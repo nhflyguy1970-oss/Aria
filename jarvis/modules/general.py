@@ -3,13 +3,12 @@ from jarvis.branding import assistant_intro
 from jarvis.conversation import Conversation
 from jarvis.modules.memory import MemoryStore
 
-
 class GeneralEngine:
     """CLI-only general chat engine (GUI uses JarvisAssistant directly)."""
 
     def __init__(self, memory: MemoryStore | None = None):
         self.conversation = Conversation(
-            f"You are {assistant_intro()}, a helpful general-purpose AI assistant. "
+            f"You are {assistant_intro()}, your friendly AI buddy. "
             "Be concise, accurate, and friendly."
         )
         self.mem = memory or MemoryStore()
@@ -67,7 +66,6 @@ class GeneralEngine:
         print(answer)
         print()
         return True
-
 
 def main():
     engine = GeneralEngine()
