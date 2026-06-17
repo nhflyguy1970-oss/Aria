@@ -4,10 +4,8 @@ from pathlib import Path
 
 from jarvis.config import DATA_DIR, PROJECT_ROOT, SECRET_BLOCKLIST, SKIP_DIRS
 
-
 class PathError(Exception):
     pass
-
 
 def resolve_path(path: str, *, base: Path | None = None) -> Path:
     """Resolve and validate a path stays within allowed roots."""
@@ -32,22 +30,21 @@ def resolve_path(path: str, *, base: Path | None = None) -> Path:
 
     return resolved
 
-
 def read_file(path: str, *, base: Path | None = None) -> str:
     try:
         resolved = resolve_path(path, base=base)
         return resolved.read_text(encoding="utf-8", errors="ignore")
     except PathError as e:
+        log.error(f"Path error: {e}")
         return f"ERROR: {e}"
     except Exception as e:
+        log.error(f"File read error: {e}")
         return f"ERROR: {e}"
-
 
 def write_file(path: str, content: str, *, base: Path | None = None) -> None:
     resolved = resolve_path(path, base=base)
     resolved.parent.mkdir(parents=True, exist_ok=True)
     resolved.write_text(content, encoding="utf-8")
-
 
 def backup_file(path: str, *, base: Path | None = None) -> str:
     resolved = resolve_path(path, base=base)
@@ -59,7 +56,6 @@ def backup_file(path: str, *, base: Path | None = None) -> str:
     )
     return str(backup_path)
 
-
 def replace_text(path: str, old_text: str, new_text: str, *, base: Path | None = None) -> str:
     content = read_file(path, base=base)
     if content.startswith("ERROR:"):
@@ -70,17 +66,14 @@ def replace_text(path: str, old_text: str, new_text: str, *, base: Path | None =
     write_file(path, content.replace(old_text, new_text), base=base)
     return backup
 
-
 def _walk(root: Path):
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         yield dirpath, filenames
 
-
 def _is_blocked(path: Path) -> bool:
     low = path.name.lower()
     return any(b in low for b in SECRET_BLOCKLIST)
-
 
 def find_files(name: str, root: str | Path) -> list[str]:
     root = Path(root).resolve()
@@ -92,7 +85,6 @@ def find_files(name: str, root: str | Path) -> list[str]:
             if name.lower() in filename.lower():
                 matches.append(str(Path(dirpath) / filename))
     return matches
-
 
 def search_files(text: str, root: str | Path) -> list[tuple[str, int, str]]:
     root = Path(root).resolve()
@@ -108,9 +100,9 @@ def search_files(text: str, root: str | Path) -> list[tuple[str, int, str]]:
                         if text.lower() in line.lower():
                             results.append((str(path), line_num, line.strip()))
             except OSError:
+                log.error(f"Could not read file: {path}")
                 pass
     return results
-
 
 def scan_project(root: str | Path) -> tuple[Path, list[str]]:
     root = Path(root).resolve()
@@ -121,7 +113,6 @@ def scan_project(root: str | Path) -> tuple[Path, list[str]]:
             files.append(str(full.relative_to(root)))
     return root, files
 
-
 def show_file(path: str, *, base: Path | None = None) -> None:
     try:
         resolved = resolve_path(path, base=base)
@@ -129,4 +120,5 @@ def show_file(path: str, *, base: Path | None = None) -> None:
             for line_num, line in enumerate(f, start=1):
                 print(f"{line_num}: {line.rstrip()}")
     except Exception as e:
+        log.error(f"Error showing file: {e}")
         print(f"\nERROR: {e}\n")

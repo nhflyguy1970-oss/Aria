@@ -4,6 +4,15 @@ import os
 import shutil
 from pathlib import Path
 
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("jarvis.log"),
+        logging.StreamHandler()
+    ]
+)
 log = logging.getLogger("jarvis")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -71,7 +80,6 @@ def _bootstrap_uncensored() -> bool:
         log.warning("Uncensored ComfyUI defaults failed: %s", exc)
     return True
 
-
 UNCENSORED = _bootstrap_uncensored()
 
 # Env vars still override at runtime (highest priority)
@@ -86,7 +94,6 @@ _ENV_OVERRIDE = {
 
 MAX_CONTEXT_CHARS = int(os.getenv("JARVIS_MAX_CONTEXT_CHARS", "80000"))
 MAX_MESSAGES = int(os.getenv("JARVIS_MAX_MESSAGES", "40"))
-
 
 def _base_system_prompt(uncensored: bool) -> str:
     from jarvis.branding import assistant_intro
@@ -110,11 +117,9 @@ def _base_system_prompt(uncensored: bool) -> str:
         "Never mention internal routing, commands, or JSON. Be concise unless asked for detail."
     )
 
-
 SYSTEM_PROMPT_STANDARD = _base_system_prompt(False)
 SYSTEM_PROMPT_UNCENSORED = _base_system_prompt(True)
 SYSTEM_PROMPT = SYSTEM_PROMPT_UNCENSORED if UNCENSORED else SYSTEM_PROMPT_STANDARD
-
 
 def _resolve_models() -> dict:
     from jarvis.model_store import get_models
@@ -123,7 +128,6 @@ def _resolve_models() -> dict:
         if env_val:
             models[role] = env_val
     return models
-
 
 # Dynamic proxy — always reads latest from model_store
 class _ModelDict:
@@ -145,9 +149,7 @@ class _ModelDict:
     def keys(self):
         return _resolve_models().keys()
 
-
 MODELS = _ModelDict()
-
 
 def set_uncensored(enabled: bool) -> None:
     global UNCENSORED, SYSTEM_PROMPT
@@ -185,10 +187,8 @@ def set_uncensored(enabled: bool) -> None:
     except Exception as exc:
         log.warning("Could not clear image prompt cache: %s", exc)
 
-
 def is_uncensored() -> bool:
     return UNCENSORED
-
 
 def piper_binary() -> Path | None:
     found = shutil.which("piper")
@@ -196,7 +196,6 @@ def piper_binary() -> Path | None:
         return Path(found)
     bundled = PROJECT_ROOT / "tools" / "piper" / "piper"
     return bundled if bundled.is_file() else None
-
 
 def piper_lib_dir() -> Path | None:
     """Directory containing Piper's bundled .so libraries."""
@@ -207,7 +206,6 @@ def piper_lib_dir() -> Path | None:
     if binary and binary.parent.joinpath("libpiper_phonemize.so.1").is_file():
         return binary.parent
     return None
-
 
 def piper_runtime_env() -> dict[str, str]:
     """Environment for Piper subprocess (LD_LIBRARY_PATH for bundled libs)."""
@@ -221,7 +219,6 @@ def piper_runtime_env() -> dict[str, str]:
             env["ESPEAK_DATA_PATH"] = str(espeak_data)
     return env
 
-
 def piper_model_path() -> Path | None:
     raw = os.getenv("JARVIS_PIPER_MODEL", "").strip()
     if raw:
@@ -230,7 +227,6 @@ def piper_model_path() -> Path | None:
             return path
     default = DATA_DIR / "models" / "piper" / "en_US-lessac-medium.onnx"
     return default if default.is_file() else None
-
 
 def piper_ready() -> bool:
     if piper_binary() is None or piper_model_path() is None:
@@ -241,7 +237,6 @@ def piper_ready() -> bool:
         return piper_lib_dir() is not None
     return True
 
-
 def piper_voice_label() -> str:
     voice = os.getenv("JARVIS_TTS_VOICE", "en-us")
     model = piper_model_path()
@@ -250,16 +245,13 @@ def piper_voice_label() -> str:
     name = model.stem.replace("en_US-", "").replace("_", " ")
     return f"{name} · {voice}"
 
-
 CHAT_SETTINGS_FILE = DATA_DIR / "chat_settings.json"
-
 
 def save_personality_preset(preset: str) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     data = _load_chat_settings()
     data["personality"] = preset if preset in PERSONALITIES else "default"
     _write_chat_settings(data)
-
 
 def _load_chat_settings() -> dict:
     if CHAT_SETTINGS_FILE.exists():
@@ -269,26 +261,21 @@ def _load_chat_settings() -> dict:
             pass
     return {}
 
-
 def _write_chat_settings(data: dict) -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     CHAT_SETTINGS_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
-
 VISION_QUALITY_MODES = ("custom", "fast", "quality")
-
 
 def load_vision_quality() -> str:
     """custom = Vision dropdown only; fast = moondream; quality = llama3.2/llava."""
     q = _load_chat_settings().get("vision_quality", "custom")
     return q if q in VISION_QUALITY_MODES else "custom"
 
-
 def save_vision_quality(mode: str) -> None:
     data = _load_chat_settings()
     data["vision_quality"] = mode if mode in VISION_QUALITY_MODES else "custom"
     _write_chat_settings(data)
-
 
 def load_personality_preset() -> str:
     preset = _load_chat_settings().get("personality", "default")
@@ -296,20 +283,16 @@ def load_personality_preset() -> str:
         return preset
     return "default"
 
-
 def load_memory_namespace() -> str:
     ns = _load_chat_settings().get("memory_namespace", "default")
     return (ns or "default").strip() or "default"
-
 
 def save_memory_namespace(namespace: str) -> None:
     data = _load_chat_settings()
     data["memory_namespace"] = (namespace or "default").strip() or "default"
     _write_chat_settings(data)
 
-
 AUTO_MEMORY_MODES = ("off", "explicit", "smart")
-
 
 def load_auto_memory_mode() -> str:
     data = _load_chat_settings()
@@ -320,46 +303,37 @@ def load_auto_memory_mode() -> str:
         return "off"
     return "smart"
 
-
 def save_auto_memory_mode(mode: str) -> None:
     data = _load_chat_settings()
     data["auto_memory_mode"] = mode if mode in AUTO_MEMORY_MODES else "smart"
     _write_chat_settings(data)
 
-
 def load_auto_memory() -> bool:
     return load_auto_memory_mode() != "off"
 
-
 def load_auto_checkpoint() -> bool:
     return _load_chat_settings().get("auto_checkpoint", True) is not False
-
 
 def save_auto_checkpoint(enabled: bool) -> None:
     data = _load_chat_settings()
     data["auto_checkpoint"] = bool(enabled)
     _write_chat_settings(data)
 
-
 def load_auto_namespace() -> bool:
     return _load_chat_settings().get("auto_namespace", True) is not False
-
 
 def save_auto_namespace(enabled: bool) -> None:
     data = _load_chat_settings()
     data["auto_namespace"] = bool(enabled)
     _write_chat_settings(data)
 
-
 def load_memory_in_system_prompt() -> bool:
     return _load_chat_settings().get("memory_in_system_prompt", True) is not False
-
 
 def save_memory_in_system_prompt(enabled: bool) -> None:
     data = _load_chat_settings()
     data["memory_in_system_prompt"] = bool(enabled)
     _write_chat_settings(data)
-
 
 def build_system_prompt(preset: str | None = None, memory_store=None) -> str:
     preset = preset or load_personality_preset()
