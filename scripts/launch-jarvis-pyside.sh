@@ -21,9 +21,10 @@ export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-fluent}"
 export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-0}"
 
 if ! jarvis_server_responsive; then
-  jarvis_start_serve_background
-  jarvis_start_tray_background || true
-  jarvis_wait_for_server "${SERVE_PID:-}" || {
+  if ! jarvis_start_tray_background; then
+    jarvis_start_serve_background
+  fi
+  jarvis_wait_for_server "${SERVE_PID:-${TRAY_PID:-}}" || {
     echo "ARIA server did not start — see $LOG_FILE" >&2
     exit 1
   }

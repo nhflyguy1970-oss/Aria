@@ -196,6 +196,14 @@ def _install_restart_signal_handler() -> None:
     signal.signal(signal.SIGUSR1, _handler)
 
 
+def _server_responsive() -> bool:
+    try:
+        with urllib.request.urlopen(HEALTH_URL, timeout=2):
+            return True
+    except Exception:
+        return False
+
+
 def run_tray(uncensored: bool = False) -> None:
     global _watchdog, _services_watchdog
     from jarvis.audio_device import apply_system_default
@@ -217,7 +225,11 @@ def run_tray(uncensored: bool = False) -> None:
         apply_system_default()
         svc_ollama()
         ensure_homeassistant_background()
-        proc = start_server()
+        if _server_responsive():
+            logger.info("API already listening on port %d — tray attaching (no duplicate server)", PORT)
+            proc = None
+        else:
+            proc = start_server()
 
         if os.getenv("JARVIS_NO_BROWSER") != "1":
             _notify("Jarvis", f"Ready — {url}")

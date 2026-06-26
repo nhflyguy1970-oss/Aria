@@ -273,16 +273,48 @@ def _focus_existing_window(title: str | None = None) -> bool:
         title = assistant_name()
     import shutil
 
-    for cmd in (
-        ["wmctrl", "-a", title],
-        ["xdotool", "search", "--name", title, "windowactivate"],
-    ):
-        if shutil.which(cmd[0]):
-            try:
-                subprocess.run(cmd, timeout=2, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    needle = title.casefold()
+    if shutil.which("wmctrl"):
+        try:
+            listed = subprocess.run(
+                ["wmctrl", "-l"],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+            if any(needle in line.casefold() for line in (listed.stdout or "").splitlines()):
+                subprocess.run(
+                    ["wmctrl", "-a", title],
+                    timeout=2,
+                    check=False,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
                 return True
-            except Exception:
-                continue
+        except Exception:
+            pass
+    if shutil.which("xdotool"):
+        try:
+            found = subprocess.run(
+                ["xdotool", "search", "--name", title],
+                capture_output=True,
+                text=True,
+                timeout=2,
+                check=False,
+            )
+            wid = (found.stdout or "").strip().splitlines()
+            if wid:
+                subprocess.run(
+                    ["xdotool", "windowactivate", "--sync", wid[0]],
+                    timeout=2,
+                    check=False,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return True
+        except Exception:
+            pass
     return False
 
 

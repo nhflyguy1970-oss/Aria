@@ -127,7 +127,7 @@ jarvis_start_serve_background() {
 jarvis_open_gui_detached() {
   export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-fluent}"
   export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-0}"
-  export JARVIS_SHELL_FORCE_NEW="${JARVIS_SHELL_FORCE_NEW:-1}"
+  export JARVIS_SHELL_FORCE_NEW="${JARVIS_SHELL_FORCE_NEW:-0}"
   "$(jarvis_python)" -m jarvis.gui_launcher "$URL"
 }
 
@@ -135,7 +135,9 @@ jarvis_run_gui_foreground() {
   export JARVIS_NO_BROWSER=1
   export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-fluent}"
   export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-0}"
-  export JARVIS_SHELL_FORCE_NEW="${JARVIS_SHELL_FORCE_NEW:-1}"
+  export JARVIS_SHELL_FORCE_NEW="${JARVIS_SHELL_FORCE_NEW:-0}"
+  # FluentWindow crashes on some Linux/GPU stacks — stable Fusion QMainWindow by default.
+  export JARVIS_FLUENT_WINDOW="${JARVIS_FLUENT_WINDOW:-0}"
   cd "$JARVIS_ROOT"
 
   if [[ "${JARVIS_GUI_MODE}" == "electron" ]]; then

@@ -96,6 +96,13 @@ def _use_fluent_chrome() -> bool:
     return False
 
 
+def _use_fluent_window() -> bool:
+    """FluentWindow chrome (unstable on some Linux GPU stacks). Theme still applies without this."""
+    if not _use_fluent_chrome() or not fluent_available():
+        return False
+    return os.getenv("JARVIS_FLUENT_WINDOW", "0").strip().lower() in ("1", "true", "yes", "on")
+
+
 def missing_dependency_hint() -> str:
     from jarvis.desktop_runtime import desktop_deps_hint
 
@@ -178,6 +185,10 @@ def terminate_running_shell(*, timeout_sec: float = 4.0) -> bool:
             path.unlink(missing_ok=True)
         except OSError:
             pass
+    try:
+        release_gui_shell_lock()
+    except Exception:
+        pass
     return True
 
 
@@ -370,6 +381,10 @@ def _build_window(url: str) -> Any:
             self.setStatusBar(status)
             self.view.loadFinished.connect(lambda ok: status.showMessage("Ready" if ok else "Load failed", 3000))
 
+        def closeEvent(self, event) -> None:  # noqa: N802
+            logger.info("ARIA window closing")
+            super().closeEvent(event)
+
     win = JarvisMainWindow()
     _register_main_window(win)
     return win
@@ -387,6 +402,7 @@ def run_window_blocking(url: str, *, wait_for_ready: bool = True) -> int:
     shell_name = "fluent" if _use_fluent_chrome() else "pyside"
     if not acquire_gui_shell_lock(shell_name):
         if focus_window() or focus_existing_window():
+            logger.info("GUI shell already open — focused existing window")
             return 0
         terminate_running_shell()
         if not acquire_gui_shell_lock(shell_name):
@@ -400,8 +416,11 @@ def run_window_blocking(url: str, *, wait_for_ready: bool = True) -> int:
 
         QApplication, *_ = _import_pyside()
         app = QApplication.instance() or QApplication(sys.argv)
-        use_fluent = _use_fluent_chrome() and fluent_available()
-        if use_fluent:
+        app.setApplicationName(os.getenv("JARVIS_ASSISTANT_NAME", "ARIA"))
+        app.setDesktopFileName("aria")
+        app.setQuitOnLastWindowClosed(True)
+        use_fluent_window = _use_fluent_window()
+        if use_fluent_window:
             _apply_fluent_theme(app)
             os.environ["JARVIS_SHELL"] = "pyside-fluent"
             try:
@@ -409,15 +428,21 @@ def run_window_blocking(url: str, *, wait_for_ready: bool = True) -> int:
             except Exception as exc:
                 logger.warning("Fluent window failed (%s) — using Fusion fallback", exc)
                 os.environ["JARVIS_SHELL"] = "pyside"
+                _apply_fluent_theme(app) if fluent_available() else _apply_dark_palette(app)
                 window = _build_window(url)
         else:
-            if _use_fluent_chrome() and not fluent_available():
-                logger.warning("Fluent widgets requested but not installed — using Fusion theme")
-            _apply_fluent_theme(app) if fluent_available() else _apply_dark_palette(app)
+            if _use_fluent_chrome() and fluent_available():
+                _apply_fluent_theme(app)
+            else:
+                _apply_dark_palette(app)
             os.environ["JARVIS_SHELL"] = "pyside"
             window = _build_window(url)
         window.show()
+        window.raise_()
+        window.activateWindow()
+        logger.info("ARIA window shown (%s)", os.environ.get("JARVIS_SHELL", "pyside"))
         code = app.exec()
+        logger.info("PySide event loop exited (code=%s)", code)
         _clear_main_window()
         return int(code)
     finally:
