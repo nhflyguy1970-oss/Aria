@@ -90,7 +90,7 @@ def edit_image(
 ) -> str:
     """Img2img edit — transform the whole image guided by prompt. Returns path or ERROR:."""
     from jarvis.comfyui import is_available
-    from jarvis.services import ensure_comfyui
+    from jarvis.services import ensure_comfyui_nvidia
 
     if not prompt.strip():
         return "ERROR: Edit needs a prompt describing what to change"
@@ -101,7 +101,7 @@ def edit_image(
         prepare_for_comfyui()
 
     if not is_available():
-        ensure_comfyui(block=True, timeout=30)
+        ensure_comfyui_nvidia(block=True, timeout=30)
     if not is_available():
         return (
             "ERROR: ComfyUI is not running. Start it from the Gallery sidebar or run "

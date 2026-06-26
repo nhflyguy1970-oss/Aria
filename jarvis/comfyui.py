@@ -33,6 +33,34 @@ def is_available() -> bool:
         return False
 
 
+def _fetch_system_stats() -> dict | None:
+    try:
+        with urllib.request.urlopen(f"{COMFY_URL}/system_stats", timeout=5) as resp:
+            return json.loads(resp.read().decode())
+    except Exception:
+        return None
+
+
+def comfyui_device_name() -> str:
+    """Active ComfyUI torch device name, or empty if offline."""
+    stats = _fetch_system_stats()
+    if not stats:
+        return ""
+    devices = stats.get("devices") or []
+    if not devices:
+        return ""
+    return str(devices[0].get("name") or "")
+
+
+def nvidia_comfyui_required() -> bool:
+    try:
+        from jarvis.gpu_routing import gpu_preference, nvidia_available
+
+        return gpu_preference() in ("nvidia", "both", "auto") and nvidia_available()
+    except Exception:
+        return False
+
+
 def wait_until_ready(timeout: float = 90) -> bool:
     deadline = time.time() + timeout
     delay = 0.5
@@ -356,9 +384,9 @@ def _generate_once(
     from jarvis.vram_guard import prepare_for_comfyui
 
     prepare_for_comfyui()
-    if not is_available():
-        from jarvis.services import ensure_comfyui
-        ensure_comfyui(block=True, timeout=90)
+    from jarvis.services import ensure_comfyui_nvidia
+
+    ensure_comfyui_nvidia(block=True, timeout=90)
     if not is_available():
         from jarvis.branding import assistant_name
 

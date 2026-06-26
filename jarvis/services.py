@@ -10,9 +10,9 @@ import sys
 import threading
 import time
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from jarvis.env_loader import PROJECT_ROOT, load_jarvis_env
 from jarvis.ha_docker import container_running, ha_api_healthy, should_autostart_ha
@@ -95,17 +95,28 @@ def _comfy_python(comfy_root: Path) -> str:
 
 def _comfy_env() -> dict:
     env = os.environ.copy()
-    try:
-        from jarvis.gpu_routing import gpu_env_for_subprocess
-
-        env.update(gpu_env_for_subprocess())
-    except Exception:
-        pass
     pref = (os.getenv("JARVIS_GPU_PREFER") or "auto").strip().lower()
-    if pref != "nvidia":
-        gfx = os.getenv("JARVIS_ROCM_GFX", "11.0.0").strip()
-        if gfx:
-            env.setdefault("HSA_OVERRIDE_GFX_VERSION", gfx)
+    try:
+        from jarvis.gpu_routing import gpu_env_for_subprocess, gpu_preference, nvidia_available
+
+        if gpu_preference() in ("nvidia", "both", "auto") and nvidia_available():
+            env.update(gpu_env_for_subprocess())
+            for rocm_key in (
+                "HSA_OVERRIDE_GFX_VERSION",
+                "ROCR_VISIBLE_DEVICES",
+                "GPU_DEVICE_ORDINAL",
+                "HIP_FORCE_DEV_KERNARG",
+            ):
+                env.pop(rocm_key, None)
+        elif pref != "nvidia":
+            gfx = os.getenv("JARVIS_ROCM_GFX", "11.0.0").strip()
+            if gfx:
+                env.setdefault("HSA_OVERRIDE_GFX_VERSION", gfx)
+    except Exception:
+        if pref != "nvidia":
+            gfx = os.getenv("JARVIS_ROCM_GFX", "11.0.0").strip()
+            if gfx:
+                env.setdefault("HSA_OVERRIDE_GFX_VERSION", gfx)
     return env
 
 
@@ -117,7 +128,16 @@ def _comfy_extra_args() -> list[str]:
 
     if effective_cpu_mode():
         return ["--cpu"]
-    return ["--fp32-text-enc"]
+    args = ["--fp32-text-enc"]
+    try:
+        from jarvis.gpu_routing import gpu_preference, nvidia_available
+
+        if gpu_preference() in ("nvidia", "both", "auto") and nvidia_available():
+            idx = (os.getenv("JARVIS_CUDA_DEVICE") or "0").strip()
+            args.extend(["--cuda-device", idx])
+    except Exception:
+        pass
+    return args
 
 
 def _comfy_cmd() -> tuple[list[str], Path] | None:
@@ -182,12 +202,12 @@ def ensure_ollama(timeout: float = 45) -> bool:
     return ok
 
 
-def ensure_comfyui(timeout: float = 120, *, block: bool = False) -> bool:
+def ensure_comfyui(timeout: float = 120, *, block: bool = False, on_demand: bool = False) -> bool:
     global _comfy_proc
     if _comfy_healthy():
         _log("ComfyUI: already running")
         return True
-    if not _should_autostart_comfy():
+    if not on_demand and not _should_autostart_comfy():
         return False
     spec = _comfy_cmd()
     if not spec:
@@ -262,7 +282,31 @@ def _stop_comfyui() -> None:
         time.sleep(2)
 
 
-def fallback_comfyui_to_cpu() -> bool:
+def restart_comfyui(*, block: bool = True, timeout: float = 120) -> bool:
+    """Stop ComfyUI and start again with current GPU env (NVIDIA when configured)."""
+    _log("ComfyUI: restarting for GPU routing")
+    _stop_comfyui()
+    return ensure_comfyui(timeout=timeout, block=block, on_demand=True)
+
+
+def ensure_comfyui_nvidia(*, block: bool = True, timeout: float = 120) -> bool:
+    """Start or restart ComfyUI on NVIDIA when JARVIS_GPU_PREFER=nvidia."""
+    try:
+        from jarvis.comfyui import comfyui_device_name, nvidia_comfyui_required
+    except Exception:
+        return ensure_comfyui(timeout=timeout, block=block, on_demand=True)
+
+    if not nvidia_comfyui_required():
+        return ensure_comfyui(timeout=timeout, block=block, on_demand=True)
+
+    name = comfyui_device_name()
+    if name and not any(token in name.lower() for token in ("nvidia", "geforce", "rtx", "quadro", "tesla")):
+        _log(f"ComfyUI: wrong GPU ({name}) — restarting on NVIDIA")
+        return restart_comfyui(block=block, timeout=timeout)
+
+    if _comfy_healthy():
+        return True
+    return ensure_comfyui(timeout=timeout, block=block, on_demand=True)
     from jarvis.comfyui_settings import auto_fallback_enabled, mark_runtime_cpu_fallback
 
     if not auto_fallback_enabled():
@@ -307,7 +351,11 @@ def set_comfyui_checkpoint(checkpoint: str) -> dict:
 
 
 def set_comfyui_checkpoint_file(filename: str) -> dict:
-    from jarvis.comfyui_settings import clear_checkpoint_file, get_settings_dict, save_checkpoint_file
+    from jarvis.comfyui_settings import (
+        clear_checkpoint_file,
+        get_settings_dict,
+        save_checkpoint_file,
+    )
 
     if not filename or filename in ("__preset__", "clear"):
         clear_checkpoint_file()

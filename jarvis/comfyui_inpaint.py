@@ -193,7 +193,7 @@ def inpaint(
 ) -> str:
     """Inpaint masked region via ComfyUI. Returns output path or ERROR: string."""
     from jarvis.comfyui import is_available
-    from jarvis.services import ensure_comfyui
+    from jarvis.services import ensure_comfyui_nvidia
 
     if not prompt.strip():
         return "ERROR: Inpaint needs a prompt describing what to generate in the masked area"
@@ -203,7 +203,7 @@ def inpaint(
 
         prepare_for_comfyui()
     if not is_available():
-        ensure_comfyui(block=True, timeout=30)
+        ensure_comfyui_nvidia(block=True, timeout=30)
     if not is_available():
         return (
             "ERROR: ComfyUI is not running. Start it from the Gallery sidebar or run "

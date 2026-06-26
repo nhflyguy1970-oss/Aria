@@ -97,10 +97,20 @@ def _detect_gpu_uncached() -> dict:
         if nvidia:
             info["nvidia"] = nvidia
             info["nvidia_available"] = True
+            info["compute_gpu"] = nvidia.get("name", "")
+            info["compute_vram_mb"] = nvidia.get("vram_mb", 0)
+            info["compute_vendor"] = "nvidia"
+            info["display_gpu"] = info.get("name", "")
+            info["display_vendor"] = info.get("vendor", "unknown")
             if gpu_preference() in ("nvidia", "both", "auto"):
-                info["compute_gpu"] = nvidia.get("name", "")
-                info["compute_vram_mb"] = nvidia.get("vram_mb", 0)
-                info["compute_vendor"] = "nvidia"
+                info["name"] = nvidia.get("name", info["name"])
+                info["vendor"] = "nvidia"
+                if nvidia.get("vram_mb"):
+                    info["vram_mb"] = nvidia["vram_mb"]
+                if nvidia.get("free_vram_mb") is not None:
+                    info["free_vram_mb"] = nvidia["free_vram_mb"]
+                if nvidia.get("vram_used_mb") is not None:
+                    info["vram_used_mb"] = nvidia["vram_used_mb"]
     except Exception:
         pass
 
@@ -111,17 +121,20 @@ def _detect_gpu_uncached() -> dict:
     if rocm_out and "error" not in rocm_out.lower() and "Card series" in rocm_out:
         info["rocm_available"] = True
         parsed = _parse_rocm_smi(rocm_all)
-        if parsed["name"]:
-            info["name"] = parsed["name"]
-        if parsed["vram_mb"]:
-            info["vram_mb"] = parsed["vram_mb"]
+        if parsed["name"] and not info.get("display_gpu"):
+            info["display_gpu"] = parsed["name"]
         if parsed["driver"]:
             info["rocm_version"] = parsed["driver"]
-        used = _parse_vram_used_mb(rocm_all)
-        if used:
-            info["vram_used_mb"] = used
-            if info["vram_mb"]:
-                info["free_vram_mb"] = max(0, info["vram_mb"] - used)
+        if info.get("vendor") != "nvidia":
+            if parsed["name"]:
+                info["name"] = parsed["name"]
+            if parsed["vram_mb"]:
+                info["vram_mb"] = parsed["vram_mb"]
+            used = _parse_vram_used_mb(rocm_all)
+            if used:
+                info["vram_used_mb"] = used
+                if info["vram_mb"]:
+                    info["free_vram_mb"] = max(0, info["vram_mb"] - used)
 
     if not info["rocm_available"]:
         ver = _run(["rocminfo"], timeout=5)
@@ -151,7 +164,7 @@ def _detect_gpu_uncached() -> dict:
         info["recommendation"] = (
             f"NVIDIA compute: {nv.get('name', 'GPU')} "
             f"({nv.get('free_vram_mb', nv.get('vram_mb', 0))}MB free). "
-            "Display GPU may be AMD — Ollama/Whisper use NVIDIA when CUDA_VISIBLE_DEVICES is set."
+            "Display GPU may be AMD — image gen and Ollama use NVIDIA when ComfyUI is restarted via ARIA."
         )
     elif info["ollama_using_gpu"]:
         info["recommendation"] = f"GPU acceleration active{vram_note}."
@@ -187,5 +200,9 @@ def detect_gpu(*, force: bool = False) -> dict:
 
 def is_low_vram(threshold_mb: int = 10240) -> bool:
     """True when detected VRAM is at or below threshold (default 10GB)."""
-    vram = detect_gpu().get("vram_mb") or 0
+    info = detect_gpu()
+    if info.get("compute_vendor") == "nvidia" or info.get("vendor") == "nvidia":
+        vram = int(info.get("vram_mb") or 0)
+        return 0 < vram <= threshold_mb
+    vram = info.get("vram_mb") or 0
     return 0 < vram <= threshold_mb

@@ -40,3 +40,11 @@ else
 fi
 
 echo "Restart ARIA: ./scripts/stop-jarvis.sh && ./scripts/launch-jarvis.sh"
+
+COMFY_PORT="${JARVIS_COMFYUI_PORT:-8188}"
+echo "Stopping ComfyUI on port ${COMFY_PORT}…"
+fuser -k "${COMFY_PORT}/tcp" 2>/dev/null || true
+pkill -f "ComfyUI/main.py" 2>/dev/null || true
+pkill -f "main.py --listen.*${COMFY_PORT}" 2>/dev/null || true
+sleep 2
+echo "ComfyUI stopped — ARIA will start it on NVIDIA on the next image request."

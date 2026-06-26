@@ -207,9 +207,9 @@ def service_restart(name: str) -> dict[str, Any]:
         ok = ensure_ollama(timeout=45)
         return {"ok": ok, "service": svc, "message": "Ollama restarted" if ok else "Ollama failed to start"}
     if svc == "comfyui":
-        from jarvis.services import ensure_comfyui
+        from jarvis.services import ensure_comfyui_nvidia
 
-        ok = ensure_comfyui(block=True, timeout=120)
+        ok = ensure_comfyui_nvidia(block=True, timeout=120)
         return {"ok": ok, "service": svc, "message": "ComfyUI restarted" if ok else "ComfyUI failed — check logs"}
     if svc in ("homeassistant", "ha"):
         from jarvis.ha_docker import ensure_homeassistant

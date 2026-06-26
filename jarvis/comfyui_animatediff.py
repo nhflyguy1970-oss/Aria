@@ -300,9 +300,9 @@ def generate(
         return f"ERROR: AnimateDiff unavailable — {detail}", ""
 
     if not comfyui.is_available():
-        from jarvis.services import ensure_comfyui
+        from jarvis.services import ensure_comfyui_nvidia
 
-        ensure_comfyui(block=True, timeout=90)
+        ensure_comfyui_nvidia(block=True, timeout=90)
     if not comfyui.is_available():
         return "ERROR: ComfyUI is not running", ""
 
