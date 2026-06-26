@@ -1,0 +1,52 @@
+[project]
+name = "jarvis"
+version = "3.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+target-version = "py312"
+line-length = 140
+src = ["jarvis", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+# Env must load before FastAPI imports (paths, secrets).
+"jarvis/gui/server.py" = ["E402"]
+# BujoMixin import after BulletJournal helpers to avoid circular import.
+"jarvis/modules/journal.py" = ["E402"]
+# Quote strings are intentionally kept intact.
+"jarvis/journal_quotes.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["jarvis"]
+namespace_packages = true
+explicit_package_bases = true
+warn_return_any = false
+warn_unused_ignores = true
+check_untyped_defs = false
+disallow_untyped_defs = false
+no_implicit_optional = true
+
+[[tool.mypy.overrides]]
+module = [
+    "openwakeword.*",
+    "pyannote.*",
+    "pystray.*",
+    "fitz.*",
+    "bark.*",
+    "TTS.*",
+    "faster_whisper.*",
+    "duckduckgo_search.*",
+    "weasyprint.*",
+    "mcp.*",
+    "audiocraft.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "jarvis.modules.journal_bujo"
+disable_error_code = ["attr-defined", "has-type"]

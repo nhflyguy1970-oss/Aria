@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ARIA
+Comment=Adaptive Reasoning Intelligence Assistant — Chrome app + system tray
+Exec=bash @JARVIS_ROOT@/scripts/launch-jarvis.sh
+Icon=@JARVIS_ROOT@/assets/jarvis-icon.svg
+Path=@JARVIS_ROOT@
+Terminal=false
+Categories=Development;Utility;
+StartupNotify=true
+StartupWMClass=ARIA
+SingleMainWindow=true
+Keywords=AI;Assistant;ARIA;Ollama;Coding;Chrome;

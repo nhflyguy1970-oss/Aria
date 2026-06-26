@@ -1,33 +1,35 @@
-# Python / tooling
-venv/
-.venv/
+# Secrets and local runtime state
+data/jarvis.env
+data/uncensored_auth.json
+data/uncensored_sessions.json
+data/app_settings.json
+.env
+.env.local
+**/credentials.json
+**/secrets.json
+
+# Python
 __pycache__/
 *.py[cod]
+*.egg-info/
+.venv/
+venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
-*.egg-info/
-dist/
-build/
 
-# Secrets & local env
-.env
-data/jarvis.env
+# Runtime data (large / machine-specific)
+data/generated/
+data/uploads/
+data/audio/
+data/models/
+data/logs/
+data/memory.json
+data/chat_*.json
+tools/piper/
 
-# IDE / assistants
-.idea/
-.aider*
-.cursor/
-
-# Runtime data (never commit)
-data/
-*.log
-jarvis.log
-
-# Caches / models
-unsloth_compiled_cache/
-.cache/
-
-# OS
+# OS / editor
 .DS_Store
-Thumbs.db
+*.swp
+.idea/
+.vscode/

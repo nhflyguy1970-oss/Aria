@@ -41,11 +41,13 @@ AUDIO_LIBRARY_DIRS = {
     "edited": EDITED_DIR,
 }
 
+
 def _song_base_stem(stem: str) -> str:
     for suffix in ("_inst", "_vocal", "_backing"):
         if stem.endswith(suffix):
             return stem[: -len(suffix)]
     return stem
+
 
 def delete_audio_file(path: str, *, category: str | None = None) -> str:
     """Delete an audio library file (and related song artifacts). Returns path or ERROR."""
@@ -60,7 +62,6 @@ def delete_audio_file(path: str, *, category: str | None = None) -> str:
     try:
         target = Path(path).expanduser().resolve()
     except OSError as e:
-        log.error(f"Invalid path: {e}")
         return f"ERROR: Invalid path: {e}"
     data_root = DATA_DIR.resolve()
     if data_root not in target.parents and target != data_root:
@@ -94,6 +95,7 @@ def delete_audio_file(path: str, *, category: str | None = None) -> str:
 
 SUPPORTED_AUDIO = {".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm", ".mp4"}
 
+
 class AudioEngine:
     def __init__(self):
         self.conversation = Conversation(
@@ -114,11 +116,9 @@ class AudioEngine:
             resolved = self._resolve_audio(path, base=DATA_DIR)
             result = play_file(resolved)
             if result.startswith("ERROR:"):
-                log.error(f"Error playing file: {result}")
                 return result
             return result
         except Exception as e:
-            log.error(f"Exception in play(): {e}")
             return f"ERROR: {e}"
 
     def _should_auto_play(self) -> bool:
@@ -139,7 +139,6 @@ class AudioEngine:
     def _probe_duration(self, src: Path) -> float | None:
         ffprobe = self._ffprobe_path()
         if not ffprobe:
-            log.warning("ffprobe not found")
             return None
         try:
             result = subprocess.run(
@@ -154,11 +153,9 @@ class AudioEngine:
                 timeout=30,
             )
             if result.returncode != 0:
-                log.error(f"ffprobe error: {result.stderr}")
                 return None
             return float(result.stdout.strip())
-        except (ValueError, subprocess.SubprocessError) as e:
-            log.error(f"Error probing duration: {e}")
+        except (ValueError, subprocess.SubprocessError):
             return None
 
     def status(self) -> dict:
@@ -206,7 +203,6 @@ class AudioEngine:
             out_path = RECORDINGS_DIR / f"recording_{stamp}.wav"
         result = record_to_file(out_path, duration_sec, source=source)
         if result.startswith("ERROR:"):
-            log.error(f"Error recording file: {result}")
             return result
         self.last_output = result
         return result
@@ -221,7 +217,6 @@ class AudioEngine:
         """Record, then transcribe. Returns (audio_path, transcript_or_error)."""
         path = self.record(duration_sec, source=source)
         if path.startswith("ERROR:"):
-            log.error(f"Error in record_and_transcribe: {path}")
             return path, path
         text = self.transcribe(path, model=model, language=language)
         return path, text
@@ -256,13 +251,11 @@ class AudioEngine:
             resolved = self._resolve_audio(path)
             result = fw_transcribe(resolved, model=model, language=lang)
             if result.startswith("ERROR:"):
-                log.error(f"Error transcribing file: {result}")
                 return result
             self.last_transcript = result
             index_transcript(str(resolved), result, title=resolved.name)
             return result
         except Exception as e:
-            log.error(f"Exception in transcribe(): {e}")
             return f"ERROR: {e}"
 
     def batch_transcribe(self, paths: list[str], model: str | None = None, language: str | None = None) -> list[dict]:
@@ -288,7 +281,6 @@ class AudioEngine:
     ) -> str:
         """Generate speech audio from text (piper if available, else espeak)."""
         if not text or not text.strip():
-            log.warning("No text provided for audio generation")
             return "ERROR: No text provided for audio generation"
 
         GENERATED_DIR.mkdir(parents=True, exist_ok=True)
@@ -319,15 +311,12 @@ class AudioEngine:
                     env=piper_runtime_env(),
                 )
                 if proc.returncode != 0:
-                    log.error(f"Piper error: {proc.stderr or proc.stdout}")
                     return f"ERROR: {proc.stderr or proc.stdout}"
             except Exception as e:
-                log.error(f"Exception in Piper generation: {e}")
                 return f"ERROR: Piper failed: {e}"
         else:
             espeak = self._espeak_path()
             if not espeak:
-                log.warning("espeak not found")
                 return "ERROR: espeak not found. Install: sudo apt install espeak-ng"
 
             cmd = [
@@ -346,13 +335,11 @@ class AudioEngine:
             try:
                 subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=True)
             except Exception as e:
-                log.error(f"Exception in espeak generation: {e}")
                 return f"ERROR: {e}"
 
         if fmt != "wav":
             converted = self.convert(str(wav_path), str(out_path))
             if converted.startswith("ERROR:"):
-                log.error(f"Error converting audio format: {converted}")
                 return converted
             if wav_path != out_path and wav_path.exists():
                 wav_path.unlink(missing_ok=True)
@@ -443,8 +430,7 @@ Respond with ONLY valid JSON."""
                 raw = re.sub(r"\n?```$", "", raw)
             parsed = json.loads(raw)
             return {k: v for k, v in parsed.items() if v is not None}
-        except Exception as e:
-            log.error(f"Exception parsing edit instruction: {e}")
+        except Exception:
             return {}
 
     def edit(
@@ -465,7 +451,6 @@ Respond with ONLY valid JSON."""
         """Edit audio with ffmpeg (trim, volume, speed, fade, normalize)."""
         ffmpeg = self._ffmpeg_path()
         if not ffmpeg:
-            log.warning("ffmpeg not found")
             return "ERROR: ffmpeg not found. Install: sudo apt install ffmpeg"
 
         try:
@@ -509,7 +494,6 @@ Respond with ONLY valid JSON."""
             )
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=600, env=ffmpeg_env())
             if result.returncode != 0:
-                log.error(f"Error editing audio: {result.stderr or result.stdout}")
                 return f"ERROR: {result.stderr or result.stdout}"
 
             self.last_output = str(dst)
@@ -517,14 +501,12 @@ Respond with ONLY valid JSON."""
                 play_file(dst)
             return str(dst)
         except Exception as e:
-            log.error(f"Exception in edit(): {e}")
             return f"ERROR: {e}"
 
     def analyze(self, path: str, model: str | None = None) -> dict:
         """Transcribe and LLM-summarize audio."""
         transcript = self.transcribe(path, model=model)
         if transcript.startswith("ERROR:"):
-            log.error(f"Error analyzing file: {transcript}")
             return {"ok": False, "error": transcript}
         prompt = f"""Analyze this audio transcript. Summarize key points, tone, and action items.
 
@@ -563,7 +545,6 @@ TRANSCRIPT:
                 nch = wf.getnchannels()
                 width = wf.getsampwidth()
                 if nframes <= 0 or width not in (1, 2, 4):
-                    log.warning("Invalid WAV file format")
                     return [0.0] * samples
                 raw = wf.readframes(nframes)
             if width == 1:
@@ -597,7 +578,6 @@ TRANSCRIPT:
             peaks = self._extract_waveform_peaks(src, samples=samples)
             return {"ok": True, "path": str(src), "duration": duration, "samples": len(peaks), "peaks": peaks}
         except Exception as e:
-            log.error(f"Exception in waveform(): {e}")
             return {"ok": False, "error": str(e)}
 
     def record_vad(
@@ -619,7 +599,6 @@ TRANSCRIPT:
         raw_path = out_path.with_name(out_path.stem + "_raw.wav")
         result = record_to_file(raw_path, max_duration_sec, source=source)
         if result.startswith("ERROR:"):
-            log.error(f"Error recording VAD: {result}")
             return result
         trimmed = trim_silence_vad(
             raw_path, out_path,
@@ -642,7 +621,6 @@ TRANSCRIPT:
         out_path = RECORDINGS_DIR / f"recording_ptt_{stamp}.wav"
         session_id, err = start_ptt_record(out_path, source=source)
         if err:
-            log.error(f"Error starting PTT record: {err}")
             return "", err if err.startswith("ERROR:") else f"ERROR: {err}"
         return session_id, str(out_path)
 
@@ -650,14 +628,12 @@ TRANSCRIPT:
         result = stop_ptt_record(session_id)
         if not result.startswith("ERROR:"):
             self.last_output = result
-        log.info(f"PTT recording stopped: {result}")
         return result
 
     def transform_genre(
         self, path: str, genre_prompt: str, duration: int = 30, job_id: str | None = None,
     ) -> str:
         from jarvis.song_studio import transform_genre
-        log.info(f"Transforming genre for {path}")
         return transform_genre(path, genre_prompt, duration=duration, job_id=job_id)
 
     def generate_full_song(
@@ -665,7 +641,6 @@ TRANSCRIPT:
         duration: int = 30, job_id: str | None = None,
     ) -> dict:
         from jarvis.song_studio import generate_full_song
-        log.info(f"Generating full song with topic '{topic}'")
         return generate_full_song(topic, genre=genre, mood=mood, duration=duration, job_id=job_id)
 
     def voice_to_song(
@@ -673,7 +648,6 @@ TRANSCRIPT:
         genre: str = "pop", duration: int = 30, job_id: str | None = None,
     ) -> dict:
         from jarvis.song_studio import voice_to_song
-        log.info(f"Converting voice to song with path '{voice_path}'")
         return voice_to_song(
             voice_path, lyrics=lyrics, title=title, style=style,
             genre=genre, duration=duration, job_id=job_id,
@@ -683,20 +657,16 @@ TRANSCRIPT:
         from jarvis.audio_diarize import diarize
         try:
             resolved = str(self._resolve_audio(path))
-            log.info(f"Diarizing audio file: {resolved}")
             return diarize(resolved, num_speakers=num_speakers)
         except Exception as e:
-            log.error(f"Exception in diarize(): {e}")
             return {"ok": False, "error": str(e)}
 
     def delete_file(self, path: str, *, category: str | None = None) -> str:
-        log.info(f"Deleting audio file: {path}")
         return delete_audio_file(path, category=category)
 
     def convert(self, path: str, output: str) -> str:
         ffmpeg = self._ffmpeg_path()
         if not ffmpeg:
-            log.warning("ffmpeg not found")
             return "ERROR: ffmpeg not found"
 
         try:
@@ -714,12 +684,10 @@ TRANSCRIPT:
             self.last_output = str(dst)
             return str(dst)
         except Exception as e:
-            log.error(f"Exception in convert(): {e}")
             return f"ERROR: {e}"
 
     def handle(self, prompt: str) -> bool:
         if prompt.lower() == "exit":
-            log.info("Exiting audio module")
             return False
 
         if prompt.startswith("record "):
@@ -728,8 +696,7 @@ TRANSCRIPT:
             if rest:
                 try:
                     dur = float(rest.split()[0])
-                except ValueError as e:
-                    log.warning(f"Invalid duration: {e}")
+                except ValueError:
                     pass
             result = self.record(dur)
             if result.startswith("ERROR:"):
@@ -743,8 +710,7 @@ TRANSCRIPT:
             if prompt.startswith("record-transcribe "):
                 try:
                     dur = float(prompt.split()[1])
-                except (IndexError, ValueError) as e:
-                    log.warning(f"Invalid duration: {e}")
+                except (IndexError, ValueError):
                     pass
             path, text = self.record_and_transcribe(dur)
             if path.startswith("ERROR:"):
@@ -888,6 +854,7 @@ TRANSCRIPT:
         print()
         return True
 
+
 def main():
     engine = AudioEngine()
     print("\nJarvis Audio Module")
@@ -911,10 +878,8 @@ def main():
             prompt = input("Audio > ")
             if not engine.handle(prompt):
                 break
-        except KeyboardInterrupt as e:
-            log.info("Keyboard interrupt received, exiting...")
+        except KeyboardInterrupt:
             print("\n")
             break
         except Exception as e:
-            log.error(f"Exception in main loop: {e}")
             print(f"\nERROR: {e}\n")

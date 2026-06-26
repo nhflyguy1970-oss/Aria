@@ -1,0 +1,16 @@
+{
+  "name": "ARIA",
+  "short_name": "ARIA",
+  "description": "Adaptive Reasoning Intelligence Assistant — local AI",
+  "start_url": "/?app=1",
+  "display": "standalone",
+  "background_color": "#0a0c10",
+  "theme_color": "#0a0c10",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

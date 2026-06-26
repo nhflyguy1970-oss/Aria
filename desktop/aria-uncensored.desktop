@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ARIA (Uncensored)
+Comment=ARIA uncensored mode — no content filters
+Exec=bash @JARVIS_ROOT@/scripts/launch-jarvis-uncensored.sh
+Icon=@JARVIS_ROOT@/assets/jarvis-icon-uncensored.svg
+Path=@JARVIS_ROOT@
+Terminal=false
+Categories=Development;Utility;
+StartupNotify=true
+StartupWMClass=ARIA
+SingleMainWindow=true
+Keywords=AI;Assistant;ARIA;Ollama;Uncensored;

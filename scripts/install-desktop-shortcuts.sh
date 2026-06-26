@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Install ARIA .desktop entries (app menu + optional Desktop icon).
+set -euo pipefail
+
+JARVIS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+DESKTOP_DIR="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
+
+# Desktop: main ARIA shortcut (Chrome app). Optional: JARVIS_DESKTOP_SHORTCUTS=all
+DESKTOP_SHORTCUTS="${JARVIS_DESKTOP_SHORTCUTS:-aria}"
+
+chmod +x "$JARVIS_ROOT/scripts/launch-jarvis.sh"
+chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-uncensored.sh"
+chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-app.sh"
+chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-native.sh"
+
+mkdir -p "$APPS_DIR"
+
+# App menu entries
+APP_MENU_VARIANTS=(aria aria-uncensored)
+LEGACY_VARIANTS=(jarvis jarvis-uncensored jarvis-app jarvis-native aria-app aria-native)
+
+for variant in "${APP_MENU_VARIANTS[@]}"; do
+  src="$JARVIS_ROOT/desktop/$variant.desktop"
+  [[ -f "$src" ]] || continue
+  sed "s|@JARVIS_ROOT@|$JARVIS_ROOT|g" "$src" > "$APPS_DIR/$variant.desktop"
+  chmod +x "$APPS_DIR/$variant.desktop"
+done
+
+# Remove legacy Jarvis shortcuts from app menu and desktop
+for variant in "${LEGACY_VARIANTS[@]}"; do
+  rm -f "$APPS_DIR/${variant}.desktop"
+done
+
+if [[ -d "$DESKTOP_DIR" ]]; then
+  for variant in "${LEGACY_VARIANTS[@]}"; do
+    rm -f "$DESKTOP_DIR/${variant}.desktop"
+  done
+fi
+
+# Desktop icons
+if [[ -d "$DESKTOP_DIR" ]]; then
+  if [[ "$DESKTOP_SHORTCUTS" == "all" ]]; then
+    DESKTOP_LIST=(aria aria-uncensored)
+  else
+    IFS=',' read -ra DESKTOP_LIST <<< "$DESKTOP_SHORTCUTS"
+  fi
+  for variant in "${DESKTOP_LIST[@]}"; do
+    variant="${variant// /}"
+    [[ -n "$variant" ]] || continue
+    src="$JARVIS_ROOT/desktop/$variant.desktop"
+    [[ -f "$src" ]] || { echo "Skip unknown desktop shortcut: $variant" >&2; continue; }
+    sed "s|@JARVIS_ROOT@|$JARVIS_ROOT|g" "$src" > "$DESKTOP_DIR/$variant.desktop"
+    chmod +x "$DESKTOP_DIR/$variant.desktop"
+    gio set "$DESKTOP_DIR/$variant.desktop" metadata::trusted true 2>/dev/null || true
+  done
+fi
+
+echo "Installed app menu:"
+for variant in "${APP_MENU_VARIANTS[@]}"; do
+  echo "  $APPS_DIR/$variant.desktop"
+done
+if [[ -d "$DESKTOP_DIR" ]]; then
+  echo "Desktop icons:"
+  ls "$DESKTOP_DIR"/aria*.desktop 2>/dev/null | sed 's|^|  |' || echo "  (none)"
+fi
