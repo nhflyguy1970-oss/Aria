@@ -56,6 +56,15 @@ from jarvis.branding import assistant_name
 
 app = FastAPI(title=assistant_name(), version=APP_VERSION, lifespan=lifespan)
 
+try:
+    from jarvis.extensibility.loader import register_extension_api
+
+    register_extension_api(app, assistant)
+except Exception:
+    import logging
+
+    logging.getLogger("jarvis.gui.server").exception("Extension API registration failed")
+
 from jarvis.auth import APIKeyMiddleware
 from jarvis.network_guard import NetworkGuardMiddleware
 from jarvis.rate_limit import RateLimitMiddleware

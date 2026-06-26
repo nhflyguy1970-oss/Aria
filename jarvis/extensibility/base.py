@@ -1,34 +1,43 @@
-# Source Generated with Decompyle++
-# File: base.cpython-312.pyc (Python 3.12)
+"""Extension protocol for domain modules."""
 
-'''Extension protocol for domain modules.'''
 from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
+
 if TYPE_CHECKING:
     from fastapi import FastAPI
+
     from jarvis.assistant import JarvisAssistant
     from jarvis.router_table import RouteRule
-ExtensionMeta = <NODE:12>()
+
+
+@dataclass(frozen=True)
+class ExtensionMeta:
+    name: str
+    version: str = "1.0.0"
+    description: str = ""
+    module_label: str = ""
+
 
 class Extension:
-    meta: 'ExtensionMeta' = 'Hook surface for a domain extension (actions, routes, optional API).'
-    
-    def load(self = None):
-        '''Import handler modules so @register_action side effects run.'''
-        pass
+    """Hook surface for a domain extension (actions, routes, optional API)."""
 
-    
-    def routes(self = None):
+    meta: ExtensionMeta
+
+    def load(self) -> None:
+        """Import handler modules so @register_action side effects run."""
+
+    def routes(self) -> list[RouteRule]:
         return []
 
-    
-    def register_api(self = None, app = None, assistant = None):
+    def register_api(self, app: FastAPI, assistant: JarvisAssistant) -> None:
         pass
 
-    
-    def to_dict(self = None):
-        pass
-    # WARNING: Decompyle incomplete
-
-
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.meta.name,
+            "version": self.meta.version,
+            "description": self.meta.description,
+            "module_label": self.meta.module_label,
+        }

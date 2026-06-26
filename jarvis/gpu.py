@@ -90,6 +90,20 @@ def _detect_gpu_uncached() -> dict:
     info["vendor"] = vendor
     info["name"] = name
 
+    try:
+        from jarvis.gpu_routing import gpu_preference, parse_nvidia_smi
+
+        nvidia = parse_nvidia_smi()
+        if nvidia:
+            info["nvidia"] = nvidia
+            info["nvidia_available"] = True
+            if gpu_preference() in ("nvidia", "both", "auto"):
+                info["compute_gpu"] = nvidia.get("name", "")
+                info["compute_vram_mb"] = nvidia.get("vram_mb", 0)
+                info["compute_vendor"] = "nvidia"
+    except Exception:
+        pass
+
     rocm_out = _run(["rocm-smi", "--showproductname"])
     rocm_mem = _run(["rocm-smi", "--showmeminfo", "vram"])
     rocm_drv = _run(["rocm-smi", "--showdriverversion"])
@@ -132,7 +146,14 @@ def _detect_gpu_uncached() -> dict:
 
     vram_note = f" ({info['vram_mb']}MB VRAM)" if info["vram_mb"] else ""
 
-    if info["ollama_using_gpu"]:
+    if info.get("compute_vendor") == "nvidia":
+        nv = info.get("nvidia") or {}
+        info["recommendation"] = (
+            f"NVIDIA compute: {nv.get('name', 'GPU')} "
+            f"({nv.get('free_vram_mb', nv.get('vram_mb', 0))}MB free). "
+            "Display GPU may be AMD — Ollama/Whisper use NVIDIA when CUDA_VISIBLE_DEVICES is set."
+        )
+    elif info["ollama_using_gpu"]:
         info["recommendation"] = f"GPU acceleration active{vram_note}."
     elif info["rocm_available"]:
         info["recommendation"] = (

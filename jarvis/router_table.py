@@ -122,7 +122,14 @@ _SORTED: list[RouteRule] | None = None
 def _sorted_rules() -> list[RouteRule]:
     global _SORTED
     if _SORTED is None:
-        _SORTED = sorted(_rules(), key=lambda r: r.priority)
+        rules = list(_rules())
+        try:
+            from jarvis.extensibility.loader import extension_routes
+
+            rules.extend(extension_routes())
+        except Exception:
+            pass
+        _SORTED = sorted(rules, key=lambda r: r.priority)
     return _SORTED
 
 

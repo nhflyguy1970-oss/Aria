@@ -13,6 +13,14 @@ def ensure_handlers_loaded() -> None:
     from jarvis.handlers.queues import register_queue_actions
 
     register_queue_actions()
+    try:
+        from jarvis.extensibility.loader import load_extensions
+
+        load_extensions()
+    except Exception:
+        import logging
+
+        logging.getLogger("jarvis.handlers").exception("Extension load failed")
     _loaded = True
 
 
