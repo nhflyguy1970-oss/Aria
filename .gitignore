@@ -1,0 +1,33 @@
+# Python / tooling
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Secrets & local env
+.env
+data/jarvis.env
+
+# IDE / assistants
+.idea/
+.aider*
+.cursor/
+
+# Runtime data (never commit)
+data/
+*.log
+jarvis.log
+
+# Caches / models
+unsloth_compiled_cache/
+.cache/
+
+# OS
+.DS_Store
+Thumbs.db
