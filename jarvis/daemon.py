@@ -82,8 +82,15 @@ def start_server(open_browser: bool = False) -> subprocess.Popen:
         time.sleep(0.5)
         try:
             with urllib.request.urlopen(HEALTH_URL, timeout=2):
-                logger.info("Jarvis server ready on port %d", PORT)
-                return _server_proc
+                if _server_proc.poll() is None:
+                    logger.info("Jarvis server ready on port %d", PORT)
+                    return _server_proc
+                logger.warning(
+                    "Port %d is up but managed server child exited — attaching without child process",
+                    PORT,
+                )
+                _server_proc = None
+                return None
         except Exception:
             if _server_proc.poll() is not None:
                 log_tail = ""
@@ -225,6 +232,13 @@ def run_tray(uncensored: bool = False) -> None:
         apply_system_default()
         svc_ollama()
         ensure_homeassistant_background()
+        if os.getenv("JARVIS_GRAPH_BACKEND", "sqlite").strip().lower() == "memgraph":
+            try:
+                from jarvis.memgraph_docker import ensure_memgraph_background
+
+                ensure_memgraph_background()
+            except Exception as exc:
+                logger.warning("Memgraph autostart skipped: %s", exc)
         if _server_responsive():
             logger.info("API already listening on port %d — tray attaching (no duplicate server)", PORT)
             proc = None

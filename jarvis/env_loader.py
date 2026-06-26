@@ -26,6 +26,7 @@ def load_jarvis_env(force: bool = False) -> None:
         for key in _PREVIOUS_JARVIS_KEYS - keys_in_file:
             os.environ.pop(key, None)
         _PREVIOUS_JARVIS_KEYS = keys_in_file
+        _apply_gpu_routing()
         _apply_rocm_override()
         _LOADED = True
         return
@@ -54,6 +55,7 @@ def load_jarvis_env(force: bool = False) -> None:
     for key in _PREVIOUS_JARVIS_KEYS - keys_in_file:
         os.environ.pop(key, None)
     _PREVIOUS_JARVIS_KEYS = keys_in_file
+    _apply_gpu_routing()
     _apply_rocm_override()
     _LOADED = True
 
@@ -84,8 +86,24 @@ def upsert_env_vars(updates: dict[str, str]) -> list[str]:
     return changed
 
 
+def _apply_gpu_routing() -> None:
+    """Apply CUDA_VISIBLE_DEVICES / HIP_VISIBLE_DEVICES from JARVIS_GPU_PREFER."""
+    try:
+        from jarvis.gpu_routing import gpu_env_for_subprocess, gpu_preference
+
+        if gpu_preference() == "nvidia":
+            os.environ.pop("HSA_OVERRIDE_GFX_VERSION", None)
+        for key, value in gpu_env_for_subprocess().items():
+            os.environ[key] = value
+    except Exception:
+        pass
+
+
 def _apply_rocm_override() -> None:
     """RX 7600 (gfx1102) needs HSA_OVERRIDE_GFX_VERSION so ROCm uses gfx1100 kernels."""
+    pref = (os.getenv("JARVIS_GPU_PREFER") or "auto").strip().lower()
+    if pref == "nvidia":
+        return
     gfx = os.getenv("JARVIS_ROCM_GFX", "11.0.0").strip()
     if gfx:
         os.environ.setdefault("HSA_OVERRIDE_GFX_VERSION", gfx)

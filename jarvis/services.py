@@ -95,9 +95,17 @@ def _comfy_python(comfy_root: Path) -> str:
 
 def _comfy_env() -> dict:
     env = os.environ.copy()
-    gfx = os.getenv("JARVIS_ROCM_GFX", "11.0.0").strip()
-    if gfx:
-        env.setdefault("HSA_OVERRIDE_GFX_VERSION", gfx)
+    try:
+        from jarvis.gpu_routing import gpu_env_for_subprocess
+
+        env.update(gpu_env_for_subprocess())
+    except Exception:
+        pass
+    pref = (os.getenv("JARVIS_GPU_PREFER") or "auto").strip().lower()
+    if pref != "nvidia":
+        gfx = os.getenv("JARVIS_ROCM_GFX", "11.0.0").strip()
+        if gfx:
+            env.setdefault("HSA_OVERRIDE_GFX_VERSION", gfx)
     return env
 
 
@@ -148,6 +156,13 @@ def ensure_ollama(timeout: float = 45) -> bool:
     if not shutil.which("ollama"):
         _log("Ollama: binary not found in PATH")
         return False
+    ollama_env = os.environ.copy()
+    try:
+        from jarvis.gpu_routing import gpu_env_for_subprocess
+
+        ollama_env.update(gpu_env_for_subprocess())
+    except Exception:
+        pass
     with _lock:
         if _ollama_healthy():
             return True
@@ -156,6 +171,7 @@ def ensure_ollama(timeout: float = 45) -> bool:
                 ["ollama", "serve"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                env=ollama_env,
             )
             _log("Ollama: starting…")
         except Exception as e:
