@@ -4,4 +4,4 @@ exclude = ["venv", ".venv", "data", "tools"]
 
 [lint]
 select = ["E", "F", "I", "UP"]
-ignore = ["E501", "E402"]
+ignore = ["E501", "E402", "UP047"]

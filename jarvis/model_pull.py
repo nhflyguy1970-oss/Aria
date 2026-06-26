@@ -1,6 +1,6 @@
 import shutil
 import subprocess
-from typing import Iterator
+from collections.abc import Iterator
 
 
 def pull_model(model: str) -> Iterator[dict]:

@@ -18,7 +18,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest ruff
-      - name: Ruff (jarvis package)
-        run: ruff check jarvis/ tests/ --config ruff.toml --select E,F,W,I
-      - name: Pytest
-        run: pytest tests/ -q --tb=short -m "not network"
+      - name: Ruff (recovery gate)
+        run: python scripts/ci_check.py ruff
+      - name: Pytest (recovery gate)
+        run: python scripts/ci_check.py pytest

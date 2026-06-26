@@ -2,7 +2,6 @@
 
 import logging
 import os
-import shutil
 import signal
 import subprocess
 import sys
@@ -215,7 +214,11 @@ def run_tray(uncensored: bool = False) -> None:
     global _watchdog, _services_watchdog
     from jarvis.audio_device import apply_system_default
     from jarvis.ha_docker import ensure_homeassistant_background
-    from jarvis.services import ServicesWatchdog, ensure_comfyui_background, pull_missing_models_background
+    from jarvis.services import (
+        ServicesWatchdog,
+        ensure_comfyui_background,
+        pull_missing_models_background,
+    )
     from jarvis.services import ensure_ollama as svc_ollama
     from jarvis.tray import run_tray_app
     from jarvis.watchdog import ServerWatchdog
@@ -277,7 +280,6 @@ def run_tray(uncensored: bool = False) -> None:
                 if wakeword_available():
                     try:
                         from jarvis.assistant_instance import get_assistant
-
                         from jarvis.audio_wakeword import configure
 
                         configure(chat_processor=get_assistant().process)
@@ -308,7 +310,6 @@ def run_tray(uncensored: bool = False) -> None:
             stop_server()
 
         from jarvis.config import is_uncensored
-
         from jarvis.proactive_scheduler import start as start_scheduler
 
         start_scheduler()
