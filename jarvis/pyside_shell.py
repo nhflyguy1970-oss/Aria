@@ -257,7 +257,21 @@ def _configure_web_view(view) -> None:
 def _build_fluent_window(url: str) -> Any:
     from qfluentwidgets import CaptionLabel, FluentIcon, FluentWindow, Theme, setTheme, TransparentToolButton
 
-    QApplication, *_p, QWebEngineView, QUrl, QIcon, _pal, _col, QWidget, QVBoxLayout, QHBoxLayout = _import_pyside()
+    (
+        QApplication,
+        _QMainWindow,
+        _QToolBar,
+        _QStatusBar,
+        QWebEngineView,
+        QUrl,
+        _QAction,
+        QIcon,
+        _QPalette,
+        _QColor,
+        QWidget,
+        QVBoxLayout,
+        QHBoxLayout,
+    ) = _import_pyside()
 
     setTheme(Theme.DARK)
     shell = "fluent" if _use_fluent_chrome() else "pyside"
@@ -390,7 +404,12 @@ def run_window_blocking(url: str, *, wait_for_ready: bool = True) -> int:
         if use_fluent:
             _apply_fluent_theme(app)
             os.environ["JARVIS_SHELL"] = "pyside-fluent"
-            window = _build_fluent_window(url)
+            try:
+                window = _build_fluent_window(url)
+            except Exception as exc:
+                logger.warning("Fluent window failed (%s) — using Fusion fallback", exc)
+                os.environ["JARVIS_SHELL"] = "pyside"
+                window = _build_window(url)
         else:
             if _use_fluent_chrome() and not fluent_available():
                 logger.warning("Fluent widgets requested but not installed — using Fusion theme")

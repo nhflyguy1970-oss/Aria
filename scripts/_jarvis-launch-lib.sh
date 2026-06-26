@@ -51,9 +51,17 @@ jarvis_resolve_display() {
       fi
     done < <(loginctl list-sessions --no-legend 2>/dev/null || true)
   fi
-  if [[ -S "/tmp/.X11-unix/X0" ]]; then
-    export DISPLAY=":0"
-  fi
+  local sock dval
+  for sock in /tmp/.X11-unix/X*; do
+    [[ -S "$sock" ]] || continue
+    dval=":${sock##*/X}"
+    if command -v xdpyinfo &>/dev/null; then
+      xdpyinfo -display "$dval" &>/dev/null && export DISPLAY="$dval" && return 0
+    else
+      export DISPLAY="$dval"
+      return 0
+    fi
+  done
   export DISPLAY="${DISPLAY:-:0}"
 }
 
