@@ -1,14 +1,33 @@
-# Source Generated with Decompyle++
-# File: journal_handlers.cpython-312.pyc (Python 3.12)
+"""Journal read handlers."""
 
-'''Journal read handlers.'''
 from __future__ import annotations
+
 from jarvis.handlers.registry import register_action
 from jarvis.response import ok
-journal_today = (lambda assistant = None, params = None, message = register_action('journal_today', module = 'journal', description = "Today's daily journal page"): if not params.get('day'):
-params.get('day')day = ''if not day:
-daypage = assistant.journal.format_page('daily', None)ok(page, module = 'journal'))()
-journal_monthly = (lambda assistant = None, params = None, message = register_action('journal_monthly', module = 'journal', description = 'Monthly journal page'): _month_key = _month_keyimport jarvis.modules.journalif not params.get('month'):
-params.get('month')month = _month_key()page = assistant.journal.format_page('monthly', month)ok(page, module = 'journal'))()
-journal_open_tasks = (lambda assistant = None, params = None, message = register_action('journal_open_tasks', module = 'journal', description = 'Open journal tasks'): pass# WARNING: Decompyle incomplete
-)()
+
+
+@register_action("journal_today", module="journal", description="Today's daily journal page")
+def journal_today(assistant, params: dict, message: str) -> dict:
+    day = params.get("day") or ""
+    page = assistant.journal.format_page("daily", day or None)
+    return ok(page, module="journal")
+
+
+@register_action("journal_monthly", module="journal", description="Monthly journal page")
+def journal_monthly(assistant, params: dict, message: str) -> dict:
+    from jarvis.modules.journal import _month_key
+
+    month = params.get("month") or _month_key()
+    page = assistant.journal.format_page("monthly", month)
+    return ok(page, module="journal")
+
+
+@register_action("journal_open_tasks", module="journal", description="Open journal tasks")
+def journal_open_tasks(assistant, params: dict, message: str) -> dict:
+    tasks = assistant.journal.open_tasks()
+    if not tasks:
+        return ok("No open journal tasks — you're clear.", module="journal")
+    from jarvis.modules.journal import _format_bullet
+
+    lines = "\n".join(f"• [{t.get('section')}] {_format_bullet(t)}" for t in tasks)
+    return ok(f"**Open tasks ({len(tasks)}):**\n\n{lines}", module="journal")
