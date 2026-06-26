@@ -1,4 +1,5 @@
 # Secrets and local runtime state
+data/
 data/jarvis.env
 data/uncensored_auth.json
 data/uncensored_sessions.json
@@ -33,3 +34,5 @@ tools/piper/
 *.swp
 .idea/
 .vscode/
+jarvis.log
+.aider*
