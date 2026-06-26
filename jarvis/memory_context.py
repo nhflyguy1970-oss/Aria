@@ -1,330 +1,350 @@
-"""Memory context: system prompt block, conflicts, project namespace, smart auto-memory."""
+# Source Generated with Decompyle++
+# File: memory_context.cpython-312.pyc (Python 3.12)
 
+'''Memory context: system prompt block, conflicts, project namespace, smart auto-memory.'''
 from __future__ import annotations
-
 import re
 import subprocess
 from datetime import date, datetime, timezone
 from pathlib import Path
-
 from jarvis.config import PROJECT_ROOT
+_JOURNAL_MEMORY = re.compile('^From bullet journal \\(([^)]+)\\):\\s*(.+)$', re.I | re.S)
+_JOURNAL_DATE = re.compile('(\\d{4}-\\d{2}-\\d{2})')
+_RESUME_HINTS = re.compile('\\b(resume|continue|checkpoint|left off|where we|coding task|debug until|pick up|unfinished|still working on)\\b', re.I)
+_CODING_FILE_HINTS = re.compile('\\b(fix|debug|implement|patch|refactor|run tests|pytest)\\b.*\\.py\\b|\\.py\\b.*\\b(fix|debug|implement|patch|refactor|tests?)\\b', re.I)
+AUTO_MEMORY_MODES = ('off', 'explicit', 'smart')
+JOURNAL_LEARN_TAG = 'journal-learn'
+GENERIC_AUTO_PATTERNS = ('user asked', 'user wanted', 'the user is', 'assistant (said|replied|explained)', 'conversation about', 'discussed (the|a) topic')
 
-_JOURNAL_MEMORY = re.compile(
-    r"^From bullet journal \(([^)]+)\):\s*(.+)$",
-    re.I | re.S,
-)
-_JOURNAL_DATE = re.compile(r"(\d{4}-\d{2}-\d{2})")
-_RESUME_HINTS = re.compile(
-    r"\b(resume|continue|checkpoint|left off|where we|coding task|debug until|"
-    r"pick up|unfinished|still working on)\b",
-    re.I,
-)
-_CODING_FILE_HINTS = re.compile(
-    r"\b(fix|debug|implement|patch|refactor|run tests|pytest)\b.*\.py\b|"
-    r"\.py\b.*\b(fix|debug|implement|patch|refactor|tests?)\b",
-    re.I,
-)
-
-AUTO_MEMORY_MODES = ("off", "explicit", "smart")
-GENERIC_AUTO_PATTERNS = (
-    r"user asked",
-    r"user wanted",
-    r"the user is",
-    r"assistant (said|replied|explained)",
-    r"conversation about",
-    r"discussed (the|a) topic",
-)
+def _profile_name_line(profile = None):
+    '''Single canonical name line — env override, then latest profile name tag.'''
+    import os
+    if not os.getenv('JARVIS_USER_NAME'):
+        os.getenv('JARVIS_USER_NAME')
+    env_name = ''.strip()
+    if env_name:
+        return f'''User\'s name is {env_name}.'''
+# WARNING: Decompyle incomplete
 
 
-def detect_project_namespace(root: Path | None = None) -> str:
-    """Slug from git repo name or project folder."""
-    base = (root or PROJECT_ROOT).resolve()
+def resolve_project_namespace(root = None):
+    '''Active workspace slug when set, else git-derived namespace.'''
+    get_active_slug = get_active_slug
+    import jarvis.active_project
+    slug = get_active_slug()
+    if slug:
+        return slug
+    return None(root)
+
+
+def detect_project_namespace(root = None):
+    '''Slug from git repo name or project folder.'''
+    if not root:
+        root
+    base = PROJECT_ROOT.resolve()
+    
     try:
-        r = subprocess.run(
-            ["git", "-C", str(base), "rev-parse", "--show-toplevel"],
-            capture_output=True,
-            text=True,
-            timeout=3,
-        )
+        r = subprocess.run([
+            'git',
+            '-C',
+            str(base),
+            'rev-parse',
+            '--show-toplevel'], capture_output = True, text = True, timeout = 3)
         if r.returncode == 0:
             base = Path(r.stdout.strip())
+        name = re.sub('[^\\w-]+', '-', base.name.lower()).strip('-')
+        if not name:
+            name
+        return 'default'
     except (OSError, subprocess.TimeoutExpired):
-        pass
-    name = re.sub(r"[^\w-]+", "-", base.name.lower()).strip("-")
-    return name or "default"
+        continue
 
 
-def system_prompt_block(memory_store, *, max_chars: int = 2200) -> str:
-    """Stable user context for the system prompt."""
-    from jarvis.trust_memory import filter_trusted_content, seed_default_strategies
 
+def system_prompt_block(memory_store = None, *, max_chars):
+    '''Stable user context for the system prompt.'''
+    filter_trusted_content = filter_trusted_content
+    seed_default_strategies = seed_default_strategies
+    import jarvis.trust_memory
     seed_default_strategies(memory_store)
-
-    lines = ["Persistent user context (trust this over guesses):"]
-
-    profile = memory_store.list_entries(namespace="profile")
-    summary = next((p for p in profile if "summary" in (p.get("tags") or [])), None)
+    explicit_teaching_system_block = explicit_teaching_system_block
+    import jarvis.explicit_teaching
+    teach_block = explicit_teaching_system_block(memory_store)
+    lines = []
+    if teach_block:
+        lines.append(teach_block)
+        lines.append('')
+    corrections_system_block = corrections_system_block
+    import jarvis.correction_learning
+    correction_block = corrections_system_block(memory_store)
+    if correction_block:
+        lines.append(correction_block)
+        lines.append('')
+    lines.append('Persistent user context (trust this over guesses):')
+    profile = memory_store.list_entries(namespace = 'profile')
+    name_line = _profile_name_line(profile)
+    if name_line:
+        lines.append(f'''- {name_line}''')
+    summary = (lambda .0: pass# WARNING: Decompyle incomplete
+)(profile(), None)
     if summary:
-        lines.append(f"- {summary['content']}")
+        lines.append(f'''- {summary['content']}''')
     else:
-        for p in profile[:4]:
-            lines.append(f"- {p['content']}")
-
-    for e in memory_store.list_entries(entry_type="strategy")[:4]:
-        line = filter_trusted_content(e["content"])
-        if line:
-            lines.append(f"- Rule: {line}")
-
-    stable = [
-        e for e in memory_store.list_entries()
-        if e.get("type") in ("fact", "preference", "project")
-        and e.get("namespace") not in ("profile",)
-        and "checkpoint" not in (e.get("tags") or [])
-        and e.get("type") not in ("auto", "failure", "strategy")
-    ]
-    for e in stable:
-        line = filter_trusted_content(e["content"])
-        if line:
-            lines.append(f"- {line}")
-        if len(lines) >= 10:
-            break
-
-    block = "\n".join(lines)
-    if len(block) > max_chars:
-        block = block[: max_chars - 3] + "..."
-    return block if len(lines) > 1 else ""
-
-
-def find_conflicts(memory_store, *, threshold: float = 0.82) -> list[dict]:
-    """Find likely contradictory or duplicate memory pairs."""
-    from jarvis import llm
-    from jarvis.cheatsheets import is_cheatsheet_entry
-
-    entries = [
-        e for e in memory_store.list_entries(include_embedding=True)
-        if not is_cheatsheet_entry(e)
-    ]
-    conflicts: list[dict] = []
-    seen: set[tuple[str, str]] = set()
-
-    for i, a in enumerate(entries):
-        for b in entries[i + 1 :]:
-            if a.get("id") == b.get("id"):
+        shown = 0
+        for p in profile:
+            if not p.get('tags'):
+                p.get('tags')
+            tags = []
+            if 'name' in tags:
                 continue
-            key = tuple(sorted([a.get("id", ""), b.get("id", "")]))
-            if key in seen:
-                continue
-
-            ca, cb = a["content"].lower(), b["content"].lower()
-            if ca == cb or ca in cb or cb in ca:
-                conflicts.append({
-                    "kind": "duplicate",
-                    "a": memory_store.to_public(a),
-                    "b": memory_store.to_public(b),
-                    "score": 1.0,
-                })
-                seen.add(key)
-                continue
-
-            emb_a, emb_b = a.get("embedding") or [], b.get("embedding") or []
-            sim = llm.cosine_similarity(emb_a, emb_b) if emb_a and emb_b else 0.0
-            if sim < threshold:
-                continue
-
-            if _looks_contradictory(a["content"], b["content"]):
-                conflicts.append({
-                    "kind": "contradiction",
-                    "a": memory_store.to_public(a),
-                    "b": memory_store.to_public(b),
-                    "score": round(sim, 3),
-                })
-                seen.add(key)
-            elif sim >= 0.92 and a.get("namespace") == b.get("namespace"):
-                conflicts.append({
-                    "kind": "similar",
-                    "a": memory_store.to_public(a),
-                    "b": memory_store.to_public(b),
-                    "score": round(sim, 3),
-                })
-                seen.add(key)
-
-    return conflicts[:20]
+            if shown >= 4:
+                profile
+            else:
+                lines.append(f'''- {p['content']}''')
+                shown += 1
+    for e in memory_store.list_entries(entry_type = 'strategy')[:4]:
+        line = filter_trusted_content(e['content'])
+        if not line:
+            continue
+        lines.append(f'''- Rule: {line}''')
+    for e in memory_store.list_entries(namespace = 'environment')[:5]:
+        line = filter_trusted_content(e['content'])
+        if not line:
+            continue
+        lines.append(f'''- {line}''')
+# WARNING: Decompyle incomplete
 
 
-def _looks_contradictory(a: str, b: str) -> bool:
-    la, lb = a.lower(), b.lower()
-    neg = ("don't", "do not", "never", "not ", "no longer", "avoid")
-    prefs = ("prefer", "likes", "uses", "wants", "enjoy")
-    if any(p in la for p in prefs) and any(p in lb for p in prefs):
-        if any(n in la for n in neg) != any(n in lb for n in neg):
-            return True
-    opposites = [
-        ("dark mode", "light mode"),
-        ("tabs", "spaces"),
-        ("vim", "emacs"),
-        ("brief", "detailed"),
-        ("linux", "windows"),
-        ("morning", "evening"),
-    ]
-    for x, y in opposites:
-        if (x in la and y in lb) or (y in la and x in lb):
-            return True
-    return False
+def find_conflicts(memory_store = None, *, threshold):
+    '''Find likely contradictory or duplicate memory pairs.'''
+    llm = llm
+    import jarvis
+    is_cheatsheet_entry = is_cheatsheet_entry
+    import jarvis.cheatsheets
+# WARNING: Decompyle incomplete
 
 
-def should_extract_auto_memory(user_msg: str, assistant_msg: str, mode: str) -> bool:
-    if mode == "off":
+def _normalize_conflict_text(content = None):
+    if not content:
+        content
+    return re.sub('\\s+', ' ', ''.lower().strip())
+
+
+def _is_internal_journal_mirror(a = None, b = None):
+    '''Same journal-learn text stored as both fact and note — not a user conflict.'''
+    if _normalize_conflict_text(a.get('content', '')) != _normalize_conflict_text(b.get('content', '')):
         return False
-    if mode == "explicit":
-        return bool(re.search(r"\b(remember|don't forget|note that|keep in mind)\b", user_msg, re.I))
-    # smart
-    if re.search(r"\b(remember|don't forget|note that|keep in mind)\b", user_msg, re.I):
+    if not a.get('tags'):
+        a.get('tags')
+    if not b.get('tags'):
+        b.get('tags')
+    tags_b = []
+    tags_a = []
+    if JOURNAL_LEARN_TAG not in tags_a or JOURNAL_LEARN_TAG not in tags_b:
+        return False
+    return {
+        a.get('type'),
+        b.get('type')} == {
+        'fact',
+        'note'}
+
+
+def _conflict_priority(entry = None):
+    '''Higher priority = keep. Explicit teach/correction beats auto; newer beats older.'''
+    if not entry.get('tags'):
+        entry.get('tags')
+    tags = []
+    score = 0
+    if 'user-corrected' in tags or 'correction-learn' in tags:
+        score += 40
+    if entry.get('type') in ('teaching', 'strategy', 'preference'):
+        score += 20
+    if entry.get('type') == 'auto':
+        score -= 10
+    if 'brain-consolidated' in tags:
+        score += 5
+    if not entry.get('timestamp'):
+        entry.get('timestamp')
+    return (score, '')
+
+
+def auto_resolve_obvious_conflicts(memory_store = None, *, threshold):
+    '''Drop obvious duplicate pairs — keep higher-priority or newer entry.'''
+    removed = 0
+    for conflict in find_conflicts(memory_store, threshold = threshold):
+        if conflict.get('kind') not in ('duplicate', 'similar'):
+            continue
+        b = conflict['b']
+        a = conflict['a']
+        pb = _conflict_priority(b)
+        pa = _conflict_priority(a)
+        if pa[0] != pb[0]:
+            drop = b if pa[0] > pb[0] else a
+        elif pa[1] != pb[1]:
+            drop = a if pa[1] >= pb[1] else b
+        else:
+            drop = b
+        if not memory_store.delete_id(drop['id']):
+            continue
+        removed += 1
+    return {
+        'removed': removed }
+
+
+def _looks_contradictory(a = None, b = None):
+    pass
+# WARNING: Decompyle incomplete
+
+
+def should_extract_auto_memory(user_msg = None, assistant_msg = None, mode = None):
+    if mode == 'off':
+        return False
+    if mode == 'explicit':
+        return bool(re.search("\\b(remember|don't forget|note that|keep in mind)\\b", user_msg, re.I))
+    if None.search("\\b(remember|don't forget|note that|keep in mind)\\b", user_msg, re.I):
         return True
-    if re.search(r"\?\s*$", user_msg.strip()) and not re.search(
-        r"\b(i (?:am|'m)|my name|i prefer|i like|i use|i live|call me)\b", user_msg, re.I
-    ):
+    if not re.search('\\?\\s*$', user_msg.strip()) and re.search("\\b(i (?:am|'m)|my name|i prefer|i like|i use|i live|call me)\\b", user_msg, re.I):
         return False
     if len(user_msg.strip()) < 12:
         return False
-    return bool(re.search(
-        r"\b(i (?:am|'m)|my name|call me|i prefer|i like|i love|i hate|i use|i work|i live)\b",
-        user_msg,
-        re.I,
-    ))
+    return bool(re.search("\\b(i (?:am|'m)|my name|call me|i prefer|i like|i love|i hate|i use|i work|i live)\\b", user_msg, re.I))
 
 
-def filter_extracted_facts(facts: list[str], user_msg: str) -> list[str]:
-    """Drop low-value auto-extracted facts."""
-    out = []
-    for fact in facts:
-        f = fact.strip()
-        if len(f) < 12:
-            continue
-        lower = f.lower()
-        if any(re.search(p, lower) for p in GENERIC_AUTO_PATTERNS):
-            continue
-        if "jarvis" in lower and "user" not in lower:
-            continue
-        out.append(f)
-    return out[:2]
+def filter_extracted_facts(facts = None, user_msg = None):
+    '''Drop low-value auto-extracted facts.'''
+    pass
+# WARNING: Decompyle incomplete
 
 
-def should_inject_resume_context(message: str, session=None) -> bool:
-    """Only surface coding resume/checkpoint hints when the user is continuing that work."""
-    from jarvis.router import is_meta_self_question
+def build_turn_extraction_text(user_msg = None, assistant_msg = None, *, max_user, max_assistant):
+    '''Format a chat turn for memory extraction (user + optional assistant reply).'''
+    if not user_msg:
+        user_msg
+    user = ''.strip()[:max_user]
+    if not assistant_msg:
+        assistant_msg
+    assistant = ''.strip()[:max_assistant]
+    if assistant:
+        return f'''User: {user}\nAssistant: {assistant}'''
 
-    text = (message or "").strip()
-    if not text or is_meta_self_question(text):
+
+def build_conversation_extraction_text(messages = None, *, max_messages, max_chars):
+    '''Format recent dialogue for periodic conversation memory extraction.'''
+    pass
+# WARNING: Decompyle incomplete
+
+
+def branch_memory_namespace(branch_id = None):
+    '''Per-chat-branch namespace for conversation memory.'''
+    if not branch_id:
+        branch_id
+    if not 'main'.strip():
+        'main'.strip()
+    bid = 'main'
+    return f'''branch:{bid}'''
+
+
+def branch_summary_text(messages = None, *, max_messages, max_chars):
+    '''Compact branch dialogue for upserted branch summary.'''
+    blob = build_conversation_extraction_text(messages, max_messages = max_messages, max_chars = max_chars)
+    if not blob.strip():
+        return ''
+    return f'''Conversation summary ({len(blob.splitlines())} turns):\n{blob}'''
+
+
+def summarize_branch_dialogue(messages = None, *, max_messages, max_chars):
+    '''LLM summary of recent branch dialogue; falls back to compact text.'''
+    blob = build_conversation_extraction_text(messages, max_messages = max_messages, max_chars = max_chars)
+    if not blob.strip():
+        return ''
+    prompt = f'''Summarize this conversation in 3-5 short factual bullet points. Focus on user preferences, decisions, tasks, and outcomes. No fluff.\n\n{blob[:5000]}'''
+    
+    try:
+        llm = llm
+        import jarvis
+        summary = llm.ask(llm.general_model(), [
+            {
+                'role': 'user',
+                'content': prompt }]).strip()
+        if summary:
+            return summary[:4000]
+        return branch_summary_text(messages, max_messages = max_messages, max_chars = max_chars)
+    except Exception:
+        continue
+
+
+
+def should_inject_resume_context(message = None, session = None):
+    '''Only surface coding resume/checkpoint hints when the user is continuing that work.'''
+    is_meta_self_question = is_meta_self_question
+    import jarvis.router
+    if not message:
+        message
+    text = ''.strip()
+    if text or is_meta_self_question(text):
         return False
-    if session is not None and getattr(session, "last_module", "") == "coding":
-        return True
-    if _RESUME_HINTS.search(text):
-        return True
-    if _CODING_FILE_HINTS.search(text):
-        return True
-    return False
+# WARNING: Decompyle incomplete
 
 
-def _journal_date_from_location(location: str) -> date | None:
-    m = _JOURNAL_DATE.search(location or "")
+def _journal_date_from_location(location = None):
+    if not location:
+        location
+    m = _JOURNAL_DATE.search('')
     if not m:
         return None
+    
     try:
         return date.fromisoformat(m.group(1))
     except ValueError:
         return None
 
 
-def _format_journal_date(d: date) -> str:
-    return d.strftime("%B ") + str(d.day)
+
+def _format_journal_date(d = None):
+    return d.strftime('%B ') + str(d.day)
 
 
-def normalize_journal_memory_text(content: str, *, journal_date: date | None = None) -> str:
+def normalize_journal_memory_text(content = None, *, journal_date):
     """Store journal bullets as stable facts, not relative 'today' phrasing."""
-    m = _JOURNAL_MEMORY.match((content or "").strip())
+    if not content:
+        content
+    m = _JOURNAL_MEMORY.match(''.strip())
     if not m:
-        return (content or "").strip()
-
-    location, body = m.group(1).strip(), m.group(2).strip()
-    body = re.sub(r"^[\s—\-–]+", "", body).strip()
-    d = journal_date or _journal_date_from_location(location)
-    if d is None:
-        return f"From bullet journal ({location}): {body}"
-
-    birthday = re.match(
-        r"today is (.+?)'s birthday\.?$",
-        body,
-        re.I,
-    )
-    if birthday:
-        who = birthday.group(1).strip()
-        who_title = who[:1].upper() + who[1:] if who else "Their"
-        return f"{who_title}'s birthday is {_format_journal_date(d)}."
-
-    if re.search(r"\btoday\b", body, re.I):
-        body = re.sub(
-            r"^Today is ",
-            f"On {_format_journal_date(d)}, ",
-            body,
-            count=1,
-            flags=re.I,
-        )
-        body = re.sub(r"\btoday\b", _format_journal_date(d), body, flags=re.I)
-
-    return f"From bullet journal ({location}): {body}"
+        if not content:
+            content
+        return ''.strip()
+    body = m.group(2).strip()
+    location = None.group(1).strip()
+    body = re.sub('^[\\s—\\-–]+', '', body).strip()
+    if not journal_date:
+        journal_date
+    d = _journal_date_from_location(location)
+# WARNING: Decompyle incomplete
 
 
-def contextualize_memory_for_chat(content: str, *, today: date | None = None) -> str | None:
+def contextualize_memory_for_chat(content = None, *, today):
     """Rewrite or drop dated journal memories so past 'today' notes do not confuse chat."""
-    text = (content or "").strip()
+    if not content:
+        content
+    text = ''.strip()
     if not text:
         return None
-
     m = _JOURNAL_MEMORY.match(text)
     if not m:
         return text
-
-    location, body = m.group(1).strip(), m.group(2).strip()
+    body = m.group(2).strip()
+    location = None.group(1).strip()
     journal_day = _journal_date_from_location(location)
-    now = today or datetime.now(timezone.utc).date()
-    if journal_day is None or journal_day >= now:
-        return normalize_journal_memory_text(text, journal_date=journal_day)
-
-    normalized = normalize_journal_memory_text(text, journal_date=journal_day)
-    if re.search(r"\bbirthday\b", normalized, re.I):
-        birthday_only = re.match(r"^(.+'s birthday is .+\.)$", normalized, re.I)
-        if birthday_only:
-            return birthday_only.group(1)
-        return normalized
-    if re.search(r"\btoday\b", body, re.I):
-        return None
-    return f"{normalized} (journal note from {journal_day.isoformat()}, not today)"
+    if not today:
+        today
+    now = datetime.now(timezone.utc).date()
+# WARNING: Decompyle incomplete
 
 
-def build_quick_checkpoint(session, messages: list[dict], task_manager=None) -> str | None:
-    """Template checkpoint for shutdown — no LLM call."""
-    from jarvis.trust_memory import filter_trusted_content, is_test_artifact_path
+def build_quick_checkpoint(session = None, messages = None, task_manager = None):
+    '''Template checkpoint for shutdown — no LLM call.'''
+    filter_trusted_content = filter_trusted_content
+    is_test_artifact_path = is_test_artifact_path
+    import jarvis.trust_memory
+# WARNING: Decompyle incomplete
 
-    user_msgs = [m["content"][:120] for m in messages if m.get("role") == "user"][-3:]
-    if not user_msgs and not session.last_file:
-        return None
-
-    parts = []
-    if session.last_file and not is_test_artifact_path(session.last_file):
-        parts.append(f"last file `{session.last_file}`")
-    if session.last_module and session.last_module != "general":
-        parts.append(f"module {session.last_module}")
-    if session.last_coding_mode:
-        parts.append(f"coding mode {session.last_coding_mode}")
-    if task_manager:
-        t = task_manager.active()
-        if t:
-            parts.append(f"task `{t.title}` ({t.status})")
-    if user_msgs:
-        clean = [m for m in user_msgs if filter_trusted_content(m)]
-        if clean:
-            parts.append("recent asks: " + " | ".join(clean))
-
-    if len(parts) < 2 and not session.last_file:
-        return None
-    return "Auto-saved on exit — " + "; ".join(parts) + "."

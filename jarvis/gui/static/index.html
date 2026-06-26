@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0a0c10" />
   <meta name="application-name" content="ARIA" />
-  <meta name="jarvis-ui-version" content="5.15.7" />
+  <meta name="jarvis-ui-version" content="5.16.50" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>ARIA</title>
@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=4.2.0" />
+  <link rel="stylesheet" href="/static/style.css?v=4.4.0" />
   <script>
     (function () {
       var standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -25,12 +25,18 @@
   </script>
 </head>
 <body>
+  <div id="jarvisBootFlash" class="jarvis-boot-flash" aria-hidden="true"></div>
   <div class="sidebar-backdrop" aria-hidden="true"></div>
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-icon">
-          <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="16" r="6" fill="currentColor" opacity="0.9"/></svg>
+        <div class="brand-icon brand-icon--arc">
+          <svg class="arc-reactor" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <circle cx="16" cy="16" r="14" stroke="currentColor" stroke-width="1.2" opacity="0.55"/>
+            <circle cx="16" cy="16" r="9" stroke="currentColor" stroke-width="1" opacity="0.75"/>
+            <circle cx="16" cy="16" r="4" fill="currentColor" opacity="0.95"/>
+            <path d="M16 2v6M16 24v6M2 16h6M24 16h6" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+          </svg>
         </div>
         <div>
           <h1 id="appTitle">ARIA</h1>
@@ -187,7 +193,8 @@
             <button type="button" id="restartServerBtn" class="ghost-btn small" title="Restart API server. Or run: scripts/jarvis-ctl.sh restart">Restart server</button>
           </div>
           <div class="sidebar-btn-row sidebar-btn-row--compact">
-            <button type="button" id="jarvisBlueToggle" class="ghost-btn small">Blue theme</button>
+            <button type="button" id="jarvisAliveToggle" class="ghost-btn small active">Life UI on</button>
+            <button type="button" id="jarvisBlueToggle" class="ghost-btn small">HUD mode</button>
             <button type="button" id="themeToggle" class="light-theme-btn ghost-btn small">Light theme</button>
           </div>
           <div class="sidebar-btn-row sidebar-btn-row--compact">
@@ -317,6 +324,7 @@
       </nav>
 
       <div id="chatView" class="view-panel">
+      <canvas id="jarvisAmbientCanvas" aria-hidden="true"></canvas>
       <div id="startupOverlay" class="startup-overlay hidden">
         <div class="startup-card">
           <h3 id="startupOverlayTitle">Starting ARIA…</h3>
@@ -982,9 +990,10 @@
   <script src="/static/journal.js?v=5.8.1"></script>
   <script src="/static/video_studio.js?v=1.2.2"></script>
   <script src="/static/meme_studio.js?v=1.1.0"></script>
-  <script src="/static/movie_tiers.js?v=1.0.4"></script>
+  <script src="/static/movie_tiers.js?v=1.0.18"></script>
+  <script src="/static/jarvis_ambient.js?v=1.0.0"></script>
   <script type="module" src="/static/modules/jobs.mjs?v=1.0.0"></script>
   <script type="module" src="/static/modules/health.mjs?v=1.0.0"></script>
-  <script src="/static/app.js?v=5.15.7"></script>
+  <script src="/static/app.js?v=5.16.50"></script>
 </body>
 </html>

@@ -3513,6 +3513,7 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
 function hideStartupOverlay(message) {
   if (startupStatus && message) startupStatus.textContent = message;
   startupOverlay?.classList.add("hidden");
+  window.jarvisFlashSystemsOnline?.();
 }
 
 function appendStartupLog(msg) {

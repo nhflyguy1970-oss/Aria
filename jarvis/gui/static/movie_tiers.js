@@ -496,8 +496,8 @@
       document.documentElement.classList.toggle("theme-jarvis-blue", on);
       localStorage.setItem(LS.jarvisBlue, on ? "1" : "0");
     };
-    apply(localStorage.getItem(LS.jarvisBlue) === "1");
-    btn?.addEventListener("click", () => apply(!document.documentElement.classList.contains("theme-jarvis-blue")));
+    apply(localStorage.getItem(LS.jarvisBlue) !== "0");
+    /* HUD toggle click handled by jarvis_ambient.js */
   }
 
   /* --- Keyboard shortcuts (Tier 4 #38) --- */

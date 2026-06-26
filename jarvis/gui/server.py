@@ -26,7 +26,7 @@ from jarvis.ollama_health import check_ollama
 STATIC_DIR = Path(__file__).parent / "static"
 ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 APP_VERSION = "3.1.0"
-UI_VERSION = os.getenv("JARVIS_UI_VERSION", "5.15.7")
+UI_VERSION = os.getenv("JARVIS_UI_VERSION", "5.16.50")
 assistant = JarvisAssistant(uncensored=is_uncensored())
 
 from jarvis.assistant_instance import set_assistant

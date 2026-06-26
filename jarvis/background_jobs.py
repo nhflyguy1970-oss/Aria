@@ -10,16 +10,25 @@ if TYPE_CHECKING:
 BACKGROUND_ACTIONS = frozenset({
     "document_summarize",
     "learn_about",
+    "knowledge_research_run",
+    "self_upgrade_run",
+    "aria_self_fix",
 })
 
 ACTION_LABELS = {
     "document_summarize": "Document summarize",
     "learn_about": "Learn topic",
+    "knowledge_research_run": "Nightly knowledge research",
+    "self_upgrade_run": "Self-upgrade pipeline",
+    "aria_self_fix": "ARIA self-fix",
 }
 
 ACTION_MODULES = {
     "document_summarize": "document",
     "learn_about": "general",
+    "knowledge_research_run": "general",
+    "self_upgrade_run": "coding",
+    "aria_self_fix": "coding",
 }
 
 _HANDLER_METHODS: dict[str, str] = {
@@ -28,7 +37,7 @@ _HANDLER_METHODS: dict[str, str] = {
 }
 
 
-def submit_action(assistant: JarvisAssistant, action: str, params: dict, message: str) -> str:
+def submit_action(assistant: "JarvisAssistant", action: str, params: dict, message: str) -> str:
     from jarvis.coding_jobs import submit
 
     method_name = _HANDLER_METHODS.get(action)

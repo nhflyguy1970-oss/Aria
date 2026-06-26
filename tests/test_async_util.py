@@ -1,29 +1,27 @@
-"""Tests for async_util helpers."""
+# Source Generated with Decompyle++
+# File: test_async_util.cpython-312-pytest-9.0.3.pyc (Python 3.12)
 
-import asyncio
+'''Tests for async_util helpers.'''
+import builtins as @py_builtins
 
+rewrite
+import asyncio = import _pytest.assertion.rewrite, assertion
 from jarvis.async_util import run_sync, stream_sync_iter
 
-
 def test_run_sync_runs_in_thread():
+    
     async def _run():
-        def add(a, b):
-            return a + b
-
-        assert await run_sync(add, 2, 3) == 5
+        pass
+    # WARNING: Decompyle incomplete
 
     asyncio.run(_run())
 
 
 def test_stream_sync_iter_bridges_generator():
+    
     async def _run():
-        def gen():
-            yield {"a": 1}
-            yield {"b": 2}
-
-        out = []
-        async for item in stream_sync_iter(gen):
-            out.append(item)
-        assert out == [{"a": 1}, {"b": 2}]
+        pass
+    # WARNING: Decompyle incomplete
 
     asyncio.run(_run())
+

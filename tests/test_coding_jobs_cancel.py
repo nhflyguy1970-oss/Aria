@@ -1,22 +1,14 @@
-"""Coding job cancel and workers."""
+# Source Generated with Decompyle++
+# File: test_coding_jobs_cancel.cpython-312-pytest-9.0.3.pyc (Python 3.12)
 
+'''Coding job cancel and workers.'''
+import builtins as @py_builtins
+
+rewrite
+import threading = import _pytest.assertion.rewrite, assertion
 from jarvis import coding_jobs
 
-
 def test_cancel_queued_job():
-    coding_jobs._jobs.clear()
-    coding_jobs._history.clear()
-    coding_jobs._active_ids.clear()
+    pass
+# WARNING: Decompyle incomplete
 
-    def slow():
-        return {"ok": True, "message": "done"}
-
-    job_id = coding_jobs.submit("test", slow)
-    assert coding_jobs.cancel_job(job_id)
-    job = coding_jobs.get_job(job_id)
-    assert job["cancelled"] is True
-
-
-def test_job_stats_workers():
-    stats = coding_jobs.job_stats()
-    assert stats["workers"] >= 1

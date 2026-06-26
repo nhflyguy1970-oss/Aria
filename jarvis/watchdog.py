@@ -1,177 +1,187 @@
+# Source Generated with Decompyle++
+# File: watchdog.cpython-312.pyc (Python 3.12)
+
 import logging
 import socket
 import subprocess
 import threading
-import urllib.request
+import urllib.request as urllib
+logger = logging.getLogger('jarvis.watchdog')
 
-logger = logging.getLogger("jarvis.watchdog")
-
-
-def _media_work_active() -> bool:
-    """True while a GPU image/video job is running or queued."""
+def _media_work_active():
+    '''True while a GPU image/video job is running or queued.'''
+    
     try:
-        from jarvis.media_jobs import busy_state, has_active_work, has_active_work_persisted
-        from jarvis.restart_flag import controlled_restart_active
-        from jarvis.request_activity import active as chat_active
-
+        busy_state = busy_state
+        has_active_work = has_active_work
+        has_active_work_persisted = has_active_work_persisted
+        import jarvis.media_jobs
+        controlled_restart_active = controlled_restart_active
+        import jarvis.restart_flag
+        chat_active = active
+        import jarvis.request_activity
+        heavy_active = heavy_active
+        import jarvis.request_activity
         if controlled_restart_active():
             return True
-        if chat_active():
-            return True
-        try:
-            from jarvis.coding_jobs import has_active_work as coding_active
+            
+            try:
+                if chat_active() or heavy_active():
+                    return True
+                
+                try:
+                    coding_active = has_active_work
+                    import jarvis.coding_jobs
+                    if coding_active():
+                        return True
+                        
+                        try:
+                            if has_active_work_persisted():
+                                return True
+                                
+                                try:
+                                    if has_active_work():
+                                        return True
+                                        
+                                        try:
+                                            st = busy_state()
+                                            if not st.get('busy'):
+                                                st.get('busy')
+                                            return bool(st.get('pending'))
+                                            except Exception:
+                                                
+                                                try:
+                                                    continue
+                                                    
+                                                    try:
+                                                        pass
+                                                    except Exception:
+                                                        exc = None
+                                                        logger.debug('Media work check failed: %s', exc)
+                                                        exc = None
+                                                        del exc
+                                                        return False
+                                                        exc = None
+                                                        del exc
 
-            if coding_active():
-                return True
-        except Exception:
-            pass
-        if has_active_work_persisted():
-            return True
-        if has_active_work():
-            return True
-        st = busy_state()
-        return bool(st.get("busy") or st.get("pending"))
-    except Exception as exc:
-        logger.debug("Media work check failed: %s", exc)
-        return False
+
+
+
+
+
+
+
 
 
 class ServerWatchdog:
-    """Monitor Jarvis health and restart the server process if it dies."""
-
-    def __init__(
-        self,
-        health_url: str = "http://127.0.0.1:8765/api/ping",
-        interval: int = 15,
-        on_restart=None,
-        failures_before_restart: int = 3,
-        timeout: float = 8,
-    ):
+    '''Monitor Jarvis health and restart the server process if it dies.'''
+    
+    def __init__(self, health_url = None, interval = None, on_restart = None, failures_before_restart = ('http://127.0.0.1:8765/api/ping', 15, None, 4, 10), timeout = ('health_url', str, 'interval', int, 'failures_before_restart', int, 'timeout', float)):
         self.health_url = health_url
         self.interval = interval
         self.on_restart = on_restart
         self.failures_before_restart = max(1, failures_before_restart)
         self.timeout = timeout
         self._stop = threading.Event()
-        self._thread: threading.Thread | None = None
-        self._server_proc: subprocess.Popen | None = None
+        self._thread = None
+        self._server_proc = None
         self._restart_count = 0
         self._consecutive_failures = 0
 
-    def set_server_process(self, proc: subprocess.Popen | None) -> None:
+    
+    def set_server_process(self = None, proc = None):
         self._server_proc = proc
         self._consecutive_failures = 0
 
-    def _healthy(self) -> bool:
+    
+    def _healthy(self = None):
+        
         try:
-            with urllib.request.urlopen(self.health_url, timeout=self.timeout) as resp:
-                return resp.status == 200
-        except Exception as exc:
-            logger.debug("Health check failed: %s", exc)
-            return False
-
-    def _port_open(self) -> bool:
-        try:
-            from urllib.parse import urlparse
-
-            parsed = urlparse(self.health_url)
-            host = parsed.hostname or "127.0.0.1"
-            port = parsed.port or 8765
-            with socket.create_connection((host, port), timeout=self.timeout):
-                return True
-        except OSError:
-            return False
-
-    def _restart_server(self) -> None:
-        self._restart_count += 1
-        fail_count = self._consecutive_failures
-        self._consecutive_failures = 0
-        try:
-            from jarvis.restart_audit import log_restart_event
-
-            log_restart_event(
-                "watchdog",
-                detail=f"unhealthy restart #{self._restart_count}",
-                failures=fail_count,
-            )
-        except Exception as exc:
-            logger.debug("Could not write restart audit: %s", exc)
-        try:
-            from jarvis.metrics import note_watchdog_restart
-
-            note_watchdog_restart()
-        except Exception as exc:
-            logger.debug("Could not record watchdog restart metric: %s", exc)
-        logger.warning("Jarvis unhealthy — restart #%d", self._restart_count)
-        if self._server_proc and self._server_proc.poll() is not None:
-            self._server_proc = None
-        if self.on_restart:
-            self._server_proc = self.on_restart()
-        else:
-            logger.error("No restart callback configured")
-
-    def _loop(self) -> None:
-        while not self._stop.wait(self.interval):
-            if self._server_proc and self._server_proc.poll() is not None:
-                code = self._server_proc.returncode
+            resp = urllib.request.urlopen(self.health_url, timeout = self.timeout)
+            
+            try:
+                None(None, None)
+                return 
+                with None:
+                    if not None, resp.status == 200:
+                        pass
+                
                 try:
-                    from jarvis.restart_flag import controlled_restart_active
+                    return None
+                    
+                    try:
+                        pass
+                    except Exception:
+                        logger.debug('Health check failed: %s', exc)
+                        None = None
+                        del exc
+                        return False
+                        exc = None
+                        del exc
 
-                    if controlled_restart_active() or _media_work_active():
-                        logger.info(
-                            "Server process exited (code %s) during restart/media — not escalating",
-                            code,
-                        )
-                        self._consecutive_failures = 0
-                        continue
-                except Exception as exc:
-                    logger.debug("Restart/media gate check failed: %s", exc)
-                logger.warning("Server process exited (code %s)", code)
-                self._restart_server()
-                continue
-            if self._healthy():
-                self._consecutive_failures = 0
-                continue
-            if _media_work_active():
-                if self._consecutive_failures:
-                    logger.info("Health check slow during media job — not restarting server")
-                self._consecutive_failures = 0
-                continue
-            self._consecutive_failures += 1
-            threshold = self.failures_before_restart
-            if self._consecutive_failures < threshold:
-                logger.info(
-                    "Health check failed (%d/%d) — server may be busy",
-                    self._consecutive_failures,
-                    threshold,
-                )
-                continue
-            if not self._port_open():
-                if _media_work_active():
-                    logger.info("Port closed during media job — waiting before restart")
-                    self._consecutive_failures = 0
-                    continue
-                self._restart_server()
-            else:
-                if _media_work_active():
-                    logger.info("Wedged probe during media job — not restarting server")
-                    self._consecutive_failures = 0
-                    continue
-                logger.warning(
-                    "Liveness probe failed %d times with port open — restarting wedged server",
-                    self._consecutive_failures,
-                )
-                self._restart_server()
 
-    def start(self) -> None:
+
+
+
+    
+    def _port_open(self = None):
+        
+        try:
+            urlparse = urlparse
+            import urllib.parse
+            parsed = urlparse(self.health_url)
+            if not parsed.hostname:
+                parsed.hostname
+            host = '127.0.0.1'
+            if not parsed.port:
+                parsed.port
+            port = 8765
+            socket.create_connection((host, port), timeout = self.timeout)
+            
+            try:
+                None(None, None)
+                return True
+                with None:
+                    if not None:
+                        pass
+                
+                try:
+                    return None
+                    
+                    try:
+                        pass
+                    except OSError:
+                        return False
+
+
+
+
+
+    
+    def _restart_server(self = None):
+        self._consecutive_failures = self, self._restart_count += 1, ._restart_count
+        self._consecutive_failures = 0
+    # WARNING: Decompyle incomplete
+
+    
+    def _loop(self = None):
+        pass
+    # WARNING: Decompyle incomplete
+
+    
+    def start(self = None):
         if self._thread and self._thread.is_alive():
-            return
+            return None
         self._stop.clear()
-        self._thread = threading.Thread(target=self._loop, daemon=True, name="jarvis-watchdog")
+        self._thread = threading.Thread(target = self._loop, daemon = True, name = 'jarvis-watchdog')
         self._thread.start()
-        logger.info("Watchdog started (interval=%ds)", self.interval)
+        logger.info('Watchdog started (interval=%ds)', self.interval)
 
-    def stop(self) -> None:
+    
+    def stop(self = None):
         self._stop.set()
         if self._thread:
-            self._thread.join(timeout=3)
+            self._thread.join(timeout = 3)
+            return None
+
+
