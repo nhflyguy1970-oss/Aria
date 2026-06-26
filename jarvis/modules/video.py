@@ -82,12 +82,16 @@ class VideoEngine:
 
     def generate(self, prompt: str) -> str:
         from jarvis.cache_state import invalidate_video_gallery
-        from jarvis.vram_guard import prepare_for_comfyui
 
-        prepare_for_comfyui()
         pos, neg = self.prepare_prompt(prompt)
         if not pos:
             return "ERROR: Empty video prompt"
+
+        from jarvis.services import ensure_comfyui_nvidia
+        from jarvis.vram_guard import prepare_for_comfyui
+
+        prepare_for_comfyui()
+        ensure_comfyui_nvidia(block=True, timeout=120)
         result, keyframe, method = generate_motion_clip(pos, negative_prompt=neg)
         if result.startswith("ERROR:"):
             return result

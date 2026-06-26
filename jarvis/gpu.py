@@ -204,10 +204,12 @@ def detect_gpu(*, force: bool = False) -> dict:
 
 
 def is_low_vram(threshold_mb: int = 10240) -> bool:
-    """True when detected VRAM is at or below threshold (default 10GB)."""
-    info = detect_gpu()
-    if info.get("compute_vendor") == "nvidia" or info.get("vendor") == "nvidia":
+    """True when compute GPU VRAM is at or below threshold (default 10GB)."""
+    try:
+        from jarvis.gpu_routing import is_compute_low_vram
+
+        return is_compute_low_vram(threshold_mb)
+    except Exception:
+        info = detect_gpu()
         vram = int(info.get("vram_mb") or 0)
         return 0 < vram <= threshold_mb
-    vram = info.get("vram_mb") or 0
-    return 0 < vram <= threshold_mb

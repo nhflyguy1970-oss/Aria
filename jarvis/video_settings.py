@@ -8,8 +8,8 @@ from pathlib import Path
 
 from jarvis.comfyui_settings import (
     CKPT_DIR,
-    UNCENSORED_CHECKPOINTS,
     UNCENSORED_CHECKPOINT_LABELS,
+    UNCENSORED_CHECKPOINTS,
     list_all_checkpoint_files,
     list_installed_checkpoints,
     recommended_uncensored_checkpoint,
@@ -199,12 +199,15 @@ def effective_animatediff_frames(duration: float, fps: int) -> int:
 
 def effective_animatediff_size() -> tuple[int, int]:
     from jarvis.gpu import is_low_vram
+    from jarvis.gpu_routing import compute_vram_mb, nvidia_compute_active
 
-    if is_low_vram(10240):
-        return 512, 512
     data = _load()
     w = int(data.get("width") or 512)
     h = int(data.get("height") or 512)
+    if nvidia_compute_active() and compute_vram_mb() > 10240:
+        return min(w, 768), min(h, 768)
+    if is_low_vram(10240):
+        return 512, 512
     return min(w, 768), min(h, 768)
 
 
@@ -253,13 +256,17 @@ def clear_uncensored_auto() -> dict:
 
 
 def get_settings_dict() -> dict:
+    from jarvis.comfyui import comfyui_device_name
     from jarvis.comfyui_animatediff import readiness
     from jarvis.config import is_uncensored
+    from jarvis.gpu import detect_gpu, is_low_vram
+    from jarvis.gpu_routing import compute_vram_mb, nvidia_compute_active
     from jarvis.modules.video import prompt_model_name
 
     data = _load()
     dur, fps = effective_duration(), effective_fps()
     w, h = effective_size()
+    ad_w, ad_h = effective_animatediff_size()
     rec_ckpt = recommended_uncensored_checkpoint()
     active_ckpt = resolve_keyframe_checkpoint()
     uncensored = is_uncensored()
@@ -294,6 +301,12 @@ def get_settings_dict() -> dict:
         "engines": list(VALID_ENGINES),
         "max_duration_sec": 12,
         "note": motion_note,
+        "low_vram": is_low_vram(),
+        "compute_gpu": detect_gpu().get("compute_gpu") or detect_gpu().get("name"),
+        "comfyui_device": comfyui_device_name(),
+        "nvidia_compute": nvidia_compute_active(),
+        "vram_gb": round(compute_vram_mb() / 1024, 1),
+        "animatediff_size": {"width": ad_w, "height": ad_h},
         "install_scripts": {
             "quality": "./scripts/install-sdxl-base.sh",
             "flux": "./scripts/install-flux-schnell.sh",

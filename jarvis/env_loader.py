@@ -101,12 +101,16 @@ def upsert_env_vars(updates: dict[str, str]) -> list[str]:
 def _apply_gpu_routing() -> None:
     """Apply CUDA_VISIBLE_DEVICES / HIP_VISIBLE_DEVICES from JARVIS_GPU_PREFER."""
     try:
-        from jarvis.gpu_routing import gpu_env_for_subprocess, gpu_preference
+        from jarvis.gpu_routing import apply_gpu_env_to_os, gpu_env_for_subprocess, gpu_preference
 
         if gpu_preference() == "nvidia":
             os.environ.pop("HSA_OVERRIDE_GFX_VERSION", None)
+        apply_gpu_env_to_os()
         for key, value in gpu_env_for_subprocess().items():
-            os.environ[key] = value
+            if value == "":
+                os.environ.pop(key, None)
+            elif value:
+                os.environ[key] = value
     except Exception:
         pass
 

@@ -19,6 +19,10 @@ ROOT = Path(__file__).resolve().parents[1]
 RUFF_PATHS: tuple[str, ...] = (
     "jarvis/async_util.py",
     "jarvis/gpu_routing.py",
+    "jarvis/comfyui_video.py",
+    "jarvis/video_settings.py",
+    "jarvis/modules/video.py",
+    "jarvis/resource_router.py",
     "jarvis/torch_device.py",
     "jarvis/env_loader.py",
     "jarvis/gpu.py",

@@ -49,6 +49,14 @@ def recommendations() -> list[str]:
     gpu = detect_gpu()
     vram = int(gpu.get("vram_mb") or 0)
     tips: list[str] = []
+    try:
+        from jarvis.gpu_routing import nvidia_compute_active
+
+        if nvidia_compute_active():
+            name = gpu.get("compute_gpu") or gpu.get("name") or "NVIDIA GPU"
+            tips.append(f"Compute GPU: {name} — ComfyUI image/video use NVIDIA when started via ARIA.")
+    except Exception:
+        pass
     if is_low_vram(10240):
         tips.append("Use 7B chat/code models (not 14B+) — switch profile to Gaming or run optimize-rx7600-8gb.sh")
         tips.append("Vision: moondream or llama3.2-vision:11b — avoid llava:13b on 8GB")

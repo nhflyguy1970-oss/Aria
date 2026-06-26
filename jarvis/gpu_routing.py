@@ -149,10 +149,51 @@ def gpu_env_for_subprocess() -> dict[str, str]:
         idx = (os.getenv("JARVIS_CUDA_DEVICE") or "0").strip()
         env["CUDA_VISIBLE_DEVICES"] = idx
         env.setdefault("HIP_VISIBLE_DEVICES", "-1")
+        for rocm_key in (
+            "HSA_OVERRIDE_GFX_VERSION",
+            "ROCR_VISIBLE_DEVICES",
+            "GPU_DEVICE_ORDINAL",
+            "HIP_FORCE_DEV_KERNARG",
+        ):
+            env[rocm_key] = ""
         return env
     if pref == "amd":
         env.pop("CUDA_VISIBLE_DEVICES", None)
     return env
+
+
+def nvidia_compute_active() -> bool:
+    """True when NVIDIA is the preferred compute GPU and is available."""
+    return gpu_preference() in ("nvidia", "both", "auto") and nvidia_available()
+
+
+def compute_vram_mb() -> int:
+    """VRAM of the compute GPU (NVIDIA when preferred, else display/ROCm)."""
+    if nvidia_compute_active():
+        nv = parse_nvidia_smi()
+        if nv.get("vram_mb"):
+            return int(nv["vram_mb"])
+    from jarvis.gpu import detect_gpu
+
+    return int(detect_gpu(force=True).get("vram_mb") or 0)
+
+
+def is_compute_low_vram(threshold_mb: int = 10240) -> bool:
+    vram = compute_vram_mb()
+    return 0 < vram <= threshold_mb
+
+
+def apply_gpu_env_to_os() -> None:
+    """Apply subprocess GPU routing to the current process environment."""
+    pref = gpu_preference()
+    if nvidia_compute_active():
+        for key, value in gpu_env_for_subprocess().items():
+            if value == "":
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+    elif pref == "nvidia":
+        os.environ.pop("HSA_OVERRIDE_GFX_VERSION", None)
 
 
 def routing_status() -> dict:
@@ -166,4 +207,7 @@ def routing_status() -> dict:
         "resolved_torch_device": resolve_torch_device(),
         "resolved_whisper_device": resolve_whisper_device(),
         "resolved_functiongemma_device": resolve_functiongemma_device(),
+        "nvidia_compute_active": nvidia_compute_active(),
+        "compute_vram_mb": compute_vram_mb(),
+        "compute_low_vram": is_compute_low_vram(),
     }

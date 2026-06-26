@@ -10,8 +10,8 @@ import threading
 import time
 import uuid
 from collections import deque
-from pathlib import Path
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from jarvis.config import DATA_DIR
 
@@ -61,12 +61,27 @@ ACTION_MODULES = {
 
 ETA_HINTS = {
     "generate_image": "typically 30–90 seconds",
-    "generate_video": "may take 5–15 minutes on 8GB GPU",
+    "generate_video": "typically 3–10 minutes",
     "generate_meme": "typically 30–90 seconds",
     "upscale_image": "usually under 10 seconds",
     "inpaint_image": "typically 30–120 seconds",
     "edit_image": "typically 30–90 seconds",
 }
+
+
+def eta_hint(action: str) -> str:
+    if action == "generate_video":
+        try:
+            from jarvis.gpu import is_low_vram
+            from jarvis.gpu_routing import compute_vram_mb, nvidia_compute_active
+
+            if nvidia_compute_active() and compute_vram_mb() > 10240:
+                return "typically 2–8 minutes on NVIDIA GPU"
+            if is_low_vram(10240):
+                return "may take 5–15 minutes on 8GB GPU"
+        except Exception:
+            pass
+    return ETA_HINTS.get(action, "")
 
 
 class MediaJobCancelled(Exception):
@@ -321,7 +336,7 @@ def _notify_busy_start(label: str, kind: str) -> None:
     from jarvis.branding import assistant_name
 
     name = assistant_name()
-    hint = ETA_HINTS.get(kind, "")
+    hint = eta_hint(kind)
     body = f"{label} started."
     if hint:
         body += f" {hint.capitalize()}."

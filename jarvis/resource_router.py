@@ -7,7 +7,6 @@ import logging
 import os
 import time
 import urllib.request
-from pathlib import Path
 from typing import Any
 
 from jarvis.config import DATA_DIR
@@ -104,7 +103,8 @@ def ram_available_gb() -> float:
 
 def snapshot() -> dict[str, Any]:
     from jarvis.coding_jobs import job_stats as coding_stats
-    from jarvis.media_jobs import busy_state, job_stats as media_stats
+    from jarvis.media_jobs import busy_state
+    from jarvis.media_jobs import job_stats as media_stats
     from jarvis.vram_guard import status as vram_status
 
     gpu = detect_gpu()
@@ -175,14 +175,21 @@ def preflight(action: str = "video") -> dict[str, Any]:
                 f"{label} detected — Jarvis will unload Ollama before ComfyUI when the job runs."
             )
         if is_video:
-            from jarvis.video_settings import effective_engine, effective_animatediff_frames, effective_animatediff_size
+            from jarvis.video_settings import (
+                effective_animatediff_frames,
+                effective_animatediff_size,
+                effective_engine,
+            )
 
             eng = effective_engine()
             ad_w, ad_h = effective_animatediff_size()
             frames = effective_animatediff_frames(4.0, 8)
             if eng in ("auto", "animatediff"):
                 adjustments.append("AnimateDiff may fall back to Ken Burns if VRAM is tight.")
-                tips.insert(0, "Ken Burns uses less VRAM than AnimateDiff on RX 7600.")
+                if snap["low_vram"]:
+                    tips.insert(0, "Ken Burns uses less VRAM than AnimateDiff on 8GB GPUs.")
+                else:
+                    tips.insert(0, "AnimateDiff uses your NVIDIA GPU; Ken Burns is the CPU fallback.")
             suggested = {
                 "engine": eng,
                 "width": ad_w,
@@ -253,9 +260,11 @@ def prepare_for_media_job(action: str) -> dict[str, Any]:
     if action not in _VRAM_ACTIONS:
         return {"skipped": True}
 
+    from jarvis.services import ensure_comfyui_nvidia
     from jarvis.vram_guard import prepare_for_comfyui, vram_guard_enabled
 
     result: dict[str, Any] = {"action": action, "prepared": False}
+    ensure_comfyui_nvidia(block=True, timeout=120)
     if vram_guard_enabled():
         prep = prepare_for_comfyui()
         result.update(prep)

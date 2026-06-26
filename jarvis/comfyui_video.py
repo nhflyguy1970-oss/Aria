@@ -43,6 +43,10 @@ def generate_motion_clip(
     """
     global _last_method, _last_fallback_reason
 
+    from jarvis.services import ensure_comfyui_nvidia
+
+    ensure_comfyui_nvidia(block=True, timeout=120)
+
     engine = effective_engine()
     dur = duration if duration is not None else effective_duration()
     frame_fps = fps if fps is not None else effective_fps()
@@ -117,7 +121,7 @@ def generate_motion_clip(
 
         _last_fallback_reason = reason
         if is_low_vram(10240) and _looks_like_vram_failure(result):
-            log.warning("AnimateDiff likely hit VRAM limits on 8GB GPU — using Ken Burns")
+            log.warning("AnimateDiff likely hit VRAM limits — using Ken Burns")
 
     video, keyframe = generate_ken_burns_clip(
         prompt,
@@ -151,9 +155,13 @@ def generate_ken_burns_clip(
     fps: int | None = None,
 ) -> tuple[str, str]:
     """Generate keyframe via ComfyUI then ffmpeg Ken Burns clip."""
-    from jarvis import comfyui
     from jarvis.video_ops import image_to_motion_video
-    from jarvis.video_settings import effective_duration, effective_fps, effective_size, resolve_keyframe_checkpoint
+    from jarvis.video_settings import (
+        effective_duration,
+        effective_fps,
+        effective_size,
+        resolve_keyframe_checkpoint,
+    )
 
     w, h = effective_size()
     if width:

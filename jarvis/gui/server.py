@@ -448,11 +448,23 @@ def comfyui_install_animatediff():
     log_path = log_dir / "animatediff-install.log"
     with open(log_path, "a", encoding="utf-8") as logf:
         logf.write(f"\n--- started {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+        env = os.environ.copy()
+        try:
+            from jarvis.gpu_routing import gpu_env_for_subprocess
+
+            for key, value in gpu_env_for_subprocess().items():
+                if value == "":
+                    env.pop(key, None)
+                else:
+                    env[key] = value
+        except Exception:
+            pass
         _animatediff_install_proc = subprocess.Popen(
             [str(script)],
             cwd=str(PROJECT_ROOT),
             stdout=logf,
             stderr=subprocess.STDOUT,
+            env=env,
             start_new_session=True,
         )
     return {"ok": True, "message": "AnimateDiff install started (~2 GB motion module + custom nodes)", "running": True}

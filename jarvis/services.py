@@ -95,24 +95,22 @@ def _comfy_python(comfy_root: Path) -> str:
 
 def _comfy_env() -> dict:
     env = os.environ.copy()
-    pref = (os.getenv("JARVIS_GPU_PREFER") or "auto").strip().lower()
     try:
         from jarvis.gpu_routing import gpu_env_for_subprocess, gpu_preference, nvidia_available
 
-        if gpu_preference() in ("nvidia", "both", "auto") and nvidia_available():
-            env.update(gpu_env_for_subprocess())
-            for rocm_key in (
-                "HSA_OVERRIDE_GFX_VERSION",
-                "ROCR_VISIBLE_DEVICES",
-                "GPU_DEVICE_ORDINAL",
-                "HIP_FORCE_DEV_KERNARG",
-            ):
-                env.pop(rocm_key, None)
-        elif pref != "nvidia":
+        overrides = gpu_env_for_subprocess()
+        for key, value in overrides.items():
+            if value == "":
+                env.pop(key, None)
+            else:
+                env[key] = value
+        pref = gpu_preference()
+        if pref != "nvidia" and not (nvidia_available() and pref in ("both", "auto")):
             gfx = os.getenv("JARVIS_ROCM_GFX", "11.0.0").strip()
             if gfx:
                 env.setdefault("HSA_OVERRIDE_GFX_VERSION", gfx)
     except Exception:
+        pref = (os.getenv("JARVIS_GPU_PREFER") or "auto").strip().lower()
         if pref != "nvidia":
             gfx = os.getenv("JARVIS_ROCM_GFX", "11.0.0").strip()
             if gfx:
