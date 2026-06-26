@@ -323,10 +323,36 @@
         <button type="button" class="view-tab" data-view="actions">Actions</button>
       </nav>
 
+      <div id="globalWorldStateBar" class="global-world-state-bar" role="status" aria-live="polite" title="ARIA world state">
+        <span class="world-state-dot" aria-hidden="true"></span>
+        <span id="globalWorldStateHud" class="world-state-hud-text">Loading world state…</span>
+      </div>
+
+      <div id="ariaVoiceStrip" class="aria-voice-strip" role="status" aria-live="polite">
+        <div id="voiceBar" class="voice-bar" data-state="idle" title="Voice status">
+          <span class="voice-bar-dot" aria-hidden="true"></span>
+          <span class="voice-bar-label">Voice idle</span>
+        </div>
+        <span id="voiceBarMode" class="voice-bar-mode muted" title="Duplex mode"></span>
+        <button type="button" id="voiceMuteBtn" class="ghost-btn small voice-mute-btn" title="Mute auto-speak">Muted</button>
+        <select id="duplexModeSelect" class="ghost-btn small" title="Duplex voice mode">
+          <option value="off">Duplex off</option>
+          <option value="half" selected>Half duplex</option>
+          <option value="full">Full duplex</option>
+        </select>
+        <select id="sttBackendSelect" class="ghost-btn small" title="Speech-to-text backend">
+          <option value="whisper" selected>Whisper STT</option>
+          <option value="realtimestt">RealTimeSTT</option>
+        </select>
+        <button type="button" id="cloudLiveBtn" class="ghost-btn small" title="Cloud live voice (OpenAI/Gemini)">Cloud live</button>
+        <button type="button" id="audioStopBtn" class="ghost-btn small" title="Stop speaking">Stop</button>
+      </div>
+
       <div id="chatView" class="view-panel">
-      <canvas id="jarvisAmbientCanvas" aria-hidden="true"></canvas>
+      <canvas id="jarvisAmbientCanvas" class="hidden" aria-hidden="true"></canvas>
       <div id="startupOverlay" class="startup-overlay hidden">
         <div class="startup-card">
+          <div class="startup-ring" aria-hidden="true"></div>
           <h3 id="startupOverlayTitle">Starting ARIA…</h3>
           <p id="startupStatus">Bringing services online</p>
           <ul id="startupLog" class="startup-log"></ul>
@@ -990,8 +1016,9 @@
   <script src="/static/journal.js?v=5.8.1"></script>
   <script src="/static/video_studio.js?v=1.2.2"></script>
   <script src="/static/meme_studio.js?v=1.1.0"></script>
-  <script src="/static/movie_tiers.js?v=1.0.18"></script>
-  <script src="/static/jarvis_ambient.js?v=1.0.0"></script>
+  <script src="/static/movie_tiers.js?v=1.0.19"></script>
+  <script src="/static/voice_bar.js?v=1.2.8"></script>
+  <script src="/static/jarvis_ambient.js?v=1.2.0"></script>
   <script type="module" src="/static/modules/jobs.mjs?v=1.0.0"></script>
   <script type="module" src="/static/modules/health.mjs?v=1.0.0"></script>
   <script src="/static/app.js?v=5.16.50"></script>

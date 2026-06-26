@@ -69,23 +69,23 @@ def _matches_sunlight_include_name(term=None, friendly=None, eid=None):
     """Match preset include_names like wall, wall1, lamp to HA lights."""
     fn = _norm_label(friendly)
     t = _norm_label(term)
-    if t == "table lamp":
-        return fn == "table lamp" or eid == "light.table_lamp"
-    if t == "lamp":
-        if fn == "table lamp" or eid == "light.table_lamp":
-            return False
-        return fn == "lamp" or eid in (
-            "light.lamp",
-            "light.lamp_1",
-            "light.geeni_bw413_smart_bulb_3",
-        )
     if t in ("wall1", "wall 1"):
         return "wall 1" in fn or fn == "wall1" or eid == "light.merkury_bw904_smart_bulb_2"
     if t == "wall":
         if "wall 1" in fn or fn == "wall1":
             return False
-        return fn == "wall" or eid == "light.geeni_bw413_smart_bulb_2"
-    return t in fn.split()
+        if fn == "wall" or fn.startswith("wall "):
+            return True
+        return "family room" in fn or eid == "light.geeni_bw413_smart_bulb_2"
+    if t == "lamp":
+        return eid == "light.table_lamp" or fn in ("table lamp", "lamp") or eid in (
+            "light.lamp",
+            "light.lamp_1",
+            "light.geeni_bw413_smart_bulb_3",
+        )
+    return fn == t or t in fn.split()
+
+
 def ensure_scene_state():
     '''Default sunlight to auto-on daily unless explicitly disabled.'''
     state = _scene_state()
@@ -482,8 +482,6 @@ def apply_sunlight_night_off(targets = None, *, transition):
     for eid in lights:
         set_light(eid, action = 'off', transition = transition)
     return None
-    except Exception:
-        continue
 
 
 def activate_sunlight(spec = None):

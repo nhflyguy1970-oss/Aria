@@ -1,33 +1,25 @@
 #!/usr/bin/env bash
-# Commit and push ARIA source to git (real backup — not chat/data export).
+# Backup ARIA source to git remote (private GitHub repo).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  echo "Not a git repository: $ROOT" >&2
-  exit 1
-fi
+STAMP="$(date -u +"%Y-%m-%d %H:%M UTC")"
+MSG="Backup: ${STAMP}"
 
-MSG="${1:-Backup ARIA $(date -Iseconds)}"
-git add -A
-git reset HEAD data/ venv/ .env .env.* 2>/dev/null || true
+git add jarvis/ scripts/ tests/ main.py .gitignore docs/ assets/ README.md 2>/dev/null || true
 
-if git diff --quiet HEAD && git diff --cached --quiet; then
-  echo "Nothing to commit."
+if git diff --cached --quiet; then
+  echo "No staged changes to commit."
 else
   git commit -m "$MSG"
-  echo "Committed: $(git log -1 --oneline)"
+  echo "Committed: $MSG"
 fi
 
 if git remote get-url origin >/dev/null 2>&1; then
-  if command -v gh >/dev/null && gh auth status >/dev/null 2>&1; then
-    git push origin "$(git branch --show-current)"
-    echo "Pushed to origin."
-  else
-    echo "Remote exists but gh not authenticated — run: gh auth login && git push"
-  fi
+  git push origin HEAD
+  echo "Pushed to $(git remote get-url origin)"
 else
-  echo "No origin remote. After gh auth login:"
-  echo "  gh repo create jarvis --private --source=. --push"
+  echo "No git remote 'origin'. Run: gh repo create jarvis --private --source=. --push"
+  exit 1
 fi

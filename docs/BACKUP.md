@@ -1,35 +1,39 @@
-# ARIA backup
+# ARIA GitHub backup
 
-ARIA does **not** auto-backup source code. Chat exports and the sidebar **Backup** button save conversation/data — not your Python tree.
+## One-time setup
 
-## What to back up
-
-| What | How |
-|------|-----|
-| Source code | `git commit` + push to GitHub |
-| Chat / memory / journal | `data/` (excluded from git by design) |
-| Upgrade snapshots | Created only during the upgrade wizard |
-
-## One-command backup (source)
-
-```bash
-chmod +x scripts/backup-aria.sh
-./scripts/backup-aria.sh
-```
-
-## First-time GitHub setup
+1. Install [GitHub CLI](https://cli.github.com/) if needed.
+2. Authenticate:
 
 ```bash
 gh auth login
-gh repo create jarvis --private --source=. --remote=origin --push
 ```
 
-## Habit
+3. Create a private repo and push (from project root):
 
-Run `./scripts/backup-aria.sh` after meaningful changes, or at least daily.
+```bash
+cd /media/jeff/AI/jarvis
+gh repo create jarvis --private --source=. --push
+```
 
-## Recovery notes
+If the repo name is taken, pick another name and set `origin` manually:
 
-- **Jun 2026:** Source was recovered from `.pyc` via pycdc and Cursor checkpoint `aa000cf`.
-- Decompiled files may be incomplete; prefer git history once pushed.
-- Life UI lives in `jarvis/gui/static/` (not in bytecode).
+```bash
+gh repo create my-jarvis-backup --private --source=. --remote=origin --push
+```
+
+## Regular backups
+
+```bash
+./scripts/backup-aria.sh
+```
+
+This stages `jarvis/`, `scripts/`, `tests/`, `main.py`, `.gitignore`, `docs/`, `assets/`, and `README.md`, commits if there are changes, and pushes to `origin`.
+
+**Not committed:** `data/`, `.env`, `venv/`, logs, secrets.
+
+## Verify auth
+
+```bash
+gh auth status
+```
