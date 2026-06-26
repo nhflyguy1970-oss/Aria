@@ -10,6 +10,7 @@ DESKTOP_DIR="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
 DESKTOP_SHORTCUTS="${JARVIS_DESKTOP_SHORTCUTS:-aria}"
 
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis.sh"
+chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-pyside.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-uncensored.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-app.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-native.sh"
@@ -17,7 +18,7 @@ chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-native.sh"
 mkdir -p "$APPS_DIR"
 
 # App menu entries
-APP_MENU_VARIANTS=(aria aria-uncensored)
+APP_MENU_VARIANTS=(aria aria-pyside aria-uncensored)
 LEGACY_VARIANTS=(jarvis jarvis-uncensored jarvis-app jarvis-native aria-app aria-native)
 
 for variant in "${APP_MENU_VARIANTS[@]}"; do

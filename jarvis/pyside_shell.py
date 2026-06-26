@@ -228,6 +228,32 @@ def _apply_fluent_theme(app: Any) -> bool:
         return False
 
 
+def _grant_web_media_permissions(page) -> None:
+    try:
+        from PySide6.QtWebEngineCore import QWebEnginePage
+
+        def _on_feature(url, feature):
+            if feature in (
+                QWebEnginePage.Feature.MediaAudioCapture,
+                QWebEnginePage.Feature.MediaVideoCapture,
+                QWebEnginePage.Feature.MediaAudioVideoCapture,
+            ):
+                page.setFeaturePermission(url, feature, QWebEnginePage.PermissionPolicy.PermissionGrantedByUser)
+
+        page.featurePermissionRequested.connect(_on_feature)
+    except Exception as exc:
+        logger.debug("web media permissions: %s", exc)
+
+
+def _configure_web_view(view) -> None:
+    from PySide6.QtWebEngineCore import QWebEngineSettings
+
+    settings = view.settings()
+    settings.setAttribute(QWebEngineSettings.WebAttribute.LocalStorageEnabled, True)
+    settings.setAttribute(QWebEngineSettings.WebAttribute.JavascriptEnabled, True)
+    _grant_web_media_permissions(view.page())
+
+
 def _build_fluent_window(url: str) -> Any:
     from qfluentwidgets import CaptionLabel, FluentIcon, FluentWindow, Theme, setTheme, TransparentToolButton
 
@@ -257,6 +283,7 @@ def _build_fluent_window(url: str) -> Any:
             nav.setContentsMargins(12, 8, 12, 4)
 
             self.view = QWebEngineView(page)
+            _configure_web_view(self.view)
             self.view.load(QUrl(self._home))
 
             btn_back = TransparentToolButton(FluentIcon.RETURN, page)
@@ -310,6 +337,7 @@ def _build_window(url: str) -> Any:
             if ICON_PATH.is_file():
                 self.setWindowIcon(QIcon(str(ICON_PATH)))
             self.view = QWebEngineView(self)
+            _configure_web_view(self.view)
             self.setCentralWidget(self.view)
             self.view.load(QUrl(self._home))
             toolbar = QToolBar("Navigation", self)
@@ -385,7 +413,6 @@ def launch_pyside_shell(url: str) -> bool:
         return True
     return spawn_detached(
         [python_exe(), "-m", "jarvis.pyside_shell", url, "--no-wait"],
-        extra_env={"JARVIS_PYSIDE_FOREGROUND": "1"},
     )
 
 
@@ -409,9 +436,8 @@ def main(argv: list[str] | None = None) -> int:
         wait_for_ready = False
         args.pop()
     url = args[0] if args else default_url()
-    if os.getenv("JARVIS_PYSIDE_FOREGROUND", "").strip().lower() in ("1", "true", "yes", "on"):
-        return run_window_blocking(url, wait_for_ready=wait_for_ready)
-    return 0 if launch_pyside_shell(url) else 1
+    # Desktop shortcut and `python -m jarvis.pyside_shell` run the window in this process.
+    return run_window_blocking(url, wait_for_ready=wait_for_ready)
 
 
 if __name__ == "__main__":

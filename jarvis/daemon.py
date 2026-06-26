@@ -287,12 +287,17 @@ def run_tray(uncensored: bool = False) -> None:
 
         start_scheduler()
 
-        run_tray_app(
-            url=url,
-            on_restart=lambda: restart_server(),
-            on_quit=on_quit,
-            uncensored=uncensored and is_uncensored(),
-        )
+        try:
+            run_tray_app(
+                url=url,
+                on_restart=lambda: restart_server(),
+                on_quit=on_quit,
+                uncensored=uncensored and is_uncensored(),
+            )
+        except Exception as exc:
+            logger.warning("Tray unavailable (%s) — server keeps running without tray icon", exc)
+            if proc and proc.poll() is None:
+                proc.wait()
     except Exception as e:
         _notify("Jarvis failed", str(e)[:180])
         logger.exception("Jarvis tray startup failed")

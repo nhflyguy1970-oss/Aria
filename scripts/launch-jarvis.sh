@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch ARIA from desktop shortcut: tray + Chrome app window.
+# Launch ARIA from desktop shortcut: background server + tray + PySide/Fluent window.
 set -euo pipefail
 
 JARVIS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -18,11 +18,11 @@ source "$JARVIS_ROOT/scripts/_jarvis-launch-lib.sh"
 mkdir -p "$LOG_DIR"
 jarvis_activate_env
 ARIA_NAME="$(jarvis_app_name)"
-jarvis_log "=== ${ARIA_NAME} launch $(date -Iseconds) ==="
+jarvis_log "=== ${ARIA_NAME} launch $(date -Iseconds) DISPLAY=${DISPLAY:-unset} GUI_MODE=${JARVIS_GUI_MODE:-fluent} ==="
 
 if jarvis_server_responsive; then
   jarvis_notify "$ARIA_NAME" "Opening…"
-  jarvis_open_gui_detached || jarvis_notify "$ARIA_NAME" "Could not open window — try again"
+  jarvis_run_gui_foreground
   exit 0
 fi
 
@@ -34,16 +34,14 @@ fi
 
 jarvis_notify "$ARIA_NAME" "Starting…"
 jarvis_stop_stale
-
 unset JARVIS_UNCENSORED
-export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-app}"
-export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-1}"
-"$(jarvis_python)" "$JARVIS_ROOT/main.py" tray >>"$LOG_FILE" 2>&1 &
-TRAY_PID=$!
-jarvis_log "Tray PID: $TRAY_PID"
 
-if ! jarvis_wait_for_server "$TRAY_PID"; then
-  if jarvis_port_open; then
+# Start API server (serve) — survives even if tray fails.
+jarvis_start_serve_background
+jarvis_start_tray_background || true
+
+if ! jarvis_wait_for_server "$SERVE_PID"; then
+  if jarvis_server_responsive; then
     jarvis_log "Health slow after start — opening window anyway"
     jarvis_run_gui_foreground
   fi
