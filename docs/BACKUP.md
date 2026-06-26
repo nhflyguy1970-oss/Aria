@@ -9,17 +9,20 @@
 gh auth login
 ```
 
-3. Create a private repo and push (from project root):
+3. Point `origin` at the ARIA repo and push (from project root):
 
 ```bash
 cd /media/jeff/AI/jarvis
-gh repo create jarvis --private --source=. --push
+git remote add origin https://github.com/nhflyguy1970-oss/Aria.git
+# or, if origin already exists:
+# git remote set-url origin https://github.com/nhflyguy1970-oss/Aria.git
+git push -u origin main
 ```
 
-If the repo name is taken, pick another name and set `origin` manually:
+If you need to create the repo first (empty GitHub account):
 
 ```bash
-gh repo create my-jarvis-backup --private --source=. --remote=origin --push
+gh repo create nhflyguy1970-oss/Aria --private --source=. --remote=origin --push
 ```
 
 ## Regular backups
