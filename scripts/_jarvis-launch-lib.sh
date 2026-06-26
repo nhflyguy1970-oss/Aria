@@ -57,16 +57,17 @@ jarvis_native_available() {
 }
 
 jarvis_open_gui_detached() {
-  # Chrome app window by default (stable for coding). Override: JARVIS_GUI_MODE=native
-  export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-app}"
-  export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-1}"
+  export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-fluent}"
+  export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-0}"
+  export JARVIS_SHELL_FORCE_NEW="${JARVIS_SHELL_FORCE_NEW:-1}"
   "$(jarvis_python)" -m jarvis.gui_launcher "$URL"
 }
 
 jarvis_run_gui_foreground() {
   export JARVIS_NO_BROWSER=1
-  export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-app}"
-  export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-1}"
+  export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-fluent}"
+  export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-0}"
+  export JARVIS_SHELL_FORCE_NEW="${JARVIS_SHELL_FORCE_NEW:-1}"
   cd "$JARVIS_ROOT"
 
   if [[ "${JARVIS_GUI_MODE}" == "native" ]] && jarvis_native_available; then

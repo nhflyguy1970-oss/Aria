@@ -2,7 +2,7 @@
 Version=1.0
 Type=Application
 Name=ARIA
-Comment=Adaptive Reasoning Intelligence Assistant — Chrome app + system tray
+Comment=Adaptive Reasoning Intelligence Assistant — PySide/Fluent window (see data/jarvis.env)
 Exec=bash @JARVIS_ROOT@/scripts/launch-jarvis.sh
 Icon=@JARVIS_ROOT@/assets/jarvis-icon.svg
 Path=@JARVIS_ROOT@

@@ -78,7 +78,7 @@ def start_server(open_browser: bool = False) -> subprocess.Popen:
         stderr=subprocess.STDOUT,
         text=True,
     )
-    for _ in range(60):
+    for _ in range(120):
         time.sleep(0.5)
         try:
             with urllib.request.urlopen(HEALTH_URL, timeout=2):
