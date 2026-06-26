@@ -28,6 +28,12 @@ def load_jarvis_env(force: bool = False) -> None:
         _PREVIOUS_JARVIS_KEYS = keys_in_file
         _apply_gpu_routing()
         _apply_rocm_override()
+        try:
+            from jarvis.gpu import invalidate_gpu_cache
+
+            invalidate_gpu_cache()
+        except Exception:
+            pass
         _LOADED = True
         return
     for line in raw.splitlines():
@@ -57,6 +63,12 @@ def load_jarvis_env(force: bool = False) -> None:
     _PREVIOUS_JARVIS_KEYS = keys_in_file
     _apply_gpu_routing()
     _apply_rocm_override()
+    try:
+        from jarvis.gpu import invalidate_gpu_cache
+
+        invalidate_gpu_cache()
+    except Exception:
+        pass
     _LOADED = True
 
 

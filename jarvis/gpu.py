@@ -184,6 +184,11 @@ def _detect_gpu_uncached() -> dict:
     return info
 
 
+def invalidate_gpu_cache() -> None:
+    global _GPU_CACHE
+    _GPU_CACHE = {"at": 0.0, "data": None}
+
+
 def detect_gpu(*, force: bool = False) -> dict:
     now = time.time()
     if (

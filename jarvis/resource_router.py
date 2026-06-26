@@ -165,7 +165,15 @@ def preflight(action: str = "video") -> dict[str, Any]:
 
     if snap["low_vram"]:
         if action in _VRAM_ACTIONS or is_video:
-            warnings.append("8GB-class GPU detected — Jarvis will unload Ollama before ComfyUI when the job runs.")
+            gpu_name = (snap.get("vram_guard") or {}).get("gpu_name") or ""
+            label = "8GB-class GPU"
+            if gpu_name:
+                label = gpu_name
+            elif (snap.get("vram_mb") or 0) > 10240:
+                label = f"{round((snap['vram_mb'] or 0) / 1024)}GB GPU"
+            warnings.append(
+                f"{label} detected — Jarvis will unload Ollama before ComfyUI when the job runs."
+            )
         if is_video:
             from jarvis.video_settings import effective_engine, effective_animatediff_frames, effective_animatediff_size
 
