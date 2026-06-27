@@ -17,11 +17,13 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") <command>
 
-  open      Open or focus the Jarvis window
+  audit      Run 14-phase system audit (sudo for SMART if configured)
+  open       Open or focus the Jarvis window
   reload    Reload the Jarvis window (UI only — use restart for API changes)
   restart   Restart the API server (required after code updates; tray must be running)
   stop      Stop tray + server
   status    Show whether server is up
+  audit     Run 14-phase system audit (see: ./scripts/audit-system.sh)
 
 Tray tip: on GNOME/Ubuntu, left-click the tray icon for the menu — right-click often does nothing.
 In the Jarvis window: sidebar → Reload UI, or press Ctrl+Shift+R.
@@ -74,6 +76,10 @@ case "$cmd" in
     fi
     echo "$(jarvis_app_name) server: down"
     exit 1
+    ;;
+  audit)
+    shift
+    exec "${JARVIS_ROOT}/scripts/audit-system.sh" "$@"
     ;;
   -h|--help|help|"")
     usage
