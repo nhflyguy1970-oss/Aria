@@ -2,9 +2,19 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
+
+# Tests import jarvis.llm which pulls ollama at import time.
+if "ollama" not in sys.modules:
+    _ollama = MagicMock()
+    _ollama.chat = MagicMock(return_value={"message": {"content": ""}})
+    _ollama.embed = MagicMock(return_value={"embeddings": [[0.0]]})
+    _ollama.generate = MagicMock(return_value={"response": ""})
+    sys.modules["ollama"] = _ollama
 
 
 @pytest.fixture(autouse=True)
@@ -40,11 +50,13 @@ def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "jarvis.config.JOURNAL_DIR": journal_dir,
         "jarvis.fs.DATA_DIR": tmp_path,
         "jarvis.config.MEMORY_FILE": tmp_path / "memory.json",
+        "jarvis.config.MEMORY_DB_FILE": tmp_path / "memory.db",
         "jarvis.config.CHAT_SETTINGS_FILE": tmp_path / "chat_settings.json",
         "jarvis.branches.DATA_DIR": tmp_path,
         "jarvis.branches.BRANCHES_FILE": tmp_path / "chat_branches.json",
         "jarvis.modules.memory.DATA_DIR": tmp_path,
-        "jarvis.modules.memory.MEMORY_FILE": tmp_path / "memory.json",
+        "jarvis.modules.memory.jarvis_config.MEMORY_FILE": tmp_path / "memory.json",
+        "jarvis.modules.memory.jarvis_config.MEMORY_DB_FILE": tmp_path / "memory.db",
         "jarvis.modules.journal.JOURNAL_DIR": journal_dir,
         "jarvis.modules.journal.JOURNAL_FILE": journal_dir / "bullet_journal.json",
         "jarvis.modules.journal.JOURNAL_PHOTOS_DIR": journal_dir / "photos",
