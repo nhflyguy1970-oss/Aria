@@ -20,6 +20,10 @@ venv/
 .ruff_cache/
 
 # Runtime data (large / machine-specific)
+memory_vectors.db
+memory_vectors.db-shm
+memory_vectors.db-wal
+output/
 data/generated/
 data/uploads/
 data/audio/
