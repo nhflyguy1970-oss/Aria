@@ -1,9 +1,60 @@
 /** Video studio — keyframe checkpoints, gallery, upload, trim, frame analysis. */
 
-function resolveVideoUrl(pathOrName) {
+function resolveVideoUrl(pathOrName, { playback = true } = {}) {
+  if (typeof window.resolveVideoPlaybackUrl === "function" && playback) {
+    const raw = (pathOrName || "").split(/[/\\]/).pop();
+    if (!raw) return "";
+    let file = raw.replace(/\.(mp4|mov|m4v|mkv|avi)$/i, ".webm");
+    const base = `/api/video-gallery/${encodeURIComponent(file)}`;
+    if (typeof window.mediaNeedsApiKey === "function"
+      && typeof window.isSameMachineHost === "function"
+      && (window.mediaNeedsApiKey() && !window.isSameMachineHost())) {
+      return typeof window.apiAuthUrl === "function" ? window.apiAuthUrl(base) : base;
+    }
+    return base;
+  }
   const file = (pathOrName || "").split(/[/\\]/).pop();
   if (!file) return "";
-  return `/api/video-gallery/${encodeURIComponent(file)}`;
+  const base = `/api/video-gallery/${encodeURIComponent(file)}`;
+  return typeof window.apiAuthUrl === "function" ? window.apiAuthUrl(base) : base;
+}
+
+function attachVideoLoadError(video) {
+  if (!video || video.dataset.mediaErrorBound) return;
+  video.dataset.mediaErrorBound = "1";
+  video.addEventListener("error", () => {
+    const parent = video.closest(".video-gallery-item") || video.parentElement;
+    if (!parent || parent.querySelector(".media-load-warn")) return;
+    const warn = document.createElement("p");
+    warn.className = "media-load-warn warn small";
+    warn.textContent = "Video failed to load — if using LAN, ensure API key is set";
+    parent.appendChild(warn);
+  });
+}
+
+async function appendGalleryVideo(videoEl, fileName) {
+  attachVideoLoadError(videoEl);
+  if (typeof window.resolveVideoPlaybackUrl === "function") {
+    const playback = await window.resolveVideoPlaybackUrl(fileName);
+    if (playback.ok && playback.url) {
+      videoEl.src = playback.url;
+      return;
+    }
+    if (playback.needsKey) {
+      const parent = videoEl.closest(".video-gallery-item") || videoEl.parentElement;
+      if (parent && !parent.querySelector(".media-load-warn")) {
+        const warn = document.createElement("p");
+        warn.className = "media-load-warn warn small";
+        warn.innerHTML = 'Video needs API key — <button type="button" class="ghost-btn small media-key-btn">Enter key</button>';
+        warn.querySelector(".media-key-btn")?.addEventListener("click", () => {
+          if (typeof showApiKeyModal === "function") showApiKeyModal("");
+        });
+        parent.appendChild(warn);
+      }
+      return;
+    }
+  }
+  videoEl.src = resolveVideoUrl(fileName);
 }
 
 let videoSettingsBusy = false;
@@ -56,7 +107,16 @@ async function loadVideoSettings() {
     if (presetSel && s.keyframe_preset) presetSel.value = s.keyframe_preset;
     populateVideoCheckpointFiles(s);
     if (status) {
-      status.textContent = s.note || `Engine: ${s.engine || "auto"}`;
+      const plan = s.clip_plan || {};
+      let line = s.note || `Engine: ${s.engine || "auto"}`;
+      if (plan.frames && plan.fps) {
+        line += ` · AnimateDiff plan: ${plan.frames} frames @ ${plan.fps} fps (~${plan.actual_duration_sec}s`;
+        if (plan.truncated && plan.target_duration_sec) {
+          line += `, requested ${plan.target_duration_sec}s`;
+        }
+        line += ")";
+      }
+      status.textContent = line;
     }
     if (hint) {
       const ad = s.animatediff || {};
@@ -157,7 +217,7 @@ async function loadVideoGallery() {
   grid.innerHTML = "<p class=\"muted\">Loading…</p>";
   await loadVideoSettings();
   try {
-    const res = await fetch("/api/video-gallery");
+    const res = await fetch("/api/video-gallery", { cache: "no-store" });
     const data = await res.json();
     const videos = data.videos || [];
     if (!videos.length) {
@@ -165,21 +225,51 @@ async function loadVideoGallery() {
       return;
     }
     grid.innerHTML = videos.map((v) => {
-      const url = resolveVideoUrl(v.name);
-      return `<div class="video-gallery-item" data-path="${escapeHtml(v.path)}">
+      return `<div class="video-gallery-item" data-path="${escapeHtml(v.path)}" data-video-name="${escapeHtml(v.name)}">
         <button type="button" class="gallery-del video-del" data-name="${escapeHtml(v.name)}" title="Delete">×</button>
-        <video controls preload="metadata" src="${url}" class="video-thumb"></video>
+        <video preload="metadata" class="video-thumb clickable-video" title="Click to open player"></video>
         <p class="video-item-name">${escapeHtml(v.name)}</p>
         <button type="button" class="ghost-btn small video-analyze-btn" data-path="${escapeHtml(v.path)}">Analyze frame</button>
         <button type="button" class="ghost-btn small video-trim-btn" data-path="${escapeHtml(v.path)}">Trim</button>
       </div>`;
     }).join("");
 
+    grid.querySelectorAll(".video-gallery-item").forEach((item) => {
+      const video = item.querySelector("video");
+      const name = item.dataset.videoName;
+      if (video && name) {
+        void appendGalleryVideo(video, name).then(() => {
+          if (typeof window.bindClickableVideos === "function") window.bindClickableVideos(item);
+        });
+      }
+    });
+
     grid.querySelectorAll(".video-del").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        if (!confirm("Delete this video?")) return;
-        await fetch(`/api/video-gallery/${encodeURIComponent(btn.dataset.name)}`, { method: "DELETE" });
-        loadVideoGallery();
+      btn.addEventListener("click", async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        const name = btn.dataset.name;
+        if (!name || !confirm("Delete this video?")) return;
+        btn.disabled = true;
+        try {
+          const res = await fetch(`/api/video-gallery/${encodeURIComponent(name)}`, { method: "DELETE" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.ok === false) {
+            const msg = data.message || data.detail || res.statusText || "Delete failed";
+            btn.disabled = false;
+            if (window.showAriaToast) window.showAriaToast(msg, "error");
+            else alert(msg);
+            return;
+          }
+          btn.closest(".video-gallery-item")?.remove();
+          if (window.showAriaToast) window.showAriaToast(`Deleted ${name}`, "info");
+          if (!grid.querySelector(".video-gallery-item")) {
+            grid.innerHTML = "<p class=\"muted\">No videos yet. Chat: “generate a video of …” or upload below.</p>";
+          }
+        } catch (e) {
+          btn.disabled = false;
+          if (window.showAriaToast) window.showAriaToast(e.message || "Delete failed", "error");
+        }
       });
     });
     grid.querySelectorAll(".video-analyze-btn").forEach((btn) => {

@@ -24,9 +24,15 @@ function journalNotify(message, isError = true) {
   }
   el.textContent = message;
   el.classList.toggle("journal-toast-error", isError);
+  el.classList.toggle("journal-toast-success", !isError);
   el.classList.remove("hidden");
   clearTimeout(journalNotify._timer);
   journalNotify._timer = setTimeout(() => el.classList.add("hidden"), 4500);
+}
+
+function showBujoLoading() {
+  if (!bujoContent) return;
+  bujoContent.innerHTML = '<p class="bujo-loading" aria-busy="true">Loading…</p>';
 }
 
 const nativeFetch = window.fetch.bind(window);
@@ -326,7 +332,12 @@ function renderBulletItem(b, editable, showThread = false) {
 }
 
 function renderBullets(bullets, editable = true, depth = 0, showThread = false) {
-  if (!bullets?.length) return depth === 0 ? '<p class="bujo-empty">No entries yet.</p>' : "";
+  if (!bullets?.length) {
+    if (depth === 0) {
+      return '<p class="bujo-empty">No entries yet. Start rapid log: type below and press <kbd>Enter</kbd>.</p>';
+    }
+    return "";
+  }
   const items = bullets.map((b) => renderBulletItem(b, editable, showThread)).join("");
   if (depth === 0) return `<ul class="bujo-list">${items}</ul>`;
   return `<ul class="bujo-list bujo-nested">${items}</ul>`;
@@ -576,11 +587,13 @@ function bindAddRow() {
     }
     const input = document.getElementById("bujoAddContent");
     if (input) input.value = "";
+    journalNotify("Entry saved", false);
     refreshBujo();
   });
 }
 
 async function loadDaily() {
+  showBujoLoading();
   const day = journalDate?.value || new Date().toISOString().slice(0, 10);
   const [dayRes, timelineRes] = await Promise.all([
     fetch(`/api/journal/daily?day=${day}`),
@@ -598,7 +611,7 @@ async function loadDaily() {
     form.append("from_day", day);
     const res = await fetch("/api/journal/migrate-daily", { method: "POST", body: form });
     const r = await res.json();
-    alert(`Moved ${r.migrated || 0} open tasks to ${r.to_day}`);
+    journalNotify(`Moved ${r.migrated || 0} open tasks to ${r.to_day}`, false);
     refreshBujo();
   });
   bindAddRow();
@@ -685,6 +698,7 @@ async function loadMonthlyReview(month) {
 }
 
 async function loadMonthly() {
+  showBujoLoading();
   const month = journalMonth?.value || new Date().toISOString().slice(0, 7);
   const res = await fetch(`/api/journal/monthly/calendar?month=${month}`);
   const data = await res.json();
@@ -704,6 +718,9 @@ async function loadMonthly() {
 
   bujoContent.innerHTML = `
     <h3>${escapeHtml(data.title || month)} ${pageNumLabel(data)}</h3>
+    <div class="bujo-daily-tools">
+      <button type="button" id="bujoMigrateMonthIncomplete" class="ghost-btn small" title="BuJo: migrate open monthly tasks to next month">Migrate incomplete → next month</button>
+    </div>
     <p class="bujo-cal-hint">Click a day · <span class="bujo-cal-holiday-inline">★ holidays</span> on cells · double-click for calendar note · drop tasks</p>
     ${grid}
     ${renderCalendarHolidayLegend(data.holidays)}
@@ -738,6 +755,20 @@ async function loadMonthly() {
     const res = await fetch("/api/journal/reflect/review", { method: "POST", body: form });
     const data = await res.json();
     alert(data.reflection || "No reflection generated.");
+  });
+
+  document.getElementById("bujoMigrateMonthIncomplete")?.addEventListener("click", async () => {
+    const [y, m] = month.split("-").map(Number);
+    const nm = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, "0")}`;
+    const dest = document.getElementById("journalMigrateDest")?.value || "monthly";
+    const form = new FormData();
+    form.append("from_month", month);
+    form.append("to_month", nm);
+    form.append("dest", dest);
+    const res = await fetch("/api/journal/migrate-month", { method: "POST", body: form });
+    const r = await res.json();
+    journalNotify(`Migrated ${r.migrated || 0} open tasks to ${nm}`, false);
+    refreshBujo();
   });
 
   bujoContent.querySelectorAll(".bujo-cal-day[data-date]").forEach((btn) => {
@@ -779,6 +810,7 @@ async function loadWeeklyReview(week) {
 }
 
 async function loadWeekly() {
+  showBujoLoading();
   const week = journalWeek?.value || isoWeekValue();
   const res = await fetch(`/api/journal/weekly?week=${encodeURIComponent(week)}`);
   const data = await res.json();
@@ -819,6 +851,7 @@ async function loadWeekly() {
 }
 
 async function loadHabits() {
+  showBujoLoading();
   const month = journalMonth?.value || new Date().toISOString().slice(0, 7);
   const res = await fetch(`/api/journal/habits?month=${month}`);
   const data = await res.json();
@@ -830,14 +863,15 @@ async function loadHabits() {
     const num = d.split("-")[2];
     table += `<th>${parseInt(num, 10)}</th>`;
   });
-  table += `<th>Done</th></tr></thead><tbody>`;
+  table += `<th>Done</th><th>Streak</th></tr></thead><tbody>`;
   habits.forEach((h) => {
     table += `<tr><td>${escapeHtml(h.name)}</td>`;
     days.forEach((d) => {
       const on = h.days?.[d];
       table += `<td><button type="button" class="bujo-habit-cell${on ? " on" : ""}" data-hid="${escapeHtml(h.id)}" data-day="${d}" aria-label="Toggle ${h.name} on ${d}">${on ? "●" : "○"}</button></td>`;
     });
-    table += `<td class="bujo-habit-count">${h.done_count || 0}</td></tr>`;
+    table += `<td class="bujo-habit-count">${h.done_count || 0}</td>`;
+    table += `<td class="bujo-habit-streak" title="Consecutive days through today">${h.streak || 0}🔥</td></tr>`;
   });
   table += "</tbody></table>";
 
@@ -869,6 +903,7 @@ async function loadHabits() {
 }
 
 async function loadFuture() {
+  showBujoLoading();
   const res = await fetch("/api/journal/future");
   const data = await res.json();
   const targetMonth = futureMonthValue();
@@ -923,6 +958,7 @@ async function loadFuture() {
 }
 
 async function loadIndex() {
+  showBujoLoading();
   const res = await fetch("/api/journal/index");
   const data = await res.json();
   const rows = (data.entries || []).map((e) => {
@@ -953,10 +989,16 @@ async function loadIndex() {
     loadIndex();
   });
   document.getElementById("indexAddBtn")?.addEventListener("click", async () => {
+    const topic = document.getElementById("indexTopic")?.value.trim();
+    if (!topic) {
+      journalNotify("Enter a topic for the index");
+      return;
+    }
     const form = new FormData();
-    form.append("topic", document.getElementById("indexTopic").value);
-    form.append("pages", document.getElementById("indexPages").value);
+    form.append("topic", topic);
+    form.append("pages", document.getElementById("indexPages")?.value || "");
     await fetch("/api/journal/index", { method: "POST", body: form });
+    journalNotify("Index entry added", false);
     loadIndex();
   });
   bujoContent.querySelectorAll(".bujo-index-link").forEach((btn) => {
@@ -1002,6 +1044,7 @@ function navigateBujoPage(pageRef) {
 window.navigateBujoPage = navigateBujoPage;
 
 async function loadCollections() {
+  showBujoLoading();
   const res = await fetch("/api/journal/collections");
   const data = await res.json();
   const names = data.names || [];
@@ -1247,7 +1290,10 @@ function bindBulletActions() {
       else if (act === "remember") {
         const res = await fetch(`/api/journal/bullet/${id}/remember`, { method: "POST" });
         const data = await res.json();
-        alert(data.ok ? `Saved to memory (${data.namespace})` : (data.error || "Could not save"));
+        journalNotify(
+          data.ok ? `Saved to memory (${data.namespace})` : (data.error || "Could not save"),
+          !data.ok
+        );
         return;
       } else if (act === "cancel") await fetch(`/api/journal/bullet/${id}/cancel`, { method: "POST" });
       else if (act === "migrate") {
@@ -1286,6 +1332,7 @@ function bindBulletActions() {
 }
 
 async function loadWellness() {
+  showBujoLoading();
   const month = journalMonth?.value || new Date().toISOString().slice(0, 7);
   const res = await fetch(`/api/journal/wellness?month=${month}`);
   const data = await res.json();
@@ -1317,9 +1364,9 @@ async function loadJournalKey() {
     const key = await res.json();
     const symbols = key.symbols || {};
     const labels = {
-      task: "task", event: "event", note: "note", done: "done",
-      migrated: "migrated", scheduled: "scheduled", cancelled: "cancelled",
-      important: "important", inspiration: "inspiration", explore: "explore",
+      task: "task", event: "event", note: "note",
+      task_done: "done", task_migrated: "migrated", task_scheduled: "scheduled",
+      task_cancelled: "cancelled", important: "important", inspiration: "inspiration", explore: "explore",
     };
     const items = Object.entries(labels).map(([k, label]) => {
       const symChar = symbols[k] || "";
@@ -1334,6 +1381,7 @@ async function loadJournalKey() {
 }
 
 async function loadKey() {
+  showBujoLoading();
   const res = await fetch("/api/journal/key");
   const key = await res.json();
   const symbols = key.symbols || {};
@@ -1369,7 +1417,7 @@ async function loadKey() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symbols: sym, description: document.getElementById("bujoKeyDesc")?.value, custom: customs }),
     });
-    alert("Key saved");
+    journalNotify("Key saved", false);
     loadJournalKey();
     loadKey();
   });
@@ -1396,7 +1444,105 @@ function refreshBujo() {
   else if (currentBujo === "future") loadFuture();
   else if (currentBujo === "index") loadIndex();
   else if (currentBujo === "collections") loadCollections();
+  else if (currentBujo === "projects") loadProjects();
   else if (currentBujo === "key") loadKey();
+}
+
+let projectJournalSlug = null;
+let projectJournalDay = null;
+
+async function loadProjects() {
+  showBujoLoading();
+  const day = projectJournalDay || journalDate?.value || new Date().toISOString().slice(0, 10);
+  const res = await fetch("/api/journal/projects");
+  const data = await res.json();
+  const projects = data.projects || [];
+
+  const listItems = projects.map((p) =>
+    `<button type="button" class="bujo-project-row${projectJournalSlug === p.slug ? " active" : ""}" data-slug="${escapeHtml(p.slug)}">
+      <span class="bujo-project-title">${escapeHtml(p.title || p.slug)}</span>
+      <span class="bujo-project-meta">${p.days || 0} days</span>
+    </button>`
+  ).join("");
+
+  let detail = '<p class="bujo-empty">Select a project to view its daily log.</p>';
+  if (projectJournalSlug) {
+    const pageRes = await fetch(`/api/journal/projects/${encodeURIComponent(projectJournalSlug)}?day=${encodeURIComponent(day)}`);
+    const pageData = await pageRes.json();
+    const page = pageData.page || {};
+    detail = `
+      <div class="bujo-project-detail">
+        <div class="bujo-day-header">
+          <h4>${escapeHtml(pageData.project || projectJournalSlug)} · ${escapeHtml(day)}</h4>
+          <input type="date" id="projectJournalDay" value="${escapeHtml(day)}" />
+        </div>
+        ${renderBullets(page.bullets || [], true)}
+        ${page.notes ? `<p class="bujo-project-notes"><strong>Notes</strong> ${escapeHtml(page.notes)}</p>` : ""}
+        <div class="bujo-add-row">
+          <select id="projectLogType"><option value="note">— Note</option><option value="task">• Task</option><option value="event">○ Event</option></select>
+          <input type="text" id="projectLogText" placeholder="Quick log to this project…" />
+          <button type="button" id="projectLogBtn" class="apply-btn small">Add</button>
+          <button type="button" id="projectLearnBtn" class="ghost-btn small" title="Send to brain">★ Learn</button>
+        </div>
+      </div>`;
+  }
+
+  bujoContent.innerHTML = `
+    <h3>Project journals</h3>
+    <p class="bujo-cal-hint">Per-project daily logs — separate from your main BuJo. Auto-updated morning/evening when enabled.</p>
+    <div class="bujo-project-layout">
+      <div class="bujo-project-list">${listItems || '<p class="bujo-empty">No project journals yet — log via chat: “project journal for aria”.</p>'}</div>
+      <div class="bujo-project-panel">${detail}</div>
+    </div>`;
+
+  bujoContent.querySelectorAll(".bujo-project-row").forEach((btn) => {
+    btn.onclick = () => {
+      projectJournalSlug = btn.dataset.slug;
+      loadProjects();
+    };
+  });
+
+  document.getElementById("projectJournalDay")?.addEventListener("change", (e) => {
+    projectJournalDay = e.target.value;
+    loadProjects();
+  });
+
+  document.getElementById("projectLogBtn")?.addEventListener("click", async () => {
+    const text = document.getElementById("projectLogText")?.value.trim();
+    if (!text || !projectJournalSlug) return;
+    await fetch(`/api/journal/projects/${encodeURIComponent(projectJournalSlug)}/log`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        bullet_type: document.getElementById("projectLogType")?.value || "note",
+      }),
+    });
+    document.getElementById("projectLogText").value = "";
+    journalNotify("Logged to project journal", false);
+    loadProjects();
+  });
+
+  document.getElementById("projectLogText")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") document.getElementById("projectLogBtn")?.click();
+  });
+
+  document.getElementById("projectLearnBtn")?.addEventListener("click", async () => {
+    if (!projectJournalSlug) return;
+    const d = document.getElementById("projectJournalDay")?.value || day;
+    const res = await fetch(`/api/journal/projects/${encodeURIComponent(projectJournalSlug)}/learn`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ day: d }),
+    });
+    const r = await res.json();
+    journalNotify(r.ok ? `Learned ${(r.facts || []).length} fact(s)` : (r.message || r.error || "Nothing to learn"), r.ok ? false : true);
+  });
+
+  if (projectJournalSlug) {
+    bindBulletActions();
+    bindLinkClicks();
+  }
 }
 
 function setBujoTab(name) {
@@ -1415,6 +1561,9 @@ function setBujoTab(name) {
   }
   updateRapidLogForTab();
   refreshBujo();
+  if (name !== "search" && name !== "key") {
+    setTimeout(() => document.getElementById("rapidLogInput")?.focus(), 120);
+  }
 }
 
 document.querySelectorAll(".bujo-tab").forEach((tab) => {
@@ -1444,7 +1593,15 @@ document.getElementById("rapidLogBtn")?.addEventListener("click", async () => {
     if (!rapid.ok) return;
   }
   document.getElementById("rapidLogInput").value = "";
+  journalNotify("Rapid log saved", false);
   refreshBujo();
+});
+
+document.getElementById("rapidLogInput")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    document.getElementById("rapidLogBtn")?.click();
+  }
 });
 
 document.getElementById("journalUndoBtn")?.addEventListener("click", async () => {

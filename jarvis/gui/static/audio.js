@@ -31,6 +31,18 @@ function renderInputSourceOptions(sources, active) {
   return opts.join("");
 }
 
+function renderOutputSinkOptions(sinks, active) {
+  const opts = [];
+  for (const s of sinks || []) {
+    const sel = s.name === active ? " selected" : "";
+    const tag = s.is_digital ? " · TOSLink" : s.is_creative ? " · analog" : "";
+    opts.push(
+      `<option value="${escapeHtml(s.name)}"${sel}>${escapeHtml(s.label || s.name)}${escapeHtml(tag)}</option>`
+    );
+  }
+  return opts.join("");
+}
+
 function renderRecentList(items, emptyLabel, category = "") {
   if (!items?.length) return `<p class="audio-empty">${emptyLabel}</p>`;
   return `<ul class="audio-recent">${items.map((f) =>
@@ -52,6 +64,10 @@ function selectedInputSource() {
   return document.getElementById("audioInputSource")?.value || "";
 }
 
+function selectedOutputSink() {
+  return document.getElementById("audioOutputSink")?.value || "";
+}
+
 function selectedWhisperModel() {
   return document.getElementById("audioWhisperModel")?.value || "base";
 }
@@ -69,6 +85,8 @@ async function loadAudioStatus() {
     const tts = data.tts_engine || "none";
     const mix = d.creative_mixer || {};
     const micLabel = (d.input_source || "default input").split(".").pop().slice(0, 28);
+    const outLabel = (d.output_sinks || []).find((s) => s.name === d.output_sink)?.label
+      || (d.output_digital ? "TOSLink" : (d.output_sink || "output")).split(".").pop().slice(0, 28);
     const capVol = data.capture_volume || "100%";
     const route = data.mic_routing || d.mic_routing || {};
     const hw = route.hardware_input_source || mix.input_source || "";
@@ -82,8 +100,8 @@ async function loadAudioStatus() {
       <span class="audio-stat">${data.whisper_cli ? "✓" : "✗"} Whisper (${escapeHtml(data.whisper_model || "base")})</span>
       <span class="audio-stat">${data.ffmpeg ? "✓" : "✗"} ffmpeg</span>
       <span class="audio-stat">${tts === "piper" ? "✓ Piper" : tts === "espeak" ? "espeak" : "✗ TTS"}${musicTag}</span>
-      <span class="audio-stat" title="${escapeHtml(d.output_sink || "")}">🔊 ${escapeHtml((d.name || "Audio").slice(0, 32))}</span>
-      <span class="audio-stat" title="${escapeHtml(route.routing_hint || d.input_source || "")}">🎤 ${escapeHtml(hw || micLabel)} · ${escapeHtml(capVol)}${routeTag}</span>`;
+      <span class="audio-stat" title="${escapeHtml(d.output_sink || "")}">🔊 ${escapeHtml(outLabel)}</span>
+      <span class="audio-stat" title="${escapeHtml(d.input_source || "")}">🎤 ${escapeHtml(hw || micLabel)} · ${escapeHtml(capVol)}${routeTag}</span>`;
     return data;
   } catch (_) {
     audioStatusBar.textContent = "Could not load audio status.";
@@ -319,7 +337,9 @@ async function loadAudioPanel() {
   const musicStatus = await musicStatusRes.json().catch(() => ({ installed: false }));
   const d = statusData?.devices || {};
   const sources = statusData?.input_sources || d.input_sources || [];
+  const sinks = statusData?.output_sinks || d.output_sinks || [];
   const activeSource = d.input_source || "";
+  const activeSink = d.output_sink || "";
   const capVol = statusData?.capture_volume || "100%";
   const routing = statusData?.mic_routing || d.mic_routing || {};
   const activeProfile = routing.profile || "rear";
@@ -370,6 +390,9 @@ async function loadAudioPanel() {
       <div class="audio-row">
         <label>Microphone
           <select id="audioInputSource" class="audio-source-select">${renderInputSourceOptions(sources, activeSource)}</select>
+        </label>
+        <label>Output
+          <select id="audioOutputSink" class="audio-source-select">${renderOutputSinkOptions(sinks, activeSink)}</select>
         </label>
         <label>PipeWire gain
           <select id="audioCaptureVolume" class="audio-source-select">
@@ -562,6 +585,19 @@ async function loadAudioPanel() {
     await fetch("/api/audio/input-source", { method: "POST", body: form });
     loadAudioStatus();
     statusEl.textContent = `Input saved: ${selectedInputSource().split(".").pop()}`;
+  });
+
+  document.getElementById("audioOutputSink")?.addEventListener("change", async () => {
+    const form = new FormData();
+    form.append("sink", selectedOutputSink());
+    const res = await fetch("/api/audio/output-sink", { method: "POST", body: form });
+    const data = await res.json();
+    if (!data.ok) {
+      statusEl.textContent = data.message || "Output failed";
+      return;
+    }
+    statusEl.textContent = `Output saved: ${selectedOutputSink().split(".").pop()}`;
+    loadAudioPanel();
   });
 
   document.getElementById("audioCaptureVolume")?.addEventListener("change", async () => {
@@ -920,24 +956,42 @@ async function loadAudioPanel() {
   document.getElementById("audioMusicBtn")?.addEventListener("click", async () => {
     const prompt = document.getElementById("audioMusicPrompt")?.value.trim();
     if (!prompt) return;
-    statusEl.textContent = "Generating music (may take a while)…";
+    statusEl.textContent = "Queueing music generation…";
     const form = new FormData();
     form.append("prompt", prompt);
     form.append("duration", document.getElementById("audioMusicDur")?.value || "10");
+    form.append("async_job", "1");
     const res = await fetch("/api/audio/music", { method: "POST", body: form });
     const data = await res.json();
     if (!data.ok) {
       statusEl.textContent = data.message || "MusicGen failed";
       return;
     }
-    statusEl.textContent = `Saved: ${data.audio_path}`;
-    const mp = document.getElementById("audioMusicPreview");
-    if (mp && data.audio_path) {
-      mp.src = audioFileUrl(data.audio_path);
-      mp.load();
-      mp.classList.remove("hidden");
+    if (data.job_id && typeof window.pollAudioJob === "function") {
+      await window.pollAudioJob(data.job_id, statusEl, (result) => {
+        const path = result?.audio_path;
+        if (!path) return;
+        statusEl.textContent = `Saved: ${path}`;
+        const mp = document.getElementById("audioMusicPreview");
+        if (mp) {
+          mp.src = audioFileUrl(path);
+          mp.load();
+          mp.classList.remove("hidden");
+        }
+        refreshRecentLists();
+      });
+      return;
     }
-    refreshRecentLists();
+    if (data.audio_path) {
+      statusEl.textContent = `Saved: ${data.audio_path}`;
+      const mp = document.getElementById("audioMusicPreview");
+      if (mp) {
+        mp.src = audioFileUrl(data.audio_path);
+        mp.load();
+        mp.classList.remove("hidden");
+      }
+      refreshRecentLists();
+    }
   });
 
   document.getElementById("audioSearchBtn")?.addEventListener("click", async () => {

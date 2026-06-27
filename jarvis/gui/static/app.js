@@ -5,13 +5,18 @@
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (url, opts = {}) => {
     const key = sessionStorage.getItem("jarvis_api_key");
-    if (key && String(url).startsWith("/api/")) {
+    const path = String(url).split("?")[0];
+    if (path.startsWith("/api/")) {
       const headers = new Headers(opts.headers || {});
-      if (!headers.has("X-API-Key")) headers.set("X-API-Key", key);
+      if (key && !headers.has("X-API-Key")) headers.set("X-API-Key", key);
+      if (typeof window.jarvisDeviceId === "function" && !headers.has("X-Jarvis-Device")) {
+        headers.set("X-Jarvis-Device", window.jarvisDeviceId());
+      }
+      const sess = typeof window.jarvisSession === "function" ? window.jarvisSession() : "";
+      if (sess && !headers.has("X-Jarvis-Session")) headers.set("X-Jarvis-Session", sess);
       opts = { ...opts, headers };
     }
     const res = await nativeFetch(url, opts);
-    const path = String(url).split("?")[0];
     if (
       res.status === 401
       && path.startsWith("/api/")
@@ -25,6 +30,87 @@
 
 function getStoredApiKey() {
   return sessionStorage.getItem("jarvis_api_key") || "";
+}
+
+function apiAuthUrl(url) {
+  if (!url) return "";
+  const key = getStoredApiKey();
+  if (!key) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}api_key=${encodeURIComponent(key)}`;
+}
+window.apiAuthUrl = apiAuthUrl;
+
+let jarvisLanIps = [];
+let jarvisApiKeyRequired = false;
+let jarvisLocalhostKeyExempt = true;
+
+function isLoopbackHost(host) {
+  return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
+}
+
+function isSameMachineHost() {
+  const host = location.hostname;
+  return isLoopbackHost(host) || jarvisLanIps.includes(host);
+}
+
+function mediaNeedsApiKey() {
+  if (!jarvisApiKeyRequired) return false;
+  if (jarvisLocalhostKeyExempt && isSameMachineHost()) return false;
+  return true;
+}
+
+async function fetchMediaBlobUrl(url) {
+  const res = await fetch(url);
+  if (!res.ok) return { ok: false, status: res.status };
+  const blob = await res.blob();
+  const type = (blob.type || "").toLowerCase();
+  if (type.includes("json") || type.includes("text")) {
+    return { ok: false, status: res.status || 415 };
+  }
+  const videoBlob = type.startsWith("video/") ? blob : new Blob([blob], { type: "video/mp4" });
+  return { ok: true, url: URL.createObjectURL(videoBlob) };
+}
+
+function resolveVideoUrl(pathOrName, { playback = true } = {}) {
+  const raw = (pathOrName || "").split(/[/\\]/).pop();
+  if (!raw) return "";
+  let file = raw;
+  if (playback && !/\.webm$/i.test(file)) {
+    file = file.replace(/\.(mp4|mov|m4v|mkv|avi)$/i, ".webm");
+  }
+  const url = `/api/video-gallery/${encodeURIComponent(file)}`;
+  if (!mediaNeedsApiKey() || isSameMachineHost()) return url;
+  return apiAuthUrl(url);
+}
+
+async function resolveVideoPlaybackUrl(pathOrName) {
+  const url = resolveVideoUrl(pathOrName, { playback: true });
+  if (!url) return { ok: false, url: "", needsKey: false };
+  if (mediaNeedsApiKey() && !isSameMachineHost() && !getStoredApiKey()) {
+    return { ok: false, url, needsKey: true };
+  }
+  return { ok: true, url, direct: true, needsKey: false };
+}
+window.resolveVideoPlaybackUrl = resolveVideoPlaybackUrl;
+window.mediaNeedsApiKey = mediaNeedsApiKey;
+window.isSameMachineHost = isSameMachineHost;
+
+const MEDIA_LOAD_ERROR_HINT = "Could not play this clip in the app — try Video gallery or open the file from data/generated_videos/";
+
+function attachMediaLoadError(el, kind = "media") {
+  if (!el || el.dataset.mediaErrorBound) return;
+  el.dataset.mediaErrorBound = "1";
+  el.addEventListener("error", () => {
+    const parent = el.closest("figure") || el.parentElement;
+    if (!parent || parent.querySelector(".media-load-warn")) return;
+    const warn = document.createElement("p");
+    warn.className = "media-load-warn warn small";
+    warn.textContent = kind === "video"
+      ? `Video failed to load — ${MEDIA_LOAD_ERROR_HINT}`
+      : `Image failed to load — ${MEDIA_LOAD_ERROR_HINT}`;
+    parent.appendChild(warn);
+  });
 }
 
 function showApiKeyModal(message) {
@@ -93,6 +179,9 @@ async function refreshLanPanel() {
   try {
     const res = await fetch("/api/lan");
     const data = await res.json();
+    jarvisLanIps = data.lan_ips || [];
+    jarvisApiKeyRequired = Boolean(data.api_key_required);
+    jarvisLocalhostKeyExempt = data.api_key_localhost_exempt !== false;
     if (!data.lan_enabled) {
       line.textContent = "Local only — run ./scripts/enable-lan.sh on the PC to allow LAN.";
       if (list) list.innerHTML = "";
@@ -131,12 +220,18 @@ function initLanPanel() {
 
 async function initLanAccessGate() {
   try {
-    const host = location.hostname;
-    const isLocalHost = host === "localhost" || host === "127.0.0.1" || host === "[::1]";
     const res = await fetch("/api/live");
     const data = await res.json();
-    const needsKey = data.api_key_required
-      && !(isLocalHost && data.api_key_localhost_exempt !== false);
+    jarvisApiKeyRequired = Boolean(data.api_key_required);
+    jarvisLocalhostKeyExempt = data.api_key_localhost_exempt !== false;
+    try {
+      const lanRes = await fetch("/api/lan");
+      if (lanRes.ok) {
+        const lanData = await lanRes.json();
+        jarvisLanIps = lanData.lan_ips || [];
+      }
+    } catch (_) {}
+    const needsKey = mediaNeedsApiKey();
     if (needsKey && !getStoredApiKey()) {
       showApiKeyModal("");
     }
@@ -690,17 +785,18 @@ function syncMediaBusyClass() {
 function resolveImageUrl(imgPath, { thumb = false, thumbMax = CHAT_IMAGE_THUMB_MAX } = {}) {
   if (!imgPath) return "";
   const file = imgPath.split(/[/\\]/).pop();
+  let url;
   if (/\/uploads[/\\]/i.test(imgPath)) {
-    return `/api/uploads/${encodeURIComponent(file)}`;
-  }
-  if (/\/generated[/\\]memes[/\\]/i.test(imgPath)) {
-    return `/api/meme-gallery/${encodeURIComponent(file)}`;
-  }
-  if (/\/generated[/\\]/i.test(imgPath)) {
+    url = `/api/uploads/${encodeURIComponent(file)}`;
+  } else if (/\/generated[/\\]memes[/\\]/i.test(imgPath)) {
+    url = `/api/meme-gallery/${encodeURIComponent(file)}`;
+  } else if (/\/generated[/\\]/i.test(imgPath)) {
     const base = `/api/gallery/${encodeURIComponent(file)}`;
-    return thumb ? `${base}?max=${thumbMax}` : base;
+    url = thumb ? `${base}?max=${thumbMax}` : base;
+  } else {
+    url = `/api/audio/file?path=${encodeURIComponent(imgPath)}`;
   }
-  return `/api/audio/file?path=${encodeURIComponent(imgPath)}`;
+  return apiAuthUrl(url);
 }
 
 function galleryViewVisible() {
@@ -708,17 +804,58 @@ function galleryViewVisible() {
   return el && !el.classList.contains("hidden");
 }
 
-function appendImageFigure(container, imgPath, imageName, caption, { thumb = true } = {}) {
+async function appendImageFigure(container, imgPath, imageName, caption, { thumb = true } = {}) {
   if (!container || !imgPath || !/\.(png|jpe?g|webp|gif|bmp)$/i.test(imgPath)) return;
   const file = imageName || imgPath.split(/[/\\]/).pop();
   const url = resolveImageUrl(imgPath, { thumb });
   const fullUrl = resolveImageUrl(imgPath, { thumb: false });
   const label = caption || file;
   const pathAttr = escapeHtml(imgPath);
-  container.insertAdjacentHTML(
-    "beforeend",
-    `<figure class="gen-image" data-image-path="${pathAttr}"><img src="${url}" data-full-src="${escapeHtml(fullUrl)}" alt="${escapeHtml(file)}" loading="lazy" decoding="async" class="clickable-image" data-image-path="${pathAttr}" title="Click to view and edit" /><figcaption>${escapeHtml(label)}</figcaption></figure>`,
-  );
+  const fig = document.createElement("figure");
+  fig.className = "gen-image";
+  fig.dataset.imagePath = imgPath;
+  const img = document.createElement("img");
+  img.alt = file;
+  img.loading = "lazy";
+  img.decoding = "async";
+  img.className = "clickable-image";
+  img.dataset.imagePath = imgPath;
+  img.title = "Click to view and edit";
+  img.dataset.fullSrc = fullUrl;
+  const cap = document.createElement("figcaption");
+  cap.textContent = label;
+  fig.appendChild(img);
+  fig.appendChild(cap);
+  container.appendChild(fig);
+  attachMediaLoadError(img, "image");
+  if (!mediaNeedsApiKey() || isNativeApp()) {
+    img.src = url;
+    bindClickableImages(container);
+    return;
+  }
+  const key = getStoredApiKey();
+  if (key) {
+    try {
+      const res = await fetch(fullUrl);
+      if (res.ok) {
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        img.dataset.fullSrc = blobUrl;
+        if (thumb && url !== fullUrl) {
+          const thumbRes = await fetch(url);
+          img.src = thumbRes.ok ? URL.createObjectURL(await thumbRes.blob()) : blobUrl;
+        } else {
+          img.src = blobUrl;
+        }
+      } else {
+        img.src = url;
+      }
+    } catch {
+      img.src = url;
+    }
+  } else {
+    img.src = url;
+  }
   bindClickableImages(container);
 }
 
@@ -795,6 +932,62 @@ function closeImageLightbox() {
   lightboxImagePath = "";
 }
 
+function openVideoLightbox(url, caption = "") {
+  const modal = document.getElementById("videoLightbox");
+  const player = document.getElementById("videoLightboxPlayer");
+  const cap = document.getElementById("videoLightboxCaption");
+  if (!modal || !player || !url) return;
+  player.pause();
+  player.removeAttribute("src");
+  player.load();
+  player.src = url;
+  if (cap) cap.textContent = caption || "";
+  modal.classList.remove("hidden");
+  player.play().catch(() => {});
+}
+window.openVideoLightbox = openVideoLightbox;
+
+function closeVideoLightbox() {
+  const player = document.getElementById("videoLightboxPlayer");
+  if (player) {
+    player.pause();
+    player.removeAttribute("src");
+    player.load();
+  }
+  document.getElementById("videoLightbox")?.classList.add("hidden");
+}
+window.closeVideoLightbox = closeVideoLightbox;
+
+function bindClickableVideos(root) {
+  const scope = root || document;
+  scope.querySelectorAll(".gen-video video, .video-gallery-item .video-thumb").forEach((video) => {
+    if (video.dataset.lightboxBound) return;
+    video.dataset.lightboxBound = "1";
+    const isThumb = video.classList.contains("video-thumb");
+    video.classList.add("clickable-video");
+    if (!video.title) video.title = isThumb ? "Click to open player" : "Double-click to open full player";
+    const open = (e) => {
+      const src = video.currentSrc || video.src;
+      if (!src) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const host = video.closest(".gen-video, .video-gallery-item");
+      const caption = host?.querySelector("figcaption, .video-item-name")?.textContent?.trim() || "";
+      openVideoLightbox(src, caption);
+    };
+    video.addEventListener(isThumb ? "click" : "dblclick", open);
+  });
+}
+window.bindClickableVideos = bindClickableVideos;
+
+function initVideoLightbox() {
+  document.getElementById("videoLightboxClose")?.addEventListener("click", closeVideoLightbox);
+  const modal = document.getElementById("videoLightbox");
+  modal?.addEventListener("click", (e) => {
+    if (e.target === modal) closeVideoLightbox();
+  });
+}
+
 async function queueImageEdit(imagePath, prompt, regionKey, statusEl, onDone) {
   if (!imagePath || !prompt) {
     if (statusEl) statusEl.textContent = "Enter what you want to change.";
@@ -852,7 +1045,11 @@ function initImageLightbox() {
     if (e.target === modal) closeImageLightbox();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && modal && !modal.classList.contains("hidden")) closeImageLightbox();
+    if (e.key !== "Escape") return;
+    const imageModal = document.getElementById("imageLightbox");
+    const videoModal = document.getElementById("videoLightbox");
+    if (imageModal && !imageModal.classList.contains("hidden")) closeImageLightbox();
+    else if (videoModal && !videoModal.classList.contains("hidden")) closeVideoLightbox();
   });
   document.getElementById("imageLightboxEditBtn")?.addEventListener("click", async () => {
     const prompt = document.getElementById("imageLightboxPrompt")?.value?.trim();
@@ -1001,20 +1198,37 @@ async function pollComfySettingsJob(jobId) {
   throw new Error("ComfyUI settings timed out — check data/logs/comfyui.log");
 }
 
-function resolveVideoUrl(pathOrName) {
-  const file = (pathOrName || "").split(/[/\\]/).pop();
-  if (!file) return "";
-  return `/api/video-gallery/${encodeURIComponent(file)}`;
+async function appendAuthenticatedVideo(container, videoPath, videoName) {
+  if (!container || !videoPath) return;
+  const label = videoName || videoPath.split(/[/\\]/).pop();
+  const fig = document.createElement("figure");
+  fig.className = "gen-video";
+  const video = document.createElement("video");
+  video.controls = true;
+  video.preload = "metadata";
+  video.className = "chat-video-player";
+  attachMediaLoadError(video, "video");
+  const cap = document.createElement("figcaption");
+  cap.textContent = label;
+  fig.appendChild(video);
+  fig.appendChild(cap);
+  container.appendChild(fig);
+
+  const playback = await resolveVideoPlaybackUrl(videoPath);
+  if (!playback.ok && playback.needsKey) {
+    const warn = document.createElement("p");
+    warn.className = "media-load-warn warn small";
+    warn.innerHTML = 'Video needs your API key — <button type="button" class="ghost-btn small media-key-btn">Enter API key</button>';
+    warn.querySelector(".media-key-btn")?.addEventListener("click", () => showApiKeyModal(""));
+    fig.appendChild(warn);
+    return;
+  }
+  if (playback.url) video.src = playback.url;
+  bindClickableVideos(fig);
 }
 
 function appendGeneratedVideo(container, videoPath, videoName) {
-  if (!container || !videoPath) return;
-  const url = resolveVideoUrl(videoPath);
-  const label = videoName || videoPath.split(/[/\\]/).pop();
-  container.insertAdjacentHTML(
-    "beforeend",
-    `<figure class="gen-video"><video controls preload="metadata" src="${url}" class="chat-video-player"></video><figcaption>${escapeHtml(label)}</figcaption></figure>`,
-  );
+  void appendAuthenticatedVideo(container, videoPath, videoName);
 }
 
 function buildVideoMessageHtml(data, text) {
@@ -1864,10 +2078,18 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
                 break;
               }
               const streamed = Boolean(full);
-              if (!streamed) typing.remove();
+              const isPendingMediaJob = Boolean(
+                event.job_id
+                && (event.type === "media_job" || event.result_type === "media_job" || event.pending),
+              );
+              if (!streamed && !isPendingMediaJob) typing.remove();
+              if (isPendingMediaJob) typing.classList.remove("typing-msg");
               lastAssistantText = full || event.message;
+              const doneOpts = isPendingMediaJob
+                ? { targetBody: typing.querySelector(".msg-body"), pendingMediaJob: true }
+                : {};
               try {
-                handleDone(event, full || event.message, streamed);
+                handleDone(event, full || event.message, streamed, doneOpts);
               } catch (err) {
                 console.error("handleDone failed", err);
                 showError(`Could not display response: ${err.message || err}`);
@@ -2323,7 +2545,7 @@ function handleDone(data, text, streamed = false, options = {}) {
       body.innerHTML = formatMessage(text || data.message || "");
       if (data.data_preview) body.insertAdjacentHTML("beforeend", buildDataTableHtml(data.data_preview));
       if (data.chart_path) {
-        const chartUrl = `/api/audio/file?path=${encodeURIComponent(data.chart_path)}`;
+        const chartUrl = apiAuthUrl(`/api/audio/file?path=${encodeURIComponent(data.chart_path)}`);
         body.insertAdjacentHTML("beforeend", `<figure class="gen-image data-chart"><img src="${chartUrl}" alt="chart" /><figcaption>Chart</figcaption></figure>`);
       }
       if (data.export_path) {
@@ -2394,6 +2616,11 @@ function handleDone(data, text, streamed = false, options = {}) {
       }
     }
     scrollMessageIntoView(options.targetBody, "start");
+  } else if (options.targetBody && options.pendingMediaJob) {
+    applyAssistantMeta(options.targetBody.closest(".message"), meta);
+    options.targetBody.innerHTML = formatMessage(text || data.message || "Working…");
+    options.targetBody.closest(".message")?.classList.remove("typing-msg");
+    scrollMessageIntoView(options.targetBody, "start");
   } else if (streamed) {
     const lastMsg = document.querySelector(".message.assistant:last-child");
     const msg = lastMsg?.querySelector(".msg-body");
@@ -2422,7 +2649,7 @@ function handleDone(data, text, streamed = false, options = {}) {
   if (data.warnings?.length) showChatWarnings(data.warnings);
   if (data.audio_path) showAudioPlayer(data.audio_path, data.transcript);
   if (data.chart_path && data.module !== "data") {
-    const chartUrl = `/api/audio/file?path=${encodeURIComponent(data.chart_path)}`;
+    const chartUrl = apiAuthUrl(`/api/audio/file?path=${encodeURIComponent(data.chart_path)}`);
     const msg = document.querySelector(".message.assistant:last-child .msg-body");
     if (msg) {
       msg.insertAdjacentHTML("beforeend", `<img src="${chartUrl}" alt="chart" style="max-width:100%" />`);
@@ -2439,7 +2666,8 @@ function handleDone(data, text, streamed = false, options = {}) {
     data.job_id
     && (data.type === "media_job" || data.result_type === "media_job" || data.pending)
   ) {
-    const msg = document.querySelector(".message.assistant:last-child");
+    const msg = options.targetBody?.closest?.(".message")
+      || document.querySelector(".message.assistant:last-child");
     pollMediaJob(data.job_id, msg);
   }
 
@@ -3458,12 +3686,30 @@ async function setComfyCheckpointFile(filename) {
 }
 
 function switchToView(view) {
+  const VIEW_PANELS = [
+    "chatView", "dashboardView", "plannerView", "calendarView", "flytyingView", "projectsView",
+    "makerView", "browserView", "securityView", "presenceView", "auditView", "voiceView", "audioView", "journalView",
+    "memoryView", "galleryView", "videoView", "memeView", "documentsView", "actionsView",
+  ];
   document.querySelectorAll(".view-tab").forEach((t) => {
     t.classList.toggle("active", t.dataset.view === view);
   });
-  ["chatView", "audioView", "journalView", "memoryView", "galleryView", "videoView", "memeView", "documentsView", "actionsView"].forEach((id) => {
-    document.getElementById(id)?.classList.toggle("hidden", id !== `${view}View`);
+  const targetId = `${view}View`;
+  VIEW_PANELS.forEach((id) => {
+    document.getElementById(id)?.classList.toggle("hidden", id !== targetId);
   });
+  if (view === "dashboard" && window.initDashboard) window.initDashboard();
+  if (view === "planner" && window.initPlanner) window.initPlanner();
+  if (view === "calendar" && window.initCalendar) window.initCalendar();
+  if (view === "flytying" && window.initFlytying) window.initFlytying();
+  if (view === "projects" && window.initProjects) window.initProjects();
+  if (view === "maker" && window.initMakerLab) window.initMakerLab();
+  if (view === "browser" && window.initBrowserPanel) window.initBrowserPanel();
+  if (view !== "browser" && window.stopBrowserPanelPoll) window.stopBrowserPanelPoll();
+  if (view === "security" && window.initSecurity) window.initSecurity();
+  if (view === "presence" && window.initPresence) window.initPresence();
+  if (view === "audit" && window.initAudit) window.initAudit();
+  if (view === "voice" && window.initVoiceTab) window.initVoiceTab();
   if (view === "audio" && window.initAudio) window.initAudio();
   if (view === "journal" && window.initJournal) window.initJournal();
   if (view === "memory") loadMemoryBrowser();
@@ -3472,7 +3718,21 @@ function switchToView(view) {
   if (view === "meme" && typeof loadMemeGallery === "function") loadMemeGallery();
   if (view === "actions") loadActions();
   if (view === "documents" && window.loadDocumentsTab) window.loadDocumentsTab();
+  document.querySelector(`.view-tab[data-view="${view}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
+
+function resetSidebarLayout() {
+  localStorage.removeItem("jarvis_sidebar_collapsed");
+  document.querySelectorAll(".sidebar-section.collapsed").forEach((sec) => {
+    sec.classList.remove("collapsed");
+    const head = sec.querySelector(".sidebar-section-head");
+    if (head) head.setAttribute("aria-expanded", "true");
+  });
+  document.body.classList.remove("mobile-sidebar-open");
+}
+
+window.switchToView = switchToView;
+window.resetSidebarLayout = resetSidebarLayout;
 
 if (galleryModeSelect) {
   galleryModeSelect.addEventListener("change", () => setComfyMode(galleryModeSelect.value));
@@ -3495,6 +3755,18 @@ galleryWorkflowInput?.addEventListener("change", async () => {
 document.getElementById("openImageSettingsBtn")?.addEventListener("click", () => {
   switchToView("gallery");
   document.getElementById("imageEnginePanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+document.getElementById("openVideoStudioBtn")?.addEventListener("click", () => {
+  switchToView("video");
+  document.body.classList.remove("mobile-sidebar-open");
+});
+document.getElementById("openVideoGalleryBtn")?.addEventListener("click", () => {
+  switchToView("video");
+  document.getElementById("videoGalleryGrid")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  document.body.classList.remove("mobile-sidebar-open");
+});
+document.getElementById("sidebarVideoFreeVramBtn")?.addEventListener("click", () => {
+  if (typeof window.freeJarvisVram === "function") window.freeJarvisVram(statusText);
 });
 
 document.getElementById("mobileMenuBtn")?.addEventListener("click", () => {
@@ -3592,13 +3864,6 @@ const modelSelects = {
 
 let modelSettings = null;
 
-modelsToggle?.addEventListener("click", async () => {
-  const open = modelsToggle.getAttribute("aria-expanded") === "true";
-  modelsToggle.setAttribute("aria-expanded", open ? "false" : "true");
-  modelsEditor?.classList.toggle("hidden", open);
-  if (!open) await loadModelSettings();
-});
-
 function fillModelSelect(select, choices, value) {
   if (!select) return;
   select.innerHTML = "";
@@ -3688,6 +3953,8 @@ async function loadModelSettings() {
     return null;
   }
 }
+
+window.loadModelSettings = loadModelSettings;
 
 document.getElementById("saveModelsBtn")?.addEventListener("click", async () => {
   const mode = uncensoredToggle.checked ? "uncensored" : "standard";
@@ -4083,7 +4350,12 @@ async function pollWakewordChat() {
 
 loadSuggestions();
 initImageLightbox();
+initVideoLightbox();
 document.getElementById("reloadUiBtn")?.addEventListener("click", () => reloadJarvisUi());
+document.getElementById("resetLayoutBtn")?.addEventListener("click", () => {
+  resetSidebarLayout();
+  if (statusText) statusText.textContent = "Sidebar expanded — all sections visible";
+});
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && String(e.key).toLowerCase() === "r") {
     e.preventDefault();
@@ -4284,27 +4556,78 @@ async function showCheatsheet(key) {
   box.classList.remove("hidden");
 }
 
+let memorySettingsSaveInFlight = 0;
+
+function applyMemorySettingsToUi(data) {
+  if (!data || !data.ok) return;
+  const modeEl = document.getElementById("memoryAutoMode");
+  if (modeEl && data.auto_memory_mode) modeEl.value = data.auto_memory_mode;
+  const brainEl = document.getElementById("memoryBrainMode");
+  if (brainEl) brainEl.checked = data.brain_mode !== false;
+  const journalLearnEl = document.getElementById("memoryAutoJournalLearn");
+  if (journalLearnEl) {
+    const bl = data.brain_learning || {};
+    journalLearnEl.checked = data.auto_journal_learn === true
+      || (data.auto_journal_learn == null && bl.auto_journal_learn === true);
+  }
+  const docLearnEl = document.getElementById("memoryAutoDocumentLearn");
+  if (docLearnEl) {
+    const bl = data.brain_learning || {};
+    docLearnEl.checked = data.auto_document_learn === true
+      || (data.auto_document_learn == null && bl.auto_document_learn === true);
+  }
+  const cpEl = document.getElementById("memoryAutoCheckpoint");
+  if (cpEl) cpEl.checked = data.auto_checkpoint !== false;
+  const nsEl = document.getElementById("memoryAutoNamespace");
+  if (nsEl) nsEl.checked = data.auto_namespace !== false;
+  const promptEl = document.getElementById("memoryInPrompt");
+  if (promptEl) promptEl.checked = data.memory_in_system_prompt !== false;
+}
+
 async function loadMemorySettings() {
+  if (memorySettingsSaveInFlight > 0) return;
   try {
     const res = await fetch("/api/memory/settings");
-    const data = await res.json();
-    if (!data.ok) return;
-    const modeEl = document.getElementById("memoryAutoMode");
-    if (modeEl && data.auto_memory_mode) modeEl.value = data.auto_memory_mode;
-    const cpEl = document.getElementById("memoryAutoCheckpoint");
-    if (cpEl) cpEl.checked = data.auto_checkpoint !== false;
-    const nsEl = document.getElementById("memoryAutoNamespace");
-    if (nsEl) nsEl.checked = data.auto_namespace !== false;
-    const promptEl = document.getElementById("memoryInPrompt");
-    if (promptEl) promptEl.checked = data.memory_in_system_prompt !== false;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) return;
+    applyMemorySettingsToUi(data);
   } catch (_) {}
 }
 
 async function saveMemorySettings(patch) {
-  await fetch("/api/memory/settings", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
+  memorySettingsSaveInFlight += 1;
+  try {
+    const res = await fetch("/api/memory/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      const err = new Error(data.message || `Could not save settings (HTTP ${res.status})`);
+      err.locked = res.status === 423 || data.locked;
+      throw err;
+    }
+    applyMemorySettingsToUi(data);
+    return data;
+  } finally {
+    memorySettingsSaveInFlight = Math.max(0, memorySettingsSaveInFlight - 1);
+  }
+}
+
+function bindMemorySettingCheckbox(id, key) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener("change", async (e) => {
+    const target = e.target;
+    const want = target.checked;
+    try {
+      await saveMemorySettings({ [key]: want });
+    } catch (err) {
+      target.checked = !want;
+      if (err.locked) window.jarvisShowLock?.();
+      window.showAriaToast?.(err.message || "Could not save memory setting", "warn", 6000);
+    }
   });
 }
 
@@ -4382,10 +4705,251 @@ async function loadMemoryTrustStatus() {
   }
 }
 
+async function loadEnvironmentPreferences() {
+  const form = document.getElementById("envPrefsForm");
+  if (!form) return;
+  try {
+    const res = await fetch("/api/memory/environment/preferences");
+    const data = await res.json();
+    const items = data.preferences || [];
+    form.innerHTML = items.map((p) => `
+      <div class="env-pref-field" data-key="${escapeHtml(p.key)}">
+        <label for="envPref-${escapeHtml(p.key)}">${escapeHtml(p.label)}</label>
+        <textarea id="envPref-${escapeHtml(p.key)}" rows="2" placeholder="${escapeHtml(p.hint || "")}">${escapeHtml(p.content || "")}</textarea>
+      </div>`).join("");
+  } catch (_) {
+    form.innerHTML = "<p class=\"muted\">Could not load stack preferences.</p>";
+  }
+}
+
+async function saveEnvironmentPreferences() {
+  const form = document.getElementById("envPrefsForm");
+  if (!form) return;
+  const preferences = [];
+  form.querySelectorAll(".env-pref-field").forEach((field) => {
+    const key = field.dataset.key;
+    const ta = field.querySelector("textarea");
+    if (key && ta) preferences.push({ key, content: ta.value });
+  });
+  const res = await fetch("/api/memory/environment/preferences", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ preferences }),
+  });
+  const data = await res.json();
+  if (!data.ok) {
+    alert(data.error || "Save failed");
+    return;
+  }
+  loadMemoryBrowser();
+}
+
+function setKnowledgeResearchStatus(text, busy = false) {
+  const el = document.getElementById("knowledgeResearchStatus");
+  if (!el) return;
+  el.textContent = text || "";
+  el.classList.toggle("busy", Boolean(busy && text));
+}
+
+function knowledgeKindLabel(kind) {
+  if (kind === "intel") return "General";
+  if (kind === "personal") return "Personal";
+  if (kind === "profile") return "Profile";
+  return "Stack";
+}
+
+function renderKnowledgeResearchBrief(b) {
+  const day = b.last_day || b.updated || "";
+  const label = knowledgeKindLabel(b.kind || "stack");
+  return `<li><span class="knowledge-kind-badge knowledge-kind-${escapeHtml(b.kind || "stack")}">${escapeHtml(label)}</span> <button type="button" class="ghost-btn tiny knowledge-research-link" data-slug="${escapeHtml(b.slug)}"><strong>${escapeHtml(b.title || b.slug)}</strong></button> <span class="muted">${escapeHtml(day)}</span></li>`;
+}
+
+function renderKnowledgeResearchTopics(categories) {
+  const byKind = { stack: [], intel: [], personal: [], profile: [] };
+  for (const c of categories) {
+    const k = c.kind || "stack";
+    (byKind[k] || byKind.stack).push(c);
+  }
+  const parts = [];
+  if (byKind.profile.length) {
+    parts.push(
+      `<strong>From your profile (nightly):</strong> ${byKind.profile.map((c) => escapeHtml(c.title)).join(" · ")}`,
+    );
+  }
+  if (byKind.stack.length) {
+    parts.push(
+      `<strong>Stack (nightly):</strong> ${byKind.stack.map((c) => escapeHtml(c.title)).join(" · ")}`,
+    );
+  }
+  if (byKind.intel.length) {
+    parts.push(
+      `<strong>General (rotating, 4/night):</strong> ${byKind.intel.map((c) => escapeHtml(c.title)).join(" · ")}`,
+    );
+  }
+  if (byKind.personal.length) {
+    parts.push(
+      `<strong>Personal:</strong> ${byKind.personal.map((c) => escapeHtml(c.title)).join(" · ")}`,
+    );
+  }
+  return parts.join("<br>");
+}
+
+async function waitForCodingJobResult(jobId, { onProgress } = {}) {
+  const maxAttempts = 240;
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    const res = await fetch(`/api/coding/job/${encodeURIComponent(jobId)}`);
+    const job = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(job.message || `HTTP ${res.status}`);
+    onProgress?.(job);
+    if (job.done) return job;
+  }
+  throw new Error("Job timed out");
+}
+
+async function runKnowledgeResearchNow() {
+  const runBtn = document.getElementById("knowledgeResearchRunBtn");
+  const jobsBtn = document.getElementById("knowledgeResearchJobsBtn");
+  if (!runBtn || runBtn.dataset.busy === "1") return;
+  runBtn.dataset.busy = "1";
+  runBtn.disabled = true;
+  jobsBtn?.classList.add("hidden");
+  setKnowledgeResearchStatus("Starting knowledge research…", true);
+  try {
+    window.showAriaToast?.("Running knowledge research (may take a few minutes)…", "info", 8000);
+    const res = await fetch("/api/knowledge/research/daily", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ force: true }),
+    });
+    const data = await res.json();
+    if (data.pending && data.job_id) {
+      jobsBtn?.classList.remove("hidden");
+      setKnowledgeResearchStatus("Research queued — searching web and writing briefs…", true);
+      try {
+        const job = await waitForCodingJobResult(data.job_id, {
+          onProgress: (j) => {
+            const msg = j.message || "Running…";
+            setKnowledgeResearchStatus(`Research in progress — ${msg}`, true);
+          },
+        });
+        jobsBtn?.classList.add("hidden");
+        const errText = job.error || job.result?.message || "";
+        if (job.result?.ok) {
+          setKnowledgeResearchStatus("Research complete.", false);
+          window.showAriaToast?.(job.result.message || "Research complete", "ok", 8000);
+          loadMemoryBrowser();
+        } else if (String(errText).includes("knowledge_research_run")) {
+          setKnowledgeResearchStatus("Handler missing — restart Jarvis server, then try again.", false);
+          window.showAriaToast?.("Research handler missing — restart Jarvis server, then try again.", "err", 10000);
+        } else {
+          setKnowledgeResearchStatus(errText || "Research failed.", false);
+          window.showAriaToast?.(errText || "Research failed", "err", 8000);
+        }
+      } catch (_) {
+        setKnowledgeResearchStatus(
+          "Still running in the background — click View job progress or Services → Background jobs.",
+          false,
+        );
+        window.showAriaToast?.("Research still running — opening Job center…", "info", 8000);
+        window.jarvisJobs?.openJobCenter?.();
+      }
+    } else if (data.ok) {
+      setKnowledgeResearchStatus(data.message || "Research complete.", false);
+      window.showAriaToast?.(data.message || "Research complete", "ok", 8000);
+      loadMemoryBrowser();
+    } else {
+      setKnowledgeResearchStatus(data.message || "Research failed.", false);
+      window.showAriaToast?.(data.message || "Research failed", "err", 8000);
+    }
+  } catch (e) {
+    setKnowledgeResearchStatus(e.message || "Request failed.", false);
+    window.showAriaToast?.(e.message || "Request failed", "err", 8000);
+  } finally {
+    runBtn.dataset.busy = "0";
+    runBtn.disabled = false;
+  }
+}
+
+async function loadKnowledgeResearchPanel() {
+  const rRes = await fetch("/api/knowledge/research");
+  if (!rRes.ok) return;
+  const rData = await rRes.json();
+  const topicsEl = document.getElementById("knowledgeResearchTopics");
+  if (topicsEl) {
+    const cats = rData.categories || [];
+    topicsEl.innerHTML = cats.length ? renderKnowledgeResearchTopics(cats) : "";
+  }
+  const rEl = document.getElementById("knowledgeResearchList");
+  if (rEl) {
+    const briefs = rData.briefs || [];
+    const last = rData.last_run_day ? ` · last run ${escapeHtml(rData.last_run_day)}` : "";
+    rEl.innerHTML = briefs.length
+      ? briefs.map((b) => renderKnowledgeResearchBrief(b)).join("") + `<li class="muted">${briefs.length} brief(s)${last}</li>`
+      : `<li class="muted">No nightly research yet${last} — click Run research now or wait for 11 PM.</li>`;
+    rEl.querySelectorAll(".knowledge-research-link").forEach((btn) => {
+      btn.onclick = async () => {
+        const slug = btn.dataset.slug;
+        if (!slug) return;
+        try {
+          const res = await fetch(`/api/knowledge/research/${encodeURIComponent(slug)}`);
+          const brief = await res.json();
+          if (!brief.ok) {
+            alert(brief.message || "Could not load brief");
+            return;
+          }
+          const preview = (brief.markdown || "").slice(0, 8000);
+          const w = window.open("", "_blank", "width=720,height=640");
+          if (w) {
+            w.document.write(`<pre style="font:14px/1.5 sans-serif;padding:1rem;white-space:pre-wrap">${escapeHtml(preview)}</pre>`);
+            w.document.title = slug;
+          } else {
+            alert(preview.slice(0, 2000));
+          }
+        } catch (e) {
+          alert(e.message || "Load failed");
+        }
+      };
+    });
+  }
+}
+
+async function loadProfileInlinePanel() {
+  const el = document.getElementById("profileInlineContent");
+  if (!el) return;
+  try {
+    const [qRes, mRes] = await Promise.all([
+      fetch("/api/profile/questionnaire"),
+      fetch("/api/memory/all?namespace=profile"),
+    ]);
+    const data = await qRes.json();
+    const mem = await mRes.json();
+    const questions = data.questions?.length ? data.questions : [];
+    const entries = (mem.entries || []).filter((e) => !(e.tags || []).includes("summary"));
+    if (entries.length) {
+      el.innerHTML = entries.map((e) =>
+        `<div class="profile-inline-row"><span>${escapeHtml(e.content || "")}</span></div>`
+      ).join("");
+    } else if (!data.completed && questions.length) {
+      el.innerHTML = `<p>Questionnaire not completed — ${questions.length} questions waiting.</p>`;
+      renderProfileForm(questions);
+      document.getElementById("profileModal")?.classList.remove("hidden");
+    } else if (data.completed) {
+      el.innerHTML = "<p>Profile completed. Click <strong>Edit answers</strong> to update your questionnaire.</p>";
+    } else {
+      el.innerHTML = "<p>No profile answers yet. Click Edit answers to fill in the questionnaire.</p>";
+    }
+  } catch (e) {
+    el.textContent = e.message || "Could not load profile";
+  }
+}
+
 async function loadMemoryBrowser() {
   await loadMemorySettings();
+  await loadEnvironmentPreferences();
   await loadMemoryConflicts();
   await loadMemoryTrustStatus();
+  await loadProfileInlinePanel();
   try {
     const kRes = await fetch("/api/knowledge");
     const kData = await kRes.json();
@@ -4396,6 +4960,9 @@ async function loadMemoryBrowser() {
         ? topics.map((t) => `<li><strong>${escapeHtml(t.title || t.slug)}</strong> <code>${escapeHtml(t.slug || "")}</code></li>`).join("")
         : "<li>No knowledge briefs yet — say <em>learn about: …</em></li>";
     }
+  } catch (_) {}
+  try {
+    await loadKnowledgeResearchPanel();
   } catch (_) {}
   await loadCheatsheets(document.getElementById("cheatsheetSelect")?.value || "");
   const el = document.getElementById("memoryList");
@@ -4467,6 +5034,9 @@ async function loadMemoryBrowser() {
 }
 
 function initMemoryBrowser() {
+  document.getElementById("knowledgeResearchRunBtn")?.addEventListener("click", () => {
+    runKnowledgeResearchNow();
+  });
   document.getElementById("memorySearch")?.addEventListener("input", () => loadMemoryBrowser());
   document.getElementById("memoryTypeFilter")?.addEventListener("change", () => loadMemoryBrowser());
   document.getElementById("memoryNsFilter")?.addEventListener("change", () => loadMemoryBrowser());
@@ -4523,16 +5093,25 @@ function initMemoryBrowser() {
     loadMemoryBrowser();
   });
   document.getElementById("memoryAutoMode")?.addEventListener("change", (e) => {
-    saveMemorySettings({ auto_memory_mode: e.target.value });
+    void saveMemorySettings({ auto_memory_mode: e.target.value }).catch((err) => {
+      window.showAriaToast?.(err.message || "Could not save setting", "warn", 6000);
+      if (err.locked) window.jarvisShowLock?.();
+    });
   });
-  document.getElementById("memoryAutoCheckpoint")?.addEventListener("change", (e) => {
-    saveMemorySettings({ auto_checkpoint: e.target.checked });
-  });
-  document.getElementById("memoryAutoNamespace")?.addEventListener("change", (e) => {
-    saveMemorySettings({ auto_namespace: e.target.checked });
-  });
-  document.getElementById("memoryInPrompt")?.addEventListener("change", (e) => {
-    saveMemorySettings({ memory_in_system_prompt: e.target.checked });
+  bindMemorySettingCheckbox("memoryBrainMode", "brain_mode");
+  bindMemorySettingCheckbox("memoryAutoJournalLearn", "auto_journal_learn");
+  bindMemorySettingCheckbox("memoryAutoDocumentLearn", "auto_document_learn");
+  bindMemorySettingCheckbox("memoryAutoCheckpoint", "auto_checkpoint");
+  bindMemorySettingCheckbox("memoryAutoNamespace", "auto_namespace");
+  bindMemorySettingCheckbox("memoryInPrompt", "memory_in_system_prompt");
+  document.getElementById("envPrefsSaveBtn")?.addEventListener("click", () => saveEnvironmentPreferences());
+  document.getElementById("envMachineSyncBtn")?.addEventListener("click", async () => {
+    const res = await fetch("/api/memory/environment/sync?machine_only=true", { method: "POST" });
+    const data = await res.json();
+    if (data.ok) {
+      alert(`Machine facts refreshed (${data.added || 0} added, ${data.updated || 0} updated).`);
+      loadMemoryBrowser();
+    }
   });
   document.getElementById("profileRetakeBtn")?.addEventListener("click", async () => {
     if (!confirm("Replace your saved profile with new answers?")) return;
@@ -4545,6 +5124,18 @@ function initMemoryBrowser() {
     renderProfileForm(data.questions || []);
     const modal = document.getElementById("profileModal");
     if (modal) modal.dataset.retake = "1";
+    modal?.classList.remove("hidden");
+  });
+  document.getElementById("profileInlineEditBtn")?.addEventListener("click", async () => {
+    const res = await fetch("/api/profile/questionnaire?edit=1");
+    const data = await res.json();
+    if (!data.ok || !(data.questions || []).length) {
+      alert("Could not load profile questions");
+      return;
+    }
+    renderProfileForm(data.questions);
+    const modal = document.getElementById("profileModal");
+    if (modal) modal.dataset.retake = data.completed ? "1" : "";
     modal?.classList.remove("hidden");
   });
   document.getElementById("cheatsheetViewBtn")?.addEventListener("click", () => {
@@ -4650,6 +5241,7 @@ document.getElementById("profileForm")?.addEventListener("submit", async (e) => 
     }
     document.getElementById("profileModal")?.classList.add("hidden");
     delete document.getElementById("profileModal")?.dataset.retake;
+    loadProfileInlinePanel();
     addMessage(
       "assistant",
       `Thanks — I saved **${data.stored || 0}** things about you to memory. I'll use this to personalize our chats.`,
@@ -4732,8 +5324,8 @@ async function loadGallery() {
     if (!res.ok) throw new Error(`Gallery unavailable (${res.status})`);
     const data = await res.json();
   el.innerHTML = (data.images || []).map((img) => {
-    const thumb = `/api/gallery/${encodeURIComponent(img.name)}?max=${GALLERY_THUMB_MAX}`;
-    const full = `/api/gallery/${encodeURIComponent(img.name)}`;
+    const thumb = apiAuthUrl(`/api/gallery/${encodeURIComponent(img.name)}?max=${GALLERY_THUMB_MAX}`);
+    const full = apiAuthUrl(`/api/gallery/${encodeURIComponent(img.name)}`);
     return `<div class="gallery-item">
       <button type="button" class="gallery-del" data-name="${escapeHtml(img.name)}" title="Delete">×</button>
       <button type="button" class="gallery-upscale" data-path="${escapeHtml(img.path)}" title="Upscale 2×">2×</button>

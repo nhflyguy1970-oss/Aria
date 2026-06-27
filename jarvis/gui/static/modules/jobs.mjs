@@ -4,6 +4,33 @@ import { escapeHtml, $ } from "./util.mjs";
 
 let jobCenterPollTimer = null;
 
+export function updateJobCenterBadge(data) {
+  const badge = $("jobCenterBadge");
+  const svcBtn = $("jobCenterServicesBtn");
+  const dot = $("jobCenterSvcDot");
+  if (!badge || !svcBtn) return;
+  const busy = Boolean(data?.any_busy);
+  svcBtn.classList.toggle("busy", busy);
+  if (dot) dot.classList.toggle("online", busy);
+  if (busy) {
+    badge.textContent = "running";
+    badge.classList.remove("hidden");
+  } else {
+    badge.textContent = "";
+    badge.classList.add("hidden");
+  }
+}
+
+export async function refreshJobCenterBadge() {
+  try {
+    const res = await fetch("/api/jobs");
+    if (!res.ok) return;
+    updateJobCenterBadge(await res.json());
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function cancelJobByQueue(queue, jobId) {
   const paths = {
     media: `/api/media/job/${encodeURIComponent(jobId)}/cancel`,
@@ -63,6 +90,7 @@ export function renderJobCenter(data) {
   if (!(data.recent || []).length) {
     jobCenterList.innerHTML = '<li class="muted">No recent jobs.</li>';
   }
+  updateJobCenterBadge(data);
 }
 
 export async function refreshJobCenter() {
@@ -95,12 +123,17 @@ export function closeJobCenter() {
 }
 
 function initJobCenter() {
-  $("jobCenterBtn")?.addEventListener("click", openJobCenter);
+  const open = () => openJobCenter();
+  $("jobCenterBtn")?.addEventListener("click", open);
+  $("jobCenterServicesBtn")?.addEventListener("click", open);
+  $("knowledgeResearchJobsBtn")?.addEventListener("click", open);
   $("jobCenterCloseBtn")?.addEventListener("click", closeJobCenter);
   $("jobCenterRefreshBtn")?.addEventListener("click", refreshJobCenter);
   $("jobCenterModal")?.addEventListener("click", (e) => {
     if (e.target?.id === "jobCenterModal") closeJobCenter();
   });
+  refreshJobCenterBadge();
+  setInterval(() => refreshJobCenterBadge(), 15000);
 }
 
 if (document.readyState === "loading") {
@@ -113,6 +146,8 @@ window.jarvisJobs = {
   cancelJobByQueue,
   renderJobCenter,
   refreshJobCenter,
+  refreshJobCenterBadge,
+  updateJobCenterBadge,
   openJobCenter,
   closeJobCenter,
 };

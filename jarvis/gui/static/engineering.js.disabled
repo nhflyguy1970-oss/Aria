@@ -1,0 +1,552 @@
+/** 3D Engineering lab — STL viewer (Three.js) */
+window.jarvisEngineeringInit = async function () {
+  const listEl = document.getElementById("engineeringModelList");
+  const viewer = document.getElementById("engineeringViewer");
+  const viewerHint = document.getElementById("engineeringViewerHint");
+  const viewerWrap = viewer?.closest(".engineering-viewer-wrap");
+  const engView = document.getElementById("engineeringView");
+  const status = document.getElementById("engineeringStatus");
+  const installBtn = document.getElementById("engineeringInstallBtn");
+  const designBtn = document.getElementById("engineeringDesignBtn");
+  const promptInput = document.getElementById("engineeringPromptInput");
+  const promptLabel = document.getElementById("engineeringPromptLabel");
+  const editContext = document.getElementById("engineeringEditContext");
+  const editNameEl = document.getElementById("engineeringEditName");
+  const editIdEl = document.getElementById("engineeringEditId");
+  const newDesignBtn = document.getElementById("engineeringNewDesignBtn");
+  const aiModelEl = document.getElementById("engineeringAiModel");
+  const engineSelect = document.getElementById("engineeringEngineSelect");
+  const printPanel = document.getElementById("engineeringPrintPanel");
+  const printTipsEl = document.getElementById("engineeringPrintTips");
+  const downloadStl = document.getElementById("engineeringDownloadStl");
+  const downloadScad = document.getElementById("engineeringDownloadScad");
+  if (!listEl || !viewer) return;
+
+  const THREE_LOCAL = "/static/vendor/three";
+  const THREE_CDN = "https://cdn.jsdelivr.net/npm/three@0.145.0";
+  const RENDER_TIMEOUT_MS = 130000;
+
+  let renderer = null;
+  let scene = null;
+  let camera = null;
+  let mesh = null;
+  let resizeObserver = null;
+  let busy = false;
+  let stlLoading = false;
+  let activeModelId = null;
+  let activeModelName = null;
+  let meshyAvailable = false;
+
+  function setStatus(msg) {
+    if (status) status.textContent = msg;
+  }
+
+  function setBusy(on) {
+    busy = on;
+    engView?.classList.toggle("engineering-busy", on);
+    if (designBtn) designBtn.disabled = on;
+  }
+
+  function setHintVisible(show) {
+    viewerHint?.classList.toggle("hidden", !show);
+  }
+
+  function updateEditorMode() {
+    const editing = !!activeModelId;
+    editContext?.classList.toggle("hidden", !editing);
+    if (editing) {
+      if (editNameEl) editNameEl.textContent = activeModelName || activeModelId;
+      if (editIdEl) editIdEl.textContent = activeModelId;
+      if (promptLabel) promptLabel.textContent = "Describe the change to apply";
+      if (promptInput) {
+        promptInput.placeholder = "e.g. increase wall thickness to 3mm, widen the base to 70mm, add a cable slot";
+      }
+      if (designBtn) designBtn.textContent = "Apply edit & render";
+    } else {
+      if (promptLabel) promptLabel.textContent = "Describe the part you want";
+      if (promptInput) {
+        promptInput.placeholder = "e.g. phone stand with 15° angle, 60mm wide, slot for charging cable";
+      }
+      if (designBtn) designBtn.textContent = "Design & render";
+    }
+  }
+
+  function selectModelForEdit(m, { focusPrompt = false } = {}) {
+    if (!m?.id) return;
+    activeModelId = m.id;
+    activeModelName = m.name || m.id;
+    updateEditorMode();
+    refreshList();
+    if (m.has_stl) showPrintPanel(m.id);
+    else hidePrintPanel();
+    if (focusPrompt) promptInput?.focus();
+  }
+
+  function clearEditSelection() {
+    activeModelId = null;
+    activeModelName = null;
+    updateEditorMode();
+    hidePrintPanel();
+    refreshList();
+  }
+
+  function hidePrintPanel() {
+    printPanel?.classList.add("hidden");
+    if (printTipsEl) printTipsEl.innerHTML = "";
+  }
+
+  async function showPrintPanel(modelId, advice) {
+    if (!modelId || !printPanel) return;
+    let pa = advice;
+    if (!pa) {
+      try {
+        const res = await fetch(`/api/engineering/print-advice/${encodeURIComponent(modelId)}`);
+        pa = await res.json();
+      } catch (_) {
+        pa = null;
+      }
+    }
+    if (!pa?.ok) {
+      hidePrintPanel();
+      return;
+    }
+    printPanel.classList.remove("hidden");
+    if (downloadStl) {
+      downloadStl.href = pa.download_stl || `/api/engineering/stl/${modelId}`;
+      downloadStl.download = `${modelId}.stl`;
+    }
+    if (downloadScad) {
+      downloadScad.href = pa.download_scad || `/api/engineering/scad/${modelId}`;
+      downloadScad.download = `${modelId}.scad`;
+    }
+    if (printTipsEl) {
+      const settings = pa.settings || {};
+      const settingLine = settings.layer_height
+        ? `<li class="muted">Slicer: ${settings.layer_height} · ${settings.infill}</li>`
+        : "";
+      printTipsEl.innerHTML = settingLine
+        + (pa.tips || []).map((t) => `<li>${escapeHtml(t)}</li>`).join("");
+    }
+  }
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) {
+        resolve();
+        return;
+      }
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error(`Failed to load ${src}`));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureThree() {
+    if (window.THREE && window.THREE.STLLoader) return;
+    const sources = [
+      [`${THREE_LOCAL}/three.min.js`, `${THREE_LOCAL}/STLLoader.js`],
+      [`${THREE_CDN}/build/three.min.js`, `${THREE_CDN}/examples/js/loaders/STLLoader.js`],
+    ];
+    let lastErr = null;
+    for (const [core, loader] of sources) {
+      try {
+        await loadScript(core);
+        await loadScript(loader);
+        if (window.THREE?.STLLoader) return;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error("3D preview library failed to load");
+  }
+
+  function resizeViewer() {
+    if (!renderer || !camera || !viewerWrap) return;
+    const w = Math.max(viewerWrap.clientWidth, 200);
+    const h = Math.max(viewerWrap.clientHeight, 200);
+    renderer.setSize(w, h);
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+  }
+
+  function initViewer() {
+    if (renderer) {
+      resizeViewer();
+      return;
+    }
+    const w = Math.max(viewerWrap?.clientWidth || 480, 200);
+    const h = Math.max(viewerWrap?.clientHeight || 360, 200);
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h);
+    renderer.setClearColor(0x000000, 0);
+    viewer.innerHTML = "";
+    viewer.appendChild(renderer.domElement);
+
+    scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x0a1628, 0.0022);
+
+    camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 2000);
+    camera.position.set(0, 35, 120);
+
+    const keyLight = new THREE.DirectionalLight(0x5eb8ff, 1.0);
+    keyLight.position.set(2, 3, 4);
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xd4a054, 0.45);
+    fillLight.position.set(-3, 1, -2);
+    scene.add(fillLight);
+
+    scene.add(new THREE.AmbientLight(0x304868, 0.55));
+
+    const grid = new THREE.GridHelper(120, 16, 0x5eb8ff, 0x2a4466);
+    grid.rotation.x = Math.PI / 2;
+    grid.material.opacity = 0.35;
+    grid.material.transparent = true;
+    scene.add(grid);
+
+    if (viewerWrap && !resizeObserver) {
+      resizeObserver = new ResizeObserver(() => resizeViewer());
+      resizeObserver.observe(viewerWrap);
+    }
+  }
+
+  function showGeometry(geometry) {
+    initViewer();
+    setHintVisible(false);
+    if (mesh) {
+      scene.remove(mesh);
+      mesh.geometry?.dispose();
+      mesh.material?.dispose();
+      mesh = null;
+    }
+    geometry.center();
+    geometry.computeBoundingBox();
+    const mat = new THREE.MeshPhongMaterial({
+      color: 0x5eb8ff,
+      emissive: 0x0a2848,
+      specular: 0xd4a054,
+      shininess: 90,
+    });
+    mesh = new THREE.Mesh(geometry, mat);
+    scene.add(mesh);
+    const size = geometry.boundingBox.getSize(new THREE.Vector3()).length() || 40;
+    camera.position.set(size * 0.75, size * 0.45, size * 1.15);
+    camera.lookAt(0, 0, 0);
+    resizeViewer();
+    animate();
+  }
+
+  async function fetchStlBuffer(url) {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      if (res.status === 401) {
+        throw new Error("API key required — enter JARVIS_API_KEY in the sidebar");
+      }
+      if (res.status === 404) {
+        throw new Error("STL not found — click Build STL first");
+      }
+      throw new Error(`Could not load mesh (HTTP ${res.status})`);
+    }
+    return res.arrayBuffer();
+  }
+
+  async function loadStl(url, label, { manageBusy = true } = {}) {
+    if (stlLoading) return;
+    stlLoading = true;
+    if (manageBusy) setBusy(true);
+    setStatus(label || "Loading preview…");
+    try {
+      await ensureThree();
+      if (!renderer) initViewer();
+      const buffer = await fetchStlBuffer(url);
+      const loader = new THREE.STLLoader();
+      const geometry = loader.parse(buffer);
+      showGeometry(geometry);
+      setStatus("Preview loaded — drag to view in browser; download STL for your slicer");
+      if (activeModelId) showPrintPanel(activeModelId);
+    } catch (e) {
+      setHintVisible(true);
+      setStatus("Preview failed: " + (e.message || e));
+    } finally {
+      stlLoading = false;
+      if (manageBusy) setBusy(false);
+      requestAnimationFrame(resizeViewer);
+    }
+  }
+
+  let animId = null;
+  function animate() {
+    if (animId) cancelAnimationFrame(animId);
+    const loop = () => {
+      animId = requestAnimationFrame(loop);
+      if (mesh) mesh.rotation.y += 0.008;
+      if (renderer && scene && camera) renderer.render(scene, camera);
+    };
+    loop();
+  }
+
+  async function renderModel(id) {
+    if (busy) return null;
+    setBusy(true);
+    setStatus("Running OpenSCAD… this can take 1–2 minutes");
+    try {
+      const res = await fetch("/api/engineering/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model_id: id }),
+        signal: AbortSignal.timeout(RENDER_TIMEOUT_MS),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok || d.ok === false) {
+        setStatus(d.message || "Render failed");
+        return null;
+      }
+      setStatus(d.message?.replace(/\*\*/g, "") || "STL ready");
+      return d.stl_url || `/api/engineering/stl/${id}`;
+    } catch (e) {
+      const msg = e.name === "TimeoutError" || e.name === "AbortError"
+        ? "Render timed out — try again or check OpenSCAD"
+        : (e.message || "Render failed");
+      setStatus(msg);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function previewModel(m) {
+    const id = m.id || "";
+    if (!id || busy) return;
+    selectModelForEdit(m);
+    if (m.has_stl) {
+      await loadStl(`/api/engineering/stl/${id}?t=${Date.now()}`, `Loading ${m.name || id}…`);
+      return;
+    }
+    const url = await renderModel(id);
+    if (url) await loadStl(`${url}?t=${Date.now()}`, `Loading ${m.name || id}…`);
+    refreshList();
+  }
+
+  function escapeHtml(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function modelRowHtml(m) {
+    const id = m.id || "";
+    const name = escapeHtml(m.name || id);
+    const badgeClass = m.has_stl ? "stl" : "scad";
+    const badgeLabel = m.has_stl ? "STL ready" : "SCAD only";
+    const previewBtn = m.has_stl
+      ? `<button type="button" class="eng-action-btn primary eng-preview-btn" data-id="${id}">Preview</button>`
+      : "";
+    const buildBtn = !m.has_stl
+      ? `<button type="button" class="eng-action-btn primary eng-build-btn" data-id="${id}">Build STL</button>`
+      : "";
+    const rebuildBtn = m.has_stl
+      ? `<button type="button" class="eng-action-btn eng-rebuild-btn" data-id="${id}">Rebuild</button>`
+      : "";
+    const selectBtn = `<button type="button" class="eng-action-btn eng-select-btn${activeModelId === id ? " primary" : ""}" data-id="${id}" title="Select to edit via prompt">Select</button>`;
+    return `<li class="eng-model-row${activeModelId === id ? " eng-model-row--active" : ""}">`
+      + `<span class="eng-model-name">${name}</span>`
+      + `<span class="eng-model-meta"><span class="eng-badge ${badgeClass}">${badgeLabel}</span> · ${id}</span>`
+      + `<div class="eng-model-actions">${selectBtn}${previewBtn}${buildBtn}${rebuildBtn}</div>`
+      + `</li>`;
+  }
+
+  function bindModelActions(models) {
+    listEl.querySelectorAll(".eng-select-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const m = models.find((x) => x.id === btn.dataset.id);
+        if (m) selectModelForEdit(m, { focusPrompt: true });
+      });
+    });
+    listEl.querySelectorAll(".eng-preview-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const m = models.find((x) => x.id === btn.dataset.id);
+        if (m) previewModel(m);
+      });
+    });
+    listEl.querySelectorAll(".eng-build-btn, .eng-rebuild-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.id;
+        if (!id || busy) return;
+        const m = models.find((x) => x.id === id);
+        if (m) selectModelForEdit(m);
+        const url = await renderModel(id);
+        if (url) await loadStl(`${url}?t=${Date.now()}`);
+        refreshList();
+      });
+    });
+  }
+
+  async function refreshList() {
+    try {
+      const res = await fetch("/api/engineering/models");
+      const data = await res.json();
+      const models = data.models || [];
+      if (aiModelEl && data.engineering_model) {
+        aiModelEl.dataset.localModel = data.engineering_model;
+        if (engineSelect?.value !== "meshy") aiModelEl.textContent = data.engineering_model;
+      }
+      installBtn?.classList.toggle("hidden", !!data.available);
+      meshyAvailable = !!data.meshy_available;
+      if (engineSelect) {
+        const meshyOpt = engineSelect.querySelector('option[value="meshy"]');
+        if (meshyOpt) meshyOpt.disabled = !meshyAvailable;
+        if (!meshyAvailable && engineSelect.value === "meshy") engineSelect.value = "openscad";
+      }
+      if (aiModelEl) {
+        const eng = engineSelect?.value === "meshy" ? "Meshy AI (cloud)" : (data.engineering_model || "local coder");
+        aiModelEl.textContent = eng;
+      }
+      if (!busy && !designBtn?.disabled) {
+        const ai = data.engineering_model ? ` · AI ${data.engineering_model}` : "";
+        const meshyNote = meshyAvailable ? " · Meshy available" : "";
+        const st = data.available
+          ? (data.backend === "flatpak"
+            ? `OpenSCAD ready (Flatpak)${ai}${meshyNote}`
+            : `OpenSCAD ready${ai}${meshyNote}`)
+          : `Built-in STL export${ai}${meshyNote}`;
+        setStatus(st);
+      }
+      listEl.innerHTML = models.length
+        ? models.map(modelRowHtml).join("")
+        : "<li class='muted'>No saved models yet.</li>";
+      bindModelActions(models);
+      return models;
+    } catch (_) {
+      listEl.innerHTML = "<li>Could not load models</li>";
+      return [];
+    }
+  }
+
+  if (!window.__jarvisEngineeringBound) {
+    window.__jarvisEngineeringBound = true;
+
+    installBtn?.addEventListener("click", () => {
+      alert(
+        "Run in a terminal on this PC:\n\n"
+        + "  cd /media/jeff/AI/jarvis\n"
+        + "  ./scripts/install-openscad.sh\n\n"
+        + "Or: sudo apt install -y openscad",
+      );
+    });
+
+    newDesignBtn?.addEventListener("click", () => {
+      clearEditSelection();
+      if (promptInput) promptInput.value = "";
+      setStatus("Starting a new part — describe it above.");
+      promptInput?.focus();
+    });
+
+    engineSelect?.addEventListener("change", () => {
+      if (aiModelEl) {
+        aiModelEl.textContent = engineSelect.value === "meshy"
+          ? "Meshy AI (cloud)"
+          : (aiModelEl.dataset.localModel || "local coder");
+      }
+    });
+
+    designBtn?.addEventListener("click", async () => {
+      const prompt = promptInput?.value?.trim();
+      if (!prompt) {
+        setStatus(activeModelId
+          ? "Describe what to change in the box above."
+          : "Enter a part description in the box above.");
+        promptInput?.focus();
+        return;
+      }
+      if (busy) return;
+      const editing = !!activeModelId;
+      const engine = editing ? "openscad" : (engineSelect?.value || "openscad");
+      if (!editing && engine === "meshy" && !meshyAvailable) {
+        setStatus("Meshy needs JARVIS_MESHY_API_KEY in data/jarvis.env — see meshy.ai/api");
+        return;
+      }
+      setBusy(true);
+      setStatus(editing
+        ? "Applying edit and re-rendering STL… (may take 1–2 min)"
+        : (engine === "meshy"
+          ? "Sending to Meshy AI… (1–3 min, uses cloud credits)"
+          : "Designing OpenSCAD and rendering STL… (may take 1–2 min)"));
+      let previewUrl = null;
+      let previewModelId = null;
+      let previewAdvice = null;
+      try {
+        const endpoint = editing ? "/api/engineering/edit" : "/api/engineering/design";
+        const body = editing
+          ? { model_id: activeModelId, prompt }
+          : { prompt, engine };
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(engine === "meshy" ? 300000 : 180000),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) {
+          setStatus(data.message || (editing ? "Edit failed" : "Design failed"));
+          return;
+        }
+        activeModelId = data.model_id || activeModelId;
+        activeModelName = data.name || activeModelName;
+        updateEditorMode();
+        setStatus((data.message || (editing ? "Updated" : "Design saved")).replace(/\*\*/g, ""));
+        if (promptInput && editing) promptInput.value = "";
+        await refreshList();
+        previewModelId = data.model_id;
+        previewAdvice = data.print_advice;
+        if (data.rendered && data.stl_url) {
+          previewUrl = `${data.stl_url}?t=${Date.now()}`;
+        } else if (data.model_id) {
+          const url = await renderModel(data.model_id);
+          if (url) previewUrl = `${url}?t=${Date.now()}`;
+        }
+      } catch (e) {
+        const msg = e.name === "TimeoutError" || e.name === "AbortError"
+          ? (activeModelId ? "Edit timed out — try a simpler change" : "Design timed out — try a simpler part")
+          : (e.message || "network error");
+        setStatus((activeModelId ? "Edit failed — " : "Design failed — ") + msg);
+      } finally {
+        setBusy(false);
+      }
+      if (previewUrl) {
+        await loadStl(previewUrl, "Loading preview…", { manageBusy: false });
+      }
+      if (previewModelId) showPrintPanel(previewModelId, previewAdvice);
+    });
+  }
+
+  updateEditorMode();
+
+  if (window.__jarvisEngineeringReady) {
+    requestAnimationFrame(() => {
+      resizeViewer();
+      if (renderer) animate();
+    });
+    refreshList();
+    return;
+  }
+  window.__jarvisEngineeringReady = true;
+
+  try {
+    await ensureThree();
+    initViewer();
+    setHintVisible(true);
+    animate();
+    const models = await refreshList();
+    if (!mesh && models.length && models[0].has_stl) {
+      selectModelForEdit(models[0]);
+      await loadStl(`/api/engineering/stl/${models[0].id}?t=${Date.now()}`, "Loading latest model…");
+      refreshList();
+    }
+  } catch (e) {
+    setStatus("3D preview unavailable: " + (e.message || e));
+    setHintVisible(true);
+    refreshList();
+  }
+  requestAnimationFrame(resizeViewer);
+};

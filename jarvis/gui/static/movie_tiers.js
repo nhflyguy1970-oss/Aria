@@ -144,6 +144,7 @@
   function initCollapsibleSections() {
     let collapsed = {};
     try { collapsed = JSON.parse(localStorage.getItem(LS.collapsed) || "{}"); } catch (_) {}
+    if (collapsed.models === undefined) collapsed.models = true;
     document.querySelectorAll(".sidebar-section[data-section]").forEach((sec) => {
       const key = sec.dataset.section;
       const head = sec.querySelector(".sidebar-section-head");
@@ -153,8 +154,33 @@
         sec.classList.toggle("collapsed");
         collapsed[key] = sec.classList.contains("collapsed");
         localStorage.setItem(LS.collapsed, JSON.stringify(collapsed));
+        head.setAttribute("aria-expanded", sec.classList.contains("collapsed") ? "false" : "true");
+        if (key === "models" && !sec.classList.contains("collapsed")) {
+          document.getElementById("modelsEditor")?.classList.remove("hidden");
+          if (typeof window.loadModelSettings === "function") window.loadModelSettings();
+        }
       });
+      head.setAttribute("aria-expanded", sec.classList.contains("collapsed") ? "false" : "true");
     });
+  }
+
+  async function refreshWorldStateHud() {
+    const el = $("globalWorldStateHud");
+    const dot = document.querySelector(".world-state-dot");
+    if (!el) return;
+    try {
+      const [envData, liveData] = await Promise.all([
+        fetchJson("/api/environment"),
+        fetchJson("/api/live").catch(() => ({})),
+      ]);
+      const svc = envData.services_ready ? "systems online" : "warming up";
+      const gpu = envData.gpu?.name ? envData.gpu.name.replace(/^.*\[AMD\/ATI\]\s*/, "").split("(")[0].trim() : "";
+      const ollama = liveData.ready === false ? " · Ollama starting" : "";
+      el.textContent = `${svc}${gpu ? " · " + gpu : ""}${ollama}`;
+      if (dot) dot.style.background = envData.services_ready ? "var(--accent)" : "#fbbf24";
+    } catch (_) {
+      el.textContent = "World state unavailable";
+    }
   }
 
   /* --- Module chip filter (Tier 1 #10) --- */
@@ -525,6 +551,82 @@
     });
   }
 
+  /* --- Integrations sidebar (API keys) --- */
+  async function loadIntegrationsPanel() {
+    const setLine = (el, set, preview) => {
+      if (!el) return;
+      el.textContent = set ? `Saved (${preview})` : "Not set";
+    };
+    try {
+      const data = await fetchJson("/api/integrations/secrets");
+      setLine($("integrationsGeminiStatus"), data.gemini_api_key_set, data.gemini_api_key_preview);
+      setLine($("integrationsOpenaiStatus"), data.openai_api_key_set, data.openai_api_key_preview);
+      setLine($("integrationsHfStatus"), data.hf_token_set, data.hf_token_preview);
+      const line = $("integrationsStatusLine");
+      if (line) {
+        line.textContent = data.gemini_api_key_set
+          ? "Cloud Live ready — use voice bar → Cloud live"
+          : "Paste Gemini key below for Cloud Live voice";
+      }
+    } catch (_) {
+      const line = $("integrationsStatusLine");
+      if (line) line.textContent = "Could not load key status";
+    }
+  }
+
+  async function loadIntegrationSecrets() {
+    await loadIntegrationsPanel();
+  }
+
+  function initIntegrationsPanel() {
+    loadIntegrationsPanel();
+    $("integrationsSaveBtn")?.addEventListener("click", async () => {
+      const body = {};
+      const g = $("integrationsGeminiKey")?.value?.trim();
+      const o = $("integrationsOpenaiKey")?.value?.trim();
+      const h = $("integrationsHfToken")?.value?.trim();
+      if (g) body.gemini_api_key = g;
+      if (o) body.openai_api_key = o;
+      if (h) body.hf_token = h;
+      const msg = $("integrationsPanelMsg");
+      if (!Object.keys(body).length) {
+        if (msg) msg.textContent = "Paste at least one key, then Save.";
+        return;
+      }
+      if (msg) msg.textContent = "Saving…";
+      try {
+        const res = await fetch("/api/integrations/secrets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (res.status === 404) {
+          if (msg) msg.textContent = "Server needs a restart first — sidebar → Restart server, then Save again.";
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) {
+          if (msg) msg.textContent = data.message || data.detail || `Save failed (HTTP ${res.status})`;
+          return;
+        }
+        if ($("integrationsGeminiKey") && g) $("integrationsGeminiKey").value = "";
+        if ($("integrationsOpenaiKey") && o) $("integrationsOpenaiKey").value = "";
+        if ($("integrationsHfToken") && h) $("integrationsHfToken").value = "";
+        if (msg) {
+          msg.textContent = data.gemini_api_key_set
+            ? "Saved — Cloud Live is ready."
+            : "Saved.";
+        }
+        await loadIntegrationsPanel();
+      } catch (e) {
+        if (msg) msg.textContent = String(e);
+      }
+    });
+    $("integrationsSettingsBtn")?.addEventListener("click", () => {
+      $("settingsModal")?.classList.remove("hidden");
+    });
+  }
+
   /* --- Settings modal (Tier 2 voice unified #8) --- */
   function initSettingsModal() {
     const modal = $("settingsModal");
@@ -574,7 +676,8 @@
           return `<li class="documents-row"><strong>${escapeHtml(name)}</strong> `
             + `<span class="muted">${escapeHtml(path)}</span> `
             + `<button type="button" class="ghost-btn tiny doc-attach" data-path="${escapeHtml(path)}">Attach</button> `
-            + `<button type="button" class="ghost-btn tiny doc-summarize" data-path="${escapeHtml(path)}">Summarize</button></li>`;
+            + `<button type="button" class="ghost-btn tiny doc-summarize" data-path="${escapeHtml(path)}">Summarize</button> `
+            + `<button type="button" class="ghost-btn tiny doc-learn" data-path="${escapeHtml(path)}">Learn</button></li>`;
         }).join("")
         : "<li class='muted'>Drop PDFs/DOCX in data/documents/</li>";
       list.querySelectorAll(".doc-attach").forEach((btn) => {
@@ -592,6 +695,36 @@
           const p = btn.dataset.path || "";
           if (typeof window.sendMessage === "function") {
             window.sendMessage(`summarize ${p}`);
+          }
+        });
+      });
+      list.querySelectorAll(".doc-learn").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const p = btn.dataset.path || "";
+          if (!p) return;
+          btn.disabled = true;
+          const label = btn.textContent;
+          btn.textContent = "Learning…";
+          try {
+            const data = await fetchJson("/api/documents/learn", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ path: p }),
+            });
+            if (typeof window.appendAssistantMessage === "function") {
+              const msg = data.message
+                || (data.ok ? `Learned from ${p}` : "Document learn failed");
+              window.appendAssistantMessage(msg);
+            } else if (typeof window.sendMessage === "function") {
+              window.sendMessage(`learn from document ${p}`);
+            }
+          } catch (_) {
+            if (typeof window.sendMessage === "function") {
+              window.sendMessage(`learn from document ${p}`);
+            }
+          } finally {
+            btn.disabled = false;
+            btn.textContent = label;
           }
         });
       });
@@ -715,6 +848,7 @@
     initSpeakToggle();
     initCollapsibleSections();
     initModuleFilter();
+    initIntegrationsPanel();
     initChatMicPtt();
     initServiceRestart();
     initHaExtras();
@@ -728,6 +862,7 @@
     initHud();
     $("wakePill")?.addEventListener("click", toggleWake);
     refreshEnvStrip();
+    refreshWorldStateHud();
     refreshProfileBanner();
     refreshWakePill();
     loadPinnedBriefing();
@@ -737,6 +872,7 @@
     setInterval(() => {
       if (window.mediaWorkActive?.()) return;
       refreshEnvStrip();
+      refreshWorldStateHud();
     }, 60000);
     setInterval(() => {
       if (window.mediaWorkActive?.()) return;

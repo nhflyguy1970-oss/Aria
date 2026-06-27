@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0a0c10" />
   <meta name="application-name" content="ARIA" />
-  <meta name="jarvis-ui-version" content="5.16.50" />
+  <meta name="jarvis-ui-version" content="5.16.73" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>ARIA</title>
@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=4.4.0" />
+  <link rel="stylesheet" href="/static/style.css?v=5.16.72" />
   <script>
     (function () {
       var standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -95,6 +95,9 @@
           <div class="service-row" data-svc="homeassistant"><span class="svc-dot"></span> Home Assistant</div>
           <div class="service-row" data-svc="piper"><span class="svc-dot"></span> Voice (Piper)</div>
           <div class="service-row" data-svc="vision"><span class="svc-dot"></span> Vision</div>
+          <button type="button" id="jobCenterServicesBtn" class="service-row service-row--action" title="Media, coding, research, and audio jobs">
+            <span class="svc-dot" id="jobCenterSvcDot"></span> Background jobs <span id="jobCenterBadge" class="job-center-badge hidden" aria-hidden="true"></span>
+          </button>
         </div>
         <button type="button" id="openImageSettingsBtn" class="ghost-btn image-settings-btn" title="SD, SDXL, Flux checkpoints and GPU/CPU mode">
           Image settings (SD / SDXL / Flux)
@@ -102,12 +105,72 @@
         </div>
       </div>
 
+      <div class="sidebar-section sidebar-section--integrations" data-section="integrations">
+        <button type="button" class="sidebar-section-head" aria-expanded="true">
+          <p class="sidebar-section-title">Integrations</p><span class="section-chevron">▾</span>
+        </button>
+        <div class="sidebar-section-body">
+        <div id="integrationsPanel" class="integrations-panel">
+          <p id="integrationsStatusLine" class="ha-status-line muted">API keys for cloud voice &amp; models</p>
+          <label class="ha-field">
+            <span class="ha-field-label">Gemini API key <span class="muted">(Cloud Live voice)</span></span>
+            <input type="password" id="integrationsGeminiKey" class="audio-path-input" placeholder="AIza…" autocomplete="off" />
+            <span id="integrationsGeminiStatus" class="ha-token-preview muted"></span>
+          </label>
+          <label class="ha-field">
+            <span class="ha-field-label">OpenAI API key <span class="muted">(optional)</span></span>
+            <input type="password" id="integrationsOpenaiKey" class="audio-path-input" placeholder="sk-…" autocomplete="off" />
+            <span id="integrationsOpenaiStatus" class="ha-token-preview muted"></span>
+          </label>
+          <label class="ha-field">
+            <span class="ha-field-label">Hugging Face token <span class="muted">(optional)</span></span>
+            <input type="password" id="integrationsHfToken" class="audio-path-input" placeholder="hf_…" autocomplete="off" />
+            <span id="integrationsHfStatus" class="ha-token-preview muted"></span>
+          </label>
+          <p id="integrationsPanelMsg" class="ha-panel-status muted" aria-live="polite"></p>
+          <div class="ha-actions">
+            <button type="button" id="integrationsSaveBtn" class="apply-btn small">Save API keys</button>
+            <button type="button" id="integrationsSettingsBtn" class="ghost-btn small" title="Voice toggles">More settings…</button>
+          </div>
+          <p class="ha-token-hint muted">Saved on this PC only. Cloud Live turns on when Gemini is set.</p>
+        </div>
+        </div>
+      </div>
+
+      <div class="sidebar-section sidebar-section--tools" data-section="tools">
+        <button type="button" class="sidebar-section-head" aria-expanded="true">
+          <p class="sidebar-section-title">Agent tools</p><span class="section-chevron">▾</span>
+        </button>
+        <div class="sidebar-section-body">
+          <button type="button" id="toolsRefreshBtn" class="ghost-btn small">Refresh</button>
+          <ul id="toolsStatusList" class="checklist-results"></ul>
+        </div>
+      </div>
+
+      <div class="sidebar-section sidebar-section--video" data-section="video">
+        <button type="button" class="sidebar-section-head" aria-expanded="true">
+          <p class="sidebar-section-title">Video</p><span class="section-chevron">▾</span>
+        </button>
+        <div class="sidebar-section-body">
+          <button type="button" id="openVideoStudioBtn" class="ghost-btn small">Open Video studio</button>
+          <button type="button" id="openVideoGalleryBtn" class="ghost-btn small">Video gallery</button>
+          <button type="button" id="sidebarVideoFreeVramBtn" class="ghost-btn small" title="Unload Ollama before AnimateDiff">Free VRAM</button>
+          <p id="sidebarVideoStatus" class="muted small">AnimateDiff · Ken Burns · chat: “make a video…”</p>
+        </div>
+      </div>
+
       <div class="sidebar-section sidebar-section--home" data-section="home">
-        <div id="haPanel" class="ha-panel">
-          <div class="ha-panel-head">
-            <span class="sidebar-section-title">Smart home</span>
+        <div class="sidebar-section-head-row float-drag-head">
+          <button type="button" class="sidebar-section-head" aria-expanded="true">
+            <p class="sidebar-section-title">Smart home</p><span class="section-chevron">▾</span>
+          </button>
+          <div class="sidebar-section-head-actions">
+            <button type="button" id="haFloatBtn" class="ghost-btn tiny" title="Detach panel">⧉</button>
             <button type="button" id="haRefreshBtn" class="ghost-btn small">Refresh</button>
           </div>
+        </div>
+        <div class="sidebar-section-body">
+        <div id="haPanel" class="ha-panel">
           <p id="haStatusLine" class="ha-status-line muted">Checking…</p>
           <label class="ha-field">
             <span class="ha-field-label">Home Assistant URL</span>
@@ -160,6 +223,17 @@
             </div>
             <ul id="haEntityList" class="ha-entity-list muted"></ul>
           </div>
+          <p class="nav-label lsp-label">Scene presets</p>
+          <div id="scenePresetsBtns" class="ha-quick-actions"></div>
+          <p class="nav-label lsp-label">Kasa (TP-Link)</p>
+          <div id="kasaRoomFilters" class="ha-quick-actions"></div>
+          <p id="kasaStatusLine" class="ha-status-line muted">Kasa: checking…</p>
+          <div class="ha-actions">
+            <button type="button" id="kasaDiscoverBtn" class="ghost-btn small">Discover Kasa</button>
+            <button type="button" id="kasaRefreshBtn" class="ghost-btn small">Refresh</button>
+          </div>
+          <ul id="kasaDeviceList" class="ha-entity-list muted"></ul>
+        </div>
         </div>
       </div>
 
@@ -189,7 +263,8 @@
             <button type="button" id="shortcutsBtn" class="ghost-btn small">Shortcuts</button>
             <button type="button" id="jobCenterBtn" class="ghost-btn small" title="Background jobs (media, coding, audio)">Job center</button>
             <button type="button" id="debugBundleBtn" class="ghost-btn small" title="Copy diagnostics for troubleshooting">Debug bundle</button>
-            <button type="button" id="reloadUiBtn" class="ghost-btn small" title="Reload this window (native app — no browser refresh needed)">Reload UI</button>
+            <button type="button" id="reloadUiBtn" class="ghost-btn small" title="Reload this window (Ctrl+Shift+R)">Reload UI</button>
+            <button type="button" id="resetLayoutBtn" class="ghost-btn small" title="Expand all collapsed sidebar sections">Expand sidebar</button>
             <button type="button" id="restartServerBtn" class="ghost-btn small" title="Restart API server. Or run: scripts/jarvis-ctl.sh restart">Restart server</button>
           </div>
           <div class="sidebar-btn-row sidebar-btn-row--compact">
@@ -202,11 +277,22 @@
             <button type="button" id="exportChatPdfBtn" class="ghost-btn small">Export PDF</button>
             <button type="button" id="backupDataBtn" class="ghost-btn small">Backup</button>
           </div>
+          <div class="chat-sessions-panel">
+            <p class="sidebar-section-title">Chat sessions</p>
+            <div class="planner-add-row">
+              <input type="text" id="chatSessionTitleInput" class="audio-path-input" placeholder="New session title…" />
+              <button type="button" id="chatSessionNewBtn" class="ghost-btn small">Save</button>
+            </div>
+            <ul id="chatSessionsList" class="planner-list chat-sessions-list"></ul>
+          </div>
         </div>
       </div>
 
-      <div class="sidebar-section sidebar-section--coding" id="codingPanel">
-        <p class="sidebar-section-title">Coding</p>
+      <div class="sidebar-section sidebar-section--coding" id="codingPanel" data-section="coding">
+        <button type="button" class="sidebar-section-head" aria-expanded="true">
+          <p class="sidebar-section-title">Coding</p><span class="section-chevron">▾</span>
+        </button>
+        <div class="sidebar-section-body">
         <div id="editorContextCard" class="editor-context-card" title="Synced from Cursor extension">
           <span class="editor-context-dot" aria-hidden="true"></span>
           <span id="editorContextLabel" class="editor-context-label">Cursor: checking…</span>
@@ -255,13 +341,14 @@
           <div id="lanUrlList" class="lan-url-list"></div>
           <button type="button" id="lanCopyUrlBtn" class="ghost-btn small hidden">Copy URL</button>
         </div>
+        </div>
       </div>
 
-      <div class="sidebar-section sidebar-section--models models-panel">
-        <button type="button" id="modelsToggle" class="models-toggle" aria-expanded="false">
-          <span class="sidebar-section-title">Model settings</span>
-          <span class="chevron">›</span>
+      <div class="sidebar-section sidebar-section--models models-panel" data-section="models">
+        <button type="button" id="modelsToggle" class="sidebar-section-head models-toggle" aria-expanded="false">
+          <p class="sidebar-section-title">Model settings</p><span class="section-chevron">▾</span>
         </button>
+        <div class="sidebar-section-body">
         <p id="modelsStatus" class="models-status">Checking…</p>
         <p id="gpuStatus" class="gpu-status"></p>
         <button type="button" id="freeVramBtn" class="ghost-btn small vram-free-btn" title="Unload Ollama models before image/video gen">Free VRAM</button>
@@ -295,6 +382,7 @@
           <p id="modelsEditorStatus" class="editor-status"></p>
           <pre id="pullLog" class="pull-log hidden"></pre>
         </div>
+        </div>
       </div>
 
       <div class="sidebar-section sidebar-section--footer sidebar-footer" data-section="footer">
@@ -313,6 +401,17 @@
     <main class="chat-panel">
       <nav class="view-tabs">
         <button type="button" class="view-tab active" data-view="chat">Chat</button>
+        <button type="button" class="view-tab" data-view="dashboard">Dashboard</button>
+        <button type="button" class="view-tab" data-view="planner">Planner</button>
+        <button type="button" class="view-tab" data-view="calendar">Calendar</button>
+        <button type="button" class="view-tab" data-view="flytying">Fly tying</button>
+        <button type="button" class="view-tab" data-view="projects">Projects</button>
+        <button type="button" class="view-tab" data-view="maker">Maker</button>
+        <button type="button" class="view-tab" data-view="browser">Browser</button>
+        <button type="button" class="view-tab" data-view="security">Security</button>
+        <button type="button" class="view-tab" data-view="presence">Presence</button>
+        <button type="button" class="view-tab" data-view="audit">System</button>
+        <button type="button" class="view-tab" data-view="voice">Voice</button>
         <button type="button" class="view-tab" data-view="audio">Audio</button>
         <button type="button" class="view-tab" data-view="journal">Bullet Journal</button>
         <button type="button" class="view-tab" data-view="memory">Memory</button>
@@ -364,7 +463,9 @@
         <div>
           <h2>How can I help?</h2>
           <div class="status-row">
+            <span id="systemMonitorStrip" class="system-monitor-strip muted" title="System stats"></span>
             <p id="statusText">Ready · Ollama local</p>
+            <span id="brainModeStrip" class="brain-mode-strip muted" title="Brain mode"></span>
             <span id="envStrip" class="env-strip muted" title="Environment"></span>
             <button type="button" id="wakePill" class="wake-pill" title="Wake word">Wake: —</button>
             <button type="button" id="editorContextPill" class="editor-pill hidden" title="Active file from Cursor">
@@ -607,6 +708,7 @@
           <button type="button" class="bujo-tab" data-bujo="future">Future</button>
           <button type="button" class="bujo-tab" data-bujo="index">Index</button>
           <button type="button" class="bujo-tab" data-bujo="collections">Collections</button>
+          <button type="button" class="bujo-tab" data-bujo="projects">Projects</button>
           <button type="button" class="bujo-tab" data-bujo="key">Key</button>
         </nav>
         <div id="bujoToolbar" class="bujo-toolbar">
@@ -660,17 +762,41 @@
               </select>
             </label>
             <label class="memory-setting">
-              <input type="checkbox" id="memoryAutoCheckpoint" /> Auto-checkpoint on exit
+              <input type="checkbox" id="memoryBrainMode" checked /> Brain learning
             </label>
             <label class="memory-setting">
-              <input type="checkbox" id="memoryAutoNamespace" /> Per-repo namespace
+              <input type="checkbox" id="memoryAutoJournalLearn" checked /> Auto-learn from journal
             </label>
             <label class="memory-setting">
-              <input type="checkbox" id="memoryInPrompt" /> Profile in system prompt
+              <input type="checkbox" id="memoryAutoDocumentLearn" checked /> Auto-learn from documents
+            </label>
+            <label class="memory-setting">
+              <input type="checkbox" id="memoryAutoCheckpoint" checked /> Auto-checkpoint on exit
+            </label>
+            <label class="memory-setting">
+              <input type="checkbox" id="memoryAutoNamespace" checked /> Per-repo namespace
+            </label>
+            <label class="memory-setting">
+              <input type="checkbox" id="memoryInPrompt" checked /> Profile in system prompt
             </label>
             <button type="button" id="profileRetakeBtn" class="ghost-btn small">Update profile</button>
           </div>
+          <div id="profileInlinePanel" class="profile-inline-panel">
+            <h3 class="memory-subheading">About you</h3>
+            <p class="muted profile-inline-intro">Profile questionnaire answers — used to personalize chat.</p>
+            <div id="profileInlineContent" class="profile-inline-content muted">Loading profile…</div>
+            <button type="button" id="profileInlineEditBtn" class="ghost-btn small">Edit answers</button>
+          </div>
           <div id="memoryConflicts" class="memory-conflicts hidden" aria-live="polite"></div>
+          <div class="env-prefs-panel" id="envPrefsPanel">
+            <h3>Stack preferences</h3>
+            <p class="env-prefs-intro muted">How ARIA should assume you work — saved to memory. Machine specs below refresh automatically.</p>
+            <div id="envPrefsForm" class="env-prefs-form"></div>
+            <div class="env-prefs-actions">
+              <button type="button" id="envPrefsSaveBtn" class="apply-btn small">Save preferences</button>
+              <button type="button" id="envMachineSyncBtn" class="ghost-btn small" title="Refresh CPU, GPU, Ollama models, Docker">Refresh machine facts</button>
+            </div>
+          </div>
           <div class="cheatsheet-panel">
             <label for="cheatsheetSelect">Cheatsheets</label>
             <select id="cheatsheetSelect" aria-label="Select cheatsheet">
@@ -703,6 +829,18 @@
             <button type="button" id="memoryPruneBtn" class="apply-btn small">Prune stale</button>
             <button type="button" id="memoryScrubBtn" class="apply-btn small" title="Remove test artifacts (broken_calc, buy milk, etc.)">Scrub test junk</button>
           </div>
+          <div id="nightlyLearningPanel" class="knowledge-panel nightly-learning-panel">
+            <h3 class="memory-subheading">Nightly research briefs</h3>
+            <p class="muted knowledge-panel-hint">Automated digests — stack, general intel, and personal interests.</p>
+            <p id="knowledgeResearchTopics" class="muted knowledge-research-topics"></p>
+            <ul id="knowledgeResearchList" class="knowledge-topic-list muted"></ul>
+            <div class="knowledge-research-actions">
+              <button type="button" id="knowledgeResearchRunBtn" class="ghost-btn small">Run research now</button>
+              <button type="button" id="knowledgeResearchJobsBtn" class="ghost-btn small hidden" title="Open background job progress">View job progress</button>
+            </div>
+            <p id="knowledgeResearchStatus" class="knowledge-research-status muted" aria-live="polite"></p>
+          </div>
+          <h3 class="memory-subheading">Stored memories</h3>
           <p id="memoryStats" class="memory-stats"></p>
           <p id="memoryTrustStatus" class="memory-stats memory-trust-status"></p>
         </div>
@@ -818,8 +956,8 @@
               </select>
             </label>
             <label class="image-engine-field">
-              <span>AnimateDiff frames (8GB: 16 max)</span>
-              <input type="number" id="videoAdFramesInput" class="audio-path-input" min="8" max="32" step="1" value="16" />
+              <span>Max AnimateDiff frames (12GB: up to 64)</span>
+              <input type="number" id="videoAdFramesInput" class="audio-path-input" min="8" max="96" step="1" value="64" />
             </label>
             <label class="image-engine-field">
               <span>Keyframe preset</span>
@@ -935,6 +1073,512 @@
         </div>
       </div>
 
+      <div id="dashboardView" class="view-panel hidden">
+        <div class="dash-page-header">
+          <p id="dashboardWelcome" class="muted dash-welcome">Welcome back</p>
+          <h2 id="dashboardGreeting">Dashboard</h2>
+          <p id="dashboardDate" class="muted dash-date"></p>
+        </div>
+        <div id="dashboardBody" class="dashboard-body"></div>
+        <section class="checklist-section">
+          <h3>First-flight checklist</h3>
+          <p id="checklistSummary" class="muted">Click Run checks for voice, briefing, HA, and dependency smoke tests.</p>
+          <button type="button" id="checklistRunBtn" class="ghost-btn small">Run checks</button>
+          <ul id="checklistResults" class="checklist-results"></ul>
+        </section>
+        <section class="checklist-section">
+          <h3>Skills &amp; workflows</h3>
+          <p class="muted">Bundled procedure skills and learned action sequences.</p>
+          <button type="button" id="skillsWorkflowsRefreshBtn" class="ghost-btn small">Refresh</button>
+          <button type="button" id="workflowsScanBtn" class="ghost-btn small">Scan action log</button>
+          <ul id="skillsList" class="checklist-results"></ul>
+          <ul id="workflowsList" class="checklist-results"></ul>
+        </section>
+        <section class="checklist-section">
+          <h3>Security</h3>
+          <p class="muted">Optional PIN lock — set <code>JARVIS_PIN_LOCK=1</code> in jarvis.env to enforce.</p>
+          <div class="planner-add-row">
+            <input type="password" id="pinSetupInput" class="audio-path-input" inputmode="numeric" maxlength="6" placeholder="4–6 digit PIN" autocomplete="new-password" />
+            <button type="button" id="pinSetupBtn" class="ghost-btn small">Set PIN</button>
+          </div>
+          <p id="pinSetupStatus" class="muted" aria-live="polite"></p>
+        </section>
+      </div>
+
+      <div id="plannerView" class="view-panel hidden">
+        <h2>Planner</h2>
+        <p id="plannerStatus" class="muted"></p>
+        <div class="planner-grid">
+          <section>
+            <h3>Tasks</h3>
+            <div class="planner-add-row">
+              <input type="text" id="plannerTaskInput" placeholder="Add task…" />
+              <button type="button" id="plannerAddTaskBtn" class="ghost-btn small">Add</button>
+            </div>
+            <ul id="plannerTasks" class="planner-list"></ul>
+          </section>
+          <section>
+            <h3>Timers</h3>
+            <div class="planner-add-row">
+              <input type="text" id="plannerTimerInput" placeholder="e.g. 10 minutes" />
+            <button type="button" id="plannerTimerBtn" class="ghost-btn small">Start</button>
+            <button type="button" id="plannerPomodoroBtn" class="ghost-btn small" title="Ada-style 25 min focus timer">Pomodoro</button>
+          </div>
+            <ul id="plannerTimers" class="planner-list"></ul>
+          </section>
+          <section>
+            <h3>Alarms</h3>
+            <div class="planner-add-row">
+              <input type="text" id="plannerAlarmInput" placeholder="e.g. 7am" />
+              <button type="button" id="plannerAlarmBtn" class="ghost-btn small">Set</button>
+            </div>
+            <ul id="plannerAlarms" class="planner-list"></ul>
+          </section>
+          <section>
+            <h3>Today</h3>
+            <ul id="plannerEvents" class="planner-list"></ul>
+          </section>
+        </div>
+      </div>
+
+      <div id="calendarView" class="view-panel hidden">
+        <div class="calendar-header">
+          <h2>Calendar</h2>
+          <p class="muted">Month view — click a day for appointments, tasks, and notes.</p>
+          <div class="calendar-toolbar">
+            <button type="button" id="calendarPrevBtn" class="ghost-btn small">← Prev</button>
+            <strong id="calendarMonthLabel">—</strong>
+            <button type="button" id="calendarNextBtn" class="ghost-btn small">Next →</button>
+            <button type="button" id="calendarTodayBtn" class="ghost-btn small">Today</button>
+          </div>
+        </div>
+        <div id="calendarHolidayLegend" class="calendar-holiday-legend"></div>
+        <div id="calendarGrid" class="calendar-grid calendar-month-stage" role="grid" aria-label="Month calendar">
+          <p class="muted calendar-loading">Loading calendar…</p>
+        </div>
+        <div class="calendar-layout">
+          <section class="calendar-main">
+            <div id="calendarDayPanel" class="calendar-day-panel muted">Select a day on the calendar above…</div>
+          </section>
+          <aside class="calendar-side">
+            <details class="calendar-details">
+              <summary>Work schedule (weekly)</summary>
+              <div id="calendarWorkSchedule" class="calendar-work-schedule"></div>
+            </details>
+            <details class="calendar-details">
+              <summary>External calendar (ICS)</summary>
+              <p id="calendarIcsStatus" class="muted"></p>
+              <input type="url" id="calendarIcsUrl" class="audio-path-input" placeholder="https://…/basic.ics" />
+              <div class="sidebar-btn-row">
+                <button type="button" id="calendarIcsTestBtn" class="ghost-btn small">Test</button>
+                <button type="button" id="calendarIcsSaveBtn" class="apply-btn small">Save</button>
+              </div>
+            </details>
+          </aside>
+        </div>
+      </div>
+
+      <div id="flytyingView" class="view-panel hidden flytying-workspace">
+        <header class="flytying-header">
+          <div>
+            <h2>Fly tying</h2>
+            <p id="flytyingStatus" class="muted">Loading…</p>
+            <p id="flytyingPatternOfDay" class="flytying-potd muted small"></p>
+          </div>
+          <div class="flytying-header-actions">
+            <label class="flytying-model-label">Model
+              <select id="flytyingModelSelect" class="personality-select" title="Fly tying model (7b = recipes, 14b = design)"></select>
+            </label>
+            <button type="button" id="flytyingHealthBtn" class="ghost-btn small" title="Library health">Health</button>
+            <button type="button" id="flytyingRebuildBtn" class="ghost-btn small" title="Rebuild gold index">Rebuild</button>
+            <button type="button" id="flytyingRefreshBtn" class="ghost-btn small">Refresh</button>
+          </div>
+        </header>
+        <p id="flytyingHatchBanner" class="flytying-hatch-banner muted small"></p>
+        <p id="flytyingDataWarn" class="flytying-data-warn hidden" role="alert"></p>
+        <div class="flytying-layout">
+          <aside class="flytying-col flytying-col-recipes">
+            <h3 class="flytying-col-title">Patterns</h3>
+            <div class="planner-add-row flytying-search-row">
+              <input type="search" id="flytyingSearchInput" placeholder="Search patterns…" autocomplete="off" />
+              <button type="button" id="flytyingSearchBtn" class="ghost-btn small">Go</button>
+              <button type="button" id="flytyingClearFiltersBtn" class="ghost-btn small" title="Clear search and type filter">Clear</button>
+            </div>
+            <p id="flytyingSearchHint" class="muted small flytying-search-hint" aria-live="polite"></p>
+            <select id="flytyingTypeFilter" class="personality-select flytying-type-filter" title="Fly type">
+              <option value="">All types</option>
+              <option value="dry">Dry</option>
+              <option value="nymph">Nymph</option>
+              <option value="emerger">Emerger</option>
+              <option value="streamer">Streamer</option>
+              <option value="terrestrial">Terrestrial</option>
+              <option value="wet">Wet</option>
+            </select>
+            <div class="flytying-filter-row">
+              <label class="flytying-filter-check"><input type="checkbox" id="flytyingFavoritesOnly" /> Favorites</label>
+              <label class="flytying-filter-mini">Min Q <input type="number" id="flytyingMinQuality" min="0" max="100" step="5" placeholder="0" /></label>
+              <button type="button" id="flytyingSeasonalBtn" class="ghost-btn small">Seasonal</button>
+            </div>
+            <ul id="flytyingQueueList" class="flytying-queue-list"></ul>
+            <ul id="flytyingRecipeList" class="flytying-recipe-list"></ul>
+            <section id="flytyingVideosPanel" class="flytying-videos-panel">
+              <div class="flytying-videos-head">
+                <h4 class="flytying-col-subtitle">Tying videos</h4>
+                <button type="button" id="flytyingVideosToggle" class="ghost-btn small flytying-videos-toggle" aria-expanded="true">Hide</button>
+              </div>
+              <div id="flytyingVideosBody" class="flytying-videos-body">
+              <div class="flytying-add-video">
+                <input type="url" id="flytyingCustomVideoUrl" placeholder="Paste YouTube, Vimeo, or Fly Fish Food URL…" />
+                <button type="button" id="flytyingAddVideoBtn" class="ghost-btn small">Add</button>
+              </div>
+              <input type="search" id="flytyingVideoSearch" class="flytying-video-search" placeholder="Filter videos…" />
+              <ul id="flytyingVideoList" class="flytying-video-list"></ul>
+              </div>
+            </section>
+          </aside>
+          <main class="flytying-col flytying-col-detail">
+            <div class="flytying-detail-toolbar">
+              <h3 class="flytying-col-title">Recipe &amp; video</h3>
+              <div class="flytying-detail-actions">
+                <button type="button" id="flytyingCompareBtn" class="ghost-btn small" disabled>Compare</button>
+                <button type="button" id="flytyingExportBtn" class="ghost-btn small" disabled>Export</button>
+                <button type="button" id="flytyingPrintBtn" class="ghost-btn small" disabled>Print</button>
+              </div>
+            </div>
+            <div id="flytyingComparePanel" class="flytying-compare-panel hidden"></div>
+            <div id="flytyingVideoPlayer" class="flytying-video-player hidden" aria-label="Pattern video"></div>
+            <div id="flytyingStepPanel" class="flytying-step-panel hidden"></div>
+            <div id="flytyingRecipeDetail" class="flytying-recipe-detail">
+              <p class="muted">Select a pattern from the list.</p>
+            </div>
+          </main>
+          <aside class="flytying-col flytying-col-chat">
+            <h3 class="flytying-col-title">Fly tying chat</h3>
+            <div id="flytyingChatMessages" class="flytying-chat-messages"></div>
+            <p id="flytyingChatStatus" class="muted small flytying-chat-status" aria-live="polite"></p>
+            <div class="flytying-materials-box">
+              <label class="nav-label" for="flytyingMaterialsSummary">Materials on hand</label>
+              <textarea id="flytyingMaterialsSummary" rows="2" placeholder="e.g. olive 14 dry hook, grizzly hackle, Uni 8/0 olive thread — or use the inventory table below"></textarea>
+              <label class="flytying-materials-explain"><input type="checkbox" id="flytyingMaterialsExplain" /> Ask ARIA to explain matches (slower)</label>
+              <div class="flytying-materials-actions">
+                <button type="button" id="flytyingSaveMaterialsBtn" class="ghost-btn small">Save list</button>
+                <button type="button" id="flytyingMaterialsBtn" class="ghost-btn small">Suggest a fly</button>
+              </div>
+              <details class="flytying-inv-details" id="flytyingInvDetails">
+                <summary class="nav-label">Inventory table — what, color, size, brand</summary>
+                <div class="flytying-inv-db-wrap">
+                  <table class="flytying-inv-table" aria-label="Materials inventory">
+                    <thead>
+                      <tr class="flytying-inv-head">
+                        <th><button type="button" class="flytying-sort-btn" data-col="what">What</button></th>
+                        <th><button type="button" class="flytying-sort-btn" data-col="color">Color</button></th>
+                        <th><button type="button" class="flytying-sort-btn" data-col="size">Size</button></th>
+                        <th><button type="button" class="flytying-sort-btn" data-col="brand">Brand</button></th>
+                        <th>Notes</th>
+                        <th class="flytying-inv-actions-col"></th>
+                      </tr>
+                      <tr class="flytying-inv-entry-row">
+                        <td><input type="text" id="flytyingInvWhat" placeholder="hook, thread…" autocomplete="off" /></td>
+                        <td><input type="text" id="flytyingInvColor" placeholder="olive" autocomplete="off" /></td>
+                        <td><input type="text" id="flytyingInvSize" placeholder="14, 8/0" autocomplete="off" /></td>
+                        <td><input type="text" id="flytyingInvBrand" placeholder="Uni" autocomplete="off" /></td>
+                        <td><input type="text" id="flytyingInvNotes" placeholder="optional" autocomplete="off" /></td>
+                        <td><button type="button" id="flytyingManualAddBtn" class="apply-btn tiny">Add</button></td>
+                      </tr>
+                    </thead>
+                    <tbody id="flytyingInventoryBody"></tbody>
+                    <tfoot>
+                      <tr><td colspan="6" id="flytyingInventoryCount" class="flytying-inv-foot muted small"></td></tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <label class="muted small flytying-bulk-label" for="flytyingBulkInput">Quick import — one per line</label>
+                <textarea id="flytyingBulkInput" rows="2" placeholder="size 14 dry hook&#10;olive dubbing"></textarea>
+                <button type="button" id="flytyingBulkAddBtn" class="ghost-btn small">Import lines</button>
+                <details class="flytying-scan-details">
+                  <summary class="muted small">Barcode scan (optional)</summary>
+                  <div class="flytying-scan-row">
+                    <input type="text" id="flytyingScanInput" class="flytying-scan-input" placeholder="Scan or type barcode…" autocomplete="off" />
+                    <button type="button" id="flytyingCameraScanBtn" class="ghost-btn small">Camera</button>
+                    <button type="button" id="flytyingScanPhotoBtn" class="ghost-btn small">Photo</button>
+                    <input type="file" id="flytyingScanPhotoFile" accept="image/*" class="hidden" />
+                    <button type="button" id="flytyingLabelBtn" class="ghost-btn small">Print label</button>
+                  </div>
+                </details>
+              </details>
+            </div>
+            <form id="flytyingChatForm" class="flytying-chat-form">
+              <textarea id="flytyingChatInput" rows="2" placeholder="Ask about a pattern, hatch, or design a new fly…" required></textarea>
+              <div class="flytying-chat-actions">
+                <button type="submit" class="apply-btn small">Send</button>
+                <button type="button" id="flytyingCancelChatBtn" class="ghost-btn small hidden">Stop</button>
+                <button type="button" id="flytyingClearChatBtn" class="ghost-btn small">Clear chat</button>
+              </div>
+            </form>
+            <div id="flytyingScanModal" class="flytying-scan-modal hidden" role="dialog" aria-modal="true" aria-labelledby="flytyingScanModalTitle">
+              <div class="flytying-scan-modal-inner">
+                <h4 id="flytyingScanModalTitle">Scan barcode</h4>
+                <video id="flytyingScanVideo" playsinline muted class="flytying-scan-video"></video>
+                <p id="flytyingScanModalStatus" class="muted small" aria-live="polite">Starting camera…</p>
+                <div class="flytying-scan-modal-actions">
+                  <button type="button" id="flytyingScanModalClose" class="ghost-btn small">Close</button>
+                </div>
+              </div>
+            </div>
+            <div id="flytyingNameBarcodeModal" class="flytying-scan-modal hidden" role="dialog" aria-modal="true" aria-labelledby="flytyingNameBarcodeTitle">
+              <div class="flytying-scan-modal-inner">
+                <h4 id="flytyingNameBarcodeTitle">Name this barcode</h4>
+                <p id="flytyingNameBarcodeCode" class="muted small"></p>
+                <input type="text" id="flytyingNameBarcodeName" placeholder="Material name (e.g. Uni 8/0 olive)" />
+                <input type="text" id="flytyingNameBarcodeBrand" placeholder="Brand (optional)" />
+                <div class="flytying-scan-modal-actions">
+                  <button type="button" id="flytyingNameBarcodeSave" class="apply-btn small">Add to inventory</button>
+                  <button type="button" id="flytyingNameBarcodeCancel" class="ghost-btn small">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <div id="projectsView" class="view-panel hidden">
+        <h2>Projects</h2>
+        <p id="projectsActive" class="muted">Loading…</p>
+        <div class="planner-add-row">
+          <input type="text" id="projectsTitleInput" placeholder="New project name…" />
+          <button type="button" id="projectsCreateBtn" class="ghost-btn small">Create</button>
+        </div>
+        <div class="planner-add-row">
+          <input type="text" id="projectsGitInput" placeholder="Import git repo path…" />
+          <button type="button" id="projectsImportBtn" class="ghost-btn small">Import</button>
+        </div>
+        <ul id="projectsList" class="planner-list"></ul>
+      </div>
+
+      <div id="makerView" class="view-panel hidden">
+        <div id="makerFloatPanel">
+        <h2 class="float-drag-head">Maker lab <button type="button" id="makerFloatBtn" class="ghost-btn tiny" title="Detach floating window">⧉</button></h2>
+        <p id="cadStatusLine" class="muted">Loading CAD status…</p>
+        <div class="planner-add-row">
+          <input type="text" id="cadPromptInput" placeholder="Design a 5 inch to 4 inch hose adapter…" />
+          <select id="cadBackendSelect" class="personality-select" title="CAD backend">
+            <option value="auto">auto</option>
+            <option value="openscad">OpenSCAD</option>
+            <option value="build123d">build123d</option>
+            <option value="meshy">Meshy</option>
+          </select>
+          <button type="button" id="cadGenerateBtn" class="apply-btn small">Generate</button>
+        </div>
+        <div class="planner-add-row">
+          <input type="text" id="cadIterateInput" placeholder="Iterate: make it taller, add mounting holes…" />
+          <button type="button" id="cadIterateBtn" class="ghost-btn small">Iterate</button>
+        </div>
+        <div class="ha-actions">
+          <button type="button" id="cadHelloCubeBtn" class="ghost-btn small">Hello cube</button>
+          <button type="button" id="cadSliceBtn" class="ghost-btn small">Slice</button>
+          <button type="button" id="cadExportBtn" class="ghost-btn small">Export STEP/OBJ</button>
+          <button type="button" id="cadRefreshBtn" class="ghost-btn small">Refresh</button>
+          <button type="button" id="cadClearBtn" class="ghost-btn small">Clear gallery</button>
+        </div>
+        <p id="cadGenLog" class="muted" aria-live="polite"></p>
+        <p id="cadDimensionsLine" class="muted"></p>
+        <div id="cadViewer" class="cad-viewer"></div>
+        <ul id="cadModelList" class="planner-list"></ul>
+        <h3 class="float-drag-head">Printer <button type="button" id="printerFloatBtn" class="ghost-btn tiny" title="Detach floating window">⧉</button></h3>
+        <div id="printerFloatPanel">
+        <p id="printerStatusLine" class="muted">Loading…</p>
+        <div class="planner-add-row">
+          <select id="printerModelSelect" class="personality-select" title="Printer model">
+            <option value="">Select model…</option>
+            <option value="bambu_a1">Bambu Lab A1 (Studio / SD)</option>
+            <option value="bambu_a1_mini">Bambu Lab A1 Mini (Studio / SD)</option>
+            <option value="creality_ender3_v3_ke">Creality Ender-3 V3 KE (Moonraker)</option>
+          </select>
+          <input type="text" id="printerNameInput" placeholder="Printer name" />
+          <input type="text" id="printerHostInput" placeholder="IP for Creality KE (e.g. 192.168.1.50)" />
+          <button type="button" id="printerAddBtn" class="ghost-btn small">Add</button>
+          <button type="button" id="printerDiscoverBtn" class="ghost-btn small">Discover KE</button>
+          <button type="button" id="printerRefreshBtn" class="ghost-btn small">Status</button>
+        </div>
+        <p class="muted small">Bambu: no LAN mode — slice here, send via Bambu Studio. Creality KE: install Moonraker helper, then enter IP.</p>
+        <ul id="printerDiscoverList" class="planner-list muted"></ul>
+        <label class="toggle-row"><span>Bed clear</span><input type="checkbox" id="printBedConfirm" /></label>
+        <label class="toggle-row"><span>Filament loaded</span><input type="checkbox" id="printFilamentConfirm" /></label>
+        <button type="button" id="printStartBtn" class="ghost-btn small">Start print</button>
+        </div>
+        </div>
+      </div>
+
+      <div id="browserView" class="view-panel hidden">
+        <div id="browserFloatPanel">
+        <h2 class="float-drag-head">Browser agent <button type="button" id="browserFloatBtn" class="ghost-btn tiny" title="Detach floating window">⧉</button></h2>
+        <p id="browserStatusLine" class="muted">Loading…</p>
+        <p id="browserUrlLine" class="muted"></p>
+        <p id="browserPlaywrightHint" class="muted small hidden"></p>
+        <div class="planner-add-row">
+          <input type="url" id="browserUrlInput" class="audio-path-input" placeholder="https://…" />
+          <button type="button" id="browserNavigateBtn" class="ghost-btn small">Open</button>
+        </div>
+        <div class="browser-shot-wrap">
+          <img id="browserScreenshot" class="browser-screenshot hidden" alt="Browser screenshot" />
+        </div>
+        <div class="ha-actions">
+          <button type="button" id="browserScreenshotBtn" class="ghost-btn small">Screenshot</button>
+          <button type="button" id="browserInstallPwBtn" class="ghost-btn small">Install Playwright</button>
+          <button type="button" id="browserRefreshBtn" class="ghost-btn small">Refresh</button>
+          <button type="button" id="browserPauseBtn" class="ghost-btn small">Pause</button>
+          <button type="button" id="browserResumeBtn" class="ghost-btn small">Resume</button>
+          <button type="button" id="browserTakeoverBtn" class="ghost-btn small">Takeover</button>
+          <button type="button" id="browserStopBtn" class="ghost-btn small">Stop</button>
+        </div>
+        <p class="nav-label lsp-label">Agent task</p>
+        <div class="planner-add-row">
+          <input type="text" id="browserGoalInput" placeholder="e.g. click Sign in" />
+          <select id="browserModeSelect" class="personality-select" title="Agent mode">
+            <option value="auto">auto (DOM → VLM)</option>
+            <option value="dom">DOM only</option>
+            <option value="vlm">VLM only</option>
+          </select>
+          <button type="button" id="browserRunTaskBtn" class="apply-btn small">Run</button>
+        </div>
+        <p id="browserTaskResult" class="muted" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div id="securityView" class="view-panel hidden">
+        <h2>Security</h2>
+        <p id="securityStatusLine" class="muted">Loading…</p>
+        <section class="checklist-section">
+          <h3>PIN lock</h3>
+          <p class="muted">Set a PIN and enable <code>JARVIS_PIN_LOCK=1</code> in jarvis.env.</p>
+          <div class="planner-add-row">
+            <input type="password" id="securityPinInput" class="audio-path-input" inputmode="numeric" maxlength="6" placeholder="4–6 digit PIN" autocomplete="new-password" />
+            <button type="button" id="securityPinBtn" class="ghost-btn small">Set PIN</button>
+            <button type="button" id="securityLockBtn" class="ghost-btn small">Lock now</button>
+          </div>
+          <p id="securityPinStatus" class="muted" aria-live="polite"></p>
+        </section>
+        <section class="checklist-section">
+          <h3>Trusted devices</h3>
+          <ul id="trustedDevicesList" class="planner-list"></ul>
+        </section>
+        <section class="checklist-section">
+          <h3>Voice &amp; presence</h3>
+          <p id="securityCloudLiveLine" class="muted">Cloud live: …</p>
+          <p id="securityGesturesLine" class="muted">Gestures: …</p>
+          <p id="securityBrainLine" class="muted">Brain mode: …</p>
+        </section>
+      </div>
+
+      <div id="presenceView" class="view-panel hidden">
+        <h2>Presence</h2>
+        <p id="presenceStatus" class="muted">Webcam + gestures</p>
+        <div class="presence-stage">
+          <video id="presenceVideo" class="presence-video" autoplay playsinline muted></video>
+          <canvas id="presenceCanvas" class="presence-canvas"></canvas>
+        </div>
+        <div class="ha-actions">
+          <button type="button" id="presenceStartBtn" class="ghost-btn small">Start camera</button>
+          <button type="button" id="presenceStopBtn" class="ghost-btn small">Stop</button>
+          <button type="button" id="faceEnrollBtn" class="ghost-btn small">Enroll face</button>
+        </div>
+        <label class="ha-field">
+          <span class="ha-field-label">Gestures</span>
+          <select id="gestureModeSelect" class="personality-select">
+            <option value="off">Off</option>
+            <option value="preview">Preview only</option>
+            <option value="control">Control — pinch click, fist drag panels</option>
+            <option value="cpu">CPU-only (low FPS)</option>
+          </select>
+        </label>
+        <p id="gestureStatus" class="muted" aria-live="polite"></p>
+        <button type="button" id="gestureCalibBtn" class="ghost-btn small">Calibrate gestures</button>
+        <p id="gestureCalibSteps" class="muted" aria-live="polite"></p>
+      </div>
+
+      <div id="auditView" class="view-panel hidden">
+        <div class="audit-header">
+          <div>
+            <h2>System Audit</h2>
+            <p id="auditStatusLine" class="muted" aria-live="polite">14-phase whole-system health check — hardware, OS, network, security, plus Jarvis stack.</p>
+          </div>
+          <div class="audit-header-actions">
+            <button type="button" id="auditRunBtn" class="ghost-btn small">Run audit</button>
+          </div>
+        </div>
+        <p class="muted audit-hint">14 phases: OS · packages · storage/SMART · memory · hardware/sensors · GPU · services/desktop · containers · dev tools · integrity · performance · security · network · Jarvis/AI.</p>
+        <div id="auditReportBody" class="audit-report-body">
+          <p class="muted">No audit run yet.</p>
+        </div>
+      </div>
+
+      <div id="voiceView" class="view-panel hidden life-panel">
+        <h2>Voice</h2>
+        <p id="voiceTabStatus" class="muted">Loading…</p>
+        <p id="voiceTabModel" class="muted"></p>
+        <p id="voiceTabCloud" class="muted"></p>
+        <div class="voice-tab-settings">
+          <label>Duplex
+            <select id="voiceTabDuplexSelect" class="personality-select">
+              <option value="off">Off</option>
+              <option value="half">Half</option>
+              <option value="full">Full</option>
+            </select>
+          </label>
+          <label>STT backend
+            <select id="voiceTabSttSelect" class="personality-select">
+              <option value="whisper">Whisper</option>
+              <option value="realtimestt">RealtimeSTT</option>
+            </select>
+          </label>
+          <label>TTS chunk chars
+            <input type="number" id="voiceTabChunkChars" class="audio-path-input small-num" value="220" min="40" max="600" />
+          </label>
+          <label>Interrupt on speak
+            <input type="checkbox" id="voiceTabInterrupt" />
+          </label>
+          <label>Chunk sentences
+            <input type="checkbox" id="voiceTabChunkSentences" checked />
+          </label>
+          <button type="button" id="voiceTabSaveBtn" class="ghost-btn small">Save settings</button>
+          <button type="button" id="voiceTabRefreshBtn" class="ghost-btn small">Refresh</button>
+        </div>
+        <div class="voice-tab-cloud">
+          <h3 class="life-subheading">Cloud live</h3>
+          <p id="voiceTabCloudDetail" class="muted"></p>
+          <button type="button" id="voiceTabCloudBtn" class="apply-btn small">Toggle cloud live</button>
+        </div>
+        <div class="voice-tab-cheatsheet">
+          <h3 class="life-subheading">Voice cheatsheet</h3>
+          <select id="voiceTabCheatsheetSelect" class="personality-select" aria-label="Voice cheatsheet">
+            <option value="voice">Voice commands</option>
+          </select>
+          <pre id="voiceTabCheatsheetBody" class="cheatsheet-content"></pre>
+        </div>
+        <p class="muted">Use the voice strip above chat for PTT, mute, and quick controls.</p>
+      </div>
+
+      <div id="toolConfirmModal" class="crop-modal hidden" role="dialog">
+        <div class="crop-modal-card">
+          <h3>Confirm action</h3>
+          <p id="toolConfirmMessage"></p>
+          <div class="sidebar-btn-row">
+            <button type="button" id="toolConfirmYes" class="apply-btn small">Confirm</button>
+            <button type="button" id="toolConfirmNo" class="ghost-btn small">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="listeningOverlay" class="listening-overlay hidden" aria-live="polite">Listening…</div>
+
+      <div id="projectPickerModal" class="crop-modal hidden" role="dialog">
+        <div class="crop-modal-card">
+          <h3>Choose a project</h3>
+          <div id="projectPickerList" class="sidebar-btn-row"></div>
+          <button type="button" id="projectPickerSkipBtn" class="ghost-btn small">Skip</button>
+        </div>
+      </div>
+
       <div id="settingsModal" class="crop-modal hidden" role="dialog">
         <div class="crop-modal-card profile-modal-card">
           <h3>Voice &amp; chat settings</h3>
@@ -1010,17 +1654,54 @@
       </section>
     </div>
   </div>
+  <div id="videoLightbox" class="image-lightbox video-lightbox hidden" role="dialog" aria-label="Video player">
+    <button type="button" id="videoLightboxClose" class="image-lightbox-close" title="Close (Esc)">×</button>
+    <div class="video-lightbox-card">
+      <video id="videoLightboxPlayer" controls preload="auto" playsinline class="video-lightbox-player"></video>
+      <p id="videoLightboxCaption" class="video-lightbox-caption muted"></p>
+    </div>
+  </div>
+  <div id="gestureCursor" class="gesture-cursor hidden" aria-hidden="true"></div>
+  <div id="lockScreen" class="lock-screen hidden" role="dialog" aria-modal="true">
+    <div class="lock-card">
+      <h2>ARIA locked</h2>
+      <p class="muted">Enter PIN or use a trusted device</p>
+      <input type="password" id="lockPinInput" class="audio-path-input" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="off" />
+      <label class="toggle-row"><span>Trust this device</span><input type="checkbox" id="lockTrustDevice" /></label>
+      <button type="button" id="lockUnlockBtn" class="apply-btn">Unlock</button>
+      <p id="lockError" class="fail"></p>
+    </div>
+  </div>
+  <script src="/static/lock_screen.js?v=5.16.70"></script>
   <script src="/static/audio_studio.js?v=1.3.0"></script>
   <script src="/static/audio_advanced.js?v=1.5.0"></script>
-  <script src="/static/audio.js?v=2.2.0"></script>
-  <script src="/static/journal.js?v=5.8.1"></script>
-  <script src="/static/video_studio.js?v=1.2.2"></script>
+  <script src="/static/audio.js?v=5.16.70"></script>
+  <script src="/static/journal.js?v=5.16.70"></script>
+  <script src="/static/video_studio.js?v=5.16.70"></script>
   <script src="/static/meme_studio.js?v=1.1.0"></script>
-  <script src="/static/movie_tiers.js?v=1.0.19"></script>
-  <script src="/static/voice_bar.js?v=1.2.8"></script>
+  <script src="/static/smarthome.js?v=5.16.70"></script>
+  <script src="/static/chat_sessions.js?v=5.16.70"></script>
+  <script src="/static/movie_tiers.js?v=5.16.70"></script>
+  <script src="/static/gemini_live.js?v=5.16.70"></script>
+  <script src="/static/voice_bar.js?v=5.16.70"></script>
   <script src="/static/jarvis_ambient.js?v=1.2.0"></script>
-  <script type="module" src="/static/modules/jobs.mjs?v=1.0.0"></script>
-  <script type="module" src="/static/modules/health.mjs?v=1.0.0"></script>
-  <script src="/static/app.js?v=5.16.50"></script>
+  <script type="module" src="/static/modules/jobs.mjs?v=5.16.70"></script>
+  <script type="module" src="/static/modules/health.mjs?v=5.16.70"></script>
+  <script src="/static/planner.js?v=5.16.70"></script>
+  <script src="/static/calendar.js?v=5.16.73"></script>
+  <script src="/static/flytying.js?v=5.16.70"></script>
+  <script src="/static/projects.js?v=5.16.70"></script>
+  <script src="/static/vendor/three/three.min.js"></script>
+  <script src="/static/vendor/three/STLLoader.js"></script>
+  <script src="/static/maker.js?v=5.16.70"></script>
+  <script src="/static/browser_panel.js?v=5.16.70"></script>
+  <script src="/static/presence.js?v=5.16.70"></script>
+  <script src="/static/security_settings.js?v=5.16.70"></script>
+  <script src="/static/tools_sidebar.js?v=5.16.70"></script>
+  <script src="/static/floating_panels.js?v=5.16.70"></script>
+  <script src="/static/world_state_hud.js?v=5.16.70"></script>
+  <script src="/static/audit.js?v=5.16.70"></script>
+  <script src="/static/voice_tab.js?v=5.16.70"></script>
+  <script src="/static/app.js?v=5.16.71"></script>
 </body>
 </html>
