@@ -107,6 +107,29 @@ def trim(path: str | Path, start: float, end: float | None = None, duration: flo
     return str(out)
 
 
+def _remux_mp4_web(src: Path, out: Path) -> bool:
+    """Copy/re-encode to browser-friendly MP4 (yuv420p, faststart moov atom)."""
+    ffmpeg = _ffmpeg()
+    if not ffmpeg:
+        import shutil
+        try:
+            shutil.copy2(src, out)
+            return out.is_file()
+        except OSError:
+            return False
+    cmd = [
+        ffmpeg, "-y", "-loglevel", "error",
+        "-i", str(src),
+        "-c:v", "libx264", "-profile:v", "main", "-pix_fmt", "yuv420p",
+        "-preset", "fast", "-crf", "20",
+        "-movflags", "+faststart",
+        "-an",
+        str(out),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    return proc.returncode == 0 and out.is_file()
+
+
 def ensure_mp4(path: str | Path) -> str:
     """Return an MP4 path, converting GIF/WebP via ffmpeg when needed."""
     src = Path(path).expanduser().resolve()
@@ -115,11 +138,13 @@ def ensure_mp4(path: str | Path) -> str:
     if src.suffix.lower() == ".mp4":
         stamp = time.strftime("%Y%m%d_%H%M%S")
         if "generated_videos" in str(src.parent):
+            ensure_webm(src)
             return str(src)
         out = VIDEO_OUTPUT_DIR / f"motion_{src.stem}_{stamp}.mp4"
         ensure_dirs()
-        import shutil
-        shutil.copy2(src, out)
+        if not _remux_mp4_web(src, out):
+            return f"ERROR: Could not prepare MP4 for playback"
+        ensure_webm(out)
         return str(out)
     ffmpeg = _ffmpeg()
     if not ffmpeg:
@@ -130,13 +155,15 @@ def ensure_mp4(path: str | Path) -> str:
     cmd = [
         ffmpeg, "-y", "-loglevel", "error",
         "-i", str(src),
-        "-pix_fmt", "yuv420p", "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+        "-pix_fmt", "yuv420p", "-c:v", "libx264", "-profile:v", "main",
+        "-preset", "fast", "-crf", "20", "-movflags", "+faststart",
         str(out),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if proc.returncode != 0 or not out.exists():
         err = (proc.stderr or proc.stdout or "mp4 convert failed").strip()
         return f"ERROR: {err[:300]}"
+    ensure_webm(out)
     return str(out)
 
 
@@ -170,13 +197,15 @@ def image_to_motion_video(
     cmd = [
         ffmpeg, "-y", "-loglevel", "error",
         "-loop", "1", "-i", str(src), "-vf", vf,
-        "-t", str(duration), "-pix_fmt", "yuv420p", "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+        "-t", str(duration), "-pix_fmt", "yuv420p", "-c:v", "libx264", "-profile:v", "main",
+        "-preset", "fast", "-crf", "20", "-movflags", "+faststart",
         str(out),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if proc.returncode != 0 or not out.exists():
         err = (proc.stderr or proc.stdout or "motion encode failed").strip()
         return f"ERROR: {err[:300]}"
+    ensure_webm(out)
     return str(out)
 
 
@@ -239,6 +268,33 @@ def storyboard_ken_burns(
             pass
 
 
+def ensure_webm(mp4_path: str | Path) -> str:
+    """VP9 WebM sidecar for in-app playback (Qt WebEngine often cannot decode H.264)."""
+    src = Path(mp4_path).expanduser().resolve()
+    if not src.is_file():
+        return f"ERROR: Not found: {src}"
+    if src.suffix.lower() != ".mp4":
+        return f"ERROR: WebM sidecar requires MP4 source"
+    out = src.with_suffix(".webm")
+    if out.is_file() and out.stat().st_mtime >= src.stat().st_mtime:
+        return str(out)
+    ffmpeg = _ffmpeg()
+    if not ffmpeg:
+        return f"ERROR: ffmpeg not installed (needed for WebM playback)"
+    cmd = [
+        ffmpeg, "-y", "-loglevel", "error",
+        "-i", str(src),
+        "-c:v", "libvpx-vp9", "-crf", "32", "-b:v", "0",
+        "-row-mt", "1", "-an",
+        str(out),
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    if proc.returncode != 0 or not out.is_file():
+        err = (proc.stderr or proc.stdout or "webm convert failed").strip()
+        return f"ERROR: {err[:300]}"
+    return str(out)
+
+
 def list_videos(limit: int = 50) -> list[dict]:
     ensure_dirs()
     files: list[Path] = []
@@ -246,7 +302,13 @@ def list_videos(limit: int = 50) -> list[dict]:
         if root.exists():
             files.extend(p for p in root.iterdir() if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS)
     files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return [{"name": f.name, "path": str(f)} for f in files[:limit]]
+    names = {p.name for p in files}
+    shown: list[Path] = []
+    for path in files:
+        if path.suffix.lower() == ".webm" and path.with_suffix(".mp4").name in names:
+            continue
+        shown.append(path)
+    return [{"name": f.name, "path": str(f)} for f in shown[:limit]]
 
 
 def safe_video_name(name: str) -> str:

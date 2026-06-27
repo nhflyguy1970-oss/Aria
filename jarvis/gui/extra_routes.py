@@ -316,11 +316,140 @@ def register_routes(app, assistant):
 
         return lan_status()
 
+    @app.get("/api/integrations/secrets")
+    def integrations_secrets_get():
+        from jarvis.integration_secrets import secrets_status
+
+        return {"ok": True, **secrets_status()}
+
+    @app.post("/api/integrations/secrets")
+    async def integrations_secrets_post(request: Request):
+        from jarvis.integration_secrets import save_secrets
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if not isinstance(body, dict):
+            return JSONResponse(status_code=400, content={"ok": False, "message": "JSON body required"})
+        return save_secrets(body)
+
     @app.get("/api/knowledge")
     def knowledge_list():
         from jarvis.knowledge import list_topics
 
         return {"ok": True, "topics": list_topics()}
+
+    @app.get("/api/knowledge/research")
+    def knowledge_research_list_api():
+        from jarvis.knowledge_research_daily import (
+            _categories,
+            _load_state,
+            list_research_briefs,
+            research_enabled,
+        )
+
+        state = _load_state()
+        cats = _categories(memory=assistant.memory)
+        return {
+            "ok": True,
+            "enabled": research_enabled(),
+            "last_run_day": state.get("last_run_day", ""),
+            "categories": [
+                {
+                    "id": c["id"],
+                    "slug": c["slug"],
+                    "title": c["title"],
+                    "kind": c.get("kind", "stack"),
+                    "source": c.get("source", "builtin"),
+                }
+                for c in cats
+            ],
+            "profile_topic_count": sum(1 for c in cats if c.get("kind") == "profile"),
+            "briefs": list_research_briefs(),
+        }
+
+    @app.get("/api/knowledge/research/daily")
+    def knowledge_research_daily_get():
+        from jarvis.knowledge_research_daily import list_research_briefs
+
+        briefs = list_research_briefs()
+        if not briefs:
+            return JSONResponse(
+                status_code=404,
+                content={"ok": False, "message": "Brief not found", "briefs": []},
+            )
+        return {"ok": True, "briefs": briefs, "count": len(briefs)}
+
+    @app.get("/api/knowledge/research/{slug}")
+    def knowledge_research_get_api(slug: str):
+        from jarvis.knowledge_research_daily import RESEARCH_DIR
+
+        safe = re.sub(r"[^\w-]", "", (slug or "").strip())
+        path = RESEARCH_DIR / f"{safe}.md"
+        if not path.is_file():
+            return JSONResponse(status_code=404, content={"ok": False, "message": "Brief not found"})
+        return {"ok": True, "slug": safe, "markdown": path.read_text(encoding="utf-8")[:120_000]}
+
+    @app.post("/api/knowledge/research/daily")
+    async def knowledge_research_daily(request: Request):
+        from jarvis.background_jobs import submit_action
+        from jarvis.handlers import ensure_handlers_loaded
+        from jarvis.handlers.registry import get_spec
+        from jarvis.knowledge_research_daily import research_category, run_nightly_research
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if not isinstance(body, dict):
+            body = {}
+        category = (body.get("category") or "").strip()
+        force = body.get("force") is True
+        async_mode = body.get("async") is not False
+
+        def _sync_result() -> dict:
+            if category:
+                result = research_category(category, memory=assistant.memory, force=force)
+                if result.get("ok") and result.get("remembered"):
+                    assistant.refresh_system_prompt()
+                return {"ok": result.get("ok", False), **result}
+            results = run_nightly_research(memory=assistant.memory, force=force)
+            if any(r.get("remembered") for r in results if isinstance(r, dict)):
+                assistant.refresh_system_prompt()
+            updated = [r for r in results if isinstance(r, dict) and r.get("ok") and not r.get("skipped")]
+            if updated:
+                titles = ", ".join(r.get("title") or r.get("slug") or "topic" for r in updated[:5])
+                message = f"Research complete — {len(updated)} topic(s): {titles}."
+            elif results and results[0].get("skipped"):
+                message = results[0].get("message", "Already completed today.")
+            else:
+                message = results[0].get("message") if results else "No research categories ran."
+            ok = bool(updated) or (results and results[0].get("ok"))
+            return {"ok": ok, "message": message, "results": results}
+
+        if async_mode:
+            ensure_handlers_loaded()
+            spec = get_spec("knowledge_research_run")
+            if not spec or not spec.handler:
+                return _sync_result()
+            params: dict = {"force": "true" if force else "false"}
+            if category:
+                params["category"] = category
+            job_id = submit_action(
+                assistant,
+                "knowledge_research_run",
+                params,
+                f"knowledge research {category or 'all'}",
+            )
+            return {
+                "ok": True,
+                "pending": True,
+                "job_id": job_id,
+                "message": "Knowledge research queued — poll /api/coding/job/{job_id}",
+            }
+
+        return _sync_result()
 
     @app.get("/api/homeassistant/status")
     def homeassistant_status():
@@ -396,6 +525,40 @@ def register_routes(app, assistant):
 
         chunks = build_index(force=True)
         return {"ok": True, "chunks": len(chunks)}
+
+    @app.post("/api/documents/learn")
+    async def documents_learn(request: Request):
+        from jarvis.document_learning import learn_from_file, learn_from_text, learn_from_url
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if not isinstance(body, dict):
+            body = {}
+        store = assistant.memory
+        url = (body.get("url") or "").strip()
+        if url:
+            result = learn_from_url(store, url)
+            if result.ok:
+                assistant.refresh_system_prompt()
+            return {"ok": result.ok, "message": result.message, "lessons": result.lessons}
+        text = (body.get("text") or "").strip()
+        if text:
+            result = learn_from_text(store, text, title=(body.get("title") or "OCR document"))
+            if result.ok:
+                assistant.refresh_system_prompt()
+            return {"ok": result.ok, "message": result.message, "lessons": result.lessons}
+        path = (body.get("path") or "").strip()
+        if not path:
+            return JSONResponse(
+                status_code=400,
+                content={"ok": False, "message": "path, url, or text required"},
+            )
+        result = learn_from_file(store, path)
+        if result.ok:
+            assistant.refresh_system_prompt()
+        return {"ok": result.ok, "message": result.message, "lessons": result.lessons}
 
     @app.post("/api/automation/inbound")
     async def automation_inbound(request: Request):
@@ -794,279 +957,6 @@ def register_routes(app, assistant):
             return JSONResponse(status_code=500, content={"ok": False, "error": str(e)})
         return FileResponse(dest, filename=dest.name, media_type="application/pdf")
 
-    @app.get("/api/memory/all")
-    def memory_all(q: str = "", type: str = "", namespace: str = ""):
-        entries = assistant.memory.list_entries(
-            type or None,
-            namespace=namespace or None,
-            query=q or None,
-        )
-        return {
-            "entries": entries,
-            "stats": assistant.memory.stats(),
-            "namespace": assistant.session.memory_namespace,
-        }
-
-    @app.get("/api/memory/stats")
-    def memory_stats():
-        from jarvis.config import (
-            load_auto_checkpoint,
-            load_auto_memory,
-            load_auto_memory_mode,
-            load_auto_namespace,
-            load_memory_in_system_prompt,
-            load_memory_namespace,
-        )
-        return {
-            "stats": assistant.memory.stats(),
-            "namespace": load_memory_namespace(),
-            "session_namespace": assistant.session.memory_namespace,
-            "auto_memory": load_auto_memory(),
-            "auto_memory_mode": load_auto_memory_mode(),
-            "auto_checkpoint": load_auto_checkpoint(),
-            "auto_namespace": load_auto_namespace(),
-            "memory_in_system_prompt": load_memory_in_system_prompt(),
-        }
-
-    @app.get("/api/memory/settings")
-    def memory_settings_get():
-        from jarvis.config import (
-            load_auto_checkpoint,
-            load_auto_memory_mode,
-            load_auto_namespace,
-            load_memory_in_system_prompt,
-            load_memory_namespace,
-        )
-        return {
-            "ok": True,
-            "namespace": load_memory_namespace(),
-            "session_namespace": assistant.session.memory_namespace,
-            "auto_memory_mode": load_auto_memory_mode(),
-            "auto_checkpoint": load_auto_checkpoint(),
-            "auto_namespace": load_auto_namespace(),
-            "memory_in_system_prompt": load_memory_in_system_prompt(),
-        }
-
-    @app.post("/api/memory/settings")
-    async def memory_settings_set(request: Request):
-        from jarvis.config import (
-            save_auto_checkpoint,
-            save_auto_memory_mode,
-            save_auto_namespace,
-            save_memory_in_system_prompt,
-            save_memory_namespace,
-        )
-
-        body = await request.json()
-        if "auto_memory_mode" in body:
-            save_auto_memory_mode(str(body["auto_memory_mode"]))
-        if "auto_checkpoint" in body:
-            save_auto_checkpoint(bool(body["auto_checkpoint"]))
-        if "auto_namespace" in body:
-            save_auto_namespace(bool(body["auto_namespace"]))
-            if body["auto_namespace"]:
-                assistant.sync_project_namespace()
-        if "memory_in_system_prompt" in body:
-            save_memory_in_system_prompt(bool(body["memory_in_system_prompt"]))
-        if "namespace" in body:
-            ns = (body.get("namespace") or "default").strip() or "default"
-            save_memory_namespace(ns)
-            assistant.session.note_memory_namespace(ns)
-        assistant.refresh_system_prompt()
-        return {"ok": True}
-
-    @app.get("/api/memory/conflicts")
-    def memory_conflicts():
-        from jarvis.memory_context import find_conflicts
-
-        return {"ok": True, "conflicts": find_conflicts(assistant.memory)}
-
-    @app.post("/api/memory/conflicts/resolve")
-    async def memory_conflicts_resolve(request: Request):
-        body = await request.json()
-        drop_id = (body.get("drop_id") or "").strip()
-        if not drop_id:
-            return JSONResponse(status_code=400, content={"ok": False, "error": "drop_id required"})
-        ok = assistant.memory.delete_id(drop_id)
-        if not ok:
-            return JSONResponse(status_code=404, content={"ok": False, "error": "not found"})
-        assistant.refresh_system_prompt()
-        return {"ok": True}
-
-    @app.post("/api/memory/auto-checkpoint")
-    async def memory_auto_checkpoint():
-        assistant.branches.persist(session=assistant.session)
-        return assistant.auto_checkpoint(reason="gui-exit")
-
-    @app.post("/api/memory")
-    async def memory_add(request: Request):
-        body = await request.json()
-        content = (body.get("content") or "").strip()
-        if not content:
-            return JSONResponse(status_code=400, content={"ok": False, "error": "content required"})
-        try:
-            entry = assistant.memory.add(
-                body.get("type") or "fact",
-                content,
-                tags=body.get("tags") or [],
-                namespace=body.get("namespace") or assistant.session.memory_namespace,
-            )
-        except ValueError as e:
-            return JSONResponse(status_code=400, content={"ok": False, "error": str(e)})
-        assistant.refresh_system_prompt()
-        return {"ok": True, "entry": assistant.memory.to_public(entry)}
-
-    @app.put("/api/memory/{entry_id}")
-    async def memory_update(entry_id: str, request: Request):
-        body = await request.json()
-        ok = assistant.memory.update(
-            entry_id,
-            content=body.get("content"),
-            entry_type=body.get("type"),
-            tags=body.get("tags"),
-            namespace=body.get("namespace"),
-        )
-        if not ok:
-            return JSONResponse(status_code=404, content={"ok": False, "error": "not found"})
-        assistant.refresh_system_prompt()
-        return {"ok": True, "entry": assistant.memory.get(entry_id)}
-
-    @app.delete("/api/memory/{entry_id}")
-    def memory_delete_id(entry_id: str):
-        if entry_id.isdigit():
-            ok = assistant.memory.delete(int(entry_id))
-        else:
-            ok = assistant.memory.delete_id(entry_id)
-        if ok:
-            assistant.refresh_system_prompt()
-        return {"ok": ok}
-
-    @app.get("/api/memory/export")
-    def memory_export():
-        return assistant.memory.export_data()
-
-    @app.post("/api/memory/import")
-    async def memory_import(request: Request):
-        body = await request.json()
-        merge = body.get("merge", True) is not False
-        try:
-            added = assistant.memory.import_data(body, merge=merge)
-        except ValueError as e:
-            return JSONResponse(status_code=400, content={"ok": False, "error": str(e)})
-        return {"ok": True, "added": added}
-
-    @app.post("/api/memory/prune")
-    def memory_prune():
-        removed = assistant.memory.prune()
-        assistant.refresh_system_prompt()
-        return {"ok": True, "removed": removed}
-
-    @app.get("/api/memory/trust/status")
-    def memory_trust_status():
-        from jarvis.trust_memory import trust_status
-
-        status = trust_status(assistant.memory)
-        status["last_scrub_on_startup"] = getattr(assistant, "_trust_last_scrub", 0)
-        return {"ok": True, **status}
-
-    @app.post("/api/memory/trust/scrub")
-    def memory_trust_scrub():
-        from jarvis.trust_memory import scrub_store
-
-        result = scrub_store(assistant.memory)
-        assistant.refresh_system_prompt()
-        return {"ok": True, **result}
-
-    @app.get("/api/cheatsheets")
-    def cheatsheets_list():
-        from jarvis.cheatsheets import list_cheatsheets, seed_cheatsheets
-
-        if not list_cheatsheets(assistant.memory):
-            seed_cheatsheets(assistant.memory)
-        return {"ok": True, "cheatsheets": list_cheatsheets(assistant.memory)}
-
-    @app.get("/api/cheatsheets/{key}")
-    def cheatsheets_get(key: str):
-        from jarvis.cheatsheets import find_by_key, seed_cheatsheets
-
-        if not find_by_key(assistant.memory, key):
-            seed_cheatsheets(assistant.memory, keys=[key.split("/")[0]])
-        entry = find_by_key(assistant.memory, key)
-        if not entry:
-            return JSONResponse(status_code=404, content={"ok": False, "error": "not found"})
-        return {"ok": True, "cheatsheet": assistant.memory.to_public(entry)}
-
-    @app.put("/api/cheatsheets/{key}")
-    async def cheatsheets_update(key: str, request: Request):
-        from jarvis.cheatsheets import upsert_cheatsheet
-
-        body = await request.json()
-        content = (body.get("content") or "").strip()
-        if not content:
-            return JSONResponse(status_code=400, content={"ok": False, "error": "content required"})
-        try:
-            entry = upsert_cheatsheet(assistant.memory, key, content)
-        except ValueError as e:
-            return JSONResponse(status_code=400, content={"ok": False, "error": str(e)})
-        return {"ok": True, "cheatsheet": assistant.memory.to_public(entry)}
-
-    @app.post("/api/cheatsheets/{key}/reset")
-    def cheatsheets_reset(key: str):
-        from jarvis.cheatsheets import reset_cheatsheet
-
-        entry = reset_cheatsheet(assistant.memory, key)
-        if not entry:
-            return JSONResponse(status_code=404, content={"ok": False, "error": "not found"})
-        return {"ok": True, "cheatsheet": assistant.memory.to_public(entry)}
-
-    @app.get("/api/profile/questionnaire")
-    def profile_questionnaire_status(edit: bool = False):
-        from jarvis.profile_questionnaire import get_questions, get_status
-
-        status = get_status()
-        show_questions = edit or not status.get("completed")
-        return {
-            "ok": True,
-            **status,
-            "questions": get_questions() if show_questions else [],
-        }
-
-    @app.post("/api/profile/questionnaire/reset")
-    def profile_questionnaire_reset():
-        from jarvis.profile_questionnaire import get_questions, reset_profile
-
-        reset_profile(assistant.memory)
-        assistant.refresh_system_prompt()
-        return {"ok": True, "questions": get_questions()}
-
-    @app.post("/api/profile/questionnaire")
-    async def profile_questionnaire_submit(request: Request):
-        from jarvis.profile_questionnaire import get_status, save_answers, skip
-
-        body = await request.json()
-        if body.get("skip"):
-            skip(assistant.memory)
-            return {"ok": True, "skipped": True}
-        answers = body.get("answers") if isinstance(body.get("answers"), dict) else body
-        if not isinstance(answers, dict):
-            return JSONResponse(status_code=400, content={"ok": False, "error": "answers required"})
-        name = (answers.get("name") or "").strip()
-        if not name:
-            return JSONResponse(status_code=400, content={"ok": False, "error": "name is required"})
-        retake = bool(body.get("retake")) or bool(get_status().get("completed"))
-        stored = save_answers(assistant.memory, answers, replace=retake)
-        assistant.refresh_system_prompt()
-        return {"ok": True, "stored": len(stored), "memories": stored, "retake": retake}
-
-    @app.post("/api/memory/namespace")
-    async def memory_namespace_set(request: Request):
-        from jarvis.config import save_memory_namespace
-        body = await request.json()
-        ns = (body.get("namespace") or "default").strip() or "default"
-        save_memory_namespace(ns)
-        assistant.session.note_memory_namespace(ns)
-        return {"ok": True, "namespace": ns}
-
     @app.get("/api/actions")
     def actions_list(module: str = "", limit: int = 50):
         return {"actions": list_actions(limit=min(limit, 100), module=module)}
@@ -1227,8 +1117,17 @@ def register_routes(app, assistant):
         return {"ok": True, "deleted": path.name}
 
     _VIDEO_EXTS = {".mp4", ".webm", ".mov", ".mkv", ".avi", ".m4v"}
+    _VIDEO_MEDIA = {
+        ".mp4": "video/mp4",
+        ".webm": "video/webm",
+        ".mov": "video/quicktime",
+        ".mkv": "video/x-matroska",
+        ".avi": "video/x-msvideo",
+        ".m4v": "video/mp4",
+    }
 
     @app.get("/api/video-gallery")
+    @app.get("/api/video/gallery")
     def video_gallery_list():
         cached = get_video_gallery_cache()
         if cached is not None:
@@ -1241,13 +1140,20 @@ def register_routes(app, assistant):
 
     @app.get("/api/video-gallery/{name}")
     def video_gallery_file(name: str):
-        from jarvis.video_ops import VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR
+        from jarvis.video_ops import VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR, ensure_webm
 
         safe = Path(name).name
         for root in (VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR):
             path = (root / safe).resolve()
             if root.resolve() in path.parents and path.is_file() and path.suffix.lower() in _VIDEO_EXTS:
-                return FileResponse(path, media_type="video/mp4")
+                media = _VIDEO_MEDIA.get(path.suffix.lower(), "video/mp4")
+                return FileResponse(path, media_type=media)
+            if safe.lower().endswith(".webm"):
+                mp4_path = (root / f"{safe[:-5]}.mp4").resolve()
+                if root.resolve() in mp4_path.parents and mp4_path.is_file():
+                    webm = ensure_webm(mp4_path)
+                    if not str(webm).startswith("ERROR:"):
+                        return FileResponse(Path(webm), media_type="video/webm")
         return JSONResponse(status_code=404, content={"detail": "not found"})
 
     @app.delete("/api/video-gallery/{name}")
@@ -1255,10 +1161,20 @@ def register_routes(app, assistant):
         from jarvis.video_ops import VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR
 
         safe = Path(name).name
+        if not safe or safe in (".", ".."):
+            return JSONResponse(status_code=400, content={"ok": False, "message": "Invalid name"})
         for root in (VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR):
             path = (root / safe).resolve()
-            if root.resolve() in path.parents and path.is_file() and path.suffix.lower() in _VIDEO_EXTS:
-                path.unlink(missing_ok=False)
+            try:
+                if root.resolve() not in path.parents:
+                    continue
+            except (OSError, ValueError):
+                continue
+            if path.is_file() and path.suffix.lower() in _VIDEO_EXTS:
+                try:
+                    path.unlink()
+                except OSError as exc:
+                    return JSONResponse(status_code=500, content={"ok": False, "message": str(exc)})
                 invalidate_video_gallery()
                 return {"ok": True, "deleted": path.name}
         return JSONResponse(status_code=404, content={"ok": False, "message": "Not found"})
@@ -1782,3 +1698,72 @@ def register_routes(app, assistant):
         from jarvis.router_table import list_rules
 
         return {"ok": True, "rules": list_rules()}
+
+    @app.get("/api/audit")
+    def audit_get(refresh: bool = False):
+        from jarvis.system_audit import get_audit_status, run_audit
+
+        if refresh:
+            return run_audit(use_cache=False)
+        status = get_audit_status()
+        if status.get("running") or status.get("ok"):
+            return status
+        return run_audit(use_cache=False)
+
+    @app.post("/api/audit/run")
+    def audit_run():
+        from jarvis.system_audit import clear_audit_cache, run_audit
+
+        clear_audit_cache()
+        return run_audit(use_cache=False, background=True)
+
+    @app.post("/api/audit/install")
+    async def audit_install(request: Request):
+        from jarvis.system_audit import clear_audit_cache
+        from jarvis.system_audit_engine import run_install_script
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        key = (body.get("install_key") or body.get("key") or "").strip()
+        if not key:
+            return JSONResponse({"ok": False, "error": "install_key required"})
+        try:
+            result = run_install_script(key)
+            if result.get("ok"):
+                clear_audit_cache()
+                result["message"] = (result.get("message") or "Install finished") + " — run audit to refresh"
+            return JSONResponse(result)
+        except Exception as exc:
+            return JSONResponse({"ok": False, "error": str(exc), "message": str(exc)})
+
+    @app.get("/api/audit/status")
+    def audit_status_alias():
+        from jarvis.system_audit import get_audit_status
+
+        return get_audit_status()
+
+    @app.get("/api/audit/history")
+    def audit_history_alias():
+        from jarvis.system_audit import get_cached_audit
+
+        cached = get_cached_audit()
+        if not cached:
+            return {"ok": False, "history": [], "message": "No audit cached"}
+        return {"ok": True, "history": [cached], "latest": cached}
+
+    @app.get("/api/audit/latest")
+    def audit_latest_alias():
+        from jarvis.system_audit import get_cached_audit, get_audit_status
+
+        cached = get_cached_audit()
+        if cached:
+            return {"ok": True, **cached}
+        return get_audit_status()
+
+    @app.get("/api/background-jobs")
+    def background_jobs_alias():
+        from jarvis.jobs_center import snapshot
+
+        return {"ok": True, **snapshot()}

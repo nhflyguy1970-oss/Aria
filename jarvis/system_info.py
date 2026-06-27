@@ -1,58 +1,76 @@
-# Source Generated with Decompyle++
-# File: system_info.cpython-312.pyc (Python 3.12)
+"""Unified system snapshot for voice and dashboard."""
 
-'''Unified system snapshot for voice and dashboard.'''
 from __future__ import annotations
+
 from datetime import datetime
 from typing import Any
+
 from jarvis.feature_flags import all_flags, planner_enabled
-from jarvis.morning_briefing import personalized_greeting
 
-def build_system_info(*, assistant):
-    env_snapshot = snapshot
-    import jarvis.environment
+
+def build_system_info(*, assistant) -> dict[str, Any]:
     now = datetime.now()
-    greet = personalized_greeting(when = now, assistant = assistant)
-# WARNING: Decompyle incomplete
+    greeting = "Hello"
+    try:
+        from jarvis.morning_briefing import personalized_greeting
+
+        greeting = personalized_greeting(when=now, assistant=assistant)
+    except Exception:
+        pass
+    env: dict[str, Any] = {}
+    try:
+        from jarvis.environment import snapshot as env_snapshot
+
+        env = env_snapshot()
+    except Exception:
+        pass
+    planner: dict[str, Any] = {"enabled": planner_enabled()}
+    if planner_enabled():
+        try:
+            from jarvis.planner_store import planner_snapshot
+
+            planner = planner_snapshot()
+        except Exception:
+            pass
+    ha: dict[str, Any] = {}
+    try:
+        from jarvis.home_assistant import ha_summary_markdown
+
+        summary = ha_summary_markdown()
+        if summary:
+            ha = {"summary": summary}
+    except Exception:
+        pass
+    return {
+        "greeting": greeting,
+        "date": now.strftime("%A, %B %d"),
+        "date_label": now.strftime("%A, %B %d"),
+        "time": now.strftime("%I:%M %p").lstrip("0"),
+        "time_display": now.strftime("%I:%M %p").lstrip("0"),
+        "planner": planner,
+        "environment": env,
+        "home_assistant": ha,
+        "feature_flags": all_flags(),
+    }
 
 
-def format_system_info_markdown(*, assistant):
-    info = build_system_info(assistant = assistant)
-    if not info.get('date_label'):
-        info.get('date_label')
-    if not info.get('time_display'):
-        info.get('time_display')
+def format_system_info_markdown(*, assistant) -> str:
+    info = build_system_info(assistant=assistant)
     parts = [
-        f'''## {info['greeting']}''',
-        f'''**{info['date']}** · {info['time']}''']
-    if not info.get('weather'):
-        info.get('weather')
-    weather = { }
-    if weather.get('summary'):
-        format_weather_line = format_weather_line
-        import jarvis.journal_weather
-        parts.append(format_weather_line(weather))
-    if not info.get('environment'):
-        info.get('environment')
-    env = { }
-    if env.get('profile'):
-        parts.append(f'''Profile: **{env['profile']}**''')
-    if not env.get('gpu'):
-        env.get('gpu')
-    gpu = { }
-    if gpu.get('free_vram_mb'):
-        parts.append(f'''VRAM free: **{gpu['free_vram_mb']} MB**''')
-    if not info.get('planner'):
-        info.get('planner')
-    planner = { }
-    if planner.get('enabled'):
-        format_planner_lines = format_planner_lines
-        import jarvis.planner_store
-        block = format_planner_lines()
-        if block:
-            parts.append(block)
-    if not info.get('briefing'):
-        info.get('briefing')
-    briefing = { }
-# WARNING: Decompyle incomplete
+        f"## {info.get('greeting', 'Status')}",
+        f"**{info.get('date', '')}** · {info.get('time', '')}",
+    ]
+    planner = info.get("planner") or {}
+    if planner.get("enabled"):
+        try:
+            from jarvis.planner_store import format_planner_lines
 
+            block = format_planner_lines()
+            if block:
+                parts.append(block)
+        except Exception:
+            pass
+    ha = info.get("home_assistant") or {}
+    if ha.get("summary"):
+        parts.append(ha["summary"])
+    return "\n".join(parts)

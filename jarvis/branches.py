@@ -17,6 +17,7 @@ class BranchManager:
         self._data = self._load()
         self.active_id = self._data.get("active", "main")
         self._conversations: dict[str, Conversation] = {}
+        self._ensure_default_branches()
 
     def _load(self) -> dict:
         if BRANCHES_FILE.exists():
@@ -25,6 +26,25 @@ class BranchManager:
             except (json.JSONDecodeError, OSError):
                 pass
         return {"active": "main", "branches": {"main": {"name": "Main", "messages": [], "created": ""}}}
+
+    def _ensure_default_branches(self) -> None:
+        branches = self._data.setdefault("branches", {})
+        defaults = (
+            ("main", "Main"),
+            ("work", "Work"),
+            ("personal", "Personal"),
+        )
+        added = False
+        for bid, name in defaults:
+            if bid not in branches:
+                branches[bid] = {
+                    "name": name,
+                    "messages": [],
+                    "created": datetime.now(timezone.utc).isoformat(),
+                }
+                added = True
+        if added:
+            self._save()
 
     def _save(self) -> None:
         for bid, conv in self._conversations.items():

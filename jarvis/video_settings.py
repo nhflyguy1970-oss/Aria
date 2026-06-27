@@ -25,7 +25,7 @@ DEFAULTS = {
     "fps": 8,
     "width": 768,
     "height": 768,
-    "animatediff_frames": 16,
+    "animatediff_frames": 64,
     "animatediff_checkpoint": "",
     "keyframe_preset": "quality",
     "keyframe_checkpoint": "",
@@ -180,31 +180,102 @@ def should_try_animatediff(engine: str | None = None) -> bool:
     return is_ready()
 
 
-def effective_animatediff_frames(duration: float, fps: int) -> int:
-    data = _load()
-    env_max = os.getenv("JARVIS_ANIMATEDIFF_MAX_FRAMES", "").strip()
-    max_frames = int(data.get("animatediff_frames") or 16)
-    if env_max:
+def _gpu_max_animatediff_frames(width: int, height: int) -> int:
+    """VRAM-aware frame cap for a single AnimateDiff batch."""
+    env = os.getenv("JARVIS_ANIMATEDIFF_MAX_FRAMES", "").strip()
+    if env:
         try:
-            max_frames = int(env_max)
+            return max(8, min(int(env), 128))
         except ValueError:
             pass
+    from jarvis.gpu_routing import compute_vram_mb, nvidia_compute_active
+
+    pixels = int(width) * int(height)
+    vram = compute_vram_mb()
+    if nvidia_compute_active() and vram > 10240:
+        if pixels <= 512 * 512:
+            return 64
+        if pixels <= 768 * 768:
+            return 48
+        return 32
     from jarvis.gpu import is_low_vram
 
     if is_low_vram(10240):
-        max_frames = min(max_frames, 16)
-    requested = int(duration * fps)
-    return max(8, min(requested, max_frames, 32))
+        return 16
+    return 32
 
 
-def effective_animatediff_size() -> tuple[int, int]:
+def plan_animatediff_clip(
+    duration: float | None = None,
+    fps: int | None = None,
+    *,
+    width: int | None = None,
+    height: int | None = None,
+) -> dict:
+    """
+    Pick frames, fps, and resolution to hit the requested clip length within VRAM.
+    Long clips (6s+) use 512² so more frames fit on 12GB GPUs.
+    """
+    target_dur = float(duration if duration is not None else effective_duration())
+    base_fps = int(fps if fps is not None else effective_fps())
+    data = _load()
+    user_cap = int(data.get("animatediff_frames") or 0)
+    ad_w, ad_h = effective_animatediff_size(target_dur)
+    if width:
+        ad_w = min(int(width), ad_w)
+    if height:
+        ad_h = min(int(height), ad_h)
+    if target_dur > 6 and ad_w > 512:
+        ad_w = ad_h = 512
+
+    def _fit(w: int, h: int) -> tuple[int, int, float]:
+        max_frames = _gpu_max_animatediff_frames(w, h)
+        if user_cap >= 8:
+            max_frames = min(max_frames, user_cap)
+        requested = max(8, int(round(target_dur * base_fps)))
+        frames = min(requested, max_frames)
+        eff_fps = base_fps
+        if frames < requested:
+            eff_fps = max(4, int(round(frames / target_dur)))
+        actual = frames / eff_fps
+        return frames, eff_fps, actual
+
+    frames, eff_fps, actual_dur = _fit(ad_w, ad_h)
+    if actual_dur < target_dur - 0.35 and ad_w > 512:
+        ad_w = ad_h = 512
+        frames, eff_fps, actual_dur = _fit(ad_w, ad_h)
+
+    return {
+        "frames": max(8, int(frames)),
+        "fps": max(4, int(eff_fps)),
+        "width": ad_w,
+        "height": ad_h,
+        "target_duration_sec": round(target_dur, 2),
+        "actual_duration_sec": round(actual_dur, 2),
+        "truncated": actual_dur < target_dur - 0.25,
+    }
+
+
+def effective_animatediff_frames(duration: float, fps: int) -> int:
+    return plan_animatediff_clip(duration, fps)["frames"]
+
+
+def effective_animatediff_fps(duration: float, fps: int) -> int:
+    return plan_animatediff_clip(duration, fps)["fps"]
+
+
+def effective_animatediff_size(duration: float | None = None) -> tuple[int, int]:
     from jarvis.gpu import is_low_vram
     from jarvis.gpu_routing import compute_vram_mb, nvidia_compute_active
 
+    dur = float(duration if duration is not None else effective_duration())
     data = _load()
     w = int(data.get("width") or 512)
     h = int(data.get("height") or 512)
-    if nvidia_compute_active() and compute_vram_mb() > 10240:
+    if dur > 6:
+        w = min(w, 512)
+        h = min(h, 512)
+    elif nvidia_compute_active() and compute_vram_mb() > 10240:
         return min(w, 768), min(h, 768)
     if is_low_vram(10240):
         return 512, 512
@@ -266,7 +337,8 @@ def get_settings_dict() -> dict:
     data = _load()
     dur, fps = effective_duration(), effective_fps()
     w, h = effective_size()
-    ad_w, ad_h = effective_animatediff_size()
+    ad_w, ad_h = effective_animatediff_size(dur)
+    clip_plan = plan_animatediff_clip(dur, fps)
     rec_ckpt = recommended_uncensored_checkpoint()
     active_ckpt = resolve_keyframe_checkpoint()
     uncensored = is_uncensored()
@@ -307,6 +379,7 @@ def get_settings_dict() -> dict:
         "nvidia_compute": nvidia_compute_active(),
         "vram_gb": round(compute_vram_mb() / 1024, 1),
         "animatediff_size": {"width": ad_w, "height": ad_h},
+        "clip_plan": clip_plan,
         "install_scripts": {
             "quality": "./scripts/install-sdxl-base.sh",
             "flux": "./scripts/install-flux-schnell.sh",

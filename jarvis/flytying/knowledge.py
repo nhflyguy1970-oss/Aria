@@ -1,299 +1,160 @@
-# Source Generated with Decompyle++
-# File: knowledge.cpython-312.pyc (Python 3.12)
+"""Teach main ARIA chat fly tying — document library sync + context injection."""
 
-'''Teach main ARIA chat fly tying — document library sync + context injection.'''
 from __future__ import annotations
+
 import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
 from jarvis.config import DATA_DIR
-FLYTYING_DOCS_DIR = DATA_DIR / 'documents' / 'flytying'
-FLYTYING_RECIPES_DIR = FLYTYING_DOCS_DIR / 'recipes'
-SYNC_MARKER = DATA_DIR / 'flytying_library_sync.json'
-FLYTYING_MEMORY_NAMESPACE = 'fly-tying'
+
+FLYTYING_DOCS_DIR = DATA_DIR / "documents" / "flytying"
+FLYTYING_RECIPES_DIR = FLYTYING_DOCS_DIR / "recipes"
+SYNC_MARKER = DATA_DIR / "flytying_library_sync.json"
+FLYTYING_MEMORY_NAMESPACE = "fly-tying"
 MAX_CONTEXT_CHARS = 3200
-_FLY_CHAT_RE = re.compile('\\b(fly\\s*tying|fly\\s*pattern|dry\\s*fly|wet\\s*fly|nymph|emerger|streamer|terrestrial|hackle|dubbing|marabou|cdc|parachute|woolly\\s*bugger|adams|elk\\s*hair|tying\\s*bench|vise|hook\\s*size|bead\\s*head|materials?\\s+(?:on\\s+hand|i\\s+have))\\b', re.I)
 
-def _slug(name = None, rid = None):
-    if not name:
-        name
-        if not rid:
-            rid
-    base = re.sub('[^\\w\\s-]', '', 'pattern'.lower())
-    base = re.sub('[\\s_]+', '-', base).strip('-')[:50]
-    if not base:
-        base = 'pattern'
-    if not rid:
-        rid
-    short = re.sub('[^\\w]', '', '')[:12]
-    if short:
-        return f'''{base}-{short}'''
+_FLY_CHAT_RE = re.compile(
+    r"\b(fly\s*tying|fly\s*pattern|dry\s*fly|wet\s*fly|nymph|emerger|streamer|"
+    r"terrestrial|hackle|dubbing|marabou|cdc|parachute|woolly\s*bugger|adams|"
+    r"elk\s*hair|tying\s*bench|vise|hook\s*size|bead\s*head|materials?\s+"
+    r"(?:on\s+hand|i\s+have))\b",
+    re.I,
+)
 
 
-def _recipe_markdown(recipe = None):
-    if not recipe.get('fly_name'):
-        recipe.get('fly_name')
-        if not recipe.get('name'):
-            recipe.get('name')
-            if not recipe.get('instruction'):
-                recipe.get('instruction')
-    name = str('Pattern')
-    lines = [
-        f'''# {name}''',
-        '']
-    if recipe.get('type'):
-        lines.append(f'''Type: {recipe['type']}''')
-    if recipe.get('hook'):
-        lines.append(f'''Hook: {recipe['hook']}''')
-    if not recipe.get('materials'):
-        recipe.get('materials')
-    mats = []
+def _slug(name: str = "", rid: str = "") -> str:
+    base = re.sub(r"[^\w\s-]", "", (name or "pattern").lower())
+    base = re.sub(r"[\s_]+", "-", base).strip("-")[:50] or "pattern"
+    short = re.sub(r"[^\w]", "", rid or "")[:12]
+    return f"{base}-{short}" if short else base
+
+
+def _recipe_markdown(recipe: dict) -> str:
+    name = str(recipe.get("fly_name") or recipe.get("name") or "Pattern")
+    lines = [f"# {name}", ""]
+    if recipe.get("type"):
+        lines.append(f"Type: {recipe['type']}")
+    if recipe.get("hook"):
+        lines.append(f"Hook: {recipe['hook']}")
+    mats = recipe.get("materials") or []
     if mats:
-        lines.append('')
-        lines.append('## Materials')
-        (lambda .0: pass# WARNING: Decompyle incomplete
-)(mats[:25]())
-    if not recipe.get('steps'):
-        recipe.get('steps')
-    steps = []
+        lines.append("")
+        lines.append("## Materials")
+        for m in mats[:25]:
+            lines.append(f"- {m}")
+    steps = recipe.get("steps") or []
     if steps:
-        lines.append('')
-        lines.append('## Steps')
-        (lambda .0: pass# WARNING: Decompyle incomplete
-)(enumerate(steps[:30], 1)())
-    if recipe.get('source_url'):
-        lines.append('')
-        lines.append(f'''Source: {recipe['source_url']}''')
-    return '\n'.join(lines).strip() + '\n'
+        lines.append("")
+        lines.append("## Steps")
+        for i, step in enumerate(steps[:30], 1):
+            lines.append(f"{i}. {step}")
+    if recipe.get("source_url"):
+        lines.append("")
+        lines.append(f"Source: {recipe['source_url']}")
+    return "\n".join(lines).strip() + "\n"
 
 
-def sync_library(*, force):
-    '''Export gold recipes into data/documents/flytying/ for documents_rag.'''
-    gold_recipes_path = gold_recipes_path
-    import jarvis.flytying.config
-    gold = gold_recipes_path()
-    if not gold.is_file():
+def sync_library(*, force: bool = False) -> dict[str, Any]:
+    """Export Blackfly library JSONL into data/documents/flytying/ (secondary mirror for documents_rag)."""
+    from jarvis.flytying.config import blackfly_data_available, recipe_source_path, scraped_dataset_path
+
+    if not blackfly_data_available():
         return {
-            'ok': False,
-            'message': 'gold_recipes.jsonl missing',
-            'written': 0 }
-    gold_mtime = None.stat().st_mtime
-    if force and SYNC_MARKER.is_file():
-        
-        try:
-            meta = json.loads(SYNC_MARKER.read_text(encoding = 'utf-8'))
-            if not meta.get('gold_mtime'):
-                meta.get('gold_mtime')
-            if float(0) >= gold_mtime:
-                if not meta.get('written'):
-                    meta.get('written')
-                return {
-                    'ok': True,
-                    'message': 'library up to date',
-                    'written': int(0),
-                    'skipped': True }
-            FLYTYING_RECIPES_DIR.mkdir(parents = True, exist_ok = True)
-            written = 0
-            updated = 0
-            types = { }
-            
-            try:
-                f = open(gold, encoding = 'utf-8')
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    recipe = json.loads(line)
-                    if not isinstance(recipe, dict):
-                        continue
-                    if not recipe.get('recipe_id'):
-                        recipe.get('recipe_id')
-                        if not recipe.get('content_hash'):
-                            recipe.get('content_hash')
-                    rid = str(written)
-                    if not recipe.get('fly_name'):
-                        recipe.get('fly_name')
-                        if not recipe.get('name'):
-                            recipe.get('name')
-                            if not recipe.get('instruction'):
-                                recipe.get('instruction')
-                    name = str(rid)
-                    slug = _slug(name, rid)
-                    path = FLYTYING_RECIPES_DIR / f'''{slug}.md'''
-                    content = _recipe_markdown(recipe)
-                    if path.is_file() and path.read_text(encoding = 'utf-8') == content:
-                        written += 1
-                        if not recipe.get('type'):
-                            recipe.get('type')
-                        t = str('unknown').lower()
-                        types[t] = types.get(t, 0) + 1
-                        continue
-                    path.write_text(content, encoding = 'utf-8')
-                    written += 1
-                    updated += 1
-                    if not recipe.get('type'):
-                        recipe.get('type')
-                    t = str('unknown').lower()
-                    types[t] = types.get(t, 0) + 1
-                
-                try:
-                    None(None, None)
-                    index_lines = [
-                        '# Fly tying pattern library',
-                        '',
-                        f'''Synced from Blackfly gold dataset ({written} patterns).''',
-                        '',
-                        '## Types',
-                        '']
-                    for t, count in sorted(types.items(), key = (lambda x: (-x[1], x[0]))):
-                        index_lines.append(f'''- {t}: {count}''')
-                    index_lines.extend([
-                        '',
-                        '## Using this library',
-                        '',
-                        'Ask ARIA about patterns, materials, or hatch matching. Open the **Fly tying** tab for recipes, videos, and dedicated chat.',
-                        ''])
-                    FLYTYING_DOCS_DIR.mkdir(parents = True, exist_ok = True)
-                    (FLYTYING_DOCS_DIR / 'README.md').write_text('\n'.join(index_lines), encoding = 'utf-8')
-                    reindexed = False
-                    
-                    try:
-                        documents_rag = documents_rag
-                        import jarvis
-                        if force or updated > 0:
-                            documents_rag.build_index(force = True)
-                            reindexed = True
-                        SYNC_MARKER.parent.mkdir(parents = True, exist_ok = True)
-                        SYNC_MARKER.write_text(json.dumps({
-                            'gold_mtime': gold_mtime,
-                            'written': written,
-                            'updated': updated,
-                            'synced_at': datetime.now(timezone.utc).isoformat(),
-                            'reindexed': reindexed }, indent = 2), encoding = 'utf-8')
-                        recipe_index = index
-                        import jarvis.flytying
-                        recipe_index.invalidate()
-                        return {
-                            'ok': True,
-                            'message': 'library synced',
-                            'written': written,
-                            'updated': updated,
-                            'reindexed': reindexed }
-                        except (OSError, json.JSONDecodeError, TypeError, ValueError):
-                            continue
-                        except json.JSONDecodeError:
-                            continue
-                        with None:
-                            if not None:
-                                pass
-                        
-                        try:
-                            continue
-                        except OSError:
-                            exc = None
-                            del exc
-                            return None
-                            None = 
-                            del exc
-                            except Exception:
-                                None, {
-                                    'ok': False,
-                                    'message': str(exc),
-                                    'written': written }
-                                continue
+            "ok": False,
+            "message": "Blackfly scraped database missing",
+            "exported": 0,
+            "scraped_path": str(scraped_dataset_path()),
+        }
 
+    gold = recipe_source_path()
+    if not gold.is_file():
+        return {"ok": False, "message": "Blackfly recipe library missing", "exported": 0}
 
-
-
-
-
-
-def maybe_sync_library():
-    
+    FLYTYING_RECIPES_DIR.mkdir(parents=True, exist_ok=True)
+    exported = 0
     try:
-        sync_library(force = False)
-        return None
-    except Exception:
-        return None
+        for line in gold.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            recipe = json.loads(line)
+            rid = str(recipe.get("id") or recipe.get("recipe_id") or "")
+            name = str(recipe.get("fly_name") or recipe.get("name") or "pattern")
+            dest = FLYTYING_RECIPES_DIR / f"{_slug(name, rid)}.md"
+            if dest.is_file() and not force:
+                continue
+            dest.write_text(_recipe_markdown(recipe), encoding="utf-8")
+            exported += 1
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"ok": False, "message": str(exc), "exported": exported}
+
+    marker = {
+        "synced_at": datetime.now(timezone.utc).isoformat(),
+        "exported": exported,
+        "source": str(gold),
+    }
+    SYNC_MARKER.parent.mkdir(parents=True, exist_ok=True)
+    SYNC_MARKER.write_text(json.dumps(marker, indent=2), encoding="utf-8")
+    return {"ok": True, "message": f"Exported {exported} recipe doc(s)", "exported": exported}
 
 
+def sync_status() -> dict[str, Any]:
+    if not SYNC_MARKER.is_file():
+        return {"synced": False, "exported": 0, "recipes_dir": str(FLYTYING_RECIPES_DIR)}
+    try:
+        data = json.loads(SYNC_MARKER.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            return {"synced": True, **data, "recipes_dir": str(FLYTYING_RECIPES_DIR)}
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {"synced": False, "exported": 0, "recipes_dir": str(FLYTYING_RECIPES_DIR)}
 
-def seed_memory(memory_store = None):
-    '''Seed fly-tying namespace facts (idempotent).'''
-    pass
-# WARNING: Decompyle incomplete
 
+def seed_memory(memory, *, limit: int = 12) -> dict[str, Any]:
+    """Store a small fly-tying cheat sheet in memory if not already present."""
+    from jarvis.flytying import bridge
 
-def context_for_main_chat(message = None, *, max_chars):
-    '''Inject RAG hits into main chat when the message is fly-tying related.'''
-    warnings = []
-    if not message:
-        message
-    if not _FLY_CHAT_RE.search(''):
-        return ('', warnings)
-    bridge = bridge
-    import jarvis.flytying
-    hatch_context_text = hatch_context_text
-    import jarvis.flytying.hatch
     if not bridge.gold_available():
-        return ('', warnings)
-    hatch = hatch_context_text()
-    hits = bridge.search_recipes(message, limit = 3)
-    if not hits:
-        return (hatch, warnings)
-    blocks = [
-        None,
-        'Fly tying library (use for pattern facts):']
-    budget = max_chars
-    for h in hits:
-        if not h.get('name'):
-            h.get('name')
-            if not h.get('recipe_id'):
-                h.get('recipe_id')
-        detail = bridge.get_recipe('')
-        if not detail:
-            detail
-        if not { }.get('formatted'):
-            { }.get('formatted')
-            if not h.get('name'):
-                h.get('name')
-        text = ''
-        if len(text) > budget:
-            text = text[:budget] + '\n…'
-        blocks.append(text)
-        budget -= len(text)
-        if not budget < 400:
-            continue
-        hits
-    return ('\n\n'.join(blocks), warnings)
+        return {"ok": False, "message": "Blackfly scraped database not available"}
+    if memory.similar_exists("Fly tying patterns and materials reference", namespace=FLYTYING_MEMORY_NAMESPACE):
+        return {"ok": True, "skipped": True, "message": "Fly-tying memory already seeded"}
+
+    rows = bridge.search_recipes("", limit=limit) or []
+    if not rows:
+        return {"ok": False, "message": "No recipes to seed"}
+
+    lines = ["Fly tying patterns and materials reference:"]
+    for r in rows[:limit]:
+        name = r.get("fly_name") or r.get("name") or "pattern"
+        typ = r.get("type") or r.get("fly_type") or ""
+        hook = r.get("hook") or ""
+        lines.append(f"- {name}" + (f" ({typ})" if typ else "") + (f", hook {hook}" if hook else ""))
+    content = "\n".join(lines)
+    memory.add("note", content, tags=["flytying-seed"], namespace=FLYTYING_MEMORY_NAMESPACE)
+    return {"ok": True, "seeded": len(rows[:limit])}
 
 
-def gold_recipes_path_exists():
-    gold_recipes_path = gold_recipes_path
-    import jarvis.flytying.config
-    return gold_recipes_path().is_file()
+def is_flytying_chat(message: str) -> bool:
+    return bool(_FLY_CHAT_RE.search((message or "").strip()))
 
 
-def sync_status():
-    gold_recipes_path = gold_recipes_path
-    import jarvis.flytying.config
-    meta = { }
-    if SYNC_MARKER.is_file():
-        
-        try:
-            meta = json.loads(SYNC_MARKER.read_text(encoding = 'utf-8'))
-            recipe_files = list(FLYTYING_RECIPES_DIR.glob('*.md')) if FLYTYING_RECIPES_DIR.is_dir() else []
-            return {
-                'ok': True,
-                'gold_exists': gold_recipes_path().is_file(),
-                'docs_dir': str(FLYTYING_DOCS_DIR),
-                'recipe_files': len(recipe_files),
-                'last_sync': meta.get('synced_at'),
-                'written': meta.get('written') }
-        except (OSError, json.JSONDecodeError):
-            meta = { }
-            continue
+def flytying_context_for_chat(memory, message: str = "", *, limit: int = 6) -> str:
+    if not is_flytying_chat(message):
+        return ""
+    from jarvis.flytying import bridge
 
-
+    if not bridge.gold_available():
+        return ""
+    hits = bridge.search_recipes(message, limit=limit) or []
+    lines: list[str] = []
+    for hit in hits:
+        rid = str(hit.get("recipe_id") or hit.get("name") or "")
+        row = bridge.get_recipe(rid)
+        if row and row.get("formatted"):
+            lines.append(str(row["formatted"]))
+    if not lines:
+        return ""
+    return "\n\n".join(lines)[:MAX_CONTEXT_CHARS]

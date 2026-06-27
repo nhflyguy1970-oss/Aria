@@ -13,6 +13,7 @@ def ensure_handlers_loaded() -> None:
     from jarvis.handlers.queues import register_queue_actions
 
     register_queue_actions()
+    from jarvis.handlers import knowledge_handlers  # noqa: F401
     try:
         from jarvis.extensibility.loader import load_extensions
 

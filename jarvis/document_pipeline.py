@@ -1,8 +1,9 @@
-"""PDF and Office document text extraction, caching, and Q&A for warranty/work docs."""
+"""Document text extraction, caching, and Q&A for warranty/work docs and learning."""
 
 from __future__ import annotations
 
 import hashlib
+import html.parser
 import json
 import logging
 import os
@@ -15,7 +16,9 @@ from typing import Any
 
 log = logging.getLogger("jarvis")
 
-DOCUMENT_EXTENSIONS = {".pdf", ".docx"}
+DOCUMENT_EXTENSIONS = {".pdf", ".docx", ".txt", ".md", ".markdown", ".html", ".htm"}
+TEXT_EXTENSIONS = {".txt", ".md", ".markdown"}
+HTML_EXTENSIONS = {".html", ".htm"}
 DOCUMENTS_DIR = Path(__file__).resolve().parent.parent / "data" / "documents"
 CACHE_DIR = DOCUMENTS_DIR / ".cache"
 
@@ -66,10 +69,17 @@ def is_document_path(path: str | Path) -> bool:
 
 
 def document_attachment_action(message: str) -> str:
-    """Route document attach: summarize, query, vision_ocr, or info."""
+    """Route document attach: learn, ingest, summarize, query, vision_ocr, or info."""
     lower = (message or "").lower().strip()
     if not lower or lower in ("please analyze the attached file.", "analyze", "(attachment)"):
         return "summarize"
+    if re.search(
+        r"\b(learn from|study (?:this|the)|read and learn|memorize (?:this|the)|teach yourself from)\b",
+        lower,
+    ):
+        return "learn"
+    if re.search(r"\b(ingest|add to (?:my )?(?:document )?library|index (?:this|the) (?:doc|document|file))\b", lower):
+        return "ingest"
     if re.search(
         r"\b(read (all )?text|ocr|scan(ned)?|what text|transcribe|describe (this )?(page|pdf|document))\b",
         lower,
@@ -224,8 +234,98 @@ def _extract_docx(path: Path) -> ParsedDocument:
     )
 
 
+class _HTMLTextExtractor(html.parser.HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self._parts: list[str] = []
+        self._skip = 0
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        if tag in ("script", "style", "noscript"):
+            self._skip += 1
+        elif tag in ("p", "br", "div", "li", "h1", "h2", "h3", "h4", "tr", "section", "article"):
+            self._parts.append("\n")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in ("script", "style", "noscript") and self._skip:
+            self._skip -= 1
+
+    def handle_data(self, data: str) -> None:
+        if self._skip:
+            return
+        text = (data or "").strip()
+        if text:
+            self._parts.append(text + " ")
+
+    def get_text(self) -> str:
+        return _clean_page_text("".join(self._parts))
+
+
+def html_to_text(html: str) -> str:
+    parser = _HTMLTextExtractor()
+    try:
+        parser.feed(html or "")
+        parser.close()
+    except html.parser.HTMLParseError:
+        pass
+    return parser.get_text()
+
+
+def _title_from_html(html: str) -> str:
+    m = re.search(r"<title[^>]*>([^<]+)</title>", html or "", re.I | re.S)
+    return _clean_page_text(m.group(1)) if m else ""
+
+
+def _extract_text_file(path: Path) -> ParsedDocument:
+    raw = path.read_text(encoding="utf-8", errors="ignore")
+    pages = [_clean_page_text(raw)] if raw.strip() else [""]
+    return ParsedDocument(
+        path=str(path),
+        title=path.stem or path.name,
+        pages=pages,
+        page_count=1,
+        char_count=len(raw),
+        source="text",
+    )
+
+
+def _extract_html_file(path: Path) -> ParsedDocument:
+    raw = path.read_text(encoding="utf-8", errors="ignore")
+    title = _title_from_html(raw) or path.stem or path.name
+    text = html_to_text(raw)
+    pages = [_clean_page_text(text)] if text.strip() else [""]
+    return ParsedDocument(
+        path=str(path),
+        title=title,
+        pages=pages,
+        page_count=1,
+        char_count=len(text),
+        source="html",
+    )
+
+
+def parse_text_content(
+    text: str,
+    *,
+    title: str = "document",
+    source: str = "text",
+    path: str = "",
+) -> ParsedDocument:
+    """Build a ParsedDocument from raw text (OCR output, pasted content, etc.)."""
+    cleaned = _clean_page_text(text or "")
+    pages = [cleaned] if cleaned else [""]
+    return ParsedDocument(
+        path=path or f"inline:{title}",
+        title=(title or "document").strip(),
+        pages=pages,
+        page_count=1,
+        char_count=len(cleaned),
+        source=source,
+    )
+
+
 def parse_document(path: str | Path, *, use_cache: bool = True) -> ParsedDocument:
-    """Extract text from PDF or DOCX."""
+    """Extract text from supported document types."""
     documents_dir()
     p = Path(path).expanduser().resolve()
     if not p.exists():
@@ -241,8 +341,14 @@ def parse_document(path: str | Path, *, use_cache: bool = True) -> ParsedDocumen
 
     if suffix == ".pdf":
         parsed = _extract_pdf(p)
-    else:
+    elif suffix == ".docx":
         parsed = _extract_docx(p)
+    elif suffix in TEXT_EXTENSIONS:
+        parsed = _extract_text_file(p)
+    elif suffix in HTML_EXTENSIONS:
+        parsed = _extract_html_file(p)
+    else:
+        raise ValueError(f"Unsupported document type: {suffix}")
 
     if use_cache:
         _write_cache(parsed)
@@ -255,9 +361,9 @@ def low_text_warning(doc: ParsedDocument) -> str | None:
     if doc.char_count >= max(80, doc.page_count * 25):
         return None
     return (
-        f"This PDF looks scanned or image-only ({doc.char_count} characters across "
-        f"{doc.page_count} page(s)). For OCR, attach the PDF and ask to **read all text in this document** "
-        "or pick a page and use vision OCR."
+        f"This document looks scanned or image-only ({doc.char_count} characters across "
+        f"{doc.page_count} page(s)). For OCR, attach the file and ask to **read all text in this document** "
+        "or **learn from this document with OCR**."
     )
 
 
@@ -390,8 +496,10 @@ def answer_document(doc: ParsedDocument, question: str) -> str:
 def list_library_documents(limit: int = 50) -> list[dict[str, Any]]:
     root = documents_dir()
     items: list[dict[str, Any]] = []
-    for path in sorted(root.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
+    for path in sorted(root.rglob("*"), key=lambda p: p.stat().st_mtime, reverse=True):
         if not path.is_file() or path.suffix.lower() not in DOCUMENT_EXTENSIONS:
+            continue
+        if path.name.startswith(".") or ".cache" in path.parts:
             continue
         items.append({
             "name": path.name,

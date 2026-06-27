@@ -9,5 +9,10 @@ class SecurityExtension(Extension):
     def load(self) -> None:
         import jarvis.extensions.security.handlers  # noqa: F401
 
+    def register_api(self, app, assistant) -> None:
+        from jarvis.extensions.security.api import register_routes
+
+        register_routes(app, assistant)
+
 
 EXTENSION = SecurityExtension()

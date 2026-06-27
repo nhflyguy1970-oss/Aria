@@ -1,218 +1,271 @@
-# Source Generated with Decompyle++
-# File: audit_paths.cpython-312.pyc (Python 3.12)
+"""Resolve Jarvis install paths for system audit (any disk / layout)."""
 
-'''Resolve Jarvis install paths for system audit (any disk / layout).'''
 from __future__ import annotations
+
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
+
 from jarvis.config import DATA_DIR, PROJECT_ROOT
 
-def _env_files():
-    '''jarvis.env locations without calling jarvis_root() (avoids circular imports).'''
-    pass
-# WARNING: Decompyle incomplete
+
+def _env_files() -> list[Path]:
+    """jarvis.env locations without calling jarvis_root() (avoids circular imports)."""
+    out: list[Path] = []
+    seen: set[str] = set()
+
+    def add(p: Path) -> None:
+        key = str(p)
+        if key not in seen:
+            seen.add(key)
+            out.append(p)
+
+    for raw in (os.environ.get("JARVIS_ROOT", ""), os.environ.get("ARIA_ROOT", "")):
+        if raw.strip():
+            add(Path(raw.strip()).expanduser() / "data" / "jarvis.env")
+    add(PROJECT_ROOT / "data" / "jarvis.env")
+    add(Path.home() / ".config" / "jarvis" / "jarvis.env")
+    return out
 
 
-def read_env_file_var(name = None):
+def read_env_file_var(name: str) -> str:
     for env_path in _env_files():
         if not env_path.is_file():
             continue
-        text = env_path.read_text(encoding = 'utf-8', errors = 'replace')
+        try:
+            text = env_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
         for line in text.splitlines():
             line = line.strip()
-            if line or line.startswith('#'):
+            if not line or line.startswith("#"):
                 continue
-            if line.startswith('export '):
+            if line.startswith("export "):
                 line = line[7:].strip()
-            if not line.startswith(f'''{name}='''):
+            if not line.startswith(f"{name}="):
                 continue
-            val = line.split('=', 1)[1].strip()
-            if (val.startswith('"') or val.endswith('"') or val.startswith("'")) and val.endswith("'"):
+            val = line.split("=", 1)[1].strip()
+            if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
                 val = val[1:-1]
-            val = val.replace('$HOME', str(Path.home())).replace('${HOME}', str(Path.home()))
-            if not val:
-                continue
-            
-            
-            return _env_files(), text.splitlines(), val
-    return ''
-    except OSError:
-        continue
+            val = val.replace("$HOME", str(Path.home())).replace("${HOME}", str(Path.home()))
+            if val:
+                return val
+    return ""
 
 
-def jarvis_root():
-    '''Active Jarvis tree — env override, jarvis.env, else package location.'''
-    for raw in (os.environ.get('JARVIS_ROOT', ''), os.environ.get('ARIA_ROOT', ''), read_env_file_var('JARVIS_ROOT'), read_env_file_var('ARIA_ROOT')):
+def jarvis_root() -> Path:
+    """Active Jarvis tree — env override, jarvis.env, else package location."""
+    for raw in (
+        os.environ.get("JARVIS_ROOT", ""),
+        os.environ.get("ARIA_ROOT", ""),
+        read_env_file_var("JARVIS_ROOT"),
+        read_env_file_var("ARIA_ROOT"),
+    ):
         if not raw.strip():
             continue
         root = Path(raw.strip()).expanduser().resolve()
-        if not (root / 'jarvis' / 'config.py').is_file() and (root / 'scripts').is_dir():
-            continue
-        
-        return (os.environ.get('JARVIS_ROOT', ''), os.environ.get('ARIA_ROOT', ''), read_env_file_var('JARVIS_ROOT'), read_env_file_var('ARIA_ROOT')), root
+        if (root / "jarvis" / "config.py").is_file() or (root / "scripts").is_dir():
+            return root
     return PROJECT_ROOT.resolve()
 
 
-def _read_env_file_paths():
-    extra = []
+def _read_env_file_paths() -> list[str]:
+    extra: list[str] = []
     files = list(_env_files())
-    root_env = jarvis_root() / 'data' / 'jarvis.env'
+    root_env = jarvis_root() / "data" / "jarvis.env"
     if root_env not in files:
         files.append(root_env)
     for env_path in files:
         if not env_path.is_file():
             continue
-        text = env_path.read_text(encoding = 'utf-8', errors = 'replace')
+        try:
+            text = env_path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
         for line in text.splitlines():
             line = line.strip()
-            if line.startswith('#') or 'PATH=' not in line:
+            if line.startswith("#") or "PATH=" not in line:
                 continue
-            m = re.search('PATH=(?:"([^"]*)"|\\\'([^\\\']*)\\\'|([^;\\s]+))', line)
-            if not m:
-                continue
-            if not m.group(1):
-                m.group(1)
-                if not m.group(2):
-                    m.group(2)
-                    if not m.group(3):
-                        m.group(3)
-            val = ''
-            for part in val.split(':'):
-                part = part.strip().replace('$HOME', str(Path.home()))
-                part = part.replace('${HOME}', str(Path.home()))
-                if not part:
-                    continue
-                extra.append(part)
+            m = re.search(r'PATH=(?:"([^"]*)"|\'([^\']*)\'|([^;\s]+))', line)
+            if m:
+                val = m.group(1) or m.group(2) or m.group(3) or ""
+                for part in val.split(":"):
+                    part = part.strip().replace("$HOME", str(Path.home()))
+                    part = part.replace("${HOME}", str(Path.home()))
+                    if part:
+                        extra.append(part)
     return extra
-    except OSError:
-        continue
 
 
-def _login_shell_path():
-    
+def _login_shell_path() -> str:
     try:
-        proc = subprocess.run([
-            'bash',
-            '-lc',
-            'echo $PATH'], capture_output = True, text = True, timeout = 8, check = False)
-        if proc.returncode == 0:
-            if not proc.stdout:
-                proc.stdout
-            if ''.strip():
-                return proc.stdout.strip()
-            except Exception:
-                return ''
+        proc = subprocess.run(
+            ["bash", "-lc", "echo $PATH"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        if proc.returncode == 0 and (proc.stdout or "").strip():
+            return proc.stdout.strip()
+    except Exception:
+        pass
+    return ""
 
 
-
-def _standard_tool_dirs():
+def _standard_tool_dirs() -> list[str]:
     home = Path.home()
     dirs = [
-        home / '.cargo' / 'bin',
-        home / '.local' / 'bin',
-        Path('/usr/local/bin'),
-        Path('/usr/bin'),
-        Path('/snap/bin')]
-    nvm = home / '.nvm' / 'versions' / 'node'
+        home / ".cargo" / "bin",
+        home / ".local" / "bin",
+        Path("/usr/local/bin"),
+        Path("/usr/bin"),
+        Path("/snap/bin"),
+    ]
+    nvm = home / ".nvm" / "versions" / "node"
     if nvm.is_dir():
-        for ver in sorted(nvm.iterdir(), reverse = True):
-            b = ver / 'bin'
-            if not b.is_dir():
-                continue
-            dirs.append(b)
-            sorted(nvm.iterdir(), reverse = True)
-    rustup = home / '.rustup' / 'toolchains'
+        for ver in sorted(nvm.iterdir(), reverse=True):
+            b = ver / "bin"
+            if b.is_dir():
+                dirs.append(b)
+                break
+    rustup = home / ".rustup" / "toolchains"
     if rustup.is_dir():
-        for tc in sorted(rustup.iterdir(), reverse = True):
-            b = tc / 'bin'
-            if not b.is_dir():
+        for tc in sorted(rustup.iterdir(), reverse=True):
+            b = tc / "bin"
+            if b.is_dir():
+                dirs.append(b)
+    return [str(d) for d in dirs if d.is_dir()]
+
+
+def audit_path_env() -> dict[str, str]:
+    """Full PATH for subprocess + shutil.which during audit."""
+    parts: list[str] = []
+    seen: set[str] = set()
+
+    def add(chunk: str) -> None:
+        for p in chunk.split(os.pathsep):
+            p = p.strip()
+            if not p or p in seen:
                 continue
-            dirs.append(b)
-# WARNING: Decompyle incomplete
+            seen.add(p)
+            parts.append(p)
+
+    extra = os.environ.get("JARVIS_AUDIT_EXTRA_PATH", "")
+    if extra.strip():
+        add(extra.strip())
+    for p in _read_env_file_paths():
+        add(p)
+    for p in _standard_tool_dirs():
+        add(p)
+    login = _login_shell_path()
+    if login:
+        add(login)
+    add(os.environ.get("PATH", ""))
+
+    env = os.environ.copy()
+    if not env.get("HOME") and env.get("USER"):
+        env["HOME"] = f"/home/{env['USER']}"
+    env["PATH"] = os.pathsep.join(parts)
+    env["JARVIS_ROOT"] = str(jarvis_root())
+    return env
 
 
-def audit_path_env():
-    '''Full PATH for subprocess + shutil.which during audit.'''
-    pass
-# WARNING: Decompyle incomplete
+def prepare_gui_sudo_env(env: dict[str, str] | None = None) -> dict[str, str] | None:
+    """Set SUDO_ASKPASS + DISPLAY for zenity sudo from ARIA server (returns None if unavailable)."""
+    base = dict(env) if env else audit_path_env()
+    askpass = resolve_script("sudo-askpass-zenity.sh")
+    if not (askpass.is_file() and os.access(askpass, os.X_OK)):
+        return None
+    zen = shutil.which("zenity", path=base.get("PATH", ""))
+    kdialog = shutil.which("kdialog", path=base.get("PATH", ""))
+    if not zen and not kdialog:
+        return None
+    if base.get("DISPLAY") or base.get("WAYLAND_DISPLAY"):
+        base["SUDO_ASKPASS"] = str(askpass)
+        return base
+    for display in (":0", ":1", ":2"):
+        if Path(f"/tmp/.X11-unix/X{display.lstrip(':')}").exists():
+            base["DISPLAY"] = display
+            base["SUDO_ASKPASS"] = str(askpass)
+            return base
+    return None
 
 
-def audit_path_string():
-    return audit_path_env()['PATH']
+def audit_path_string() -> str:
+    return audit_path_env()["PATH"]
 
 
-def resolve_venv_python():
-    '''Jarvis venv — may live on another disk via JARVIS_VENV.'''
-    candidates = []
-    for raw in (os.environ.get('JARVIS_VENV', ''), os.environ.get('VIRTUAL_ENV', ''), read_env_file_var('JARVIS_VENV')):
-        if not raw.strip():
-            continue
-        p = Path(raw.strip()).expanduser()
-        candidates.append(p / 'bin' / 'python' if p.is_dir() else p)
+def resolve_venv_python() -> Path | None:
+    """Jarvis venv — may live on another disk via JARVIS_VENV."""
+    candidates: list[Path] = []
+    for raw in (
+        os.environ.get("JARVIS_VENV", ""),
+        os.environ.get("VIRTUAL_ENV", ""),
+        read_env_file_var("JARVIS_VENV"),
+    ):
+        if raw.strip():
+            p = Path(raw.strip()).expanduser()
+            candidates.append(p / "bin" / "python" if p.is_dir() else p)
     root = jarvis_root()
     candidates.extend([
-        root / 'venv' / 'bin' / 'python',
-        root / '.venv' / 'bin' / 'python'])
+        root / "venv" / "bin" / "python",
+        root / ".venv" / "bin" / "python",
+    ])
     for c in candidates:
-        if c.is_file() and os.access(c, os.X_OK):
-            
-            return candidates, Path(c)
+        try:
+            if c.is_file() and os.access(c, os.X_OK):
+                return Path(c)
+        except OSError:
+            continue
     return None
-    except OSError:
-        continue
 
 
-def resolve_script(rel = None):
-    '''Resolve scripts/foo.sh under the active Jarvis root.'''
-    rel = rel.removeprefix('/')
-    if rel.startswith('scripts/'):
+def resolve_script(rel: str) -> Path:
+    """Resolve scripts/foo.sh under the active Jarvis root."""
+    rel = rel.removeprefix("/")
+    if rel.startswith("scripts/"):
         return jarvis_root() / rel
-    return None() / 'scripts' / rel
+    return jarvis_root() / "scripts" / rel
 
 
-def install_command(rel = None, *, note):
+def install_command(rel: str, *, note: str = "") -> str:
     script = resolve_script(rel)
-    cmd = f'''bash {script}'''
+    cmd = f"bash {script}"
     if note:
-        return f'''{cmd}  # {note}'''
+        return f"{cmd}  # {note}"
+    return cmd
 
 
-def configured_gpu_preference():
-    if not os.environ.get('JARVIS_GPU_PREFER', ''):
-        os.environ.get('JARVIS_GPU_PREFER', '')
-        if not read_env_file_var('JARVIS_GPU_PREFER'):
-            read_env_file_var('JARVIS_GPU_PREFER')
-    raw = 'auto'.strip().lower()
-    if raw in ('nvidia', 'amd', 'both', 'hybrid', 'auto'):
-        if raw in ('both', 'hybrid'):
-            return 'both'
-        return None
+def configured_gpu_preference() -> str:
+    raw = (
+        os.environ.get("JARVIS_GPU_PREFER", "")
+        or read_env_file_var("JARVIS_GPU_PREFER")
+        or "auto"
+    ).strip().lower()
+    if raw in ("nvidia", "amd", "both", "hybrid", "auto"):
+        return "both" if raw in ("both", "hybrid") else raw
+    return "auto"
 
 
-def nvidia_ai_hybrid_configured():
-    '''AMD + NVIDIA present and Jarvis env routes AI to NVIDIA.'''
-    if configured_gpu_preference() == 'nvidia':
-        configured_gpu_preference() == 'nvidia'
-        if not read_env_file_var('HIP_VISIBLE_DEVICES') == '-1':
-            read_env_file_var('HIP_VISIBLE_DEVICES') == '-1'
-    return os.environ.get('HIP_VISIBLE_DEVICES', '').strip() == '-1'
+def nvidia_ai_hybrid_configured() -> bool:
+    """AMD + NVIDIA present and Jarvis env routes AI to NVIDIA."""
+    return configured_gpu_preference() == "nvidia" and (
+        read_env_file_var("HIP_VISIBLE_DEVICES") == "-1"
+        or os.environ.get("HIP_VISIBLE_DEVICES", "").strip() == "-1"
+    )
 
 
-def audit_locations():
+def audit_locations() -> dict[str, str]:
     root = jarvis_root()
     venv = resolve_venv_python()
-    data = root / 'data'
+    data = root / "data"
     if not data.is_dir():
         data = DATA_DIR
-    if venv:
-        return {
-            'jarvis_root': str(root),
-            'data_dir': str(data),
-            'venv_python': str(venv) }
     return {
-        'jarvis_root': None,
-        'data_dir': str(root),
-        'venv_python': str(data) }
-
+        "jarvis_root": str(root),
+        "data_dir": str(data),
+        "venv_python": str(venv) if venv else "",
+    }

@@ -1,46 +1,54 @@
-# Source Generated with Decompyle++
-# File: audio_brain_feed.cpython-312.pyc (Python 3.12)
+"""Debounced auto-feed from audio transcripts into brain memory."""
 
-'''Debounced auto-feed from audio transcripts into brain memory.'''
 from __future__ import annotations
+
 import logging
 import threading
 import time
 from pathlib import Path
-log = logging.getLogger('jarvis.audio_brain_feed')
-_LOCK = threading.Lock()
-_LAST_FEED: 'dict[str, float]' = { }
-_DEBOUNCE_SEC = float(__import__('os').getenv('JARVIS_AUDIO_FEED_DEBOUNCE', '60'))
 
-def _enabled():
-    auto_audio_learn_enabled = auto_audio_learn_enabled
-    import jarvis.brain_memory
+log = logging.getLogger("jarvis.audio_brain_feed")
+
+_LOCK = threading.Lock()
+_LAST_FEED: dict[str, float] = {}
+_DEBOUNCE_SEC = float(__import__("os").getenv("JARVIS_AUDIO_FEED_DEBOUNCE", "60"))
+
+
+def _enabled() -> bool:
+    from jarvis.brain_memory import auto_audio_learn_enabled
+
     return auto_audio_learn_enabled()
 
 
-def maybe_feed_transcript(memory = None, transcript = None, audio_path = None):
-    '''Schedule debounced transcript → brain learning (non-blocking).'''
-    if not transcript:
-        transcript
-    text = ''.strip()
-# WARNING: Decompyle incomplete
+def maybe_feed_transcript(memory, transcript: str, audio_path: str = "") -> None:
+    """Schedule debounced transcript → brain learning (non-blocking)."""
+    text = (transcript or "").strip()
+    if not _enabled() or memory is None or len(text) < 20:
+        return
+    key = f"{Path(audio_path).name}:{text[:80]}"
+    now = time.monotonic()
+    with _LOCK:
+        if now - _LAST_FEED.get(key, 0.0) < _DEBOUNCE_SEC:
+            return
+        _LAST_FEED[key] = now
+
+    threading.Thread(
+        target=_feed_worker,
+        args=(memory, text, audio_path),
+        daemon=True,
+        name="audio-brain-feed",
+    ).start()
 
 
-def _feed_worker(memory = None, transcript = None, audio_path = None):
-    
+def _feed_worker(memory, transcript: str, audio_path: str) -> None:
     try:
-        extract_and_store = extract_and_store
-        import jarvis.journal_learning
-        label = Path(audio_path).name if audio_path else 'recording'
-        extract_and_store(memory, f'''Audio transcript ({label}):\n{transcript[:2500]}''', project = 'main')
-        return None
-    except Exception:
-        exc = None
-        log.debug('Audio brain feed skipped: %s', exc)
-        exc = None
-        del exc
-        return None
-        exc = None
-        del exc
+        from jarvis.journal_learning import extract_and_store
 
-
+        label = Path(audio_path).name if audio_path else "recording"
+        extract_and_store(
+            memory,
+            f"Audio transcript ({label}):\n{transcript[:2500]}",
+            project="main",
+        )
+    except Exception as exc:
+        log.debug("Audio brain feed skipped: %s", exc)

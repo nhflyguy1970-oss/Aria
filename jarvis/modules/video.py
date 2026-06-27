@@ -14,7 +14,8 @@ PROMPT_SYSTEM = """You convert casual video requests into prompts for AI video g
 
 Output ONLY valid JSON: {"positive": "...", "negative": "..."}
 
-positive: vivid scene with clear subject action and motion (walking, turning, wind, water, gestures), lighting, composition.
+positive: Keep every specific detail the user asked for (subjects, actions, poses, setting, clothing, camera).
+Do not generalize, sanitize, or replace specifics with vague scenery. One vivid paragraph.
 negative: defects to avoid; empty string if none.
 """
 
@@ -36,6 +37,7 @@ class VideoEngine:
         self.last_keyframe = ""
         self.last_method = "ken_burns"
         self.last_fallback_reason = ""
+        self.last_clip_plan: dict = {}
 
     def _prompt_model(self) -> str:
         env = os.getenv("JARVIS_VIDEO_PROMPT_MODEL", "").strip()
@@ -57,6 +59,10 @@ class VideoEngine:
         user_prompt = (user_prompt or "").strip()
         if not user_prompt:
             return "", ""
+        if os.getenv("JARVIS_VIDEO_RAW_PROMPT", "").lower() in ("1", "true", "yes", "on"):
+            self.last_enhanced_prompt = user_prompt
+            self.last_negative_prompt = ""
+            return user_prompt, ""
         system = PROMPT_SYSTEM + (PROMPT_UNCENSORED if is_uncensored() else "")
         try:
             raw = llm.ask(
@@ -98,8 +104,9 @@ class VideoEngine:
         self.last_video = result
         self.last_keyframe = keyframe
         self.last_method = method
-        from jarvis.comfyui_video import last_fallback_reason
+        from jarvis.comfyui_video import last_clip_plan, last_fallback_reason
 
+        self.last_clip_plan = last_clip_plan()
         self.last_fallback_reason = last_fallback_reason()
         invalidate_video_gallery()
         return result

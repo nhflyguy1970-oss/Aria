@@ -77,6 +77,37 @@ def _parse_ics_events(text: str, day: date) -> list[dict[str, Any]]:
     return events
 
 
+def fetch_events_for_month(month: str) -> dict[str, list[dict[str, Any]]]:
+    """Return ICS events keyed by YYYY-MM-DD for the given month."""
+    url = ics_url()
+    if not url or not month:
+        return {}
+    try:
+        y, m = map(int, month.split("-")[:2])
+        month_start = date(y, m, 1)
+        if m == 12:
+            month_end = date(y + 1, 1, 1)
+        else:
+            month_end = date(y, m + 1, 1)
+    except (TypeError, ValueError):
+        return {}
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Jarvis/3.2 Calendar"})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            text = resp.read().decode("utf-8", errors="replace")
+    except Exception as exc:
+        log.debug("ICS fetch failed: %s", exc)
+        return {}
+    out: dict[str, list[dict[str, Any]]] = {}
+    day = month_start
+    while day < month_end:
+        events = _parse_ics_events(text, day)
+        if events:
+            out[day.isoformat()] = events
+        day = date.fromordinal(day.toordinal() + 1)
+    return out
+
+
 def fetch_events_for_day(day: date | None = None) -> list[dict[str, Any]]:
     url = ics_url()
     if not url:

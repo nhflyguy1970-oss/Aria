@@ -3,33 +3,49 @@
 from __future__ import annotations
 
 import json
-import re
+import logging
+import os
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 from jarvis import llm
-from jarvis.config import DATA_DIR, MEMORY_FILE
+from jarvis import config as jarvis_config
+from jarvis.config import DATA_DIR
+from jarvis.modules.memory_common import (
+    DEFAULT_NAMESPACE,
+    MEMORY_TYPES,
+    keyword_score,
+    normalize_entry,
+    parse_remember,
+    parse_ts,
+    relevance_score,
+    search_pool,
+    split_remember_facts,
+    to_public,
+    utc_now,
+)
+from jarvis.modules.memory_embeddings import EmbeddingSidecar
 
-MEMORY_TYPES = ("fact", "auto", "note", "preference", "project", "failure", "strategy")
-DEFAULT_NAMESPACE = "default"
+logger = logging.getLogger("jarvis.memory")
 
 
-def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+def _memory_json_compact() -> bool:
+    return os.getenv("JARVIS_MEMORY_COMPACT", "1").strip().lower() not in ("0", "false", "no")
 
 
-def _parse_ts(ts: str) -> datetime:
-    try:
-        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
-    except (TypeError, ValueError):
-        return datetime.now(timezone.utc)
+def _vectors_path_for(data_path: Path) -> Path:
+    return data_path.parent / "memory_vectors.db"
 
 
-class MemoryStore:
-    def __init__(self, path=None):
-        self.path = path or MEMORY_FILE
+class JsonMemoryStore:
+    def __init__(self, path: Path | None = None, embeddings: EmbeddingSidecar | None = None):
+        self.path = path or jarvis_config.MEMORY_FILE
         DATA_DIR.mkdir(parents=True, exist_ok=True)
+        self._embeddings = embeddings or EmbeddingSidecar(_vectors_path_for(self.path))
+        self._pending_touch_ids: set[str] = set()
         self._data = self._load()
+        self._hydrate_embeddings_from_json()
 
     def _load(self) -> dict:
         if self.path.exists():
@@ -37,32 +53,51 @@ class MemoryStore:
                 data = json.loads(self.path.read_text(encoding="utf-8"))
                 entries = data.get("entries") or []
                 for i, e in enumerate(entries):
-                    self._normalize_entry(e, i)
+                    normalize_entry(e, i)
                 data["entries"] = entries
                 return data
             except (json.JSONDecodeError, OSError):
                 pass
         return {"entries": [], "version": 2}
 
-    def _normalize_entry(self, entry: dict, index: int) -> dict:
-        entry.setdefault("id", f"m{index}")
-        entry.setdefault("namespace", DEFAULT_NAMESPACE)
-        entry.setdefault("tags", [])
-        entry.setdefault("access_count", 0)
-        entry.setdefault("relevance", 1.0)
-        entry.setdefault("timestamp", _utc_now())
-        if entry.get("type") not in MEMORY_TYPES:
-            entry["type"] = "note"
-        return entry
+    def _hydrate_embeddings_from_json(self) -> None:
+        dirty = False
+        for e in self._data["entries"]:
+            emb = e.pop("embedding", None)
+            eid = e.get("id")
+            if eid and isinstance(emb, list) and emb:
+                self._embeddings.set(str(eid), emb)
+                dirty = True
+        if dirty:
+            self._save_metadata_only()
 
-    def _save(self) -> None:
+    def _save_metadata_only(self) -> None:
         from jarvis.live_data_guard import assert_live_write_allowed
 
         assert_live_write_allowed(self.path)
-        self.path.write_text(
-            json.dumps(self._data, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
+        if _memory_json_compact():
+            payload = json.dumps(self._data, ensure_ascii=False, separators=(",", ":"))
+        else:
+            payload = json.dumps(self._data, indent=2, ensure_ascii=False)
+        self.path.write_text(payload, encoding="utf-8")
+
+    def _save(self) -> None:
+        self._save_metadata_only()
+
+    def flush(self) -> None:
+        self._apply_pending_touches()
+
+    def _apply_pending_touches(self) -> None:
+        if not self._pending_touch_ids:
+            return
+        now = utc_now()
+        touched = self._pending_touch_ids
+        self._pending_touch_ids = set()
+        for e in self._data["entries"]:
+            if e.get("id") in touched:
+                e["access_count"] = int(e.get("access_count", 0)) + 1
+                e["last_accessed"] = now
+        self._save()
 
     def _next_id(self) -> str:
         existing = {e.get("id") for e in self._data["entries"]}
@@ -73,8 +108,13 @@ class MemoryStore:
 
     @staticmethod
     def to_public(entry: dict) -> dict:
-        out = {k: v for k, v in entry.items() if k != "embedding"}
-        return out
+        return to_public(entry)
+
+    def _attach_embedding(self, entry: dict, *, include: bool) -> dict:
+        if include:
+            entry = dict(entry)
+            entry["embedding"] = self._embeddings.get(entry["id"])
+        return entry
 
     def add(
         self,
@@ -89,7 +129,7 @@ class MemoryStore:
             raise ValueError("Empty memory content")
         from jarvis.trust_memory import is_trusted_memory_content
 
-        if entry_type not in ("failure", "strategy") and not is_trusted_memory_content(content):
+        if entry_type not in ("failure", "strategy", "teaching", "success") and not is_trusted_memory_content(content):
             raise ValueError("Refusing to store test-artifact content in live memory")
         entry_type = entry_type if entry_type in MEMORY_TYPES else "fact"
         embedding = llm.embed_text(content)
@@ -99,13 +139,15 @@ class MemoryStore:
             "content": content,
             "tags": tags or [],
             "namespace": (namespace or DEFAULT_NAMESPACE).strip() or DEFAULT_NAMESPACE,
-            "timestamp": _utc_now(),
+            "timestamp": utc_now(),
             "access_count": 0,
             "relevance": 1.0,
-            "embedding": embedding,
         }
         self._data["entries"].append(entry)
+        if embedding:
+            self._embeddings.set(entry["id"], embedding)
         self._save()
+        entry["embedding"] = embedding
         return entry
 
     def similar_exists(self, content: str, threshold: float = 0.88) -> bool:
@@ -119,26 +161,17 @@ class MemoryStore:
         if not emb:
             return False
         for e in self._data["entries"]:
-            e_emb = e.get("embedding") or []
+            e_emb = self._embeddings.get(e["id"])
             if e_emb and llm.cosine_similarity(emb, e_emb) >= threshold:
                 return True
         return False
 
     def relevance_score(self, entry: dict) -> float:
-        base = float(entry.get("relevance", 1.0))
-        age_days = max(0, (datetime.now(timezone.utc) - _parse_ts(entry.get("timestamp", ""))).days)
-        decay = max(0.25, 1.0 - age_days * 0.008)
-        access_boost = min(0.4, int(entry.get("access_count", 0)) * 0.04)
-        type_penalty = 0.85 if entry.get("type") == "auto" else 1.0
-        return (base * decay + access_boost) * type_penalty
+        return relevance_score(entry)
 
     def touch(self, entry_id: str) -> None:
-        for e in self._data["entries"]:
-            if e.get("id") == entry_id:
-                e["access_count"] = int(e.get("access_count", 0)) + 1
-                e["last_accessed"] = _utc_now()
-                self._save()
-                return
+        if entry_id:
+            self._pending_touch_ids.add(entry_id)
 
     def list_entries(
         self,
@@ -163,13 +196,13 @@ class MemoryStore:
             ]
         entries.sort(key=lambda e: (self.relevance_score(e), e.get("timestamp", "")), reverse=True)
         if include_embedding:
-            return entries
-        return [self.to_public(e) for e in entries]
+            return [self._attach_embedding(e, include=True) for e in entries]
+        return [to_public(e) for e in entries]
 
     def get(self, entry_id: str) -> dict | None:
         for e in self._data["entries"]:
             if e.get("id") == entry_id:
-                return self.to_public(e)
+                return to_public(e)
         return None
 
     def find_index(self, entry_id: str) -> int | None:
@@ -192,66 +225,44 @@ class MemoryStore:
                 continue
             if content is not None:
                 e["content"] = content.strip()
-                e["embedding"] = llm.embed_text(e["content"])
+                self._embeddings.set(entry_id, llm.embed_text(e["content"]))
             if entry_type and entry_type in MEMORY_TYPES:
                 e["type"] = entry_type
             if tags is not None:
                 e["tags"] = tags
             if namespace is not None:
                 e["namespace"] = namespace.strip() or DEFAULT_NAMESPACE
-            e["timestamp"] = _utc_now()
+            e["timestamp"] = utc_now()
             self._save()
             return True
         return False
 
-    def search(
-        self,
-        query: str,
-        limit: int = 10,
-        *,
-        namespace: str | None = None,
-    ) -> list[dict]:
-        query_lower = query.lower().strip()
-        pool = self._data["entries"]
-        if namespace:
-            pool = [e for e in pool if e.get("namespace") == namespace]
+    def search(self, query: str, limit: int = 10, *, namespace: str | None = None) -> list[dict]:
+        pool = list(self._data["entries"])
 
-        keyword_matches = [
-            e for e in pool
-            if query_lower in e["content"].lower()
-            or any(query_lower in t.lower() for t in e.get("tags", []))
-        ]
-        if keyword_matches:
-            for e in keyword_matches:
-                self.touch(e["id"])
-            return [self.to_public(e) for e in keyword_matches[-limit:]]
+        def _get_emb(e: dict) -> list[float]:
+            return self._embeddings.get(e["id"])
 
-        if not llm.embed_available():
-            return []
+        def _set_emb(e: dict, emb: list[float]) -> None:
+            self._embeddings.set(e["id"], emb)
 
-        query_emb = llm.embed_text(query)
-        if not query_emb:
-            return []
-
-        scored = []
-        for e in pool:
-            emb = e.get("embedding") or []
-            if not emb:
-                emb = llm.embed_text(e["content"])
-                e["embedding"] = emb
-            sim = llm.cosine_similarity(query_emb, emb)
-            if sim > 0.3:
-                scored.append((sim * self.relevance_score(e), e))
-        scored.sort(key=lambda x: x[0], reverse=True)
-        results = [e for _, e in scored[:limit]]
-        for e in results:
-            self.touch(e["id"])
-        return [self.to_public(e) for e in results]
+        return search_pool(
+            pool,
+            query,
+            limit,
+            namespace=namespace,
+            get_embedding=_get_emb,
+            set_embedding=_set_emb,
+            touch=self.touch,
+            flush_touches=self._apply_pending_touches,
+        )
 
     def delete(self, index: int) -> bool:
         entries = self._data["entries"]
         if 0 <= index < len(entries):
+            eid = entries[index]["id"]
             del entries[index]
+            self._embeddings.delete(eid)
             self._save()
             return True
         return False
@@ -261,16 +272,20 @@ class MemoryStore:
         if idx is None:
             return False
         del self._data["entries"][idx]
+        self._embeddings.delete(entry_id)
         self._save()
         return True
 
     def clear(self, entry_type: str | None = None, namespace: str | None = None) -> int:
         before = len(self._data["entries"])
         if not entry_type and not namespace:
+            ids = [e["id"] for e in self._data["entries"]]
             self._data["entries"] = []
+            self._embeddings.delete_many(ids)
             self._save()
             return before
         kept = []
+        removed_ids: list[str] = []
         for e in self._data["entries"]:
             drop = False
             if entry_type and namespace:
@@ -279,11 +294,15 @@ class MemoryStore:
                 drop = e.get("type") == entry_type
             elif namespace:
                 drop = e.get("namespace") == namespace
-            if not drop:
+            if drop:
+                removed_ids.append(e["id"])
+            else:
                 kept.append(e)
         removed = before - len(kept)
         self._data["entries"] = kept
-        self._save()
+        if removed_ids:
+            self._embeddings.delete_many(removed_ids)
+            self._save()
         return removed
 
     def prune(
@@ -295,16 +314,18 @@ class MemoryStore:
     ) -> int:
         now = datetime.now(timezone.utc)
         kept = []
-        removed = 0
+        removed_ids: list[str] = []
         for e in self._data["entries"]:
             if e.get("type") in types:
-                age = (now - _parse_ts(e.get("timestamp", ""))).days
+                age = (now - parse_ts(e.get("timestamp", ""))).days
                 if age >= max_age_days and self.relevance_score(e) < min_score:
-                    removed += 1
+                    removed_ids.append(e["id"])
                     continue
             kept.append(e)
+        removed = len(removed_ids)
         self._data["entries"] = kept
         if removed:
+            self._embeddings.delete_many(removed_ids)
             self._save()
         return removed
 
@@ -322,6 +343,8 @@ class MemoryStore:
             "total": len(entries),
             "namespaces": self.namespaces(),
             "by_type": by_type,
+            "backend": "json",
+            "vectors": self._embeddings.count(),
         }
 
     def latest_checkpoint(self, namespace: str | None = None) -> dict | None:
@@ -333,25 +356,37 @@ class MemoryStore:
             candidates = [c for c in candidates if c.get("namespace") == namespace]
         if not candidates:
             return None
-        return self.to_public(max(candidates, key=lambda e: e.get("timestamp", "")))
+        return to_public(max(candidates, key=lambda e: e.get("timestamp", "")))
 
     def upsert_checkpoint(self, content: str, namespace: str = "default") -> dict:
-        """Replace prior checkpoint for this namespace with a fresh project state."""
         ns = (namespace or DEFAULT_NAMESPACE).strip() or DEFAULT_NAMESPACE
+        remove_ids = [
+            e["id"] for e in self._data["entries"]
+            if e.get("namespace") == ns and "checkpoint" in (e.get("tags") or [])
+        ]
         self._data["entries"] = [
             e for e in self._data["entries"]
-            if not (e.get("namespace") == ns and "checkpoint" in (e.get("tags") or []))
+            if e["id"] not in remove_ids
         ]
+        if remove_ids:
+            self._embeddings.delete_many(remove_ids)
         return self.add(
             "project",
             content,
             tags=["checkpoint", "project-state"],
             namespace=ns,
         )
+
+    def export_data(self, *, include_embeddings: bool = False) -> dict:
+        entries = self._data["entries"]
+        if include_embeddings:
+            public = [self._attach_embedding(dict(e), include=True) for e in entries]
+        else:
+            public = [to_public(e) for e in entries]
         return {
-            "version": 2,
-            "exported_at": _utc_now(),
-            "entries": [self.to_public(e) for e in self._data["entries"]],
+            "version": int(self._data.get("version") or 2),
+            "exported_at": utc_now(),
+            "entries": public,
         }
 
     def import_data(self, payload: dict, *, merge: bool = True) -> int:
@@ -360,7 +395,9 @@ class MemoryStore:
             raise ValueError("Invalid memory import — expected {entries: [...]}")
         added = 0
         if not merge:
+            old_ids = [e["id"] for e in self._data["entries"]]
             self._data["entries"] = []
+            self._embeddings.delete_many(old_ids)
         existing_ids = {e.get("id") for e in self._data["entries"]}
         existing_content = {e["content"].lower().strip() for e in self._data["entries"]}
         for raw in incoming:
@@ -375,67 +412,130 @@ class MemoryStore:
             eid = raw.get("id")
             if eid in existing_ids:
                 eid = self._next_id()
+            eid = eid or self._next_id()
+            emb = raw.get("embedding") if isinstance(raw.get("embedding"), list) else llm.embed_text(content)
             entry = {
-                "id": eid or self._next_id(),
+                "id": eid,
                 "type": entry_type,
                 "content": content,
                 "tags": tags,
                 "namespace": namespace,
-                "timestamp": raw.get("timestamp") or _utc_now(),
+                "timestamp": raw.get("timestamp") or utc_now(),
                 "access_count": int(raw.get("access_count") or 0),
                 "relevance": float(raw.get("relevance") or 1.0),
-                "embedding": llm.embed_text(content),
             }
             self._data["entries"].append(entry)
-            existing_ids.add(entry["id"])
+            if emb:
+                self._embeddings.set(eid, emb)
+            existing_ids.add(eid)
             existing_content.add(content.lower())
             added += 1
         if added:
             self._save()
         return added
 
+    parse_remember = staticmethod(parse_remember)
+    split_remember_facts = staticmethod(split_remember_facts)
+
+    def find_by_env_key(self, env_key: str) -> dict | None:
+        tag = f"env-key:{env_key}"
+        for e in self.list_entries(namespace="environment", include_embedding=True):
+            if tag in (e.get("tags") or []):
+                return e
+        return None
+
+    def upsert_by_tag(
+        self,
+        *,
+        tag: str,
+        entry_type: str,
+        content: str,
+        namespace: str,
+        extra_tags: list[str] | None = None,
+    ) -> dict:
+        for e in self.list_entries(namespace=namespace, include_embedding=True):
+            if tag in (e.get("tags") or []):
+                self.update(e["id"], content=content)
+                return self.get(e["id"]) or e
+        tags = list(extra_tags or []) + [tag]
+        return self.add(entry_type, content, tags=tags, namespace=namespace)
+
+    def upsert_branch_summary(self, branch_id: str, content: str) -> dict:
+        from jarvis.memory_context import branch_memory_namespace
+
+        ns = branch_memory_namespace(branch_id)
+        return self.upsert_by_tag(
+            tag="branch-summary",
+            entry_type="note",
+            content=content,
+            namespace=ns,
+            extra_tags=["conversation-roll", "branch-summary"],
+        )
+
+
+def create_memory_store(path: Path | str | None = None):
+    """Factory: SQLite (default for new installs) or JSON (tests / legacy)."""
+    from jarvis.modules.memory_migrate import migrate_json_to_sqlite
+    from jarvis.modules.memory_sqlite import SqliteMemoryStore
+
+    p = Path(path) if path is not None else None
+    embeddings = EmbeddingSidecar(
+        _vectors_path_for(p.parent if p else DATA_DIR)
+    )
+
+    if p is not None and p.suffix == ".json":
+        return JsonMemoryStore(path=p, embeddings=embeddings)
+
+    if p is not None and p.suffix in (".db", ".sqlite", ".sqlite3"):
+        return SqliteMemoryStore(path=p, embeddings=embeddings)
+
+    backend = jarvis_config.resolve_memory_backend()
+    if backend == "sqlite":
+        db_path = jarvis_config.MEMORY_DB_FILE
+        if not db_path.exists() and jarvis_config.MEMORY_FILE.exists():
+            migrate_json_to_sqlite(embeddings=embeddings)
+        store = SqliteMemoryStore(path=db_path, embeddings=embeddings)
+        return store
+
+    return JsonMemoryStore(path=jarvis_config.MEMORY_FILE, embeddings=embeddings)
+
+
+class MemoryStore:
+    """Facade over JSON or SQLite memory backends."""
+
+    def __init__(self, path=None):
+        self._impl = create_memory_store(path)
+
+    @property
+    def path(self):
+        return getattr(self._impl, "path", jarvis_config.MEMORY_FILE)
+
+    @property
+    def _data(self):
+        return self._impl._data
+
+    def _save(self) -> None:
+        self._impl._save()
+
+    def __getattr__(self, name):
+        return getattr(self._impl, name)
+
+    @staticmethod
+    def to_public(entry: dict) -> dict:
+        return to_public(entry)
+
     @staticmethod
     def parse_remember(text: str) -> tuple[str, str, str | None]:
-        """Return (content, entry_type, namespace) from natural language."""
-        text = (text or "").replace("\r\n", "\n").strip()
-        lower = text.lower()
-        namespace = None
-        if m := re.search(r"\b(?:in|for)\s+(?:namespace|project)\s+[`'\"]?(\w[\w-]*)[`'\"]?", lower):
-            namespace = m.group(1)
-            text = re.sub(
-                r"\b(?:in|for)\s+(?:namespace|project)\s+[`'\"]?\w[\w-]*[`'\"]?\s*",
-                "",
-                text,
-                flags=re.I,
-            )
-        for prefix in (
-            r"^(please\s+)?(remember|don't forget|note that|keep in mind)\s*(that\s+)?",
-            r"^(these|the following)\s+facts?\s*:?\s*",
-            r"^facts?\s*:?\s*",
-        ):
-            text = re.sub(prefix, "", text, flags=re.I).strip()
-        entry_type = "fact"
-        if re.search(r"\b(preference|prefer)\b", lower):
-            entry_type = "preference"
-        elif re.search(r"\b(project|codename)\b", lower):
-            entry_type = "project"
-        return text.strip(), entry_type, namespace
+        return parse_remember(text)
 
     @staticmethod
     def split_remember_facts(content: str) -> list[str]:
-        """Split multi-line remember payloads into separate facts."""
-        text = (content or "").replace("\r\n", "\n").strip()
-        if not text:
-            return []
-        lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
-        skip = re.compile(
-            r"^(do not summarize|just reply|reply with|no summary|stored\.?)\b",
-            re.I,
-        )
-        lines = [ln for ln in lines if not skip.search(ln)]
-        if len(lines) >= 2:
-            return lines
-        return [text] if text else []
+        return split_remember_facts(content)
+
+
+# Back-compat re-exports
+_parse_ts = parse_ts
+_utc_now = utc_now
 
 
 class MemoryEngine:

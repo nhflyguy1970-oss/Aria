@@ -212,7 +212,7 @@ def _animatediff_workflow(
     scheduler = os.getenv("JARVIS_ANIMATEDIFF_SCHEDULER", "normal")
     seed = int(time.time()) % (2**32)
     negative = negative_prompt.strip() or DEFAULT_NEGATIVE
-    frames = max(8, min(int(frames), 32))
+    frames = max(8, min(int(frames), int(os.getenv("JARVIS_ANIMATEDIFF_MAX_FRAMES", "128"))))
 
     apply_inputs: dict = {
         "motion_model": ["2", 0],

@@ -41,13 +41,24 @@ def client_ip(request: Request) -> str:
 
 
 def is_local_client(request: Request) -> bool:
+    """Loopback, or this host's own LAN IP (browser opened via http://10.x.x.x on the PC)."""
     ip = client_ip(request)
     if not ip:
         return False
     try:
-        return ipaddress.ip_address(ip).is_loopback
+        addr = ipaddress.ip_address(ip)
     except ValueError:
         return False
+    if addr.is_loopback:
+        return True
+    try:
+        from jarvis.lan import list_lan_ips
+
+        if ip in list_lan_ips():
+            return True
+    except Exception:
+        pass
+    return False
 
 
 def api_key_required_for(request: Request) -> bool:
@@ -56,6 +67,17 @@ def api_key_required_for(request: Request) -> bool:
     if localhost_key_exempt() and is_local_client(request):
         return False
     return True
+
+
+def _media_gallery_file_get(request: Request) -> bool:
+    """Read-only gallery file GETs (not list JSON endpoints)."""
+    if request.method != "GET":
+        return False
+    path = request.url.path
+    for prefix in ("/api/gallery/", "/api/video-gallery/", "/api/meme-gallery/"):
+        if path.startswith(prefix) and path != prefix.rstrip("/"):
+            return True
+    return False
 
 
 def check_key(request: Request) -> bool:
@@ -67,7 +89,7 @@ def check_key(request: Request) -> bool:
         return True
     if _normalize_incoming_key(request.headers.get("X-API-Key")) == key:
         return True
-    if allow_query_api_key():
+    if allow_query_api_key() or _media_gallery_file_get(request):
         q = _normalize_incoming_key(request.query_params.get("api_key"))
         return q == key
     return False

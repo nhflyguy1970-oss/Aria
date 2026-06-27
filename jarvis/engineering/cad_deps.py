@@ -1,47 +1,51 @@
-# Source Generated with Decompyle++
-# File: cad_deps.cpython-312.pyc (Python 3.12)
+"""CAD toolchain dependency status."""
 
-'''CAD toolchain dependency status.'''
 from __future__ import annotations
-import importlib.util as importlib
+
+import importlib.util
 import shutil
 from typing import Any
 
-def _has_module(name = None):
+
+def _has_module(name: str) -> bool:
     return importlib.util.find_spec(name) is not None
 
 
-def cad_status():
-    openscad = shutil.which('openscad')
-    build123d = _has_module('build123d')
+def cad_status() -> dict[str, Any]:
+    openscad_path = shutil.which("openscad") or ""
+    build123d = _has_module("build123d")
     meshy = False
-    
+    cad_on = True
+    printer_on = False
+    meshy_cad = False
     try:
-        meshy_available = meshy_available
-        import jarvis.meshy_client
-        meshy = meshy_available()
-        cad_enabled = cad_enabled
-        meshy_cad_enabled = meshy_cad_enabled
-        printer_enabled = printer_enabled
-        import jarvis.p3_flags
-        if meshy_cad_enabled():
-            meshy_cad_enabled()
-        if not openscad:
-            openscad
-        if not openscad:
-            openscad
-            if not build123d:
-                build123d
-        return {
-            'enabled': cad_enabled(),
-            'printer_enabled': printer_enabled(),
-            'meshy_cad': meshy,
-            'openscad': bool(openscad),
-            'openscad_path': '',
-            'build123d': build123d,
-            'meshy': meshy,
-            'ready': bool(meshy) }
+        from jarvis.p3_flags import cad_enabled, meshy_cad_enabled, printer_enabled
+
+        cad_on = cad_enabled()
+        printer_on = printer_enabled()
+        meshy_cad = meshy_cad_enabled()
     except Exception:
-        continue
+        pass
+    try:
+        from jarvis.meshy_client import meshy_available
 
+        meshy = meshy_available()
+    except Exception:
+        meshy = False
+    try:
+        from jarvis.engineering.slicer import slicer_status
 
+        slicer = slicer_status()
+    except Exception:
+        slicer = {}
+    return {
+        "enabled": cad_on,
+        "printer_enabled": printer_on,
+        "meshy_cad": meshy_cad,
+        "openscad": bool(openscad_path),
+        "openscad_path": openscad_path,
+        "build123d": build123d,
+        "meshy": meshy,
+        "ready": bool(openscad_path or build123d or meshy),
+        "slicer": slicer,
+    }

@@ -1,103 +1,92 @@
-# Source Generated with Decompyle++
-# File: memory_consolidation.cpython-312.pyc (Python 3.12)
+"""Nightly memory consolidation — distill branch/auto memories into durable facts."""
 
-'''Nightly memory consolidation — distill branch/auto memories into durable facts.'''
 from __future__ import annotations
+
 import json
 import logging
 import re
 from datetime import datetime, timedelta, timezone
+
 from jarvis import llm
-log = logging.getLogger('jarvis.memory_consolidation')
-_CONSOLIDATION_TAG = 'brain-consolidated'
 
-def _recent_cutoff(days = None):
-    return (datetime.now(timezone.utc) - timedelta(days = days)).isoformat()
+log = logging.getLogger("jarvis.memory_consolidation")
+
+_CONSOLIDATION_TAG = "brain-consolidated"
 
 
-def _collect_source_entries(memory_store = None, *, limit):
+def _recent_cutoff(days: int = 2) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+
+
+def _collect_source_entries(memory_store, *, limit: int = 40) -> list[dict]:
     cutoff = _recent_cutoff()
-    sources = []
-    for e in memory_store.list_entries(entry_type = 'auto'):
-        if not e.get('timestamp'):
-            e.get('timestamp')
-        if not '' >= cutoff:
-            continue
-        sources.append(e)
-    for e in memory_store.list_entries(entry_type = 'note'):
-        if not e.get('tags'):
-            e.get('tags')
-        tags = []
-        if not 'branch-summary' in tags:
-            continue
-        if not e.get('timestamp'):
-            e.get('timestamp')
-        if not '' >= cutoff:
-            continue
-        sources.append(e)
-    for e in memory_store.list_entries(entry_type = 'teaching'):
-        if not e.get('tags'):
-            e.get('tags')
-        if not 'document-learn' in []:
-            continue
-        if not e.get('timestamp'):
-            e.get('timestamp')
-        if not '' >= cutoff:
-            continue
-        sources.append(e)
-    sources.sort(key = (lambda e: e.get('timestamp', '')), reverse = True)
+    sources: list[dict] = []
+    for e in memory_store.list_entries(entry_type="auto"):
+        if (e.get("timestamp") or "") >= cutoff:
+            sources.append(e)
+    for e in memory_store.list_entries(entry_type="note"):
+        tags = e.get("tags") or []
+        if "branch-summary" in tags and (e.get("timestamp") or "") >= cutoff:
+            sources.append(e)
+    sources.sort(key=lambda e: e.get("timestamp", ""), reverse=True)
     return sources[:limit]
 
 
-def _distill_facts(blob = None, *, max_facts):
+def _distill_facts(blob: str, *, max_facts: int = 6) -> list[str]:
     if not blob.strip():
         return []
-    prompt = f'''{max_facts} facts. Return JSON only: {{"facts": ["..."]}}.\n\nNotes:\n{blob[:6000]}'''
-# WARNING: Decompyle incomplete
+    prompt = (
+        "Distill durable user facts from these memory notes. "
+        "Merge duplicates. Skip transient chat, questions, and one-off tasks. "
+        "Each fact: one complete sentence about the user. "
+        f"Max {max_facts} facts. "
+        'Return JSON only: {"facts": ["..."]}.\n\n'
+        f"Notes:\n{blob[:6000]}"
+    )
+    try:
+        raw = llm.ask(llm.general_model(), [{"role": "user", "content": prompt}]).strip()
+        if raw.startswith("```"):
+            raw = re.sub(r"^```\w*\n?", "", raw)
+            raw = re.sub(r"\n?```$", "", raw)
+        data = json.loads(raw)
+        return [
+            f.strip()
+            for f in data.get("facts", [])
+            if isinstance(f, str) and len(f.strip()) >= 12
+        ][:max_facts]
+    except Exception as exc:
+        log.debug("Consolidation LLM skipped: %s", exc)
+        return []
 
 
-def run_consolidation(memory_store = None, *, target_namespace):
-    '''Distill recent branch summaries + auto memories into profile/project facts.'''
-    consolidation_enabled = consolidation_enabled
-    import jarvis.brain_memory
-    detect_project_namespace = detect_project_namespace
-    import jarvis.memory_context
+def run_consolidation(memory_store, *, target_namespace: str = "profile") -> dict:
+    """Distill recent branch summaries + auto memories into profile/project facts."""
+    from jarvis.brain_memory import consolidation_enabled
+    from jarvis.memory_context import detect_project_namespace
+
     if not consolidation_enabled():
-        return {
-            'skipped': True,
-            'reason': 'disabled',
-            'added': 0,
-            'removed': 0 }
-    sources = None(memory_store)
+        return {"skipped": True, "reason": "disabled", "added": 0, "removed": 0}
+
+    sources = _collect_source_entries(memory_store)
     if not sources:
-        return {
-            'skipped': True,
-            'reason': 'no_sources',
-            'added': 0,
-            'removed': 0 }
-    blob = (lambda .0: pass# WARNING: Decompyle incomplete
-)(sources())
+        return {"skipped": True, "reason": "no_sources", "added": 0, "removed": 0}
+
+    blob = "\n".join(f"- {e.get('content', '')[:500]}" for e in sources)
     facts = _distill_facts(blob)
     if not facts:
-        return {
-            'skipped': True,
-            'reason': 'llm_empty',
-            'added': 0,
-            'removed': 0 }
-    if not None.join:
-        None.join
-    ns = detect_project_namespace()
+        return {"skipped": True, "reason": "llm_empty", "added": 0, "removed": 0}
+
+    ns = target_namespace or detect_project_namespace()
     added = 0
     for fact in facts:
-        if memory_store.similar_exists(fact, namespace = ns):
+        if memory_store.similar_exists(fact, namespace=ns):
             continue
-        memory_store.add('fact', fact, tags = [
-            _CONSOLIDATION_TAG,
-            'auto-learn'], namespace = ns)
+        memory_store.add(
+            "fact",
+            fact,
+            tags=[_CONSOLIDATION_TAG, "auto-learn"],
+            namespace=ns,
+        )
         added += 1
-    return {
-        'skipped': False,
-        'added': added,
-        'sources': len(sources),
-        'namespace': ns }
 
+    return {"skipped": False, "added": added, "sources": len(sources), "namespace": ns}

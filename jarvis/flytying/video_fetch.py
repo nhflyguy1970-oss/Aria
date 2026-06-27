@@ -1,111 +1,99 @@
-# Source Generated with Decompyle++
-# File: video_fetch.cpython-312.pyc (Python 3.12)
+"""Fetch and parse embedded videos from fly-tying article pages."""
 
-'''Fetch and parse embedded videos from fly-tying article pages.'''
 from __future__ import annotations
+
 import logging
 import re
-import urllib.error as urllib
-import urllib.request as urllib
+import urllib.error
+import urllib.request
 from typing import Any
 from urllib.parse import urljoin
-log = logging.getLogger('jarvis.flytying.video_fetch')
-_USER_AGENT = 'JarvisFlyTying/1.0 (+https://github.com/jarvis)'
+
+log = logging.getLogger("jarvis.flytying.video_fetch")
+
+_USER_AGENT = "JarvisFlyTying/1.0 (+https://github.com/jarvis)"
 _FETCH_TIMEOUT = 12
-_YT_ID_RE = re.compile('(?:youtube\\.com/watch\\?(?:[^\\"\'\\s]*&)?v=|youtu\\.be/|youtube\\.com/embed/|img\\.youtube\\.com/vi/|data-video-id=[\\"\'])([A-Za-z0-9_-]{11})')
-_VIMEO_RE = re.compile('(?:player\\.)?vimeo\\.com/(?:video/)?(\\d+)', re.I)
-_IFRAME_SRC_RE = re.compile('<iframe[^>]+(?:src|data-src)=["\\\']([^"\\\']+)["\\\']', re.I)
-_OG_VIDEO_RE = re.compile('<meta[^>]+(?:property|name)=["\\\'](?:og:video(?::url)?|twitter:player)["\\\'][^>]+content=["\\\']([^"\\\']+)["\\\']', re.I)
+_YT_ID_RE = re.compile(
+    r'(?:youtube\.com/watch\?(?:[^"\'\s]*&)?v=|youtu\.be/|youtube\.com/embed/|'
+    r'img\.youtube\.com/vi/|data-video-id=["\'])([A-Za-z0-9_-]{11})'
+)
+_VIMEO_RE = re.compile(r"(?:player\.)?vimeo\.com/(?:video/)?(\d+)", re.I)
+_IFRAME_SRC_RE = re.compile(r'<iframe[^>]+(?:src|data-src)=["\']([^"\']+)["\']', re.I)
+_OG_VIDEO_RE = re.compile(
+    r'<meta[^>]+(?:property|name)=["\'](?:og:video(?::url)?|twitter:player)["\']'
+    r'[^>]+content=["\']([^"\']+)["\']',
+    re.I,
+)
 
-def youtube_ids_from_html(html = None):
+
+def youtube_ids_from_html(html: str) -> list[str]:
     if not html:
         return []
-    seen = None()
-    out = []
+    seen: set[str] = set()
+    out: list[str] = []
     for vid in _YT_ID_RE.findall(html):
-        if not vid not in seen:
+        if vid in seen:
             continue
         seen.add(vid)
         out.append(vid)
     return out
 
 
-def vimeo_ids_from_html(html = None):
+def vimeo_ids_from_html(html: str) -> list[str]:
     if not html:
         return []
-    seen = None()
-    out = []
+    seen: set[str] = set()
+    out: list[str] = []
     for vid in _VIMEO_RE.findall(html):
-        if not vid not in seen:
+        if vid in seen:
             continue
         seen.add(vid)
         out.append(vid)
     return out
 
 
-def embedded_video_urls_from_html(html = None, page_url = None):
-    pass
-# WARNING: Decompyle incomplete
+def embedded_video_urls_from_html(html: str, page_url: str = "") -> list[dict[str, Any]]:
+    if not html:
+        return []
+    urls: list[str] = []
+    for match in _IFRAME_SRC_RE.findall(html):
+        urls.append(urljoin(page_url, match))
+    for match in _OG_VIDEO_RE.findall(html):
+        urls.append(urljoin(page_url, match))
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for url in urls:
+        if url in seen:
+            continue
+        seen.add(url)
+        item: dict[str, Any] = {"url": url}
+        yt = _YT_ID_RE.search(url)
+        if yt:
+            item["provider"] = "youtube"
+            item["id"] = yt.group(1)
+        else:
+            vm = _VIMEO_RE.search(url)
+            if vm:
+                item["provider"] = "vimeo"
+                item["id"] = vm.group(1)
+        out.append(item)
+    for vid in youtube_ids_from_html(html):
+        out.append({"provider": "youtube", "id": vid, "url": f"https://www.youtube.com/watch?v={vid}"})
+    return out
 
 
-def fetch_page_html(url = None):
-    req = urllib.request.Request(url, headers = {
-        'User-Agent': _USER_AGENT })
-    resp = urllib.request.urlopen(req, timeout = _FETCH_TIMEOUT)
-    None(None, None)
-    return 
-    with None:
-        if not None, resp.read().decode('utf-8', errors = 'replace'):
-            pass
-
-
-def discover_videos_from_url(url = None):
-    '''Resolve a user URL or article page into playable video metadata.'''
-    video_dict_from_url = video_dict_from_url
-    import jarvis.flytying.media
-    direct = video_dict_from_url(url)
-    if direct and direct.get('embed_url'):
-        return [
-            direct]
-    if not None:
-        pass
-    low = ''.lower()
-    if 'flyfishfood.com' not in low and 'midcurrent.com' not in low:
-        if direct:
-            return [
-                direct]
-        return None
-    
+def fetch_page_html(url: str) -> str:
+    req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     try:
-        html = fetch_page_html(url)
-        found = []
-        seen = set()
-        for embed_url in embedded_video_urls_from_html(html, url):
-            row = video_dict_from_url(embed_url)
-            if not row:
-                continue
-            if not row.get('video_id'):
-                row.get('video_id')
-            key = f'''{row.get('provider')}:{row.get('watch_url')}'''
-            if key in seen:
-                continue
-            seen.add(key)
-            if not row.get('title'):
-                row['title'] = 'Tutorial'
-            row['source_page'] = url
-            found.append(row)
-        if found:
-            return found
-        if None:
-            return [
-                direct]
-        return None
-    except (urllib.error.URLError, OSError, TimeoutError):
-        exc = None
-        log.debug('Video page fetch failed %s: %s', url[:80], exc)
-        del exc
-        return None
-        None = 
-        del exc
+        with urllib.request.urlopen(req, timeout=_FETCH_TIMEOUT) as resp:
+            return resp.read().decode("utf-8", errors="replace")
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        log.debug("video fetch failed for %s: %s", url, exc)
+        return ""
 
 
+def fetch_videos_from_url(url: str) -> list[dict[str, Any]]:
+    html = fetch_page_html(url)
+    if not html:
+        return []
+    return embedded_video_urls_from_html(html, page_url=url)

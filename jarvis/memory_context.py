@@ -301,6 +301,41 @@ def contextualize_memory_for_chat(content: str, *, today: date | None = None) ->
     return f"{normalized} (journal note from {journal_day.isoformat()}, not today)"
 
 
+def build_conversation_extraction_text(
+    messages: list[dict],
+    *,
+    max_messages: int = 12,
+    max_chars: int = 350,
+) -> str:
+    """Format recent dialogue for periodic conversation memory extraction."""
+    recent = [
+        m for m in messages[-max_messages:]
+        if m.get("role") in ("user", "assistant") and (m.get("content") or "").strip()
+    ]
+    return "\n".join(
+        f"{m['role']}: {(m.get('content') or '').strip()[:max_chars]}" for m in recent
+    )
+
+
+def branch_memory_namespace(branch_id: str) -> str:
+    """Per-chat-branch namespace for conversation memory."""
+    bid = (branch_id or "main").strip() or "main"
+    return f"branch:{bid}"
+
+
+def branch_summary_text(messages: list[dict], *, max_messages: int = 16, max_chars: int = 400) -> str:
+    """Compact branch conversation summary for upsert_branch_summary."""
+    recent = [
+        m for m in messages[-max_messages:]
+        if m.get("role") in ("user", "assistant") and (m.get("content") or "").strip()
+    ]
+    lines = [
+        f"{m['role']}: {(m.get('content') or '').strip()[:max_chars]}"
+        for m in recent
+    ]
+    return "Conversation summary:\n" + "\n".join(lines) if lines else ""
+
+
 def build_quick_checkpoint(session, messages: list[dict], task_manager=None) -> str | None:
     """Template checkpoint for shutdown — no LLM call."""
     from jarvis.trust_memory import filter_trusted_content, is_test_artifact_path

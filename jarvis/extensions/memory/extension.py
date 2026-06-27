@@ -13,6 +13,7 @@ class MemoryExtension(Extension):
 
     def load(self) -> None:
         import jarvis.extensions.memory.handlers  # noqa: F401
+        import jarvis.extensions.memory.document_learning_handlers  # noqa: F401
 
     def routes(self):
         from jarvis.extensions.memory.routes import memory_routes
@@ -20,12 +21,9 @@ class MemoryExtension(Extension):
         return memory_routes()
 
     def register_api(self, app, assistant) -> None:
-        try:
-            from jarvis.extensions.memory.api import register_routes
+        from jarvis.extensions.memory.api import register_routes
 
-            register_routes(app, assistant)
-        except Exception:
-            pass
+        register_routes(app, assistant)
 
 
 EXTENSION = MemoryExtension()

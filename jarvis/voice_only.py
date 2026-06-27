@@ -1,8 +1,7 @@
-# Source Generated with Decompyle++
-# File: voice_only.cpython-312.pyc (Python 3.12)
+"""Voice-only demo — minimal assistant without the web GUI (P1 #34)."""
 
-'''Voice-only demo — minimal assistant without the web GUI (P1 #34).'''
 from __future__ import annotations
+
 import logging
 import os
 import re
@@ -10,331 +9,354 @@ import signal
 import sys
 import threading
 from typing import Any
-log = logging.getLogger('jarvis.voice_only')
+
+log = logging.getLogger("jarvis.voice_only")
+
 _stop = threading.Event()
-_console_state = 'idle'
-_last_confirm_id: 'str | None' = None
-
-def prepare_voice_only_env():
-    '''Sensible defaults for headless voice demo.'''
-    os.environ.setdefault('JARVIS_VOICE_ONLY', '1')
-    os.environ.setdefault('JARVIS_WAKEWORD_TO_CHAT', '1')
-    os.environ.setdefault('JARVIS_WAKEWORD_SPEAK', '0')
-    os.environ.setdefault('JARVIS_WAKEWORD_RECORD', '1')
-    os.environ.setdefault('JARVIS_AUTO_PLAY', '1')
-    os.environ.setdefault('JARVIS_NO_BROWSER', '1')
+_console_state = "idle"
+_last_confirm_id: str | None = None
 
 
-def strip_for_speech(text = None):
-    '''Remove markdown/code/citations so TTS sounds natural.'''
-    sanitize_for_speech = sanitize_for_speech
-    import jarvis.tts_stream
+def prepare_voice_only_env() -> None:
+    """Sensible defaults for headless voice demo."""
+    os.environ.setdefault("JARVIS_VOICE_ONLY", "1")
+    os.environ.setdefault("JARVIS_WAKEWORD_TO_CHAT", "1")
+    os.environ.setdefault("JARVIS_WAKEWORD_SPEAK", "0")
+    os.environ.setdefault("JARVIS_WAKEWORD_RECORD", "1")
+    os.environ.setdefault("JARVIS_AUTO_PLAY", "1")
+    os.environ.setdefault("JARVIS_NO_BROWSER", "1")
+
+
+def strip_for_speech(text: str) -> str:
+    """Remove markdown/code/citations so TTS sounds natural."""
+    from jarvis.tts_stream import sanitize_for_speech
+
     return sanitize_for_speech(text)
 
 
-def speak_max_chars():
-    raw = os.getenv('JARVIS_VOICE_SPEAK_MAX_CHARS', '1200').strip()
-    
+def speak_max_chars() -> int:
+    raw = os.getenv("JARVIS_VOICE_SPEAK_MAX_CHARS", "1200").strip()
     try:
         return max(80, min(int(raw), 4000))
     except ValueError:
         return 1200
 
 
+def speak_text(text: str, *, assistant=None) -> str:
+    """Generate Piper audio and play through the default sink."""
+    from jarvis.events import emit_voice_state
 
-def speak_text(text = None, *, assistant):
-    '''Generate Piper audio and play through the default sink.'''
-    emit_voice_state = emit_voice_state
-    import jarvis.events
     cleaned = strip_for_speech(text)
     if not cleaned:
-        return ''
+        return ""
     limit = speak_max_chars()
     if len(cleaned) > limit:
-        cleaned = cleaned[:limit - 3].rstrip() + '…'
-    emit_voice_state('speaking', detail = 'voice-only')
-# WARNING: Decompyle incomplete
+        cleaned = cleaned[: limit - 3].rstrip() + "…"
+    emit_voice_state("speaking", detail="voice-only")
+    try:
+        if assistant is None:
+            from jarvis.assistant_instance import get_assistant
+
+            assistant = get_assistant()
+        path = assistant.audio.generate(cleaned, auto_play=True)
+        if str(path).startswith("ERROR"):
+            log.warning("TTS failed: %s", path)
+            return ""
+        return str(path)
+    finally:
+        emit_voice_state("idle")
 
 
-def voice_chat_processor(message = None, voice = None, *, assistant):
-    '''Process one utterance and speak the reply (no GUI).'''
-    global _last_confirm_id, _last_confirm_id
-    get_assistant = get_assistant
-    import jarvis.assistant_instance
-    if not assistant:
-        assistant
-    assistant = get_assistant()
-    result = assistant.process(message, voice = True)
-    if not result.get('message'):
-        result.get('message')
-    reply = ''.strip()
-    if result.get('type') == 'confirm_required':
-        if not result.get('confirm_id'):
-            result.get('confirm_id')
-        if not ''.strip():
-            ''.strip()
-        _last_confirm_id = None
-        speak_text('That action needs confirmation. Say yes to confirm, or no to cancel.', assistant = assistant)
+def voice_chat_processor(message: str, voice: bool = True, *, assistant=None) -> dict[str, Any]:
+    """Process one utterance and speak the reply (no GUI)."""
+    global _last_confirm_id
+    from jarvis.assistant_instance import get_assistant
+
+    assistant = assistant or get_assistant()
+    result = assistant.process(message, voice=True)
+    reply = (result.get("message") or "").strip()
+    if result.get("type") == "confirm_required":
+        _last_confirm_id = (result.get("confirm_id") or "").strip() or None
+        speak_text(
+            "That action needs confirmation. Say yes to confirm, or no to cancel.",
+            assistant=assistant,
+        )
         return result
     _last_confirm_id = None
-    if reply and result.get('ok', True):
-        speak_text(reply, assistant = assistant)
-        return result
-    if None.get('ok', True) and reply:
-        speak_text(reply, assistant = assistant)
+    if reply and result.get("ok", True):
+        speak_text(reply, assistant=assistant)
+    elif not result.get("ok", True) and reply:
+        speak_text(reply, assistant=assistant)
     return result
 
 
-def _console_voice_state(event = None, **payload):
+def _console_voice_state(event: str = "", **payload: Any) -> None:
     global _console_state
-    if not payload.get('state'):
-        payload.get('state')
-    state = 'idle'.strip().lower()
-    if not payload.get('detail'):
-        payload.get('detail')
-    detail = ''.strip()
-    if not state == _console_state and detail:
-        return None
+    state = (payload.get("state") or "idle").strip().lower()
+    detail = (payload.get("detail") or "").strip()
+    if state == _console_state and not detail:
+        return
     _console_state = state
     labels = {
-        'idle': '○ idle',
-        'listening': '● listening',
-        'thinking': '◐ thinking',
-        'speaking': '♪ speaking' }
+        "idle": "○ idle",
+        "listening": "● listening",
+        "thinking": "◐ thinking",
+        "speaking": "♪ speaking",
+    }
     line = labels.get(state, state)
     if detail:
-        line = f'''{line} ({detail})'''
-    print(line, flush = True)
+        line = f"{line} ({detail})"
+    print(line, flush=True)
 
 
-def _voice_on_detect(model = None, score = None):
-    _start_record_after_detect = _start_record_after_detect
-    wakeword_phrase = wakeword_phrase
-    import jarvis.audio_wakeword
-    print(f'''\n● {wakeword_phrase(model)} ({score:.0%})''', flush = True)
+def _voice_on_detect(model: str, score: float) -> None:
+    from jarvis.audio_wakeword import _start_record_after_detect, wakeword_phrase
+
+    print(f"\n● {wakeword_phrase(model)} ({score:.0%})", flush=True)
     _start_record_after_detect(model, score)
 
 
-def _execute_confirm(confirm_id = None, approved = None, *, assistant):
-    log_event = log_event
-    import jarvis.action_log
-    call_action = call_action
-    has_action = has_action
-    import jarvis.handlers.registry
-    pop_pending = pop_pending
-    import jarvis.tool_permissions
+def _execute_confirm(confirm_id: str, approved: bool, *, assistant) -> dict[str, Any]:
+    from jarvis.action_log import log_event
+    from jarvis.handlers.registry import call_action, has_action
+    from jarvis.tool_permissions import pop_pending
+
     row = pop_pending(confirm_id)
     if not row:
-        return {
-            'ok': False,
-            'message': 'Confirm expired.' }
-    if not row.get('message'):
-        row.get('message')
-    log_event('tool_confirm', tool = row.get('tool'), action = row.get('action'), approved = approved, message = ''[:200])
+        return {"ok": False, "message": "Confirm expired."}
+    log_event(
+        "tool_confirm",
+        tool=row.get("tool"),
+        action=row.get("action"),
+        approved=approved,
+        message=(row.get("message") or "")[:200],
+    )
     if not approved:
-        return {
-            'ok': True,
-            'message': 'Cancelled.' }
-    if not None.get('action'):
-        None.get('action')
-    action = ''
-    if not row.get('params'):
-        row.get('params')
-    params = dict({ })
-    params['_confirmed'] = True
-    if not row.get('message'):
-        row.get('message')
-    message = ''
+        return {"ok": True, "message": "Cancelled."}
+    action = row.get("action") or ""
+    params = dict(row.get("params") or {})
+    params["_confirmed"] = True
+    message = row.get("message") or ""
     if has_action(action):
         return call_action(assistant, action, params, message)
-    if None == 'ha_control':
+    if action == "ha_control":
         return assistant._ha_control(params, message)
-    if None == 'ha_scene':
+    if action == "ha_scene":
         return assistant._ha_scene(params, message)
-    return {
-        'ok': None,
-        'message': f'''Unknown confirmed action: {action}''' }
+    return {"ok": False, "message": f"Unknown confirmed action: {action}"}
 
 
-def _handle_confirm_followup(text = None, assistant = None):
-    '''If the last turn needs confirmation, accept yes/no by voice.'''
-    global _last_confirm_id, _last_confirm_id
+def _handle_confirm_followup(text: str, assistant) -> bool:
+    """If the last turn needs confirmation, accept yes/no by voice."""
+    global _last_confirm_id
     if not _last_confirm_id:
         return False
     lower = text.strip().lower()
-    if lower in ('yes', 'yeah', 'yep', 'confirm', 'do it', 'go ahead', 'approve'):
-        result = _execute_confirm(_last_confirm_id, True, assistant = assistant)
+    if lower in ("yes", "yeah", "yep", "confirm", "do it", "go ahead", "approve"):
+        result = _execute_confirm(_last_confirm_id, True, assistant=assistant)
         _last_confirm_id = None
-        if not result.get('message'):
-            result.get('message')
-        reply = ''.strip()
+        reply = (result.get("message") or "").strip()
         if reply:
-            speak_text(reply, assistant = assistant)
+            speak_text(reply, assistant=assistant)
         return True
-    if lower in ('no', 'nope', 'cancel', 'stop', 'deny'):
-        _execute_confirm(_last_confirm_id, False, assistant = assistant)
+    if lower in ("no", "nope", "cancel", "stop", "deny"):
+        _execute_confirm(_last_confirm_id, False, assistant=assistant)
         _last_confirm_id = None
-        speak_text('Cancelled.', assistant = assistant)
+        speak_text("Cancelled.", assistant=assistant)
         return True
     return False
 
 
-def process_utterance(text = None, *, assistant):
-    get_assistant = get_assistant
-    import jarvis.assistant_instance
-    if not assistant:
-        assistant
-    assistant = get_assistant()
-    if not text:
-        text
-    cleaned = ''.strip()
+def process_utterance(text: str, *, assistant=None) -> dict[str, Any]:
+    from jarvis.assistant_instance import get_assistant
+
+    assistant = assistant or get_assistant()
+    cleaned = (text or "").strip()
     if not cleaned:
-        return {
-            'ok': False,
-            'message': 'Empty transcript' }
-    if None(cleaned, assistant):
-        return {
-            'ok': True,
-            'message': 'confirmation handled' }
-    return None(cleaned, voice = True, assistant = assistant)
+        return {"ok": False, "message": "Empty transcript"}
+    if _handle_confirm_followup(cleaned, assistant):
+        return {"ok": True, "message": "confirmation handled"}
+    return voice_chat_processor(cleaned, voice=True, assistant=assistant)
 
 
-def run_ptt_loop(*, assistant):
-    record_until_silence = record_until_silence
-    import jarvis.audio_live
-    emit_voice_state = emit_voice_state
-    on = on
-    import jarvis.events
-    transcribe = transcribe
-    import jarvis.stt
-# WARNING: Decompyle incomplete
+def run_ptt_loop(*, assistant=None) -> None:
+    from jarvis.audio_live import record_until_silence
+    from jarvis.events import emit_voice_state, on
+    from jarvis.stt import transcribe
+
+    if assistant is None:
+        from jarvis.assistant_instance import get_assistant
+
+        assistant = get_assistant()
+
+    on("voice_state", _console_voice_state)
+    print("Push-to-talk — press Enter, speak, then pause. Ctrl+C to quit.", flush=True)
+    while not _stop.is_set():
+        try:
+            input("\n[Enter] listen… ")
+        except (EOFError, KeyboardInterrupt):
+            break
+        if _stop.is_set():
+            break
+        emit_voice_state("listening", detail="ptt")
+        audio_path = record_until_silence()
+        if audio_path.startswith("ERROR:"):
+            print(audio_path, flush=True)
+            emit_voice_state("idle")
+            continue
+        text = transcribe(audio_path)
+        if text.startswith("ERROR:"):
+            print(text, flush=True)
+            emit_voice_state("idle")
+            continue
+        print(f"You: {text}", flush=True)
+        result = process_utterance(text, assistant=assistant)
+        reply = (result.get("message") or "").strip()
+        if reply:
+            print(f"{assistant_name()}: {reply[:500]}", flush=True)
 
 
-def run_wakeword_loop(*, assistant):
-    audio_wakeword = audio_wakeword
-    import jarvis
-    on = on
-    import jarvis.events
-# WARNING: Decompyle incomplete
+def run_wakeword_loop(*, assistant=None) -> None:
+    from jarvis import audio_wakeword
+    from jarvis.events import on
+
+    if assistant is None:
+        from jarvis.assistant_instance import get_assistant
+
+        assistant = get_assistant()
+
+    audio_wakeword.configure(chat_processor=voice_chat_processor)
+    on("voice_state", _console_voice_state)
+
+    phrase = audio_wakeword.wakeword_phrase()
+    print(f"Wake word active — say “{phrase}”, then your request. Ctrl+C to quit.", flush=True)
+    result = audio_wakeword.start_listener(on_detect=_voice_on_detect)
+    if result.startswith("ERROR"):
+        raise RuntimeError(result)
+    print("○ idle (waiting for wake word)", flush=True)
+    while not _stop.is_set():
+        _stop.wait(0.5)
 
 
-def run_once(text = None, *, assistant):
-    '''Single command for scripting / smoke tests.'''
-    pass
-# WARNING: Decompyle incomplete
+def run_once(text: str, *, assistant=None) -> dict[str, Any]:
+    """Single command for scripting / smoke tests."""
+    if assistant is None:
+        from jarvis.assistant_instance import get_assistant
+
+        assistant = get_assistant()
+    print(f"You: {text}", flush=True)
+    result = process_utterance(text, assistant=assistant)
+    reply = (result.get("message") or "").strip()
+    if reply:
+        from jarvis.branding import assistant_name
+
+        print(f"{assistant_name()}: {reply}", flush=True)
+    return result
 
 
-def assistant_name():
-    _name = assistant_name
-    import jarvis.branding
+def assistant_name() -> str:
+    from jarvis.branding import assistant_name as _name
+
     return _name()
 
 
-def _install_signal_handlers():
-    
+def _install_signal_handlers() -> None:
     def _shutdown(signum, _frame):
         _stop.set()
-        
         try:
-            audio_wakeword = audio_wakeword
-            import jarvis
-            audio_wakeword.stop_listener()
-            print('\nVoice demo stopped.', flush = True)
-            return None
-        except Exception:
-            continue
+            from jarvis import audio_wakeword
 
+            audio_wakeword.stop_listener()
+        except Exception:
+            pass
+        print("\nVoice demo stopped.", flush=True)
 
     signal.signal(signal.SIGINT, _shutdown)
     signal.signal(signal.SIGTERM, _shutdown)
 
 
-def run_voice_only(argv = None):
-    '''Entry for `python main.py voice`. Returns process exit code.'''
-    load_jarvis_env = load_jarvis_env
-    import jarvis.env_loader
-    if not argv:
-        argv
-    argv = list(sys.argv[2:])
+def run_voice_only(argv: list[str] | None = None) -> int:
+    """Entry for `python main.py voice`. Returns process exit code."""
+    from jarvis.env_loader import load_jarvis_env
+
+    argv = list(argv or sys.argv[2:])
     load_jarvis_env()
     prepare_voice_only_env()
-    once_text = ''
+
+    once_text = ""
     force_ptt = False
     i = 0
-    if i < len(argv):
+    while i < len(argv):
         arg = argv[i]
-        if arg in ('--ptt', '-p'):
+        if arg in ("--ptt", "-p"):
             force_ptt = True
-        elif arg in ('--once', '-1') and i + 1 < len(argv):
+        elif arg in ("--once", "-1") and i + 1 < len(argv):
             once_text = argv[i + 1]
             i += 1
-        elif arg in ('-h', '--help'):
+        elif arg in ("-h", "--help"):
             _print_help()
             return 0
         i += 1
-        if i < len(argv):
-            continue
+
     _install_signal_handlers()
-    JarvisAssistant = JarvisAssistant
-    import jarvis.assistant
-    set_assistant = set_assistant
-    import jarvis.assistant_instance
-    is_uncensored = is_uncensored
-    import jarvis.config
-    ensure_services = ensure_services
-    import jarvis.services
+
+    from jarvis.assistant import JarvisAssistant
+    from jarvis.assistant_instance import set_assistant
+    from jarvis.config import is_uncensored
+    from jarvis.services import ensure_services
+
     name = assistant_name()
-    print(f'''\n{name} voice-only demo (no web GUI)\n''', flush = True)
-    ensure_services(pull_models = os.getenv('JARVIS_AUTO_PULL_MODELS', '1') != '0')
-    assistant = JarvisAssistant(uncensored = is_uncensored())
+    print(f"\n{name} voice-only demo (no web GUI)\n", flush=True)
+
+    ensure_services(pull_models=os.getenv("JARVIS_AUTO_PULL_MODELS", "1") != "0")
+    assistant = JarvisAssistant(uncensored=is_uncensored())
     set_assistant(assistant)
-    if os.getenv('JARVIS_FIRST_RUN_MODELS', '1') != '0':
-        
+
+    if os.getenv("JARVIS_FIRST_RUN_MODELS", "1") != "0":
         try:
-            ensure_optional_models = ensure_optional_models
-            import jarvis.first_run_models
+            from jarvis.first_run_models import ensure_optional_models
+
             ensure_optional_models()
-            if once_text:
-                run_once(once_text, assistant = assistant)
-                return 0
-            use_wakeword = not force_ptt
-            if use_wakeword:
-                wakeword_available = wakeword_available
-                import jarvis.audio_wakeword
-                if not wakeword_available():
-                    print('Wake word unavailable — falling back to push-to-talk.', flush = True)
-                    use_wakeword = False
-            
-            try:
-                if use_wakeword:
-                    run_wakeword_loop(assistant = assistant)
-                    return 0
-                    
-                    try:
-                        run_ptt_loop(assistant = assistant)
-                        return 0
-                        except Exception:
-                            exc = None
-                            log.debug('first-run model check skipped: %s', exc)
-                            exc = None
-                            del exc
-                            continue
-                            exc = None
-                            del exc
-                    except RuntimeError:
-                        exc = None
-                        print(f'''ERROR: {exc}''', flush = True)
-                        exc = None
-                        del exc
-                        return 1
-                        exc = None
-                        del exc
+        except Exception as exc:
+            log.debug("first-run model check skipped: %s", exc)
+
+    if once_text:
+        run_once(once_text, assistant=assistant)
+        return 0
+
+    use_wakeword = not force_ptt
+    if use_wakeword:
+        from jarvis.audio_wakeword import wakeword_available
+
+        if not wakeword_available():
+            print("Wake word unavailable — falling back to push-to-talk.", flush=True)
+            use_wakeword = False
+
+    try:
+        if use_wakeword:
+            run_wakeword_loop(assistant=assistant)
+        else:
+            run_ptt_loop(assistant=assistant)
+    except RuntimeError as exc:
+        print(f"ERROR: {exc}", flush=True)
+        return 1
+    return 0
 
 
-
-
-
-def _print_help():
+def _print_help() -> None:
     name = assistant_name()
-    print(f'''\n{name} voice-only demo (P1 #34) — minimal assistant without the web GUI.\n\nUsage:\n  python main.py voice              Wake word loop (fallback: push-to-talk)\n  python main.py voice --ptt        Push-to-talk only (Enter to record)\n  python main.py voice --once "…"   Single command, speak reply, exit\n\nEnvironment:\n  JARVIS_WAKEWORD_SPEAK=0           voice-only speaks via Piper (avoid double TTS)\n  JARVIS_VOICE_SPEAK_MAX_CHARS=1200 Truncate long TTS\n  JARVIS_WAKEWORD_MODEL=hey_jarvis  Wake phrase model\n''')
+    print(
+        f"""
+{name} voice-only demo (P1 #34) — minimal assistant without the web GUI.
 
+Usage:
+  python main.py voice              Wake word loop (fallback: push-to-talk)
+  python main.py voice --ptt        Push-to-talk only (Enter to record)
+  python main.py voice --once "…"   Single command, speak reply, exit
+
+Environment:
+  JARVIS_WAKEWORD_SPEAK=0           voice-only speaks via Piper (avoid double TTS)
+  JARVIS_VOICE_SPEAK_MAX_CHARS=1200 Truncate long TTS
+  JARVIS_WAKEWORD_MODEL=hey_jarvis  Wake phrase model
+"""
+    )

@@ -78,9 +78,23 @@ class MediaHandler:
         name = Path(result).name
         enhanced = self.a.video.last_enhanced_prompt
         method = self.a.video.last_method
+        plan = self.a.video.last_clip_plan or {}
         msg = f"Here's your video — **{prompt[:80]}**"
         if method == "animatediff":
-            msg += "\n\n*Generated with AnimateDiff (real motion)*"
+            from jarvis.comfyui_animatediff import resolve_checkpoint
+
+            ad_ckpt = resolve_checkpoint() or "SD 1.5"
+            actual = plan.get("actual_duration_sec")
+            target = plan.get("target_duration_sec")
+            fps = plan.get("fps")
+            frames = plan.get("frames")
+            if actual and target and fps:
+                msg += f"\n\n*AnimateDiff* — ~{actual}s ({frames} frames @ {fps} fps)"
+                if plan.get("truncated"):
+                    msg += f" (requested {target}s — VRAM cap; use **Ken Burns** engine for full length + your XL checkpoint)"
+            else:
+                msg += "\n\n*Generated with AnimateDiff (real motion)*"
+            msg += f"\n*Model:* `{ad_ckpt}` (SD 1.5 — keyframe checkpoint below is Ken Burns only)"
         else:
             from jarvis.video_settings import keyframe_checkpoint_label
 

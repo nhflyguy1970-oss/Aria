@@ -1,101 +1,113 @@
-# Source Generated with Decompyle++
-# File: server_shutdown.cpython-312.pyc (Python 3.12)
+"""Request full Jarvis shutdown from the GUI (handled by tray parent)."""
 
-'''Request full Jarvis shutdown from the GUI (handled by tray parent).'''
 from __future__ import annotations
+
 import logging
 import os
 import signal
 import threading
 import time
 from pathlib import Path
+
 from jarvis.config import DATA_DIR
-logger = logging.getLogger('jarvis.server_shutdown')
-SHUTDOWN_FLAG = DATA_DIR / 'shutdown_jarvis.request'
-_shutdown_watcher_started = False
 
-def is_tray_managed():
-    return os.getenv('JARVIS_SERVICES_MANAGED') == '1'
+logger = logging.getLogger("jarvis.server_shutdown")
+
+SHUTDOWN_FLAG = DATA_DIR / "shutdown_jarvis.request"
 
 
-def _signal_tray_shutdown():
+def is_tray_managed() -> bool:
+    return os.getenv("JARVIS_SERVICES_MANAGED") == "1"
+
+
+def _signal_tray_shutdown() -> bool:
     """Ask serve's parent (tray) to quit via SIGUSR2."""
-    
     try:
         parent = os.getppid()
         if parent <= 1:
             return False
-            
-            try:
-                os.kill(parent, signal.SIGUSR2)
-                return True
-            except OSError:
-                exc = None
-                logger.warning('Could not signal tray for shutdown: %s', exc)
-                exc = None
-                del exc
-                return False
-                exc = None
-                del exc
+        os.kill(parent, signal.SIGUSR2)
+        return True
+    except OSError as exc:
+        logger.warning("Could not signal tray for shutdown: %s", exc)
+        return False
 
 
-
-
-def _free_vram_best_effort():
-    
+def _free_vram_best_effort() -> None:
     try:
-        stop_all_for_gaming = stop_all_for_gaming
-        import jarvis.gaming_shutdown
-        return stop_all_for_gaming()
-    except Exception:
-        exc = None
-        logger.debug('Gaming shutdown skipped: %s', exc)
-        free_vram = free_vram
-        import jarvis.vram_guard
-        del exc
-        return None
-        except Exception:
-            None, free_vram()
-            del exc
-            return None
-        None = None
-        del exc
+        from jarvis.vram_guard import free_vram
+
+        free_vram()
+    except Exception as exc:
+        logger.debug("VRAM free before shutdown skipped: %s", exc)
 
 
+def _exit_serve_process(delay: float = 0.35) -> None:
+    def _do() -> None:
+        time.sleep(delay)
+        try:
+            os.kill(os.getpid(), signal.SIGTERM)
+        except OSError:
+            os._exit(0)
 
-def _exit_serve_process(delay = None):
-    pass
-# WARNING: Decompyle incomplete
-
-
-def request_shutdown(*, source, detail, free_vram, stop_everything):
-    '''Stop Jarvis completely — tray + server + GPU services for gaming.'''
-    log_restart_event = log_restart_event
-    import jarvis.restart_audit
-    if not detail:
-        detail
-    log_restart_event(source, detail = 'request_shutdown')
-    gaming_result = { }
-    if free_vram or stop_everything:
-        gaming_result = _free_vram_best_effort()
-# WARNING: Decompyle incomplete
+    threading.Thread(target=_do, name="jarvis-serve-exit", daemon=True).start()
 
 
-def consume_shutdown_request():
-    '''True if shutdown was requested (flag cleared). Tray process only.'''
+def request_shutdown(
+    *,
+    source: str = "api",
+    detail: str = "",
+    free_vram: bool = False,
+) -> dict[str, object]:
+    """Stop Jarvis completely — tray + server + watchdog (not a restart)."""
+    from jarvis.restart_audit import log_restart_event
+
+    log_restart_event(source, detail=detail or "request_shutdown")
+
+    if free_vram:
+        _free_vram_best_effort()
+
+    if is_tray_managed():
+        if _signal_tray_shutdown():
+            logger.info("Shutdown requested — signaled tray (SIGUSR2)")
+            return {"ok": True, "message": "ARIA is shutting down…"}
+        try:
+            DATA_DIR.mkdir(parents=True, exist_ok=True)
+            SHUTDOWN_FLAG.write_text(str(time.time()), encoding="utf-8")
+        except OSError as exc:
+            return {"ok": False, "message": f"Could not queue shutdown: {exc}"}
+        logger.info("Shutdown requested — flag file (tray watcher)")
+        return {"ok": True, "message": "ARIA is shutting down…"}
+
+    _exit_serve_process()
+    return {
+        "ok": True,
+        "message": "Server stopping (standalone mode — tray not running).",
+    }
+
+
+def consume_shutdown_request() -> bool:
+    """True if shutdown was requested (flag cleared). Tray process only."""
     if not SHUTDOWN_FLAG.is_file():
         return False
-    
     try:
         SHUTDOWN_FLAG.unlink()
-        return True
     except OSError:
-        return True
+        pass
+    return True
 
 
+def start_shutdown_watcher(on_shutdown) -> None:
+    """Poll for GUI shutdown requests (tray process only)."""
 
-def start_shutdown_watcher(on_shutdown = None):
-    '''Poll for GUI shutdown requests (tray process only).'''
-    pass
-# WARNING: Decompyle incomplete
+    def _loop() -> None:
+        while True:
+            time.sleep(1.0)
+            try:
+                if consume_shutdown_request():
+                    logger.info("Processing GUI shutdown request (flag file)")
+                    on_shutdown()
+            except Exception:
+                logger.exception("Shutdown watcher error")
 
+    threading.Thread(target=_loop, name="jarvis-shutdown-watcher", daemon=True).start()

@@ -355,9 +355,9 @@ def run_workflow(
 
 
 def _save_workflow_outputs(outputs: dict, filename_prefix: str) -> str | None:
-    """Download first image, gif, or video from ComfyUI workflow outputs."""
-    for node_out in outputs.values():
-        for key in ("images", "gifs", "videos", "animated"):
+    """Download first video/gif/image from ComfyUI workflow outputs (video preferred)."""
+    for key in ("videos", "gifs", "animated", "images"):
+        for node_out in outputs.values():
             for item in node_out.get(key, []):
                 fname = item.get("filename", "")
                 if not fname:

@@ -17,6 +17,7 @@ log = logging.getLogger("jarvis")
 
 _last_method = "ken_burns"
 _last_fallback_reason = ""
+_last_clip_plan: dict = {}
 
 
 def last_generation_method() -> str:
@@ -25,6 +26,10 @@ def last_generation_method() -> str:
 
 def last_fallback_reason() -> str:
     return _last_fallback_reason
+
+
+def last_clip_plan() -> dict:
+    return dict(_last_clip_plan)
 
 
 def generate_motion_clip(
@@ -41,7 +46,7 @@ def generate_motion_clip(
     Returns (video_path, keyframe_path, method) or (ERROR:..., "", method).
     method is 'animatediff' or 'ken_burns'.
     """
-    global _last_method, _last_fallback_reason
+    global _last_method, _last_fallback_reason, _last_clip_plan
 
     from jarvis.services import ensure_comfyui_nvidia
 
@@ -65,18 +70,18 @@ def generate_motion_clip(
     if try_animatediff:
         from jarvis.comfyui_animatediff import generate as generate_animatediff
         from jarvis.gpu import is_low_vram
-        from jarvis.video_settings import effective_animatediff_frames, effective_animatediff_size
+        from jarvis.video_settings import plan_animatediff_clip
 
-        ad_w, ad_h = effective_animatediff_size()
-        if width:
-            ad_w = min(int(width), ad_w)
-        if height:
-            ad_h = min(int(height), ad_h)
-        frames = effective_animatediff_frames(dur, frame_fps)
+        plan = plan_animatediff_clip(dur, frame_fps, width=width, height=height)
+        _last_clip_plan = plan
+        ad_w, ad_h = plan["width"], plan["height"]
+        frames = plan["frames"]
+        frame_fps = plan["fps"]
 
         log.info(
-            "AnimateDiff attempt: %dx%d, %d frames @ %d fps (engine=%s)",
-            ad_w, ad_h, frames, frame_fps, engine,
+            "AnimateDiff attempt: %dx%d, %d frames @ %d fps (~%.1fs target %.1fs, engine=%s)",
+            ad_w, ad_h, frames, frame_fps,
+            plan["actual_duration_sec"], plan["target_duration_sec"], engine,
         )
         result, _ = generate_animatediff(
             prompt,
@@ -132,6 +137,16 @@ def generate_motion_clip(
         fps=frame_fps,
     )
     _last_method = "ken_burns"
+    _last_clip_plan = {
+        "frames": int(dur * frame_fps),
+        "fps": frame_fps,
+        "width": w,
+        "height": h,
+        "target_duration_sec": dur,
+        "actual_duration_sec": dur,
+        "truncated": False,
+        "engine": "ken_burns",
+    }
     if video.startswith("ERROR:"):
         return video, keyframe, "ken_burns"
     return video, keyframe, "ken_burns"

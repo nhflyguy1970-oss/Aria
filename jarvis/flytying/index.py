@@ -1,267 +1,250 @@
-# Source Generated with Decompyle++
-# File: index.cpython-312.pyc (Python 3.12)
+"""In-memory index over Blackfly JSONL (scraped dataset or gold library)."""
 
-'''In-memory index over gold_recipes.jsonl — fast search and lookup.'''
 from __future__ import annotations
+
 import json
-import re
 import threading
 from typing import Any
-from jarvis.flytying.config import gold_recipes_path
-from jarvis.flytying.aliases import expand_query
-from jarvis.flytying.hook_utils import parse_hook
-_CACHE: 'dict[str, Any]' = {
-    'mtime': 0,
-    'recipes': [],
-    'by_id': { },
-    'by_name': { } }
+
+from jarvis.flytying.config import blackfly_data_available, recipe_source_path
+from jarvis.flytying.hook_utils import hook_matches_filter
+
+_CACHE: dict[str, Any] = {
+    "mtime": 0,
+    "path": "",
+    "recipes": [],
+    "by_id": {},
+    "by_name": {},
+    "browse_sorted": [],
+    "browse_rows": [],
+}
 _LOCK = threading.Lock()
 
-def _recipe_name(item = None):
-    if not item.get('fly_name'):
-        item.get('fly_name')
-        if not item.get('name'):
-            item.get('name')
-            if not item.get('instruction'):
-                item.get('instruction')
-    return str('')
+
+def _recipe_name(item: dict[str, Any]) -> str:
+    return str(item.get("fly_name") or item.get("name") or item.get("instruction") or "")
 
 
-def _recipe_id(item = None):
-    if not item.get('recipe_id'):
-        item.get('recipe_id')
-        if not item.get('content_hash'):
-            item.get('content_hash')
-    return str('')
+def _recipe_id(item: dict[str, Any]) -> str:
+    return str(item.get("recipe_id") or item.get("content_hash") or item.get("id") or _recipe_name(item))
 
 
-def _search_blob(item = None):
-    if not item.get('type'):
-        item.get('type')
-    if not item.get('hook'):
-        item.get('hook')
-    if not item.get('materials'):
-        item.get('materials')
-    if not item.get('steps'):
-        item.get('steps')
-    if not item.get('instruction'):
-        item.get('instruction')
+def _search_blob(item: dict[str, Any]) -> str:
     parts = [
-        ' '.join,
-        (lambda .0: pass# WARNING: Decompyle incomplete
-)([]()),
-        None,
-        ' '.join,
-        (lambda .0: pass# WARNING: Decompyle incomplete
-)([]()),
-        str('')]
-    return ' '.join(parts).lower()
+        _recipe_name(item),
+        str(item.get("type") or ""),
+        str(item.get("hook") or ""),
+        " ".join(str(m) for m in (item.get("materials") or [])),
+        " ".join(str(s) for s in (item.get("steps") or [])),
+        str(item.get("instruction") or ""),
+        str(item.get("output") or ""),
+    ]
+    return " ".join(parts).lower()
 
 
-def _matches_query(needle = None, blob = None):
-    pass
-# WARNING: Decompyle incomplete
+def _recipe_lookup_rank(item: dict[str, Any]) -> tuple[int, float]:
+    has_local = bool(item.get("saved_image_paths"))
+    return (1 if has_local else 0, float(item.get("quality_score") or 0))
 
 
-def _recipe_row(item = None):
+def _recipe_row(item: dict[str, Any], *, include_images: bool = False) -> dict[str, Any]:
     name = _recipe_name(item)
-    hook_info = parse_hook(item.get('hook'))
-    thumb = ''
-    if not item.get('image_urls'):
-        item.get('image_urls')
-    imgs = []
-    if imgs:
-        thumb = str(imgs[0])
-    elif item.get('saved_image_paths'):
-        
+    row = {
+        "recipe_id": _recipe_id(item),
+        "name": name,
+        "type": item.get("type") or "",
+        "hook": item.get("hook") or "",
+        "quality_score": float(item.get("quality_score") or 0),
+        "steps_count": len(item.get("steps") or []),
+    }
+    if include_images:
         try:
-            local_image_api_path = local_image_api_path
-            import jarvis.flytying.media
-            if not item.get('saved_image_paths'):
-                item.get('saved_image_paths')
-            paths = { }
-            if isinstance(paths, dict):
-                for p in paths.values():
-                    if not local_image_api_path(p):
-                        local_image_api_path(p)
-                    thumb = ''
-                    if not thumb:
-                        continue
-                        
-                        try:
-                            paths.values()
-                        except:
-                            if isinstance(paths, list) and paths:
-                                if not local_image_api_path(paths[0]):
-                                    local_image_api_path(paths[0])
-                                thumb = ''
+            from jarvis.flytying.media import resolve_recipe_images
 
-            if not _recipe_id(item):
-                _recipe_id(item)
-            if not item.get('type'):
-                item.get('type')
-            if not hook_info.get('size_label'):
-                hook_info.get('size_label')
-            if not item.get('steps'):
-                item.get('steps')
-            if not item.get('materials'):
-                item.get('materials')
-            if not item.get('image_urls'):
-                item.get('image_urls')
-            return {
-                'recipe_id': None,
-                'name': name,
-                'type': str(''),
-                'hook': item.get('hook'),
-                'hook_size': '',
-                'steps_count': len([]),
-                'materials_count': len([]),
-                'quality_score': item.get('quality_score'),
-                'has_images': bool(item.get('saved_image_paths')),
-                'has_videos': bool(item.get('source_url')),
-                'thumbnail': thumb,
-                'source_url': item.get('source_url') }
+            images = resolve_recipe_images(item)
+            if images:
+                row["thumbnail"] = images[0].get("url", "")
+                row["image_urls"] = [img.get("url", "") for img in images if img.get("url")]
         except Exception:
-            continue
-
-
-
-def invalidate():
-    _LOCK
-    _CACHE['mtime'] = 0
-    None(None, None)
-    return None
-    with None:
-        if not None:
             pass
+    return row
 
 
-def _load():
-    path = gold_recipes_path()
-    if not path.is_file():
-        _LOCK
-        _CACHE.update({
-            'mtime': 0,
-            'recipes': [],
-            'by_id': { },
-            'by_name': { } })
-        None(None, None)
-        return None
-    mtime = path.stat().st_mtime
-    _LOCK
-    if _CACHE['mtime'] == mtime and _CACHE['recipes']:
-        None(None, None)
-        return None
-    None(None, None)
-    recipes = []
-    by_id = { }
-    by_name = { }
-    
-    try:
-        f = open(path, encoding = 'utf-8')
-        for line in f:
+def _load() -> None:
+    if not blackfly_data_available():
+        _CACHE["mtime"] = 0
+        _CACHE["path"] = ""
+        _CACHE["recipes"] = []
+        _CACHE["by_id"] = {}
+        _CACHE["by_name"] = {}
+        _CACHE["browse_sorted"] = []
+        _CACHE["browse_rows"] = []
+        return
+    path = recipe_source_path()
+    mtime = path.stat().st_mtime if path.is_file() else 0
+    path_s = str(path)
+    if _CACHE["mtime"] == mtime and _CACHE["path"] == path_s and _CACHE["recipes"]:
+        return
+    recipes: list[dict[str, Any]] = []
+    by_id: dict[str, dict[str, Any]] = {}
+    by_name: dict[str, dict[str, Any]] = {}
+    if path.is_file():
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
             line = line.strip()
             if not line:
                 continue
-            item = json.loads(line)
-            if not isinstance(item, dict):
-                continue
-            rid = _recipe_id(item)
-            if rid:
-                item.setdefault('recipe_id', rid)
-            recipes.append(item)
-            if rid:
-                by_id[rid.lower()] = item
-                by_id[rid] = item
-            name = _recipe_name(item).strip().lower()
-            if not name:
-                continue
-            by_name.setdefault(name, []).append(item)
-        
-        try:
-            None(None, None)
-            _LOCK
-            _CACHE.update({
-                'mtime': mtime,
-                'recipes': recipes,
-                'by_id': by_id,
-                'by_name': by_name })
-            None(None, None)
-            return None
-            with None:
-                if not None:
-                    pass
-            return None
-            with None:
-                if not None:
-                    pass
-            continue
+            try:
+                item = json.loads(line)
             except json.JSONDecodeError:
                 continue
-            with None:
-                if not None:
-                    pass
-            
-            try:
+            if not isinstance(item, dict):
                 continue
-            except OSError:
-                return None
-                with None:
-                    if not None:
-                        pass
-                return None
+            recipes.append(item)
+            rid = _recipe_id(item)
+            name = _recipe_name(item).lower()
+            by_id[rid] = item
+            if name:
+                prev = by_name.get(name)
+                if prev is None or _recipe_lookup_rank(item) > _recipe_lookup_rank(prev):
+                    by_name[name] = item
+    _CACHE["mtime"] = mtime
+    _CACHE["path"] = path_s
+    _CACHE["recipes"] = recipes
+    _CACHE["by_id"] = by_id
+    _CACHE["by_name"] = by_name
+    browse_sorted = sorted(
+        recipes,
+        key=lambda item: (-float(item.get("quality_score") or 0), _recipe_name(item).lower()),
+    )
+    _CACHE["browse_sorted"] = browse_sorted
+    _CACHE["browse_rows"] = [_recipe_row(item) for item in browse_sorted]
 
 
+def invalidate() -> None:
+    with _LOCK:
+        _CACHE["mtime"] = 0
+        _CACHE["path"] = ""
+        _CACHE["browse_sorted"] = []
+        _CACHE["browse_rows"] = []
+    try:
+        from jarvis.cache_state import invalidate_flytying_list_cache
+
+        invalidate_flytying_list_cache()
+    except Exception:
+        pass
 
 
-
-def recipes():
-    _load()
-    return list(_CACHE['recipes'])
-
-
-def find_recipe(name_or_id = None):
-    '''Exact id match, then exact name, then prefix — never loose substring.'''
-    pass
-# WARNING: Decompyle incomplete
+def recipes() -> list[dict[str, Any]]:
+    with _LOCK:
+        _load()
+        return list(_CACHE["recipes"])
 
 
-def _best_of(items = None):
-    if len(items) == 1:
-        return items[0]
-    return None(items, key = (lambda r: if not r.get('quality_score'):
-r.get('quality_score')if not r.get('steps'):
-r.get('steps')(float(0), len([]))))
+def find_recipe(name_or_id: str | None) -> dict[str, Any] | None:
+    needle = str(name_or_id or "").strip()
+    if not needle:
+        return None
+    with _LOCK:
+        _load()
+        if needle in _CACHE["by_id"]:
+            return _CACHE["by_id"][needle]
+        lower = needle.lower()
+        if lower in _CACHE["by_name"]:
+            return _CACHE["by_name"][lower]
+        matches = [item for item in _CACHE["recipes"] if _recipe_name(item).lower() == lower]
+        if matches:
+            matches.sort(key=lambda item: _recipe_lookup_rank(item), reverse=True)
+            return matches[0]
+    return None
 
 
-def search(q = None, *, fly_type, limit):
-    '''Return (rows, mode) where mode is keyword|browse.'''
-    cap = max(1, min(limit, 500))
-    if not q:
-        q
-    needle = ''.strip().lower()
-    if not fly_type:
-        fly_type
-    type_filter = ''.strip().lower()
-    all_recipes = recipes()
-    if not all_recipes:
-        return ([], 'empty')
-# WARNING: Decompyle incomplete
+def search(
+    q: str | None,
+    *,
+    fly_type: str | None = None,
+    limit: int = 20,
+    offset: int = 0,
+    hook_size: int | None = None,
+) -> tuple[list[dict[str, Any]], str, int]:
+    if not blackfly_data_available():
+        return [], "unavailable", 0
+    with _LOCK:
+        _load()
+        items = list(_CACHE["recipes"])
+    if not items:
+        return [], "empty", 0
+    needle = str(q or "").strip().lower()
+    type_filter = str(fly_type or "").strip().lower()
+    off = max(0, int(offset or 0))
+    lim = max(1, limit)
+
+    def _sort_key(item: dict[str, Any]) -> tuple[float, str]:
+        return (-float(item.get("quality_score") or 0), _recipe_name(item).lower())
+
+    if not needle:
+        with _LOCK:
+            _load()
+            sorted_items = list(_CACHE.get("browse_sorted") or [])
+            row_cache = list(_CACHE.get("browse_rows") or [])
+        if type_filter:
+            keep = [
+                i
+                for i, item in enumerate(sorted_items)
+                if str(item.get("type") or "").lower() == type_filter
+            ]
+            sorted_items = [sorted_items[i] for i in keep]
+            row_cache = [row_cache[i] for i in keep]
+        if hook_size is not None:
+            keep = [
+                i
+                for i, item in enumerate(sorted_items)
+                if hook_matches_filter(item.get("hook"), size=hook_size)
+            ]
+            sorted_items = [sorted_items[i] for i in keep]
+            row_cache = [row_cache[i] for i in keep]
+        page_rows = row_cache[off : off + lim] if row_cache else [
+            _recipe_row(item) for item in sorted_items[off : off + lim]
+        ]
+        return page_rows, "browse", len(sorted_items)
+    matched: list[dict[str, Any]] = []
+    tokens = [t for t in needle.split() if t]
+    for item in items:
+        if type_filter and str(item.get("type") or "").lower() != type_filter:
+            continue
+        if hook_size is not None and not hook_matches_filter(item.get("hook"), size=hook_size):
+            continue
+        blob = _search_blob(item)
+        if needle in blob or all(tok in blob for tok in tokens):
+            matched.append(item)
+    matched.sort(key=_sort_key)
+    page = matched[off : off + lim]
+    return [_recipe_row(item) for item in page], "keyword", len(matched)
 
 
-def similar_recipes(name_or_id = None, *, limit):
+def similar_recipes(name_or_id: str | None, *, limit: int = 6) -> list[dict[str, Any]]:
     base = find_recipe(name_or_id)
     if not base:
         return []
-    base_id = None(base)
-    if not base.get('type'):
-        base.get('type')
-    base_type = str('').lower()
-    if not base.get('materials'):
-        base.get('materials')
-# WARNING: Decompyle incomplete
+    base_id = _recipe_id(base)
+    base_type = str(base.get("type") or "").lower()
+    base_mats = {str(m).lower() for m in (base.get("materials") or [])}
+    scored: list[tuple[float, dict[str, Any]]] = []
+    for item in recipes():
+        rid = _recipe_id(item)
+        if rid == base_id:
+            continue
+        score = 0.0
+        if base_type and str(item.get("type") or "").lower() == base_type:
+            score += 2.0
+        overlap = base_mats & {str(m).lower() for m in (item.get("materials") or [])}
+        score += len(overlap) * 0.5
+        score += float(item.get("quality_score") or 0) / 100.0
+        if score > 0:
+            scored.append((score, _recipe_row(item)))
+    scored.sort(key=lambda pair: (-pair[0], pair[1].get("name", "").lower()))
+    return [row for _, row in scored[: max(1, limit)]]
 
 
-def recipe_dict(name_or_id = None):
-    return find_recipe(name_or_id)
-
+# Exposed for bridge hybrid merge
+def recipe_row(item: dict[str, Any]) -> dict[str, Any]:
+    return _recipe_row(item)

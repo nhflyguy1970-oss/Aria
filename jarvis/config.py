@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import shutil
+import threading
 from pathlib import Path
 
 log = logging.getLogger("jarvis")
@@ -10,6 +11,19 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 JOURNAL_DIR = DATA_DIR / "journal"
 MEMORY_FILE = DATA_DIR / "memory.json"
+MEMORY_DB_FILE = DATA_DIR / "memory.db"
+MEMORY_VECTORS_FILE = DATA_DIR / "memory_vectors.db"
+
+
+def resolve_memory_backend() -> str:
+    explicit = os.getenv("JARVIS_MEMORY_BACKEND", "").strip().lower()
+    if explicit in ("sqlite", "json"):
+        return explicit
+    if MEMORY_DB_FILE.exists():
+        return "sqlite"
+    if MEMORY_FILE.exists():
+        return "json"
+    return "sqlite"
 
 PERSONALITIES = {
     "default": "",
@@ -308,6 +322,18 @@ def save_memory_namespace(namespace: str) -> None:
     _write_chat_settings(data)
 
 
+def resolve_memory_backend() -> str:
+    """sqlite | json — auto-picks from existing files when env unset."""
+    explicit = os.getenv("JARVIS_MEMORY_BACKEND", "").strip().lower()
+    if explicit in ("sqlite", "json"):
+        return explicit
+    if MEMORY_DB_FILE.exists():
+        return "sqlite"
+    if MEMORY_FILE.exists():
+        return "json"
+    return "sqlite"
+
+
 AUTO_MEMORY_MODES = ("off", "explicit", "smart")
 
 
@@ -358,6 +384,44 @@ def load_memory_in_system_prompt() -> bool:
 def save_memory_in_system_prompt(enabled: bool) -> None:
     data = _load_chat_settings()
     data["memory_in_system_prompt"] = bool(enabled)
+    _write_chat_settings(data)
+
+
+def load_brain_mode() -> bool:
+    data = _load_chat_settings()
+    if "brain_mode" in data:
+        return bool(data["brain_mode"])
+    env = os.getenv("JARVIS_BRAIN_MODE", "").strip().lower()
+    if env in ("0", "false", "off", "no"):
+        return False
+    if env in ("1", "true", "yes", "on"):
+        return True
+    return True
+
+
+def save_brain_mode(enabled: bool) -> None:
+    data = _load_chat_settings()
+    data["brain_mode"] = bool(enabled)
+    _write_chat_settings(data)
+
+
+def load_auto_journal_learn() -> bool:
+    return _load_chat_settings().get("auto_journal_learn", True) is not False
+
+
+def save_auto_journal_learn(enabled: bool) -> None:
+    data = _load_chat_settings()
+    data["auto_journal_learn"] = bool(enabled)
+    _write_chat_settings(data)
+
+
+def load_auto_document_learn() -> bool:
+    return _load_chat_settings().get("auto_document_learn", True) is not False
+
+
+def save_auto_document_learn(enabled: bool) -> None:
+    data = _load_chat_settings()
+    data["auto_document_learn"] = bool(enabled)
     _write_chat_settings(data)
 
 

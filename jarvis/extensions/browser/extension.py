@@ -7,4 +7,9 @@ class _Ext(Extension):
     def load(self) -> None:
         import jarvis.extensions.browser.handlers  # noqa: F401
 
+    def register_api(self, app, assistant) -> None:
+        from jarvis.extensions.browser.api import register_routes
+
+        register_routes(app, assistant)
+
 EXTENSION = _Ext()

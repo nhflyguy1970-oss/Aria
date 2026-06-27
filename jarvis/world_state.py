@@ -1,299 +1,327 @@
-# Source Generated with Decompyle++
-# File: world_state.cpython-312.pyc (Python 3.12)
+"""Unified always-updated snapshot of Jarvis / ARIA environment."""
 
-'''Unified always-updated snapshot of Jarvis / ARIA environment.'''
 from __future__ import annotations
+
 import os
 import threading
 import time
 from datetime import datetime
 from typing import Any
+
 _lock = threading.Lock()
-_cache: 'dict[str, Any] | None' = None
-_cache_at: 'float' = 0
-TTL_SEC = float(os.getenv('JARVIS_WORLD_STATE_TTL', '30'))
-
-def jarvis_preset_enabled():
-    return os.getenv('JARVIS_PRESET', '').strip().lower() == 'jarvis'
+_cache: dict[str, Any] | None = None
+_cache_at: float = 0.0
+TTL_SEC = float(os.getenv("JARVIS_WORLD_STATE_TTL", "30"))
 
 
-def world_state_enabled():
+def jarvis_preset_enabled() -> bool:
+    return os.getenv("JARVIS_PRESET", "").strip().lower() == "jarvis"
+
+
+def world_state_enabled() -> bool:
     if jarvis_preset_enabled():
         return True
-    return os.getenv('JARVIS_WORLD_STATE', '1') != '0'
+    return os.getenv("JARVIS_WORLD_STATE", "1") != "0"
 
 
-def jarvis_persona_enabled():
+def jarvis_persona_enabled() -> bool:
     if jarvis_preset_enabled():
         return True
-    return os.getenv('JARVIS_PERSONA', '').strip().lower() == 'jarvis'
+    return os.getenv("JARVIS_PERSONA", "").strip().lower() == "jarvis"
 
 
-def _active_project():
-    get_active_project = get_active_project
-    get_active_slug = get_active_slug
-    import jarvis.active_project
+def _active_project() -> dict[str, Any]:
+    from jarvis.active_project import get_active_project, get_active_slug
+
     slug = get_active_slug()
-    if not get_active_project():
-        get_active_project()
-    meta = { }
-    if not meta.get('name'):
-        meta.get('name')
-        if not slug:
-            slug
-    if not meta.get('title'):
-        meta.get('title')
-        if not meta.get('name'):
-            meta.get('name')
-            if not slug:
-                slug
+    meta = get_active_project() or {}
     return {
-        'slug': slug,
-        'name': '',
-        'title': '' }
+        "slug": slug,
+        "name": meta.get("name") or slug or "",
+        "title": meta.get("title") or meta.get("name") or slug or "",
+    }
 
 
-def _editor_snapshot():
-    
+def _editor_snapshot() -> dict[str, Any]:
     try:
-        get_context = get_context
-        import jarvis.editor_context
-        ctx = get_context(max_age_s = 300)
+        from jarvis.editor_context import get_context
+
+        ctx = get_context(max_age_s=300)
         if not ctx:
-            return {
-                'active': False }
-        if not ctx.relative_file:
-            ctx.relative_file
+            return {"active": False}
         return {
-            'active': None,
-            'workspace': ctx.workspace,
-            'file': ctx.active_file,
-            'language': ctx.language,
-            'fresh': ctx.is_fresh() }
+            "active": True,
+            "workspace": ctx.workspace,
+            "file": ctx.relative_file or ctx.active_file,
+            "language": ctx.language,
+            "fresh": ctx.is_fresh(),
+        }
     except Exception:
-        return 
+        return {"active": False}
 
 
-
-def _ha_snapshot():
-    
+def _ha_snapshot() -> dict[str, Any]:
     try:
-        leave_scene = leave_scene
-        status_payload = status_payload
-        import jarvis.home_assistant
+        from jarvis.home_assistant import leave_scene, status_payload
+
         st = status_payload()
         leave = leave_scene()
-        if leave:
-            leave
-        if not st.get('url'):
-            st.get('url')
         return {
-            'enabled': bool(st.get('enabled')),
-            'connected': bool(st.get('connected')),
-            'configured': bool(st.get('configured')),
-            'leave_scene': leave,
-            'leave_scene_armed': bool(st.get('connected')),
-            'url': '' }
+            "enabled": bool(st.get("enabled")),
+            "connected": bool(st.get("connected")),
+            "configured": bool(st.get("configured")),
+            "leave_scene": leave,
+            "leave_scene_armed": bool(leave and st.get("connected")),
+            "url": st.get("url") or "",
+        }
     except Exception:
-        return 
+        return {"enabled": False, "connected": False, "leave_scene_armed": False}
 
 
-
-def _scene_mode():
-    
+def _scene_mode() -> str:
     try:
-        _load_chat_settings = _load_chat_settings
-        import jarvis.config
-        if not _load_chat_settings().get('scene_state'):
-            _load_chat_settings().get('scene_state')
-        state = { }
-        if not state.get('active_preset'):
-            state.get('active_preset')
-        return ''.strip()
+        from jarvis.config import _load_chat_settings
+
+        state = _load_chat_settings().get("scene_state") or {}
+        return (state.get("active_preset") or "").strip()
     except Exception:
-        return ''
+        return ""
 
 
-
-def _jobs_snapshot():
-    media = {
-        'busy': False,
-        'pending': 0,
-        'label': '' }
-    coding = {
-        'busy': False,
-        'pending': 0 }
-    print_jobs = []
+def _jobs_snapshot() -> dict[str, Any]:
+    media: dict[str, Any] = {"busy": False, "pending": 0, "label": ""}
+    coding: dict[str, Any] = {"busy": False, "pending": 0}
+    print_jobs: list[dict[str, Any]] = []
     research_pending = False
-# WARNING: Decompyle incomplete
 
-
-def _planner_next_event():
-    
     try:
-        planner_enabled = planner_enabled
-        import jarvis.feature_flags
+        from jarvis.media_jobs import busy_state
+
+        media = busy_state()
+    except Exception:
+        pass
+    try:
+        from jarvis.coding_jobs import job_stats
+
+        coding = job_stats()
+    except Exception:
+        pass
+    try:
+        from jarvis.engineering.print_jobs import list_jobs
+
+        print_jobs = [
+            j for j in list_jobs(limit=8)
+            if (j.get("status") or "") in ("queued", "running", "printing")
+        ]
+    except Exception:
+        pass
+    try:
+        from jarvis.knowledge_research_daily import _load_state, research_enabled
+        from jarvis.modules.journal import _today
+
+        if research_enabled():
+            day = _today()
+            st = _load_state()
+            research_pending = not bool(st.get("days", {}).get(day, {}).get("completed"))
+    except Exception:
+        pass
+
+    running = (
+        int(bool(media.get("busy") or media.get("pending")))
+        + int(bool(coding.get("busy") or coding.get("pending")))
+        + len(print_jobs)
+        + int(research_pending)
+    )
+    return {
+        "media": media,
+        "coding": coding,
+        "print_jobs": print_jobs,
+        "research_pending": research_pending,
+        "running_count": running,
+    }
+
+
+def _planner_next_event() -> dict[str, Any] | None:
+    try:
+        from jarvis.feature_flags import planner_enabled
+
         if not planner_enabled():
             return None
-            
+        from jarvis.planner_store import events_for_day
+
+        now = datetime.now()
+        day = now.date().isoformat()
+        upcoming: list[tuple[datetime, dict[str, Any]]] = []
+        for ev in events_for_day(day):
+            raw = (ev.get("start_time") or "").strip()
+            if not raw:
+                continue
             try:
-                events_for_day = events_for_day
-                import jarvis.planner_store
-                now = datetime.now()
-                day = now.date().isoformat()
-                upcoming = []
-                for ev in events_for_day(day):
-                    if not ev.get('start_time'):
-                        ev.get('start_time')
-                    raw = ''.strip()
-                    if not raw:
-                        continue
-                    start = datetime.fromisoformat(raw.replace('Z', '+00:00'))
-                    if start.tzinfo:
-                        start = start.replace(tzinfo = None)
-                        
-                        try:
-                            if not start >= now:
-                                continue
-                                
-                                try:
-                                    upcoming.append((start, ev))
-                                    continue
-                                    if not upcoming:
-                                        return None
-                                        
-                                        try:
-                                            upcoming.sort(key = (lambda x: x[0]))
-                                            (start, ev) = upcoming[0]
-                                            if not ev.get('title'):
-                                                ev.get('title')
-                                            if not ev.get('source'):
-                                                ev.get('source')
-                                            return {
-                                                'title': '',
-                                                'start_time': start.isoformat(timespec = 'minutes'),
-                                                'minutes_until': max(0, int((start - now).total_seconds() // 60)),
-                                                'source': 'planner' }
-                                            except ValueError:
-                                                
-                                                try:
-                                                    continue
-                                                    
-                                                    try:
-                                                        pass
-                                                    except Exception:
-                                                        return None
+                start = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                if start.tzinfo:
+                    start = start.replace(tzinfo=None)
+            except ValueError:
+                continue
+            if start >= now:
+                upcoming.append((start, ev))
+        if not upcoming:
+            return None
+        upcoming.sort(key=lambda x: x[0])
+        start, ev = upcoming[0]
+        return {
+            "title": ev.get("title") or "",
+            "start_time": start.isoformat(timespec="minutes"),
+            "minutes_until": max(0, int((start - now).total_seconds() // 60)),
+            "source": ev.get("source") or "planner",
+        }
+    except Exception:
+        return None
 
 
-
-
-
-
-
-
-
-def _recent_failures(memory_store = None, *, limit):
+def _recent_failures(memory_store=None, *, limit: int = 3) -> list[dict[str, str]]:
     store = memory_store
-# WARNING: Decompyle incomplete
+    if store is None:
+        try:
+            from jarvis.assistant_instance import get_assistant
+
+            store = get_assistant().memory
+        except Exception:
+            return []
+    if store is None:
+        return []
+    try:
+        from jarvis.experience_memory import EXPERIENCE_NAMESPACE
+
+        rows = store.list_entries(
+            entry_type="failure",
+            namespace=EXPERIENCE_NAMESPACE,
+        )
+        rows.sort(key=lambda e: e.get("timestamp") or "", reverse=True)
+        out: list[dict[str, str]] = []
+        for row in rows[:limit]:
+            out.append({
+                "id": row.get("id") or "",
+                "content": (row.get("content") or "")[:220],
+                "timestamp": row.get("timestamp") or "",
+            })
+        return out
+    except Exception:
+        return []
 
 
-def _services_summary():
-    pass
-# WARNING: Decompyle incomplete
+def _services_summary() -> dict[str, Any]:
+    try:
+        from jarvis.services import get_status
+
+        st = get_status()
+        svcs = st.get("services") or []
+        down = [s.get("name") for s in svcs if s.get("required") and not s.get("running")]
+        optional_down = [s.get("name") for s in svcs if not s.get("required") and not s.get("running")]
+        return {
+            "ready": bool(st.get("ready")),
+            "ollama": bool(st.get("ollama", {}).get("running")),
+            "comfyui": bool(st.get("comfyui", {}).get("running")),
+            "required_down": down,
+            "optional_down": optional_down[:4],
+        }
+    except Exception:
+        return {"ready": False, "required_down": []}
 
 
-def build_world_state(*, memory_store):
-    '''Build a fresh world-state snapshot (no cache).'''
+def build_world_state(*, memory_store=None) -> dict[str, Any]:
+    """Build a fresh world-state snapshot (no cache)."""
     project = _active_project()
     editor = _editor_snapshot()
     ha = _ha_snapshot()
     jobs = _jobs_snapshot()
     mode = _scene_mode()
     return {
-        'ts': datetime.now().isoformat(timespec = 'seconds'),
-        'project': project,
-        'editor': editor,
-        'home_assistant': ha,
-        'scene_mode': mode,
-        'jobs': jobs,
-        'planner_next': _planner_next_event(),
-        'recent_failures': _recent_failures(memory_store),
-        'services': _services_summary() }
+        "ts": datetime.now().isoformat(timespec="seconds"),
+        "project": project,
+        "editor": editor,
+        "home_assistant": ha,
+        "scene_mode": mode,
+        "jobs": jobs,
+        "planner_next": _planner_next_event(),
+        "recent_failures": _recent_failures(memory_store),
+        "services": _services_summary(),
+    }
 
 
-def refresh_world_state_cache(*, force, memory_store):
-    '''Return cached snapshot, rebuilding when TTL expired.'''
+def refresh_world_state_cache(*, force: bool = False, memory_store=None) -> dict[str, Any]:
+    """Return cached snapshot, rebuilding when TTL expired."""
+    global _cache, _cache_at
     now = time.time()
-    _lock
-# WARNING: Decompyle incomplete
+    with _lock:
+        if not force and _cache is not None and (now - _cache_at) < TTL_SEC:
+            return dict(_cache)
+    state = build_world_state(memory_store=memory_store)
+    with _lock:
+        _cache = state
+        _cache_at = now
+    return dict(state)
 
 
-def world_state_summary(state = None, *, memory_store):
-    '''Compact markdown block for system prompts.'''
+def world_state_summary(state: dict[str, Any] | None = None) -> str:
+    """Compact markdown block for system prompts."""
     if not world_state_enabled():
-        return ''
-    if not state:
-        state
-    snap = refresh_world_state_cache(memory_store = memory_store)
-    lines = [
-        '**World state**']
-    if not snap.get('project'):
-        snap.get('project')
-    proj = { }
-    if not proj.get('slug'):
-        proj.get('slug')
-    slug = 'default'
-    if not proj.get('name'):
-        proj.get('name')
-    name = slug
-    if not slug:
-        slug
-    lines.append(f'''- Project: **{name}** (`{'none'}`)''')
-    if not snap.get('editor'):
-        snap.get('editor')
-    editor = { }
-    if editor.get('active') and editor.get('file'):
-        lines.append(f'''- Editor: `{editor.get('file')}`''')
-    if not snap.get('home_assistant'):
-        snap.get('home_assistant')
-    ha = { }
-    if ha.get('enabled'):
-        ha_line = 'connected' if ha.get('connected') else 'offline'
-        if ha.get('leave_scene_armed'):
-            ha_line += f''' · leave `{ha.get('leave_scene')}` armed'''
-        lines.append(f'''- Home: {ha_line}''')
-    if not snap.get('scene_mode'):
-        snap.get('scene_mode')
-    mode = ''.strip()
+        return ""
+    snap = state or refresh_world_state_cache()
+    lines = ["**World state**"]
+
+    proj = snap.get("project") or {}
+    slug = proj.get("slug") or "default"
+    name = proj.get("name") or slug
+    lines.append(f"- Project: **{name}** (`{slug or 'none'}`)")
+
+    editor = snap.get("editor") or {}
+    if editor.get("active") and editor.get("file"):
+        lines.append(f"- Editor: `{editor.get('file')}`")
+
+    ha = snap.get("home_assistant") or {}
+    if ha.get("enabled"):
+        ha_line = "connected" if ha.get("connected") else "offline"
+        if ha.get("leave_scene_armed"):
+            ha_line += f" · leave `{ha.get('leave_scene')}` armed"
+        lines.append(f"- Home: {ha_line}")
+
+    mode = (snap.get("scene_mode") or "").strip()
     if mode:
-        lines.append(f'''- Mode: **{mode}**''')
-    if not snap.get('jobs'):
-        snap.get('jobs')
-    jobs = { }
-    if not jobs.get('running_count'):
-        jobs.get('running_count')
-    rc = int(0)
+        lines.append(f"- Mode: **{mode}**")
+
+    jobs = snap.get("jobs") or {}
+    rc = int(jobs.get("running_count") or 0)
     if rc:
         parts = []
-        if not jobs.get('media'):
-            jobs.get('media')
-        media = { }
-        if media.get('busy') or media.get('pending'):
-            parts.append('media')
-        if not jobs.get('coding'):
-            jobs.get('coding')
-        coding = { }
-        if coding.get('busy') or coding.get('pending'):
-            parts.append('coding')
-        if jobs.get('print_jobs'):
-            if not jobs.get('print_jobs'):
-                jobs.get('print_jobs')
-            parts.append(f'''print×{len([])}''')
-        if jobs.get('research_pending'):
-            parts.append('research')
-        if not ', '.join(parts):
-            ', '.join(parts)
-        lines.append(f'''- Jobs: {rc} active ({'background'})''')
-    nxt = snap.get('planner_next')
-# WARNING: Decompyle incomplete
+        media = jobs.get("media") or {}
+        if media.get("busy") or media.get("pending"):
+            parts.append("media")
+        coding = jobs.get("coding") or {}
+        if coding.get("busy") or coding.get("pending"):
+            parts.append("coding")
+        if jobs.get("print_jobs"):
+            parts.append(f"print×{len(jobs.get('print_jobs') or [])}")
+        if jobs.get("research_pending"):
+            parts.append("research")
+        lines.append(f"- Jobs: {rc} active ({', '.join(parts) or 'background'})")
 
+    nxt = snap.get("planner_next")
+    if nxt and nxt.get("title"):
+        mins = nxt.get("minutes_until")
+        when = f" in {mins}m" if mins is not None else ""
+        lines.append(f"- Next: **{nxt.get('title')}**{when}")
+
+    failures = snap.get("recent_failures") or []
+    if failures:
+        lines.append("- Recent failures:")
+        for f in failures[:3]:
+            content = (f.get("content") or "").replace("\n", " ")[:120]
+            lines.append(f"  - {content}")
+
+    svc = snap.get("services") or {}
+    if svc.get("required_down"):
+        lines.append(f"- Services down: {', '.join(svc['required_down'])}")
+    elif not svc.get("ready"):
+        lines.append("- Services: warming up")
+
+    return "\n".join(lines)

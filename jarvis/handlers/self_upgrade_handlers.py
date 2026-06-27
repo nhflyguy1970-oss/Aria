@@ -1,20 +1,44 @@
-# Source Generated with Decompyle++
-# File: self_upgrade_handlers.cpython-312.pyc (Python 3.12)
+"""Self-upgrade pipeline handlers — branch, test, merge on approval."""
 
-'''Self-upgrade pipeline handlers — branch, test, merge on approval.'''
 from __future__ import annotations
+
 from jarvis.handlers.registry import register_action
 from jarvis.response import err, ok
-self_upgrade_run = (lambda assistant = None, params = None, message = register_action('self_upgrade_run', module = 'coding', description = 'Semi-auto self-upgrade: branch, change, test, report', queue = 'background'): parse_self_upgrade_task = parse_self_upgrade_taskrun_pipeline = run_pipelineimport jarvis.self_upgradeif not params.get('task'):
-params.get('task')if not parse_self_upgrade_task(message):
-parse_self_upgrade_task(message)task = ''.strip()if not params.get('max_steps'):
-params.get('max_steps')max_steps = int(4)result = run_pipeline(assistant, task, max_steps = max_steps)# WARNING: Decompyle incomplete
-)()
-self_upgrade_merge = (lambda assistant = None, params = None, message = register_action('self_upgrade_merge', module = 'coding', description = 'Merge approved self-upgrade branch'): merge_force = merge_forcemerge_pipeline = merge_pipelineimport jarvis.self_upgradeif not params.get('force'):
-params.get('force')if not ''.lower() in ('1', 'true', 'yes'):
-''.lower() in ('1', 'true', 'yes')force = merge_force(message)result = merge_pipeline(assistant, force = force)# WARNING: Decompyle incomplete
-)()
-self_upgrade_abort = (lambda assistant = None, params = None, message = register_action('self_upgrade_abort', module = 'coding', description = 'Abort self-upgrade branch'): abort_pipeline = abort_pipelineimport jarvis.self_upgraderesult = abort_pipeline(assistant)if result.get('ok'):
-ok(result['message'], module = 'coding')None(result.get('message', 'Abort failed.'), module = 'coding'))()
-upgrade_apply_handler = (lambda assistant = None, params = None, message = register_action('upgrade_apply', module = 'coding', description = 'Apply verified self-upgrade proposal'): assistant._upgrade_apply(params, message))()
-apply_proposal_handler = (lambda assistant = None, params = None, message = register_action('apply_proposal', module = 'coding', description = 'Apply pending code proposal'): assistant._apply_proposal_nl(params, message))()
+
+
+@register_action(
+    "self_upgrade_run",
+    module="coding",
+    description="Semi-auto self-upgrade: branch, change, test, report",
+    queue="background",
+)
+def self_upgrade_run(assistant, params: dict, message: str) -> dict:
+    from jarvis.self_upgrade import parse_self_upgrade_task, run_pipeline
+
+    task = (params.get("task") or parse_self_upgrade_task(message) or "").strip()
+    max_steps = int(params.get("max_steps") or 4)
+    result = run_pipeline(assistant, task, max_steps=max_steps)
+    if result.get("ok"):
+        return ok(result["message"], module="coding", **{k: result[k] for k in result if k not in ("ok", "message")})
+    return err(result.get("message", "Self-upgrade failed."), module="coding", **{k: result[k] for k in result if k not in ("ok", "message")})
+
+
+@register_action("self_upgrade_merge", module="coding", description="Merge approved self-upgrade branch")
+def self_upgrade_merge(assistant, params: dict, message: str) -> dict:
+    from jarvis.self_upgrade import merge_force, merge_pipeline
+
+    force = (params.get("force") or "").lower() in ("1", "true", "yes") or merge_force(message)
+    result = merge_pipeline(assistant, force=force)
+    if result.get("ok"):
+        return ok(result["message"], module="coding", **{k: result[k] for k in result if k not in ("ok", "message")})
+    return err(result.get("message", "Merge failed."), module="coding")
+
+
+@register_action("self_upgrade_abort", module="coding", description="Abort self-upgrade branch")
+def self_upgrade_abort(assistant, params: dict, message: str) -> dict:
+    from jarvis.self_upgrade import abort_pipeline
+
+    result = abort_pipeline(assistant)
+    if result.get("ok"):
+        return ok(result["message"], module="coding")
+    return err(result.get("message", "Abort failed."), module="coding")

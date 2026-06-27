@@ -1,50 +1,39 @@
-# Source Generated with Decompyle++
-# File: hook_utils.cpython-312.pyc (Python 3.12)
+"""Hook size parsing and normalization."""
 
-'''Hook size parsing and normalization.'''
 from __future__ import annotations
+
 import re
 from typing import Any
-_HOOK_SIZE_RE = re.compile('(?:#|size\\s*|sz\\.?\\s*)?(\\d{1,2})\\s*(?:-\\s*(\\d{1,2}))?\\s*(?:hook|dry|nymph|streamer|emerg|scud|curved|jig|barbless)?', re.I)
 
-def parse_hook(hook = None):
-    if not hook:
-        hook
-    text = str('').strip()
+_HOOK_SIZE_RE = re.compile(
+    r"(?:#|size\s*|sz\.?\s*)?(\d{1,2})\s*(?:-\s*(\d{1,2}))?\s*(?:hook|dry|nymph|streamer|emerg|scud|curved|jig|barbless)?",
+    re.I,
+)
+
+
+def parse_hook(hook: Any) -> dict[str, Any]:
+    text = str(hook or "").strip()
     if not text:
-        return {
-            'raw': '',
-            'size_min': None,
-            'size_max': None,
-            'size_label': '' }
-    m = None.search(text)
+        return {"raw": "", "size_min": None, "size_max": None, "size_label": ""}
+    m = _HOOK_SIZE_RE.search(text)
     if not m:
-        nums = re.findall('\\d{1,2}', text)
+        nums = re.findall(r"\d{1,2}", text)
         if nums:
             n = int(nums[0])
-            return {
-                'raw': text,
-                'size_min': n,
-                'size_max': n,
-                'size_label': f'''#{n}''' }
-        return {
-            'raw': None,
-            'size_min': None,
-            'size_max': None,
-            'size_label': text }
-    lo = None(m.group(1))
+            return {"raw": text, "size_min": n, "size_max": n, "size_label": f"#{n}"}
+        return {"raw": text, "size_min": None, "size_max": None, "size_label": text}
+    lo = int(m.group(1))
     hi = int(m.group(2)) if m.group(2) else lo
-    hi = max(lo, hi)
-    lo = min(lo, hi)
-    label = f'''#{lo}''' if lo == hi else f'''#{lo}-{hi}'''
-    return {
-        'raw': text,
-        'size_min': lo,
-        'size_max': hi,
-        'size_label': label }
+    lo, hi = min(lo, hi), max(lo, hi)
+    label = f"#{lo}" if lo == hi else f"#{lo}-{hi}"
+    return {"raw": text, "size_min": lo, "size_max": hi, "size_label": label}
 
 
-def hook_matches_filter(hook = None, *, size):
-    pass
-# WARNING: Decompyle incomplete
-
+def hook_matches_filter(hook: Any, *, size: int | None = None) -> bool:
+    if size is None:
+        return True
+    parsed = parse_hook(hook)
+    lo, hi = parsed.get("size_min"), parsed.get("size_max")
+    if lo is None or hi is None:
+        return True
+    return lo <= size <= hi

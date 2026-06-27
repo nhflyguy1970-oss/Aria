@@ -60,3 +60,22 @@ def set_meme_gallery_cache(memes: list) -> None:
 def invalidate_meme_gallery() -> None:
     _meme["memes"] = None
     _meme["at"] = 0.0
+
+
+FLYTYING_LIST_TTL = 45.0
+_flytying_lists: dict[str, tuple[float, dict]] = {}
+
+
+def get_flytying_list_cache(key: str) -> dict | None:
+    row = _flytying_lists.get(key)
+    if row and time.time() - row[0] < FLYTYING_LIST_TTL:
+        return row[1]
+    return None
+
+
+def set_flytying_list_cache(key: str, payload: dict) -> None:
+    _flytying_lists[key] = (time.time(), payload)
+
+
+def invalidate_flytying_list_cache() -> None:
+    _flytying_lists.clear()

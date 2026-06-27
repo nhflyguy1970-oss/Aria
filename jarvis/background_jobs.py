@@ -39,14 +39,28 @@ _HANDLER_METHODS: dict[str, str] = {
 
 def submit_action(assistant: "JarvisAssistant", action: str, params: dict, message: str) -> str:
     from jarvis.coding_jobs import submit
+    from jarvis.handlers import ensure_handlers_loaded
+    from jarvis.handlers.registry import call_action, get_spec
 
-    method_name = _HANDLER_METHODS.get(action)
-    if not method_name:
-        raise ValueError(f"Unknown background action: {action}")
-    handler: Callable[[dict, str], dict] = getattr(assistant, method_name)
-    label = ACTION_LABELS.get(action, action)
+    ensure_handlers_loaded()
+    label = ACTION_LABELS.get(action, action.replace("_", " ").title())
+    job_id_ref: dict[str, str] = {"id": ""}
 
     def _run() -> dict:
-        return handler(params, message)
+        from jarvis.coding_jobs import _is_cancelled
 
-    return submit(label, _run)
+        run_params = dict(params)
+        run_params["_cancel_check"] = lambda: _is_cancelled(job_id_ref["id"])
+        spec = get_spec(action)
+        if spec and spec.handler:
+            return call_action(assistant, action, run_params, message)
+
+        method_name = _HANDLER_METHODS.get(action)
+        if not method_name:
+            raise ValueError(f"Unknown background action: {action}")
+        handler: Callable[[dict, str], dict] = getattr(assistant, method_name)
+        return handler(run_params, message)
+
+    job_id = submit(label, _run)
+    job_id_ref["id"] = job_id
+    return job_id

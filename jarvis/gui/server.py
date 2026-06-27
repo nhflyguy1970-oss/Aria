@@ -26,7 +26,7 @@ from jarvis.ollama_health import check_ollama
 STATIC_DIR = Path(__file__).parent / "static"
 ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 APP_VERSION = "3.1.0"
-UI_VERSION = os.getenv("JARVIS_UI_VERSION", "5.16.50")
+UI_VERSION = os.getenv("JARVIS_UI_VERSION", "5.16.73")
 assistant = JarvisAssistant(uncensored=is_uncensored())
 
 from jarvis.assistant_instance import set_assistant
@@ -44,6 +44,19 @@ async def lifespan(app: FastAPI):
 
     recover_stale_jobs()
     audio_wakeword.configure(chat_processor=assistant.process)
+
+    def _warm_flytying_index() -> None:
+        try:
+            from jarvis.flytying.config import blackfly_data_available
+            from jarvis.flytying import index as recipe_index
+
+            if blackfly_data_available():
+                recipe_index.recipes()
+        except Exception:
+            pass
+
+    threading.Thread(target=_warm_flytying_index, daemon=True, name="flytying-warm").start()
+
     yield
     try:
         assistant.branches.persist(session=assistant.session)
