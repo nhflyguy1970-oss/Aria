@@ -12,10 +12,12 @@ load_jarvis_env()
 from jarvis.platform_attachment import attach_platform_infrastructure
 from jarvis.platform_inference import attach_platform_inference
 from jarvis.platform_memory import attach_platform_memory
+from jarvis.platform_semantic_memory import attach_platform_semantic_memory
 
 attach_platform_infrastructure()
 attach_platform_inference()
 attach_platform_memory()
+attach_platform_semantic_memory()
 
 
 def print_help():

@@ -38,6 +38,14 @@ def _vectors_path_for(data_path: Path) -> Path:
     return data_path.parent / "memory_vectors.db"
 
 
+def create_embedding_sidecar(vectors_path: Path):
+    from jarvis.modules.semantic_memory_adapter_store import wrap_semantic_memory_store
+    from jarvis.modules.vector_store import SqliteVectorStore
+
+    legacy = SqliteVectorStore(path=vectors_path)
+    return wrap_semantic_memory_store(legacy)
+
+
 class JsonMemoryStore:
     def __init__(self, path: Path | None = None, embeddings: EmbeddingSidecar | None = None):
         self.path = path or jarvis_config.MEMORY_FILE
@@ -479,9 +487,11 @@ def create_memory_store(path: Path | str | None = None):
     from jarvis.modules.memory_sqlite import SqliteMemoryStore
 
     p = Path(path) if path is not None else None
-    embeddings = EmbeddingSidecar(
-        _vectors_path_for(p.parent if p else DATA_DIR)
-    )
+    if p is not None:
+        vectors_path = _vectors_path_for(p)
+    else:
+        vectors_path = jarvis_config.MEMORY_VECTORS_FILE
+    embeddings = create_embedding_sidecar(vectors_path)
 
     if p is not None and p.suffix == ".json":
         store = JsonMemoryStore(path=p, embeddings=embeddings)
