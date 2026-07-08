@@ -95,6 +95,14 @@ def is_ollama_pullable(model: str) -> bool:
 
 
 def _installed() -> list[str]:
+    try:
+        from jarvis.platform_inference import installed_models
+
+        platform_models = installed_models()
+        if platform_models:
+            return platform_models
+    except Exception:
+        pass
     ollama = check_ollama()
     return ollama.get("models", []) if ollama.get("running") else []
 
