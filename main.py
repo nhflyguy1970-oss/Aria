@@ -9,6 +9,10 @@ from jarvis.modules import MODULES
 
 load_jarvis_env()
 
+from jarvis.platform_attachment import attach_platform_infrastructure
+
+attach_platform_infrastructure()
+
 
 def print_help():
     from jarvis.branding import assistant_full_name, assistant_name

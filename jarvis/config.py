@@ -8,7 +8,8 @@ from pathlib import Path
 log = logging.getLogger("jarvis")
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = PROJECT_ROOT / "data"
+_DATA_DEFAULT = PROJECT_ROOT / "data"
+DATA_DIR = Path(os.getenv("JARVIS_DATA_DIR", str(_DATA_DEFAULT)))
 JOURNAL_DIR = DATA_DIR / "journal"
 MEMORY_FILE = DATA_DIR / "memory.json"
 MEMORY_DB_FILE = DATA_DIR / "memory.db"
