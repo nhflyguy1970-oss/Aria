@@ -227,6 +227,7 @@ def run_tray(uncensored: bool = False) -> None:
     load_jarvis_env()
     from jarvis.platform_attachment import attach_platform_infrastructure, validate_platform_startup
     from jarvis.platform_inference import attach_platform_inference, validate_platform_inference
+    from jarvis.platform_memory import attach_platform_memory, validate_platform_memory
 
     attach_report = attach_platform_infrastructure()
     startup_issues = validate_platform_startup()
@@ -240,6 +241,12 @@ def run_tray(uncensored: bool = False) -> None:
         logger.warning("Platform inference validation: %s", "; ".join(inference_issues))
     elif inference_report.get("attached"):
         logger.info("AI Platform inference attached for Aria")
+    memory_report = attach_platform_memory()
+    memory_issues = validate_platform_memory()
+    if memory_issues:
+        logger.warning("Platform memory validation: %s", "; ".join(memory_issues))
+    elif memory_report.get("attached"):
+        logger.info("AI Platform memory adapter attached for Aria")
     _install_restart_signal_handler()
     if uncensored:
         os.environ["JARVIS_UNCENSORED"] = "1"

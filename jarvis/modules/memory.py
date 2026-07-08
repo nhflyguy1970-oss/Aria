@@ -484,10 +484,16 @@ def create_memory_store(path: Path | str | None = None):
     )
 
     if p is not None and p.suffix == ".json":
-        return JsonMemoryStore(path=p, embeddings=embeddings)
+        store = JsonMemoryStore(path=p, embeddings=embeddings)
+        from jarvis.modules.memory_adapter_store import wrap_memory_store
+
+        return wrap_memory_store(store)
 
     if p is not None and p.suffix in (".db", ".sqlite", ".sqlite3"):
-        return SqliteMemoryStore(path=p, embeddings=embeddings)
+        store = SqliteMemoryStore(path=p, embeddings=embeddings)
+        from jarvis.modules.memory_adapter_store import wrap_memory_store
+
+        return wrap_memory_store(store)
 
     backend = jarvis_config.resolve_memory_backend()
     if backend == "sqlite":
@@ -495,9 +501,12 @@ def create_memory_store(path: Path | str | None = None):
         if not db_path.exists() and jarvis_config.MEMORY_FILE.exists():
             migrate_json_to_sqlite(embeddings=embeddings)
         store = SqliteMemoryStore(path=db_path, embeddings=embeddings)
-        return store
+    else:
+        store = JsonMemoryStore(path=jarvis_config.MEMORY_FILE, embeddings=embeddings)
 
-    return JsonMemoryStore(path=jarvis_config.MEMORY_FILE, embeddings=embeddings)
+    from jarvis.modules.memory_adapter_store import wrap_memory_store
+
+    return wrap_memory_store(store)
 
 
 class MemoryStore:
