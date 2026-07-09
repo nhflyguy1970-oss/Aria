@@ -3,27 +3,32 @@
 from __future__ import annotations
 
 import os
+import shutil
+import subprocess
+from typing import TYPE_CHECKING
 
-from aiplatform.workstation.registry import WorkstationComponent
+if TYPE_CHECKING:
+    from aiplatform.workstation.registry import WorkstationComponent
 
 
 def aria_components() -> list[WorkstationComponent]:
+    from aiplatform.workstation.registry import WorkstationComponent
+
     from jarvis.config import piper_ready, piper_voice_label
-    from jarvis.ha_docker import container_running, ha_api_healthy, should_autostart_ha
+    from jarvis.ha_docker import (
+        container_running,
+        ensure_homeassistant,
+        ha_api_healthy,
+        should_autostart_ha,
+    )
     from jarvis.services import (
         _comfy_healthy,
         _jarvis_port_open,
-        _ollama_healthy,
         _should_autostart_comfy,
         ensure_comfyui,
-        ensure_ollama,
-        ensure_services,
         restart_comfyui,
         stop_comfyui,
     )
-    from jarvis.ha_docker import ensure_homeassistant
-    import shutil
-    import subprocess
 
     def _start_ha() -> bool:
         ensure_homeassistant(block=True)
@@ -48,7 +53,9 @@ def aria_components() -> list[WorkstationComponent]:
             application_id="aria",
             config_keys=["JARVIS_HOST", "JARVIS_PORT"],
             health=_jarvis_port_open,
-            detail=lambda: f"{os.getenv('JARVIS_HOST', '127.0.0.1')}:{os.getenv('JARVIS_PORT', '8765')}",
+            detail=lambda: (
+                f"{os.getenv('JARVIS_HOST', '127.0.0.1')}:{os.getenv('JARVIS_PORT', '8765')}"
+            ),
         ),
         WorkstationComponent(
             id="piper",
@@ -95,11 +102,11 @@ def aria_components() -> list[WorkstationComponent]:
 
 def register_with_platform() -> None:
     from aiplatform.workstation.extensions import register_components, register_probe
-    from jarvis.application import probes as aria_probes
+
     from jarvis.application import acceptance_catalog
+    from jarvis.application import probes as aria_probes
 
     register_components(aria_components)
     for probe_id, fn in aria_probes.PROBE_MAP.items():
         register_probe(probe_id, fn)
-    register_acceptance = acceptance_catalog.register
-    register_acceptance()
+    acceptance_catalog.register()

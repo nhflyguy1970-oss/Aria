@@ -648,7 +648,10 @@ def compute_score_gaps(
 
 def run_acceptance(*, persist: bool = True, live: bool = True) -> dict[str, Any]:
     """Run full workstation acceptance and compute score."""
-    from jarvis.application.standalone.workstation_impl.integration_probes import PROBE_MAP, run_probe
+    from jarvis.application.standalone.workstation_impl.integration_probes import (
+        PROBE_MAP,
+        run_probe,
+    )
 
     items: list[AcceptanceItem] = []
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())

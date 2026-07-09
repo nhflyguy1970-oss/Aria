@@ -31,7 +31,10 @@ def configure() -> int:
 
 
 def start() -> int:
-    from jarvis.application.standalone.workstation_impl.startup import bootstrap_workstation, startup_greeting
+    from jarvis.application.standalone.workstation_impl.startup import (
+        bootstrap_workstation,
+        startup_greeting,
+    )
 
     result = bootstrap_workstation()
     if not result.get("ok"):
@@ -72,7 +75,9 @@ def verify() -> int:
 
 
 def hardware() -> int:
-    from jarvis.application.standalone.workstation_impl.hardware_report import format_hardware_markdown
+    from jarvis.application.standalone.workstation_impl.hardware_report import (
+        format_hardware_markdown,
+    )
 
     print(format_hardware_markdown())
     return 0

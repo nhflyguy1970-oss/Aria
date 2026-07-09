@@ -74,7 +74,12 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    from jarvis.application.standalone.workstation_impl import lifecycle, lifecycle_shell, operations, registry
+    from jarvis.application.standalone.workstation_impl import (
+        lifecycle,
+        lifecycle_shell,
+        operations,
+        registry,
+    )
 
     if args.command == "restore":
         return lifecycle_shell.restore(args.archive)
@@ -85,7 +90,10 @@ def main(argv: list[str] | None = None) -> int:
         return lifecycle_shell.install(*extra)
 
     if args.command == "verify":
-        from jarvis.application.standalone.workstation_impl.inventory import format_inventory_text, verify_inventory
+        from jarvis.application.standalone.workstation_impl.inventory import (
+            format_inventory_text,
+            verify_inventory,
+        )
 
         result = verify_inventory()
         print(format_inventory_text(result.get("inventory")))
@@ -96,13 +104,18 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if result.get("ready") else 1
 
     if args.command == "acceptance":
-        from jarvis.application.standalone.workstation_impl.acceptance import format_acceptance_markdown, run_acceptance
+        from jarvis.application.standalone.workstation_impl.acceptance import (
+            format_acceptance_markdown,
+            run_acceptance,
+        )
 
         report = run_acceptance()
         if getattr(args, "json", False):
             print(json.dumps(report, indent=2))
         else:
-            from jarvis.application.standalone.workstation_impl.acceptance import format_acceptance_markdown
+            from jarvis.application.standalone.workstation_impl.acceptance import (
+                format_acceptance_markdown,
+            )
 
             print(format_acceptance_markdown(report, verbose=getattr(args, "verbose", False)))
         return 0 if report.get("acceptance_passed") else 1
@@ -114,7 +127,9 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "hardware":
-        from jarvis.application.standalone.workstation_impl.hardware_report import format_hardware_markdown
+        from jarvis.application.standalone.workstation_impl.hardware_report import (
+            format_hardware_markdown,
+        )
 
         print(format_hardware_markdown())
         return 0
@@ -137,7 +152,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if result.get("ok") else 1
 
     if args.command == "repair":
-        from jarvis.application.standalone.workstation_impl.repair import format_repair_markdown, run_repair
+        from jarvis.application.standalone.workstation_impl.repair import (
+            format_repair_markdown,
+            run_repair,
+        )
 
         result = run_repair()
         print(format_repair_markdown(result))

@@ -5,7 +5,12 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from jarvis.application.standalone.workstation_impl.registry import all_components, component, get_registry, registry_snapshot
+from jarvis.application.standalone.workstation_impl.registry import (
+    all_components,
+    component,
+    get_registry,
+    registry_snapshot,
+)
 
 logger = logging.getLogger("jarvis.workstation")
 

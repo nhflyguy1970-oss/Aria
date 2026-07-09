@@ -42,8 +42,11 @@ def _action_items(report: dict[str, Any]) -> list[str]:
 
 
 def build_startup_notification(report: dict[str, Any] | None = None) -> str:
+    from jarvis.application.standalone.workstation_impl.acceptance import (
+        last_acceptance,
+        run_acceptance,
+    )
     from jarvis.morning_briefing import time_greeting
-    from jarvis.application.standalone.workstation_impl.acceptance import last_acceptance, run_acceptance
 
     data = report or last_acceptance()
     if not data.get("items"):

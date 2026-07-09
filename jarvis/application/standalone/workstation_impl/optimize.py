@@ -6,8 +6,8 @@ import os
 import re
 from pathlib import Path
 
-from jarvis.env_loader import PROJECT_ROOT
 from jarvis.application.standalone.workstation_impl.hardware_report import collect_hardware
+from jarvis.env_loader import PROJECT_ROOT
 
 _ENV_FILE = PROJECT_ROOT / "data" / "jarvis.env"
 _EXAMPLE = PROJECT_ROOT / "jarvis.env.example"

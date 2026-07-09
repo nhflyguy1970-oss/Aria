@@ -208,7 +208,10 @@ def repair_python_deps() -> dict[str, Any]:
 
 def repair_acceptance_failures(report: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """Map acceptance failures to targeted repair actions."""
-    from jarvis.application.standalone.workstation_impl.acceptance import last_acceptance, run_acceptance
+    from jarvis.application.standalone.workstation_impl.acceptance import (
+        last_acceptance,
+        run_acceptance,
+    )
 
     data = report or last_acceptance()
     if not data.get("items"):

@@ -8,7 +8,10 @@ import time
 from typing import Any
 
 from jarvis.application.standalone.workstation_impl.lifecycle import restart, up
-from jarvis.application.standalone.workstation_impl.registry import all_components, registry_snapshot
+from jarvis.application.standalone.workstation_impl.registry import (
+    all_components,
+    registry_snapshot,
+)
 
 logger = logging.getLogger("jarvis.workstation")
 

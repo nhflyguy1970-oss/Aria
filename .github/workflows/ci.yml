@@ -18,9 +18,5 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest ruff
-      - name: Ruff (recovery gate)
-        run: python scripts/ci_check.py ruff
-      - name: Ruff format check
-        run: python scripts/ci_check.py format-check
-      - name: Pytest (recovery gate)
-        run: python scripts/ci_check.py pytest
+      - name: CI gates
+        run: python scripts/ci_check.py all

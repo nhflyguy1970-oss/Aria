@@ -2,13 +2,6 @@
 
 from __future__ import annotations
 
-import os
-import shutil
-import subprocess
-import tempfile
-import urllib.request
-from pathlib import Path
-
 from jarvis.application.standalone.workstation_impl.integration_probes import (
     probe_cli_tool,
     probe_ocr,
