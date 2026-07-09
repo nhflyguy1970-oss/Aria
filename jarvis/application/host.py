@@ -21,9 +21,9 @@ class AriaApplicationHost:
     """Application contract for Aria on AI Platform."""
 
     def register(self):
-        from aiplatform.applications.host import ApplicationRegistration
+        Registration = _registration_class()
 
-        return ApplicationRegistration(
+        return Registration(
             app_id="aria",
             install_path=str(PROJECT_ROOT),
             component_ids=["aria", "piper", "whisper", "comfyui", "homeassistant"],
@@ -63,9 +63,9 @@ class AriaApplicationHost:
         return _jarvis_port_open()
 
     def capabilities(self):
-        from aiplatform.applications.host import ApplicationCapabilities
+        Capabilities = _capabilities_class()
 
-        return ApplicationCapabilities(
+        return Capabilities(
             id="aria",
             label="Aria",
             version="3.1.0",
@@ -85,6 +85,28 @@ class AriaApplicationHost:
 
 
 HOST = AriaApplicationHost()
+
+
+def _registration_class():
+    try:
+        from aiplatform.applications.host import ApplicationRegistration
+
+        return ApplicationRegistration
+    except ImportError:
+        from jarvis.application.contract import ApplicationRegistration
+
+        return ApplicationRegistration
+
+
+def _capabilities_class():
+    try:
+        from aiplatform.applications.host import ApplicationCapabilities
+
+        return ApplicationCapabilities
+    except ImportError:
+        from jarvis.application.contract import ApplicationCapabilities
+
+        return ApplicationCapabilities
 
 
 def attach_if_present() -> bool:
