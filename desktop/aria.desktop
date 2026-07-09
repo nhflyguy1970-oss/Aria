@@ -1,8 +1,8 @@
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=ARIA
-Comment=Adaptive Reasoning Intelligence Assistant — tray + PySide window
+Name=Aria
+Comment=Adaptive Reasoning Intelligence Assistant — standard profile
 Exec=@JARVIS_ROOT@/scripts/launch-jarvis.sh
 Icon=@JARVIS_ROOT@/assets/jarvis-tray.png
 Path=@HOME@
@@ -10,5 +10,5 @@ Terminal=false
 Categories=Development;Utility;
 StartupNotify=true
 StartupWMClass=aria
-Keywords=AI;Assistant;ARIA;Ollama;Coding;PySide;
+Keywords=AI;Assistant;Aria;Ollama;Coding;
 MimeType=

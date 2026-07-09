@@ -87,12 +87,12 @@ def run_tray_app(
         except Exception:
             icon.notify(f"{name} is offline", title)
 
-    def open_workstation(icon, item):
+    def open_platform(icon, item):
         from jarvis.gui_launcher import open_gui as launch_gui
 
         launch_gui(f"{url}?app=1#workstation")
 
-    def workstation_status(icon, item):
+    def platform_status(icon, item):
         try:
             import json
             import urllib.request
@@ -107,8 +107,8 @@ def run_tray_app(
 
     menu = pystray.Menu(
         Item(f"Open {assistant_name()}", open_gui, default=True),
-        Item("Workstation dashboard", open_workstation),
-        Item("Workstation status", workstation_status),
+        Item("AI Platform", open_platform),
+        Item("Platform status", platform_status),
         Item("Restart server", restart),
         Item("Check status", status),
         pystray.Menu.SEPARATOR,

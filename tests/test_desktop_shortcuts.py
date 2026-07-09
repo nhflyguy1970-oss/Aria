@@ -1,4 +1,4 @@
-"""Regression tests for desktop shortcut installation (RC blocker #desktop-path)."""
+"""Regression tests for simplified desktop launcher installation."""
 
 from __future__ import annotations
 
@@ -10,9 +10,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 DESKTOP_DIR = ROOT / "desktop"
 INSTALL_SCRIPT = ROOT / "scripts" / "install-desktop-shortcuts.sh"
-LAUNCHER = ROOT / "scripts" / "desktop-launch-workstation.sh"
 
-WORKSTATION_DESKTOPS = (
+CANONICAL_IDS = ("ai-platform", "aria", "aria-uncensored")
+
+STALE_IDS = (
     "ai-workstation",
     "ai-workstation-start",
     "ai-workstation-stop",
@@ -20,9 +21,13 @@ WORKSTATION_DESKTOPS = (
     "ai-workstation-doctor",
     "ai-workstation-repair",
     "ai-workstation-acceptance",
+    "aria-pyside",
+    "aria-app",
+    "aria-native",
+    "jarvis",
+    "jarvis-uncensored",
 )
 
-# Bare command names in Exec fail under GNOME (PATH=/usr/bin:/bin only).
 BARE_EXEC_RE = re.compile(
     r"^Exec=(?:workstation|aria)(?:\s|$)",
     re.MULTILINE,
@@ -37,27 +42,77 @@ def _substitute_install(content: str, jarvis_root: str, home: str) -> str:
     return content.replace("@JARVIS_ROOT@", jarvis_root).replace("@HOME@", home)
 
 
-def test_workstation_desktop_templates_use_absolute_exec():
-    for name in WORKSTATION_DESKTOPS:
+def test_only_three_canonical_templates_exist():
+    templates = sorted(p.stem for p in DESKTOP_DIR.glob("*.desktop"))
+    assert templates == list(CANONICAL_IDS)
+
+
+def test_canonical_desktop_templates_use_absolute_exec():
+    expected_exec = {
+        "ai-platform": "@JARVIS_ROOT@/scripts/desktop-launch-platform.sh",
+        "aria": "@JARVIS_ROOT@/scripts/launch-jarvis.sh",
+        "aria-uncensored": "@JARVIS_ROOT@/scripts/launch-jarvis-uncensored.sh",
+    }
+    for name, exec_line in expected_exec.items():
         text = _read_desktop(name)
-        assert not BARE_EXEC_RE.search(text), f"{name}.desktop must not use bare workstation/aria"
-        assert "@JARVIS_ROOT@/scripts/desktop-launch-workstation.sh" in text
+        assert not BARE_EXEC_RE.search(text), f"{name} must not use bare command in Exec"
+        assert f"Exec={exec_line}" in text
 
 
-def test_aria_desktop_uses_absolute_launch_script():
-    text = _read_desktop("aria")
-    assert not BARE_EXEC_RE.search(text)
-    assert "Exec=@JARVIS_ROOT@/scripts/launch-jarvis.sh" in text
+def test_install_script_lists_stale_ids_for_cleanup():
+    text = INSTALL_SCRIPT.read_text(encoding="utf-8")
+    for stale in STALE_IDS:
+        assert stale in text, f"install script must remove stale launcher {stale}"
 
 
-def test_installed_desktop_exec_survives_minimal_path(tmp_path):
-    """Simulate install + GNOME desktop PATH (no ~/.local/bin)."""
+def test_install_script_installs_exactly_three(tmp_path, monkeypatch):
+    """Simulate install into isolated XDG dirs — no duplicates."""
+    home = tmp_path
+    apps = home / ".local" / "share" / "applications"
+    desktop = home / "Desktop"
+    apps.mkdir(parents=True)
+    desktop.mkdir()
+
+    # Pre-seed stale launchers (regression: repair must remove these).
+    for stale in STALE_IDS:
+        (apps / f"{stale}.desktop").write_text("[Desktop Entry]\n", encoding="utf-8")
+        (desktop / f"{stale}.desktop").write_text("[Desktop Entry]\n", encoding="utf-8")
+
+    env = {
+        **os.environ,
+        "HOME": str(home),
+        "XDG_DATA_HOME": str(home / ".local" / "share"),
+        "XDG_DESKTOP_DIR": str(desktop),
+    }
+    proc = subprocess.run(
+        ["bash", str(INSTALL_SCRIPT)],
+        env=env,
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr or proc.stdout
+
+    app_files = sorted(p.name for p in apps.glob("*.desktop"))
+    desktop_files = sorted(p.name for p in desktop.glob("*.desktop"))
+    expected = sorted(f"{i}.desktop" for i in CANONICAL_IDS)
+
+    assert app_files == expected, f"app menu duplicates: {app_files}"
+    assert desktop_files == expected, f"desktop duplicates: {desktop_files}"
+
+    for stale in STALE_IDS:
+        assert not (apps / f"{stale}.desktop").exists()
+        assert not (desktop / f"{stale}.desktop").exists()
+
+
+def test_installed_exec_survives_minimal_path(tmp_path):
     jarvis_root = str(ROOT)
     home = str(tmp_path)
     apps = tmp_path / ".local" / "share" / "applications"
     apps.mkdir(parents=True)
 
-    for name in WORKSTATION_DESKTOPS:
+    for name in CANONICAL_IDS:
         src = DESKTOP_DIR / f"{name}.desktop"
         installed = apps / f"{name}.desktop"
         installed.write_text(
@@ -66,33 +121,19 @@ def test_installed_desktop_exec_survives_minimal_path(tmp_path):
         )
         match = re.search(r"^Exec=(.+)$", installed.read_text(encoding="utf-8"), re.MULTILINE)
         assert match, f"missing Exec in {name}"
-        exec_line = match.group(1).strip()
-        # First token must be an absolute path (not a bare command name).
-        cmd = exec_line.split()[0]
+        cmd = match.group(1).strip().split()[0]
         assert cmd.startswith("/"), f"{name} Exec must use absolute path, got: {cmd}"
-
-        env = {
-            **os.environ,
-            "PATH": "/usr/bin:/bin",
-            "HOME": home,
-        }
-        # Dry-run: launcher exists and is executable; only validate start entry invokes script.
-        if name in ("ai-workstation", "ai-workstation-start"):
-            proc = subprocess.run(
-                ["bash", "-n", cmd],
-                env=env,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            assert proc.returncode == 0, proc.stderr
+        proc = subprocess.run(["bash", "-n", cmd], capture_output=True, text=True, check=False)
+        assert proc.returncode == 0, proc.stderr
 
 
-def test_desktop_launcher_script_exists_and_executable():
-    assert LAUNCHER.is_file()
-    assert os.access(LAUNCHER, os.X_OK)
+def test_platform_launcher_script_exists_and_executable():
+    launcher = ROOT / "scripts" / "desktop-launch-platform.sh"
+    assert launcher.is_file()
+    assert os.access(launcher, os.X_OK)
 
 
-def test_install_script_references_desktop_launcher():
+def test_install_script_chmod_platform_launcher():
     text = INSTALL_SCRIPT.read_text(encoding="utf-8")
-    assert "desktop-launch-workstation.sh" in text
+    assert "desktop-launch-platform.sh" in text
+    assert "update-desktop-database" in text
