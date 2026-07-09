@@ -24,6 +24,17 @@ def select_tool(task: str, *, prefer: str = "") -> ToolDescriptor | None:
         if chosen and chosen.available():
             return chosen
 
+    try:
+        from jarvis.personalization.store import preferred_tool
+
+        pref = preferred_tool()
+        if pref:
+            tool = get_tool(pref)
+            if tool and tool.available():
+                return tool
+    except Exception:
+        pass
+
     if any(k in task_lower for k in _AGENT_KEYWORDS):
         for tid in ("openhands", "goose", "hermes"):
             tool = get_tool(tid)
@@ -71,6 +82,12 @@ def execute_tool(
 
     if memory_sink and result.get("ok"):
         _remember_tool_result(tool, params, result)
+        try:
+            from jarvis.personalization.learner import learn_from_tool_result
+
+            learn_from_tool_result(tool_id, result)
+        except Exception:
+            pass
 
     return result
 

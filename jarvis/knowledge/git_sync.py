@@ -293,6 +293,12 @@ def sync_all(*, force: bool = False) -> dict[str, Any]:
         pass
 
     ok = all(r.get("ok") for r in results) if results else True
+    try:
+        from jarvis.personalization.learner import learn_from_git_sync
+
+        learn_from_git_sync(results)
+    except Exception:
+        pass
     return {"ok": ok, "repos": len(results), "results": results}
 
 

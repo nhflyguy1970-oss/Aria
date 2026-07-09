@@ -105,6 +105,15 @@ def select_route(
     context_tokens = _estimate_context_tokens(messages or [])
     cloud_model = _is_cloud_model(model)
 
+    try:
+        from jarvis.personalization.store import preferred_model
+
+        pref = preferred_model(role, fallback="")
+        if pref and not cloud_model and gateway_mode() != "litellm":
+            model = pref
+    except Exception:
+        pass
+
     if _low_vram() and not cloud_model:
         adjusted = _smaller_model(model, role)
         if adjusted != model:

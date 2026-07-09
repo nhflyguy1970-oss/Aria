@@ -41,7 +41,12 @@ class ConversationEngine:
 
         return MemoryEngine.memory_citation(entry)
 
-    def build_context_prefix(self, message: str) -> tuple[str, list[str], list[dict]]:
+    def build_context_prefix(
+        self,
+        message: str,
+        *,
+        skip_unified_extras: bool = False,
+    ) -> tuple[str, list[str], list[dict]]:
         parts: list[str] = []
         warnings: list[str] = []
         citations: list[dict] = []
@@ -100,6 +105,15 @@ class ConversationEngine:
         busy_hint = chat_busy_hint()
         if busy_hint:
             parts.append(busy_hint)
+
+        if not skip_project_context and not skip_unified_extras:
+            try:
+                from jarvis.context.builder import append_context_extras
+
+                meta: dict = {}
+                append_context_extras(parts, self._a, message, meta)
+            except Exception:
+                pass
 
         return "\n\n".join(parts), warnings, citations
 
@@ -163,6 +177,15 @@ class ConversationEngine:
         if behavior is not None:
             behavior.auto_remember(self._a, user_msg, assistant_msg)
 
+    def _learn_preferences(self, model: str) -> None:
+        try:
+            from jarvis.personalization.learner import learn_from_active_project, learn_from_chat
+
+            learn_from_chat(model=model, role="general")
+            learn_from_active_project()
+        except Exception:
+            pass
+
     def execute(self, params: dict, message: str) -> dict:
         from jarvis.branding import assistant_name
 
@@ -210,6 +233,7 @@ class ConversationEngine:
             )
         self._a.conversation.add_assistant(answer)
         self.auto_remember(message, answer)
+        self._learn_preferences(model)
         self._a.branches.persist(session=self._a.session)
         extra: dict = {"inference_ms": inference_ms, "model": model, **usage}
         if context_warnings:
@@ -317,6 +341,7 @@ class ConversationEngine:
 
         self._a.conversation.add_assistant(answer)
         self.auto_remember(message, answer)
+        self._learn_preferences(model)
         self._a.branches.persist(session=self._a.session)
         inference_ms = int((time.perf_counter() - t0) * 1000)
         done_payload = {

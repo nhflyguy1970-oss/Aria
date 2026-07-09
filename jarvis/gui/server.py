@@ -382,6 +382,36 @@ def memory_consolidate_api(dry_run: bool = False):
     return consolidate(get_assistant().memory, dry_run=dry_run)
 
 
+@app.get("/api/personalization")
+def personalization_api():
+    from jarvis.personalization.store import snapshot
+
+    return snapshot()
+
+
+@app.get("/api/context/build")
+def context_build_api(q: str = ""):
+    from jarvis.assistant_instance import get_assistant
+    from jarvis.context.builder import build_unified_context
+
+    return build_unified_context(get_assistant(), q or "status")
+
+
+@app.get("/api/jobs")
+def jobs_list_api(status: str | None = None):
+    from jarvis.jobs.checkpointed import list_jobs
+
+    jobs = [j.to_dict() for j in list_jobs(status=status or None)]
+    return {"ok": True, "jobs": jobs}
+
+
+@app.get("/api/jobs/{job_id}")
+def jobs_status_api(job_id: str):
+    from jarvis.jobs.checkpointed import job_status
+
+    return job_status(job_id)
+
+
 @app.get("/api/knowledge/git-sync")
 def knowledge_git_sync_status():
     from jarvis.knowledge.git_sync import list_repo_states, repo_summary_markdown
