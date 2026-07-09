@@ -30,7 +30,9 @@ def models_info(assistant, params: dict, message: str) -> dict:
 def greeting(assistant, params: dict, message: str) -> dict:
     lower = (message or "").lower().strip()
     if re.search(r"good (morning|afternoon|evening)\b", lower):
-        return assistant._morning_briefing(params, message)
+        from jarvis.handlers.registry import call_action
+
+        return call_action(assistant, "morning_briefing", params, message)
     return ok(greeting_message(), module=None, type="info")
 
 

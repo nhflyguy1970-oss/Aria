@@ -16,7 +16,13 @@ def ensure_handlers_loaded() -> None:
     from jarvis.handlers.queues import register_queue_actions
 
     register_queue_actions()
-    from jarvis.handlers import knowledge_handlers  # noqa: F401
+    from jarvis.handlers import (  # noqa: F401
+        aria_coder_handlers,
+        knowledge_handlers,
+        self_upgrade_handlers,
+        skill_handlers,
+        workflow_handlers,
+    )
     try:
         from jarvis.extensibility.loader import load_extensions
 

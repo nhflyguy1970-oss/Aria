@@ -7,11 +7,14 @@ from typing import Any
 
 def handle_jarvis_mcp_tool(name: str, arguments: dict) -> dict[str, Any]:
     from jarvis.assistant_instance import get_assistant
+    from jarvis.handlers import ensure_handlers_loaded
+    from jarvis.handlers.registry import call_action
 
-    a = get_assistant()
+    ensure_handlers_loaded()
+    assistant = get_assistant()
 
     if name == "jarvis_briefing":
-        return a._morning_briefing({}, "morning briefing")
+        return call_action(assistant, "morning_briefing", {}, "morning briefing")
 
     if name == "jarvis_environment":
         from jarvis.environment import snapshot
@@ -22,27 +25,27 @@ def handle_jarvis_mcp_tool(name: str, arguments: dict) -> dict[str, Any]:
         text = (arguments.get("text") or "").strip()
         if not text:
             return {"ok": False, "message": "text required"}
-        return a._journal_log({"text": text}, text)
+        return call_action(assistant, "journal_log", {"text": text}, text)
 
     if name == "jarvis_document_search":
         query = (arguments.get("query") or "").strip()
         if not query:
             return {"ok": False, "message": "query required"}
-        return a._document_search({"query": query}, query)
+        return call_action(assistant, "document_search", {"query": query}, query)
 
     if name == "jarvis_ha_toggle":
         from jarvis.home_assistant import call_service, ha_enabled
 
         if not ha_enabled():
             return {"ok": False, "message": "Home Assistant not configured"}
-        eid = (arguments.get("entity_id") or "").strip()
+        entity_id = (arguments.get("entity_id") or "").strip()
         action = (arguments.get("action") or "toggle").strip().lower()
-        if not eid:
+        if not entity_id:
             return {"ok": False, "message": "entity_id required"}
-        domain = eid.split(".")[0]
-        svc = "turn_on" if action == "on" else "turn_off" if action == "off" else "toggle"
-        call_service(domain, svc, {"entity_id": eid})
-        return {"ok": True, "entity_id": eid, "action": svc}
+        domain = entity_id.split(".")[0]
+        service = "turn_on" if action == "on" else "turn_off" if action == "off" else "toggle"
+        call_service(domain, service, {"entity_id": entity_id})
+        return {"ok": True, "entity_id": entity_id, "action": service}
 
     if name == "jarvis_ha_scene":
         from jarvis.home_assistant import activate_scene, ha_enabled
@@ -52,14 +55,14 @@ def handle_jarvis_mcp_tool(name: str, arguments: dict) -> dict[str, Any]:
         scene = (arguments.get("scene") or arguments.get("entity_id") or "").strip()
         if not scene:
             return {"ok": False, "message": "scene required"}
-        ok = activate_scene(scene)
+        ok, _msg = activate_scene(scene)
         return {"ok": ok, "scene": scene}
 
     if name == "jarvis_generate_image":
         prompt = (arguments.get("prompt") or "").strip()
         if not prompt:
             return {"ok": False, "message": "prompt required"}
-        return a._enqueue_media(
+        return assistant._enqueue_media(
             "generate_image",
             {"prompt": prompt},
             prompt,
@@ -69,6 +72,6 @@ def handle_jarvis_mcp_tool(name: str, arguments: dict) -> dict[str, Any]:
         message = (arguments.get("message") or "").strip()
         if not message:
             return {"ok": False, "message": "message required"}
-        return a.process(message)
+        return assistant.process(message)
 
     return {"ok": False, "message": f"Unknown jarvis tool: {name}"}

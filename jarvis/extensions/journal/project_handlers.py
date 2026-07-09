@@ -18,7 +18,7 @@ def _project_slug(assistant, params: dict, message: str) -> str:
     )
 
 
-@register_action("project_journal_list", module="journal", extension="journal", description="List project journals")
+@register_action("project_journal_list", module="journal", description="List project journals")
 def project_journal_list(assistant, params: dict, message: str) -> dict:
     from jarvis.project_journal import list_projects
 
@@ -32,7 +32,7 @@ def project_journal_list(assistant, params: dict, message: str) -> dict:
     return ok("**Project journals**\n\n" + "\n".join(lines), module="journal")
 
 
-@register_action("project_journal_today", module="journal", extension="journal", description="Today's project journal")
+@register_action("project_journal_today", module="journal", description="Today's project journal")
 def project_journal_today(assistant, params: dict, message: str) -> dict:
     from jarvis.project_journal import ProjectJournal
 
@@ -44,7 +44,7 @@ def project_journal_today(assistant, params: dict, message: str) -> dict:
     return ok(page, module="journal", project=slug)
 
 
-@register_action("project_journal_log", module="journal", extension="journal", description="Log to project journal")
+@register_action("project_journal_log", module="journal", description="Log to project journal")
 def project_journal_log(assistant, params: dict, message: str) -> dict:
     from jarvis.project_journal import ProjectJournal, parse_project_log_text
 
@@ -77,7 +77,7 @@ def project_journal_log(assistant, params: dict, message: str) -> dict:
     )
 
 
-@register_action("journal_learn", module="journal", extension="journal", description="Learn from journal pages")
+@register_action("journal_learn", module="journal", description="Learn from journal pages")
 def journal_learn(assistant, params: dict, message: str) -> dict:
     from jarvis.journal_learning import (
         format_learnings_markdown,
@@ -111,7 +111,7 @@ def journal_learn(assistant, params: dict, message: str) -> dict:
     return ok(body, module="journal", facts=facts, project=result.get("project"))
 
 
-@register_action("journal_learn_recall", module="journal", extension="journal", description="Recall journal learnings")
+@register_action("journal_learn_recall", module="journal", description="Recall journal learnings")
 def journal_learn_recall(assistant, params: dict, message: str) -> dict:
     from jarvis.journal_learning import (
         format_learnings_markdown,

@@ -607,7 +607,11 @@ def register_routes(app, assistant):
                     status_code=400,
                     content={"ok": False, "message": "text or entry required for journal_log."},
                 )
-            result = assistant._journal_log({"text": text}, text)
+            from jarvis.handlers import ensure_handlers_loaded
+            from jarvis.handlers.registry import call_action
+
+            ensure_handlers_loaded()
+            result = call_action(assistant, "journal_log", {"text": text}, text)
             return result
 
         if action == "ha_scene":
@@ -622,7 +626,11 @@ def register_routes(app, assistant):
             return JSONResponse(status_code=status, content={"ok": ok, "message": msg})
 
         if action == "briefing":
-            result = assistant._morning_briefing({}, message or "morning briefing")
+            from jarvis.handlers import ensure_handlers_loaded
+            from jarvis.handlers.registry import call_action
+
+            ensure_handlers_loaded()
+            result = call_action(assistant, "morning_briefing", {}, message or "morning briefing")
             return result
 
         if action == "run_script":

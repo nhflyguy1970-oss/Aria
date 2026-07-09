@@ -18,7 +18,7 @@ def _format_result(result) -> dict:
     return ok(body, module="memory", notes=result.notes, source_type=result.source_type)
 
 
-@register_action("observe", module="memory", extension="memory", description="Observe text and create notes")
+@register_action("observe", module="memory", description="Observe text and create notes")
 def observe(assistant, params: dict, message: str) -> dict:
     from jarvis.observation_learning import observe_text, parse_terminal_text
 
@@ -37,7 +37,7 @@ def observe(assistant, params: dict, message: str) -> dict:
     return _format_result(result)
 
 
-@register_action("observe_log", module="memory", extension="memory", description="Observe log file tail")
+@register_action("observe_log", module="memory", description="Observe log file tail")
 def observe_log_action(assistant, params: dict, message: str) -> dict:
     from jarvis.observation_learning import observe_log
 
@@ -52,7 +52,7 @@ def observe_log_action(assistant, params: dict, message: str) -> dict:
     return _format_result(result)
 
 
-@register_action("observe_terminal", module="memory", extension="memory", description="Observe terminal output")
+@register_action("observe_terminal", module="memory", description="Observe terminal output")
 def observe_terminal_action(assistant, params: dict, message: str) -> dict:
     from jarvis.observation_learning import observe_terminal, parse_terminal_text
 
@@ -70,7 +70,7 @@ def observe_terminal_action(assistant, params: dict, message: str) -> dict:
     return _format_result(result)
 
 
-@register_action("observe_screenshot", module="memory", extension="memory", description="Observe screenshot/image")
+@register_action("observe_screenshot", module="memory", description="Observe screenshot/image")
 def observe_screenshot_action(assistant, params: dict, message: str) -> dict:
     from jarvis.observation_learning import observe_screenshot
 
@@ -87,7 +87,7 @@ def observe_screenshot_action(assistant, params: dict, message: str) -> dict:
     return _format_result(result)
 
 
-@register_action("observe_camera", module="memory", extension="memory", description="Capture camera and observe")
+@register_action("observe_camera", module="memory", description="Capture camera and observe")
 def observe_camera_action(assistant, params: dict, message: str) -> dict:
     from jarvis.observation_learning import observe_camera
 
@@ -101,7 +101,7 @@ def observe_camera_action(assistant, params: dict, message: str) -> dict:
     return _format_result(result)
 
 
-@register_action("observe_action_log", module="memory", extension="memory", description="Observe recent actions")
+@register_action("observe_action_log", module="memory", description="Observe recent actions")
 def observe_action_log_action(assistant, params: dict, message: str) -> dict:
     from jarvis.observation_learning import observe_action_log
 
@@ -113,7 +113,7 @@ def observe_action_log_action(assistant, params: dict, message: str) -> dict:
     return _format_result(result)
 
 
-@register_action("observation_recall", module="memory", extension="memory", description="Recall observation notes")
+@register_action("observation_recall", module="memory", description="Recall observation notes")
 def observation_recall(assistant, params: dict, message: str) -> dict:
     from jarvis.observation_learning import (
         format_observations_markdown,

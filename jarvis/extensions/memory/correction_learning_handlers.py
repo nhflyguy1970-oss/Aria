@@ -13,7 +13,7 @@ def _last_assistant_message(assistant) -> str:
     return ""
 
 
-@register_action("correction_learn", module="memory", extension="memory", description="Learn from user correction")
+@register_action("correction_learn", module="memory", description="Learn from user correction")
 def correction_learn(assistant, params: dict, message: str) -> dict:
     from jarvis.correction_learning import apply_correction, parse_correction
 
@@ -55,7 +55,7 @@ def correction_learn(assistant, params: dict, message: str) -> dict:
     )
 
 
-@register_action("correction_recall", module="memory", extension="memory", description="Recall user corrections")
+@register_action("correction_recall", module="memory", description="Recall user corrections")
 def correction_recall(assistant, params: dict, message: str) -> dict:
     from jarvis.correction_learning import (
         correction_stats,

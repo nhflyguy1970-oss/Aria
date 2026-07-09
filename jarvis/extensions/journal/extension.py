@@ -8,6 +8,7 @@ class JournalExtension(Extension):
 
     def load(self) -> None:
         import jarvis.extensions.journal.handlers  # noqa: F401
+        import jarvis.extensions.journal.project_handlers  # noqa: F401
 
 
 EXTENSION = JournalExtension()
