@@ -569,17 +569,10 @@ class JarvisAssistant:
             "branch_switch": self._branch_switch,
             "branch_list": self._branch_list,
             "branch_delete": self._branch_delete,
-            "morning_briefing": self._morning_briefing,
-            "briefing_news_detail": self._briefing_news_detail,
             "upgrade_wizard": self._upgrade_wizard,
             "upgrade_verify": self._upgrade_verify,
             "upgrade_apply": self._upgrade_apply,
             "upgrade_rollback": self._upgrade_rollback,
-            "ha_status": self._ha_status,
-            "ha_control": self._ha_control,
-            "ha_scene": self._ha_scene,
-            "ha_query": self._ha_query,
-            "ha_set_token": self._ha_set_token,
         }
 
         handler = handlers.get(action, self._chat)
@@ -1233,85 +1226,10 @@ class JarvisAssistant:
     def _greeting(self, params: dict, message: str) -> dict:
         lower = (message or "").lower().strip()
         if re.search(r"good (morning|afternoon|evening)\b", lower):
-            return self._morning_briefing(params, message)
+            from jarvis.handlers.registry import call_action
+
+            return call_action(self, "morning_briefing", params, message)
         return _ok(greeting_message(), module=None, type="info")
-
-    def _morning_briefing(self, params: dict, message: str) -> dict:
-        from jarvis.briefing_news import persist_briefing_headlines
-        from jarvis.morning_briefing import build_briefing, mark_briefing_shown
-
-        briefing = build_briefing(journal=self.journal, memory_store=self.memory)
-        mark_briefing_shown(briefing["day"])
-        headlines = briefing.get("briefing_headlines") or persist_briefing_headlines(briefing.get("news") or {})
-        if headlines:
-            self.session.note_briefing_headlines(headlines)
-        return _ok(
-            briefing["markdown"],
-            module="briefing",
-            type="briefing",
-            open_task_count=briefing["open_task_count"],
-            weather_line=briefing["weather_line"],
-        )
-
-    def _briefing_news_detail(self, params: dict, message: str) -> dict:
-        from jarvis.briefing_news import (
-            expand_headline_detail,
-            load_recent_headlines,
-            match_headline,
-        )
-        from jarvis.profiles import web_search_disabled
-
-        headlines = self.session.last_briefing_headlines or load_recent_headlines()
-        if not headlines:
-            return _err(
-                "No briefing headlines saved yet. Say **morning briefing** first.",
-                module="briefing",
-            )
-
-        query = (params.get("query") or message or "").strip()
-        title_hint = (params.get("title") or "").strip()
-        headline = match_headline(title_hint or query, headlines)
-        if not headline and title_hint:
-            headline = match_headline(title_hint, headlines)
-        if not headline:
-            nat = [h for h in headlines if h.get("category") == "national"]
-            loc = [h for h in headlines if h.get("category") == "local"]
-            parts: list[str] = []
-            for i, h in enumerate(nat[:6], 1):
-                parts.append(f"National {i}. {h.get('title', 'Headline')}")
-            for i, h in enumerate(loc[:6], 1):
-                parts.append(f"Local {i}. {h.get('title', 'Headline')}")
-            listing = "\n".join(parts) or "\n".join(
-                f"{i}. {h.get('title', 'Headline')}" for i, h in enumerate(headlines[:8], 1)
-            )
-            return _ok(
-                "Which briefing story should I expand?\n\n"
-                f"{listing}\n\n"
-                "Reply with **local headline 2**, **national headline 1**, or words from the title.",
-                module="briefing",
-                type="clarification",
-            )
-
-        if web_search_disabled():
-            return _err(
-                "Web search is disabled (offline profile). Switch profile to expand briefing stories.",
-                module="briefing",
-            )
-
-        answer = expand_headline_detail(headline, user_query=query)
-        self.session.note_briefing_headlines(headlines)
-        return _ok(
-            answer,
-            module="briefing",
-            type="news_detail",
-            headline=headline,
-        )
-
-
-
-
-
-
 
     def _upgrade_wizard(self, params: dict, message: str) -> dict:
         from jarvis.upgrade_wizard import (
@@ -1517,106 +1435,6 @@ class JarvisAssistant:
         )
 
 
-
-    def _ha_not_configured(self) -> dict:
-        return _err(
-            "**Home Assistant isn’t connected yet.**\n\n"
-            "1. In HA (`http://127.0.0.1:8123`): **Profile → Security → Long-lived access tokens → Create token**\n"
-            "2. In ARIA sidebar → **Smart home** → paste token → **Test connection** → **Save**\n"
-            "3. Or run: `./scripts/set-ha-token.sh`\n\n"
-            "Then ask **house status** again.",
-            module="automation",
-            type="ha_setup",
-        )
-
-    def _ha_status(self, params: dict, message: str) -> dict:
-        from jarvis.home_assistant import ha_enabled, home_summary, status_payload
-
-        if not ha_enabled():
-            return self._ha_not_configured()
-        payload = status_payload()
-        conn = payload.get("connection") or {}
-        if not conn.get("ok"):
-            return _err(conn.get("message", "Home Assistant unreachable."), module="automation")
-        ok, summary = home_summary()
-        if not ok:
-            return _err(summary, module="automation")
-        header = f"**Home Assistant** connected"
-        if conn.get("version"):
-            header += f" (v{conn['version']})"
-        header += ".\n\n"
-        self.session.note_module("automation")
-        return _ok(
-            header + summary,
-            module="automation",
-            type="ha_status",
-            homeassistant=payload,
-        )
-
-    def _ha_control(self, params: dict, message: str) -> dict:
-        from jarvis.home_assistant import control_entity, ha_enabled, parse_control
-
-        if not ha_enabled():
-            return self._ha_not_configured()
-        spec = parse_control(message) or params
-        target = (spec.get("target") or "").strip()
-        action = (spec.get("action") or "on").strip().lower()
-        ok, msg = control_entity(target, action)
-        self.session.note_module("automation")
-        if not ok:
-            return _err(msg, module="automation")
-        return _ok(msg, module="automation", type="ha_control")
-
-    def _ha_scene(self, params: dict, message: str) -> dict:
-        from jarvis.home_assistant import activate_scene, ha_enabled, parse_scene
-
-        if not ha_enabled():
-            return self._ha_not_configured()
-        scene = (params.get("scene") or parse_scene(message) or "").strip()
-        ok, msg = activate_scene(scene)
-        self.session.note_module("automation")
-        if not ok:
-            return _err(msg, module="automation")
-        return _ok(msg, module="automation", type="ha_scene")
-
-    def _ha_query(self, params: dict, message: str) -> dict:
-        from jarvis.home_assistant import ha_enabled, query_entity
-
-        if not ha_enabled():
-            return self._ha_not_configured()
-        query = (params.get("query") or message or "").strip()
-        ok, msg = query_entity(query)
-        self.session.note_module("automation")
-        if not ok:
-            return _err(msg, module="automation")
-        return _ok(msg, module="automation", type="ha_query")
-
-    def _ha_set_token(self, params: dict, message: str) -> dict:
-        from jarvis.home_assistant import parse_ha_token_message, save_config, status_payload
-
-        token = (params.get("token") or parse_ha_token_message(message) or "").strip()
-        if not token:
-            return _err(
-                "Paste your Home Assistant token here, or say "
-                "`set home assistant token: …` · Sidebar → **Smart home** also has a paste box.",
-                module="automation",
-            )
-        result = save_config(token=token, ensure_automation_secret=True)
-        conn = result.get("connection") or {}
-        if not conn.get("ok"):
-            return _err(
-                conn.get("message", "Token saved but connection failed — check URL in Smart home panel."),
-                module="automation",
-            )
-        self.session.note_module("automation")
-        ver = f" (v{conn['version']})" if conn.get("version") else ""
-        return _ok(
-            f"Home Assistant connected{ver}. "
-            "Try **house status** or **turn off the living room lights**.",
-            module="automation",
-            type="ha_connected",
-            homeassistant=status_payload(),
-        )
 
     def _pdf_to_image_attachment(self, attachment: dict, page: int = 1) -> dict:
         path = attachment.get("path", "")

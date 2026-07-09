@@ -121,6 +121,36 @@ class TestPlanningBehavior(unittest.TestCase):
         self.assertIn("buy milk", result.get("message", ""))
 
 
+class TestSmartHomeBehavior(unittest.TestCase):
+    def test_discover_smarthome_behavior(self):
+        behavior = get_behavior("smarthome")
+        from jarvis.behaviors.smarthome import SmartHomeBehavior
+
+        self.assertIsInstance(behavior, SmartHomeBehavior)
+        self.assertIn("ha_status", behavior.action_names)
+        self.assertIn("ha_control", behavior.action_names)
+
+    def test_smarthome_registers_actions(self):
+        register_behaviors()
+        for action in ("ha_status", "ha_control", "ha_scene", "ha_query", "ha_set_token"):
+            self.assertTrue(has_action(action))
+
+
+class TestBriefingBehavior(unittest.TestCase):
+    def test_discover_briefing_behavior(self):
+        behavior = get_behavior("briefing")
+        from jarvis.behaviors.briefing import BriefingBehavior
+
+        self.assertIsInstance(behavior, BriefingBehavior)
+        self.assertIn("morning_briefing", behavior.action_names)
+        self.assertIn("briefing_news_detail", behavior.action_names)
+
+    def test_briefing_registers_actions(self):
+        register_behaviors()
+        for action in ("morning_briefing", "briefing_news_detail"):
+            self.assertTrue(has_action(action))
+
+
 class TestMemoryBehavior(unittest.TestCase):
     def test_discover_memory_behavior(self):
         behavior = get_behavior("memory")
