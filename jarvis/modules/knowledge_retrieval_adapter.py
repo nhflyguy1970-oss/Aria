@@ -32,12 +32,31 @@ def knowledge_retrieval_enabled() -> bool:
         return False
 
 
+def _platform_retrieval_authoritative() -> bool:
+    try:
+        from jarvis.platform_cutover import platform_data_authoritative
+
+        return platform_data_authoritative()
+    except Exception:
+        return False
+
+
 def knowledge_search(
     corpus: str,
     legacy_search: Callable[..., list[dict[str, Any]]],
     query: str,
     **kwargs: Any,
 ) -> list[dict[str, Any]]:
+    if _platform_retrieval_authoritative():
+        try:
+            from aiplatform.applications.knowledge_retrieval.bridge import platform_search
+
+            platform_results = platform_search(_APPLICATION_ID, corpus, query, limit=int(kwargs.get("limit", 5)))
+            if platform_results:
+                return platform_results
+        except Exception as exc:
+            logger.debug("platform retrieval fallback to legacy: %s", exc)
+
     results = legacy_search(query, **kwargs)
     if knowledge_retrieval_enabled():
         try:
