@@ -133,3 +133,19 @@ def snapshot() -> dict[str, Any]:
         "preferred_tool": preferred_tool(),
         "preferred_project": preferred_project(),
     }
+
+
+def format_preferences_markdown(data: dict[str, Any] | None = None) -> str:
+    snap = data or snapshot()
+    lines = ["## Learned Preferences", ""]
+    tool = snap.get("preferred_tool")
+    if tool:
+        lines.append(f"- **Coding tool:** `{tool}`")
+    proj = snap.get("preferred_project")
+    if proj:
+        lines.append(f"- **Project:** `{proj}`")
+    for role, model in (snap.get("top_models") or {}).items():
+        lines.append(f"- **Model ({role}):** `{model}`")
+    if len(lines) == 2:
+        lines.append("_No preferences learned yet — use chat and tools normally._")
+    return "\n".join(lines)
