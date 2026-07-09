@@ -121,43 +121,25 @@ def probe_qdrant() -> dict[str, Any]:
 
 
 def _first_ollama_model() -> str:
-    preferred = os.getenv("JARVIS_GENERAL_MODEL", "").strip()
-    if preferred:
-        return preferred
-    if not shutil.which("ollama"):
-        return "qwen2.5:14b"
-    try:
-        proc = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=10)
-        names = [line.split()[0] for line in (proc.stdout or "").splitlines()[1:] if line.strip()]
-        for name in names:
-            low = name.lower()
-            if "embed" in low:
-                continue
-            if any(x in low for x in ("32b", "70b", "64k")):
-                continue
-            return name
-        return names[0] if names else "qwen2.5:14b"
-    except Exception:
-        return "qwen2.5:14b"
+    from jarvis.ollama_runtime import probe_model_name
+
+    return probe_model_name()
 
 
 def probe_ollama() -> dict[str, Any]:
-    model = _first_ollama_model()
-    if not shutil.which("ollama"):
-        return _result(False, "ollama binary missing")
-    try:
-        proc = subprocess.run(
-            ["ollama", "run", model, "Reply OK"],
-            capture_output=True,
-            text=True,
-            timeout=90,
-        )
-        out = (proc.stdout or "").strip()
-        return _result(proc.returncode == 0 and bool(out), out[:120] or model)
-    except subprocess.TimeoutExpired:
-        return _result(False, "ollama inference timed out")
-    except Exception as exc:
-        return _result(False, str(exc))
+    from jarvis.ollama_runtime import run_inference_probe
+
+    probe = run_inference_probe()
+    detail = probe.get("detail") or probe.get("model") or ""
+    if probe.get("ok"):
+        extra = []
+        if probe.get("cold_start"):
+            extra.append(f"load {probe.get('load_ms')}ms")
+        if probe.get("tokens_per_sec"):
+            extra.append(f"{probe.get('tokens_per_sec')} tok/s")
+        if extra:
+            detail = f"{detail} ({', '.join(extra)})"
+    return _result(bool(probe.get("ok")), detail, model=probe.get("model"))
 
 
 def probe_litellm() -> dict[str, Any]:
@@ -486,16 +468,36 @@ PROBE_MAP: dict[str, Any] = {
 }
 
 
-def run_probe(component_id: str) -> dict[str, Any]:
+def _probe_timeout(component_id: str) -> float:
+    specific = os.getenv(f"JARVIS_PROBE_TIMEOUT_{component_id.upper()}", "").strip()
+    if specific:
+        return float(specific)
+    default = os.getenv("JARVIS_PROBE_TIMEOUT", "60").strip()
+    if component_id == "ollama":
+        return float(os.getenv("JARVIS_OLLAMA_PROBE_TIMEOUT", default or "120"))
+    if component_id in {"opencode", "claude_code", "gemini_cli"}:
+        return float(os.getenv("JARVIS_CLI_PROBE_TIMEOUT", "45"))
+    return float(default or "60")
+
+
+def run_probe(component_id: str, *, timeout: float | None = None) -> dict[str, Any]:
+    import concurrent.futures
+
     fn = PROBE_MAP.get(component_id)
     if fn is None:
         return _result(False, "no probe")
+    limit = timeout if timeout is not None else _probe_timeout(component_id)
     started = time.time()
     try:
-        result = fn()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(fn)
+            result = future.result(timeout=limit)
+    except concurrent.futures.TimeoutError:
+        result = _result(False, f"probe timed out after {limit:.0f}s", timed_out=True)
     except Exception as exc:
         result = _result(False, str(exc))
     result["duration_ms"] = round((time.time() - started) * 1000, 1)
+    result["timeout_s"] = limit
     return result
 
 

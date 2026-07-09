@@ -39,8 +39,15 @@ def _ollama_chat_with_usage(model: str, messages: list[dict], **kwargs) -> tuple
     from ollama import chat
 
     from jarvis.llm import _normalize_chat_kwargs, _with_system, usage_from_response
+    from jarvis.ollama_runtime import default_options
 
-    response = chat(model=model, messages=_with_system(messages), **_normalize_chat_kwargs(kwargs))
+    normalized = _normalize_chat_kwargs(kwargs)
+    options = dict(normalized.get("options") or {})
+    for key, value in default_options().items():
+        options.setdefault(key, value)
+    normalized["options"] = options
+
+    response = chat(model=model, messages=_with_system(messages), **normalized)
     return response["message"]["content"], usage_from_response(response)
 
 
@@ -48,12 +55,19 @@ def _ollama_stream(model: str, messages: list[dict], **kwargs) -> Iterator[str]:
     from ollama import chat
 
     from jarvis.llm import _normalize_chat_kwargs, _with_system
+    from jarvis.ollama_runtime import default_options
+
+    normalized = _normalize_chat_kwargs(kwargs)
+    options = dict(normalized.get("options") or {})
+    for key, value in default_options().items():
+        options.setdefault(key, value)
+    normalized["options"] = options
 
     stream = chat(
         model=model,
         messages=_with_system(messages),
         stream=True,
-        **_normalize_chat_kwargs(kwargs),
+        **normalized,
     )
     for chunk in stream:
         if chunk.get("message", {}).get("content"):

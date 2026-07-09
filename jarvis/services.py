@@ -613,12 +613,13 @@ def warmup_chat_model_background() -> None:
 
     def _run():
         try:
-            from jarvis.llm import ask
-            from jarvis.model_store import get_models
+            from jarvis.ollama_runtime import warmup_chat_model
 
-            model = get_models().get("general") or "qwen2.5:7b"
-            ask(model, [{"role": "user", "content": "hi"}], options={"num_predict": 1})
-            _log(f"Chat model warmed: {model}")
+            result = warmup_chat_model()
+            if result.get("ok"):
+                _log(f"Chat model warmed: {result.get('model')} ({result.get('total_s')}s)")
+            else:
+                _log(f"Chat model warmup failed: {result.get('detail', 'unknown')}")
         except Exception as e:
             logger.debug("Model warmup: %s", e)
 
