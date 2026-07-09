@@ -397,19 +397,34 @@ def context_build_api(q: str = ""):
     return build_unified_context(get_assistant(), q or "status")
 
 
-@app.get("/api/jobs")
-def jobs_list_api(status: str | None = None):
+@app.get("/api/agent-jobs")
+def agent_jobs_list_api(status: str | None = None):
     from jarvis.jobs.checkpointed import list_jobs
 
     jobs = [j.to_dict() for j in list_jobs(status=status or None)]
     return {"ok": True, "jobs": jobs}
 
 
-@app.get("/api/jobs/{job_id}")
-def jobs_status_api(job_id: str):
+@app.get("/api/agent-jobs/{job_id}")
+def agent_jobs_status_api(job_id: str):
     from jarvis.jobs.checkpointed import job_status
 
     return job_status(job_id)
+
+
+@app.post("/api/agent-jobs/start")
+def agent_jobs_start(body: dict):
+    from jarvis.assistant_instance import get_assistant
+    from jarvis.jobs.checkpointed import start_agent_job
+
+    goal = (body.get("goal") or "").strip()
+    if not goal:
+        return {"ok": False, "error": "goal required"}
+    roles = body.get("roles")
+    if isinstance(roles, str):
+        roles = [r.strip() for r in roles.split(",") if r.strip()]
+    job = start_agent_job(get_assistant(), goal, roles=roles if isinstance(roles, list) else None)
+    return {"ok": True, "job": job.to_dict()}
 
 
 @app.get("/api/knowledge/git-sync")
@@ -507,6 +522,36 @@ def openwebui_status():
     payload = status()
     payload["inference_url"] = inference_url()
     return payload
+
+
+@app.post("/api/interfaces/openwebui/start")
+def openwebui_start():
+    from jarvis.interfaces.openwebui import start
+
+    return start()
+
+
+@app.get("/api/interfaces/n8n")
+def n8n_status():
+    from jarvis.interfaces.n8n import jarvis_webhook_base, status
+
+    payload = status()
+    payload["jarvis_webhook_base"] = jarvis_webhook_base()
+    return payload
+
+
+@app.post("/api/interfaces/n8n/start")
+def n8n_start():
+    from jarvis.interfaces.n8n import start
+
+    return start()
+
+
+@app.get("/api/interfaces/grafana")
+def grafana_status():
+    from jarvis.interfaces.grafana import status
+
+    return status()
 
 
 @app.get("/api/training/status")

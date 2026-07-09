@@ -66,6 +66,29 @@ def snapshot(*, recent_limit: int = 12) -> dict[str, Any]:
     recent.sort(key=lambda j: j.get("started") or 0, reverse=True)
     recent = recent[:recent_limit]
 
+    agent_jobs: list[dict] = []
+    try:
+        from jarvis.jobs.checkpointed import list_jobs
+
+        for job in list_jobs()[:5]:
+            agent_jobs.append(
+                {
+                    "id": job.id,
+                    "queue": "agent",
+                    "label": job.goal[:80],
+                    "pct": int(job.progress * 100),
+                    "message": job.message,
+                    "done": job.status in ("completed", "failed"),
+                    "error": job.message if job.status == "failed" else "",
+                    "started": job.created_at,
+                    "kind": job.kind,
+                    "status": job.status,
+                }
+            )
+            recent.append(agent_jobs[-1])
+    except Exception:
+        pass
+
     any_busy = bool(
         media.get("busy")
         or media.get("pending", 0) > 0
@@ -83,5 +106,6 @@ def snapshot(*, recent_limit: int = 12) -> dict[str, Any]:
         "coding": coding,
         "audio": audio,
         "comfyui_settings_jobs": comfy,
-        "recent": recent,
+        "agent_jobs": agent_jobs,
+        "recent": recent[:recent_limit],
     }
