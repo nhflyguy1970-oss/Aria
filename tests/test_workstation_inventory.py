@@ -56,13 +56,14 @@ class TestInventory(unittest.TestCase):
                         "installed": False,
                         "healthy": False,
                         "install_hint": "./workstation install",
-                    }
+                    },
+                    {"id": "git", "label": "git", "installed": True, "healthy": True},
                 ],
             },
         ):
             result = verify_inventory()
         self.assertFalse(result["ready"])
-        self.assertTrue(result["blockers"])
+        self.assertEqual(result["blockers"][0]["id"], "aria_venv")
 
 
 class TestOptimize(unittest.TestCase):

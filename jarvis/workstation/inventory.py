@@ -327,34 +327,57 @@ def _summarize(items: list[InventoryRecord]) -> dict[str, Any]:
     }
 
 
-def verify_inventory() -> dict[str, Any]:
+def verify_inventory(*, require_running: bool = False) -> dict[str, Any]:
     """Verify workstation from inventory — returns blockers with install hints."""
     inv = collect_inventory(persist=True)
     blockers: list[dict[str, str]] = []
     warnings: list[dict[str, str]] = []
 
-    for item in inv.get("items") or []:
-        iid = str(item.get("id") or "")
-        if iid in ("aria_venv", "ollama", "aria") and not item.get("healthy"):
-            blockers.append(
-                {
-                    "id": iid,
-                    "message": f"{item.get('label')} not ready",
-                    "fix": str(item.get("install_hint") or "./workstation install"),
-                }
-            )
-        elif iid == "git" and not item.get("installed"):
-            blockers.append(
-                {"id": iid, "message": "git not installed", "fix": "sudo apt install git"}
-            )
-        elif iid == "docker" and not item.get("installed"):
-            warnings.append(
-                {
-                    "id": iid,
-                    "message": "docker not installed (optional databases)",
-                    "fix": "./scripts/install-docker.sh",
-                }
-            )
+    by_id = {str(item.get("id")): item for item in inv.get("items") or []}
+
+    venv = by_id.get("aria_venv")
+    if not venv or not venv.get("installed"):
+        blockers.append(
+            {
+                "id": "aria_venv",
+                "message": "Python venv not installed",
+                "fix": "./workstation install",
+            }
+        )
+
+    git = by_id.get("git")
+    if not git or not git.get("installed"):
+        blockers.append(
+            {"id": "git", "message": "git not installed", "fix": "sudo apt install git"}
+        )
+
+    ollama = by_id.get("ollama")
+    if not ollama or not ollama.get("installed"):
+        warnings.append(
+            {
+                "id": "ollama",
+                "message": "Ollama not installed",
+                "fix": "./scripts/install-ollama-latest.sh && ./scripts/pull-models.sh",
+            }
+        )
+    elif require_running and not ollama.get("healthy"):
+        warnings.append(
+            {
+                "id": "ollama",
+                "message": "Ollama not running",
+                "fix": "ollama serve  (or ./workstation start)",
+            }
+        )
+
+    aria = by_id.get("aria")
+    if require_running and aria and not aria.get("healthy"):
+        warnings.append(
+            {
+                "id": "aria",
+                "message": "Aria server not running",
+                "fix": "./workstation start",
+            }
+        )
 
     env_file = PROJECT_ROOT / "data" / "jarvis.env"
     if not env_file.is_file():
@@ -363,6 +386,16 @@ def verify_inventory() -> dict[str, Any]:
                 "id": "jarvis.env",
                 "message": "data/jarvis.env missing",
                 "fix": "./workstation configure",
+            }
+        )
+
+    docker = by_id.get("docker")
+    if not docker or not docker.get("installed"):
+        warnings.append(
+            {
+                "id": "docker",
+                "message": "docker not installed (optional databases)",
+                "fix": "./scripts/install-docker.sh",
             }
         )
 
