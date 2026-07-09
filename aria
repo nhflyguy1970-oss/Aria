@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Standalone Aria application CLI
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+exec "$ROOT/venv/bin/python" -m jarvis.application.cli "$@"

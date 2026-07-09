@@ -5,7 +5,11 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from jarvis.workstation.operations import _issue_action, diagnose, recover_safe
+from jarvis.application.standalone.workstation_impl.operations import (
+    _issue_action,
+    diagnose,
+    recover_safe,
+)
 
 
 class TestSelfHealing(unittest.TestCase):
@@ -15,7 +19,7 @@ class TestSelfHealing(unittest.TestCase):
     def test_litellm_uses_restart(self):
         self.assertEqual(_issue_action("litellm"), "restart")
 
-    @patch("jarvis.workstation.operations.registry_snapshot")
+    @patch("jarvis.application.standalone.workstation_impl.operations.registry_snapshot")
     def test_diagnose_ok_when_healthy(self, mock_snap):
         mock_snap.return_value = {
             "components": [{"id": "ollama", "label": "Ollama", "required": True, "running": True}],
@@ -25,7 +29,7 @@ class TestSelfHealing(unittest.TestCase):
         report = diagnose(force=True)
         self.assertTrue(report.get("ok"))
 
-    @patch("jarvis.workstation.operations.registry_snapshot")
+    @patch("jarvis.application.standalone.workstation_impl.operations.registry_snapshot")
     def test_diagnose_optional_managed_when_enabled(self, mock_snap):
         mock_snap.return_value = {
             "components": [
@@ -50,13 +54,13 @@ class TestSelfHealing(unittest.TestCase):
     @patch("jarvis.server_restart.request_restart")
     def test_recover_aria_requests_restart(self, mock_restart):
         mock_restart.return_value = {"ok": True, "message": "restarting"}
-        from jarvis.workstation.operations import _recover_aria
+        from jarvis.application.standalone.workstation_impl.operations import _recover_aria
 
         result = _recover_aria()
         self.assertTrue(result.get("ok"))
         mock_restart.assert_called_once()
 
-    @patch("jarvis.workstation.operations.registry_snapshot")
+    @patch("jarvis.application.standalone.workstation_impl.operations.registry_snapshot")
     def test_diagnose_aria_offline_is_recoverable(self, mock_snap):
         mock_snap.return_value = {
             "components": [
@@ -77,8 +81,8 @@ class TestSelfHealing(unittest.TestCase):
         self.assertTrue(aria_issues[0].get("auto_recoverable"))
         self.assertEqual(aria_issues[0].get("action"), "restart_aria")
 
-    @patch("jarvis.workstation.operations.up")
-    @patch("jarvis.workstation.operations.diagnose")
+    @patch("jarvis.application.standalone.workstation_impl.operations.up")
+    @patch("jarvis.application.standalone.workstation_impl.operations.diagnose")
     def test_recover_no_issues(self, mock_diag, mock_up):
         mock_diag.return_value = {"ok": True, "issues": []}
         result = recover_safe()

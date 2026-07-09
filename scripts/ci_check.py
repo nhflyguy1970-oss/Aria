@@ -88,7 +88,7 @@ PYTEST_PATHS: tuple[str, ...] = (
     "tests/test_workstation_inventory.py",
     "tests/test_workstation_acceptance.py",
     "tests/test_workstation_integration.py",
-    "tests/test_workstation_repair.py",
+    "tests/test_application_boundary.py",
     "tests/test_automation_ops.py",
     "tests/test_knowledge_registry.py",
     "tests/test_agents.py",

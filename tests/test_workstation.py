@@ -7,9 +7,9 @@ from unittest.mock import MagicMock, patch
 
 from jarvis.behaviors import get_behavior, register_behaviors
 from jarvis.handlers.registry import call_action, has_action
-from jarvis.workstation.lifecycle import down, restart, status, up
-from jarvis.workstation.operations import diagnose, format_report, recover_safe
-from jarvis.workstation.registry import all_components, component, get_registry
+from jarvis.application.standalone.workstation_impl.lifecycle import down, restart, status, up
+from jarvis.application.standalone.workstation_impl.operations import diagnose, format_report, recover_safe
+from jarvis.application.standalone.workstation_impl.registry import all_components, component, get_registry
 
 
 class TestWorkstationRegistry(unittest.TestCase):
@@ -42,33 +42,33 @@ class TestWorkstationLifecycle(unittest.TestCase):
         self.assertIn("components", snap)
         self.assertIn("summary", snap)
 
-    @patch("jarvis.workstation.lifecycle.component")
+    @patch("jarvis.application.standalone.workstation_impl.lifecycle.component")
     def test_up_unknown_component(self, mock_component):
         mock_component.return_value = None
         result = up("not-a-real-component")
         self.assertFalse(result.get("ok"))
         self.assertIn("Unknown component", result.get("error", ""))
 
-    @patch("jarvis.workstation.lifecycle.component")
+    @patch("jarvis.application.standalone.workstation_impl.lifecycle.component")
     def test_restart_managed_component(self, mock_component):
         comp = MagicMock()
         comp.managed = True
         comp.restart = MagicMock(return_value=True)
         mock_component.return_value = comp
-        with patch("jarvis.workstation.lifecycle.status", return_value={"ready": True}):
+        with patch("jarvis.application.standalone.workstation_impl.lifecycle.status", return_value={"ready": True}):
             result = restart("comfyui")
         self.assertTrue(result.get("ok"))
         comp.restart.assert_called_once()
 
-    @patch("jarvis.workstation.lifecycle.component")
+    @patch("jarvis.application.standalone.workstation_impl.lifecycle.component")
     def test_down_skips_required(self, mock_component):
         comp = MagicMock()
         comp.managed = True
         comp.required = True
         comp.healthy = MagicMock(return_value=True)
         mock_component.return_value = comp
-        with patch("jarvis.workstation.lifecycle.all_components", return_value=[comp]):
-            with patch("jarvis.workstation.lifecycle.status", return_value={"ready": True}):
+        with patch("jarvis.application.standalone.workstation_impl.lifecycle.all_components", return_value=[comp]):
+            with patch("jarvis.application.standalone.workstation_impl.lifecycle.status", return_value={"ready": True}):
                 result = down()
         self.assertTrue(result.get("ok"))
 
@@ -87,8 +87,8 @@ class TestWorkstationOperations(unittest.TestCase):
         text = format_report(force=True)
         self.assertIn("Workstation Status", text)
 
-    @patch("jarvis.workstation.operations.diagnose")
-    @patch("jarvis.workstation.operations.up")
+    @patch("jarvis.application.standalone.workstation_impl.operations.diagnose")
+    @patch("jarvis.application.standalone.workstation_impl.operations.up")
     def test_recover_bootstraps_when_no_auto_issues(self, mock_up, mock_diagnose):
         mock_diagnose.side_effect = [
             {
@@ -105,16 +105,16 @@ class TestWorkstationOperations(unittest.TestCase):
 
 class TestWorkstationLifecycleCli(unittest.TestCase):
     def test_cli_parses_lifecycle_commands(self):
-        from jarvis.workstation.cli import main
+        from jarvis.application.standalone.workstation_impl.cli import main
 
         with self.assertRaises(SystemExit) as ctx:
             main(["--help"])
         self.assertEqual(ctx.exception.code, 0)
 
-    @patch("jarvis.workstation.inventory.verify_inventory", return_value={"ready": True, "blockers": [], "warnings": [], "inventory": {"summary": {"ready": True, "total": 1, "healthy": 1}}})
-    @patch("jarvis.workstation.inventory.format_inventory_text", return_value="## Inventory")
+    @patch("jarvis.application.standalone.workstation_impl.inventory.verify_inventory", return_value={"ready": True, "blockers": [], "warnings": [], "inventory": {"summary": {"ready": True, "total": 1, "healthy": 1}}})
+    @patch("jarvis.application.standalone.workstation_impl.inventory.format_inventory_text", return_value="## Inventory")
     def test_verify_uses_inventory(self, _fmt, mock_verify):
-        from jarvis.workstation.cli import main
+        from jarvis.application.standalone.workstation_impl.cli import main
 
         self.assertEqual(main(["verify"]), 0)
         mock_verify.assert_called_once()
@@ -139,8 +139,8 @@ class TestOperationsBehavior(unittest.TestCase):
         ):
             self.assertTrue(has_action(action))
 
-    @patch("jarvis.workstation.operations.format_report", return_value="## Workstation Status\nOK")
-    @patch("jarvis.workstation.lifecycle.status", return_value={"ready": True})
+    @patch("jarvis.application.standalone.workstation_impl.operations.format_report", return_value="## Workstation Status\nOK")
+    @patch("jarvis.application.standalone.workstation_impl.lifecycle.status", return_value={"ready": True})
     def test_workstation_status_action(self, _status, _report):
         register_behaviors()
         result = call_action(MagicMock(), "workstation_status", {}, "status")

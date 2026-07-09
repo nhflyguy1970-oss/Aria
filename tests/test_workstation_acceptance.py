@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from jarvis.workstation.acceptance import (
+from jarvis.application.standalone.workstation_impl.acceptance import (
     AcceptanceItem,
     AcceptanceStatus,
     _classify,
@@ -46,16 +46,16 @@ def test_classify_needs_config_when_unverified():
     )
 
 
-@patch("jarvis.workstation.acceptance._CATALOG", [])
+@patch("jarvis.application.standalone.workstation_impl.acceptance._CATALOG", [])
 def test_run_acceptance_empty_catalog():
     report = run_acceptance(persist=False)
     assert report["score"]["overall"] == 100.0
     assert report["items"] == []
 
 
-@patch("jarvis.workstation.integration_probes.run_probe")
-@patch("jarvis.workstation.acceptance._probe_aria_api")
-@patch("jarvis.workstation.acceptance._probe_registry")
+@patch("jarvis.application.standalone.workstation_impl.integration_probes.run_probe")
+@patch("jarvis.application.standalone.workstation_impl.acceptance._probe_aria_api")
+@patch("jarvis.application.standalone.workstation_impl.acceptance._probe_registry")
 def test_run_acceptance_marks_aria_ready(mock_registry, mock_aria, mock_run_probe):
     mock_run_probe.return_value = {"ok": True, "detail": "ok"}
     mock_registry.return_value = {
@@ -78,7 +78,7 @@ def test_run_acceptance_marks_aria_ready(mock_registry, mock_aria, mock_run_prob
         ("ollama", "Ollama", "ai_runtime", True, True, True, [], lambda: mock_registry.return_value),
         ("aria", "Aria", "interfaces", True, True, True, [], mock_aria),
     ]
-    with patch("jarvis.workstation.acceptance._CATALOG", tiny_catalog):
+    with patch("jarvis.application.standalone.workstation_impl.acceptance._CATALOG", tiny_catalog):
         report = run_acceptance(persist=False)
     assert report["summary"]["ready"] == 2
     assert "Workstation Acceptance Report" in format_acceptance_markdown(report)

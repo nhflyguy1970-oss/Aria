@@ -1,22 +1,39 @@
-"""Workstation control plane — registry, lifecycle, and operations for Aria OS."""
+"""Compatibility shim — workstation implementation lives in AI Platform.
 
-from jarvis.workstation.inventory import collect_inventory, format_inventory_text, verify_inventory
-from jarvis.workstation.lifecycle import down, restart, status, up
-from jarvis.workstation.operations import diagnose, format_report, recover_safe
-from jarvis.workstation.registry import all_components, component, get_registry
+Use:
+  - ``workstation`` (AI Platform) for platform workstation lifecycle
+  - ``aria`` for standalone Aria lifecycle
+"""
 
-__all__ = [
-    "all_components",
-    "collect_inventory",
-    "component",
-    "diagnose",
-    "down",
-    "format_inventory_text",
-    "format_report",
-    "get_registry",
-    "recover_safe",
-    "restart",
-    "status",
-    "up",
-    "verify_inventory",
-]
+from __future__ import annotations
+
+import sys
+
+
+def _use_platform() -> bool:
+    try:
+        import aiplatform.workstation  # noqa: F401
+
+        return True
+    except ImportError:
+        return False
+
+
+def _attach_aria():
+    try:
+        from jarvis.application.host import attach_if_present
+
+        attach_if_present()
+    except Exception:
+        pass
+
+
+if _use_platform():
+    _attach_aria()
+    from aiplatform.workstation import *  # noqa: F403
+    from aiplatform.workstation.cli import main
+else:
+    from jarvis.application.standalone.workstation_impl import *  # noqa: F403
+    from jarvis.application.standalone.workstation_impl.cli import main
+
+__all__ = ["main"]

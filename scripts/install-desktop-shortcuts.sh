@@ -3,11 +3,18 @@
 set -euo pipefail
 
 JARVIS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=_jarvis-launch-lib.sh
+source "$JARVIS_ROOT/scripts/_jarvis-launch-lib.sh"
+PY="$(jarvis_python)"
 APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 DESKTOP_DIR="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
 
-# Desktop: main AI Workstation shortcut. Optional: JARVIS_DESKTOP_SHORTCUTS=all
-DESKTOP_SHORTCUTS="${JARVIS_DESKTOP_SHORTCUTS:-ai-workstation,aria}"
+# Desktop: platform mode installs AI Workstation; standalone Aria installs Aria only.
+if "$PY" -c "import aiplatform.workstation" 2>/dev/null; then
+  DESKTOP_SHORTCUTS="${JARVIS_DESKTOP_SHORTCUTS:-ai-workstation}"
+else
+  DESKTOP_SHORTCUTS="${JARVIS_DESKTOP_SHORTCUTS:-aria}"
+fi
 
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-pyside.sh"

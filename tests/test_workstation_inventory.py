@@ -5,13 +5,13 @@ from __future__ import annotations
 import unittest
 from unittest.mock import patch
 
-from jarvis.workstation.inventory import (
+from jarvis.application.standalone.workstation_impl.inventory import (
     InventoryRecord,
     collect_inventory,
     verify_inventory,
 )
-from jarvis.workstation.optimize import apply_optimization
-from jarvis.workstation.profiles import PROFILES, resolve_profile
+from jarvis.application.standalone.workstation_impl.optimize import apply_optimization
+from jarvis.application.standalone.workstation_impl.profiles import PROFILES, resolve_profile
 
 
 class TestInstallProfiles(unittest.TestCase):
@@ -27,9 +27,9 @@ class TestInstallProfiles(unittest.TestCase):
 
 class TestInventory(unittest.TestCase):
     def test_collect_inventory_shape(self):
-        with patch("jarvis.workstation.inventory._registry_records", return_value=[]):
+        with patch("jarvis.application.standalone.workstation_impl.inventory._registry_records", return_value=[]):
             with patch(
-                "jarvis.workstation.inventory._venv_record",
+                "jarvis.application.standalone.workstation_impl.inventory._venv_record",
                 return_value=InventoryRecord(
                     id="aria_venv",
                     label="venv",
@@ -46,7 +46,7 @@ class TestInventory(unittest.TestCase):
 
     def test_verify_flags_missing_venv(self):
         with patch(
-            "jarvis.workstation.inventory.collect_inventory",
+            "jarvis.application.standalone.workstation_impl.inventory.collect_inventory",
             return_value={
                 "summary": {"ready": False},
                 "items": [
@@ -69,7 +69,7 @@ class TestInventory(unittest.TestCase):
 class TestOptimize(unittest.TestCase):
     def test_optimize_dry_run(self):
         with patch(
-            "jarvis.workstation.optimize.collect_hardware",
+            "jarvis.application.standalone.workstation_impl.optimize.collect_hardware",
             return_value={
                 "ram_gb": 8,
                 "recommended_placement": {"llm_inference": "nvidia", "image_generation": "amd"},

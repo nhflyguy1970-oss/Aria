@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from jarvis.workstation.integration_probes import probe_redis, run_probe
 from jarvis.workstation.local_config import detect_local_services
-from jarvis.workstation.startup import _autostart_ids
+from jarvis.application.standalone.workstation_impl.startup import _autostart_ids
 
 
 def test_autostart_ids_from_env(monkeypatch):
