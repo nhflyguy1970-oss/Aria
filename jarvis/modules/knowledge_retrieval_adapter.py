@@ -90,12 +90,38 @@ def knowledge_index_build(
     return chunks
 
 
+def _platform_context(
+    corpus: str,
+    query: str,
+    **kwargs: Any,
+) -> tuple[str, list[str]] | None:
+    try:
+        from aiplatform.applications.knowledge_retrieval.bridge import platform_search
+
+        limit = int(kwargs.get("limit", 5))
+        hits = platform_search(_APPLICATION_ID, corpus, query, limit=limit)
+        if not hits:
+            return None
+        text = "\n\n".join(str(hit.get("text") or "") for hit in hits if hit.get("text"))
+        sources = [str(hit.get("source") or "") for hit in hits if hit.get("source")]
+        if not text:
+            return None
+        return text, sources
+    except Exception as exc:
+        logger.debug("platform knowledge_context unavailable: %s", exc)
+        return None
+
+
 def knowledge_context(
     corpus: str,
     legacy_context: Callable[..., tuple[str, list[str]]],
     query: str,
     **kwargs: Any,
 ) -> tuple[str, list[str]]:
+    if _platform_retrieval_authoritative():
+        platform_ctx = _platform_context(corpus, query, **kwargs)
+        if platform_ctx is not None:
+            return platform_ctx
     if knowledge_retrieval_enabled():
         try:
             from aiplatform.applications.knowledge_retrieval.metrics import record_legacy_retrieval

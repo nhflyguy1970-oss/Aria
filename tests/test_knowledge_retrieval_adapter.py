@@ -61,6 +61,28 @@ class TestKnowledgeRetrievalAdapter(unittest.TestCase):
             chunks = knowledge_index_build("aria:project_docs", legacy_build)
             self.assertEqual(len(chunks), 1)
 
+    def test_context_uses_platform_when_authoritative(self):
+        from jarvis.modules.knowledge_retrieval_adapter import knowledge_context
+
+        def legacy_context(query: str, **kwargs):
+            return "legacy context", ["legacy.md"]
+
+        with patch(
+            "jarvis.modules.knowledge_retrieval_adapter._platform_retrieval_authoritative",
+            return_value=True,
+        ):
+            with patch(
+                "jarvis.modules.knowledge_retrieval_adapter._platform_context",
+                return_value=("platform context", ["platform.md"]),
+            ):
+                text, sources = knowledge_context(
+                    "aria:project_docs",
+                    legacy_context,
+                    "readme",
+                )
+        self.assertEqual(text, "platform context")
+        self.assertEqual(sources, ["platform.md"])
+
 
 if __name__ == "__main__":
     unittest.main()
