@@ -565,10 +565,6 @@ class JarvisAssistant:
             "generate_song": self._generate_song,
             "voice_to_song": self._voice_to_song,
             "diarize_audio": self._diarize_audio,
-            "branch_create": self._branch_create,
-            "branch_switch": self._branch_switch,
-            "branch_list": self._branch_list,
-            "branch_delete": self._branch_delete,
             "upgrade_wizard": self._upgrade_wizard,
             "upgrade_verify": self._upgrade_verify,
             "upgrade_apply": self._upgrade_apply,
@@ -2290,46 +2286,6 @@ class JarvisAssistant:
             module="audio",
             audio_path=path,
             transcript=body,
-        )
-
-    def _branch_create(self, params: dict, message: str) -> dict:
-        name = params.get("name") or message.strip() or "Branch"
-        bid = self.create_branch(name)
-        return _ok(f"Created branch **{name}** (`{bid}`). You're now on it.", module="general", branch_id=bid)
-
-    def _branch_switch(self, params: dict, message: str) -> dict:
-        bid = params.get("branch_id") or message.strip()
-        if not self.switch_branch(bid):
-            branches = self.branches.list_branches()
-            lines = "\n".join(f"- `{b['id']}` {b['name']}" for b in branches)
-            return _err(f"Unknown branch `{bid}`. Available:\n{lines}")
-        return _ok(f"Switched to branch `{bid}`.", module="general", branch_id=bid)
-
-    def _branch_list(self, params: dict, message: str) -> dict:
-        branches = self.branches.list_branches()
-        active = self.branches.active_id
-        lines = "\n".join(
-            f"{'→' if b['id'] == active else ' '} `{b['id']}` **{b['name']}** ({b['messages']} msgs)"
-            for b in branches
-        )
-        return _ok(f"**Chat branches:**\n\n{lines}", module="general")
-
-    def _branch_delete(self, params: dict, message: str) -> dict:
-        raw = params.get("branch_ids") or params.get("branch_id") or message.strip()
-        if isinstance(raw, list):
-            ids = [str(x).strip() for x in raw if str(x).strip()]
-        else:
-            ids = [p.strip() for p in re.split(r"[\s,]+", str(raw)) if p.strip()]
-        if not ids:
-            return _err("Name one or more branch ids to delete (main cannot be removed).")
-        result = self.delete_branches(ids)
-        if not result["deleted"]:
-            return _err("No branches deleted — check ids (main is protected).")
-        names = ", ".join(f"`{b}`" for b in result["deleted"])
-        return _ok(
-            f"Deleted {len(result['deleted'])} branch(es): {names}. Active: `{result['active']}`.",
-            module="general",
-            branch_id=result["active"],
         )
 
     def _data_sql(self, params: dict, message: str) -> dict:

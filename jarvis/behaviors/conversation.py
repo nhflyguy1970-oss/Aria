@@ -9,13 +9,14 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from jarvis import llm
-from jarvis.behaviors.lifecycle import ApplicationBehavior
-
 from jarvis.behaviors import register_behavior
+from jarvis.behaviors.lifecycle import ApplicationBehavior
 from jarvis.config import is_uncensored
 from jarvis.handlers.registry import register_action
 from jarvis.ollama_health import check_ollama
-from jarvis.response import err as _err, ok as _ok, stream_done as _stream_done
+from jarvis.response import err as _err
+from jarvis.response import ok as _ok
+from jarvis.response import stream_done as _stream_done
 
 if TYPE_CHECKING:
     from jarvis.assistant import JarvisAssistant
@@ -50,9 +51,9 @@ class ConversationEngine:
         general = is_general_knowledge_question(message, self._a.session)
         skip_project_context = general or is_meta_self_question(message)
 
+        from jarvis.behaviors.knowledge import get_knowledge_behavior
         from jarvis.behaviors.memory import get_memory_behavior
         from jarvis.behaviors.planning import get_planning_behavior
-        from jarvis.behaviors.knowledge import get_knowledge_behavior
 
         memory_behavior = get_memory_behavior()
         if memory_behavior is not None:
@@ -182,7 +183,10 @@ class ConversationEngine:
             return _ok(piped, module=None, type="instruction_follow")
 
         context_prefix, context_warnings, memory_citations = self.build_context_prefix(user_message)
-        from jarvis.instruction_follow import is_strict_instruction_prompt, strict_instruction_context_prefix
+        from jarvis.instruction_follow import (
+            is_strict_instruction_prompt,
+            strict_instruction_context_prefix,
+        )
 
         if is_strict_instruction_prompt(user_message):
             hint = strict_instruction_context_prefix()
@@ -247,14 +251,18 @@ class ConversationEngine:
 
         yield {"type": "status", "message": "Gathering context…"}
         context_prefix, context_warnings, stream_citations = self.build_context_prefix(user_message)
-        from jarvis.instruction_follow import is_strict_instruction_prompt, strict_instruction_context_prefix
+        from jarvis.instruction_follow import (
+            is_strict_instruction_prompt,
+            strict_instruction_context_prefix,
+        )
 
         if is_strict_instruction_prompt(user_message):
             hint = strict_instruction_context_prefix()
             context_prefix = f"{hint}\n\n{context_prefix}" if context_prefix else hint
         pending = self._a.conversation.messages + [{"role": "user", "content": user_message}]
         msgs = self.messages_for_llm(pending, context_prefix)
-        from jarvis.chat_cancel import finish as finish_cancel, is_cancelled
+        from jarvis.chat_cancel import finish as finish_cancel
+        from jarvis.chat_cancel import is_cancelled
 
         chat_model = (params.get("model") or self._a.session.chat_model or "").strip() or llm.general_model()
         full: list[str] = []
@@ -326,6 +334,50 @@ class ConversationEngine:
             done_payload["memory_citations"] = stream_citations
         yield done_payload
 
+    def branch_create(self, params: dict, message: str) -> dict:
+        name = params.get("name") or message.strip() or "Branch"
+        branch_id = self._a.create_branch(name)
+        return _ok(
+            f"Created branch **{name}** (`{branch_id}`). You're now on it.",
+            module="general",
+            branch_id=branch_id,
+        )
+
+    def branch_switch(self, params: dict, message: str) -> dict:
+        branch_id = params.get("branch_id") or message.strip()
+        if not self._a.switch_branch(branch_id):
+            branches = self._a.branches.list_branches()
+            lines = "\n".join(f"- `{item['id']}` {item['name']}" for item in branches)
+            return _err(f"Unknown branch `{branch_id}`. Available:\n{lines}")
+        return _ok(f"Switched to branch `{branch_id}`.", module="general", branch_id=branch_id)
+
+    def branch_list(self, params: dict, message: str) -> dict:
+        branches = self._a.branches.list_branches()
+        active = self._a.branches.active_id
+        lines = "\n".join(
+            f"{'→' if item['id'] == active else ' '} `{item['id']}` **{item['name']}** ({item['messages']} msgs)"
+            for item in branches
+        )
+        return _ok(f"**Chat branches:**\n\n{lines}", module="general")
+
+    def branch_delete(self, params: dict, message: str) -> dict:
+        raw = params.get("branch_ids") or params.get("branch_id") or message.strip()
+        if isinstance(raw, list):
+            ids = [str(item).strip() for item in raw if str(item).strip()]
+        else:
+            ids = [part.strip() for part in re.split(r"[\s,]+", str(raw)) if part.strip()]
+        if not ids:
+            return _err("Name one or more branch ids to delete (main cannot be removed).")
+        result = self._a.delete_branches(ids)
+        if not result["deleted"]:
+            return _err("No branches deleted — check ids (main is protected).")
+        names = ", ".join(f"`{item}`" for item in result["deleted"])
+        return _ok(
+            f"Deleted {len(result['deleted'])} branch(es): {names}. Active: `{result['active']}`.",
+            module="general",
+            branch_id=result["active"],
+        )
+
 
 def ensure_conversation_engine(assistant: JarvisAssistant) -> ConversationEngine:
     behavior = get_conversation_behavior()
@@ -344,6 +396,15 @@ def get_conversation_behavior() -> ConversationBehavior | None:
     return behavior if isinstance(behavior, ConversationBehavior) else None
 
 
+_CONVERSATION_ACTIONS = [
+    "chat",
+    "branch_create",
+    "branch_switch",
+    "branch_list",
+    "branch_delete",
+]
+
+
 @register_behavior
 class ConversationBehavior(ApplicationBehavior):
     def __init__(self) -> None:
@@ -351,10 +412,10 @@ class ConversationBehavior(ApplicationBehavior):
             behavior_id="conversation",
             name="Conversation",
             category="Conversation",
-            description="Chat context assembly, LLM dispatch, and conversation persistence",
+            description="Chat context assembly, LLM dispatch, conversation persistence, and branches",
             module_path="jarvis.behaviors.conversation",
             test_module="tests.test_behaviors",
-            action_names=["chat"],
+            action_names=list(_CONVERSATION_ACTIONS),
             dependencies=list(_CONVERSATION_DEPENDENCIES),
         )
         self._engine: ConversationEngine | None = None
@@ -366,6 +427,18 @@ class ConversationBehavior(ApplicationBehavior):
     def attach(self) -> list[str]:
         register_action("chat", module="conversation", description="General chat")(
             self._chat_entry
+        )
+        register_action("branch_create", module="general", description="Create chat branch")(
+            self._branch_entry("branch_create")
+        )
+        register_action("branch_switch", module="general", description="Switch chat branch")(
+            self._branch_entry("branch_switch")
+        )
+        register_action("branch_list", info=True, module="general", description="List chat branches")(
+            self._branch_entry("branch_list")
+        )
+        register_action("branch_delete", module="general", description="Delete chat branches")(
+            self._branch_entry("branch_delete")
         )
         return []
 
@@ -392,10 +465,15 @@ class ConversationBehavior(ApplicationBehavior):
         params: dict,
         message: str,
     ) -> dict | None:
-        if action != "chat":
+        if action not in _CONVERSATION_ACTIONS:
             return None
         self.initialize(assistant)
-        return self._engine.execute(params, message) if self._engine else None
+        if not self._engine:
+            return None
+        if action == "chat":
+            return self._engine.execute(params, message)
+        handler = getattr(self._engine, action)
+        return handler(params, message)
 
     def health(self) -> dict:
         report = super().health()
@@ -408,3 +486,13 @@ class ConversationBehavior(ApplicationBehavior):
 
     def _chat_entry(self, assistant: JarvisAssistant, params: dict, message: str) -> dict:
         return ensure_conversation_engine(assistant).execute(params, message)
+
+    def _branch_entry(self, action: str):
+        def _entry(assistant: JarvisAssistant, params: dict, message: str) -> dict:
+            self.initialize(assistant)
+            if not self._engine:
+                return _err("Conversation engine not initialized.", module="general")
+            handler = getattr(self._engine, action)
+            return handler(params, message)
+
+        return _entry

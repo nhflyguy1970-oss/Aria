@@ -69,6 +69,8 @@ class TestConversationBehavior(unittest.TestCase):
     def test_conversation_registers_chat_action(self):
         register_behaviors()
         self.assertTrue(has_action("chat"))
+        for action in ("branch_create", "branch_switch", "branch_list", "branch_delete"):
+            self.assertTrue(has_action(action))
 
     def test_messages_for_llm_prefix(self):
         engine = ConversationEngine(MagicMock())
