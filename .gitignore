@@ -1,9 +1,9 @@
 # Secrets and local runtime state
-data/
-data/jarvis.env
-data/uncensored_auth.json
-data/uncensored_sessions.json
-data/app_settings.json
+/data/
+/data/jarvis.env
+/data/uncensored_auth.json
+/data/uncensored_sessions.json
+/data/app_settings.json
 .env
 .env.local
 **/credentials.json
@@ -24,13 +24,13 @@ memory_vectors.db
 memory_vectors.db-shm
 memory_vectors.db-wal
 output/
-data/generated/
-data/uploads/
-data/audio/
-data/models/
-data/logs/
-data/memory.json
-data/chat_*.json
+/data/generated/
+/data/uploads/
+/data/audio/
+/data/models/
+/data/logs/
+/data/memory.json
+/data/chat_*.json
 tools/piper/
 
 # OS / editor

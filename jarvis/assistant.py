@@ -9,7 +9,6 @@ from typing import Any, Iterator
 from jarvis import fs, llm, proposal_store, rag
 from jarvis.action_log import log_action
 from jarvis.branches import BranchManager
-from jarvis.capabilities import capabilities_message, greeting_message, models_guide
 from jarvis.code_context import format_context, gather_context
 from jarvis.coding_agent import CodingAgent
 from jarvis.coding_tasks import TaskManager
@@ -528,11 +527,6 @@ class JarvisAssistant:
             "apply_proposal": self._apply_proposal_nl,
             "dismiss_proposal": self._dismiss_proposal,
             "undo_apply": self._undo_apply,
-            "data_load": self._data_load,
-            "data_query": self._data_query,
-            "data_summary": self._data_summary,
-            "data_clean": self._data_clean,
-            "data_export": self._data_export,
             "record_transcribe": self._record_transcribe,
             "transcribe": self._transcribe,
             "analyze_audio": self._analyze_audio,
@@ -558,8 +552,6 @@ class JarvisAssistant:
             "inpaint_image": self._inpaint_image,
             "edit_image": self._edit_image,
             "enhance_prompt": self._enhance_prompt,
-            "data_chart": self._data_chart,
-            "data_sql": self._data_sql,
             "generate_music": self._generate_music,
             "transform_genre": self._transform_genre,
             "generate_song": self._generate_song,
@@ -1207,26 +1199,6 @@ class JarvisAssistant:
     def _undo_apply(self, params: dict, message: str) -> dict:
         return perform_undo_apply(self)
 
-
-    def _capabilities(self, params: dict, message: str) -> dict:
-        return _ok(capabilities_message(), module=None, type="info")
-
-    def _models_info(self, params: dict, message: str) -> dict:
-        msg = models_guide()
-        status = self.get_status()
-        if status.get("models_missing"):
-            msg += "\n\n**Missing on your system:** " + ", ".join(f"`{m}`" for m in status["models_missing"])
-            msg += "\n\nRun `./scripts/pull-models.sh` to install recommended models."
-        return _ok(msg, module=None, type="info")
-
-    def _greeting(self, params: dict, message: str) -> dict:
-        lower = (message or "").lower().strip()
-        if re.search(r"good (morning|afternoon|evening)\b", lower):
-            from jarvis.handlers.registry import call_action
-
-            return call_action(self, "morning_briefing", params, message)
-        return _ok(greeting_message(), module=None, type="info")
-
     def _upgrade_wizard(self, params: dict, message: str) -> dict:
         from jarvis.upgrade_wizard import (
             GUARDRAIL_PROMPT,
@@ -1653,86 +1625,6 @@ class JarvisAssistant:
 
 
 
-    def _data_ok(self, answer: str, **extra) -> dict:
-        preview = self.data.preview() if self.data.dataset else {}
-        if preview:
-            extra.setdefault("data_preview", preview)
-            extra.setdefault("data_path", preview.get("path", ""))
-        return _ok(answer, module="data", **extra)
-
-    def _ensure_data_loaded(self, message: str) -> dict | None:
-        if self.data.dataset:
-            return None
-        if not self.session.last_data_path:
-            return _err("No dataset loaded — attach a CSV, JSON, XLSX, or SQLite file.")
-        loaded = self._data_load({"path": self.session.last_data_path}, message)
-        if not loaded.get("ok"):
-            return loaded
-        return None
-
-    def _data_load(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_data(params.get("path", ""))
-        if not path:
-            return _err("Which data file should I load? Attach one or give me a path.")
-        result = self.data.load_dataset(path)
-        if result.startswith("ERROR:"):
-            return _err(result)
-        self.session.note_data(path)
-        self.session.note_module("data")
-        summary = self.data.describe_stats()
-        return self._data_ok(
-            f"I've loaded **{Path(path).name}**.\n\n{summary}\n\n"
-            "Try: row count, average of a column, chart, export, or clean duplicates.",
-        )
-
-    def _data_query(self, params: dict, message: str) -> dict:
-        err = self._ensure_data_loaded(message)
-        if err:
-            return err
-        question = params.get("question") or message
-        computed = self.data.compute_answer(question)
-        if computed:
-            return self._data_ok(computed)
-        ctx = self.data.describe_stats()
-        answer = llm.ask(llm.general_model(), [{
-            "role": "user",
-            "content": f"Dataset:\n{ctx}\n\nQuestion: {question}\n\nAnswer from the data only.",
-        }])
-        return self._data_ok(answer)
-
-    def _data_summary(self, params: dict, message: str) -> dict:
-        err = self._ensure_data_loaded(message)
-        if err:
-            return err
-        return self._data_ok(self.data.describe_stats())
-
-    def _data_clean(self, params: dict, message: str) -> dict:
-        err = self._ensure_data_loaded(message)
-        if err:
-            return err
-        instruction = params.get("instruction") or message
-        summary, _ = self.data.clean(instruction)
-        if summary.startswith("ERROR"):
-            return _err(summary)
-        return self._data_ok(f"{summary}\n\n{self.data.describe_stats()}")
-
-    def _data_export(self, params: dict, message: str) -> dict:
-        err = self._ensure_data_loaded(message)
-        if err:
-            return err
-        if re.search(r"\bpdf\b", message, re.I):
-            fmt = "pdf"
-        elif re.search(r"\bjson\b", message, re.I):
-            fmt = "json"
-        else:
-            fmt = "csv"
-        m = re.search(r"\bto\s+[`'\"]?([^\s`'\"]+\.(?:csv|json|pdf))[`'\"]?", message, re.I)
-        out = m.group(1) if m else None
-        path = self.data.export(out, fmt=fmt)
-        if path.startswith("ERROR"):
-            return _err(path)
-        return self._data_ok(f"Exported **{Path(path).name}** to `{path}`", export_path=path)
-
     def _transcribe(self, params: dict, message: str) -> dict:
         path = self.session.resolve_audio(params.get("path", ""))
         if not path:
@@ -2143,48 +2035,6 @@ class JarvisAssistant:
     def _enhance_prompt(self, params: dict, message: str) -> dict:
         return self._media.enhance_prompt(params, message)
 
-    def _clear(self, params: dict, message: str) -> dict:
-        bid = self.branches.active_id or "main"
-        return self.clear_branch_messages(bid)
-
-    def _weather_forecast(self, params: dict, message: str) -> dict:
-        from jarvis.journal_weather import parse_weather_day, weather_forecast_text
-
-        day = (params.get("day") or "").strip() or parse_weather_day(message)
-        return _ok(
-            weather_forecast_text(day, message=message),
-            module="general",
-            type="weather",
-        )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def _generate_music(self, params: dict, message: str) -> dict:
         from jarvis import music_gen
         prompt = params.get("prompt") or re.sub(
@@ -2287,31 +2137,3 @@ class JarvisAssistant:
             audio_path=path,
             transcript=body,
         )
-
-    def _data_sql(self, params: dict, message: str) -> dict:
-        if not self.data.dataset:
-            loaded = self._data_load({"path": self.session.last_data_path}, message)
-            if not loaded.get("ok"):
-                return loaded
-        query = params.get("query") or message
-        if not query.strip().upper().startswith("SELECT"):
-            m = re.search(r"(SELECT\s+.+)", message, re.I | re.S)
-            query = m.group(1) if m else query
-        result = self.data.sql_query(query)
-        if result.startswith("ERROR:"):
-            return _err(result)
-        return _ok(f"**Query results:**\n\n```json\n{result[:6000]}\n```", module="data")
-
-    def _data_chart(self, params: dict, message: str) -> dict:
-        err = self._ensure_data_loaded(message)
-        if err:
-            return err
-        from jarvis.modules.data import parse_chart_request
-        spec = parse_chart_request(message)
-        col = params.get("column") or spec.get("column")
-        chart_type = params.get("chart_type") or spec.get("chart_type") or "bar"
-        result = self.data.chart(col or None, chart_type=chart_type)
-        if result.startswith("ERROR:"):
-            return _err(result)
-        label = f"**{col}** ({chart_type})" if col else chart_type
-        return self._data_ok(f"Chart for {label}:", chart_path=result)

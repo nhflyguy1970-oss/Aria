@@ -123,6 +123,27 @@ class TestPlanningBehavior(unittest.TestCase):
         self.assertIn("buy milk", result.get("message", ""))
 
 
+class TestDataBehavior(unittest.TestCase):
+    def test_discover_data_behavior(self):
+        behavior = get_behavior("data")
+        from jarvis.behaviors.data import DataBehavior
+
+        self.assertIsInstance(behavior, DataBehavior)
+        self.assertIn("data_load", behavior.action_names)
+        self.assertIn("data_chart", behavior.action_names)
+
+    def test_data_registers_actions(self):
+        register_behaviors()
+        for action in (
+            "data_load",
+            "data_query",
+            "data_summary",
+            "data_chart",
+            "data_sql",
+        ):
+            self.assertTrue(has_action(action))
+
+
 class TestSmartHomeBehavior(unittest.TestCase):
     def test_discover_smarthome_behavior(self):
         behavior = get_behavior("smarthome")
