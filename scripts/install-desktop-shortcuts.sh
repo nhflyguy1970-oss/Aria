@@ -16,6 +16,7 @@ else
   DESKTOP_SHORTCUTS="${JARVIS_DESKTOP_SHORTCUTS:-aria}"
 fi
 
+chmod +x "$JARVIS_ROOT/scripts/desktop-launch-workstation.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-pyside.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-uncensored.sh"
