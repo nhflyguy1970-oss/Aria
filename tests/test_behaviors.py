@@ -93,5 +93,31 @@ class TestPlanningBehavior(unittest.TestCase):
         self.assertIn("buy milk", result.get("message", ""))
 
 
+class TestMemoryBehavior(unittest.TestCase):
+    def test_discover_memory_behavior(self):
+        behavior = get_behavior("memory")
+        from jarvis.behaviors.memory import MemoryBehavior
+
+        self.assertIsInstance(behavior, MemoryBehavior)
+        self.assertEqual(behavior.stability, "stable")
+        self.assertEqual(behavior.owner, "application")
+        self.assertEqual(behavior.version, "1.0.0")
+        self.assertIn("remember", behavior.action_names)
+        self.assertIn("memory_search", behavior.action_names)
+
+    def test_memory_registers_actions(self):
+        register_behaviors()
+        for action in ("remember", "recall", "memory_search", "project_checkpoint"):
+            self.assertTrue(has_action(action))
+
+    def test_prepare_context_default(self):
+        from jarvis.behaviors.memory import MemoryBehavior
+
+        behavior = MemoryBehavior()
+        parts, citations = behavior.prepare_context(MagicMock(), "hello")
+        self.assertIsInstance(parts, list)
+        self.assertIsInstance(citations, list)
+
+
 if __name__ == "__main__":
     unittest.main()

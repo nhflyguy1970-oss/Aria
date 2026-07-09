@@ -23,6 +23,7 @@ class ApplicationBehavior:
     dependencies: list[str] = field(default_factory=list)
     stability: str = "stable"
     owner: str = "application"
+    version: str = "1.0.0"
 
     def initialize(self, orchestrator: Any) -> None:
         """Bind this behavior to a running orchestrator instance."""
@@ -34,6 +35,15 @@ class ApplicationBehavior:
     def validate(self) -> list[str]:
         """Validate declared dependencies and readiness."""
         return []
+
+    def prepare_context(
+        self,
+        orchestrator: Any,
+        message: str,
+        **kwargs: Any,
+    ) -> tuple[list[str], list[dict]]:
+        """Inject behavior-specific context before execution (default no-op)."""
+        return [], []
 
     def execute(
         self,
@@ -71,6 +81,7 @@ class ApplicationBehavior:
             "dependencies": list(self.dependencies),
             "stability": self.stability,
             "owner": self.owner,
+            "version": self.version,
             "extracted": True,
             "application_id": application_id,
         }

@@ -36,33 +36,17 @@ class ConversationEngine:
 
     @staticmethod
     def memory_citation(entry: dict) -> dict:
-        return {
-            "id": entry.get("id"),
-            "type": entry.get("type", "fact"),
-            "date": (entry.get("created") or entry.get("date") or "")[:10],
-            "content": (entry.get("content") or "")[:160],
-        }
+        from jarvis.behaviors.memory.engine import MemoryEngine
+
+        return MemoryEngine.memory_citation(entry)
 
     def build_context_prefix(self, message: str) -> tuple[str, list[str], list[dict]]:
         parts: list[str] = []
         warnings: list[str] = []
         citations: list[dict] = []
-        seen_ids: set[str] = set()
-
-        def _cite(entry: dict, *, kind: str | None = None) -> None:
-            eid = entry.get("id") or entry.get("content", "")[:40]
-            if eid in seen_ids:
-                return
-            seen_ids.add(eid)
-            citation = self.memory_citation(entry)
-            if kind:
-                citation["type"] = kind
-            citations.append(citation)
 
         from jarvis import rag
-        from jarvis.memory_context import contextualize_memory_for_chat, should_inject_resume_context
         from jarvis.router import is_codebase_question, is_general_knowledge_question, is_meta_self_question
-        from jarvis.trust_memory import filter_trusted_content, trust_context_for_chat
 
         general = is_general_knowledge_question(message, self._a.session)
         skip_project_context = general or is_meta_self_question(message)
@@ -70,62 +54,21 @@ class ConversationEngine:
             warnings.append(
                 f"Semantic memory/RAG unavailable — check embed model `{llm.embed_model()}`."
             )
-        ns = self._a.session.memory_namespace
-        profile = self._a.memory.list_entries(namespace="profile")
-        lower_msg = message.lower()
-        trust_ctx = trust_context_for_chat(self._a.memory, message, self._a.session)
-        if trust_ctx and not general:
-            parts.append(trust_ctx)
-            for entry in self._a.memory.list_entries(entry_type="strategy")[:6]:
-                if filter_trusted_content(entry.get("content", "")):
-                    _cite(entry, kind="strategy")
 
-        if profile and not skip_project_context:
-            summary = next((p for p in profile if "summary" in (p.get("tags") or [])), None)
-            if summary:
-                parts.append(f"User profile:\n- {summary['content']}")
-            elif len(profile) <= 6:
-                parts.append(
-                    "User profile:\n" + "\n".join(f"- {p['content']}" for p in profile[:6])
-                )
-            if re.search(
-                r"\b(like to do|like doing|enjoy|hobby|hobbies|interest|passion|about me|about myself)\b",
-                lower_msg,
-            ):
-                interests = next((p for p in profile if "interests" in (p.get("tags") or [])), None)
-                if interests:
-                    parts.append(
-                        "Answer personal questions from this profile fact:\n"
-                        f"- {interests['content']}"
-                    )
+        from jarvis.behaviors.memory import get_memory_behavior
 
-        if should_inject_resume_context(message, self._a.session):
-            cp_ns = ns if ns and ns != "default" else None
-            checkpoint = self._a.memory.latest_checkpoint(cp_ns) or self._a.memory.latest_checkpoint()
-            if checkpoint:
-                cp_line = filter_trusted_content(checkpoint["content"])
-                if cp_line:
-                    parts.append(f"Project checkpoint (where user left off):\n- {cp_line}")
-
-        if not skip_project_context:
-            memories = self._a.memory.search(
+        memory_behavior = get_memory_behavior()
+        if memory_behavior is not None:
+            mem_parts, mem_citations = memory_behavior.prepare_context(
+                self._a,
                 message,
-                limit=3,
-                namespace=ns if ns and ns != "default" else None,
+                general=general,
+                skip_project_context=skip_project_context,
             )
-            if len(memories) < 2 and ns and ns != "default":
-                memories = self._a.memory.search(message, limit=3)
-            memory_lines = []
-            for memory in memories:
-                line = contextualize_memory_for_chat(memory["content"])
-                line = filter_trusted_content(line) if line else None
-                if line and line not in memory_lines:
-                    memory_lines.append(line)
-            if memory_lines:
-                parts.append("Relevant memories:\n" + "\n".join(f"- {line}" for line in memory_lines))
-            for memory in memories:
-                _cite(memory)
+            parts.extend(mem_parts)
+            citations.extend(mem_citations)
 
+        lower_msg = message.lower()
         if not skip_project_context and re.search(
             r"\b(journal|task|todo|to-do|today|priorit|what('s| is) on my plate)\b",
             lower_msg,
@@ -239,23 +182,11 @@ class ConversationEngine:
         )
 
     def auto_remember(self, user_msg: str, assistant_msg: str) -> None:
-        from jarvis.config import load_auto_memory_mode, load_memory_namespace
-        from jarvis.memory_context import filter_extracted_facts, should_extract_auto_memory
+        from jarvis.behaviors.memory import get_memory_behavior
 
-        mode = load_auto_memory_mode()
-        if not should_extract_auto_memory(user_msg, assistant_msg, mode):
-            return
-        facts = llm.extract_memories(user_msg)
-        if mode == "smart":
-            facts = filter_extracted_facts(facts, user_msg)
-        ns = self._a.session.memory_namespace or load_memory_namespace()
-        added = False
-        for fact in facts[:2]:
-            if not self._a.memory.similar_exists(fact):
-                self._a.memory.add("auto", fact, tags=["auto-extracted"], namespace=ns)
-                added = True
-        if added:
-            self._a.refresh_system_prompt()
+        behavior = get_memory_behavior()
+        if behavior is not None:
+            behavior.auto_remember(self._a, user_msg, assistant_msg)
 
     def execute(self, params: dict, message: str) -> dict:
         from jarvis.branding import assistant_name

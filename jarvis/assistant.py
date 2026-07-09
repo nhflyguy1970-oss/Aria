@@ -162,47 +162,16 @@ class JarvisAssistant:
         self.conversation = self.branches.get_conversation(self.branches.active_id, prompt)
 
     def sync_project_namespace(self) -> str | None:
-        from jarvis.config import load_auto_namespace
-        from jarvis.memory_context import detect_project_namespace
+        from jarvis.behaviors.memory.context import MemoryContext
+        from jarvis.behaviors.memory.engine import MemoryEngine
 
-        if not load_auto_namespace():
-            return None
-        ns = detect_project_namespace()
-        if ns and ns != self.session.memory_namespace:
-            self.session.note_memory_namespace(ns)
-        return ns
+        return MemoryEngine.sync_project_namespace(MemoryContext.from_orchestrator(self))
 
     def auto_checkpoint(self, *, reason: str = "exit") -> dict:
-        from datetime import datetime, timedelta, timezone
+        from jarvis.behaviors.memory.context import MemoryContext
+        from jarvis.behaviors.memory.engine import MemoryEngine
 
-        from jarvis.config import load_auto_checkpoint
-        from jarvis.memory_context import build_quick_checkpoint
-        from jarvis.modules.memory import _parse_ts
-
-        if not load_auto_checkpoint():
-            return {"ok": False, "skipped": True, "reason": "disabled"}
-
-        ns = self._project_namespace()
-        existing = self.memory.latest_checkpoint(ns)
-        if existing:
-            try:
-                age = datetime.now(timezone.utc) - _parse_ts(existing.get("timestamp", ""))
-                if age < timedelta(minutes=30) and "Auto-saved on exit" in existing.get("content", ""):
-                    return {"ok": False, "skipped": True, "reason": "recent"}
-            except (TypeError, ValueError):
-                pass
-
-        text = build_quick_checkpoint(
-            self.session,
-            self.conversation.messages,
-            self.task_manager,
-        )
-        if not text:
-            return {"ok": False, "skipped": True, "reason": "empty"}
-
-        self.memory.upsert_checkpoint(text, namespace=ns)
-        self.refresh_system_prompt()
-        return {"ok": True, "checkpoint": text, "namespace": ns, "reason": reason}
+        return MemoryEngine.auto_checkpoint(MemoryContext.from_orchestrator(self), reason=reason)
 
     @property
     def vision(self) -> VisionEngine:
@@ -554,20 +523,6 @@ class JarvisAssistant:
 
         handlers = {
             "chat": self._chat,
-            "remember": self._remember,
-            "recall": self._recall,
-            "memory_search": self._memory_search,
-            "memory_forget": self._memory_forget,
-            "memory_correct": self._memory_correct,
-            "memory_prune": self._memory_prune,
-            "memory_summarize": self._memory_summarize,
-            "memory_namespace": self._memory_namespace,
-            "memory_about_user": self._memory_about_user,
-            "cheatsheet_list": self._cheatsheet_list,
-            "cheatsheet_show": self._cheatsheet_show,
-            "cheatsheet_reset": self._cheatsheet_reset,
-            "project_checkpoint": self._project_checkpoint,
-            "project_resume": self._project_resume,
             "apply_proposal": self._apply_proposal_nl,
             "dismiss_proposal": self._dismiss_proposal,
             "undo_apply": self._undo_apply,
@@ -615,7 +570,6 @@ class JarvisAssistant:
             "ocr_structured_image": self._ocr_structured_image,
             "image_to_code": self._image_to_code,
             "analyze_region": self._analyze_region,
-            "remember_image": self._remember_image,
             "batch_vision": self._batch_vision,
             "analyze_video_frame": self._analyze_image,
             "compare_images": self._compare_images,
@@ -630,7 +584,6 @@ class JarvisAssistant:
             "journal_reflect": self._journal_reflect,
             "journal_migrate": self._journal_migrate,
             "journal_search": self._journal_search,
-            "journal_remember": self._journal_remember,
             "journal_review": self._journal_review,
             "data_chart": self._data_chart,
             "data_sql": self._data_sql,
@@ -1120,9 +1073,11 @@ class JarvisAssistant:
         )
 
     def _auto_remember(self, user_msg: str, assistant_msg: str) -> None:
-        from jarvis.behaviors.conversation import ensure_conversation_engine
+        from jarvis.behaviors.memory import get_memory_behavior
 
-        ensure_conversation_engine(self).auto_remember(user_msg, assistant_msg)
+        behavior = get_memory_behavior()
+        if behavior is not None:
+            behavior.auto_remember(self, user_msg, assistant_msg)
 
     @staticmethod
     def _stream_text_chunks(text: str, width: int = 24) -> Iterator[str]:
@@ -1896,334 +1851,6 @@ class JarvisAssistant:
         from jarvis.behaviors.conversation import ensure_conversation_engine
 
         return ensure_conversation_engine(self).execute(params, message)
-
-    def _remember(self, params: dict, message: str) -> dict:
-        from jarvis.config import load_memory_namespace
-        from jarvis.modules.memory import MemoryStore
-        from jarvis.trust_memory import parse_strategy_remember, record_strategy
-
-        raw = params.get("text") or message
-        strategy = parse_strategy_remember(raw)
-        if strategy:
-            namespace = self.session.memory_namespace or load_memory_namespace()
-            entry = record_strategy(self.memory, strategy, namespace=namespace)
-            self.session.note_module("memory")
-            self.refresh_system_prompt()
-            return _ok(
-                f"Got it — stored as **strategy** rule in `{namespace}`.\n\n{entry['content']}",
-                module="memory",
-                remembered=entry["content"],
-            )
-
-        content, entry_type, parsed_ns = MemoryStore.parse_remember(raw)
-        namespace = params.get("namespace") or parsed_ns or self.session.memory_namespace or load_memory_namespace()
-        if not content:
-            return _err("What should I remember?")
-        facts = MemoryStore.split_remember_facts(content)
-        stored: list[str] = []
-        try:
-            for fact in facts:
-                if self.memory.similar_exists(fact):
-                    continue
-                self.memory.add(entry_type, fact, namespace=namespace)
-                stored.append(fact)
-        except ValueError as e:
-            return _err(str(e))
-        if not stored:
-            return _ok("Those facts are already stored.", module="memory")
-        self.session.note_module("memory")
-        self.refresh_system_prompt()
-        if len(stored) == 1:
-            body = stored[0]
-        else:
-            body = "\n".join(f"• {f}" for f in stored)
-        return _ok(
-            f"Stored **{len(stored)}** {entry_type}{'s' if len(stored) != 1 else ''} in `{namespace}`:\n\n{body}",
-            module="memory",
-            remembered=stored[0] if len(stored) == 1 else body,
-            remembered_count=len(stored),
-        )
-
-    def _recall(self, params: dict, message: str) -> dict:
-        from jarvis.trust_memory import filter_entry_list
-
-        profile = self.memory.list_entries(namespace="profile")
-        ns = self.session.memory_namespace
-        other = self.memory.list_entries(namespace=ns if ns and ns != "default" else None)
-        if not other:
-            other = [e for e in self.memory.list_entries() if e.get("namespace") != "profile"]
-        other = filter_entry_list(other[:15])
-        entries = profile + other
-        if not entries:
-            return _ok("I don't have anything stored yet. Just tell me what to remember.", module="memory")
-        lines = "\n".join(
-            f"• [{e.get('type', 'fact')}/{e.get('namespace', 'default')}] {e['content']}"
-            for e in entries[:25]
-        )
-        return _ok(f"Here's what I remember ({len(entries)} total):\n\n{lines}", module="memory")
-
-    def _memory_about_user(self, params: dict, message: str) -> dict:
-        """Answer questions about the user from profile + memory (no LLM guesswork)."""
-        import random
-
-        lower = (params.get("question") or message).lower()
-        profile = self.memory.list_entries(namespace="profile")
-
-        if not profile:
-            hits = filter_entry_list(self.memory.search(message, limit=5))
-            if hits:
-                lines = "\n".join(f"• {h['content']}" for h in hits)
-                return _ok(f"From memory:\n\n{lines}", module="memory")
-            return _ok(
-                "I don't have a profile yet. Complete the **About you** questionnaire when it appears, "
-                "or say **Remember that I enjoy …**",
-                module="memory",
-            )
-
-        interests = next((p for p in profile if "interests" in (p.get("tags") or [])), None)
-        name = next((p for p in profile if "name" in (p.get("tags") or [])), None)
-
-        if re.search(r"\b(name|call me|who am i)\b", lower):
-            if name:
-                return _ok(name["content"], module="memory")
-            summary = next((p for p in profile if "summary" in (p.get("tags") or [])), None)
-            if summary:
-                return _ok(summary["content"], module="memory")
-
-        if re.search(
-            r"\b(like to do|like doing|enjoy|hobby|hobbies|interest|passion|something i like|fun)\b",
-            lower,
-        ):
-            if interests:
-                text = interests["content"]
-                if ": " in text:
-                    text = text.split(": ", 1)[1]
-                items = [x.strip() for x in re.split(r",| and ", text) if x.strip()]
-                if items:
-                    pick = random.choice(items)
-                    rest = [i for i in items if i != pick][:4]
-                    extra = f" You also enjoy {', '.join(rest)}." if rest else ""
-                    who = ""
-                    if name and "Jeff" in name.get("content", ""):
-                        who = "Jeff, "
-                    elif name:
-                        who = name["content"].split()[-1].rstrip(".") + ", "
-                    return _ok(
-                        f"{who}you like **{pick}**.{extra}",
-                        module="memory",
-                    )
-
-        summary = next((p for p in profile if "summary" in (p.get("tags") or [])), None)
-        if summary:
-            return _ok(f"Here's what I know about you:\n\n{summary['content']}", module="memory")
-
-        lines = "\n".join(f"• {p['content']}" for p in profile[:8])
-        return _ok(f"From your profile:\n\n{lines}", module="memory")
-
-    def _memory_search(self, params: dict, message: str) -> dict:
-        query = params.get("query") or message
-        ns = self.session.memory_namespace
-        from jarvis.trust_memory import filter_entry_list
-
-        results = filter_entry_list(
-            self.memory.search(query, namespace=ns if ns and ns != "default" else None)
-        )
-        if not results and ns and ns != "default":
-            results = filter_entry_list(self.memory.search(query))
-        if not results:
-            return _ok("No matching memories found.", module="memory")
-        lines = "\n".join(
-            f"• [{e['type']}/{e.get('namespace', 'default')}] {e['content']}" for e in results
-        )
-        return _ok(f"Found these memories:\n\n{lines}", module="memory")
-
-    def _memory_forget(self, params: dict, message: str) -> dict:
-        query = params.get("query") or message
-        query = re.sub(r"^(please\s+)?(forget|delete|remove)\s+(that|about|the memory)?\s*", "", query, flags=re.I).strip()
-        if not query:
-            return _err("What should I forget? Give me a phrase to search for.")
-        results = self.memory.search(query, limit=5)
-        if not results:
-            return _ok("No matching memories to delete.", module="memory")
-        removed_lines: list[str] = []
-        for e in results[:3]:
-            if self.memory.delete_id(e["id"]):
-                removed_lines.append(e["content"][:120])
-        self.refresh_system_prompt()
-        if not removed_lines:
-            return _ok("No matching memories to delete.", module="memory")
-        lines = "\n".join(f"• {line}" for line in removed_lines)
-        return _ok(
-            f"Removed **{len(removed_lines)}** memor{'y' if len(removed_lines) == 1 else 'ies'}:\n\n{lines}",
-            module="memory",
-        )
-
-    def _memory_correct(self, params: dict, message: str) -> dict:
-        from jarvis.trust_memory import correct_memory, parse_memory_correct
-
-        new_fact = (params.get("new_fact") or "").strip()
-        search_hint = (params.get("search_hint") or "").strip()
-        if not new_fact:
-            parsed = parse_memory_correct(message)
-            if not parsed:
-                return _err("What should I correct? Try: `correct that mom's birthday is June 9`")
-            search_hint, new_fact = parsed
-        removed, entry, strategy_created = correct_memory(self.memory, new_fact, search_hint=search_hint)
-        self.refresh_system_prompt()
-        msg = f"Updated memory — stored:\n\n**{entry['content']}**"
-        if removed:
-            msg = f"Replaced **{removed}** old entr{'y' if removed == 1 else 'ies'}. " + msg
-        if strategy_created:
-            msg += "\n\n_Also saved as a behavior strategy from your correction._"
-        return _ok(msg, module="memory", remembered=entry["content"], strategy_created=strategy_created)
-
-    def _memory_prune(self, params: dict, message: str) -> dict:
-        removed = self.memory.prune()
-        return _ok(f"Pruned **{removed}** stale auto-extracted memories.", module="memory")
-
-    def _memory_summarize(self, params: dict, message: str) -> dict:
-        from jarvis.config import load_memory_namespace
-
-        recent = [m for m in self.conversation.messages[-12:] if m.get("role") in ("user", "assistant")]
-        if len(recent) < 2:
-            return _err("Not enough conversation to summarize yet.")
-        blob = "\n".join(f"{m['role']}: {m['content'][:500]}" for m in recent)
-        facts = llm.extract_memories(blob)
-        if not facts:
-            return _ok("Nothing new worth storing from this conversation.", module="memory")
-        ns = self.session.memory_namespace or load_memory_namespace()
-        added = 0
-        for fact in facts[:5]:
-            if not self.memory.similar_exists(fact):
-                self.memory.add("auto", fact, tags=["conversation-summary"], namespace=ns)
-                added += 1
-        if added:
-            self.refresh_system_prompt()
-        lines = "\n".join(f"• {f}" for f in facts[:5])
-        return _ok(f"Stored **{added}** facts from this conversation:\n\n{lines}", module="memory")
-
-    def _memory_namespace(self, params: dict, message: str) -> dict:
-        from jarvis.config import save_memory_namespace
-
-        ns = params.get("namespace") or ""
-        if not ns:
-            m = re.search(r"\b(?:namespace|project)\s+[`'\"]?(\w[\w-]*)[`'\"]?", message, re.I)
-            ns = m.group(1) if m else ""
-        if not ns:
-            return _err("Which namespace? Example: `set memory namespace work`")
-        save_memory_namespace(ns)
-        self.session.note_memory_namespace(ns)
-        self.refresh_system_prompt()
-        return _ok(f"Memory namespace set to **{ns}**. New memories go there until changed.", module="memory")
-
-    def _project_namespace(self) -> str:
-        from jarvis.config import load_auto_namespace, load_memory_namespace
-        from jarvis.memory_context import detect_project_namespace
-
-        if load_auto_namespace():
-            return detect_project_namespace()
-        ns = self.session.memory_namespace
-        if ns and ns != "default":
-            return ns
-        return load_memory_namespace()
-
-    def _project_checkpoint(self, params: dict, message: str) -> dict:
-        from jarvis.config import PROJECT_ROOT
-
-        ns = params.get("namespace") or self._project_namespace()
-        recent = [
-            m for m in self.conversation.messages[-14:]
-            if m.get("role") in ("user", "assistant")
-        ]
-        blob = "\n".join(f"{m['role']}: {m['content'][:600]}" for m in recent)
-        session_bits = self.session.context_summary()
-        task_hint = ""
-        t = self.task_manager.active()
-        if t:
-            task_hint = f"Active coding task: {t.title} ({t.status}), path={t.path or t.checkpoint.get('path', '')}"
-
-        prompt = (
-            "Summarize where the user left off on their project so they can resume tomorrow. "
-            "Include: goal, current file(s), what was done, next steps, blockers. "
-            "Write 2-5 sentences, factual, no markdown headers.\n\n"
-            f"Project: {PROJECT_ROOT.name}\nSession: {session_bits}\n{task_hint}\n\n"
-            f"Recent chat:\n{blob}\n\n"
-            f"User note: {message or 'save checkpoint'}"
-        )
-        summary = llm.ask(llm.general_model(), [{"role": "user", "content": prompt}]).strip()
-        if not summary:
-            return _err("Could not build a checkpoint summary.")
-        note = params.get("note") or ""
-        if note:
-            summary = f"{summary} Note: {note.strip()}"
-        self.memory.upsert_checkpoint(summary, namespace=ns)
-        self.session.note_module("memory")
-        self.refresh_system_prompt()
-        return _ok(
-            f"Saved project checkpoint under **`{ns}`**.\n\n{summary}\n\n"
-            "After restart, ask **where did I leave off?** or just continue chatting — I'll see this.",
-            module="memory",
-        )
-
-    def _project_resume(self, params: dict, message: str) -> dict:
-        ns = params.get("namespace") or self._project_namespace()
-        cp = self.memory.latest_checkpoint(ns) or self.memory.latest_checkpoint()
-        if not cp:
-            return _ok(
-                "No project checkpoint saved yet. Say **save where I left off** before shutting down.",
-                module="memory",
-            )
-        extra = ""
-        if self.session.last_file:
-            extra = f"\n\nSession still has **last file**: `{self.session.last_file}`"
-        elif cp.get("namespace"):
-            extra = f"\n\nCheckpoint namespace: `{cp.get('namespace')}`"
-        return _ok(f"Here's where you left off:\n\n{cp['content']}{extra}",
-            module="memory",
-        )
-
-    def _cheatsheet_list(self, params: dict, message: str) -> dict:
-        from jarvis.cheatsheets import CHEATSHEET_NAMESPACE, list_cheatsheets, seed_cheatsheets
-
-        if not list_cheatsheets(self.memory):
-            seed_cheatsheets(self.memory)
-        items = list_cheatsheets(self.memory)
-        lines = "\n".join(f"• **{item['key']}** — {item['title']}" for item in items)
-        return _ok(
-            f"Cheatsheets in memory (`{CHEATSHEET_NAMESPACE}` namespace):\n\n{lines}\n\n"
-            "Say **memory cheatsheet** or **cheatsheet for coding**. Edit in Memory tab → Cheatsheets.",
-            module="memory",
-        )
-
-    def _cheatsheet_show(self, params: dict, message: str) -> dict:
-        from jarvis.cheatsheets import (
-            default_keys,
-            find_by_key,
-            normalize_key,
-            resolve_key_from_message,
-            seed_cheatsheets,
-        )
-
-        key = normalize_key(params.get("key", "")) or resolve_key_from_message(message)
-        if not key:
-            return self._cheatsheet_list(params, message)
-        if not find_by_key(self.memory, key):
-            seed_cheatsheets(self.memory, keys=[key])
-        entry = find_by_key(self.memory, key)
-        if not entry:
-            return _err(f"Unknown cheatsheet `{key}`. Available: {', '.join(default_keys())}")
-        return _ok(entry["content"], module="memory")
-
-    def _cheatsheet_reset(self, params: dict, message: str) -> dict:
-        from jarvis.cheatsheets import normalize_key, reset_cheatsheet, resolve_key_from_message
-
-        key = normalize_key(params.get("key", "")) or resolve_key_from_message(message)
-        if not key:
-            return _err("Which cheatsheet? Example: **reset memory cheatsheet**")
-        updated = reset_cheatsheet(self.memory, key)
-        if not updated:
-            return _err(f"No default cheatsheet for `{key}`.")
-        return _ok(f"Restored **{key}** cheatsheet to default.", module="memory")
 
     def _apply_editor_params(self, params: dict, message: str, action: str) -> None:
         from jarvis.editor_context import get_context
@@ -3374,29 +3001,6 @@ PROJECT: {context}"""
             return _err(answer)
         return self._vision_ok(answer, image_path=analyze_path)
 
-    def _remember_image(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_image(params.get("path", ""))
-        if not path:
-            return _err("Attach an image to remember.")
-        hint = (params.get("hint") or message or "").strip()
-        ocr = self.vision.ocr(path)
-        if ocr.startswith("ERROR:"):
-            summary = self.vision.analyze("Summarize this image in one paragraph.", path)
-            if summary.startswith("ERROR:"):
-                return _err(summary)
-            content = summary
-        else:
-            content = ocr
-        label = re.sub(
-            r"^(please\s+)?(remember|don't forget|note that|keep in mind)\s*(that\s+)?",
-            "",
-            hint,
-            flags=re.I,
-        ).strip()
-        fact = f"{label}: {content}" if label else f"From image {Path(path).name}: {content}"
-        self.memory.add("fact", fact[:4000])
-        return _ok(f"Stored image content in memory.\n\n{fact[:500]}…", module="memory", remembered=fact[:200])
-
     def _batch_vision(self, params: dict, message: str) -> dict:
         from jarvis import fs
         from jarvis.config import PROJECT_ROOT
@@ -4364,31 +3968,6 @@ PROJECT: {context}"""
         from jarvis.modules.journal import _format_bullet
         lines = "\n".join(f"[{h.get('section')}] {_format_bullet(h)}" for h in hits)
         return _ok(lines, module="journal")
-
-    def _journal_remember(self, params: dict, message: str) -> dict:
-        from jarvis.modules.journal import _format_bullet
-        from jarvis.memory_context import normalize_journal_memory_text
-
-        bullet_id = params.get("bullet_id") or ""
-        if not bullet_id:
-            m = re.search(r"\b([a-f0-9]{8})\b", message)
-            bullet_id = m.group(1) if m else ""
-        if bullet_id:
-            content = self.journal.bullet_remember_text(bullet_id)
-            if not content:
-                return _err("Journal bullet not found.")
-        else:
-            page = self.journal.daily_get()
-            bullets = page.get("bullets", [])
-            if not bullets:
-                return _err("Nothing on today's journal to remember.")
-            lines = "\n".join(_format_bullet(b) for b in bullets)
-            content = f"From bullet journal ({page.get('date')}):\n{lines}"
-        content = normalize_journal_memory_text(content)
-        ns = self.session.memory_namespace or "default"
-        self.memory.add("fact", content, namespace=ns)
-        self.session.note_module("memory")
-        return _ok(f"Saved to memory (`{ns}`):\n\n{content}", module="journal")
 
     def _journal_review(self, params: dict, message: str) -> dict:
         scope = "week" if "week" in message.lower() else "month"
