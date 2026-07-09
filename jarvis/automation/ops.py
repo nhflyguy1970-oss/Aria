@@ -5,7 +5,9 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
+import sys
 import time
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger("jarvis.automation")
@@ -19,71 +21,105 @@ def _runs_dir():
     return DATA_DIR / "automation"
 
 
+def _results_all_ok(results: list[dict[str, Any]]) -> bool:
+    """A maintenance job must explicitly report ok=True to count as success."""
+    return all(entry.get("ok") is True for entry in results)
+
+
+def _smoke_tests_requested(*, smoke_tests: bool) -> bool:
+    return smoke_tests or os.getenv("JARVIS_MAINTENANCE_SMOKE_TESTS", "0") == "1"
+
+
+def _step_knowledge_sync() -> dict[str, Any]:
+    from jarvis.knowledge.registry import sync_registry
+
+    kr = sync_registry()
+    return {
+        "job": "knowledge_sync",
+        "ok": bool(kr.get("ok")),
+        "detail": kr.get("source_count"),
+    }
+
+
+def _step_knowledge_ingest() -> dict[str, Any] | None:
+    from jarvis.knowledge.ingestion import maybe_scheduled_ingest
+
+    ing = maybe_scheduled_ingest()
+    if not ing:
+        return None
+    ok = ing.get("ok") if "ok" in ing else True
+    return {"job": "knowledge_ingest", "ok": bool(ok), **ing}
+
+
+def _step_git_sync() -> dict[str, Any]:
+    from jarvis.knowledge.git_sync import sync_all
+
+    gs = sync_all(force=False)
+    return {"job": "git_sync", "ok": bool(gs.get("ok")), "repos": gs.get("repos")}
+
+
+def _step_memory_consolidate() -> dict[str, Any]:
+    from jarvis.assistant_instance import get_assistant
+    from jarvis.memory.hierarchy import consolidate
+
+    mem = get_assistant().memory
+    c = consolidate(mem, dry_run=False)
+    ok = c.get("ok") if "ok" in c else True
+    return {"job": "memory_consolidate", "ok": bool(ok), **c}
+
+
+def _step_workstation() -> list[dict[str, Any]]:
+    from jarvis.workstation.operations import diagnose, recover_safe
+
+    diag = diagnose(force=True)
+    results = [
+        {
+            "job": "workstation_diagnose",
+            "ok": bool(diag.get("ok")),
+            "critical": diag.get("critical", 0),
+            "warnings": diag.get("warnings", 0),
+        }
+    ]
+    if not diag.get("ok"):
+        rec = recover_safe(max_attempts=2)
+        results.append({"job": "workstation_recover", "ok": bool(rec.get("ok"))})
+    return results
+
+
+def _append_step(
+    results: list[dict[str, Any]],
+    *,
+    job: str,
+    fn,
+) -> None:
+    try:
+        entry = fn()
+        if entry is None:
+            return
+        if isinstance(entry, list):
+            results.extend(entry)
+        else:
+            results.append(entry)
+    except Exception as exc:
+        results.append({"job": job, "ok": False, "error": str(exc)[:200]})
+
+
 def run_maintenance(*, smoke_tests: bool = False) -> dict[str, Any]:
     """Run continuous ops: knowledge sync, workstation diagnose, optional test smoke."""
     results: list[dict[str, Any]] = []
     started = time.time()
 
-    try:
-        from jarvis.knowledge.registry import sync_registry
+    _append_step(results, job="knowledge_sync", fn=_step_knowledge_sync)
+    _append_step(results, job="knowledge_ingest", fn=_step_knowledge_ingest)
+    _append_step(results, job="git_sync", fn=_step_git_sync)
+    _append_step(results, job="memory_consolidate", fn=_step_memory_consolidate)
+    _append_step(results, job="workstation_diagnose", fn=_step_workstation)
 
-        kr = sync_registry()
-        results.append(
-            {"job": "knowledge_sync", "ok": kr.get("ok", False), "detail": kr.get("source_count")}
-        )
-    except Exception as exc:
-        results.append({"job": "knowledge_sync", "ok": False, "error": str(exc)[:200]})
-
-    try:
-        from jarvis.knowledge.ingestion import maybe_scheduled_ingest
-
-        ing = maybe_scheduled_ingest()
-        if ing:
-            results.append({"job": "knowledge_ingest", **ing})
-    except Exception as exc:
-        results.append({"job": "knowledge_ingest", "ok": False, "error": str(exc)[:200]})
-
-    try:
-        from jarvis.knowledge.git_sync import sync_all
-
-        gs = sync_all(force=False)
-        results.append({"job": "git_sync", "ok": gs.get("ok", False), "repos": gs.get("repos")})
-    except Exception as exc:
-        results.append({"job": "git_sync", "ok": False, "error": str(exc)[:200]})
-
-    try:
-        from jarvis.assistant_instance import get_assistant
-        from jarvis.memory.hierarchy import consolidate
-
-        mem = get_assistant().memory
-        c = consolidate(mem, dry_run=False)
-        results.append({"job": "memory_consolidate", "ok": c.get("ok", False), **c})
-    except Exception as exc:
-        results.append({"job": "memory_consolidate", "ok": False, "error": str(exc)[:200]})
-
-    try:
-        from jarvis.workstation.operations import diagnose, recover_safe
-
-        diag = diagnose(force=True)
-        results.append(
-            {
-                "job": "workstation_diagnose",
-                "ok": diag.get("ok", False),
-                "critical": diag.get("critical", 0),
-                "warnings": diag.get("warnings", 0),
-            }
-        )
-        if not diag.get("ok"):
-            rec = recover_safe(max_attempts=2)
-            results.append({"job": "workstation_recover", "ok": rec.get("ok", False)})
-    except Exception as exc:
-        results.append({"job": "workstation_diagnose", "ok": False, "error": str(exc)[:200]})
-
-    if smoke_tests or os.getenv("JARVIS_MAINTENANCE_SMOKE_TESTS", "0") == "1":
+    if _smoke_tests_requested(smoke_tests=smoke_tests):
         results.append(_run_smoke_tests())
 
     elapsed = int((time.time() - started) * 1000)
-    ok = all(r.get("ok") for r in results)
+    ok = _results_all_ok(results)
     payload = {"ok": ok, "elapsed_ms": elapsed, "results": results, "ts": time.time()}
     _persist_run(payload)
     return payload
@@ -93,9 +129,14 @@ def _run_smoke_tests() -> dict[str, Any]:
     try:
         from jarvis.env_loader import PROJECT_ROOT
 
+        venv_python = PROJECT_ROOT / "venv" / "bin" / "python"
+        if not venv_python.is_file():
+            alt = PROJECT_ROOT / ".venv" / "bin" / "python"
+            venv_python = alt if alt.is_file() else Path(sys.executable)
+
         proc = subprocess.run(
             [
-                ".venv/bin/python",
+                str(venv_python),
                 "-m",
                 "pytest",
                 "tests/test_workstation.py",
