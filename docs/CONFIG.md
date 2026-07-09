@@ -1,6 +1,6 @@
 # Jarvis configuration reference
 
-Copy `data/jarvis.env.example` to `data/jarvis.env` and customize. Never commit secrets.
+Copy `jarvis.env.example` to `data/jarvis.env` and customize. Never commit secrets.
 
 ## Core / Ollama
 

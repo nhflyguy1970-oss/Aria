@@ -4,7 +4,13 @@
 
 ## Setup
 
+**Fresh machine?** See **[docs/INSTALL.md](docs/INSTALL.md)** and run:
+
 ```bash
+./workstation install && ./workstation configure && ./workstation verify && ./workstation start
+```
+
+Manual setup:
 cd /media/jeff/AI/jarvis
 python3 -m venv venv
 source venv/bin/activate
@@ -124,7 +130,7 @@ python general/main.py
 
 ## Configuration
 
-Copy `data/jarvis.env.example` to `data/jarvis.env` for local overrides. Never commit secrets (`HF_TOKEN`, `JARVIS_UNCENSORED_PASSWORD`, `JARVIS_API_KEY`).
+Copy `jarvis.env.example` to `data/jarvis.env` for local overrides. Never commit secrets (`HF_TOKEN`, `JARVIS_UNCENSORED_PASSWORD`, `JARVIS_API_KEY`).
 
 **Full reference:** [docs/CONFIG.md](docs/CONFIG.md) — all `JARVIS_*` variables, ComfyUI, audio, Song Studio, security, and journal settings.
 
