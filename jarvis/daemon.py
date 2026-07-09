@@ -248,6 +248,10 @@ def run_tray(uncensored: bool = False) -> None:
         attach_platform_automation_event,
         validate_platform_automation_event,
     )
+    from jarvis.platform_behavior_extraction import (
+        attach_platform_behavior_extraction,
+        validate_platform_behavior_extraction,
+    )
 
     attach_report = attach_platform_infrastructure()
     startup_issues = validate_platform_startup()
@@ -311,6 +315,18 @@ def run_tray(uncensored: bool = False) -> None:
         logger.info(
             "AI Platform automation attached for Aria (%s automations)",
             automation_report.get("registered_automations", 0),
+        )
+    behavior_report = attach_platform_behavior_extraction()
+    behavior_issues = validate_platform_behavior_extraction()
+    if behavior_issues:
+        logger.warning(
+            "Platform behavior extraction validation: %s",
+            "; ".join(behavior_issues),
+        )
+    elif behavior_report.get("attached"):
+        logger.info(
+            "AI Platform behavior extraction attached for Aria (%s behaviors)",
+            behavior_report.get("registered_behaviors", 0),
         )
     _install_restart_signal_handler()
     if uncensored:

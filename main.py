@@ -17,6 +17,7 @@ from jarvis.platform_knowledge_retrieval import attach_platform_knowledge_retrie
 from jarvis.platform_tool_capability import attach_platform_tool_capability
 from jarvis.platform_workflow_orchestration import attach_platform_workflow_orchestration
 from jarvis.platform_automation_event import attach_platform_automation_event
+from jarvis.platform_behavior_extraction import attach_platform_behavior_extraction
 
 attach_platform_infrastructure()
 attach_platform_inference()
@@ -26,6 +27,7 @@ attach_platform_knowledge_retrieval()
 attach_platform_tool_capability()
 attach_platform_workflow_orchestration()
 attach_platform_automation_event()
+attach_platform_behavior_extraction()
 
 
 def print_help():

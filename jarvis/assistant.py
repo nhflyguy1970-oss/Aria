@@ -4772,16 +4772,6 @@ PROJECT: {context}"""
         text = self.journal.ai_reflect_review(scope)
         return _ok(text, module="journal")
 
-    def _git_status(self, params: dict, message: str) -> dict:
-        from jarvis import git_util
-        return _ok(f"```\n{git_util.status()}\n```", module="coding")
-
-    def _git_diff(self, params: dict, message: str) -> dict:
-        from jarvis import git_util
-        f = params.get("file", "")
-        d = git_util.diff(file=f or None)
-        return _ok(f"```diff\n{d[:8000]}\n```", module="coding")
-
     def _data_chart(self, params: dict, message: str) -> dict:
         err = self._ensure_data_loaded(message)
         if err:

@@ -9,7 +9,10 @@ def ensure_handlers_loaded() -> None:
     global _loaded
     if _loaded:
         return
-    from jarvis.handlers import git_handlers, journal_handlers, meta  # noqa: F401
+    from jarvis.behaviors import register_behaviors
+    from jarvis.handlers import journal_handlers, meta  # noqa: F401
+
+    register_behaviors()
     from jarvis.handlers.queues import register_queue_actions
 
     register_queue_actions()
