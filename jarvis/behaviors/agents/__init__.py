@@ -12,6 +12,8 @@ from jarvis.handlers.registry import register_action
 _AGENT_ACTIONS = {
     "agent_suggest": lambda a, p, m: _suggest(p, m),
     "agent_chain": lambda a, p, m: _chain(a, p, m),
+    "agent_job_start": lambda a, p, m: _job_start(a, p, m),
+    "agent_job_status": lambda a, p, m: _job_status(p),
 }
 
 
@@ -43,6 +45,32 @@ def _chain(assistant, params: dict, message: str) -> dict:
         "message": result.get("summary") or "Agent chain complete.",
         "data": result,
     }
+
+
+def _job_start(assistant, params: dict, message: str) -> dict:
+    from jarvis.jobs.checkpointed import start_agent_job
+
+    goal = (params.get("goal") or message or "").strip()
+    if not goal:
+        return {"ok": False, "message": "goal required"}
+    roles = params.get("roles")
+    if isinstance(roles, str):
+        roles = [r.strip() for r in roles.split(",") if r.strip()]
+    job = start_agent_job(assistant, goal, roles=roles if isinstance(roles, list) else None)
+    return {
+        "ok": True,
+        "message": f"Started job `{job.id}` — {job.kind}",
+        "data": job.to_dict(),
+    }
+
+
+def _job_status(params: dict) -> dict:
+    from jarvis.jobs.checkpointed import job_status
+
+    job_id = (params.get("job_id") or params.get("id") or "").strip()
+    if not job_id:
+        return {"ok": False, "message": "job_id required"}
+    return job_status(job_id)
 
 
 @register_behavior

@@ -376,6 +376,16 @@ def run_tray(uncensored: bool = False) -> None:
 
         start_restart_watcher(restart_server)
 
+        try:
+            from jarvis.assistant_instance import get_assistant
+            from jarvis.jobs.checkpointed import resume_incomplete_jobs
+
+            resumed = resume_incomplete_jobs(get_assistant())
+            if resumed:
+                logger.info("Resumed %d checkpointed job(s): %s", len(resumed), ", ".join(resumed))
+        except Exception as exc:
+            logger.debug("Job resume skipped: %s", exc)
+
         if os.getenv("JARVIS_WAKEWORD", "0") == "1":
             try:
                 from jarvis.audio_wakeword import start_listener, wakeword_available
