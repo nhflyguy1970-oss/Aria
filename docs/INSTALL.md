@@ -7,16 +7,25 @@ Install Aria on a **fresh Linux machine** (Ubuntu/Debian/Zorin recommended) with
 ```bash
 git clone https://github.com/nhflyguy1970-oss/Aria.git
 cd Aria
-./scripts/install.sh
-./scripts/jarvis-ctl.sh configure
-./scripts/jarvis-ctl.sh verify
-./scripts/jarvis-ctl.sh start
+./workstation install --developer
+./workstation configure
+./workstation verify
+./workstation inventory
+./workstation start
 ```
 
-Or use the top-level wrapper:
+Install profiles: `--minimal`, `--developer` (default), `--full`, `--gpu`, `--headless`
+
+Or via jarvis-ctl:
 
 ```bash
-./workstation install
+./scripts/jarvis-ctl.sh install --developer
+```
+
+Equivalent wrapper:
+
+```bash
+./workstation install --developer
 ./workstation configure
 ./workstation verify
 ./workstation start

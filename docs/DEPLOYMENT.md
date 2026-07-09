@@ -16,8 +16,12 @@ AI/                          # AI_ROOT (platform data)
 
 | Action | Command |
 |--------|---------|
-| Install | `./workstation install` |
+| Install | `./workstation install [--minimal\|--developer\|--full\|--gpu\|--headless]` |
 | Configure | `./workstation configure` |
+| Verify | `./workstation verify` |
+| Inventory | `./workstation inventory` |
+| Hardware | `./workstation hardware` |
+| Optimize | `./workstation optimize` |
 | Start | `./workstation start` |
 | Stop | `./workstation stop` |
 | Restart API | `./scripts/jarvis-ctl.sh restart` |
