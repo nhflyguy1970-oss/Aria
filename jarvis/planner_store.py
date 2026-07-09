@@ -205,6 +205,24 @@ def add_event(
     time_str: str | None = None,
     duration_min: int = 15,
 ) -> dict[str, Any]:
+    from jarvis.modules.automation_event_adapter import automation_calendar_call
+
+    return automation_calendar_call(
+        _add_event_impl,
+        title,
+        when=when,
+        time_str=time_str,
+        duration_min=duration_min,
+    )
+
+
+def _add_event_impl(
+    title: str | None,
+    *,
+    when: str | None = None,
+    time_str: str | None = None,
+    duration_min: int = 15,
+) -> dict[str, Any]:
     title = str(title or "").strip()
     if not title:
         raise ValueError("Event title required")
@@ -246,6 +264,12 @@ def events_for_day(day: str | None = None) -> list[dict[str, Any]]:
 
 
 def set_timer(duration: str | None, label: str | None = None) -> dict[str, Any]:
+    from jarvis.modules.automation_event_adapter import automation_planner_call
+
+    return automation_planner_call("timer", _set_timer_impl, duration, label)
+
+
+def _set_timer_impl(duration: str | None, label: str | None = None) -> dict[str, Any]:
     secs = _parse_duration(duration)
     if not secs or secs < 1:
         raise ValueError(f"Could not parse duration: {duration}")
@@ -282,6 +306,12 @@ def clear_expired_timers() -> int:
 
 
 def set_alarm(time_str: str | None, label: str | None = None) -> dict[str, Any]:
+    from jarvis.modules.automation_event_adapter import automation_planner_call
+
+    return automation_planner_call("alarm", _set_alarm_impl, time_str, label)
+
+
+def _set_alarm_impl(time_str: str | None, label: str | None = None) -> dict[str, Any]:
     fire = _parse_time_today(time_str)
     if not fire:
         raise ValueError(f"Could not parse alarm time: {time_str}")
@@ -310,6 +340,12 @@ def list_alarms(*, include_fired: bool = False) -> list[dict[str, Any]]:
 
 
 def tick_alarms_and_timers() -> list[dict[str, str]]:
+    from jarvis.modules.automation_event_adapter import automation_reminder_tick
+
+    return automation_reminder_tick(_tick_alarms_and_timers_impl)
+
+
+def _tick_alarms_and_timers_impl() -> list[dict[str, str]]:
     """Return notifications for expired timers / due alarms; mark fired."""
     notes: list[dict[str, str]] = []
     with _conn() as conn:

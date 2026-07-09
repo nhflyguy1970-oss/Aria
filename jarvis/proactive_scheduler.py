@@ -31,8 +31,17 @@ def _notify(title: str, body: str) -> None:
 
 
 def _maybe_briefing(now: datetime) -> None:
+    from jarvis.modules.automation_event_adapter import automation_schedule_run
+
+    automation_schedule_run("proactive", "briefing", _maybe_briefing_impl, now)
+
+
+def _maybe_briefing_impl(now: datetime) -> None:
     global _last_briefing_day
     if os.getenv("JARVIS_SCHEDULER_BRIEFING", "1") == "0":
+        from jarvis.modules.automation_event_adapter import automation_record_skipped
+
+        automation_record_skipped("proactive", "briefing")
         return
     try:
         hour = int(os.getenv("JARVIS_SCHEDULE_BRIEFING_HOUR", "7"))
@@ -51,8 +60,17 @@ def _maybe_briefing(now: datetime) -> None:
 
 
 def _maybe_task_nudge(now: datetime) -> None:
+    from jarvis.modules.automation_event_adapter import automation_schedule_run
+
+    automation_schedule_run("proactive", "task_nudge", _maybe_task_nudge_impl, now)
+
+
+def _maybe_task_nudge_impl(now: datetime) -> None:
     global _last_nudge_day
     if os.getenv("JARVIS_SCHEDULER_NUDGE", "1") == "0":
+        from jarvis.modules.automation_event_adapter import automation_record_skipped
+
+        automation_record_skipped("proactive", "task_nudge")
         return
     try:
         hour = int(os.getenv("JARVIS_SCHEDULE_NUDGE_HOUR", "10"))
@@ -87,8 +105,17 @@ def _loop() -> None:
 
 
 def start() -> None:
+    from jarvis.modules.automation_event_adapter import automation_start
+
+    automation_start(_start_impl)
+
+
+def _start_impl() -> None:
     global _thread
     if os.getenv("JARVIS_SCHEDULER", "1") == "0":
+        from jarvis.modules.automation_event_adapter import automation_record_skipped
+
+        automation_record_skipped("proactive", "scheduler")
         return
     if _thread and _thread.is_alive():
         return

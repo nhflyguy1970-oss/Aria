@@ -244,6 +244,10 @@ def run_tray(uncensored: bool = False) -> None:
         attach_platform_workflow_orchestration,
         validate_platform_workflow_orchestration,
     )
+    from jarvis.platform_automation_event import (
+        attach_platform_automation_event,
+        validate_platform_automation_event,
+    )
 
     attach_report = attach_platform_infrastructure()
     startup_issues = validate_platform_startup()
@@ -295,6 +299,18 @@ def run_tray(uncensored: bool = False) -> None:
         logger.info(
             "AI Platform workflow orchestration attached for Aria (%s workflows)",
             workflow_report.get("registered_workflows", 0),
+        )
+    automation_report = attach_platform_automation_event()
+    automation_issues = validate_platform_automation_event()
+    if automation_issues:
+        logger.warning(
+            "Platform automation validation: %s",
+            "; ".join(automation_issues),
+        )
+    elif automation_report.get("attached"):
+        logger.info(
+            "AI Platform automation attached for Aria (%s automations)",
+            automation_report.get("registered_automations", 0),
         )
     _install_restart_signal_handler()
     if uncensored:
