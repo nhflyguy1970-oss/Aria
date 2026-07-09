@@ -20,6 +20,13 @@ def _chunks(text: str, source: str) -> list[dict]:
 
 
 def build_index(root: Path | None = None) -> list[dict]:
+    from aiplatform.applications.knowledge_retrieval.bridge import CORPUS_PROJECT_DOCS
+    from jarvis.modules.knowledge_retrieval_adapter import knowledge_index_build
+
+    return knowledge_index_build(CORPUS_PROJECT_DOCS, _build_index_impl, root)
+
+
+def _build_index_impl(root: Path | None = None) -> list[dict]:
     root = root or PROJECT_ROOT
     chunks: list[dict] = []
     for pattern in ("README.md", "UPGRADES.md", "DEPENDENCIES.md"):
@@ -54,6 +61,13 @@ def _load_index() -> list[dict]:
 
 
 def search(query: str, limit: int = 5) -> list[dict]:
+    from aiplatform.applications.knowledge_retrieval.bridge import CORPUS_PROJECT_DOCS
+    from jarvis.modules.knowledge_retrieval_adapter import knowledge_search
+
+    return knowledge_search(CORPUS_PROJECT_DOCS, _search_impl, query, limit=limit)
+
+
+def _search_impl(query: str, limit: int = 5) -> list[dict]:
     chunks = _load_index()
     if not chunks:
         return []

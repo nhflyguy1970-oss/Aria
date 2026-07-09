@@ -53,6 +53,13 @@ def _should_index(path: Path, root: Path) -> bool:
 
 
 def build_index(root: Path | None = None) -> list[dict]:
+    from aiplatform.applications.knowledge_retrieval.bridge import CORPUS_CODE
+    from jarvis.modules.knowledge_retrieval_adapter import knowledge_index_build
+
+    return knowledge_index_build(CORPUS_CODE, _build_index_impl, root)
+
+
+def _build_index_impl(root: Path | None = None) -> list[dict]:
     global _cache_chunks, _cache_mtime
     root = root or PROJECT_ROOT
     chunks: list[dict] = []
@@ -98,6 +105,13 @@ def invalidate_cache() -> None:
 
 
 def search(query: str, limit: int = 8, root: Path | None = None) -> list[dict]:
+    from aiplatform.applications.knowledge_retrieval.bridge import CORPUS_CODE
+    from jarvis.modules.knowledge_retrieval_adapter import knowledge_search
+
+    return knowledge_search(CORPUS_CODE, _search_impl, query, limit=limit, root=root)
+
+
+def _search_impl(query: str, limit: int = 8, root: Path | None = None) -> list[dict]:
     chunks = _load_index()
     if not chunks:
         return []

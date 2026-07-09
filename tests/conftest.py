@@ -8,6 +8,10 @@ from unittest.mock import MagicMock
 
 import pytest
 
+_PLATFORM_ROOT = Path(__file__).resolve().parents[2] / "AI-Platform"
+if _PLATFORM_ROOT.is_dir() and str(_PLATFORM_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PLATFORM_ROOT))
+
 # Tests import jarvis.llm which pulls ollama at import time.
 if "ollama" not in sys.modules:
     _ollama = MagicMock()

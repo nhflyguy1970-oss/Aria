@@ -65,6 +65,13 @@ def _read_index_file() -> list[dict] | None:
 
 
 def build_index(*, force: bool = False) -> list[dict]:
+    from aiplatform.applications.knowledge_retrieval.bridge import CORPUS_DOCUMENT_LIBRARY
+    from jarvis.modules.knowledge_retrieval_adapter import knowledge_index_build
+
+    return knowledge_index_build(CORPUS_DOCUMENT_LIBRARY, _build_index_impl, force=force)
+
+
+def _build_index_impl(*, force: bool = False) -> list[dict]:
     if not force:
         existing = _read_index_file()
         if existing is not None and not index_needs_rebuild():
@@ -125,6 +132,13 @@ def _keyword_search(query: str, chunks: list[dict], limit: int) -> list[dict]:
 
 
 def search(query: str, limit: int = 5) -> list[dict]:
+    from aiplatform.applications.knowledge_retrieval.bridge import CORPUS_DOCUMENT_LIBRARY
+    from jarvis.modules.knowledge_retrieval_adapter import knowledge_search
+
+    return knowledge_search(CORPUS_DOCUMENT_LIBRARY, _search_impl, query, limit=limit)
+
+
+def _search_impl(query: str, limit: int = 5) -> list[dict]:
     chunks = _load_index()
     if not chunks:
         return []

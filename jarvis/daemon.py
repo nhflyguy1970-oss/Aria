@@ -232,6 +232,10 @@ def run_tray(uncensored: bool = False) -> None:
         attach_platform_semantic_memory,
         validate_platform_semantic_memory,
     )
+    from jarvis.platform_knowledge_retrieval import (
+        attach_platform_knowledge_retrieval,
+        validate_platform_knowledge_retrieval,
+    )
 
     attach_report = attach_platform_infrastructure()
     startup_issues = validate_platform_startup()
@@ -257,6 +261,12 @@ def run_tray(uncensored: bool = False) -> None:
         logger.warning("Platform semantic memory validation: %s", "; ".join(semantic_issues))
     elif semantic_report.get("attached"):
         logger.info("AI Platform semantic memory attached for Aria")
+    knowledge_report = attach_platform_knowledge_retrieval()
+    knowledge_issues = validate_platform_knowledge_retrieval()
+    if knowledge_issues:
+        logger.warning("Platform knowledge retrieval validation: %s", "; ".join(knowledge_issues))
+    elif knowledge_report.get("attached"):
+        logger.info("AI Platform knowledge retrieval attached for Aria")
     _install_restart_signal_handler()
     if uncensored:
         os.environ["JARVIS_UNCENSORED"] = "1"
