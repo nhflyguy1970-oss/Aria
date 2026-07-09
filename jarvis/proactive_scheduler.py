@@ -15,6 +15,7 @@ _stop = threading.Event()
 _thread: threading.Thread | None = None
 _last_briefing_day = ""
 _last_nudge_day = ""
+_last_git_sync_ts = 0.0
 
 
 def _notify(title: str, body: str) -> None:
@@ -94,12 +95,36 @@ def _maybe_task_nudge_impl(now: datetime) -> None:
         logger.debug("Task nudge skipped: %s", exc)
 
 
+def _maybe_git_sync(now: datetime) -> None:
+    global _last_git_sync_ts
+    if os.getenv("JARVIS_SCHEDULER_GIT_SYNC", "1") == "0":
+        return
+    try:
+        interval = int(os.getenv("JARVIS_GIT_SYNC_INTERVAL_MIN", "30")) * 60
+    except ValueError:
+        interval = 1800
+    if interval <= 0:
+        return
+    now_ts = time.time()
+    if now_ts - _last_git_sync_ts < interval:
+        return
+    _last_git_sync_ts = now_ts
+    try:
+        from jarvis.knowledge.git_sync import sync_all
+
+        result = sync_all(force=False)
+        logger.info("Scheduled git sync: %s repo(s), ok=%s", result.get("repos"), result.get("ok"))
+    except Exception as exc:
+        logger.debug("Scheduled git sync failed: %s", exc)
+
+
 def _loop() -> None:
     while not _stop.wait(60):
         try:
             now = datetime.now()
             _maybe_briefing(now)
             _maybe_task_nudge(now)
+            _maybe_git_sync(now)
             from jarvis.automation.ops import maybe_nightly_maintenance
 
             maybe_nightly_maintenance(now)
