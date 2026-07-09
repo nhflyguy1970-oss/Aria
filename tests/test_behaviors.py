@@ -123,6 +123,38 @@ class TestPlanningBehavior(unittest.TestCase):
         self.assertIn("buy milk", result.get("message", ""))
 
 
+class TestAudioBehavior(unittest.TestCase):
+    def test_discover_audio_behavior(self):
+        behavior = get_behavior("audio")
+        from jarvis.behaviors.audio import AudioBehavior
+
+        self.assertIsInstance(behavior, AudioBehavior)
+        self.assertIn("transcribe", behavior.action_names)
+        self.assertIn("generate_song", behavior.action_names)
+
+    def test_audio_registers_actions(self):
+        register_behaviors()
+        for action in ("transcribe", "generate_audio", "speak", "diarize_audio"):
+            self.assertTrue(has_action(action))
+
+
+class TestMediaBehavior(unittest.TestCase):
+    def test_discover_media_behavior(self):
+        behavior = get_behavior("media")
+        from jarvis.behaviors.media import MediaBehavior
+
+        self.assertIsInstance(behavior, MediaBehavior)
+        self.assertIn("generate_image", behavior.action_names)
+        self.assertIn("enhance_prompt", behavior.action_names)
+
+    def test_media_registers_actions(self):
+        from jarvis.handlers.registry import get_queue
+
+        register_behaviors()
+        self.assertTrue(has_action("enhance_prompt"))
+        self.assertEqual(get_queue("generate_image"), "media")
+
+
 class TestVisionBehavior(unittest.TestCase):
     def test_discover_vision_behavior(self):
         behavior = get_behavior("vision")

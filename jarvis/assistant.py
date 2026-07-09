@@ -1,22 +1,19 @@
 import logging
 import re
-import subprocess
 import threading
 import uuid
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
 
 from jarvis import fs, llm, proposal_store, rag
 from jarvis.action_log import log_action
 from jarvis.branches import BranchManager
-from jarvis.code_context import format_context, gather_context
 from jarvis.coding_agent import CodingAgent
 from jarvis.coding_tasks import TaskManager
 from jarvis.coding_test_impact import format_test_impact
 from jarvis.coding_verify import verify_python_files
 from jarvis.config import (
     DATA_DIR,
-    PROJECT_ROOT,
     build_system_prompt,
     is_uncensored,
     load_personality_preset,
@@ -33,22 +30,24 @@ from jarvis.modules.journal import BulletJournal
 from jarvis.modules.memory import MemoryStore
 from jarvis.modules.vision import IMAGE_EXTENSIONS, VisionEngine
 from jarvis.ollama_health import check_ollama, models_missing
-from jarvis.router import infer_script_path, py_path_from_message, route
-from jarvis.sandbox import run_sandboxed
-from jarvis.syntax_check import available_tools, check_files, diagnostics_to_dicts, format_diagnostics
+from jarvis.response import err as _err
+from jarvis.response import ok as _ok
+from jarvis.response import stream_done as _stream_done
+from jarvis.router import route
+from jarvis.session import SessionContext
+from jarvis.syntax_check import (
+    check_files,
+    diagnostics_to_dicts,
+    format_diagnostics,
+)
 from jarvis.vision_media import (
     PDF_EXTENSIONS,
     VIDEO_EXTENSIONS,
     apply_crop_bytes,
     extract_pdf_page,
     extract_video_frame,
-    parse_region,
     parse_video_second,
 )
-
-from jarvis.response import err as _err, ok as _ok, stream_done as _stream_done
-from jarvis.session import SessionContext
-from jarvis.handlers.media import MediaHandler
 
 UPLOAD_DIR = DATA_DIR / "uploads"
 
@@ -123,12 +122,11 @@ class JarvisAssistant:
         self._vision_engines: dict[str, VisionEngine] = {}
         self._vision_llava_warned = False
         self.image = ImageEngine()
-        from jarvis.modules.video import VideoEngine
         from jarvis.modules.meme import MemeEngine
+        from jarvis.modules.video import VideoEngine
 
         self.video = VideoEngine()
         self.meme = MemeEngine()
-        self._media = MediaHandler(self)
         self.data = DataEngine()
         self.journal = BulletJournal()
         self.branches = BranchManager()
@@ -251,7 +249,6 @@ class JarvisAssistant:
         active = get_models()
         required = [active["general"], active["coder"], active["embed"]]
         missing = models_missing(required, ollama.get("models", [])) if ollama["running"] else required
-        from jarvis import rag
         from jarvis.config import load_vision_quality
         from jarvis.gpu import detect_gpu, is_low_vram
 
@@ -275,7 +272,7 @@ class JarvisAssistant:
         elif is_low_vram() and "llava" in vision_name.lower() and "13" in vision_name:
             vision_note = "8GB GPU: llava:13b is heavy — consider llama3.2-vision:11b or moondream."
         else:
-            from jarvis.model_store import _saved_vision_model, _load_raw
+            from jarvis.model_store import _load_raw, _saved_vision_model
             from jarvis.ollama_health import ollama_version, requires_mllama, supports_mllama
 
             saved = _saved_vision_model(_load_raw(), "uncensored" if is_uncensored() else "standard", installed)
@@ -533,27 +530,6 @@ class JarvisAssistant:
             "apply_proposal": self._apply_proposal_nl,
             "dismiss_proposal": self._dismiss_proposal,
             "undo_apply": self._undo_apply,
-            "record_transcribe": self._record_transcribe,
-            "transcribe": self._transcribe,
-            "analyze_audio": self._analyze_audio,
-            "speak": self._generate_audio,
-            "generate_audio": self._generate_audio,
-            "edit_audio": self._edit_audio,
-            "play_audio": self._play_audio,
-            "process_audio_vst": self._process_audio_vst,
-            "set_vst_live": self._set_vst_live,
-            "generate_image": self._generate_image,
-            "generate_video": self._generate_video,
-            "generate_meme": self._generate_meme,
-            "upscale_image": self._upscale_image,
-            "inpaint_image": self._inpaint_image,
-            "edit_image": self._edit_image,
-            "enhance_prompt": self._enhance_prompt,
-            "generate_music": self._generate_music,
-            "transform_genre": self._transform_genre,
-            "generate_song": self._generate_song,
-            "voice_to_song": self._voice_to_song,
-            "diarize_audio": self._diarize_audio,
             "upgrade_wizard": self._upgrade_wizard,
             "upgrade_verify": self._upgrade_verify,
             "upgrade_apply": self._upgrade_apply,
@@ -821,8 +797,8 @@ class JarvisAssistant:
             yield _stream_done(result)
             return
 
-        from jarvis.media_jobs import QUEUED_ACTIONS
         from jarvis.background_jobs import BACKGROUND_ACTIONS
+        from jarvis.media_jobs import QUEUED_ACTIONS
 
         if action in QUEUED_ACTIONS:
             for event in self._yield_media_job(action, params, message):
@@ -1632,154 +1608,6 @@ class JarvisAssistant:
 
 
 
-    def _transcribe(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_audio(params.get("path", ""))
-        if not path:
-            return _err("Which audio file should I transcribe? Attach one or record first.")
-        model = params.get("model") or None
-        result = self.audio.transcribe(path, model=model)
-        if result.startswith("ERROR:"):
-            return _err(result)
-        return _ok(f"Here's the transcript:\n\n{result}", module="audio", audio_path=path, transcript=result)
-
-    def _record_transcribe(self, params: dict, message: str) -> dict:
-        duration = float(params.get("duration") or 5)
-        path, text = self.audio.record_and_transcribe(duration, model=params.get("model"))
-        if path.startswith("ERROR:"):
-            return _err(path)
-        if text.startswith("ERROR:"):
-            return _err(text)
-        self.session.note_audio(path)
-        return _ok(
-            f"**Recorded** `{path}`\n\n**Transcript:**\n\n{text}",
-            module="audio",
-            audio_path=path,
-            transcript=text,
-        )
-
-    def _analyze_audio(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_audio(params.get("path", ""))
-        if not path:
-            return _err("Which audio file?")
-        transcript = self.audio.transcribe(path)
-        if transcript.startswith("ERROR:"):
-            return _err(transcript)
-        answer = llm.ask(llm.general_model(), [{
-            "role": "user",
-            "content": f"Summarize this transcript. Key points and action items.\n\n{transcript}",
-        }])
-        return _ok(f"**Summary:**\n\n{answer}\n\n---\n\n**Transcript:**\n{transcript[:2000]}", module="audio", audio_path=path)
-
-    def _generate_audio(self, params: dict, message: str) -> dict:
-        text = params.get("text") or message
-        text = re.sub(
-            r"^(please\s+)?(generate|create|make|read|speak|say)\s+(an?\s+)?(audio|voice|speech|recording\s+)?(that\s+)?(says?|reading?|of)?\s*[:\-]?\s*",
-            "",
-            text,
-            flags=re.I,
-        ).strip()
-        if not text:
-            return _err("What should the audio say?")
-        result = self.audio.generate(
-            text,
-            voice=params.get("voice") or None,
-            speed=int(params.get("speed") or 175),
-            fmt=params.get("format") or "wav",
-        )
-        if result.startswith("ERROR:"):
-            return _err(result)
-        self.session.note_audio(result)
-        played = ""
-        if self.audio.devices.get("auto_play"):
-            play_result = self.audio.play(result)
-            if not play_result.startswith("ERROR:"):
-                played = f"\n\nPlaying on **{self.audio.devices.get('name', 'Creative Sound Blaster')}**."
-        return _ok(
-            f"Generated audio saved to `{result}`{played}",
-            module="audio",
-            audio_path=result,
-        )
-
-    def _play_audio(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_audio(params.get("path", "")) or self.audio.last_output
-        if not path:
-            return _err("No audio file to play. Generate or attach one first.")
-        if path.endswith(".txt") or not Path(path).exists():
-            return self._generate_audio({"text": message or params.get("text", "")}, message)
-        result = self.audio.play(path)
-        if result.startswith("ERROR:"):
-            return _err(result)
-        return _ok(
-            f"Playing on **{self.audio.devices.get('name', 'Creative Sound Blaster')}**: `{result}`",
-            module="audio",
-            audio_path=result,
-        )
-
-    def _process_audio_vst(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_audio(params.get("path", "")) or self.audio.last_output
-        if not path:
-            return _err("Which audio file? Attach one or generate speech first.", module="audio")
-        chain = (params.get("chain") or params.get("preset") or "voice").strip().lower()
-        from jarvis.audio_settings import save_settings
-        from jarvis.audio_vst import list_chains, process_file
-
-        valid = {c["id"] for c in list_chains()}
-        if chain not in valid:
-            chain = "voice"
-        if params.get("set_playback"):
-            save_settings({"vst_playback_chain": chain})
-        result = process_file(path, chain)
-        if result.startswith("ERROR:"):
-            return _err(result, module="audio")
-        self.session.note_audio(result)
-        label = next((c["label"] for c in list_chains() if c["id"] == chain), chain)
-        return _ok(
-            f"Applied **{label}** → `{Path(result).name}`",
-            module="audio",
-            audio_path=result,
-        )
-
-    def _set_vst_live(self, params: dict, message: str) -> dict:
-        preset = (params.get("preset") or params.get("chain") or "off").strip().lower()
-        lower = (message or "").lower()
-        if "off" in lower or "direct" in lower or "disable" in lower:
-            preset = "off"
-        elif "music" in lower:
-            preset = "music"
-        elif "scout" in lower or "surround" in lower:
-            preset = "scout"
-        elif "gaming" in lower or "game" in lower:
-            preset = "gaming"
-        elif "voice" in lower or "podcast" in lower:
-            preset = "voice"
-
-        from jarvis.audio_vst_live import activate_live, deactivate_live, install_filter_configs
-
-        if preset in ("off", "none", "direct"):
-            ok, msg = deactivate_live()
-        else:
-            if params.get("install"):
-                install_filter_configs()
-            ok, msg = activate_live(preset)
-        if not ok:
-            return _err(msg, module="audio")
-        return _ok(msg, module="audio")
-
-    def _edit_audio(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_audio(params.get("path", ""))
-        if not path:
-            return _err("Which audio file should I edit? Attach one or give me a path.")
-        instruction = params.get("instruction") or message
-        result = self.audio.edit(path, instruction=instruction)
-        if result.startswith("ERROR:"):
-            return _err(result)
-        self.session.note_audio(result)
-        return _ok(
-            f"Edited audio saved to `{result}`",
-            module="audio",
-            audio_path=result,
-        )
-
     def _enqueue_coding(self, params: dict, message: str) -> dict:
         from jarvis.coding_jobs import submit_coding_agent
 
@@ -1864,126 +1692,3 @@ class JarvisAssistant:
         yield {"type": "status", "message": f"Queuing {ACTION_LABELS.get(action, action)}…"}
         yield _stream_done(self._enqueue_media(action, params, message))
 
-    def _generate_image(self, params: dict, message: str) -> dict:
-        return self._media.generate_image(params, message)
-
-    def _generate_video(self, params: dict, message: str) -> dict:
-        return self._media.generate_video(params, message)
-
-    def _generate_meme(self, params: dict, message: str) -> dict:
-        return self._media.generate_meme(params, message)
-
-    def _upscale_image(self, params: dict, message: str) -> dict:
-        return self._media.upscale_image(params, message)
-
-    def _inpaint_image(self, params: dict, message: str) -> dict:
-        return self._media.inpaint_image(params, message)
-
-    def _edit_image(self, params: dict, message: str) -> dict:
-        return self._media.edit_image(params, message)
-
-    def _enhance_prompt(self, params: dict, message: str) -> dict:
-        return self._media.enhance_prompt(params, message)
-
-    def _generate_music(self, params: dict, message: str) -> dict:
-        from jarvis import music_gen
-        prompt = params.get("prompt") or re.sub(
-            r"^(generate|create|make)\s+(?:some\s+)?music\s+(?:about|for|of)?\s*[:\-]?\s*",
-            "",
-            message,
-            flags=re.I,
-        ).strip()
-        if not prompt:
-            return _err("What kind of music should I generate?")
-        duration = int(params.get("duration") or 10)
-        result = music_gen.generate_music(prompt, duration=duration)
-        if result.startswith("ERROR:"):
-            return _err(result)
-        if not result.lower().endswith((".wav", ".mp3", ".ogg", ".flac", ".m4a")):
-            return _err(f"Music output is not audio: {result}")
-        self.session.note_audio(result)
-        return _ok(f"Music saved to `{result}`", module="audio", audio_path=result)
-
-    def _transform_genre(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_audio(params.get("path", ""))
-        if not path:
-            return _err("Attach a song or give me an audio path.")
-        genre = params.get("genre") or params.get("prompt") or message
-        genre = re.sub(
-            r"^(turn|transform|convert|remix|make)\s+(?:this|it|the song)?\s*(?:into|as|to)?\s*",
-            "", genre, flags=re.I,
-        ).strip() or "jazz"
-        duration = int(params.get("duration") or 30)
-        result = self.audio.transform_genre(path, genre, duration=duration)
-        if result.startswith("ERROR:"):
-            return _err(result)
-        self.session.note_audio(result)
-        return _ok(
-            f"Genre remix saved to `{result}`\n\n**Style:** {genre}",
-            module="audio", audio_path=result,
-        )
-
-    def _generate_song(self, params: dict, message: str) -> dict:
-        topic = params.get("topic") or params.get("prompt") or message
-        topic = re.sub(
-            r"^(write|compose|create|generate)\s+(?:a\s+)?song\s+(?:about|on)?\s*",
-            "", topic, flags=re.I,
-        ).strip()
-        if not topic:
-            return _err("What should the song be about?")
-        genre = params.get("genre") or "pop"
-        mood = params.get("mood") or "uplifting"
-        duration = int(params.get("duration") or 30)
-        result = self.audio.generate_full_song(topic, genre=genre, mood=mood, duration=duration)
-        if not result.get("ok"):
-            return _err(result.get("error", "Song generation failed"))
-        self.session.note_audio(result.get("audio_path", ""))
-        lyrics = result.get("lyrics", "")
-        return _ok(
-            f"**{result.get('title', 'Song')}**\n\n{lyrics}\n\nSaved: `{result.get('audio_path')}`",
-            module="audio",
-            audio_path=result.get("audio_path"),
-            transcript=lyrics,
-        )
-
-    def _voice_to_song(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_audio(params.get("path", "")) or self.audio.last_output
-        if not path:
-            return _err("Record your voice first or attach a vocal recording.")
-        lyrics = params.get("lyrics") or ""
-        title = params.get("title") or ""
-        style = params.get("style") or "pop ballad"
-        genre = params.get("genre") or "pop"
-        duration = int(params.get("duration") or 30)
-        result = self.audio.voice_to_song(
-            path, lyrics=lyrics, title=title, style=style, genre=genre, duration=duration,
-        )
-        if not result.get("ok"):
-            return _err(result.get("error", "Voice-to-song failed"))
-        self.session.note_audio(result.get("audio_path", ""))
-        return _ok(
-            f"**{result.get('title', 'Your song')}**\n\n{result.get('lyrics', '')}\n\nMixed track: `{result.get('audio_path')}`",
-            module="audio",
-            audio_path=result.get("audio_path"),
-            transcript=result.get("lyrics", ""),
-        )
-
-    def _diarize_audio(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_audio(params.get("path", ""))
-        if not path:
-            return _err("Which audio file should I diarize?")
-        n = int(params.get("num_speakers") or 0) or None
-        result = self.audio.diarize(path, num_speakers=n)
-        if not result.get("ok"):
-            return _err(result.get("error", "Diarization failed"))
-        text = result.get("transcript") or ""
-        segs = result.get("segments", [])
-        lines = [f"- **{s.get('speaker')}** ({s.get('start')}s–{s.get('end')}s): {s.get('text', '')}" for s in segs[:20]]
-        body = text or "\n".join(lines)
-        hint = f"\n\n_{result.get('hint')}_" if result.get("hint") else ""
-        return _ok(
-            f"**Speakers** ({result.get('engine', 'unknown')}):\n\n{body}{hint}",
-            module="audio",
-            audio_path=path,
-            transcript=body,
-        )
