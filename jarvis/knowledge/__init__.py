@@ -1,17 +1,61 @@
-"""Unified knowledge — registry, sync, and search across all workstation sources."""
+"""Unified knowledge — registry, sync, search, and learn-topic commands."""
 
-from jarvis.knowledge.registry import KnowledgeSource, get_source, list_sources, registry_snapshot, sync_registry
-from jarvis.knowledge.search import format_unified_results, unified_search
 from jarvis.knowledge.ingestion import ingest_all, maybe_scheduled_ingest, watch_paths
+from jarvis.knowledge.registry import (
+    KnowledgeSource,
+    get_source,
+    list_sources,
+    registry_snapshot,
+    sync_registry,
+)
+from jarvis.knowledge.search import format_unified_results, unified_search
+from jarvis.knowledge.topics import (
+    KNOWLEDGE_DIR,
+    MAX_BRIEF_CHARS,
+    MAX_CONTEXT_CHARS,
+    _utc_now,
+    build_brief,
+    collect_search_results,
+    context_for_query,
+    extract_key_points,
+    is_learn_command,
+    learn_topic,
+    list_topics,
+    load_brief,
+    match_topics,
+    parse_learn_topic,
+    remember_key_points,
+    save_brief,
+    search_queries,
+    slugify,
+)
 
 __all__ = [
+    "KNOWLEDGE_DIR",
+    "MAX_BRIEF_CHARS",
+    "MAX_CONTEXT_CHARS",
     "KnowledgeSource",
+    "_utc_now",
+    "build_brief",
+    "collect_search_results",
+    "context_for_query",
+    "extract_key_points",
     "format_unified_results",
     "get_source",
     "ingest_all",
+    "is_learn_command",
+    "learn_topic",
     "list_sources",
+    "list_topics",
+    "load_brief",
+    "match_topics",
     "maybe_scheduled_ingest",
+    "parse_learn_topic",
     "registry_snapshot",
+    "remember_key_points",
+    "save_brief",
+    "search_queries",
+    "slugify",
     "sync_registry",
     "unified_search",
     "watch_paths",

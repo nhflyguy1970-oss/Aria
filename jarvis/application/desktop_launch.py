@@ -107,7 +107,7 @@ def start_aria_server(*, timeout: float = 90) -> bool:
 
 
 def stop_aria_server() -> None:
-    """Best-effort stop of a background server started by this module."""
+    """Best-effort stop of tray, serve, and GUI processes."""
     global _SERVER_PROC
     if _SERVER_PROC is not None and _SERVER_PROC.poll() is None:
         with contextlib.suppress(Exception):
@@ -115,9 +115,16 @@ def stop_aria_server() -> None:
             _SERVER_PROC.wait(timeout=5)
     _SERVER_PROC = None
 
+    script = PROJECT_ROOT / "scripts" / "stop-jarvis.sh"
+    if script.is_file():
+        subprocess.run(["bash", str(script)], cwd=str(PROJECT_ROOT), check=False)
+        return
+
     for pattern in (
         f"{PROJECT_ROOT}/main.py tray",
         f"{PROJECT_ROOT}/main.py serve",
+        f"{PROJECT_ROOT}/jarvis/pyside_shell",
+        "python -m jarvis.pyside_shell",
     ):
         subprocess.run(["pkill", "-f", pattern], check=False, capture_output=True)
 
