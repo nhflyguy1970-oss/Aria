@@ -20,6 +20,14 @@ _PLANNING_ACTIONS: dict[str, tuple[Any, bool]] = {
     "planner_add_event": (PlanningEngine.add_event, False),
     "journal_schedule": (PlanningEngine.journal_schedule, False),
     "journal_thread": (PlanningEngine.journal_thread, False),
+    "journal_log": (PlanningEngine.journal_log, False),
+    "journal_today": (PlanningEngine.journal_today, True),
+    "journal_monthly": (PlanningEngine.journal_monthly, True),
+    "journal_open_tasks": (PlanningEngine.journal_open_tasks, True),
+    "journal_reflect": (PlanningEngine.journal_reflect, False),
+    "journal_migrate": (PlanningEngine.journal_migrate, False),
+    "journal_search": (PlanningEngine.journal_search, False),
+    "journal_review": (PlanningEngine.journal_review, False),
 }
 
 _PLANNING_DEPENDENCIES = ["automation_event", "journal", "capability_registry"]

@@ -218,3 +218,68 @@ class PlanningEngine:
             return err("Could not thread task to daily log.")
         verb = "Copied" if duplicate else "Migrated"
         return ok(f"{verb} to {day}: {bullet.get('content', '')}", module="journal")
+
+    @classmethod
+    def journal_log(cls, ctx: PlanningContext, params: dict, message: str) -> dict:
+        text = params.get("text") or message
+        text = re.sub(r"^(log|journal|add to journal)[:\s]+", "", text, flags=re.I).strip()
+        bullets = ctx.journal.parse_rapid_log(text)
+        lines = "\n".join(f"• {b['content']}" for b in bullets)
+        return ok(f"Added to today's log:\n\n{lines}", module="journal")
+
+    @classmethod
+    def journal_today(cls, ctx: PlanningContext, params: dict, message: str) -> dict:
+        day = params.get("day") or ""
+        page = ctx.journal.format_page("daily", day or None)
+        return ok(page, module="journal")
+
+    @classmethod
+    def journal_monthly(cls, ctx: PlanningContext, params: dict, message: str) -> dict:
+        from jarvis.modules.journal import _month_key
+
+        month = params.get("month") or _month_key()
+        page = ctx.journal.format_page("monthly", month)
+        return ok(page, module="journal")
+
+    @classmethod
+    def journal_open_tasks(cls, ctx: PlanningContext, params: dict, message: str) -> dict:
+        tasks = ctx.journal.open_tasks()
+        if not tasks:
+            return ok("No open journal tasks — you're clear.", module="journal")
+        from jarvis.modules.journal import _format_bullet
+
+        lines = "\n".join(f"• [{t.get('section')}] {_format_bullet(t)}" for t in tasks)
+        return ok(f"**Open tasks ({len(tasks)}):**\n\n{lines}", module="journal")
+
+    @classmethod
+    def journal_reflect(cls, ctx: PlanningContext, params: dict, message: str) -> dict:
+        scope = "month" if "month" in message.lower() else "week" if "week" in message.lower() else "today"
+        reflection = ctx.journal.ai_reflect(scope)
+        return ok(reflection, module="journal")
+
+    @classmethod
+    def journal_migrate(cls, ctx: PlanningContext, params: dict, message: str) -> dict:
+        from jarvis.modules.journal import _month_key
+
+        mk = _month_key()
+        year, month = map(int, mk.split("-"))
+        next_month = f"{year:04d}-{month + 1:02d}" if month < 12 else f"{year + 1:04d}-01"
+        result = ctx.journal.migrate_month(mk, next_month)
+        return ok(f"Monthly migration: moved {result['migrated']} tasks to {next_month}.", module="journal")
+
+    @classmethod
+    def journal_search(cls, ctx: PlanningContext, params: dict, message: str) -> dict:
+        query = params.get("query") or re.sub(r"^search journal\s*", "", message, flags=re.I)
+        hits = ctx.journal.search(query)
+        if not hits:
+            return ok("No journal entries found.", module="journal")
+        from jarvis.modules.journal import _format_bullet
+
+        lines = "\n".join(f"[{h.get('section')}] {_format_bullet(h)}" for h in hits)
+        return ok(lines, module="journal")
+
+    @classmethod
+    def journal_review(cls, ctx: PlanningContext, params: dict, message: str) -> dict:
+        scope = "week" if "week" in message.lower() else "month"
+        text = ctx.journal.ai_reflect_review(scope)
+        return ok(text, module="journal")

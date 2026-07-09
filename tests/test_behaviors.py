@@ -107,6 +107,9 @@ class TestPlanningBehavior(unittest.TestCase):
             "planner_set_timer",
             "planner_today",
             "journal_schedule",
+            "journal_log",
+            "journal_today",
+            "journal_open_tasks",
         ):
             self.assertTrue(has_action(action))
 

@@ -558,11 +558,6 @@ class JarvisAssistant:
             "inpaint_image": self._inpaint_image,
             "edit_image": self._edit_image,
             "enhance_prompt": self._enhance_prompt,
-            "journal_log": self._journal_log,
-            "journal_reflect": self._journal_reflect,
-            "journal_migrate": self._journal_migrate,
-            "journal_search": self._journal_search,
-            "journal_review": self._journal_review,
             "data_chart": self._data_chart,
             "data_sql": self._data_sql,
             "generate_music": self._generate_music,
@@ -2532,61 +2527,6 @@ class JarvisAssistant:
         if result.startswith("ERROR:"):
             return _err(result)
         return _ok(f"**Query results:**\n\n```json\n{result[:6000]}\n```", module="data")
-
-    def _journal_log(self, params: dict, message: str) -> dict:
-        text = params.get("text") or message
-        text = re.sub(r"^(log|journal|add to journal)[:\s]+", "", text, flags=re.I).strip()
-        bullets = self.journal.parse_rapid_log(text)
-        lines = "\n".join(f"• {b['content']}" for b in bullets)
-        return _ok(f"Added to today's log:\n\n{lines}", module="journal")
-
-    def _journal_today(self, params: dict, message: str) -> dict:
-        day = params.get("day") or ""
-        page = self.journal.format_page("daily", day or None)
-        return _ok(page, module="journal")
-
-    def _journal_monthly(self, params: dict, message: str) -> dict:
-        from jarvis.modules.journal import _month_key
-
-        month = params.get("month") or _month_key()
-        page = self.journal.format_page("monthly", month)
-        return _ok(page, module="journal")
-
-    def _journal_open_tasks(self, params: dict, message: str) -> dict:
-        tasks = self.journal.open_tasks()
-        if not tasks:
-            return _ok("No open journal tasks — you're clear.", module="journal")
-        from jarvis.modules.journal import _format_bullet
-
-        lines = "\n".join(f"• [{t.get('section')}] {_format_bullet(t)}" for t in tasks)
-        return _ok(f"**Open tasks ({len(tasks)}):**\n\n{lines}", module="journal")
-
-    def _journal_reflect(self, params: dict, message: str) -> dict:
-        scope = "month" if "month" in message.lower() else "week" if "week" in message.lower() else "today"
-        reflection = self.journal.ai_reflect(scope)
-        return _ok(reflection, module="journal")
-
-    def _journal_migrate(self, params: dict, message: str) -> dict:
-        from jarvis.modules.journal import _month_key
-        mk = _month_key()
-        y, m = map(int, mk.split("-"))
-        nm = f"{y:04d}-{m+1:02d}" if m < 12 else f"{y+1:04d}-01"
-        r = self.journal.migrate_month(mk, nm)
-        return _ok(f"Monthly migration: moved {r['migrated']} tasks to {nm}.", module="journal")
-
-    def _journal_search(self, params: dict, message: str) -> dict:
-        q = params.get("query") or re.sub(r"^search journal\s*", "", message, flags=re.I)
-        hits = self.journal.search(q)
-        if not hits:
-            return _ok("No journal entries found.", module="journal")
-        from jarvis.modules.journal import _format_bullet
-        lines = "\n".join(f"[{h.get('section')}] {_format_bullet(h)}" for h in hits)
-        return _ok(lines, module="journal")
-
-    def _journal_review(self, params: dict, message: str) -> dict:
-        scope = "week" if "week" in message.lower() else "month"
-        text = self.journal.ai_reflect_review(scope)
-        return _ok(text, module="journal")
 
     def _data_chart(self, params: dict, message: str) -> dict:
         err = self._ensure_data_loaded(message)
