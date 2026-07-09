@@ -84,6 +84,20 @@ class PlanningBehavior(ApplicationBehavior):
                 warnings.append(f"dependency not attached: {dep}")
         return warnings
 
+    def prepare_context(
+        self,
+        orchestrator: Any,
+        message: str,
+        *,
+        skip_project_context: bool = False,
+        **kwargs: Any,
+    ) -> tuple[list[str], list[dict]]:
+        self.initialize(orchestrator)
+        ctx = self._context or PlanningContext.from_orchestrator(orchestrator)
+        return PlanningEngine.prepare_context(
+            ctx, message, skip_project_context=skip_project_context
+        )
+
     def execute(
         self,
         orchestrator: Any,

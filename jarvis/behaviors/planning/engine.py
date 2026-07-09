@@ -13,6 +13,36 @@ from jarvis.response import err, ok
 class PlanningEngine:
     """Isolated planning domain logic."""
 
+    @classmethod
+    def prepare_context(
+        cls,
+        ctx: PlanningContext,
+        message: str,
+        *,
+        skip_project_context: bool = False,
+    ) -> tuple[list[str], list[dict]]:
+        import re
+
+        parts: list[str] = []
+        lower_msg = message.lower()
+        if not skip_project_context and re.search(
+            r"\b(journal|task|todo|to-do|today|priorit|what('s| is) on my plate)\b",
+            lower_msg,
+        ):
+            open_tasks = ctx.journal.format_open_tasks(limit=8)
+            if open_tasks != "No open journal tasks.":
+                parts.append(f"Open bullet journal tasks:\n{open_tasks}")
+
+        if re.search(
+            r"\b(weather|forecast|temperature|rain|snow|tomorrow|today|tonight)\b",
+            lower_msg,
+        ):
+            from jarvis.journal_weather import parse_weather_day, weather_forecast_text
+
+            parts.append(weather_forecast_text(parse_weather_day(message), message=message))
+
+        return parts, []
+
     @staticmethod
     def _disabled() -> dict:
         return err("Planner is disabled (JARVIS_PLANNER=0).", module="planner")

@@ -158,6 +158,19 @@ def _clean_page_text(text: str) -> str:
 
 
 def _extract_pdf(path: Path) -> ParsedDocument:
+    from jarvis.modules.platform_document_readers import read_platform_document
+
+    platform_pages = read_platform_document(path)
+    if platform_pages:
+        return ParsedDocument(
+            path=str(path),
+            title=path.stem or path.name,
+            pages=platform_pages,
+            page_count=len(platform_pages),
+            char_count=sum(len(page) for page in platform_pages),
+            source="platform-pdf",
+        )
+
     pages: list[str] = []
     source = "pymupdf"
     try:
@@ -208,6 +221,20 @@ def _extract_pdf_pdftotext(path: Path) -> list[str]:
 
 
 def _extract_docx(path: Path) -> ParsedDocument:
+    from jarvis.modules.platform_document_readers import read_platform_document
+
+    platform_pages = read_platform_document(path)
+    if platform_pages:
+        full = "\n\n".join(platform_pages)
+        return ParsedDocument(
+            path=str(path),
+            title=path.stem or path.name,
+            pages=platform_pages,
+            page_count=max(1, len(platform_pages)),
+            char_count=len(full),
+            source="platform-docx",
+        )
+
     try:
         from docx import Document
     except ImportError as exc:

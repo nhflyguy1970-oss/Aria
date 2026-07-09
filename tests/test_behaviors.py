@@ -11,18 +11,20 @@ from jarvis.behaviors.conversation import ConversationEngine, ConversationBehavi
 from jarvis.handlers.registry import call_action, has_action
 
 
-class TestGitBehavior(unittest.TestCase):
-    def test_git_behavior_registered(self):
+class TestEngineeringBehavior(unittest.TestCase):
+    def test_git_actions_registered(self):
         register_behaviors()
         self.assertTrue(has_action("git_status"))
         self.assertTrue(has_action("git_diff"))
+        self.assertTrue(has_action("coding_read"))
 
-    def test_discover_git_behavior(self):
-        behaviors = discover_behaviors()
-        git = next(item for item in behaviors if item.behavior_id == "git")
-        self.assertEqual(git.name, "Git")
-        self.assertEqual(git.category, "Coding")
-        self.assertEqual(git.action_names, ["git_status", "git_diff"])
+    def test_discover_engineering_behavior(self):
+        behavior = get_behavior("engineering")
+        from jarvis.behaviors.engineering import EngineeringBehavior
+
+        self.assertIsInstance(behavior, EngineeringBehavior)
+        self.assertIn("git_status", behavior.action_names)
+        self.assertIn("coding_read", behavior.action_names)
 
     @patch("jarvis.git_util.status", return_value="clean")
     def test_git_status_via_registry(self, _mock_status):
@@ -30,6 +32,29 @@ class TestGitBehavior(unittest.TestCase):
         assistant = MagicMock()
         result = call_action(assistant, "git_status", {}, "status")
         self.assertIn("clean", result.get("message", ""))
+
+
+class TestKnowledgeBehavior(unittest.TestCase):
+    def test_discover_knowledge_behavior(self):
+        behavior = get_behavior("knowledge")
+        from jarvis.behaviors.knowledge import KnowledgeBehavior
+
+        self.assertIsInstance(behavior, KnowledgeBehavior)
+        self.assertIn("web_search", behavior.action_names)
+        self.assertIn("document_search", behavior.action_names)
+
+    def test_knowledge_registers_actions(self):
+        register_behaviors()
+        for action in ("web_search", "learn_about", "document_info", "ingest_document"):
+            self.assertTrue(has_action(action))
+
+    def test_prepare_context_default(self):
+        from jarvis.behaviors.knowledge import KnowledgeBehavior
+
+        behavior = KnowledgeBehavior()
+        parts, citations = behavior.prepare_context(MagicMock(), "hello")
+        self.assertIsInstance(parts, list)
+        self.assertIsInstance(citations, list)
 
 
 class TestConversationBehavior(unittest.TestCase):

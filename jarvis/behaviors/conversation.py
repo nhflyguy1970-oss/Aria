@@ -45,17 +45,14 @@ class ConversationEngine:
         warnings: list[str] = []
         citations: list[dict] = []
 
-        from jarvis import rag
-        from jarvis.router import is_codebase_question, is_general_knowledge_question, is_meta_self_question
+        from jarvis.router import is_general_knowledge_question, is_meta_self_question
 
         general = is_general_knowledge_question(message, self._a.session)
         skip_project_context = general or is_meta_self_question(message)
-        if not llm.embed_available():
-            warnings.append(
-                f"Semantic memory/RAG unavailable — check embed model `{llm.embed_model()}`."
-            )
 
         from jarvis.behaviors.memory import get_memory_behavior
+        from jarvis.behaviors.planning import get_planning_behavior
+        from jarvis.behaviors.knowledge import get_knowledge_behavior
 
         memory_behavior = get_memory_behavior()
         if memory_behavior is not None:
@@ -68,35 +65,27 @@ class ConversationEngine:
             parts.extend(mem_parts)
             citations.extend(mem_citations)
 
-        lower_msg = message.lower()
-        if not skip_project_context and re.search(
-            r"\b(journal|task|todo|to-do|today|priorit|what('s| is) on my plate)\b",
-            lower_msg,
-        ):
-            open_tasks = self._a.journal.format_open_tasks(limit=8)
-            if open_tasks != "No open journal tasks.":
-                parts.append(f"Open bullet journal tasks:\n{open_tasks}")
+        planning_behavior = get_planning_behavior()
+        if planning_behavior is not None:
+            plan_parts, _plan_citations = planning_behavior.prepare_context(
+                self._a,
+                message,
+                skip_project_context=skip_project_context,
+            )
+            parts.extend(plan_parts)
 
-        if re.search(
-            r"\b(weather|forecast|temperature|rain|snow|tomorrow|today|tonight)\b",
-            lower_msg,
-        ):
-            from jarvis.journal_weather import parse_weather_day, weather_forecast_text
-
-            parts.append(weather_forecast_text(parse_weather_day(message), message=message))
-
-        if is_codebase_question(message, self._a.session):
-            doc_ctx, rag_warnings = rag.context_for_query(message)
-            warnings.extend(rag_warnings)
-            if doc_ctx:
-                parts.append(doc_ctx)
-
-        from jarvis.knowledge import context_for_query as knowledge_context
-
-        k_ctx, k_warnings = knowledge_context(message)
-        warnings.extend(k_warnings)
-        if k_ctx:
-            parts.append(k_ctx)
+        knowledge_behavior = get_knowledge_behavior()
+        if knowledge_behavior is not None:
+            know_parts, know_citations = knowledge_behavior.prepare_context(
+                self._a,
+                message,
+                general=general,
+                skip_project_context=skip_project_context,
+            )
+            parts.extend(know_parts)
+            citations.extend(know_citations)
+            know_warnings = getattr(knowledge_behavior, "_last_warnings", [])
+            warnings.extend(know_warnings)
 
         from jarvis.lang_util import detect_text_language, language_reply_hint
 
@@ -104,21 +93,6 @@ class ConversationEngine:
         lang_hint = language_reply_hint(lang)
         if lang_hint:
             parts.append(lang_hint)
-
-        from jarvis import web_search
-        from jarvis.profiles import web_search_disabled
-
-        if (
-            not web_search_disabled()
-            and web_search.auto_search_enabled()
-            and web_search.should_auto_search(message)
-        ):
-            hits = web_search.search(message, limit=5)
-            if hits:
-                parts.append(
-                    "Web search snippets (cite [n] if used; say if insufficient):\n"
-                    + web_search.format_results_for_llm(hits)
-                )
 
         from jarvis.resource_router import chat_busy_hint
 

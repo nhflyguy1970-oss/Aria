@@ -57,6 +57,8 @@ def _ensure_loaded() -> None:
     from jarvis.behaviors import git as _git  # noqa: F401
     from jarvis.behaviors.planning import PlanningBehavior as _planning  # noqa: F401
     from jarvis.behaviors.memory import MemoryBehavior as _memory  # noqa: F401
+    from jarvis.behaviors.knowledge import KnowledgeBehavior as _knowledge  # noqa: F401
+    from jarvis.behaviors.engineering import EngineeringBehavior as _engineering  # noqa: F401
 
     _loaded = True
 
