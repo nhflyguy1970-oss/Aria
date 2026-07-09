@@ -6,19 +6,31 @@ JARVIS_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 APPS_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 DESKTOP_DIR="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
 
-# Desktop: main ARIA shortcut (Chrome app). Optional: JARVIS_DESKTOP_SHORTCUTS=all
-DESKTOP_SHORTCUTS="${JARVIS_DESKTOP_SHORTCUTS:-aria}"
+# Desktop: main AI Workstation shortcut. Optional: JARVIS_DESKTOP_SHORTCUTS=all
+DESKTOP_SHORTCUTS="${JARVIS_DESKTOP_SHORTCUTS:-ai-workstation,aria}"
 
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-pyside.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-uncensored.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-app.sh"
 chmod +x "$JARVIS_ROOT/scripts/launch-jarvis-native.sh"
+chmod +x "$JARVIS_ROOT/scripts/workstation-gui.sh"
+chmod +x "$JARVIS_ROOT/workstation"
 
 mkdir -p "$APPS_DIR"
 
 # App menu entries
-APP_MENU_VARIANTS=(aria aria-pyside aria-uncensored)
+APP_MENU_VARIANTS=(
+  ai-workstation
+  ai-workstation-start
+  ai-workstation-stop
+  ai-workstation-status
+  ai-workstation-doctor
+  ai-workstation-acceptance
+  aria
+  aria-pyside
+  aria-uncensored
+)
 LEGACY_VARIANTS=(jarvis jarvis-uncensored jarvis-app jarvis-native aria-app aria-native)
 
 for variant in "${APP_MENU_VARIANTS[@]}"; do
@@ -42,7 +54,7 @@ fi
 # Desktop icons
 if [[ -d "$DESKTOP_DIR" ]]; then
   if [[ "$DESKTOP_SHORTCUTS" == "all" ]]; then
-    DESKTOP_LIST=(aria aria-uncensored)
+    DESKTOP_LIST=(ai-workstation aria aria-uncensored)
   else
     IFS=',' read -ra DESKTOP_LIST <<< "$DESKTOP_SHORTCUTS"
   fi
@@ -63,5 +75,5 @@ for variant in "${APP_MENU_VARIANTS[@]}"; do
 done
 if [[ -d "$DESKTOP_DIR" ]]; then
   echo "Desktop icons:"
-  ls "$DESKTOP_DIR"/aria*.desktop 2>/dev/null | sed 's|^|  |' || echo "  (none)"
+  ls "$DESKTOP_DIR"/ai-workstation*.desktop "$DESKTOP_DIR"/aria*.desktop 2>/dev/null | sed 's|^|  |' || echo "  (none)"
 fi

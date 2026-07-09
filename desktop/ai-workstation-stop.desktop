@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Stop AI Workstation
+Comment=Stop Aria tray and API server
+Exec=bash @JARVIS_ROOT@/workstation stop
+Icon=@JARVIS_ROOT@/assets/jarvis-tray.png
+Path=@JARVIS_ROOT@
+Terminal=false
+Categories=Development;Utility;
+Keywords=AI;Workstation;Aria;Stop;

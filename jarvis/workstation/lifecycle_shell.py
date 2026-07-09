@@ -31,6 +31,11 @@ def configure() -> int:
 
 
 def start() -> int:
+    from jarvis.workstation import lifecycle
+
+    bootstrap = lifecycle.up()
+    if not bootstrap.get("ok"):
+        print("Warning: bootstrap services incomplete", file=sys.stderr)
     return run_script("launch-jarvis.sh")
 
 

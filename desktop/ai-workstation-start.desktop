@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Start AI Workstation
+Comment=Bootstrap services and launch Aria (tray + window)
+Exec=bash @JARVIS_ROOT@/workstation start
+Icon=@JARVIS_ROOT@/assets/jarvis-tray.png
+Path=@JARVIS_ROOT@
+Terminal=false
+Categories=Development;Utility;
+StartupNotify=true
+Keywords=AI;Workstation;Aria;Start;

@@ -45,6 +45,9 @@ def main(argv: list[str] | None = None) -> int:
     restore_p = sub.add_parser("restore", help="Restore from backup-workstation archive")
     restore_p.add_argument("archive", help="Path to workstation_*.tar.gz")
     sub.add_parser("verify", help="Validate install from inventory")
+    acc_p = sub.add_parser("acceptance", help="Full workstation acceptance report + score")
+    acc_p.add_argument("--json", action="store_true", help="Emit JSON report")
+    acc_p.add_argument("--verbose", action="store_true", help="Show per-component detail fields")
     sub.add_parser("inventory", help="Show installed/running/healthy components")
     sub.add_parser("hardware", help="Hardware detection and workload recommendations")
     opt_p = sub.add_parser("optimize", help="Apply measured hardware tuning to jarvis.env")
@@ -89,6 +92,18 @@ def main(argv: list[str] | None = None) -> int:
         for warning in result.get("warnings") or []:
             print(f"WARN: {warning.get('message')} → {warning.get('fix')}")
         return 0 if result.get("ready") else 1
+
+    if args.command == "acceptance":
+        from jarvis.workstation.acceptance import format_acceptance_markdown, run_acceptance
+
+        report = run_acceptance()
+        if getattr(args, "json", False):
+            print(json.dumps(report, indent=2))
+        else:
+            from jarvis.workstation.acceptance import format_acceptance_markdown
+
+            print(format_acceptance_markdown(report, verbose=getattr(args, "verbose", False)))
+        return 0 if report.get("acceptance_passed") else 1
 
     if args.command == "inventory":
         from jarvis.workstation.inventory import format_inventory_text

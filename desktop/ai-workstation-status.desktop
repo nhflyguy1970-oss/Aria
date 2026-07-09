@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=AI Workstation Status
+Comment=Show workstation health and component status
+Exec=bash @JARVIS_ROOT@/scripts/workstation-gui.sh status
+Icon=@JARVIS_ROOT@/assets/jarvis-tray.png
+Path=@JARVIS_ROOT@
+Terminal=false
+Categories=Development;Utility;
+Keywords=AI;Workstation;Status;
