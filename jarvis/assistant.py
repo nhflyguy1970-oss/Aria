@@ -457,7 +457,13 @@ class JarvisAssistant:
             and attachment.get("path")
             and attachment2.get("path")
         ):
-            return self._compare_images(
+            from jarvis.handlers import ensure_handlers_loaded
+            from jarvis.handlers.registry import call_action
+
+            ensure_handlers_loaded()
+            return call_action(
+                self,
+                "compare_images",
                 {"path1": attachment["path"], "path2": attachment2["path"]},
                 message or "Compare these two images.",
             )
@@ -536,15 +542,6 @@ class JarvisAssistant:
             "play_audio": self._play_audio,
             "process_audio_vst": self._process_audio_vst,
             "set_vst_live": self._set_vst_live,
-            "describe_image": self._describe_image,
-            "analyze_image": self._analyze_image,
-            "ocr_image": self._ocr_image,
-            "ocr_structured_image": self._ocr_structured_image,
-            "image_to_code": self._image_to_code,
-            "analyze_region": self._analyze_region,
-            "batch_vision": self._batch_vision,
-            "analyze_video_frame": self._analyze_image,
-            "compare_images": self._compare_images,
             "generate_image": self._generate_image,
             "generate_video": self._generate_video,
             "generate_meme": self._generate_meme,
@@ -670,7 +667,13 @@ class JarvisAssistant:
                     yield _stream_done(_err(payload))
                     return
                 elif kind == "result":
-                    result = self._compare_from_result(payload)
+                    from jarvis.behaviors.vision.context import VisionContext
+                    from jarvis.behaviors.vision.engine import VisionActionEngine
+
+                    result = VisionActionEngine.compare_from_result(
+                        VisionContext.from_orchestrator(self),
+                        payload,
+                    )
             if result:
                 yield _stream_done(result)
             return
@@ -963,11 +966,15 @@ class JarvisAssistant:
                 question = IMAGE_TO_CODE_PROMPT
                 task = "image_to_code"
             elif action == "analyze_region":
-                result = self._analyze_region(params, message)
+                from jarvis.handlers.registry import call_action
+
+                result = call_action(self, "analyze_region", params, message)
                 yield _stream_done(result)
                 return
             elif action == "compare_images":
-                result = self._compare_images(params, message)
+                from jarvis.handlers.registry import call_action
+
+                result = call_action(self, "compare_images", params, message)
                 yield _stream_done(result)
                 return
             elif action in ("analyze_image", "analyze_video_frame"):
@@ -1772,163 +1779,6 @@ class JarvisAssistant:
             module="audio",
             audio_path=result,
         )
-
-    def _speak(self, params: dict, message: str) -> dict:
-        return self._generate_audio(params, message)
-
-    def _vision_warnings(self) -> list[str]:
-        model = llm.vision_model().lower()
-        if self._vision_llava_warned:
-            return []
-        heavy = "llava" in model and "13" in model
-        big_llama = "llama3.2-vision" in model or "llama3.2-vision" in model.replace("_", ".")
-        if not heavy and not big_llama:
-            return []
-        self._vision_llava_warned = True
-        if heavy:
-            return [
-                "Vision is using llava:13b — heavy on 8GB GPUs. "
-                "Use Fast mode (moondream) or llama3.2-vision:11b if you see freezes.",
-            ]
-        return [
-            "Vision is using llama3.2-vision:11b — moderate VRAM use on 8GB. "
-            "Switch to Fast mode if responses stall.",
-        ]
-
-    def _vision_ok(self, answer: str, *, image_path: str | None = None) -> dict:
-        extra: dict = {}
-        if image_path:
-            extra["image_path"] = image_path
-        warnings = self._vision_warnings()
-        if warnings:
-            extra["warnings"] = warnings
-        return _ok(answer, module="vision", **extra)
-
-    def _describe_image(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_image(params.get("path", ""))
-        if not path:
-            return _err("Which image? Attach one or give me a path.")
-        answer = self.vision.analyze("Describe this image in detail.", path)
-        if answer.startswith("ERROR:"):
-            return _err(answer)
-        return self._vision_ok(answer, image_path=path)
-
-    def _analyze_image(self, params: dict, message: str) -> dict:
-        from jarvis.vision_media import build_vision_prompt, vision_task_for_question
-
-        path = self.session.resolve_image(params.get("path", ""))
-        question = params.get("question") or message
-        if not path:
-            return _err("Which image?")
-        task = vision_task_for_question(question)
-        prompt = build_vision_prompt(question, task)
-        answer = self.vision.analyze(prompt, path, task=task)
-        if answer.startswith("ERROR:"):
-            return _err(answer)
-        return self._vision_ok(answer, image_path=path)
-
-    def _ocr_image(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_image(params.get("path", ""))
-        if not path:
-            return _err("Which image? Attach one or give me a path.")
-        answer = self.vision.ocr(path)
-        if answer.startswith("ERROR:"):
-            return _err(answer)
-        return self._vision_ok(answer, image_path=path)
-
-    def _compare_from_result(self, payload: dict) -> dict:
-        answer = payload.get("answer", "")
-        if answer.startswith("ERROR:"):
-            return _err(answer)
-        extra = {
-            "compare_paths": [payload.get("path1"), payload.get("path2")],
-            "action": "compare_images",
-        }
-        if payload.get("diff_path"):
-            extra["diff_path"] = payload["diff_path"]
-        warnings = self._vision_warnings()
-        if warnings:
-            extra["warnings"] = warnings
-        return _ok(answer, module="vision", **extra)
-
-    def _compare_images(self, params: dict, message: str) -> dict:
-        path1 = params.get("path1", "")
-        path2 = params.get("path2", "")
-        if not path1 or not path2:
-            return _err("Usage: compare <image1> with <image2>")
-        question = params.get("question") or message
-        result = self.vision.compare(
-            path1, path2, question if question != message else None, uploads_dir=UPLOAD_DIR,
-        )
-        return self._compare_from_result(result)
-
-    def _ocr_structured_image(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_image(params.get("path", ""))
-        if not path:
-            return _err("Which image? Attach one or give me a path.")
-        answer = self.vision.ocr_structured(path)
-        if answer.startswith("ERROR:"):
-            return _err(answer)
-        return self._vision_ok(answer, image_path=path)
-
-    def _image_to_code(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_image(params.get("path", ""))
-        if not path:
-            return _err("Attach a UI screenshot to convert to code.")
-        answer = self.vision.image_to_code(path)
-        if answer.startswith("ERROR:"):
-            return _err(answer)
-        return self._vision_ok(answer, image_path=path)
-
-    def _analyze_region(self, params: dict, message: str) -> dict:
-        path = self.session.resolve_image(params.get("path", ""))
-        if not path:
-            return _err("Which image?")
-        crop = parse_region(message, params.get("crop"))
-        analyze_path = path
-        if crop:
-            try:
-                cropped = apply_crop_bytes(Path(path).read_bytes(), crop)
-                region_file = UPLOAD_DIR / f"region_{Path(path).stem}.jpg"
-                region_file.write_bytes(cropped)
-                analyze_path = str(region_file)
-            except Exception as e:
-                return _err(str(e))
-        question = params.get("question") or message or "What is in this region?"
-        answer = self.vision.analyze(question, analyze_path, task="region")
-        if answer.startswith("ERROR:"):
-            return _err(answer)
-        return self._vision_ok(answer, image_path=analyze_path)
-
-    def _batch_vision(self, params: dict, message: str) -> dict:
-        from jarvis import fs
-        from jarvis.config import PROJECT_ROOT
-
-        folder = params.get("folder", "")
-        try:
-            root = fs.resolve_path(folder, base=PROJECT_ROOT)
-        except fs.PathError as e:
-            return _err(str(e))
-        if not root.is_dir():
-            return _err(f"Not a folder: {folder}")
-        images = sorted(
-            p for p in root.iterdir()
-            if p.is_file() and p.suffix.lower() in IMAGE_EXTENSIONS
-        )[:15]
-        if not images:
-            return _err(f"No images found in {folder}")
-        lines = []
-        for img in images:
-            desc = self.vision.analyze(
-                "Briefly describe this image in 2-3 sentences.",
-                str(img),
-                task="batch",
-            )
-            if desc.startswith("ERROR:"):
-                lines.append(f"**{img.name}**: (failed)")
-            else:
-                lines.append(f"**{img.name}**: {desc}")
-        return _ok("\n\n".join(lines), module="vision")
 
     def _enqueue_coding(self, params: dict, message: str) -> dict:
         from jarvis.coding_jobs import submit_coding_agent

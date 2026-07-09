@@ -56,6 +56,7 @@ def _ensure_loaded() -> None:
     from jarvis.behaviors import conversation as _conversation  # noqa: F401
     from jarvis.behaviors.briefing import BriefingBehavior as _briefing  # noqa: F401
     from jarvis.behaviors.data import DataBehavior as _data  # noqa: F401
+    from jarvis.behaviors.vision import VisionBehavior as _vision  # noqa: F401
     from jarvis.behaviors.engineering import EngineeringBehavior as _engineering  # noqa: F401
     from jarvis.behaviors.knowledge import KnowledgeBehavior as _knowledge  # noqa: F401
     from jarvis.behaviors.memory import MemoryBehavior as _memory  # noqa: F401

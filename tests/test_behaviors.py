@@ -123,6 +123,27 @@ class TestPlanningBehavior(unittest.TestCase):
         self.assertIn("buy milk", result.get("message", ""))
 
 
+class TestVisionBehavior(unittest.TestCase):
+    def test_discover_vision_behavior(self):
+        behavior = get_behavior("vision")
+        from jarvis.behaviors.vision import VisionBehavior
+
+        self.assertIsInstance(behavior, VisionBehavior)
+        self.assertIn("describe_image", behavior.action_names)
+        self.assertIn("compare_images", behavior.action_names)
+
+    def test_vision_registers_actions(self):
+        register_behaviors()
+        for action in (
+            "describe_image",
+            "analyze_image",
+            "ocr_image",
+            "compare_images",
+            "analyze_video_frame",
+        ):
+            self.assertTrue(has_action(action))
+
+
 class TestDataBehavior(unittest.TestCase):
     def test_discover_data_behavior(self):
         behavior = get_behavior("data")
