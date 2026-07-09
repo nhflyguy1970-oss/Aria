@@ -351,6 +351,23 @@ def knowledge_unified_search(q: str = "", limit: int = 12):
     return result
 
 
+@app.get("/api/tools")
+def tools_list():
+    from jarvis.tools.executor import tool_status
+
+    return tool_status()
+
+
+@app.post("/api/tools/execute")
+def tools_execute(body: dict):
+    from jarvis.tools.executor import execute_tool
+
+    tool_id = (body.get("tool") or body.get("tool_id") or "").strip()
+    if not tool_id:
+        return {"ok": False, "error": "tool required"}
+    return execute_tool(tool_id, body)
+
+
 @app.post("/api/services/ensure")
 def services_ensure():
     from jarvis.services import ensure_services
