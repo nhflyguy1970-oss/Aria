@@ -403,6 +403,37 @@ def platform_cutover_rollback():
     return rollback_to_legacy()
 
 
+@app.post("/api/platform/cutover/backfill")
+def platform_cutover_backfill(dry_run: bool = False, semantic: bool = False):
+    from jarvis.platform_cutover import (
+        backfill_memory,
+        backfill_semantic_vectors,
+        ensure_memory_namespaces,
+        verify_cutover_complete,
+    )
+
+    namespaces = ensure_memory_namespaces()
+    memory_result = backfill_memory(dry_run=dry_run)
+    semantic_result = None
+    if semantic and not dry_run:
+        semantic_result = backfill_semantic_vectors()
+    verification = None if dry_run else verify_cutover_complete(persist=True)
+    return {
+        "ok": memory_result.get("ok"),
+        "namespaces": namespaces,
+        "memory": memory_result,
+        "semantic": semantic_result,
+        "verification": verification,
+    }
+
+
+@app.post("/api/platform/cutover/verify")
+def platform_cutover_verify():
+    from jarvis.platform_cutover import verify_cutover_complete
+
+    return verify_cutover_complete(persist=True)
+
+
 @app.get("/api/daily/{intent}")
 def daily_workflow_api(intent: str):
     from jarvis.assistant_instance import get_assistant

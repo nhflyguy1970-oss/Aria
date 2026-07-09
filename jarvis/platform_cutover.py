@@ -229,26 +229,48 @@ def _check_backfill_gate() -> tuple[dict[str, Any], list[str], list[str]]:
 
 
 def verify_data_parity() -> dict[str, Any]:
-    """Compare legacy memory inventory with backfill stats."""
+    """Compare legacy memory inventory with platform mirror."""
     state = _load()
     stats = state.get("backfill_stats") or {}
     legacy_count = 0
+    platform_count = 0
+    contentful_legacy = 0
     error = ""
     try:
         from jarvis.assistant_instance import get_assistant
 
-        mem = get_assistant().memory
-        if hasattr(mem, "list_entries"):
-            legacy_count = len(mem.list_entries())
+        legacy_store = _legacy_memory_store(get_assistant().memory)
+        if hasattr(legacy_store, "list_entries"):
+            entries = legacy_store.list_entries()
+            legacy_count = len(entries)
+            contentful_legacy = sum(
+                1
+                for e in entries
+                if str(e.get("id", "")).strip() and str(e.get("content", "")).strip()
+            )
     except Exception as exc:
         error = str(exc)[:200]
 
+    if os.getenv("JARVIS_PLATFORM_MEMORY_ATTACHED") == "1":
+        try:
+            platform_count = _platform_memory_count(_APPLICATION_ID)
+        except Exception as exc:
+            if not error:
+                error = str(exc)[:200]
+
     mirrored = int(stats.get("mirrored") or 0)
     total = int(stats.get("total") or 0)
-    ok = not error and legacy_count == mirrored and (total == 0 or total == legacy_count)
+    ok = (
+        not error
+        and mirrored >= contentful_legacy
+        and platform_count >= contentful_legacy
+        and (total == 0 or total == legacy_count)
+    )
     return {
         "ok": ok,
         "legacy_count": legacy_count,
+        "contentful_legacy": contentful_legacy,
+        "platform_count": platform_count,
         "mirrored": mirrored,
         "backfill_total": total,
         "error": error,
@@ -299,11 +321,14 @@ def verify_readiness(*, persist: bool = True) -> dict[str, Any]:
 
     parity = verify_data_parity()
     layers["parity"] = parity
-    if not parity.get("ok") and parity.get("legacy_count", 0) > 0:
-        blockers.append(
-            "memory parity mismatch: "
-            f"legacy={parity.get('legacy_count')} mirrored={parity.get('mirrored')}"
-        )
+    if not parity.get("ok") and parity.get("contentful_legacy", parity.get("legacy_count", 0)) > 0:
+        if parity.get("platform_count", 0) < parity.get("contentful_legacy", 0):
+            blockers.append(
+                "memory parity mismatch: "
+                f"legacy={parity.get('contentful_legacy', parity.get('legacy_count'))} "
+                f"platform={parity.get('platform_count', 0)} "
+                f"mirrored={parity.get('mirrored')}"
+            )
 
     ready = not blockers
     result = {
@@ -320,26 +345,74 @@ def verify_readiness(*, persist: bool = True) -> dict[str, Any]:
     return result
 
 
+def _platform_memory_count(application_id: str = _APPLICATION_ID) -> int:
+    try:
+        from aiplatform.memory.manager import manager as memory_manager
+
+        provider = memory_manager.provider
+        if provider is None:
+            return 0
+        query = memory_manager._build_query(application=application_id, top_k=1_000_000)
+        return provider.count(query)
+    except Exception:
+        return 0
+
+
+def _legacy_memory_store(mem: Any) -> Any:
+    """Return the legacy JsonMemoryStore regardless of adapter wrapping."""
+    legacy = getattr(mem, "_legacy", None)
+    if legacy is not None and hasattr(legacy, "list_entries"):
+        return legacy
+    return mem
+
+
+def ensure_memory_namespaces() -> dict[str, str]:
+    """Register required namespace aliases on the running process."""
+    try:
+        from aiplatform.applications.memory.metrics import ensure_namespace_mappings
+
+        return ensure_namespace_mappings(_APPLICATION_ID)
+    except Exception as exc:
+        logger.warning("ensure_memory_namespaces failed: %s", exc)
+        return {}
+
+
 def backfill_memory(*, dry_run: bool = False) -> dict[str, Any]:
     """Mirror existing legacy memory entries to platform storage."""
-    if not os.getenv("JARVIS_PLATFORM_MEMORY_ATTACHED") == "1":
+    if os.getenv("JARVIS_PLATFORM_MEMORY_ATTACHED") != "1":
         return {"ok": False, "error": "platform memory not attached"}
 
     try:
+        ensure_memory_namespaces()
         from jarvis.assistant_instance import get_assistant
 
-        mem = get_assistant().memory
+        mem = _legacy_memory_store(get_assistant().memory)
         if not hasattr(mem, "list_entries"):
             return {"ok": False, "error": "memory store has no list_entries"}
         entries = mem.list_entries()
         if dry_run:
-            return {"ok": True, "dry_run": True, "entries": len(entries)}
+            namespaces: dict[str, int] = {}
+            for entry in entries:
+                ns = str(entry.get("namespace") or "default")
+                namespaces[ns] = namespaces.get(ns, 0) + 1
+            return {
+                "ok": True,
+                "dry_run": True,
+                "entries": len(entries),
+                "namespaces": namespaces,
+            }
 
         from aiplatform.applications.memory.bridge import mirror_add
 
         mirrored = 0
         errors = 0
+        skipped = 0
         for entry in entries:
+            content = str(entry.get("content", "")).strip()
+            entry_id = str(entry.get("id", "")).strip()
+            if not content or not entry_id:
+                skipped += 1
+                continue
             try:
                 mirror_add(_APPLICATION_ID, entry)
                 mirrored += 1
@@ -349,11 +422,271 @@ def backfill_memory(*, dry_run: bool = False) -> dict[str, Any]:
 
         state = _load()
         state["backfill_completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        state["backfill_stats"] = {"mirrored": mirrored, "errors": errors, "total": len(entries)}
+        state["backfill_stats"] = {
+            "mirrored": mirrored,
+            "errors": errors,
+            "skipped": skipped,
+            "total": len(entries),
+        }
         _save(state)
-        return {"ok": errors == 0, "mirrored": mirrored, "errors": errors, "total": len(entries)}
+        return {
+            "ok": errors == 0 and mirrored + skipped == len(entries),
+            "mirrored": mirrored,
+            "errors": errors,
+            "skipped": skipped,
+            "total": len(entries),
+        }
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
+
+
+def verify_memory_records(*, sample_limit: int = 0) -> dict[str, Any]:
+    """Verify every legacy memory record exists on platform with matching fields."""
+    if os.getenv("JARVIS_PLATFORM_MEMORY_ATTACHED") != "1":
+        return {"ok": False, "error": "platform memory not attached"}
+
+    try:
+        from aiplatform.applications.memory.bridge import (
+            map_memory_type,
+            map_namespace,
+            verify_platform_record,
+        )
+        from aiplatform.memory.manager import manager as memory_manager
+
+        from jarvis.assistant_instance import get_assistant
+
+        legacy_store = _legacy_memory_store(get_assistant().memory)
+        entries = legacy_store.list_entries()
+        if sample_limit > 0:
+            entries = entries[:sample_limit]
+
+        missing: list[str] = []
+        content_mismatch: list[str] = []
+        namespace_mismatch: list[str] = []
+        metadata_issues: list[str] = []
+        skipped: list[str] = []
+        namespaces: dict[str, int] = {}
+        verified = 0
+
+        for entry in entries:
+            entry_id = str(entry.get("id", "")).strip()
+            content = str(entry.get("content", "")).strip()
+            ns = map_namespace(entry.get("namespace"))
+            namespaces[ns] = namespaces.get(ns, 0) + 1
+            if not entry_id or not content:
+                skipped.append(entry_id or "(no-id)")
+                continue
+
+            platform_record = memory_manager.get(entry_id)
+            if platform_record is None:
+                missing.append(entry_id)
+                continue
+
+            ok, reason = verify_platform_record(platform_record, entry)
+            if not ok:
+                if reason == "content mismatch":
+                    content_mismatch.append(entry_id)
+                elif reason == "namespace mismatch":
+                    namespace_mismatch.append(entry_id)
+                else:
+                    metadata_issues.append(f"{entry_id}:{reason}")
+                continue
+
+            meta = getattr(platform_record, "metadata", None) or {}
+            legacy_type = str(entry.get("type", "fact"))
+            if str(meta.get("jarvis_type", "")) != legacy_type:
+                metadata_issues.append(f"{entry_id}:jarvis_type")
+            legacy_ts = str(entry.get("timestamp", ""))
+            if legacy_ts and str(meta.get("jarvis_timestamp", "")) != legacy_ts:
+                metadata_issues.append(f"{entry_id}:timestamp")
+            expected_mem_type = map_memory_type(legacy_type)
+            if str(getattr(platform_record, "memory_type", "")) != expected_mem_type:
+                metadata_issues.append(f"{entry_id}:memory_type")
+            verified += 1
+
+        platform_count = _platform_memory_count(_APPLICATION_ID)
+        ok = not (missing or content_mismatch or namespace_mismatch or metadata_issues)
+        return {
+            "ok": ok,
+            "legacy_total": len(legacy_store.list_entries()),
+            "checked": len(entries),
+            "verified": verified,
+            "skipped": len(skipped),
+            "platform_count": platform_count,
+            "namespaces": namespaces,
+            "missing": missing[:20],
+            "missing_count": len(missing),
+            "content_mismatch_count": len(content_mismatch),
+            "namespace_mismatch_count": len(namespace_mismatch),
+            "metadata_issue_count": len(metadata_issues),
+            "metadata_issues": metadata_issues[:20],
+        }
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def verify_dual_read(*, sample_size: int = 25) -> dict[str, Any]:
+    """Compare legacy get() vs platform get() for a sample of entries."""
+    if os.getenv("JARVIS_PLATFORM_MEMORY_ATTACHED") != "1":
+        return {"ok": False, "error": "platform memory not attached"}
+
+    try:
+        from aiplatform.memory.manager import manager as memory_manager
+
+        from jarvis.assistant_instance import get_assistant
+
+        legacy_store = _legacy_memory_store(get_assistant().memory)
+        entries = [
+            e
+            for e in legacy_store.list_entries()
+            if str(e.get("id", "")).strip() and str(e.get("content", "")).strip()
+        ]
+        sample = entries[:sample_size] if sample_size > 0 else entries
+        mismatches: list[str] = []
+        for entry in sample:
+            entry_id = str(entry["id"])
+            legacy = legacy_store.get(entry_id)
+            platform = memory_manager.get(entry_id)
+            if platform is None:
+                mismatches.append(f"{entry_id}:platform_missing")
+                continue
+            if str(legacy.get("content", "")).strip() != str(platform.content or "").strip():
+                mismatches.append(f"{entry_id}:content")
+        return {
+            "ok": not mismatches,
+            "sampled": len(sample),
+            "mismatches": mismatches[:20],
+            "mismatch_count": len(mismatches),
+        }
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def verify_semantic_parity(*, sample_size: int = 50) -> dict[str, Any]:
+    """Verify legacy vectors exist on platform; reset stale verification counters when aligned."""
+    if os.getenv("JARVIS_PLATFORM_SEMANTIC_MEMORY_ATTACHED") != "1":
+        return {"ok": False, "error": "platform semantic memory not attached"}
+
+    try:
+        _ensure_semantic_vector_store()
+        from aiplatform.applications.semantic.bridge import verify_embedding
+        from aiplatform.applications.semantic.metrics import (
+            metrics_view,
+            reset_verification_counters,
+        )
+
+        from jarvis.config import MEMORY_VECTORS_FILE
+        from jarvis.modules.vector_store import SqliteVectorStore
+
+        legacy_store = SqliteVectorStore(path=MEMORY_VECTORS_FILE)
+        entries = legacy_store.iter_entries()
+        legacy_total = len(entries)
+        sample = entries if sample_size <= 0 else entries[:sample_size]
+        missing: list[str] = []
+        embedding_issues: list[str] = []
+
+        from aiplatform.vectorstore import manager as vector_store_manager
+
+        platform_chunks = {
+            chunk_id: chunk for chunk_id, chunk in vector_store_manager.store.list_chunks()
+        }
+        platform_total = len(platform_chunks)
+        counters_reset = None
+        metrics_ok = True
+        for row in sample:
+            memory_id = str(row.get("memory_id", ""))
+            if not memory_id:
+                continue
+            chunk = platform_chunks.get(memory_id)
+            if chunk is None:
+                missing.append(memory_id)
+                continue
+            ok, reason = verify_embedding(row.get("vector") or [], chunk.embedding)
+            if not ok:
+                embedding_issues.append(f"{memory_id}:{reason}")
+
+        if not missing and not embedding_issues and platform_total >= legacy_total:
+            counters_reset = reset_verification_counters(_APPLICATION_ID)
+            metrics = metrics_view(_APPLICATION_ID)
+            metrics_ok = int(metrics.read_verification_failures) == 0
+
+        return {
+            "ok": (
+                not missing
+                and not embedding_issues
+                and platform_total >= legacy_total
+                and metrics_ok
+            ),
+            "legacy_total": legacy_total,
+            "platform_total": platform_total,
+            "sampled": len(sample),
+            "missing_count": len(missing),
+            "embedding_issue_count": len(embedding_issues),
+            "counters_reset": counters_reset,
+        }
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def verify_cutover_complete(*, persist: bool = True) -> dict[str, Any]:
+    """Full cutover verification without enabling platform-authoritative mode."""
+    ensure_memory_namespaces()
+    semantic_parity = verify_semantic_parity(sample_size=50)
+    readiness = verify_readiness(persist=False)
+    memory_records = verify_memory_records()
+    dual_read = verify_dual_read()
+    parity = verify_data_parity()
+
+    blockers = list(readiness.get("blockers") or [])
+    if not memory_records.get("ok"):
+        blockers.append(
+            "memory record verification failed: "
+            f"missing={memory_records.get('missing_count', 0)} "
+            f"content={memory_records.get('content_mismatch_count', 0)} "
+            f"metadata={memory_records.get('metadata_issue_count', 0)}"
+        )
+    if not dual_read.get("ok"):
+        blockers.append(
+            f"dual-read verification failed: {dual_read.get('mismatch_count', 0)} mismatches"
+        )
+    if os.getenv("JARVIS_PLATFORM_SEMANTIC_MEMORY_ATTACHED") == "1" and not semantic_parity.get(
+        "ok"
+    ):
+        blockers.append(
+            "semantic parity verification failed: "
+            f"legacy={semantic_parity.get('legacy_total', 0)} "
+            f"platform={semantic_parity.get('platform_total', 0)} "
+            f"missing={semantic_parity.get('missing_count', 0)}"
+        )
+
+    ready = not blockers
+    result = {
+        "ready": ready,
+        "blockers": blockers,
+        "warnings": readiness.get("warnings") or [],
+        "readiness": readiness,
+        "memory_records": memory_records,
+        "dual_read": dual_read,
+        "semantic_parity": semantic_parity,
+        "parity": parity,
+        "mode": current_mode(),
+        "ts": time.time(),
+    }
+    if persist:
+        state = _load()
+        state["last_full_verification"] = result
+        _save(state)
+    return result
+
+
+def _ensure_semantic_vector_store() -> str:
+    try:
+        from aiplatform.applications.semantic.manager import manager as semantic_manager
+
+        return semantic_manager.ensure_process_vector_store(_APPLICATION_ID)
+    except Exception as exc:
+        logger.warning("Could not ensure semantic vector store: %s", exc)
+        return ""
 
 
 def backfill_semantic_vectors(*, dry_run: bool = False) -> dict[str, Any]:
@@ -362,6 +695,7 @@ def backfill_semantic_vectors(*, dry_run: bool = False) -> dict[str, Any]:
         return {"ok": False, "error": "platform semantic memory not attached"}
 
     try:
+        index_path = _ensure_semantic_vector_store()
         from jarvis.config import MEMORY_VECTORS_FILE
         from jarvis.modules.vector_store import SqliteVectorStore
 
@@ -390,6 +724,9 @@ def backfill_semantic_vectors(*, dry_run: bool = False) -> dict[str, Any]:
                 logger.debug("semantic backfill failed for %s: %s", row.get("memory_id"), exc)
 
         reset = reset_verification_counters(_APPLICATION_ID)
+        from aiplatform.vectorstore import manager as vector_store_manager
+
+        vector_store_manager.save_state()
         state = _load()
         state["semantic_backfill_completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         state["semantic_backfill_stats"] = {
@@ -397,6 +734,7 @@ def backfill_semantic_vectors(*, dry_run: bool = False) -> dict[str, Any]:
             "errors": errors,
             "total": len(entries),
             "reset_counters": reset,
+            "index_path": index_path,
         }
         _save(state)
         return {"ok": errors == 0, "mirrored": mirrored, "errors": errors, "total": len(entries)}

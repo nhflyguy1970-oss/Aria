@@ -154,12 +154,16 @@ class TestPlatformCutover(unittest.TestCase):
                         self.assertEqual(current_mode(), "platform_authoritative")
 
     def test_backfill_memory_dry_run(self):
-        mock_mem = MagicMock()
+        mock_mem = MagicMock(spec=["list_entries"])
         mock_mem.list_entries.return_value = [{"id": "1"}, {"id": "2"}]
         mock_assistant = MagicMock(memory=mock_mem)
         with patch.dict("os.environ", {"JARVIS_PLATFORM_MEMORY_ATTACHED": "1"}, clear=False):
             with patch("jarvis.assistant_instance.get_assistant", return_value=mock_assistant):
-                result = backfill_memory(dry_run=True)
+                with patch(
+                    "jarvis.platform_cutover.ensure_memory_namespaces",
+                    return_value={"jarvis": "aria"},
+                ):
+                    result = backfill_memory(dry_run=True)
         self.assertTrue(result.get("ok"))
         self.assertEqual(result.get("entries"), 2)
 
