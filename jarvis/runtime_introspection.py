@@ -554,3 +554,238 @@ def runtime_action_result(action: str) -> dict[str, Any]:
         "message": format_runtime_markdown(action, data if action != "runtime_status" else data),
         "data": data,
     }
+
+
+# Chat one-word status commands → runtime collectors (no RAG / web search).
+STATUS_COMMANDS: dict[str, str] = {
+    "status": "status_summary",
+    "health": "runtime_health",
+    "services": "runtime_services",
+    "models": "runtime_models",
+    "memory": "runtime_providers",
+    "providers": "runtime_providers",
+    "gpu": "runtime_gpu",
+    "jobs": "runtime_jobs",
+}
+
+
+def is_status_command(message: str) -> str | None:
+    """Return runtime action name when message is a bare status command."""
+    text = (message or "").strip().lower()
+    if text.startswith("/"):
+        text = text[1:].strip()
+    return STATUS_COMMANDS.get(text)
+
+
+def _memory_detail() -> dict[str, Any]:
+    payload: dict[str, Any] = {"provider": "local"}
+    if os.getenv("JARVIS_PLATFORM_MEMORY_ATTACHED") == "1":
+        payload["provider"] = "platform"
+    try:
+        from jarvis.assistant_instance import get_assistant
+
+        mem = get_assistant().memory
+        entries = mem.list_entries() if hasattr(mem, "list_entries") else []
+        payload["entry_count"] = len(entries)
+        namespaces: dict[str, int] = {}
+        for e in entries:
+            ns = e.get("namespace") or "default"
+            namespaces[ns] = namespaces.get(ns, 0) + 1
+        payload["namespaces"] = namespaces
+    except Exception as exc:
+        payload["error"] = str(exc)
+    try:
+        idx = PROJECT_ROOT / "data" / "semantic-index" / "vectors.json"
+        if idx.is_file():
+            import json
+
+            data = json.loads(idx.read_text(encoding="utf-8"))
+            payload["semantic_vectors"] = len(data) if isinstance(data, list) else len(data.keys())
+    except Exception:
+        payload["semantic_vectors"] = None
+    payload["semantic_attached"] = os.getenv("JARVIS_PLATFORM_SEMANTIC_MEMORY_ATTACHED") == "1"
+    return payload
+
+
+def _knowledge_detail() -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "retrieval": "local",
+        "platform_attached": os.getenv("JARVIS_PLATFORM_KNOWLEDGE_RETRIEVAL_ATTACHED") == "1",
+    }
+    if payload["platform_attached"]:
+        payload["retrieval"] = "platform"
+    try:
+        from jarvis.knowledge.registry import registry_snapshot
+
+        snap = registry_snapshot()
+        payload["documents"] = snap.get("total_documents")
+        payload["sources"] = snap.get("sources") or []
+        payload["last_sync"] = snap.get("last_sync") or ""
+    except Exception as exc:
+        payload["registry_error"] = str(exc)
+    return payload
+
+
+def _applications() -> list[dict[str, Any]]:
+    apps: list[dict[str, Any]] = [
+        {
+            "id": "aria",
+            "label": os.getenv("JARVIS_ASSISTANT_NAME", "Aria"),
+            "attached": _host_status().get("attached"),
+            "healthy": _host_status().get("healthy"),
+            "primary": True,
+        }
+    ]
+    try:
+        from aiplatform.applications.host import all_hosts
+
+        for host in all_hosts():
+            if host.get("id") == "aria":
+                continue
+            apps.append(
+                {
+                    "id": host.get("id"),
+                    "label": host.get("id"),
+                    "attached": host.get("attached"),
+                    "healthy": host.get("health"),
+                    "primary": False,
+                }
+            )
+    except Exception:
+        pass
+    return apps
+
+
+def _recent_activity_summary(*, limit: int = 12) -> list[dict[str, Any]]:
+    try:
+        from jarvis.workstation_activity import list_events
+
+        return list_events(limit=limit)
+    except Exception:
+        return []
+
+
+def collect_dashboard() -> dict[str, Any]:
+    """Structured payload for the Workstation Dashboard UI."""
+    status = collect_runtime_status()
+    gpu_env = status.get("gpu") or {}
+    env = gpu_env.get("environment") if isinstance(gpu_env, dict) else {}
+    resources = env.get("resources") if isinstance(env, dict) else {}
+    models = status.get("models") or {}
+    active = models.get("active") or {}
+    providers = status.get("providers") or {}
+    acc = status.get("acceptance") or {}
+    return {
+        "ok": True,
+        "ts": status.get("ts"),
+        "summary": format_status_summary(status),
+        "applications": _applications(),
+        "runtime": {
+            "mode": status.get("execution_mode"),
+            "phase": status.get("phase"),
+            "host": status.get("host"),
+            "platform": status.get("platform"),
+            "cutover": status.get("cutover"),
+        },
+        "inference": {
+            "gateway": (providers.get("inference") or {}).get("gateway") or {},
+            "active_models": active,
+            "general": active.get("general"),
+            "coder": active.get("coder"),
+            "embed": active.get("embed"),
+            "vision": active.get("vision") or models.get("vision_model"),
+            "ollama_running": models.get("ollama_running"),
+        },
+        "memory": _memory_detail(),
+        "knowledge": _knowledge_detail(),
+        "databases": (status.get("services") or {}).get("databases") or [],
+        "services": (status.get("services") or {}).get("services") or [],
+        "services_ready": (status.get("services") or {}).get("ready"),
+        "infrastructure": {
+            "docker": any(
+                s.get("id") == "docker" and s.get("running")
+                for s in (status.get("services") or {}).get("services") or []
+            ),
+            "scheduler": next(
+                (
+                    s
+                    for s in (status.get("services") or {}).get("services") or []
+                    if s.get("id") == "scheduler"
+                ),
+                {},
+            ),
+            "jobs": status.get("jobs") or {},
+        },
+        "hardware": {
+            "gpu": env.get("gpu") if isinstance(env, dict) else {},
+            "resources": resources or {},
+            "disk_free_gb": env.get("disk_free_gb") if isinstance(env, dict) else None,
+        },
+        "health": {
+            "diagnose": status.get("health"),
+            "acceptance": acc,
+            "production_readiness": acc.get("production_readiness"),
+            "overall": acc.get("overall"),
+            "acceptance_passed": acc.get("acceptance_passed"),
+        },
+        "git": status.get("workspace") or {},
+        "recent_activity": _recent_activity_summary(),
+        "providers": providers,
+    }
+
+
+def format_status_summary(data: dict[str, Any] | None = None) -> str:
+    """Compact one-screen status for chat `status` command."""
+    snap = data or collect_runtime_status()
+    mode = snap.get("execution_mode", "?")
+    phase = (snap.get("phase") or {}).get("phase", "?")
+    host = snap.get("host") or {}
+    attached = "Attached" if host.get("attached") else "Standalone"
+    models = (snap.get("models") or {}).get("active") or {}
+    general = models.get("general") or models.get("coder") or "—"
+    mem_src = "Platform" if os.getenv("JARVIS_PLATFORM_MEMORY_ATTACHED") == "1" else "Local"
+    know_src = (
+        "Platform" if os.getenv("JARVIS_PLATFORM_KNOWLEDGE_RETRIEVAL_ATTACHED") == "1" else "Local"
+    )
+    acc = snap.get("acceptance") or {}
+    acc_pct = acc.get("overall")
+    acc_label = f"{acc_pct}%" if acc_pct is not None else "—"
+    svc = snap.get("services") or {}
+    svc_ok = "Healthy" if svc.get("ready") else "Degraded"
+    jobs = snap.get("jobs") or {}
+    job_n = jobs.get("active_count") or jobs.get("busy_count") or 0
+    lines = [
+        "## Workstation Status",
+        "",
+        f"**Platform:** {attached}",
+        f"**Mode:** {mode.title()}",
+        f"**Phase:** {phase}",
+        f"**Inference:** Ollama · `{general}`",
+        f"**Memory:** {mem_src}",
+        f"**Knowledge:** {know_src}",
+        f"**Acceptance:** {acc_label}",
+        f"**Services:** {svc_ok}",
+        f"**Background jobs:** {job_n} running",
+        "",
+        "_Live runtime — no search._",
+    ]
+    return "\n".join(lines)
+
+
+def format_startup_summary() -> dict[str, Any]:
+    """Greeting + startup reassurance payload for overlay and first chat."""
+    snap = collect_runtime_status()
+    greeting = "Hello"
+    try:
+        from jarvis.morning_briefing import personalized_greeting
+
+        greeting = personalized_greeting()
+    except Exception:
+        pass
+    return {
+        "ok": True,
+        "greeting": greeting,
+        "markdown": format_status_summary(snap).replace("## Workstation Status", f"## {greeting}"),
+        "summary": format_status_summary(snap),
+        "dashboard": collect_dashboard(),
+    }

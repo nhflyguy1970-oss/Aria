@@ -4208,3 +4208,24 @@ body.light-theme .service-row--action:hover { background: rgba(0, 0, 0, 0.05); }
 #makerFloatPanel.floating-panel { width: min(520px, 92vw); }
 .floating-panel.gesture-dragging { outline: 2px dashed var(--accent); }
 
+/* Workstation operational dashboard */
+.ws-menu { display: flex; flex-direction: column; gap: 0.35rem; }
+.ws-menu-btn { width: 100%; text-align: left; font-size: 0.82rem; }
+.ws-page-header { margin-bottom: 1rem; }
+.ws-toolbar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; }
+.ws-summary-bar { display: flex; flex-wrap: wrap; gap: 1rem; padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 8px; background: rgba(212, 160, 84, 0.08); border: 1px solid var(--border); }
+.ws-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.75rem; }
+.ws-card { padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); }
+.ws-card h3 { margin: 0 0 0.5rem; font-size: 0.9rem; color: var(--accent); }
+.ws-list { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+.ws-list li { padding: 0.2rem 0; }
+.ws-badge { font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.25rem; }
+.ws-badge--ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.ws-badge--down { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.ws-activity-section { margin-top: 1.5rem; }
+.ws-activity-filters { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.ws-activity-list { list-style: none; padding: 0; max-height: 320px; overflow-y: auto; font-size: 0.8rem; font-family: var(--font-mono, monospace); }
+.ws-activity-item { padding: 0.35rem 0; border-bottom: 1px solid var(--border); display: grid; grid-template-columns: 9rem 8rem 6rem 1fr; gap: 0.5rem; align-items: baseline; }
+.ws-activity-ts { color: var(--muted); }
+@media (max-width: 720px) { .ws-activity-item { grid-template-columns: 1fr; } }
+

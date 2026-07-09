@@ -697,6 +697,11 @@ def _quick_route(message: str, attachment: dict | None, session: SessionContext)
     if runtime_hit := route_runtime_introspection(message):
         return runtime_hit
 
+    from jarvis.runtime_introspection import is_status_command
+
+    if status_action := is_status_command(message):
+        return {"action": status_action, "params": {}, "thinking": "workstation status"}
+
     lower = message.lower().strip()
 
     from jarvis.upgrade_wizard import is_upgrade_task, parse_upgrade_task

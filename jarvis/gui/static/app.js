@@ -3687,7 +3687,7 @@ async function setComfyCheckpointFile(filename) {
 
 function switchToView(view) {
   const VIEW_PANELS = [
-    "chatView", "dashboardView", "plannerView", "calendarView", "flytyingView", "projectsView",
+    "chatView", "dashboardView", "workstationView", "plannerView", "calendarView", "flytyingView", "projectsView",
     "makerView", "browserView", "securityView", "presenceView", "auditView", "voiceView", "audioView", "journalView",
     "memoryView", "galleryView", "videoView", "memeView", "documentsView", "actionsView",
   ];
@@ -3699,6 +3699,7 @@ function switchToView(view) {
     document.getElementById(id)?.classList.toggle("hidden", id !== targetId);
   });
   if (view === "dashboard" && window.initDashboard) window.initDashboard();
+  if (view === "workstation" && window.initWorkstation) window.initWorkstation();
   if (view === "planner" && window.initPlanner) window.initPlanner();
   if (view === "calendar" && window.initCalendar) window.initCalendar();
   if (view === "flytying" && window.initFlytying) window.initFlytying();
@@ -3828,6 +3829,18 @@ async function waitForServices(maxAttempts = 12) {
         if (data.boot_log) data.boot_log.slice(-5).forEach(appendStartupLog);
         renderServices(data.services, data.comfyui_settings);
         if (data.ready) {
+          try {
+            const sumRes = await fetchWithTimeout("/api/workstation/startup-summary", {}, 4000);
+            if (sumRes.ok) {
+              const summary = await sumRes.json();
+              const md = summary.summary || summary.markdown || "";
+              appendStartupLog(md.split("\n").filter((l) => l.trim()).slice(0, 8).join(" · "));
+              hideStartupOverlay(summary.greeting ? `${summary.greeting} — ready.` : `All set — ${ariaName()} is ready.`);
+              return true;
+            }
+          } catch (_) {
+            /* fall through */
+          }
           hideStartupOverlay(`All set — ${ariaName()} is ready.`);
           return true;
         }
@@ -4387,6 +4400,10 @@ waitForServices().then(() => {
       messageInput.value = prefill;
       window.history.replaceState({}, "", window.location.pathname);
       setTimeout(() => sendMessage(prefill), 300);
+    }
+    const hashView = (window.location.hash || "").replace(/^#/, "").trim();
+    if (hashView && document.querySelector(`.view-tab[data-view="${hashView}"]`)) {
+      switchToView(hashView);
     }
     document.getElementById("presetQualityBtn")?.classList.add("active");
     setInterval(pollLive, isNativeApp() ? 45000 : 20000);

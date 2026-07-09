@@ -105,6 +105,21 @@
         </div>
       </div>
 
+      <div class="sidebar-section sidebar-section--workstation" data-section="workstation">
+        <button type="button" class="sidebar-section-head" aria-expanded="true">
+          <p class="sidebar-section-title">Workstation</p><span class="section-chevron">▾</span>
+        </button>
+        <div class="sidebar-section-body ws-menu">
+          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstation">Dashboard</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="chat-status">Status</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationActivityList">Activity</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstation">Models &amp; Services</button>
+          <button type="button" class="ghost-btn ws-menu-btn" onclick="document.querySelector('.view-tab[data-view=memory]')?.click()">Memory</button>
+          <button type="button" class="ghost-btn ws-menu-btn" onclick="document.querySelector('.view-tab[data-view=audit]')?.click()">Repair &amp; Logs</button>
+          <button type="button" class="ghost-btn ws-menu-btn" onclick="document.querySelector('.view-tab[data-view=actions]')?.click()">Report</button>
+        </div>
+      </div>
+
       <div class="sidebar-section sidebar-section--integrations" data-section="integrations">
         <button type="button" class="sidebar-section-head" aria-expanded="true">
           <p class="sidebar-section-title">Integrations</p><span class="section-chevron">▾</span>
@@ -402,6 +417,7 @@
       <nav class="view-tabs">
         <button type="button" class="view-tab active" data-view="chat">Chat</button>
         <button type="button" class="view-tab" data-view="dashboard">Dashboard</button>
+        <button type="button" class="view-tab" data-view="workstation">Workstation</button>
         <button type="button" class="view-tab" data-view="planner">Planner</button>
         <button type="button" class="view-tab" data-view="calendar">Calendar</button>
         <button type="button" class="view-tab" data-view="flytying">Fly tying</button>
@@ -1105,6 +1121,28 @@
         </section>
       </div>
 
+      <div id="workstationView" class="view-panel hidden">
+        <div class="ws-page-header">
+          <h2>Workstation</h2>
+          <p class="muted">Live operational dashboard — platform, services, inference, memory, and activity.</p>
+          <div class="ws-toolbar">
+            <button type="button" id="workstationRefreshBtn" class="ghost-btn small">Refresh</button>
+            <button type="button" id="workstationRepairBtn" class="ghost-btn small">Repair</button>
+            <span id="workstationLoadStatus" class="muted"></span>
+          </div>
+        </div>
+        <div id="workstationDashboardBody" class="ws-dashboard-body"></div>
+        <section class="ws-activity-section" id="workstationActivitySection">
+          <h3>Activity</h3>
+          <div class="ws-activity-filters">
+            <input type="search" id="workstationActivityQuery" placeholder="Search events…" class="audio-path-input" />
+            <input type="text" id="workstationActivityComponent" placeholder="Component filter" class="audio-path-input" />
+            <button type="button" id="workstationActivityFilterBtn" class="ghost-btn small">Filter</button>
+          </div>
+          <ul id="workstationActivityList" class="ws-activity-list"></ul>
+        </section>
+      </div>
+
       <div id="plannerView" class="view-panel hidden">
         <h2>Planner</h2>
         <p id="plannerStatus" class="muted"></p>
@@ -1688,6 +1726,7 @@
   <script type="module" src="/static/modules/jobs.mjs?v=5.16.70"></script>
   <script type="module" src="/static/modules/health.mjs?v=5.16.70"></script>
   <script src="/static/planner.js?v=5.16.70"></script>
+  <script src="/static/workstation_dashboard.js?v=1.0.0"></script>
   <script src="/static/calendar.js?v=5.16.73"></script>
   <script src="/static/flytying.js?v=5.16.70"></script>
   <script src="/static/projects.js?v=5.16.70"></script>

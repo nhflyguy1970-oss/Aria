@@ -87,8 +87,28 @@ def run_tray_app(
         except Exception:
             icon.notify(f"{name} is offline", title)
 
+    def open_workstation(icon, item):
+        from jarvis.gui_launcher import open_gui as launch_gui
+
+        launch_gui(f"{url}?app=1#workstation")
+
+    def workstation_status(icon, item):
+        try:
+            import json
+            import urllib.request
+
+            with urllib.request.urlopen(f"{url}/api/workstation/dashboard", timeout=5) as resp:
+                data = json.loads(resp.read().decode())
+            mode = (data.get("runtime") or {}).get("mode", "?")
+            acc = ((data.get("health") or {}).get("acceptance") or {}).get("overall", "?")
+            icon.notify(f"Mode: {mode} · Acceptance: {acc}%", title)
+        except Exception as exc:
+            icon.notify(f"Dashboard unavailable: {exc}"[:120], title)
+
     menu = pystray.Menu(
         Item(f"Open {assistant_name()}", open_gui, default=True),
+        Item("Workstation dashboard", open_workstation),
+        Item("Workstation status", workstation_status),
         Item("Restart server", restart),
         Item("Check status", status),
         pystray.Menu.SEPARATOR,

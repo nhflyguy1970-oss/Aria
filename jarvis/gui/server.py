@@ -43,6 +43,13 @@ async def lifespan(app: FastAPI):
     from jarvis.media_jobs import recover_stale_jobs
 
     recover_stale_jobs()
+    try:
+        from jarvis.workstation_activity import load_recent_from_disk, record_event
+
+        load_recent_from_disk()
+        record_event("startup", component="aria", detail="Server lifespan started")
+    except Exception:
+        pass
     audio_wakeword.configure(chat_processor=assistant.process)
 
     def _warm_flytying_index() -> None:
@@ -341,6 +348,42 @@ def runtime_section_api(section: str):
     data = result.get("data") or {}
     result["message"] = format_runtime_markdown(action, data)
     return result
+
+
+@app.get("/api/workstation/dashboard")
+def workstation_dashboard_api():
+    from jarvis.runtime_introspection import collect_dashboard
+
+    return collect_dashboard()
+
+
+@app.get("/api/workstation/startup-summary")
+def workstation_startup_summary_api():
+    from jarvis.runtime_introspection import format_startup_summary
+
+    return format_startup_summary()
+
+
+@app.get("/api/workstation/activity")
+def workstation_activity_api(
+    limit: int = 80,
+    q: str = "",
+    component: str = "",
+    event_type: str = "",
+    status: str = "",
+):
+    from jarvis.workstation_activity import list_events
+
+    return {
+        "ok": True,
+        "events": list_events(
+            limit=min(limit, 200),
+            query=q,
+            component=component,
+            event_type=event_type,
+            status=status,
+        ),
+    }
 
 
 @app.get("/api/knowledge/registry")

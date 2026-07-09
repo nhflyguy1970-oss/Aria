@@ -208,6 +208,13 @@ class ConversationEngine:
             return _ok(piped, module=None, type="instruction_follow")
 
         context_prefix, context_warnings, memory_citations = self.build_context_prefix(user_message)
+        retrieval_hint = ""
+        if memory_citations:
+            from jarvis.learning_notice import memory_retrieval_hint, set_retrieval_hint
+
+            retrieval_hint = memory_retrieval_hint(memory_citations)
+            if retrieval_hint:
+                set_retrieval_hint(retrieval_hint)
         from jarvis.instruction_follow import (
             is_strict_instruction_prompt,
             strict_instruction_context_prefix,
@@ -237,12 +244,17 @@ class ConversationEngine:
         self.auto_remember(message, answer)
         self._learn_preferences(model)
         self._a.branches.persist(session=self._a.session)
+        display = answer
+        if retrieval_hint:
+            from jarvis.learning_notice import append_retrieval_to_message
+
+            display = append_retrieval_to_message(answer, retrieval_hint)
         extra: dict = {"inference_ms": inference_ms, "model": model, **usage}
         if context_warnings:
             extra["warnings"] = context_warnings
         if memory_citations:
             extra["memory_citations"] = memory_citations
-        return _ok(answer, module=None, **extra)
+        return _ok(display, module=None, **extra)
 
     def execute_stream(
         self,

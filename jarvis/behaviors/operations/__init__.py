@@ -43,6 +43,7 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "runtime_jobs": lambda _params, _message: _runtime_action("runtime_jobs"),
     "runtime_gpu": lambda _params, _message: _runtime_action("runtime_gpu"),
     "runtime_platform": lambda _params, _message: _runtime_action("runtime_platform"),
+    "status_summary": lambda _params, _message: _status_summary(),
 }
 
 
@@ -149,6 +150,13 @@ def _runtime_action(action: str) -> dict:
     from jarvis.runtime_introspection import runtime_action_result
 
     return runtime_action_result(action)
+
+
+def _status_summary() -> dict:
+    from jarvis.runtime_introspection import collect_runtime_status, format_status_summary
+
+    data = collect_runtime_status()
+    return {"ok": True, "message": format_status_summary(data), "data": data, "type": "info"}
 
 
 @register_behavior

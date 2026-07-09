@@ -241,12 +241,15 @@ class MemoryEngine:
             return ok("Those facts are already stored.", module="memory")
         ctx.session.note_module("memory")
         ctx.refresh_system_prompt()
+        from jarvis.learning_notice import learning_notice
+
+        notice = learning_notice("long_term" if namespace == "default" else "project", detail=namespace)
         if len(stored) == 1:
             body = stored[0]
         else:
             body = "\n".join(f"• {fact}" for fact in stored)
         return ok(
-            f"Stored **{len(stored)}** {entry_type}{'s' if len(stored) != 1 else ''} in `{namespace}`:\n\n{body}",
+            f"{notice}\n\nStored **{len(stored)}** {entry_type}{'s' if len(stored) != 1 else ''} in `{namespace}`:\n\n{body}",
             module="memory",
             remembered=stored[0] if len(stored) == 1 else body,
             remembered_count=len(stored),

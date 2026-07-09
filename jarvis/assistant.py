@@ -431,6 +431,12 @@ class JarvisAssistant:
         load_jarvis_env()
         begin()
         try:
+            from jarvis.workstation_activity import record_event
+
+            record_event("user_request", component="chat", detail=(message or "")[:120])
+        except Exception:
+            pass
+        try:
             with self._request_lock:
                 return self._process_unlocked(message, attachment, branch_id, attachment2)
         finally:
@@ -501,6 +507,17 @@ class JarvisAssistant:
             elif path and kind == "document":
                 self.session.note_document(path)
         intent = route(message, self.session, attachment)
+        try:
+            from jarvis.workstation_activity import record_event
+
+            record_event(
+                "router_decision",
+                component="router",
+                detail=f"{intent.get('action', 'chat')}: {intent.get('thinking', '')}"[:200],
+                meta={"action": intent.get("action")},
+            )
+        except Exception:
+            pass
         if intent.get("action") == "clarify" or intent.get("needs_clarification"):
             choices = intent.get("choices", [])
             question = intent.get("clarification_question", "Which one?")
