@@ -26,6 +26,38 @@ def semantic_memory_adapter_enabled() -> bool:
         return False
 
 
+def platform_data_authoritative() -> bool:
+    if os.getenv("JARVIS_PLATFORM_DATA_AUTHORITATIVE", "").lower() in ("1", "true", "yes"):
+        return True
+    try:
+        from jarvis.platform_cutover import platform_data_authoritative as cutover_authoritative
+
+        return cutover_authoritative()
+    except Exception:
+        return False
+
+
+def _platform_vector(memory_id: str) -> list[float] | None:
+    from aiplatform.vectorstore import manager as vector_store_manager
+
+    for chunk_id, chunk in vector_store_manager.store.list_chunks():
+        if chunk_id == memory_id and chunk.embedding:
+            return list(chunk.embedding)
+    return None
+
+
+def _platform_search(
+    query_vector: list[float],
+    *,
+    limit: int,
+    min_score: float,
+) -> list[tuple[str, float]]:
+    from aiplatform.vectorstore import manager as vector_store_manager
+
+    platform_raw = vector_store_manager.store.search(query_vector, k=limit)
+    return [(chunk.id, score) for chunk, score in platform_raw if score >= min_score]
+
+
 def wrap_semantic_memory_store(legacy_store: Any, application_id: str = _APPLICATION_ID) -> Any:
     if not semantic_memory_adapter_enabled():
         return legacy_store
@@ -124,6 +156,13 @@ class SemanticMemoryAdapter:
             logger.debug("Semantic shadow search verification skipped: %s", exc)
 
     def get(self, memory_id: str) -> list[float]:
+        if platform_data_authoritative():
+            try:
+                platform_vector = _platform_vector(memory_id)
+                if platform_vector is not None:
+                    return platform_vector
+            except Exception as exc:
+                logger.debug("platform semantic get fallback: %s", exc)
         legacy_vector = self._legacy.get(memory_id)
         self._shadow_get(memory_id, legacy_vector)
         return legacy_vector
@@ -176,6 +215,17 @@ class SemanticMemoryAdapter:
         namespace: str | None = None,
         min_score: float = 0.3,
     ) -> list[tuple[str, float]]:
+        if platform_data_authoritative():
+            try:
+                platform_results = _platform_search(
+                    query_vector,
+                    limit=limit,
+                    min_score=min_score,
+                )
+                if platform_results:
+                    return platform_results
+            except Exception as exc:
+                logger.debug("platform semantic search fallback: %s", exc)
         legacy_results = self._legacy.search(
             query_vector,
             limit,

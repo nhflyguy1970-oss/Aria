@@ -37,25 +37,6 @@ def _ready_state() -> dict:
     }
 
 
-def _mock_metrics():
-    memory_metrics = MagicMock()
-    memory_metrics.to_dict.return_value = {"verification_failures": 0}
-    semantic_metrics = MagicMock()
-    semantic_metrics.to_dict.return_value = {
-        "verification_failures": 0,
-        "read_verification_failures": 0,
-        "embedding_verification_failures": 0,
-    }
-    knowledge_metrics = MagicMock()
-    knowledge_metrics.to_dict.return_value = {
-        "retrieval_verification_failures": 0,
-        "shadow_retrieval_comparisons": 10,
-        "retrieval_agreements": 10,
-    }
-    app = MagicMock(required_memory_namespaces=["aria", "profile"])
-    return memory_metrics, semantic_metrics, knowledge_metrics, app
-
-
 class TestPlatformCutover(unittest.TestCase):
     def test_default_mode_dual_write(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -118,38 +99,27 @@ class TestPlatformCutover(unittest.TestCase):
             platform.mkdir()
             cutover_file = Path(tmp) / "cutover.json"
             cutover_file.write_text(json.dumps(_ready_state()), encoding="utf-8")
-            memory_metrics, semantic_metrics, knowledge_metrics, app = _mock_metrics()
+            layer_ok = ({"ok": True}, [], [])
             with patch("jarvis.platform_cutover._CUTOVER_FILE", cutover_file):
                 with patch.dict("os.environ", _ready_env(legacy, platform), clear=False):
-                    with patch(
-                        "aiplatform.applications.memory.metrics.metrics_view",
-                        return_value=memory_metrics,
-                    ):
+                    with patch("jarvis.platform_cutover._check_memory_layer", return_value=layer_ok):
                         with patch(
-                            "aiplatform.applications.semantic.metrics.metrics_view",
-                            return_value=semantic_metrics,
+                            "jarvis.platform_cutover._check_semantic_layer",
+                            return_value=layer_ok,
                         ):
                             with patch(
-                                "aiplatform.applications.knowledge_retrieval.metrics.metrics_view",
-                                return_value=knowledge_metrics,
+                                "jarvis.platform_cutover._check_knowledge_layer",
+                                return_value=layer_ok,
                             ):
                                 with patch(
-                                    "aiplatform.applications.manager.manager.get",
-                                    return_value=app,
+                                    "jarvis.platform_cutover.verify_data_parity",
+                                    return_value={
+                                        "ok": True,
+                                        "legacy_count": 2,
+                                        "mirrored": 2,
+                                    },
                                 ):
-                                    with patch(
-                                        "aiplatform.applications.memory.validator.namespace_status",
-                                        return_value=(["aria"], ["aria"], []),
-                                    ):
-                                        with patch(
-                                            "jarvis.platform_cutover.verify_data_parity",
-                                            return_value={
-                                                "ok": True,
-                                                "legacy_count": 2,
-                                                "mirrored": 2,
-                                            },
-                                        ):
-                                            result = verify_readiness(persist=False)
+                                    result = verify_readiness(persist=False)
             self.assertTrue(result.get("ready"), result.get("blockers"))
 
     def test_enable_blocked_without_readiness(self):
