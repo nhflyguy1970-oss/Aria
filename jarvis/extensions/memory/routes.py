@@ -35,14 +35,18 @@ def memory_routes():
             "recall",
             16,
             "recall memories",
-            lambda m, lower, _s: bool(re.search(r"\b(what do you remember|recall|my memories)\b", lower)),
+            lambda m, lower, _s: bool(
+                re.search(r"\b(what do you remember|recall|my memories)\b", lower)
+            ),
         ),
         RouteRule(
             "memory_search",
             17,
             "memory search",
             lambda m, lower, _s: bool(
-                re.search(r"\b(search my memory|search memory|find in memory|memory search)\b", lower)
+                re.search(
+                    r"\b(search my memory|search memory|find in memory|memory search)\b", lower
+                )
             ),
             params=lambda m: {
                 "query": re.sub(

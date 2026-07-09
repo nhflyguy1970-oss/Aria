@@ -51,7 +51,9 @@ def knowledge_search(
         try:
             from aiplatform.applications.knowledge_retrieval.bridge import platform_search
 
-            platform_results = platform_search(_APPLICATION_ID, corpus, query, limit=int(kwargs.get("limit", 5)))
+            platform_results = platform_search(
+                _APPLICATION_ID, corpus, query, limit=int(kwargs.get("limit", 5))
+            )
             if platform_results:
                 return platform_results
         except Exception as exc:

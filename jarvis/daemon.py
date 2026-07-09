@@ -57,6 +57,7 @@ def _notify(title: str, body: str) -> None:
 def ensure_ollama() -> bool:
     """Backward-compatible wrapper."""
     from jarvis.services import ensure_ollama as _ensure
+
     return _ensure()
 
 
@@ -226,15 +227,23 @@ def run_tray(uncensored: bool = False) -> None:
     _setup_file_logging()
     load_jarvis_env()
     from jarvis.platform_attachment import attach_platform_infrastructure, validate_platform_startup
+    from jarvis.platform_automation_event import (
+        attach_platform_automation_event,
+        validate_platform_automation_event,
+    )
+    from jarvis.platform_behavior_extraction import (
+        attach_platform_behavior_extraction,
+        validate_platform_behavior_extraction,
+    )
     from jarvis.platform_inference import attach_platform_inference, validate_platform_inference
+    from jarvis.platform_knowledge_retrieval import (
+        attach_platform_knowledge_retrieval,
+        validate_platform_knowledge_retrieval,
+    )
     from jarvis.platform_memory import attach_platform_memory, validate_platform_memory
     from jarvis.platform_semantic_memory import (
         attach_platform_semantic_memory,
         validate_platform_semantic_memory,
-    )
-    from jarvis.platform_knowledge_retrieval import (
-        attach_platform_knowledge_retrieval,
-        validate_platform_knowledge_retrieval,
     )
     from jarvis.platform_tool_capability import (
         attach_platform_tool_capability,
@@ -243,14 +252,6 @@ def run_tray(uncensored: bool = False) -> None:
     from jarvis.platform_workflow_orchestration import (
         attach_platform_workflow_orchestration,
         validate_platform_workflow_orchestration,
-    )
-    from jarvis.platform_automation_event import (
-        attach_platform_automation_event,
-        validate_platform_automation_event,
-    )
-    from jarvis.platform_behavior_extraction import (
-        attach_platform_behavior_extraction,
-        validate_platform_behavior_extraction,
     )
 
     attach_report = attach_platform_infrastructure()
@@ -346,7 +347,9 @@ def run_tray(uncensored: bool = False) -> None:
             except Exception as exc:
                 logger.warning("Memgraph autostart skipped: %s", exc)
         if _server_responsive():
-            logger.info("API already listening on port %d — tray attaching (no duplicate server)", PORT)
+            logger.info(
+                "API already listening on port %d — tray attaching (no duplicate server)", PORT
+            )
             proc = None
         else:
             proc = start_server()
@@ -358,6 +361,7 @@ def run_tray(uncensored: bool = False) -> None:
         if os.getenv("JARVIS_AUTO_PULL_MODELS", "1") != "0":
             pull_missing_models_background()
         from jarvis.services import warmup_chat_model_background
+
         warmup_chat_model_background()
         ensure_comfyui_background()
 
@@ -414,6 +418,7 @@ def run_tray(uncensored: bool = False) -> None:
                 pass
             try:
                 from jarvis.audio_wakeword import stop_listener
+
                 stop_listener()
             except Exception:
                 pass

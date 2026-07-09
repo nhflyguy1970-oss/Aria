@@ -80,8 +80,13 @@ def generate_motion_clip(
 
         log.info(
             "AnimateDiff attempt: %dx%d, %d frames @ %d fps (~%.1fs target %.1fs, engine=%s)",
-            ad_w, ad_h, frames, frame_fps,
-            plan["actual_duration_sec"], plan["target_duration_sec"], engine,
+            ad_w,
+            ad_h,
+            frames,
+            frame_fps,
+            plan["actual_duration_sec"],
+            plan["target_duration_sec"],
+            engine,
         )
         result, _ = generate_animatediff(
             prompt,
@@ -188,13 +193,21 @@ def generate_ken_burns_clip(
 
     ckpt = resolve_keyframe_checkpoint()
     keyframe = comfyui.generate(
-        prompt, width=w, height=h, negative_prompt=negative_prompt, checkpoint=ckpt,
+        prompt,
+        width=w,
+        height=h,
+        negative_prompt=negative_prompt,
+        checkpoint=ckpt,
     )
     if keyframe.startswith("ERROR:"):
         return keyframe, ""
 
     video = image_to_motion_video(
-        keyframe, duration=dur, fps=frame_fps, width=w, height=h,
+        keyframe,
+        duration=dur,
+        fps=frame_fps,
+        width=w,
+        height=h,
     )
     if video.startswith("ERROR:"):
         return video, keyframe

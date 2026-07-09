@@ -145,8 +145,8 @@ def keyframe_checkpoint_label() -> str:
 
 
 def _checkpoint_label_for(name: str) -> str:
-  # reuse comfyui label logic via temp - checkpoint_label uses resolve_checkpoint_name
-  # duplicate minimal labeling
+    # reuse comfyui label logic via temp - checkpoint_label uses resolve_checkpoint_name
+    # duplicate minimal labeling
     lower = name.lower()
     if "flux" in lower and "schnell" in lower:
         return "Flux Schnell"
@@ -344,7 +344,11 @@ def get_settings_dict() -> dict:
     uncensored = is_uncensored()
     engine = effective_engine()
     ad = readiness()
-    ad_note = "AnimateDiff ready" if ad["ready"] else ("; ".join(ad["missing"]) or "AnimateDiff not installed")
+    ad_note = (
+        "AnimateDiff ready"
+        if ad["ready"]
+        else ("; ".join(ad["missing"]) or "AnimateDiff not installed")
+    )
     if engine == "auto":
         motion_note = f"Auto: AnimateDiff when ready, else Ken Burns. {ad_note}"
     elif engine == "animatediff":

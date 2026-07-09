@@ -230,10 +230,12 @@ class ChromaVectorStore:
         self._collection.upsert(
             ids=[memory_id],
             embeddings=[vector],
-            metadatas=[{
-                "namespace": namespace or "default",
-                "type": entry_type or "fact",
-            }],
+            metadatas=[
+                {
+                    "namespace": namespace or "default",
+                    "type": entry_type or "fact",
+                }
+            ],
             documents=[(content or "")[:2000]],
         )
 
@@ -458,16 +460,18 @@ class WeaviateVectorStore:
                 schema = self._client.schema.get()
                 classes = {c["class"] for c in schema.get("classes", [])}
                 if self._class not in classes:
-                    self._client.schema.create_class({
-                        "class": self._class,
-                        "vectorizer": "none",
-                        "properties": [
-                            {"name": "memory_id", "dataType": ["text"]},
-                            {"name": "namespace", "dataType": ["text"]},
-                            {"name": "type", "dataType": ["text"]},
-                            {"name": "content", "dataType": ["text"]},
-                        ],
-                    })
+                    self._client.schema.create_class(
+                        {
+                            "class": self._class,
+                            "vectorizer": "none",
+                            "properties": [
+                                {"name": "memory_id", "dataType": ["text"]},
+                                {"name": "namespace", "dataType": ["text"]},
+                                {"name": "type", "dataType": ["text"]},
+                                {"name": "content", "dataType": ["text"]},
+                            ],
+                        }
+                    )
         except Exception as exc:
             logger.warning("Weaviate schema setup: %s", exc)
 
@@ -556,7 +560,11 @@ class WeaviateVectorStore:
         try:
             if hasattr(self._client, "collections"):
                 col = self._client.collections.get(self._class)
-                kwargs: dict[str, Any] = {"near_vector": query_vector, "limit": limit, "return_properties": ["memory_id"]}
+                kwargs: dict[str, Any] = {
+                    "near_vector": query_vector,
+                    "limit": limit,
+                    "return_properties": ["memory_id"],
+                }
                 if namespace:
                     from weaviate.classes.query import Filter
 
@@ -570,11 +578,16 @@ class WeaviateVectorStore:
                     if mid and sim >= min_score:
                         out.append((str(mid), sim))
                 return out[:limit]
-            result = self._client.query.get(self._class, ["memory_id"]).with_near_vector({
-                "vector": query_vector
-            }).with_limit(limit).do()
+            result = (
+                self._client.query.get(self._class, ["memory_id"])
+                .with_near_vector({"vector": query_vector})
+                .with_limit(limit)
+                .do()
+            )
             hits = result.get("data", {}).get("Get", {}).get(self._class, [])
-            return [(str(h.get("memory_id")), min_score) for h in hits if h.get("memory_id")][:limit]
+            return [(str(h.get("memory_id")), min_score) for h in hits if h.get("memory_id")][
+                :limit
+            ]
         except Exception as exc:
             logger.warning("Weaviate search failed: %s", exc)
             return []
@@ -616,7 +629,9 @@ def create_vector_store(
     return store
 
 
-def migrate_sqlite_vectors_to(target: VectorMemoryStore, source: SqliteVectorStore | None = None) -> int:
+def migrate_sqlite_vectors_to(
+    target: VectorMemoryStore, source: SqliteVectorStore | None = None
+) -> int:
     """One-time import from sqlite sidecar into chroma/qdrant/weaviate."""
     if target.backend == "sqlite":
         return 0

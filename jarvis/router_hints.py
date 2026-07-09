@@ -223,7 +223,9 @@ def _parse_ha_control(text: str, lower: str) -> dict[str, str] | None:
 
 
 def _parse_iterate_cad(text: str, lower: str) -> dict[str, str] | None:
-    if re.search(r"\b(make it|make the)\s+(taller|shorter|wider|thinner|thicker|bigger|smaller)\b", lower):
+    if re.search(
+        r"\b(make it|make the)\s+(taller|shorter|wider|thinner|thicker|bigger|smaller)\b", lower
+    ):
         match = re.search(
             r"\b(make it|make the)\s+((?:taller|shorter|wider|thinner|thicker|bigger|smaller)\b.*)$",
             text,
@@ -284,7 +286,12 @@ def contradicts_hint(message: str | None, action: str) -> bool:
         return True
     if action == "chat" and _parse_iterate_cad(message, lower):
         return True
-    if action in ("planner_set_alarm", "planner_set_timer", "morning_briefing", "chat") and re.search(
+    if action in (
+        "planner_set_alarm",
+        "planner_set_timer",
+        "morning_briefing",
+        "chat",
+    ) and re.search(
         r"\bturn (?:on|off|toggle)\b",
         lower,
     ):

@@ -42,7 +42,14 @@ def select_tool(task: str, *, prefer: str = "") -> ToolDescriptor | None:
                 return tool
 
     if any(k in task_lower for k in _CODING_KEYWORDS):
-        for tid in ("aria_engineering", "opencode", "claude_code", "cursor", "continue", "gemini_cli"):
+        for tid in (
+            "aria_engineering",
+            "opencode",
+            "claude_code",
+            "cursor",
+            "continue",
+            "gemini_cli",
+        ):
             tool = get_tool(tid)
             if tool and tool.available():
                 return tool
@@ -127,7 +134,9 @@ def _run_aria_engineering(params: dict[str, Any]) -> dict[str, Any]:
         return {"ok": False, "error": str(exc), "tool": "aria_engineering"}
 
 
-def _remember_tool_result(tool: ToolDescriptor, params: dict[str, Any], result: dict[str, Any]) -> None:
+def _remember_tool_result(
+    tool: ToolDescriptor, params: dict[str, Any], result: dict[str, Any]
+) -> None:
     try:
         from jarvis.assistant_instance import get_assistant
 

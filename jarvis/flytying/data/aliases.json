@@ -1,0 +1,17 @@
+{
+  "bwo": ["blue wing olive", "blue-wing olive", "baetis"],
+  "pt": ["pheasant tail", "pheasant-tail", "pheasant tail nymph"],
+  "ptn": ["pheasant tail nymph", "pheasant tail"],
+  "woolly bugger": ["wooly bugger", "woolly bugger", "bugger"],
+  "elk hair caddis": ["ehc", "elk-hair caddis"],
+  "adams": ["parachute adams", "adams dry"],
+  "parachute adams": ["adams", "para adams"],
+  "caddis": ["elk hair caddis", "x-caddis", "sparkle pupa"],
+  "midge": ["zebra midge", "griffith's gnat", "griffiths gnat"],
+  "pmd": ["pale morning dun", "pale-morning dun"],
+  "stonefly": ["golden stone", "salmonfly", "pat's rubber legs"],
+  "hopper": ["dave's hopper", "terrestrial hopper", "foam hopper"],
+  "emerger": ["rs2", "klinkhamer", "sparkle dun"],
+  "streamer": ["woolly bugger", "muddler minnow", "clouser"],
+  "nymph": ["pheasant tail", "hare's ear", "hares ear", "prince nymph"]
+}

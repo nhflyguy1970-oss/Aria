@@ -209,7 +209,9 @@ class DualWriteMemoryAdapter:
             namespace=namespace,
         )
         if count:
-            after_ids = {entry.get("id") for entry in self._legacy.list_entries(namespace=namespace)}
+            after_ids = {
+                entry.get("id") for entry in self._legacy.list_entries(namespace=namespace)
+            }
             for entry_id in before_ids - after_ids:
                 self._record_legacy_write(namespace or "default")
                 self._mirror_delete(entry_id, namespace or "default")
@@ -299,7 +301,9 @@ class DualWriteMemoryAdapter:
                     filters["namespace"] = namespace
                 results = memory_manager.search(query, **filters)
                 if results:
-                    return [_platform_to_legacy(r.record) for r in results if getattr(r, "record", None)]
+                    return [
+                        _platform_to_legacy(r.record) for r in results if getattr(r, "record", None)
+                    ]
             except Exception as exc:
                 logger.debug("platform search fallback: %s", exc)
         return self._legacy.search(query, limit, namespace=namespace)

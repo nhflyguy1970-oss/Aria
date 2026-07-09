@@ -60,9 +60,7 @@ def collect_metrics() -> dict[str, float]:
     try:
         from jarvis.jobs.checkpointed import list_jobs
 
-        out["jarvis_agent_jobs_running"] = float(
-            sum(1 for j in list_jobs(status="running"))
-        )
+        out["jarvis_agent_jobs_running"] = float(sum(1 for j in list_jobs(status="running")))
     except Exception:
         pass
 

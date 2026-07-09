@@ -5,9 +5,8 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -21,7 +20,7 @@ REGISTRY_VERSION = 1
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def _source_id(source_type: str, location: str) -> str:
@@ -97,7 +96,7 @@ def _save_registry(data: dict[str, Any]) -> None:
 
 def _mtime_iso(path: Path) -> str:
     try:
-        return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).isoformat(timespec="seconds")
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=UTC).isoformat(timespec="seconds")
     except OSError:
         return ""
 
@@ -118,7 +117,7 @@ def _dir_stats(path: Path, *, extensions: set[str] | None = None) -> tuple[int, 
         except OSError:
             continue
     modified = (
-        datetime.fromtimestamp(latest, tz=timezone.utc).isoformat(timespec="seconds") if latest else ""
+        datetime.fromtimestamp(latest, tz=UTC).isoformat(timespec="seconds") if latest else ""
     )
     return count, modified
 
@@ -196,9 +195,21 @@ def _discover_code_index() -> KnowledgeSource:
             errors.append(str(exc)[:120])
 
     root = PROJECT_ROOT
-    file_count, modified = _dir_stats(root, extensions={
-        ".py", ".js", ".ts", ".tsx", ".md", ".yaml", ".yml", ".sh", ".go", ".rs",
-    })
+    file_count, modified = _dir_stats(
+        root,
+        extensions={
+            ".py",
+            ".js",
+            ".ts",
+            ".tsx",
+            ".md",
+            ".yaml",
+            ".yml",
+            ".sh",
+            ".go",
+            ".rs",
+        },
+    )
     embed = _embed_status()
     if chunk_count:
         status, health = "indexed", "healthy" if embed == "ready" else "degraded"
@@ -232,7 +243,9 @@ def _discover_project(meta: dict[str, Any]) -> KnowledgeSource:
     git_path = str(meta.get("git_path") or "").strip()
     source_type = "git_repository" if git_path else "project_folder"
     location = git_path or str(root)
-    md_count, modified = _dir_stats(root, extensions={".md", ".markdown"}) if root.is_dir() else (0, "")
+    md_count, modified = (
+        _dir_stats(root, extensions={".md", ".markdown"}) if root.is_dir() else (0, "")
+    )
     pdf_count, _ = _dir_stats(root, extensions={".pdf", ".docx"}) if root.is_dir() else (0, "")
     doc_count = md_count + pdf_count
     status = "indexed" if doc_count else ("empty" if root.is_dir() else "error")

@@ -1,0 +1,18 @@
+{
+  "cdc": ["poly yarn", "microfibetts", "snowshoe rabbit foot"],
+  "deer hair": ["elk hair", "foam", "synthetic deer hair"],
+  "elk hair": ["deer hair", "foam sheet", "polypropylene yarn"],
+  "grizzly hackle": ["brown hackle", "variant hackle", "indian hen cape"],
+  "hen hackle": ["soft hackle", "partridge", "guinea fowl"],
+  "marabou": ["rabbit strip", "synthetic marabou", "flashabou"],
+  "dubbing": ["seal substitute", "synthetic dubbing", "ice dub"],
+  "peacock herl": ["black ostrich herl", "synthetic peacock", "flashabou"],
+  "brass bead": ["tungsten bead", "glass bead", "copper bead"],
+  "tungsten bead": ["brass bead", "lead wire wrap"],
+  "wire rib": ["monofilament rib", "flash rib", "oval tinsel"],
+  "lead wire": ["non-toxic wire", "tungsten wire", "bead head"],
+  "z-lon": ["shimmer yarn", "antron yarn", "poly yarn"],
+  "antron": ["z-lon", "shimmer yarn", "polypropylene"],
+  "flashabou": ["krystal flash", "mirror flash", "flashabou"],
+  "rubber legs": ["sili legs", "round rubber", "barred rubber legs"]
+}

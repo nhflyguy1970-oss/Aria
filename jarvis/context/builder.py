@@ -17,12 +17,18 @@ def build_unified_context(assistant: Any, message: str, *, general: bool = False
 
     from jarvis.router import is_general_knowledge_question, is_meta_self_question
 
-    skip_project = general or is_general_knowledge_question(message, assistant.session) or is_meta_self_question(message)
+    skip_project = (
+        general
+        or is_general_knowledge_question(message, assistant.session)
+        or is_meta_self_question(message)
+    )
 
     from jarvis.behaviors.conversation import ConversationEngine
 
     engine = ConversationEngine(assistant)
-    prefix, ctx_warnings, ctx_citations = engine.build_context_prefix(message, skip_unified_extras=True)
+    prefix, ctx_warnings, ctx_citations = engine.build_context_prefix(
+        message, skip_unified_extras=True
+    )
     if prefix:
         parts.append(prefix)
     warnings.extend(ctx_warnings)
@@ -41,12 +47,15 @@ def build_unified_context(assistant: Any, message: str, *, general: bool = False
     }
 
 
-def append_context_extras(parts: list[str], assistant: Any, message: str, meta: dict[str, Any]) -> None:
+def append_context_extras(
+    parts: list[str], assistant: Any, message: str, meta: dict[str, Any]
+) -> None:
     _append_workspace(parts, meta)
     _append_git_state(parts, meta)
     _append_journal(parts, message)
     _append_tool_history(parts, assistant)
     _append_personalization(parts, meta)
+
 
 def _append_workspace(parts: list[str], meta: dict[str, Any]) -> None:
     try:
@@ -87,14 +96,20 @@ def _append_journal(parts: list[str], message: str) -> None:
         day = _today()
         if day and day.get("bullets"):
             bullets = day["bullets"][:5]
-            parts.append("Recent journal:\n" + "\n".join(f"- {b.get('text', '')[:120]}" for b in bullets))
+            parts.append(
+                "Recent journal:\n" + "\n".join(f"- {b.get('text', '')[:120]}" for b in bullets)
+            )
     except Exception as exc:
         logger.debug("journal context: %s", exc)
 
 
 def _append_tool_history(parts: list[str], assistant: Any) -> None:
     try:
-        hits = assistant.memory.search("", limit=3, namespace="tools") if hasattr(assistant.memory, "search") else []
+        hits = (
+            assistant.memory.search("", limit=3, namespace="tools")
+            if hasattr(assistant.memory, "search")
+            else []
+        )
         if not hits:
             return
         lines = [f"- {(h.get('content') or '')[:160]}" for h in hits]

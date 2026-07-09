@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 
 from jarvis import llm
-from jarvis.code_index import CODE_GLOBS, INDEX_SKIP, MAX_CHUNK, MAX_FILE, _chunks, _should_index
+from jarvis.code_index import _chunks, _should_index
 
 logger = logging.getLogger("jarvis.knowledge.repo_index")
 

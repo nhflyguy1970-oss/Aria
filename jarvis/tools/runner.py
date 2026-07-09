@@ -158,7 +158,9 @@ def start_background(tool_id: str, params: dict[str, Any]) -> ToolRun:
     built = build_command(tool_id, params)
     task = str(params.get("task") or params.get("prompt") or "")
     cwd = str(params.get("cwd") or os.getcwd())
-    run = ToolRun(id=uuid.uuid4().hex[:12], tool_id=tool_id, task=task[:500], cwd=cwd, status="running")
+    run = ToolRun(
+        id=uuid.uuid4().hex[:12], tool_id=tool_id, task=task[:500], cwd=cwd, status="running"
+    )
     save_run(run)
 
     if not built:
@@ -211,7 +213,9 @@ def start_background(tool_id: str, params: dict[str, Any]) -> ToolRun:
         save_run(run)
         with _lock:
             _active[run.id] = proc
-        threading.Thread(target=_watch, args=(proc, run), daemon=True, name=f"tool-{run.id}").start()
+        threading.Thread(
+            target=_watch, args=(proc, run), daemon=True, name=f"tool-{run.id}"
+        ).start()
     except Exception as exc:
         run.status = "failed"
         run.error = str(exc)[:300]

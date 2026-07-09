@@ -181,7 +181,11 @@ def enable_platform_authoritative(*, force_backfill: bool = False) -> dict[str, 
     state["enabled_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     _save(state)
     logger.info("Platform data cutover enabled — platform authoritative, legacy preserved")
-    return {"ok": True, "mode": "platform_authoritative", "message": "Platform is now authoritative. Legacy data preserved."}
+    return {
+        "ok": True,
+        "mode": "platform_authoritative",
+        "message": "Platform is now authoritative. Legacy data preserved.",
+    }
 
 
 def rollback_to_legacy() -> dict[str, Any]:

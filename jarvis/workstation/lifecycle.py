@@ -37,7 +37,9 @@ def up(target: str | None = None, *, profile: str | None = None) -> dict[str, An
         if not comp.autostart or comp.id in ("workstation", "aria"):
             continue
         if comp.healthy():
-            results.append({"id": comp.id, "ok": True, "action": "skip", "detail": "already running"})
+            results.append(
+                {"id": comp.id, "ok": True, "action": "skip", "detail": "already running"}
+            )
             continue
         if comp.start:
             ok = bool(comp.start())
@@ -55,7 +57,11 @@ def down(target: str | None = None, *, profile: str | None = None) -> dict[str, 
     """Stop managed services. Never stops Ollama system-wide by default."""
     if profile:
         ok = _stop_profile(profile)
-        return {"ok": ok, "results": [{"id": f"profile:{profile}", "ok": ok, "action": "stop"}], "status": status(force=True)}
+        return {
+            "ok": ok,
+            "results": [{"id": f"profile:{profile}", "ok": ok, "action": "stop"}],
+            "status": status(force=True),
+        }
 
     if target:
         return _component_action(target, "stop")

@@ -7,7 +7,13 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from jarvis.personalization.store import preferred_model, preferred_tool, record_model_use, record_tool_use, snapshot
+from jarvis.personalization.store import (
+    preferred_model,
+    preferred_tool,
+    record_model_use,
+    record_tool_use,
+    snapshot,
+)
 
 
 class TestPersonalization(unittest.TestCase):

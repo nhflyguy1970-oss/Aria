@@ -28,7 +28,9 @@ def run_maintenance(*, smoke_tests: bool = False) -> dict[str, Any]:
         from jarvis.knowledge.registry import sync_registry
 
         kr = sync_registry()
-        results.append({"job": "knowledge_sync", "ok": kr.get("ok", False), "detail": kr.get("source_count")})
+        results.append(
+            {"job": "knowledge_sync", "ok": kr.get("ok", False), "detail": kr.get("source_count")}
+        )
     except Exception as exc:
         results.append({"job": "knowledge_sync", "ok": False, "error": str(exc)[:200]})
 
@@ -63,12 +65,14 @@ def run_maintenance(*, smoke_tests: bool = False) -> dict[str, Any]:
         from jarvis.workstation.operations import diagnose, recover_safe
 
         diag = diagnose(force=True)
-        results.append({
-            "job": "workstation_diagnose",
-            "ok": diag.get("ok", False),
-            "critical": diag.get("critical", 0),
-            "warnings": diag.get("warnings", 0),
-        })
+        results.append(
+            {
+                "job": "workstation_diagnose",
+                "ok": diag.get("ok", False),
+                "critical": diag.get("critical", 0),
+                "warnings": diag.get("warnings", 0),
+            }
+        )
         if not diag.get("ok"):
             rec = recover_safe(max_attempts=2)
             results.append({"job": "workstation_recover", "ok": rec.get("ok", False)})
@@ -90,7 +94,14 @@ def _run_smoke_tests() -> dict[str, Any]:
         from jarvis.env_loader import PROJECT_ROOT
 
         proc = subprocess.run(
-            [".venv/bin/python", "-m", "pytest", "tests/test_workstation.py", "tests/test_knowledge_registry.py", "-q"],
+            [
+                ".venv/bin/python",
+                "-m",
+                "pytest",
+                "tests/test_workstation.py",
+                "tests/test_knowledge_registry.py",
+                "-q",
+            ],
             cwd=str(PROJECT_ROOT),
             capture_output=True,
             text=True,
@@ -137,8 +148,8 @@ def maybe_nightly_maintenance(now) -> None:
         hour = 2
     if now.hour != hour or now.minute > 10:
         return
+
     from jarvis.config import DATA_DIR
-    import json
 
     stamp_file = DATA_DIR / "automation" / "last_nightly_day.txt"
     day = now.date().isoformat()

@@ -47,7 +47,10 @@ def device_info() -> dict:
     dev = torch_device()
     whisper = whisper_device()
     hint = routing.get("torch_backend", "")
-    if gpu.get("vendor") == "amd" and os.getenv("JARVIS_GPU_PREFER", "").strip().lower() == "nvidia":
+    if (
+        gpu.get("vendor") == "amd"
+        and os.getenv("JARVIS_GPU_PREFER", "").strip().lower() == "nvidia"
+    ):
         hint = (
             "JARVIS_GPU_PREFER=nvidia: PyTorch uses CPU unless CUDA PyTorch is installed; "
             "Whisper uses NVIDIA via CTranslate2; Ollama needs CUDA build (not ROCm)."

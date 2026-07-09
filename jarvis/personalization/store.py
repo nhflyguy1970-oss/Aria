@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 from typing import Any
 
 from jarvis.config import DATA_DIR
@@ -17,7 +16,7 @@ MAX_LIST = 20
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def _load() -> dict[str, Any]:
@@ -53,7 +52,9 @@ def _bump_counter(prefs: dict, key: str, value: str, *, weight: float = 1.0) -> 
     entry["last_used"] = _utc_now()
     bucket[value] = entry
     # keep top N by count
-    sorted_items = sorted(bucket.items(), key=lambda kv: float(kv[1].get("count") or 0), reverse=True)
+    sorted_items = sorted(
+        bucket.items(), key=lambda kv: float(kv[1].get("count") or 0), reverse=True
+    )
     prefs[key] = dict(sorted_items[:MAX_LIST])
 
 

@@ -7,7 +7,8 @@ import logging
 import os
 import urllib.error
 import urllib.request
-from typing import Any, Iterator
+from collections.abc import Iterator
+from typing import Any
 
 from jarvis.inference.policy import InferenceRoute, select_route
 
@@ -80,7 +81,9 @@ def _litellm_chat_with_usage(model: str, messages: list[dict], **kwargs) -> tupl
         method="POST",
     )
     try:
-        with urllib.request.urlopen(req, timeout=int(os.getenv("JARVIS_LITELLM_TIMEOUT", "120"))) as resp:
+        with urllib.request.urlopen(
+            req, timeout=int(os.getenv("JARVIS_LITELLM_TIMEOUT", "120"))
+        ) as resp:
             data = json.loads(resp.read().decode())
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode()[:400]
@@ -110,7 +113,9 @@ def _litellm_stream(model: str, messages: list[dict], **kwargs) -> Iterator[str]
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=int(os.getenv("JARVIS_LITELLM_TIMEOUT", "120"))) as resp:
+    with urllib.request.urlopen(
+        req, timeout=int(os.getenv("JARVIS_LITELLM_TIMEOUT", "120"))
+    ) as resp:
         for raw_line in resp:
             line = raw_line.decode("utf-8", errors="ignore").strip()
             if not line.startswith("data:"):
@@ -146,7 +151,9 @@ def chat_with_usage(
             logger.warning("LiteLLM failed (%s), falling back to Ollama: %s", chosen.reason, exc)
     text, usage = _ollama_chat_with_usage(chosen.model, messages, **kwargs)
     usage["backend"] = "ollama"
-    usage["route_reason"] = chosen.reason if route else select_route(model, role=role, messages=messages).reason
+    usage["route_reason"] = (
+        chosen.reason if route else select_route(model, role=role, messages=messages).reason
+    )
     return text, usage
 
 

@@ -9,7 +9,7 @@ import time
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from jarvis.config import DATA_DIR
 
@@ -70,7 +70,9 @@ def list_jobs(*, status: str | None = None) -> list[CheckpointedJob]:
     return jobs
 
 
-def start_agent_job(assistant: Any, goal: str, *, roles: list[str] | None = None) -> CheckpointedJob:
+def start_agent_job(
+    assistant: Any, goal: str, *, roles: list[str] | None = None
+) -> CheckpointedJob:
     job = CheckpointedJob(id=uuid.uuid4().hex[:12], kind="agent_chain", goal=goal, status="running")
     job.checkpoint = {"roles": roles or [], "step": 0}
     save_job(job)

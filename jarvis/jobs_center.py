@@ -29,8 +29,11 @@ def _sanitize_job(job: dict, *, queue: str) -> dict:
 
 
 def snapshot(*, recent_limit: int = 12) -> dict[str, Any]:
-    from jarvis.media_jobs import busy_state, job_stats as media_stats, list_recent as media_recent
-    from jarvis.coding_jobs import job_stats as coding_stats, list_recent as coding_recent
+    from jarvis.coding_jobs import job_stats as coding_stats
+    from jarvis.coding_jobs import list_recent as coding_recent
+    from jarvis.media_jobs import busy_state
+    from jarvis.media_jobs import job_stats as media_stats
+    from jarvis.media_jobs import list_recent as media_recent
 
     media = media_stats()
     coding = coding_stats()

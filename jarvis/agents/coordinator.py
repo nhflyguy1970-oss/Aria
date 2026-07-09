@@ -6,7 +6,7 @@ import logging
 import time
 import uuid
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 logger = logging.getLogger("jarvis.agents")
@@ -22,7 +22,7 @@ AGENT_CHAIN_KEYWORDS = {
 }
 
 
-class AgentRole(str, Enum):
+class AgentRole(StrEnum):
     PLANNER = "planning"
     RESEARCH = "research"
     CODING = "coding"
@@ -124,12 +124,14 @@ class AgentCoordinator:
         for role in selected:
             action = _ROLE_ACTIONS.get(role)
             if not action or not has_action(action):
-                steps.append({
-                    "role": role,
-                    "action": action or "",
-                    "ok": False,
-                    "message": f"No action for role {role}",
-                })
+                steps.append(
+                    {
+                        "role": role,
+                        "action": action or "",
+                        "ok": False,
+                        "message": f"No action for role {role}",
+                    }
+                )
                 if stop_on_error:
                     break
                 continue
@@ -161,7 +163,9 @@ class AgentCoordinator:
                 break
 
         ok_count = sum(1 for s in steps if s.get("ok"))
-        summary_lines = [f"- **{s['role']}** ({s['action']}): {'ok' if s['ok'] else 'failed'}" for s in steps]
+        summary_lines = [
+            f"- **{s['role']}** ({s['action']}): {'ok' if s['ok'] else 'failed'}" for s in steps
+        ]
         return {
             "ok": ok_count == len(steps) and bool(steps),
             "chain_id": chain_id,

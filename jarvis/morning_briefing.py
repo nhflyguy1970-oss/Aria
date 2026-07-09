@@ -106,11 +106,13 @@ def build_briefing(
     today_tasks: list[dict] = []
     timeline = journal.daily_timeline(d_iso)
     for ev in timeline.get("events", []):
-        events.append({
-            "type": "event",
-            "content": ev.get("content", ""),
-            "time": ev.get("time", ""),
-        })
+        events.append(
+            {
+                "type": "event",
+                "content": ev.get("content", ""),
+                "time": ev.get("time", ""),
+            }
+        )
     for b in page.get("bullets", []):
         if b.get("type") == "event" and not b.get("time"):
             events.append(b)
@@ -172,15 +174,23 @@ def build_briefing(
         for t in today_tasks[:6]:
             lines.append(f"- {_format_bullet(t)}")
 
-    other_tasks = [t for t in open_tasks if not str(t.get("section", "")).startswith(f"daily:{d_iso}")]
+    other_tasks = [
+        t for t in open_tasks if not str(t.get("section", "")).startswith(f"daily:{d_iso}")
+    ]
     if other_tasks:
-        label = f"**Also on your list ({total_open} open)**" if total_open > len(other_tasks) else "**Also on your list**"
+        label = (
+            f"**Also on your list ({total_open} open)**"
+            if total_open > len(other_tasks)
+            else "**Also on your list**"
+        )
         lines.extend(["", label])
         for t in other_tasks[:max_tasks]:
             section = t.get("section", "")
             lines.append(f"- [{section}] {_format_bullet(t)}")
         if total_open > max_tasks:
-            lines.append(f"- _…and {total_open - max_tasks} more — say **open tasks** for the full list._")
+            lines.append(
+                f"- _…and {total_open - max_tasks} more — say **open tasks** for the full list._"
+            )
     elif not today_tasks and not events:
         lines.extend(["", "No open journal tasks — you're clear."])
 
@@ -224,16 +234,20 @@ def build_briefing(
                 issues = diag.get("issues") or []
                 critical = [i for i in issues if i.get("severity") == "critical"]
                 if critical:
-                    lines.extend(["", f"**Attention:** {critical[0].get('message', 'workstation issue')}"])
+                    lines.extend(
+                        ["", f"**Attention:** {critical[0].get('message', 'workstation issue')}"]
+                    )
         except Exception:
             pass
 
     from jarvis.branding import assistant_name
 
-    lines.extend([
-        "",
-        f"_Ask **{assistant_name()}** to expand any headline — or say **morning briefing** anytime._",
-    ])
+    lines.extend(
+        [
+            "",
+            f"_Ask **{assistant_name()}** to expand any headline — or say **morning briefing** anytime._",
+        ]
+    )
 
     from jarvis.briefing_news import persist_briefing_headlines
 

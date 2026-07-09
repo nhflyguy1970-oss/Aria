@@ -69,7 +69,10 @@ class VideoEngine:
                 self._prompt_model(),
                 [
                     {"role": "system", "content": system},
-                    {"role": "user", "content": f"Video request: {user_prompt}\n\nReturn JSON only."},
+                    {
+                        "role": "user",
+                        "content": f"Video request: {user_prompt}\n\nReturn JSON only.",
+                    },
                 ],
             )
             m = re.search(r"\{[\s\S]*\}", raw)

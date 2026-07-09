@@ -12,18 +12,20 @@ from jarvis.workstation.registry import all_components, registry_snapshot
 
 logger = logging.getLogger("jarvis.workstation")
 
-SAFE_RESTART = frozenset({
-    "ollama",
-    "comfyui",
-    "homeassistant",
-    "litellm",
-    "postgres",
-    "redis",
-    "qdrant",
-    "mongodb",
-    "open_webui",
-    "n8n",
-})
+SAFE_RESTART = frozenset(
+    {
+        "ollama",
+        "comfyui",
+        "homeassistant",
+        "litellm",
+        "postgres",
+        "redis",
+        "qdrant",
+        "mongodb",
+        "open_webui",
+        "n8n",
+    }
+)
 
 _START_INSTEAD_OF_RESTART = frozenset({"ollama"})
 
@@ -82,14 +84,16 @@ def _check_failed_jobs() -> list[dict[str, Any]]:
 
         failed = [j for j in list_jobs(status="failed")[:3]]
         if failed:
-            issues.append({
-                "severity": "warning",
-                "component": "agent_jobs",
-                "label": "Agent Jobs",
-                "message": f"{len(failed)} failed agent job(s) — latest: {failed[0].goal[:60]}",
-                "action": "alert",
-                "auto_recoverable": False,
-            })
+            issues.append(
+                {
+                    "severity": "warning",
+                    "component": "agent_jobs",
+                    "label": "Agent Jobs",
+                    "message": f"{len(failed)} failed agent job(s) — latest: {failed[0].goal[:60]}",
+                    "action": "alert",
+                    "auto_recoverable": False,
+                }
+            )
     except Exception:
         pass
     return issues
@@ -104,14 +108,16 @@ def _check_platform() -> list[dict[str, Any]]:
 
         startup = validate_platform_startup()
         if startup:
-            issues.append({
-                "severity": "warning",
-                "component": "platform",
-                "label": "AI Platform",
-                "message": f"Platform startup issues: {'; '.join(startup[:2])}",
-                "action": "alert",
-                "auto_recoverable": False,
-            })
+            issues.append(
+                {
+                    "severity": "warning",
+                    "component": "platform",
+                    "label": "AI Platform",
+                    "message": f"Platform startup issues: {'; '.join(startup[:2])}",
+                    "action": "alert",
+                    "auto_recoverable": False,
+                }
+            )
     except Exception:
         pass
     return issues
@@ -126,47 +132,55 @@ def diagnose(*, force: bool = False) -> dict[str, Any]:
         cid = comp.get("id") or ""
         if comp.get("required") and not comp.get("running"):
             action = _issue_action(cid)
-            issues.append({
-                "severity": "critical",
-                "component": cid,
-                "label": comp.get("label"),
-                "message": f"Required component offline: {comp.get('label')}",
-                "action": action,
-                "auto_recoverable": cid in SAFE_RESTART or comp.get("managed"),
-            })
+            issues.append(
+                {
+                    "severity": "critical",
+                    "component": cid,
+                    "label": comp.get("label"),
+                    "message": f"Required component offline: {comp.get('label')}",
+                    "action": action,
+                    "auto_recoverable": cid in SAFE_RESTART or comp.get("managed"),
+                }
+            )
         elif comp.get("managed") and comp.get("autostart") and not comp.get("running"):
             action = _issue_action(cid)
-            issues.append({
-                "severity": "warning",
-                "component": cid,
-                "label": comp.get("label"),
-                "message": f"Autostart component offline: {comp.get('label')}",
-                "action": action,
-                "auto_recoverable": cid in SAFE_RESTART,
-            })
+            issues.append(
+                {
+                    "severity": "warning",
+                    "component": cid,
+                    "label": comp.get("label"),
+                    "message": f"Autostart component offline: {comp.get('label')}",
+                    "action": action,
+                    "auto_recoverable": cid in SAFE_RESTART,
+                }
+            )
 
     resources = snap.get("resources") or {}
     if resources.get("low_vram"):
-        issues.append({
-            "severity": "warning",
-            "component": "gpu",
-            "label": "GPU VRAM",
-            "message": "Low VRAM — consider unloading Ollama models before media jobs",
-            "action": "unload_models",
-            "auto_recoverable": True,
-        })
+        issues.append(
+            {
+                "severity": "warning",
+                "component": "gpu",
+                "label": "GPU VRAM",
+                "message": "Low VRAM — consider unloading Ollama models before media jobs",
+                "action": "unload_models",
+                "auto_recoverable": True,
+            }
+        )
 
     env = snap.get("environment") or {}
     disk = env.get("disk_free_gb") or 0
     if disk and disk < 10:
-        issues.append({
-            "severity": "warning",
-            "component": "storage",
-            "label": "Disk",
-            "message": f"Low disk space: {disk}GB free on data volume",
-            "action": "alert",
-            "auto_recoverable": False,
-        })
+        issues.append(
+            {
+                "severity": "warning",
+                "component": "storage",
+                "label": "Disk",
+                "message": f"Low disk space: {disk}GB free on data volume",
+                "action": "alert",
+                "auto_recoverable": False,
+            }
+        )
 
     for extra in (_check_scheduler(), _check_vector_store()):
         if extra:

@@ -54,20 +54,30 @@ def recommendations() -> list[str]:
 
         if nvidia_compute_active():
             name = gpu.get("compute_gpu") or gpu.get("name") or "NVIDIA GPU"
-            tips.append(f"Compute GPU: {name} — ComfyUI image/video use NVIDIA when started via ARIA.")
+            tips.append(
+                f"Compute GPU: {name} — ComfyUI image/video use NVIDIA when started via ARIA."
+            )
     except Exception:
         pass
     if is_low_vram(10240):
-        tips.append("Use 7B chat/code models (not 14B+) — switch profile to Gaming or run optimize-rx7600-8gb.sh")
+        tips.append(
+            "Use 7B chat/code models (not 14B+) — switch profile to Gaming or run optimize-rx7600-8gb.sh"
+        )
         tips.append("Vision: moondream or llama3.2-vision:11b — avoid llava:13b on 8GB")
         tips.append("Whisper: small on CPU (AMD) — set JARVIS_WHISPER_MODEL=small")
         tips.append("Unload Ollama before ComfyUI/Song Studio (JARVIS_VRAM_GUARD=1, default on)")
-    if gpu.get("vendor") == "amd" and gpu.get("rocm_available") and gpu.get("compute_vendor") != "nvidia":
+    if (
+        gpu.get("vendor") == "amd"
+        and gpu.get("rocm_available")
+        and gpu.get("compute_vendor") != "nvidia"
+    ):
         tips.append("RX 7600: keep HSA_OVERRIDE_GFX_VERSION=11.0.0 for ComfyUI GPU")
     if gpu.get("ollama_using_gpu") and vram and vram <= 10240:
         tips.append("Ollama is using GPU — click Free VRAM before image gen if you hit OOM")
     if not tips:
-        tips.append("VRAM looks comfortable — JARVIS_VRAM_GUARD still helps when mixing Ollama + ComfyUI")
+        tips.append(
+            "VRAM looks comfortable — JARVIS_VRAM_GUARD still helps when mixing Ollama + ComfyUI"
+        )
     return tips
 
 

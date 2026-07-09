@@ -16,14 +16,16 @@ from jarvis.ml_memory import system_ram_gb, unload_ollama_models
 log = logging.getLogger("jarvis")
 
 _SETTINGS_FILE = DATA_DIR / "resource_settings.json"
-_HEAVY_ACTIONS = frozenset({
-    "generate_image",
-    "generate_video",
-    "generate_meme",
-    "upscale_image",
-    "inpaint_image",
-    "edit_image",
-})
+_HEAVY_ACTIONS = frozenset(
+    {
+        "generate_image",
+        "generate_video",
+        "generate_meme",
+        "upscale_image",
+        "inpaint_image",
+        "edit_image",
+    }
+)
 _VRAM_ACTIONS = _HEAVY_ACTIONS
 
 
@@ -189,7 +191,9 @@ def preflight(action: str = "video") -> dict[str, Any]:
                 if snap["low_vram"]:
                     tips.insert(0, "Ken Burns uses less VRAM than AnimateDiff on 8GB GPUs.")
                 else:
-                    tips.insert(0, "AnimateDiff uses your NVIDIA GPU; Ken Burns is the CPU fallback.")
+                    tips.insert(
+                        0, "AnimateDiff uses your NVIDIA GPU; Ken Burns is the CPU fallback."
+                    )
             suggested = {
                 "engine": eng,
                 "width": ad_w,
@@ -206,7 +210,9 @@ def preflight(action: str = "video") -> dict[str, Any]:
             )
 
     if snap["ram_available_gb"] and snap["ram_available_gb"] < 4:
-        warnings.append(f"Low system RAM available ({snap['ram_available_gb']}GB) — close heavy apps if renders fail.")
+        warnings.append(
+            f"Low system RAM available ({snap['ram_available_gb']}GB) — close heavy apps if renders fail."
+        )
 
     last = suggested_for_action(action if action in _HEAVY_ACTIONS else "generate_video")
     if last.get("method"):
@@ -293,7 +299,9 @@ def chat_busy_hint() -> str | None:
     if not media.get("busy") and not media.get("pending"):
         return None
     label = media.get("label") or "media render"
-    return f"Note: GPU queue busy ({label}) — chat still works; heavy image/video jobs are serialized."
+    return (
+        f"Note: GPU queue busy ({label}) — chat still works; heavy image/video jobs are serialized."
+    )
 
 
 def status_line() -> str:

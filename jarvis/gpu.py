@@ -175,8 +175,7 @@ def _detect_gpu_uncached() -> dict:
         )
     elif info["vendor"] == "amd":
         info["recommendation"] = (
-            "Install ROCm so Ollama uses your AMD GPU: "
-            "https://ollama.com/blog/amd-preview"
+            "Install ROCm so Ollama uses your AMD GPU: https://ollama.com/blog/amd-preview"
         )
     else:
         info["recommendation"] = "Load a model and send a message to verify GPU usage."
@@ -191,11 +190,7 @@ def invalidate_gpu_cache() -> None:
 
 def detect_gpu(*, force: bool = False) -> dict:
     now = time.time()
-    if (
-        not force
-        and _GPU_CACHE["data"] is not None
-        and now - _GPU_CACHE["at"] < _GPU_CACHE_SEC
-    ):
+    if not force and _GPU_CACHE["data"] is not None and now - _GPU_CACHE["at"] < _GPU_CACHE_SEC:
         return dict(_GPU_CACHE["data"])
     info = _detect_gpu_uncached()
     _GPU_CACHE["at"] = now

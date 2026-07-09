@@ -43,6 +43,7 @@ def _http_ok(url: str, timeout: float = 3) -> bool:
 def _jarvis_port_open(timeout: float = 1) -> bool:
     """TCP check only — never call /api/health from here (deadlocks health handler)."""
     import socket
+
     host = os.getenv("JARVIS_HOST", "127.0.0.1")
     port = int(os.getenv("JARVIS_PORT", "8765"))
     try:
@@ -303,7 +304,9 @@ def ensure_comfyui_nvidia(*, block: bool = True, timeout: float = 120) -> bool:
         return ensure_comfyui(timeout=timeout, block=block, on_demand=True)
 
     name = comfyui_device_name()
-    if name and not any(token in name.lower() for token in ("nvidia", "geforce", "rtx", "quadro", "tesla")):
+    if name and not any(
+        token in name.lower() for token in ("nvidia", "geforce", "rtx", "quadro", "tesla")
+    ):
         _log(f"ComfyUI: wrong GPU ({name}) — restarting on NVIDIA")
         return restart_comfyui(block=block, timeout=timeout)
 
@@ -374,6 +377,7 @@ def set_comfyui_checkpoint_file(filename: str) -> dict:
 def _whisper_model_label() -> str:
     try:
         from jarvis.audio_settings import saved_whisper_model
+
         saved = saved_whisper_model()
         if saved:
             return saved
@@ -385,6 +389,7 @@ def _whisper_model_label() -> str:
 def _musicgen_status() -> ServiceStatus:
     try:
         from jarvis.music_gen import musicgen_available, musicgen_backend
+
         ok = musicgen_available()
         backend = musicgen_backend() if ok else ""
     except Exception:
@@ -469,11 +474,7 @@ _STATUS_TTL = float(os.getenv("JARVIS_SERVICES_CACHE_SEC", "15"))
 
 def get_status(*, force: bool = False) -> dict:
     now = time.time()
-    if (
-        not force
-        and _status_cache["data"] is not None
-        and now - _status_cache["at"] < _STATUS_TTL
-    ):
+    if not force and _status_cache["data"] is not None and now - _status_cache["at"] < _STATUS_TTL:
         return _status_cache["data"]
     load_jarvis_env()
     ollama = check_ollama()
@@ -516,10 +517,13 @@ def get_status(*, force: bool = False) -> dict:
             autostart=_should_autostart_comfy(),
             required=False,
             message=(
-                "ready" if comfy
+                "ready"
+                if comfy
                 else ("starting" if _comfy_proc and _comfy_proc.poll() is None else "offline")
             ),
-            detail=f"{comfy_settings['checkpoint_label']} · {comfy_settings['label']}" if comfy else "",
+            detail=f"{comfy_settings['checkpoint_label']} · {comfy_settings['label']}"
+            if comfy
+            else "",
         ),
         ServiceStatus(
             name="web_search",
@@ -561,6 +565,7 @@ def get_status(*, force: bool = False) -> dict:
 
 def check_ollama() -> dict:
     from jarvis.ollama_health import check_ollama as _check
+
     return _check()
 
 
@@ -586,6 +591,7 @@ def pull_missing_models_background() -> None:
         try:
             from jarvis.model_pull import pull_model
             from jarvis.model_store import get_missing_models
+
             missing = get_missing_models()
             if not missing:
                 return
@@ -664,7 +670,9 @@ class ServicesWatchdog:
         if self._thread and self._thread.is_alive():
             return
         self._stop.clear()
-        self._thread = threading.Thread(target=self._loop, daemon=True, name="jarvis-services-watchdog")
+        self._thread = threading.Thread(
+            target=self._loop, daemon=True, name="jarvis-services-watchdog"
+        )
         self._thread.start()
 
     def stop(self) -> None:

@@ -23,6 +23,7 @@ def ensure_handlers_loaded() -> None:
         skill_handlers,
         workflow_handlers,
     )
+
     try:
         from jarvis.extensibility.loader import load_extensions
 

@@ -6,13 +6,12 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from jarvis.knowledge.registry import (
     KnowledgeSource,
     discover_all_sources,
     format_registry_markdown,
-    registry_snapshot,
     sync_registry,
 )
 from jarvis.knowledge.search import format_unified_results, unified_search

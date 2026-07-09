@@ -167,18 +167,41 @@ def _workflow(
         negative = negative_prompt.strip() or DEFAULT_NEGATIVE
 
     return {
-        "3": {"class_type": "KSampler", "inputs": {
-            "seed": seed, "steps": steps, "cfg": cfg,
-            "sampler_name": sampler_name, "scheduler": scheduler,
-            "denoise": 1, "model": ["4", 0], "positive": ["6", 0],
-            "negative": ["7", 0], "latent_image": ["5", 0],
-        }},
+        "3": {
+            "class_type": "KSampler",
+            "inputs": {
+                "seed": seed,
+                "steps": steps,
+                "cfg": cfg,
+                "sampler_name": sampler_name,
+                "scheduler": scheduler,
+                "denoise": 1,
+                "model": ["4", 0],
+                "positive": ["6", 0],
+                "negative": ["7", 0],
+                "latent_image": ["5", 0],
+            },
+        },
         "4": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": ckpt}},
-        "5": {"class_type": "EmptyLatentImage", "inputs": {"width": width, "height": height, "batch_size": 1}},
-        "6": {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["4", 1]}, "_meta": {"title": "Positive"}},
-        "7": {"class_type": "CLIPTextEncode", "inputs": {"text": negative, "clip": ["4", 1]}, "_meta": {"title": "Negative"}},
+        "5": {
+            "class_type": "EmptyLatentImage",
+            "inputs": {"width": width, "height": height, "batch_size": 1},
+        },
+        "6": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": prompt, "clip": ["4", 1]},
+            "_meta": {"title": "Positive"},
+        },
+        "7": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": negative, "clip": ["4", 1]},
+            "_meta": {"title": "Negative"},
+        },
         "8": {"class_type": "VAEDecode", "inputs": {"samples": ["3", 0], "vae": ["4", 2]}},
-        "9": {"class_type": "SaveImage", "inputs": {"filename_prefix": "jarvis", "images": ["8", 0]}},
+        "9": {
+            "class_type": "SaveImage",
+            "inputs": {"filename_prefix": "jarvis", "images": ["8", 0]},
+        },
     }
 
 
@@ -205,10 +228,14 @@ def upload_image(path: str | Path) -> str:
     content_type = mimetypes.guess_type(file_path.name)[0] or "image/png"
     boundary = uuid.uuid4().hex
     body = (
-        f"--{boundary}\r\n"
-        f'Content-Disposition: form-data; name="image"; filename="{file_path.name}"\r\n'
-        f"Content-Type: {content_type}\r\n\r\n"
-    ).encode() + content + f"\r\n--{boundary}--\r\n".encode()
+        (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="image"; filename="{file_path.name}"\r\n'
+            f"Content-Type: {content_type}\r\n\r\n"
+        ).encode()
+        + content
+        + f"\r\n--{boundary}--\r\n".encode()
+    )
     req = urllib.request.Request(
         f"{COMFY_URL}/upload/image",
         data=body,
@@ -364,7 +391,9 @@ def _save_workflow_outputs(outputs: dict, filename_prefix: str) -> str | None:
                     continue
                 sub = item.get("subfolder", "")
                 img_type = item.get("type", "output")
-                params = urllib.parse.urlencode({"filename": fname, "subfolder": sub, "type": img_type})
+                params = urllib.parse.urlencode(
+                    {"filename": fname, "subfolder": sub, "type": img_type}
+                )
                 out_name = Path(fname).name
                 if filename_prefix and not out_name.startswith(f"{filename_prefix}_"):
                     out_name = f"{filename_prefix}_{out_name}"
@@ -427,7 +456,4 @@ def generate(
     if auto_fallback_enabled():
         return result + " (auto CPU fallback failed to restart ComfyUI)"
 
-    return (
-        result
-        + " Switch ComfyUI to CPU or Auto (GPU → CPU) in the sidebar under Image engine."
-    )
+    return result + " Switch ComfyUI to CPU or Auto (GPU → CPU) in the sidebar under Image engine."

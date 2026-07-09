@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import logging
-import time
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 logger = logging.getLogger("jarvis.workflows.daily")
 
 
 def _utc_now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _since_yesterday() -> float:
@@ -50,7 +49,11 @@ def what_am_i_working_on(assistant: Any) -> dict[str, Any]:
     except Exception:
         pass
 
-    message = "\n".join(parts) if parts else "No active project or tasks detected. Say what you want to focus on."
+    message = (
+        "\n".join(parts)
+        if parts
+        else "No active project or tasks detected. Say what you want to focus on."
+    )
     return {"ok": True, "message": message, "type": "daily_workflow"}
 
 

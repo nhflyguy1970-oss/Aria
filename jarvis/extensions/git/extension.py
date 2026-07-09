@@ -4,7 +4,9 @@ from jarvis.extensibility.base import Extension, ExtensionMeta
 
 
 class GitExtension(Extension):
-    meta = ExtensionMeta(name="git", version="1.0.0", description="Git status, diff, commit", module_label="coding")
+    meta = ExtensionMeta(
+        name="git", version="1.0.0", description="Git status, diff, commit", module_label="coding"
+    )
 
     def load(self) -> None:
         import jarvis.extensions.git.handlers  # noqa: F401

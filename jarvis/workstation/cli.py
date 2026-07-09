@@ -40,12 +40,16 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if payload.get("ready") else 1
 
     if args.command == "up":
-        payload = lifecycle.up(getattr(args, "target", None), profile=getattr(args, "profile", None))
+        payload = lifecycle.up(
+            getattr(args, "target", None), profile=getattr(args, "profile", None)
+        )
         print(json.dumps(payload, indent=2))
         return 0 if payload.get("ok") else 1
 
     if args.command == "down":
-        payload = lifecycle.down(getattr(args, "target", None), profile=getattr(args, "profile", None))
+        payload = lifecycle.down(
+            getattr(args, "target", None), profile=getattr(args, "profile", None)
+        )
         print(json.dumps(payload, indent=2))
         return 0 if payload.get("ok") else 1
 

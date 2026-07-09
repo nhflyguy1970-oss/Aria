@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
-from jarvis.modules.memory_common import parse_ts, relevance_score, utc_now
+from jarvis.modules.memory_common import parse_ts, relevance_score
 
 logger = logging.getLogger("jarvis.memory.hierarchy")
 
 LAYER_TAG = "memory_layer"
 
 
-class MemoryLayer(str, Enum):
+class MemoryLayer(StrEnum):
     WORKING = "working"
     CONVERSATION = "conversation"
     PROJECT = "project"
@@ -97,7 +97,9 @@ def retrieval_score(entry: dict, *, base: float | None = None) -> float:
     return base_score + priority * 0.01 + access * 0.05
 
 
-def hierarchical_search(memory: Any, query: str, *, limit: int = 10, namespace: str | None = None) -> list[dict]:
+def hierarchical_search(
+    memory: Any, query: str, *, limit: int = 10, namespace: str | None = None
+) -> list[dict]:
     """Search memory with layer-aware ranking."""
     hits = memory.search(query, limit=max(limit * 3, 15), namespace=namespace)
     for h in hits:
@@ -111,7 +113,7 @@ def should_promote(entry: dict) -> str | None:
     """Return target layer if entry should be promoted, else None."""
     layer = infer_layer(entry)
     access = int(entry.get("access_count") or 0)
-    age_days = (datetime.now(timezone.utc) - parse_ts(entry.get("timestamp", ""))).days
+    age_days = (datetime.now(UTC) - parse_ts(entry.get("timestamp", ""))).days
 
     if layer == MemoryLayer.CONVERSATION.value and access >= 3:
         ns = str(entry.get("namespace") or "")
@@ -145,7 +147,7 @@ def should_prune(entry: dict) -> bool:
         return False
     if int(entry.get("access_count") or 0) >= 5:
         return False
-    age_days = (datetime.now(timezone.utc) - parse_ts(entry.get("timestamp", ""))).days
+    age_days = (datetime.now(UTC) - parse_ts(entry.get("timestamp", ""))).days
     return age_days > max_days
 
 

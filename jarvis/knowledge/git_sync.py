@@ -9,12 +9,12 @@ import os
 import shutil
 import subprocess
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from jarvis.config import DATA_DIR, PROJECT_ROOT
-from jarvis.git_util import current_branch, has_local_changes, is_repo, log_oneline, status as git_status
+from jarvis.git_util import current_branch, has_local_changes, is_repo
 
 logger = logging.getLogger("jarvis.knowledge.git_sync")
 
@@ -23,12 +23,14 @@ REPOS_INDEX_ROOT = DATA_DIR / "knowledge" / "repos"
 
 
 def _utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def _run(cmd: list[str], cwd: Path, timeout: int = 60) -> tuple[int, str]:
     try:
-        proc = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, timeout=timeout, check=False)
+        proc = subprocess.run(
+            cmd, cwd=str(cwd), capture_output=True, text=True, timeout=timeout, check=False
+        )
         return proc.returncode, ((proc.stdout or "") + (proc.stderr or "")).strip()
     except Exception as exc:
         return 1, str(exc)
@@ -61,7 +63,15 @@ def _open_pull_requests(repo: Path) -> list[dict[str, str]]:
     if not shutil.which("gh"):
         return []
     code, out = _run(
-        ["gh", "pr", "list", "--json", "number,title,state,headRefName,baseRefName,url", "--limit", "10"],
+        [
+            "gh",
+            "pr",
+            "list",
+            "--json",
+            "number,title,state,headRefName,baseRefName,url",
+            "--limit",
+            "10",
+        ],
         repo,
         timeout=30,
     )
@@ -162,7 +172,11 @@ def sync_repository(repo: Path, *, force: bool = False, label: str = "") -> GitR
     repo = repo.resolve()
     rid = _repo_id(repo)
     state_data = _load_state()
-    prev = GitRepoState.from_dict(state_data.get("repos", {}).get(rid, {})) if state_data.get("repos") else None
+    prev = (
+        GitRepoState.from_dict(state_data.get("repos", {}).get(rid, {}))
+        if state_data.get("repos")
+        else None
+    )
     prev_head = prev.head if prev else ""
 
     errors: list[str] = []
@@ -192,7 +206,13 @@ def sync_repository(repo: Path, *, force: bool = False, label: str = "") -> GitR
         label = repo.name
 
     changed = _changed_files_since(repo, prev_head) if prev_head and head != prev_head else []
-    needs_index = force or not prev_head or head != prev_head or dirty or not index_path_for_repo(repo).is_file()
+    needs_index = (
+        force
+        or not prev_head
+        or head != prev_head
+        or dirty
+        or not index_path_for_repo(repo).is_file()
+    )
 
     chunk_count = prev.chunk_count if prev else 0
     indexing_status = "unknown"

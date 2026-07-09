@@ -63,7 +63,9 @@ def _docker_start(container: str) -> bool:
     if not container or not shutil.which("docker"):
         return False
     try:
-        proc = subprocess.run(["docker", "start", container], capture_output=True, text=True, timeout=60)
+        proc = subprocess.run(
+            ["docker", "start", container], capture_output=True, text=True, timeout=60
+        )
         return proc.returncode == 0
     except Exception:
         return False
@@ -73,7 +75,9 @@ def _docker_stop(container: str) -> bool:
     if not container or not shutil.which("docker"):
         return False
     try:
-        proc = subprocess.run(["docker", "stop", container], capture_output=True, text=True, timeout=60)
+        proc = subprocess.run(
+            ["docker", "stop", container], capture_output=True, text=True, timeout=60
+        )
         return proc.returncode == 0
     except Exception:
         return False
@@ -275,7 +279,6 @@ def _build_registry() -> None:
     from jarvis.ha_docker import ensure_homeassistant
 
     def _start_ha() -> bool:
-        from jarvis.ha_docker import ensure_homeassistant
 
         ensure_homeassistant(block=True)
         return ha_api_healthy(timeout=5)
@@ -335,7 +338,9 @@ def _build_registry() -> None:
         managed=False,
         config_keys=["JARVIS_HOST", "JARVIS_PORT"],
         health=_jarvis_health,
-        detail=lambda: f"{os.getenv('JARVIS_HOST', '127.0.0.1')}:{os.getenv('JARVIS_PORT', '8765')}",
+        detail=lambda: (
+            f"{os.getenv('JARVIS_HOST', '127.0.0.1')}:{os.getenv('JARVIS_PORT', '8765')}"
+        ),
     )
 
     openwebui_url = os.getenv("JARVIS_OPENWEBUI_URL", "http://127.0.0.1:3000").rstrip("/")
@@ -506,7 +511,9 @@ def _build_registry() -> None:
         category="monitoring",
         managed=False,
         config_keys=["JARVIS_PROMETHEUS_URL"],
-        health=lambda: _http_ok(os.getenv("JARVIS_PROMETHEUS_URL", "http://127.0.0.1:9090") + "/-/healthy"),
+        health=lambda: _http_ok(
+            os.getenv("JARVIS_PROMETHEUS_URL", "http://127.0.0.1:9090") + "/-/healthy"
+        ),
     )
 
     _REGISTRY["grafana"] = WorkstationComponent(
@@ -515,7 +522,9 @@ def _build_registry() -> None:
         category="monitoring",
         managed=False,
         config_keys=["JARVIS_GRAFANA_URL"],
-        health=lambda: _http_ok(os.getenv("JARVIS_GRAFANA_URL", "http://127.0.0.1:3001") + "/api/health"),
+        health=lambda: _http_ok(
+            os.getenv("JARVIS_GRAFANA_URL", "http://127.0.0.1:3001") + "/api/health"
+        ),
     )
 
     def _workstation_up() -> bool:
@@ -563,7 +572,9 @@ def registry_snapshot(*, force: bool = False) -> dict[str, Any]:
     required = [c for c in components if c.get("required")]
     required_down = [c["id"] for c in required if not c.get("running")]
     optional_down = [
-        c["id"] for c in components if not c.get("required") and c.get("managed") and not c.get("running")
+        c["id"]
+        for c in components
+        if not c.get("required") and c.get("managed") and not c.get("running")
     ]
     return {
         "ready": not required_down,

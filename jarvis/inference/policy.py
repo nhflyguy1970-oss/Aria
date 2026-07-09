@@ -158,7 +158,9 @@ def select_route(
                 cloud=True,
             )
 
-    if mode == "litellm" or (mode == "auto" and litellm_available() and os.getenv("JARVIS_ROUTE_VIA_LITELLM", "0") == "1"):
+    if mode == "litellm" or (
+        mode == "auto" and litellm_available() and os.getenv("JARVIS_ROUTE_VIA_LITELLM", "0") == "1"
+    ):
         return InferenceRoute(
             backend="litellm",
             model=_litellm_model_name(model),
