@@ -154,6 +154,24 @@ def diagnose(*, force: bool = False) -> dict[str, Any]:
                     "auto_recoverable": cid in SAFE_RESTART,
                 }
             )
+        elif (
+            comp.get("managed")
+            and not comp.get("required")
+            and not comp.get("running")
+            and os.getenv("JARVIS_AUTO_RECOVER_OPTIONAL", "0") == "1"
+            and cid in SAFE_RESTART
+        ):
+            action = _issue_action(cid)
+            issues.append(
+                {
+                    "severity": "warning",
+                    "component": cid,
+                    "label": comp.get("label"),
+                    "message": f"Optional managed component offline: {comp.get('label')}",
+                    "action": action,
+                    "auto_recoverable": True,
+                }
+            )
 
     resources = snap.get("resources") or {}
     if resources.get("low_vram"):

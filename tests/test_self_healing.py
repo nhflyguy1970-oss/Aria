@@ -25,6 +25,28 @@ class TestSelfHealing(unittest.TestCase):
         report = diagnose(force=True)
         self.assertTrue(report.get("ok"))
 
+    @patch("jarvis.workstation.operations.registry_snapshot")
+    def test_diagnose_optional_managed_when_enabled(self, mock_snap):
+        mock_snap.return_value = {
+            "components": [
+                {
+                    "id": "postgres",
+                    "label": "PostgreSQL",
+                    "required": False,
+                    "managed": True,
+                    "autostart": False,
+                    "running": False,
+                }
+            ],
+            "resources": {},
+            "environment": {},
+        }
+        with patch.dict("os.environ", {"JARVIS_AUTO_RECOVER_OPTIONAL": "1"}, clear=False):
+            report = diagnose(force=True)
+        postgres = [i for i in report.get("issues") or [] if i.get("component") == "postgres"]
+        self.assertEqual(len(postgres), 1)
+        self.assertTrue(postgres[0].get("auto_recoverable"))
+
     @patch("jarvis.server_restart.request_restart")
     def test_recover_aria_requests_restart(self, mock_restart):
         mock_restart.return_value = {"ok": True, "message": "restarting"}

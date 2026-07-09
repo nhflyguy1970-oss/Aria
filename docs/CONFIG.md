@@ -146,4 +146,14 @@ Encrypted journal export uses `pip install cryptography` (in `requirements-optio
 | `JARVIS_SEARXNG_URL` | `http://127.0.0.1:8080` | SearXNG instance |
 | `JARVIS_DATA_MAX_ROWS` | `50000` | CSV row cap |
 
-See also `DEPENDENCIES.md`, `UPGRADES.md`, and `README.md`.
+## Workstation / self-healing
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `JARVIS_AUTO_RECOVER` | `1` | Proactive scheduler runs diagnose + recover every 5 min |
+| `JARVIS_AUTO_RECOVER_INTERVAL_MIN` | `5` | Auto-recover interval |
+| `JARVIS_AUTO_RECOVER_OPTIONAL` | `0` | When `1`, diagnose optional managed docker services (postgres, redis, litellm, etc.) and allow auto-restart |
+| `JARVIS_NIGHTLY_MAINTENANCE` | `1` | Run maintenance jobs via scheduler |
+| `JARVIS_MAINTENANCE_SMOKE_TESTS` | `1` | Run pytest smoke subset during nightly maintenance |
+
+See also `docs/PLATFORM_CUTOVER.md`, `DEPENDENCIES.md`, `UPGRADES.md`, and `README.md`.
