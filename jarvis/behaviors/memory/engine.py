@@ -88,13 +88,16 @@ class MemoryEngine:
                     parts.append(f"Project checkpoint (where user left off):\n- {cp_line}")
 
         if not skip_project_context:
-            memories = ctx.memory.search(
+            from jarvis.memory.hierarchy import hierarchical_search
+
+            memories = hierarchical_search(
+                ctx.memory,
                 message,
                 limit=3,
                 namespace=ns if ns and ns != "default" else None,
             )
             if len(memories) < 2 and ns and ns != "default":
-                memories = ctx.memory.search(message, limit=3)
+                memories = hierarchical_search(ctx.memory, message, limit=3)
             memory_lines = []
             for memory in memories:
                 line = contextualize_memory_for_chat(memory["content"])
@@ -225,7 +228,12 @@ class MemoryEngine:
             for fact in facts:
                 if ctx.memory.similar_exists(fact):
                     continue
-                ctx.memory.add(entry_type, fact, namespace=namespace)
+                entry = ctx.memory.add(entry_type, fact, namespace=namespace)
+                from jarvis.memory.hierarchy import infer_layer, tag_layer
+
+                layer = infer_layer({**entry, "type": entry_type, "namespace": namespace})
+                tagged = tag_layer(entry, layer)
+                ctx.memory.update(entry["id"], tags=tagged.get("tags"))
                 stored.append(fact)
         except ValueError as exc:
             return err(str(exc))
@@ -392,6 +400,29 @@ class MemoryEngine:
     def memory_prune(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
         removed = ctx.memory.prune()
         return ok(f"Pruned **{removed}** stale auto-extracted memories.", module="memory")
+
+    @classmethod
+    def memory_consolidate(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from jarvis.memory.hierarchy import consolidate, format_hierarchy_markdown
+
+        dry_run = bool(params.get("dry_run"))
+        result = consolidate(ctx.memory, dry_run=dry_run)
+        prefix = "Dry run — " if dry_run else ""
+        return ok(
+            prefix + format_hierarchy_markdown(ctx.memory),
+            module="memory",
+            data=result,
+        )
+
+    @classmethod
+    def memory_hierarchy(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from jarvis.memory.hierarchy import format_hierarchy_markdown, layer_summary
+
+        return ok(
+            format_hierarchy_markdown(ctx.memory),
+            module="memory",
+            data=layer_summary(ctx.memory),
+        )
 
     @classmethod
     def memory_summarize(cls, ctx: MemoryContext, params: dict, message: str) -> dict:

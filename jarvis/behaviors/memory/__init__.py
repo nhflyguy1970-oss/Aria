@@ -18,6 +18,8 @@ _MEMORY_ACTIONS: dict[str, tuple[Any, bool]] = {
     "memory_forget": (MemoryEngine.memory_forget, False),
     "memory_correct": (MemoryEngine.memory_correct, False),
     "memory_prune": (MemoryEngine.memory_prune, False),
+    "memory_consolidate": (MemoryEngine.memory_consolidate, False),
+    "memory_hierarchy": (MemoryEngine.memory_hierarchy, True),
     "memory_summarize": (MemoryEngine.memory_summarize, False),
     "memory_namespace": (MemoryEngine.memory_namespace, False),
     "memory_about_user": (MemoryEngine.memory_about_user, True),

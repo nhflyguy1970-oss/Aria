@@ -365,6 +365,23 @@ def knowledge_git_sync(force: bool = False):
     return sync_all(force=force)
 
 
+@app.get("/api/memory/hierarchy")
+def memory_hierarchy_api():
+    from jarvis.assistant_instance import get_assistant
+    from jarvis.memory.hierarchy import format_hierarchy_markdown, layer_summary
+
+    mem = get_assistant().memory
+    return {"ok": True, "layers": layer_summary(mem), "message": format_hierarchy_markdown(mem)}
+
+
+@app.post("/api/memory/consolidate")
+def memory_consolidate_api(dry_run: bool = False):
+    from jarvis.assistant_instance import get_assistant
+    from jarvis.memory.hierarchy import consolidate
+
+    return consolidate(get_assistant().memory, dry_run=dry_run)
+
+
 @app.get("/api/knowledge/git-sync")
 def knowledge_git_sync_status():
     from jarvis.knowledge.git_sync import list_repo_states, repo_summary_markdown

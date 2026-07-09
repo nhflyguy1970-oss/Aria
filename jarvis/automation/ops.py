@@ -50,6 +50,16 @@ def run_maintenance(*, smoke_tests: bool = False) -> dict[str, Any]:
         results.append({"job": "git_sync", "ok": False, "error": str(exc)[:200]})
 
     try:
+        from jarvis.assistant_instance import get_assistant
+        from jarvis.memory.hierarchy import consolidate
+
+        mem = get_assistant().memory
+        c = consolidate(mem, dry_run=False)
+        results.append({"job": "memory_consolidate", "ok": c.get("ok", False), **c})
+    except Exception as exc:
+        results.append({"job": "memory_consolidate", "ok": False, "error": str(exc)[:200]})
+
+    try:
         from jarvis.workstation.operations import diagnose, recover_safe
 
         diag = diagnose(force=True)
