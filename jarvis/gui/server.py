@@ -358,6 +358,21 @@ def knowledge_ingest(force: bool = False):
     return ingest_all(force=force)
 
 
+@app.post("/api/knowledge/git-sync")
+def knowledge_git_sync(force: bool = False):
+    from jarvis.knowledge.git_sync import sync_all
+
+    return sync_all(force=force)
+
+
+@app.get("/api/knowledge/git-sync")
+def knowledge_git_sync_status():
+    from jarvis.knowledge.git_sync import list_repo_states, repo_summary_markdown
+
+    states = [s.to_dict() for s in list_repo_states()]
+    return {"ok": True, "repos": states, "message": repo_summary_markdown()}
+
+
 @app.get("/api/tools")
 def tools_list():
     from jarvis.tools.executor import tool_status

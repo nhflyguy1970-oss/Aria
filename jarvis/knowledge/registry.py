@@ -478,6 +478,48 @@ def sync_registry(*, persist: bool = True) -> dict[str, Any]:
     }
 
 
+def register_external_source(
+    *,
+    source_id: str,
+    source_type: str,
+    label: str,
+    location: str,
+    namespace: str = "default",
+    indexing_status: str = "unknown",
+    embedding_status: str = "none",
+    document_count: int = 0,
+    chunk_count: int = 0,
+    last_indexed: str = "",
+    last_sync: str = "",
+    last_successful_sync: str = "",
+    health: str = "unknown",
+    errors: list[str] | None = None,
+    retrieval_available: bool = False,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    """Register or update a source discovered by a subsystem (e.g. git sync)."""
+    data = _load_registry()
+    data.setdefault("sources", {})[source_id] = KnowledgeSource(
+        id=source_id,
+        type=source_type,
+        label=label,
+        location=location,
+        namespace=namespace,
+        indexing_status=indexing_status,
+        embedding_status=embedding_status,
+        document_count=document_count,
+        chunk_count=chunk_count,
+        last_indexed=last_indexed,
+        last_sync=last_sync or _utc_now(),
+        last_successful_sync=last_successful_sync,
+        health=health,
+        errors=list(errors or []),
+        retrieval_available=retrieval_available,
+        metadata=dict(metadata or {}),
+    ).to_dict()
+    _save_registry(data)
+
+
 def list_sources(*, refresh: bool = False) -> list[KnowledgeSource]:
     if refresh:
         sync_registry()

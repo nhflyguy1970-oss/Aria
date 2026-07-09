@@ -131,10 +131,9 @@ def import_git_repo(path: str | None, *, title: str | None = None) -> dict[str, 
     name = str(title or repo.name).strip()
     meta = create_project(name, git_path=str(repo))
     try:
-        from jarvis.code_index import build_index
+        from jarvis.knowledge.git_sync import sync_repository
 
-        idx_file = project_dir(meta["slug"]) / "code_index.json"
-        build_index(repo, index_path=idx_file)
+        sync_repository(repo, force=True, label=meta.get("title") or name)
     except Exception:
         pass
     return meta

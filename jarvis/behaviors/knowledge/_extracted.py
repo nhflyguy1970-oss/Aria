@@ -480,3 +480,32 @@ class KnowledgeOperations:
             data=result,
         )
 
+    @classmethod
+    def git_sync(cls, ctx, params: dict, message: str) -> dict:
+        from pathlib import Path
+
+        from jarvis.knowledge.git_sync import discover_repositories, repo_summary_markdown, sync_repository
+
+        path = (params.get("path") or params.get("repo") or "").strip()
+        force = bool(params.get("force"))
+        if path:
+            st = sync_repository(Path(path).expanduser(), force=force)
+            return _ok(
+                repo_summary_markdown(),
+                module="knowledge",
+                type="git_sync",
+                data=st.to_dict(),
+            )
+        repos = discover_repositories()
+        if not repos:
+            return _err("No git repositories found. Set git_path on a project or JARVIS_GIT_WATCH_REPOS.", module="knowledge")
+        st = sync_repository(repos[0], force=force)
+        return _ok(repo_summary_markdown(), module="knowledge", type="git_sync", data=st.to_dict())
+
+    @classmethod
+    def git_sync_all(cls, ctx, params: dict, message: str) -> dict:
+        from jarvis.knowledge.git_sync import repo_summary_markdown, sync_all
+
+        result = sync_all(force=bool(params.get("force")))
+        return _ok(repo_summary_markdown(), module="knowledge", type="git_sync_all", data=result)
+

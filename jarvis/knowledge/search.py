@@ -47,7 +47,37 @@ def _search_documents(query: str, limit: int) -> list[dict[str, Any]]:
     return out
 
 
+def _search_git_repos(query: str, limit: int) -> list[dict[str, Any]]:
+    try:
+        from jarvis.knowledge.git_sync import list_repo_states
+        from jarvis.knowledge.repo_index import index_path_for_repo, search_repo_index
+
+        hits: list[dict[str, Any]] = []
+        for st in list_repo_states():
+            if not st.retrieval_available:
+                continue
+            index_path = index_path_for_repo(Path(st.path))
+            for h in search_repo_index(index_path, query, limit=limit):
+                hits.append({
+                    "source_type": "git_repository",
+                    "source_label": st.label,
+                    "title": h.get("source", "code"),
+                    "excerpt": (h.get("text") or "")[:400],
+                    "location": f"{st.path}:{h.get('source', '')}",
+                    "strategy": "semantic",
+                    "score": 0.82,
+                    "raw": {**h, "branch": st.branch, "head": st.head[:8]},
+                })
+        return sorted(hits, key=lambda x: x.get("score", 0), reverse=True)[:limit]
+    except Exception as exc:
+        logger.debug("Git repo search: %s", exc)
+        return []
+
+
 def _search_code(query: str, limit: int) -> list[dict[str, Any]]:
+    git_hits = _search_git_repos(query, limit)
+    if git_hits:
+        return git_hits
     from jarvis.code_index import search
 
     hits = search(query, limit=limit)

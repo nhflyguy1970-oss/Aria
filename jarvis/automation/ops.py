@@ -42,6 +42,14 @@ def run_maintenance(*, smoke_tests: bool = False) -> dict[str, Any]:
         results.append({"job": "knowledge_ingest", "ok": False, "error": str(exc)[:200]})
 
     try:
+        from jarvis.knowledge.git_sync import sync_all
+
+        gs = sync_all(force=False)
+        results.append({"job": "git_sync", "ok": gs.get("ok", False), "repos": gs.get("repos")})
+    except Exception as exc:
+        results.append({"job": "git_sync", "ok": False, "error": str(exc)[:200]})
+
+    try:
         from jarvis.workstation.operations import diagnose, recover_safe
 
         diag = diagnose(force=True)

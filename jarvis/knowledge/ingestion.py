@@ -49,6 +49,14 @@ def ingest_all(*, force: bool = False) -> dict[str, Any]:
     except Exception as exc:
         results.append({"target": "knowledge_registry", "ok": False, "error": str(exc)[:200]})
 
+    try:
+        from jarvis.knowledge.git_sync import sync_all
+
+        gs = sync_all(force=force)
+        results.append({"target": "git_sync", "ok": gs.get("ok", False), "repos": gs.get("repos")})
+    except Exception as exc:
+        results.append({"target": "git_sync", "ok": False, "error": str(exc)[:200]})
+
     elapsed = int((time.time() - started) * 1000)
     ok = all(r.get("ok") for r in results)
     return {"ok": ok, "elapsed_ms": elapsed, "results": results}
