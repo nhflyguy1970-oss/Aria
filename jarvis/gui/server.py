@@ -382,6 +382,35 @@ def memory_consolidate_api(dry_run: bool = False):
     return consolidate(get_assistant().memory, dry_run=dry_run)
 
 
+@app.get("/api/platform/cutover")
+def platform_cutover_status():
+    from jarvis.platform_cutover import status
+
+    return status()
+
+
+@app.post("/api/platform/cutover/enable")
+def platform_cutover_enable():
+    from jarvis.platform_cutover import enable_platform_authoritative
+
+    return enable_platform_authoritative()
+
+
+@app.post("/api/platform/cutover/rollback")
+def platform_cutover_rollback():
+    from jarvis.platform_cutover import rollback_to_legacy
+
+    return rollback_to_legacy()
+
+
+@app.get("/api/daily/{intent}")
+def daily_workflow_api(intent: str):
+    from jarvis.assistant_instance import get_assistant
+    from jarvis.workflows.daily import dispatch
+
+    return dispatch(intent, get_assistant())
+
+
 @app.get("/api/personalization")
 def personalization_api():
     from jarvis.personalization.store import snapshot

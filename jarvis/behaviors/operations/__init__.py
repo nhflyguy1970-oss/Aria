@@ -31,6 +31,9 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     },
     "maintenance_run": lambda _params, _message: _maintenance_run(),
     "context_preview": lambda params, message: _context_preview(params, message),
+    "platform_cutover_status": lambda _params, _message: _platform_cutover_status(),
+    "platform_cutover_enable": lambda _params, _message: _platform_cutover_enable(),
+    "platform_cutover_rollback": lambda _params, _message: _platform_cutover_rollback(),
 }
 
 
@@ -107,6 +110,30 @@ def _context_preview(params: dict, message: str) -> dict:
         "message": ctx or "_No context assembled._",
         "data": {k: v for k, v in result.items() if k != "context"},
     }
+
+
+def _platform_cutover_status() -> dict:
+    from jarvis.platform_cutover import format_status_markdown, status
+
+    return {"ok": True, "message": format_status_markdown(), "data": status()}
+
+
+def _platform_cutover_enable() -> dict:
+    from jarvis.platform_cutover import enable_platform_authoritative
+
+    result = enable_platform_authoritative()
+    return {
+        "ok": result.get("ok", False),
+        "message": result.get("message") or result.get("error") or "cutover",
+        "data": result,
+    }
+
+
+def _platform_cutover_rollback() -> dict:
+    from jarvis.platform_cutover import rollback_to_legacy
+
+    result = rollback_to_legacy()
+    return {"ok": True, "message": result.get("message", "rolled back"), "data": result}
 
 
 @register_behavior

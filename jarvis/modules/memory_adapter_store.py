@@ -26,6 +26,36 @@ def memory_adapter_enabled() -> bool:
         return False
 
 
+def platform_data_authoritative() -> bool:
+    if os.getenv("JARVIS_PLATFORM_DATA_AUTHORITATIVE", "").lower() in ("1", "true", "yes"):
+        return True
+    try:
+        from jarvis.platform_cutover import platform_data_authoritative as cutover_authoritative
+
+        return cutover_authoritative()
+    except Exception:
+        return False
+
+
+def _platform_to_legacy(record: Any) -> dict[str, Any]:
+    meta = getattr(record, "metadata", None) or {}
+    if isinstance(meta, dict):
+        jarvis_type = meta.get("jarvis_type", "fact")
+        timestamp = meta.get("jarvis_timestamp", "")
+    else:
+        jarvis_type = "fact"
+        timestamp = ""
+    return {
+        "id": str(getattr(record, "id", "")),
+        "content": str(getattr(record, "content", "")),
+        "type": jarvis_type,
+        "namespace": getattr(record, "namespace", "default"),
+        "tags": list(getattr(record, "tags", None) or []),
+        "timestamp": timestamp,
+        "relevance": float(getattr(record, "importance", 1.0) or 1.0),
+    }
+
+
 def wrap_memory_store(legacy_store: Any, application_id: str = _APPLICATION_ID) -> Any:
     if not memory_adapter_enabled():
         return legacy_store
@@ -229,3 +259,47 @@ class DualWriteMemoryAdapter:
         self._record_legacy_write(entry.get("namespace"))
         self._mirror_add(entry)
         return entry
+
+    def get(self, entry_id: str) -> dict | None:
+        if platform_data_authoritative():
+            try:
+                from aiplatform.memory.manager import manager as memory_manager
+
+                record = memory_manager.get(entry_id)
+                if record is not None:
+                    return _platform_to_legacy(record)
+            except Exception as exc:
+                logger.debug("platform get fallback: %s", exc)
+        return self._legacy.get(entry_id)
+
+    def list_entries(self, namespace: str | None = None) -> list[dict]:
+        if platform_data_authoritative():
+            try:
+                from aiplatform.memory.manager import manager as memory_manager
+
+                filters: dict[str, Any] = {"application": self._application_id}
+                if namespace:
+                    filters["namespace"] = namespace
+                records = memory_manager.list(**filters)
+                if records:
+                    return [_platform_to_legacy(r) for r in records]
+            except Exception as exc:
+                logger.debug("platform list fallback: %s", exc)
+        if namespace is not None:
+            return self._legacy.list_entries(namespace=namespace)
+        return self._legacy.list_entries()
+
+    def search(self, query: str, limit: int = 10, *, namespace: str | None = None) -> list[dict]:
+        if platform_data_authoritative():
+            try:
+                from aiplatform.memory.manager import manager as memory_manager
+
+                filters: dict[str, Any] = {"application": self._application_id, "limit": limit}
+                if namespace:
+                    filters["namespace"] = namespace
+                results = memory_manager.search(query, **filters)
+                if results:
+                    return [_platform_to_legacy(r.record) for r in results if getattr(r, "record", None)]
+            except Exception as exc:
+                logger.debug("platform search fallback: %s", exc)
+        return self._legacy.search(query, limit, namespace=namespace)

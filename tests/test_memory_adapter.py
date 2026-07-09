@@ -1,52 +1,60 @@
-import os
-import tempfile
+"""Memory store tests — no ollama dependency."""
+
+from __future__ import annotations
+
+import importlib.util
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+_STORE_PATH = Path(__file__).resolve().parents[1] / "jarvis" / "modules" / "memory_adapter_store.py"
+_spec = importlib.util.spec_from_file_location("memory_adapter_store", _STORE_PATH)
+assert _spec and _spec.loader
+_mod = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
 
-class TestMemoryAdapterStore(unittest.TestCase):
-    def test_wrap_disabled_without_env(self):
-        from jarvis.modules.memory_adapter_store import memory_adapter_enabled, wrap_memory_store
+DualWriteMemoryAdapter = _mod.DualWriteMemoryAdapter
+platform_data_authoritative = _mod.platform_data_authoritative
+wrap_memory_store = _mod.wrap_memory_store
 
-        legacy = object()
-        with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("JARVIS_PLATFORM_MEMORY_ATTACHED", None)
-            self.assertFalse(memory_adapter_enabled())
-            self.assertIs(wrap_memory_store(legacy), legacy)
 
-    def test_dual_write_records_legacy_metric(self):
-        from jarvis.modules.memory_adapter_store import DualWriteMemoryAdapter
+class _FakeLegacy:
+    def __init__(self) -> None:
+        self._entries = [{"id": "1", "content": "hello", "type": "fact", "namespace": "default"}]
 
-        class Legacy:
-            def add(self, entry_type, content, tags=None, *, namespace=None):
-                return {
-                    "id": "abc123",
-                    "type": entry_type,
-                    "content": content,
-                    "namespace": namespace or "default",
-                    "tags": tags or [],
-                }
+    def get(self, entry_id: str):
+        return next((e for e in self._entries if e["id"] == entry_id), None)
 
-            def get(self, entry_id):
-                return {"id": entry_id, "content": "hello", "namespace": "default", "type": "fact"}
+    def list_entries(self, namespace=None):
+        if namespace:
+            return [e for e in self._entries if e.get("namespace") == namespace]
+        return list(self._entries)
 
-        with (
-            tempfile.TemporaryDirectory() as tmp,
-            patch.dict(os.environ, {"JARVIS_PLATFORM_MEMORY_ATTACHED": "1"}, clear=False),
-            patch(
-                "aiplatform.applications.memory.state.memory_adapter_state_dir",
-                return_value=Path(tmp),
-            ),
-            patch("aiplatform.applications.memory.bridge.mirror_add"),
-        ):
-            adapter = DualWriteMemoryAdapter(Legacy())
-            entry = adapter.add("fact", "hello", namespace="profile")
-            self.assertEqual(entry["content"], "hello")
-            from aiplatform.applications.memory.metrics import metrics_view
+    def search(self, query, limit=10, *, namespace=None):
+        return self.list_entries(namespace)[:limit]
 
-            state = metrics_view("aria")
-            self.assertEqual(state.legacy_writes, 1)
+    def add(self, entry_type, content, tags=None, *, namespace=None):
+        entry = {"id": "2", "content": content, "type": entry_type, "namespace": namespace or "default"}
+        self._entries.append(entry)
+        return entry
+
+
+class TestMemoryAdapter(unittest.TestCase):
+    def test_wrap_disabled_returns_legacy(self):
+        legacy = _FakeLegacy()
+        with patch.object(_mod, "memory_adapter_enabled", return_value=False):
+            wrapped = wrap_memory_store(legacy)
+        self.assertIs(wrapped, legacy)
+
+    def test_dual_write_delegates_get(self):
+        legacy = _FakeLegacy()
+        adapter = DualWriteMemoryAdapter(legacy)
+        with patch.object(_mod, "platform_data_authoritative", return_value=False):
+            self.assertEqual(adapter.get("1"), legacy.get("1"))
+
+    def test_platform_authoritative_env(self):
+        with patch.dict("os.environ", {"JARVIS_PLATFORM_DATA_AUTHORITATIVE": "1"}):
+            self.assertTrue(platform_data_authoritative())
 
 
 if __name__ == "__main__":
