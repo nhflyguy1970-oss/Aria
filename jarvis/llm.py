@@ -68,14 +68,10 @@ def ask(model: str, messages: list[dict], **kwargs) -> str:
 
 
 def ask_with_usage(model: str, messages: list[dict], **kwargs) -> tuple[str, dict]:
-    try:
-        response = chat(model=model, messages=_with_system(messages), **_normalize_chat_kwargs(kwargs))
-        return response["message"]["content"], usage_from_response(response)
-    except Exception as e:
-        raise RuntimeError(
-            f"Ollama error with model '{model}': {e}. "
-            "Is Ollama running? Try: ollama serve"
-        ) from e
+    from jarvis.inference.gateway import chat_with_usage
+
+    role = kwargs.pop("role", "general")
+    return chat_with_usage(model, messages, role=role, **kwargs)
 
 
 def ask_with_system(model: str, system: str, user: str, **kwargs) -> str:
@@ -107,9 +103,21 @@ def ask_stream(
 ) -> Iterator[str]:
     try:
         from jarvis.chat_cancel import is_cancelled
+        from jarvis.inference.gateway import stream_chat
+        from jarvis.inference.policy import select_route
+
+        role = kwargs.pop("role", "general")
+        route = select_route(model, role=role, messages=messages)
+        if route.backend == "litellm":
+            for content in stream_chat(model, messages, role=role, route=route, **kwargs):
+                if cancel_key and is_cancelled(cancel_key):
+                    break
+                if content:
+                    yield content
+            return
 
         stream = chat(
-            model=model,
+            model=route.model,
             messages=_with_system(messages),
             stream=True,
             **_normalize_chat_kwargs(kwargs),

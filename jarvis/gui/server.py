@@ -317,6 +317,13 @@ def workstation_recover():
     return result
 
 
+@app.get("/api/workstation/inference")
+def workstation_inference():
+    from jarvis.inference.gateway import gateway_status
+
+    return gateway_status()
+
+
 @app.post("/api/services/ensure")
 def services_ensure():
     from jarvis.services import ensure_services

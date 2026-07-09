@@ -24,6 +24,11 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "workstation_up": lambda params, _message: _lifecycle("up", params),
     "workstation_down": lambda params, _message: _lifecycle("down", params),
     "workstation_restart": lambda params, _message: _restart(params),
+    "inference_status": lambda _params, _message: {
+        "ok": True,
+        "message": _inference_status_message(),
+        "data": _inference_status(),
+    },
 }
 
 
@@ -60,6 +65,21 @@ def _restart(params: dict) -> dict:
         "message": operations.format_report(force=True),
         "data": result,
     }
+
+
+def _inference_status() -> dict:
+    from jarvis.inference.gateway import gateway_status
+
+    return gateway_status()
+
+
+def _inference_status_message() -> str:
+    status = _inference_status()
+    mode = status.get("gateway_mode", "auto")
+    litellm = "up" if status.get("litellm_available") else "down"
+    cloud = "enabled" if status.get("cloud_enabled") else "disabled"
+    vram = "low" if status.get("low_vram") else "ok"
+    return f"Inference: mode={mode}, LiteLLM={litellm}, cloud={cloud}, VRAM={vram}"
 
 
 @register_behavior
