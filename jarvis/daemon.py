@@ -236,6 +236,10 @@ def run_tray(uncensored: bool = False) -> None:
         attach_platform_knowledge_retrieval,
         validate_platform_knowledge_retrieval,
     )
+    from jarvis.platform_tool_capability import (
+        attach_platform_tool_capability,
+        validate_platform_tool_capability,
+    )
 
     attach_report = attach_platform_infrastructure()
     startup_issues = validate_platform_startup()
@@ -267,6 +271,15 @@ def run_tray(uncensored: bool = False) -> None:
         logger.warning("Platform knowledge retrieval validation: %s", "; ".join(knowledge_issues))
     elif knowledge_report.get("attached"):
         logger.info("AI Platform knowledge retrieval attached for Aria")
+    tool_report = attach_platform_tool_capability()
+    tool_issues = validate_platform_tool_capability()
+    if tool_issues:
+        logger.warning("Platform tool capability validation: %s", "; ".join(tool_issues))
+    elif tool_report.get("attached"):
+        logger.info(
+            "AI Platform tool capabilities attached for Aria (%s registered)",
+            tool_report.get("registered_capabilities", 0),
+        )
     _install_restart_signal_handler()
     if uncensored:
         os.environ["JARVIS_UNCENSORED"] = "1"

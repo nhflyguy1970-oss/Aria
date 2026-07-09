@@ -98,6 +98,12 @@ def all_actions() -> list[dict[str, Any]]:
 
 
 def call_action(assistant: JarvisAssistant, action: str, params: dict, message: str) -> dict:
+    from jarvis.modules.capability_adapter import capability_invoke
+
+    return capability_invoke(_call_action_impl, assistant, action, params, message)
+
+
+def _call_action_impl(assistant: JarvisAssistant, action: str, params: dict, message: str) -> dict:
     spec = _REGISTRY.get(action)
     if not spec or not spec.handler:
         raise KeyError(action)
