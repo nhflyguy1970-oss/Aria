@@ -324,6 +324,33 @@ def workstation_inference():
     return gateway_status()
 
 
+@app.get("/api/knowledge/registry")
+def knowledge_registry(refresh: bool = False):
+    from jarvis.knowledge.registry import format_registry_markdown, registry_snapshot
+
+    snap = registry_snapshot(refresh=refresh)
+    snap["message"] = format_registry_markdown(refresh=refresh)
+    return snap
+
+
+@app.post("/api/knowledge/sync")
+def knowledge_sync():
+    from jarvis.knowledge.registry import sync_registry
+
+    return sync_registry()
+
+
+@app.get("/api/knowledge/search")
+def knowledge_unified_search(q: str = "", limit: int = 12):
+    from jarvis.knowledge.search import format_unified_results, unified_search
+
+    if not q.strip():
+        return {"ok": False, "error": "q parameter required"}
+    result = unified_search(q.strip(), limit=min(limit, 30))
+    result["message"] = format_unified_results(result)
+    return result
+
+
 @app.post("/api/services/ensure")
 def services_ensure():
     from jarvis.services import ensure_services

@@ -422,3 +422,47 @@ class KnowledgeOperations:
             for item in items
         ]
         return _ok("**Saved research briefs**\n\n" + "\n".join(lines), module="general")
+
+    @classmethod
+    def knowledge_registry(cls, ctx, params: dict, message: str) -> dict:
+        from jarvis.knowledge.registry import format_registry_markdown, registry_snapshot
+
+        refresh = bool(params.get("refresh"))
+        snap = registry_snapshot(refresh=refresh)
+        return _ok(format_registry_markdown(refresh=refresh), module="knowledge", type="knowledge_registry", data=snap)
+
+    @classmethod
+    def knowledge_sync(cls, ctx, params: dict, message: str) -> dict:
+        from jarvis.knowledge.registry import format_registry_markdown, sync_registry
+
+        result = sync_registry()
+        return _ok(
+            format_registry_markdown(refresh=False),
+            module="knowledge",
+            type="knowledge_sync",
+            data=result,
+        )
+
+    @classmethod
+    def unified_search(cls, ctx, params: dict, message: str) -> dict:
+        from jarvis.knowledge.search import format_unified_results, unified_search
+
+        query = (params.get("query") or message or "").strip()
+        for prefix in (
+            r"^search everything[:\s]*",
+            r"^unified search[:\s]*",
+            r"^find everywhere[:\s]*",
+            r"^search all(?: knowledge)?[:\s]*",
+        ):
+            query = re.sub(prefix, "", query, flags=re.I).strip()
+        if not query:
+            return _err("What should I search for across the workstation?", module="knowledge")
+        limit = int(params.get("limit") or 12)
+        result = unified_search(query, limit=limit, refresh_registry=bool(params.get("refresh")))
+        return _ok(
+            format_unified_results(result),
+            module="knowledge",
+            type="unified_search",
+            **{k: result[k] for k in ("query", "hits", "strategies", "searched") if k in result},
+        )
+

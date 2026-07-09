@@ -250,6 +250,21 @@ def _services_summary() -> dict[str, Any]:
             return {"ready": False, "required_down": []}
 
 
+def _knowledge_summary() -> dict[str, Any]:
+    try:
+        from jarvis.knowledge.registry import registry_snapshot
+
+        snap = registry_snapshot()
+        return {
+            "sources": snap.get("source_count", 0),
+            "searchable": snap.get("retrieval_count", 0),
+            "stale": snap.get("stale_count", 0),
+            "healthy": snap.get("healthy_count", 0),
+        }
+    except Exception:
+        return {"sources": 0, "searchable": 0}
+
+
 def build_world_state(*, memory_store=None) -> dict[str, Any]:
     """Build a fresh world-state snapshot (no cache)."""
     project = _active_project()
@@ -267,6 +282,7 @@ def build_world_state(*, memory_store=None) -> dict[str, Any]:
         "planner_next": _planner_next_event(),
         "recent_failures": _recent_failures(memory_store),
         "services": _services_summary(),
+        "knowledge": _knowledge_summary(),
     }
 
 

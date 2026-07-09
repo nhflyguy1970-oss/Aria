@@ -25,6 +25,9 @@ _KNOWLEDGE_ACTIONS: dict[str, tuple[Any, bool]] = {
     "document_learn_recall": (KnowledgeEngine.document_learn_recall, True),
     "knowledge_research_run": (KnowledgeEngine.knowledge_research_run, False),
     "knowledge_research_list": (KnowledgeEngine.knowledge_research_list, True),
+    "knowledge_registry": (KnowledgeEngine.knowledge_registry, True),
+    "knowledge_sync": (KnowledgeEngine.knowledge_sync, False),
+    "unified_search": (KnowledgeEngine.unified_search, False),
 }
 
 _KNOWLEDGE_DEPENDENCIES = ["retrieval", "semantic_memory", "capability_registry"]
