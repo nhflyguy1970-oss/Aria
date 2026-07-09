@@ -8,12 +8,26 @@ import sys
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Aria workstation control plane")
+    parser = argparse.ArgumentParser(
+        description="Aria workstation control plane",
+        prog="workstation",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("status", help="Show workstation status")
+    sub.add_parser("install", help="Fresh-machine install (venv, deps, platform init)")
+    sub.add_parser("configure", help="Create jarvis.env and initialize platform paths")
+    sub.add_parser("start", help="Start Aria desktop (tray + server + window)")
+    sub.add_parser("stop", help="Stop tray and server")
+    sub.add_parser("update", help="git pull + pip sync + restart if running")
+    sub.add_parser("backup", help="Backup jarvis data and platform state")
+    restore_p = sub.add_parser("restore", help="Restore from backup-workstation archive")
+    restore_p.add_argument("archive", help="Path to workstation_*.tar.gz")
+    sub.add_parser("verify", help="Hardware-agnostic install verification")
+    sub.add_parser("doctor", help="Diagnose workstation + AI-Platform")
 
-    up_p = sub.add_parser("up", help="Start workstation or a component")
+    sub.add_parser("status", help="Show workstation status (JSON)")
+
+    up_p = sub.add_parser("up", help="Start workstation services or a component")
     up_p.add_argument("target", nargs="?", help="Component id (default: bootstrap all autostart)")
     up_p.add_argument("--profile", help="Start AI Platform docker profile (data, inference)")
 
@@ -32,7 +46,23 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    from jarvis.workstation import lifecycle, operations, registry
+    from jarvis.workstation import lifecycle, lifecycle_shell, operations, registry
+
+    if args.command == "restore":
+        return lifecycle_shell.restore(args.archive)
+
+    lifecycle_commands = {
+        "install": lambda: lifecycle_shell.install(),
+        "configure": lifecycle_shell.configure,
+        "start": lifecycle_shell.start,
+        "stop": lifecycle_shell.stop,
+        "update": lifecycle_shell.update,
+        "backup": lifecycle_shell.backup,
+        "verify": lifecycle_shell.verify,
+        "doctor": lifecycle_shell.doctor,
+    }
+    if args.command in lifecycle_commands:
+        return lifecycle_commands[args.command]()
 
     if args.command == "status":
         payload = lifecycle.status(force=True)

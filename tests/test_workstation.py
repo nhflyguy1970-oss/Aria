@@ -91,13 +91,32 @@ class TestWorkstationOperations(unittest.TestCase):
     @patch("jarvis.workstation.operations.up")
     def test_recover_bootstraps_when_no_auto_issues(self, mock_up, mock_diagnose):
         mock_diagnose.side_effect = [
-            {"ok": False, "issues": [{"auto_recoverable": False, "component": "gpu", "action": "alert"}]},
+            {
+                "ok": False,
+                "issues": [{"auto_recoverable": False, "component": "gpu", "action": "alert"}],
+            },
             {"ok": True, "issues": []},
         ]
         mock_up.return_value = {"ok": True}
         result = recover_safe()
         self.assertTrue(result.get("ok"))
         mock_up.assert_called()
+
+
+class TestWorkstationLifecycleCli(unittest.TestCase):
+    def test_cli_parses_lifecycle_commands(self):
+        from jarvis.workstation.cli import main
+
+        with self.assertRaises(SystemExit) as ctx:
+            main(["--help"])
+        self.assertEqual(ctx.exception.code, 0)
+
+    @patch("jarvis.workstation.lifecycle_shell.verify", return_value=0)
+    def test_verify_delegates_to_script(self, mock_verify):
+        from jarvis.workstation.cli import main
+
+        self.assertEqual(main(["verify"]), 0)
+        mock_verify.assert_called_once()
 
 
 class TestOperationsBehavior(unittest.TestCase):

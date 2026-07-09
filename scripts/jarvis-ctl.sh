@@ -17,22 +17,42 @@ usage() {
   cat <<EOF
 Usage: $(basename "$0") <command>
 
-  audit      Run 14-phase system audit (sudo for SMART if configured)
-  open       Open or focus the Jarvis window
-  reload    Reload the Jarvis window (UI only — use restart for API changes)
-  restart   Restart the API server (required after code updates; tray must be running)
-  stop      Stop tray + server
-  status    Show whether server is up
-  workstation  Workstation registry (status/up/down/diagnose/recover)
-  audit     Run 14-phase system audit (see: ./scripts/audit-system.sh)
+Lifecycle:
+  install     Fresh-machine install (venv, deps, platform init)
+  configure   Create jarvis.env and initialize platform paths
+  start       Start Aria desktop (tray + server + window)
+  stop        Stop tray + server
+  restart     Restart the API server (tray must be running)
+  update      git pull + pip sync + restart if running
+  backup      Backup jarvis data and platform state
+  restore     Restore from backup archive (pass path as arg)
+  verify      Hardware-agnostic install verification
+  doctor      Workstation diagnose + AI-Platform doctor
+  status      Server status (--full for workstation summary)
 
-Tray tip: on GNOME/Ubuntu, left-click the tray icon for the menu — right-click often does nothing.
-In the Jarvis window: sidebar → Reload UI, or press Ctrl+Shift+R.
+Desktop:
+  open        Open or focus the Jarvis window
+  reload      Reload the Jarvis window (UI only)
+  audit       Run 14-phase system audit
+  workstation Registry/lifecycle (status/up/down/diagnose/recover)
+
+Examples:
+  ./scripts/jarvis-ctl.sh install
+  ./scripts/jarvis-ctl.sh verify && ./scripts/jarvis-ctl.sh start
+  ./scripts/jarvis-ctl.sh status --full
 EOF
 }
 
 cmd="${1:-}"
+shift || true
+
 case "$cmd" in
+  install|configure|start|update|backup|verify|doctor)
+    exec "$JARVIS_ROOT/scripts/workstation.sh" "$cmd" "$@"
+    ;;
+  restore)
+    exec "$JARVIS_ROOT/scripts/workstation.sh" restore "$@"
+    ;;
   open)
     jarvis_notify "$(jarvis_app_name)" "Opening…"
     jarvis_open_gui_detached || {
@@ -67,6 +87,18 @@ case "$cmd" in
     exec "$JARVIS_ROOT/scripts/stop-jarvis.sh"
     ;;
   status)
+    if [[ "${1:-}" == "--full" ]]; then
+      echo "=== Aria server ==="
+      if jarvis_server_responsive; then
+        echo "  up ($URL)"
+      else
+        echo "  down"
+      fi
+      echo ""
+      echo "=== Workstation ==="
+      "$(jarvis_python)" -m jarvis.workstation.cli diagnose || true
+      exit 0
+    fi
     if jarvis_server_responsive; then
       echo "$(jarvis_app_name) server: up (${URL})"
       exit 0
@@ -79,11 +111,9 @@ case "$cmd" in
     exit 1
     ;;
   audit)
-    shift
     exec "${JARVIS_ROOT}/scripts/audit-system.sh" "$@"
     ;;
   workstation)
-    shift
     exec "${JARVIS_ROOT}/scripts/workstation.sh" "$@"
     ;;
   -h|--help|help|"")

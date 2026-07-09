@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ENV_FILE="$ROOT/data/jarvis.env"
-EXAMPLE="$ROOT/data/jarvis.env.example"
+EXAMPLE="$ROOT/jarvis.env.example"
 
 mkdir -p "$ROOT/data"
 if [[ ! -f "$ENV_FILE" ]]; then

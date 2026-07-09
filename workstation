@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Unified workstation CLI — install, start, stop, verify, backup, etc.
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+exec "$ROOT/scripts/workstation.sh" "$@"
