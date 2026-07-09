@@ -312,6 +312,10 @@ _GENERAL_TECH = re.compile(
 
 def is_general_knowledge_question(message: str, session: SessionContext | None = None) -> bool:
     """General tech / hardware / AI product questions — not about this repo."""
+    from jarvis.runtime_introspection import is_runtime_introspection_question
+
+    if is_runtime_introspection_question(message):
+        return False
     if is_codebase_question(message, session):
         return False
     text = (message or "").strip()
@@ -687,6 +691,11 @@ def _quick_route(message: str, attachment: dict | None, session: SessionContext)
     table_hit = match_router_table(message, session)
     if table_hit:
         return table_hit
+
+    from jarvis.runtime_introspection import route_runtime_introspection
+
+    if runtime_hit := route_runtime_introspection(message):
+        return runtime_hit
 
     lower = message.lower().strip()
 

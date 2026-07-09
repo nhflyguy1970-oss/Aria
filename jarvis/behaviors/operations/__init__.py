@@ -34,6 +34,15 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "platform_cutover_status": lambda _params, _message: _platform_cutover_status(),
     "platform_cutover_enable": lambda _params, _message: _platform_cutover_enable(),
     "platform_cutover_rollback": lambda _params, _message: _platform_cutover_rollback(),
+    "runtime_status": lambda _params, _message: _runtime_action("runtime_status"),
+    "runtime_health": lambda _params, _message: _runtime_action("runtime_health"),
+    "runtime_providers": lambda _params, _message: _runtime_action("runtime_providers"),
+    "runtime_services": lambda _params, _message: _runtime_action("runtime_services"),
+    "runtime_mode": lambda _params, _message: _runtime_action("runtime_mode"),
+    "runtime_models": lambda _params, _message: _runtime_action("runtime_models"),
+    "runtime_jobs": lambda _params, _message: _runtime_action("runtime_jobs"),
+    "runtime_gpu": lambda _params, _message: _runtime_action("runtime_gpu"),
+    "runtime_platform": lambda _params, _message: _runtime_action("runtime_platform"),
 }
 
 
@@ -134,6 +143,12 @@ def _platform_cutover_rollback() -> dict:
 
     result = rollback_to_legacy()
     return {"ok": True, "message": result.get("message", "rolled back"), "data": result}
+
+
+def _runtime_action(action: str) -> dict:
+    from jarvis.runtime_introspection import runtime_action_result
+
+    return runtime_action_result(action)
 
 
 @register_behavior

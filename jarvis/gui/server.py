@@ -324,6 +324,25 @@ def workstation_inference():
     return gateway_status()
 
 
+@app.get("/api/runtime/status")
+def runtime_status_api():
+    from jarvis.runtime_introspection import collect_runtime_status, format_runtime_markdown
+
+    data = collect_runtime_status()
+    return {"ok": True, "data": data, "message": format_runtime_markdown("runtime_status", data)}
+
+
+@app.get("/api/runtime/{section}")
+def runtime_section_api(section: str):
+    from jarvis.runtime_introspection import collect_runtime, format_runtime_markdown
+
+    action = f"runtime_{section}" if not section.startswith("runtime_") else section
+    result = collect_runtime(action)
+    data = result.get("data") or {}
+    result["message"] = format_runtime_markdown(action, data)
+    return result
+
+
 @app.get("/api/knowledge/registry")
 def knowledge_registry(refresh: bool = False):
     from jarvis.knowledge.registry import format_registry_markdown, registry_snapshot

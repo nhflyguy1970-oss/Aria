@@ -16,11 +16,13 @@ def build_unified_context(assistant: Any, message: str, *, general: bool = False
     meta: dict[str, Any] = {}
 
     from jarvis.router import is_general_knowledge_question, is_meta_self_question
+    from jarvis.runtime_introspection import is_runtime_introspection_question
 
     skip_project = (
         general
         or is_general_knowledge_question(message, assistant.session)
         or is_meta_self_question(message)
+        or is_runtime_introspection_question(message)
     )
 
     from jarvis.behaviors.conversation import ConversationEngine

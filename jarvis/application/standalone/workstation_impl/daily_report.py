@@ -95,6 +95,18 @@ def format_daily_report(*, force: bool = False) -> str:
         "",
         f"**Phase:** `{phase.value}`",
     ]
+    try:
+        from jarvis.runtime_introspection import (
+            collect_runtime_mode,
+            execution_mode,
+            format_runtime_markdown,
+        )
+
+        lines.insert(2, f"**Execution mode:** `{execution_mode()}`")
+        lines.append("")
+        lines.append(format_runtime_markdown("runtime_mode", collect_runtime_mode()))
+    except Exception:
+        pass
     if snap.get("detail"):
         lines.append(f"**Detail:** {snap['detail']}")
     lines.append("")

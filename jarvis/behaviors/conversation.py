@@ -52,9 +52,11 @@ class ConversationEngine:
         citations: list[dict] = []
 
         from jarvis.router import is_general_knowledge_question, is_meta_self_question
+        from jarvis.runtime_introspection import is_runtime_introspection_question
 
+        runtime_self = is_runtime_introspection_question(message)
         general = is_general_knowledge_question(message, self._a.session)
-        skip_project_context = general or is_meta_self_question(message)
+        skip_project_context = general or is_meta_self_question(message) or runtime_self
 
         from jarvis.behaviors.knowledge import get_knowledge_behavior
         from jarvis.behaviors.memory import get_memory_behavior

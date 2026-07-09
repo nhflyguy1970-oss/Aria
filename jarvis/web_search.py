@@ -257,6 +257,10 @@ _AUTO_PATTERNS = (
 
 def should_auto_search(message: str) -> bool:
     """Heuristic: factual / current-events questions benefit from web context."""
+    from jarvis.runtime_introspection import is_runtime_introspection_question
+
+    if is_runtime_introspection_question(message):
+        return False
     text = (message or "").strip()
     if len(text) < 8 or len(text) > 500:
         return False
