@@ -25,10 +25,16 @@ class _FakeLegacy:
     def get(self, entry_id: str):
         return next((e for e in self._entries if e["id"] == entry_id), None)
 
-    def list_entries(self, namespace=None):
+    def list_entries(self, entry_type=None, *, namespace=None, query=None, include_embedding=False):
+        entries = list(self._entries)
+        if entry_type:
+            entries = [e for e in entries if e.get("type") == entry_type]
         if namespace:
-            return [e for e in self._entries if e.get("namespace") == namespace]
-        return list(self._entries)
+            entries = [e for e in entries if e.get("namespace") == namespace]
+        if query:
+            q = query.lower().strip()
+            entries = [e for e in entries if q in e.get("content", "").lower()]
+        return entries
 
     def search(self, query, limit=10, *, namespace=None):
         return self.list_entries(namespace)[:limit]
@@ -55,6 +61,14 @@ class TestMemoryAdapter(unittest.TestCase):
     def test_platform_authoritative_env(self):
         with patch.dict("os.environ", {"JARVIS_PLATFORM_DATA_AUTHORITATIVE": "1"}):
             self.assertTrue(platform_data_authoritative())
+
+
+    def test_dual_write_list_entries_forwards_kwargs(self):
+        legacy = _FakeLegacy()
+        adapter = DualWriteMemoryAdapter(legacy)
+        with patch.object(_mod, "platform_data_authoritative", return_value=False):
+            entries = adapter.list_entries(include_embedding=True)
+        self.assertEqual(len(entries), 1)
 
 
 if __name__ == "__main__":

@@ -274,7 +274,14 @@ class DualWriteMemoryAdapter:
                 logger.debug("platform get fallback: %s", exc)
         return self._legacy.get(entry_id)
 
-    def list_entries(self, namespace: str | None = None) -> list[dict]:
+    def list_entries(
+        self,
+        entry_type: str | None = None,
+        *,
+        namespace: str | None = None,
+        query: str | None = None,
+        include_embedding: bool = False,
+    ) -> list[dict]:
         if platform_data_authoritative():
             try:
                 from aiplatform.memory.manager import manager as memory_manager
@@ -282,14 +289,30 @@ class DualWriteMemoryAdapter:
                 filters: dict[str, Any] = {"application": self._application_id}
                 if namespace:
                     filters["namespace"] = namespace
+                if entry_type:
+                    filters["entry_type"] = entry_type
                 records = memory_manager.list(**filters)
                 if records:
-                    return [_platform_to_legacy(r) for r in records]
+                    entries = [_platform_to_legacy(r) for r in records]
+                    if query:
+                        q = query.lower().strip()
+                        entries = [
+                            e
+                            for e in entries
+                            if q in e.get("content", "").lower()
+                            or any(q in t.lower() for t in e.get("tags", []))
+                        ]
+                    if include_embedding:
+                        return entries
+                    return [{k: v for k, v in e.items() if k != "embedding"} for e in entries]
             except Exception as exc:
                 logger.debug("platform list fallback: %s", exc)
-        if namespace is not None:
-            return self._legacy.list_entries(namespace=namespace)
-        return self._legacy.list_entries()
+        return self._legacy.list_entries(
+            entry_type,
+            namespace=namespace,
+            query=query,
+            include_embedding=include_embedding,
+        )
 
     def search(self, query: str, limit: int = 10, *, namespace: str | None = None) -> list[dict]:
         if platform_data_authoritative():

@@ -147,8 +147,8 @@ class JarvisAssistant:
 
         scrubbed = scrub_store(self.memory)
         self._trust_last_scrub = scrubbed.get("removed", 0)
-        self.sync_project_namespace()
         self.refresh_system_prompt()
+        self.sync_project_namespace()
 
     def _build_prompt(self) -> str:
         return build_system_prompt(load_personality_preset(), self.memory)
