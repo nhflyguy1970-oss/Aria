@@ -2,41 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
+
+from jarvis.behaviors.lifecycle import ApplicationBehavior
 
 if TYPE_CHECKING:
     from jarvis.assistant import JarvisAssistant
-
-
-@dataclass
-class ApplicationBehavior:
-    """A discoverable, testable behavior unit."""
-
-    behavior_id: str
-    name: str
-    category: str
-    description: str
-    module_path: str
-    test_module: str = ""
-    action_names: list[str] = field(default_factory=list)
-
-    def register(self) -> None:
-        """Register handlers and capabilities for this behavior."""
-
-    def descriptor(self, application_id: str) -> dict[str, Any]:
-        return {
-            "behavior_id": self.behavior_id,
-            "name": self.name,
-            "category": self.category,
-            "description": self.description,
-            "module_path": self.module_path,
-            "test_module": self.test_module,
-            "actions": list(self.action_names),
-            "extracted": True,
-            "application_id": application_id,
-        }
-
 
 _BEHAVIORS: list[ApplicationBehavior] = []
 
@@ -55,15 +26,24 @@ def discover_behaviors() -> list[ApplicationBehavior]:
     return list(_BEHAVIORS)
 
 
-def register_behaviors() -> list[ApplicationBehavior]:
+def register_behaviors(assistant: JarvisAssistant | None = None) -> list[ApplicationBehavior]:
     loaded = discover_behaviors()
     for behavior in loaded:
-        behavior.register()
+        behavior.attach()
+        if assistant is not None:
+            behavior.initialize(assistant)
     return loaded
 
 
 def behavior_descriptors(application_id: str) -> list[dict[str, Any]]:
     return [behavior.descriptor(application_id) for behavior in discover_behaviors()]
+
+
+def get_behavior(behavior_id: str) -> ApplicationBehavior | None:
+    for behavior in discover_behaviors():
+        if behavior.behavior_id == behavior_id:
+            return behavior
+    return None
 
 
 _loaded = False
@@ -73,6 +53,7 @@ def _ensure_loaded() -> None:
     global _loaded
     if _loaded:
         return
+    from jarvis.behaviors import conversation as _conversation  # noqa: F401
     from jarvis.behaviors import git as _git  # noqa: F401
 
     _loaded = True

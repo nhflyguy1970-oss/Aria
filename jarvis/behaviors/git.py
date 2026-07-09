@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
-from jarvis.behaviors import ApplicationBehavior, register_behavior
+from typing import TYPE_CHECKING
+
+from jarvis.behaviors.lifecycle import ApplicationBehavior
+from jarvis.behaviors import register_behavior
 from jarvis.handlers.registry import register_action
 from jarvis.response import ok
+
+if TYPE_CHECKING:
+    from jarvis.assistant import JarvisAssistant
 
 
 @register_behavior
@@ -20,13 +26,27 @@ class GitBehavior(ApplicationBehavior):
             action_names=["git_status", "git_diff"],
         )
 
-    def register(self) -> None:
+    def attach(self) -> list[str]:
         register_action("git_status", module="coding", description="Git working tree status")(
             self.git_status
         )
         register_action("git_diff", module="coding", description="Git diff for file or repo")(
             self.git_diff
         )
+        return []
+
+    def execute(
+        self,
+        assistant: JarvisAssistant,
+        action: str,
+        params: dict,
+        message: str,
+    ) -> dict | None:
+        if action == "git_status":
+            return self.git_status(assistant, params, message)
+        if action == "git_diff":
+            return self.git_diff(assistant, params, message)
+        return None
 
     @staticmethod
     def git_status(assistant, params: dict, message: str) -> dict:

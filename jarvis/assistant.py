@@ -1113,130 +1113,18 @@ class JarvisAssistant:
             yield _stream_done(result)
             return
 
-        ollama = check_ollama()
-        if not ollama["running"]:
-            from jarvis.branding import assistant_name
+        from jarvis.behaviors.conversation import ensure_conversation_engine
 
-            yield {
-                "type": "done",
-                "ok": False,
-                "message": (
-                    f"**Ollama is still starting.** {assistant_name()} is bringing it online — try again in a few seconds.\n\n"
-                    "Ask **what can you do?** anytime for an instant answer."
-                ),
-            }
-            return
-
-        params = intent.get("params", {})
-        user_message = self._prepare_chat_user_message(message, params)
-        piped = self._try_strict_instructions(user_message)
-        if piped:
-            self.conversation.add_user(user_message)
-            self.conversation.add_assistant(piped)
-            self.branches.persist(session=self.session)
-            yield _stream_done(_ok(piped, module=None, type="instruction_follow"))
-            return
-
-        yield {"type": "status", "message": "Gathering context…"}
-        context_prefix, context_warnings, _stream_citations = self._chat_context_prefix(user_message)
-        from jarvis.instruction_follow import is_strict_instruction_prompt, strict_instruction_context_prefix
-
-        if is_strict_instruction_prompt(user_message):
-            hint = strict_instruction_context_prefix()
-            context_prefix = f"{hint}\n\n{context_prefix}" if context_prefix else hint
-        pending = self.conversation.messages + [{"role": "user", "content": user_message}]
-        msgs = self._messages_for_llm(pending, context_prefix)
-        from jarvis.chat_cancel import finish as finish_cancel, is_cancelled
-
-        chat_model = (params.get("model") or self.session.chat_model or "").strip() or llm.general_model()
-        full = []
-        saved_user = False
-        stopped = False
-        usage: dict = {}
-        import time
-        t0 = time.perf_counter()
-        try:
-            for chunk in llm.ask_stream(chat_model, msgs, cancel_key=request_id, usage=usage):
-                if request_id and is_cancelled(request_id):
-                    stopped = True
-                    break
-                if not saved_user:
-                    self.conversation.add_user(user_message)
-                    saved_user = True
-                full.append(chunk)
-                yield {"type": "token", "content": chunk}
-        except Exception as e:
-            if saved_user:
-                self.conversation.pop_last_user()
-            yield {"type": "done", "ok": False, "message": str(e)}
-            return
-        finally:
-            finish_cancel(request_id)
-
-        if stopped:
-            answer = "".join(full).strip()
-            if saved_user and not answer:
-                self.conversation.pop_last_user()
-            yield {
-                "type": "done",
-                "ok": True,
-                "message": answer or "*(stopped)*",
-                "stopped": True,
-                "uncensored": is_uncensored(),
-            }
-            return
-
-        answer = "".join(full)
-        if not answer.strip():
-            if saved_user:
-                self.conversation.pop_last_user()
-            yield {
-                "type": "done",
-                "ok": False,
-                "message": (
-                    f"Model `{llm.general_model()}` returned empty. "
-                    f"Try: `ollama pull {llm.general_model()}`"
-                ),
-            }
-            return
-
-        self.conversation.add_assistant(answer)
-        self._auto_remember(message, answer)
-        self.branches.persist(session=self.session)
-        inference_ms = int((time.perf_counter() - t0) * 1000)
-        done_payload = {
-            "type": "done",
-            "ok": True,
-            "message": answer,
-            "uncensored": is_uncensored(),
-            "model": chat_model,
-            "inference_ms": inference_ms,
-            **usage,
-        }
-        if context_warnings:
-            done_payload["warnings"] = context_warnings
-        if _stream_citations:
-            done_payload["memory_citations"] = _stream_citations
-        yield done_payload
+        yield from ensure_conversation_engine(self).execute_stream(
+            message,
+            params,
+            request_id=request_id,
+        )
 
     def _auto_remember(self, user_msg: str, assistant_msg: str) -> None:
-        from jarvis.config import load_auto_memory_mode, load_memory_namespace
-        from jarvis.memory_context import filter_extracted_facts, should_extract_auto_memory
+        from jarvis.behaviors.conversation import ensure_conversation_engine
 
-        mode = load_auto_memory_mode()
-        if not should_extract_auto_memory(user_msg, assistant_msg, mode):
-            return
-        facts = llm.extract_memories(user_msg)
-        if mode == "smart":
-            facts = filter_extracted_facts(facts, user_msg)
-        ns = self.session.memory_namespace or load_memory_namespace()
-        added = False
-        for fact in facts[:2]:
-            if not self.memory.similar_exists(fact):
-                self.memory.add("auto", fact, tags=["auto-extracted"], namespace=ns)
-                added = True
-        if added:
-            self.refresh_system_prompt()
+        ensure_conversation_engine(self).auto_remember(user_msg, assistant_msg)
 
     @staticmethod
     def _stream_text_chunks(text: str, width: int = 24) -> Iterator[str]:
@@ -1252,183 +1140,29 @@ class JarvisAssistant:
 
     @staticmethod
     def _memory_citation(entry: dict) -> dict:
-        return {
-            "id": entry.get("id"),
-            "type": entry.get("type", "fact"),
-            "date": (entry.get("created") or entry.get("date") or "")[:10],
-            "content": (entry.get("content") or "")[:160],
-        }
+        from jarvis.behaviors.conversation import ConversationEngine
+
+        return ConversationEngine.memory_citation(entry)
 
     def _chat_context_prefix(self, message: str) -> tuple[str, list[str], list[dict]]:
-        parts = []
-        warnings: list[str] = []
-        citations: list[dict] = []
-        seen_ids: set[str] = set()
+        from jarvis.behaviors.conversation import ensure_conversation_engine
 
-        def _cite(entry: dict, *, kind: str | None = None) -> None:
-            eid = entry.get("id") or entry.get("content", "")[:40]
-            if eid in seen_ids:
-                return
-            seen_ids.add(eid)
-            c = self._memory_citation(entry)
-            if kind:
-                c["type"] = kind
-            citations.append(c)
-
-        from jarvis import rag
-        from jarvis.router import is_codebase_question, is_general_knowledge_question
-
-        general = is_general_knowledge_question(message, self.session)
-        from jarvis.router import is_meta_self_question
-        from jarvis.memory_context import contextualize_memory_for_chat, should_inject_resume_context
-        from jarvis.trust_memory import filter_trusted_content, trust_context_for_chat
-
-        skip_project_context = general or is_meta_self_question(message)
-        if not llm.embed_available():
-            warnings.append(
-                f"Semantic memory/RAG unavailable — check embed model `{llm.embed_model()}`."
-            )
-        ns = self.session.memory_namespace
-        profile = self.memory.list_entries(namespace="profile")
-        lower_msg = message.lower()
-        trust_ctx = trust_context_for_chat(self.memory, message, self.session)
-        if trust_ctx and not general:
-            parts.append(trust_ctx)
-            for e in self.memory.list_entries(entry_type="strategy")[:6]:
-                if filter_trusted_content(e.get("content", "")):
-                    _cite(e, kind="strategy")
-
-        if profile and not skip_project_context:
-            summary = next((p for p in profile if "summary" in (p.get("tags") or [])), None)
-            if summary:
-                parts.append(f"User profile:\n- {summary['content']}")
-            elif len(profile) <= 6:
-                parts.append(
-                    "User profile:\n" + "\n".join(f"- {p['content']}" for p in profile[:6])
-                )
-            if re.search(
-                r"\b(like to do|like doing|enjoy|hobby|hobbies|interest|passion|about me|about myself)\b",
-                lower_msg,
-            ):
-                interests = next((p for p in profile if "interests" in (p.get("tags") or [])), None)
-                if interests:
-                    parts.append(
-                        "Answer personal questions from this profile fact:\n"
-                        f"- {interests['content']}"
-                    )
-
-        if should_inject_resume_context(message, self.session):
-            cp_ns = ns if ns and ns != "default" else None
-            checkpoint = self.memory.latest_checkpoint(cp_ns) or self.memory.latest_checkpoint()
-            if checkpoint:
-                cp_line = filter_trusted_content(checkpoint["content"])
-                if cp_line:
-                    parts.append(f"Project checkpoint (where user left off):\n- {cp_line}")
-
-        if not skip_project_context:
-            memories = self.memory.search(message, limit=3, namespace=ns if ns and ns != "default" else None)
-            if len(memories) < 2 and ns and ns != "default":
-                memories = self.memory.search(message, limit=3)
-            memory_lines = []
-            for m in memories:
-                line = contextualize_memory_for_chat(m["content"])
-                line = filter_trusted_content(line) if line else None
-                if line and line not in memory_lines:
-                    memory_lines.append(line)
-            if memory_lines:
-                parts.append("Relevant memories:\n" + "\n".join(f"- {line}" for line in memory_lines))
-            for m in memories:
-                _cite(m)
-
-        if not skip_project_context and re.search(
-            r"\b(journal|task|todo|to-do|today|priorit|what('s| is) on my plate)\b",
-            lower_msg,
-        ):
-            open_tasks = self.journal.format_open_tasks(limit=8)
-            if open_tasks != "No open journal tasks.":
-                parts.append(f"Open bullet journal tasks:\n{open_tasks}")
-
-        if re.search(
-            r"\b(weather|forecast|temperature|rain|snow|tomorrow|today|tonight)\b",
-            lower_msg,
-        ):
-            from jarvis.journal_weather import parse_weather_day, weather_forecast_text
-
-            parts.append(weather_forecast_text(parse_weather_day(message), message=message))
-
-        if is_codebase_question(message, self.session):
-            doc_ctx, rag_warnings = rag.context_for_query(message)
-            warnings.extend(rag_warnings)
-            if doc_ctx:
-                parts.append(doc_ctx)
-
-        from jarvis.knowledge import context_for_query as knowledge_context
-
-        k_ctx, k_warnings = knowledge_context(message)
-        warnings.extend(k_warnings)
-        if k_ctx:
-            parts.append(k_ctx)
-
-        from jarvis.lang_util import detect_text_language, language_reply_hint
-
-        lang = detect_text_language(message)
-        lang_hint = language_reply_hint(lang)
-        if lang_hint:
-            parts.append(lang_hint)
-
-        from jarvis.profiles import web_search_disabled
-        from jarvis import web_search
-
-        if (
-            not web_search_disabled()
-            and web_search.auto_search_enabled()
-            and web_search.should_auto_search(message)
-        ):
-            # Snippets only — do not run a second LLM pass here (was causing long freezes).
-            hits = web_search.search(message, limit=5)
-            if hits:
-                parts.append(
-                    "Web search snippets (cite [n] if used; say if insufficient):\n"
-                    + web_search.format_results_for_llm(hits)
-                )
-
-        from jarvis.resource_router import chat_busy_hint
-
-        busy_hint = chat_busy_hint()
-        if busy_hint:
-            parts.append(busy_hint)
-
-        return "\n\n".join(parts), warnings, citations
+        return ensure_conversation_engine(self).build_context_prefix(message)
 
     def _messages_for_llm(self, messages: list[dict], context_prefix: str) -> list[dict]:
-        if not context_prefix or not messages or messages[-1].get("role") != "user":
-            return messages
-        out = list(messages)
-        raw = out[-1]["content"]
-        out[-1] = {"role": "user", "content": f"{context_prefix}\n\nUser: {raw}"}
-        return out
+        from jarvis.behaviors.conversation import ensure_conversation_engine
+
+        return ensure_conversation_engine(self).messages_for_llm(messages, context_prefix)
 
     def _prepare_chat_user_message(self, message: str, params: dict) -> str:
-        user_message = message
-        file_path = params.get("file_path", "")
-        if file_path:
-            snippet = self._read_upload_snippet(file_path)
-            name = Path(file_path).name
-            if snippet:
-                user_message = f"Attached file `{name}`:\n```\n{snippet}\n```\n\n{message}"
-        return user_message
+        from jarvis.behaviors.conversation import ensure_conversation_engine
+
+        return ensure_conversation_engine(self).prepare_user_message(message, params)
 
     def _read_upload_snippet(self, path: str, limit: int = 12000) -> str:
-        try:
-            p = Path(path)
-            if not p.is_file():
-                return ""
-            text = p.read_text(encoding="utf-8", errors="replace")
-            if len(text) > limit:
-                return text[:limit] + "\n… (truncated)"
-            return text
-        except OSError:
-            return ""
+        from jarvis.behaviors.conversation import ensure_conversation_engine
+
+        return ensure_conversation_engine(self)._read_upload_snippet(path, limit)
 
     def apply_proposal(self, proposal_id: str | None = None, *, force: bool = False) -> dict:
         pid = proposal_id or self.session.last_proposal_id
@@ -2151,79 +1885,19 @@ class JarvisAssistant:
         return {"path": str(dest), "kind": "image", "name": frame_name}
 
     def _ask_instruction_sentence(self, topic: str, n_words: int) -> str:
-        model = (self.session.chat_model or "").strip() or llm.general_model()
-        msgs = [
-            {
-                "role": "system",
-                "content": "Reply with exactly one sentence. No numbering, quotes, or extra lines.",
-            },
-            {
-                "role": "user",
-                "content": f"Write exactly {n_words} words about {topic}. Output only that sentence.",
-            },
-        ]
-        answer, _ = llm.ask_with_usage(model, msgs, temperature=0)
-        return answer.strip()
+        from jarvis.behaviors.conversation import ensure_conversation_engine
+
+        return ensure_conversation_engine(self).ask_instruction_sentence(topic, n_words)
 
     def _try_strict_instructions(self, message: str) -> str | None:
-        from jarvis.instruction_follow import try_execute_strict_instructions
+        from jarvis.behaviors.conversation import ensure_conversation_engine
 
-        return try_execute_strict_instructions(
-            message,
-            lambda topic, n, _orig: self._ask_instruction_sentence(topic, n),
-        )
+        return ensure_conversation_engine(self).try_strict_instructions(message)
 
     def _chat(self, params: dict, message: str) -> dict:
-        from jarvis.branding import assistant_name
+        from jarvis.behaviors.conversation import ensure_conversation_engine
 
-        ollama = check_ollama()
-        if not ollama["running"]:
-            return _err(
-                f"Ollama is still starting. Wait a few seconds and try again — {assistant_name()} starts it automatically.",
-                module=None,
-            )
-
-        user_message = self._prepare_chat_user_message(message, params)
-        piped = self._try_strict_instructions(user_message)
-        if piped:
-            self.conversation.add_user(user_message)
-            self.conversation.add_assistant(piped)
-            self.branches.persist(session=self.session)
-            return _ok(piped, module=None, type="instruction_follow")
-
-        context_prefix, context_warnings, memory_citations = self._chat_context_prefix(user_message)
-        from jarvis.instruction_follow import is_strict_instruction_prompt, strict_instruction_context_prefix
-
-        if is_strict_instruction_prompt(user_message):
-            hint = strict_instruction_context_prefix()
-            context_prefix = f"{hint}\n\n{context_prefix}" if context_prefix else hint
-        self.conversation.add_user(user_message)
-        model = (params.get("model") or self.session.chat_model or "").strip() or llm.general_model()
-        usage: dict = {}
-        try:
-            import time
-            msgs = self._messages_for_llm(self.conversation.messages, context_prefix)
-            t0 = time.perf_counter()
-            answer, usage = llm.ask_with_usage(model, msgs)
-            inference_ms = int((time.perf_counter() - t0) * 1000)
-        except Exception as e:
-            self.conversation.pop_last_user()
-            return _err(str(e), module=None)
-        if not answer.strip():
-            self.conversation.pop_last_user()
-            return _err(
-                f"Model `{llm.general_model()}` returned empty. Try: `ollama pull {llm.general_model()}`",
-                module=None,
-            )
-        self.conversation.add_assistant(answer)
-        self._auto_remember(message, answer)
-        self.branches.persist(session=self.session)
-        extra: dict = {"inference_ms": inference_ms, "model": model, **usage}
-        if context_warnings:
-            extra["warnings"] = context_warnings
-        if memory_citations:
-            extra["memory_citations"] = memory_citations
-        return _ok(answer, module=None, **extra)
+        return ensure_conversation_engine(self).execute(params, message)
 
     def _remember(self, params: dict, message: str) -> dict:
         from jarvis.config import load_memory_namespace
