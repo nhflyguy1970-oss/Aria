@@ -64,18 +64,32 @@ def execute_tool(
         return {"ok": False, "error": f"Tool unavailable: {tool.label}"}
 
     if tool_id == "aria_engineering":
-        return {
-            "ok": True,
-            "tool": tool_id,
-            "message": "Use engineering actions (coding_fix, propose_fix) for built-in agent.",
-            "delegated": "aria_engineering",
-        }
+        return _run_aria_engineering(params)
 
     if tool.run is None:
-        return {"ok": False, "error": f"Tool {tool_id} has no run implementation"}
+        from jarvis.tools.runner import build_command
+
+        if build_command(tool_id, params) is None:
+            return {"ok": False, "error": f"Tool {tool_id} has no run implementation"}
 
     started = time.time()
-    result = tool.run(params)
+    if params.get("background"):
+        from jarvis.tools.runner import start_background
+
+        run = start_background(tool_id, params)
+        return {
+            "ok": run.status != "failed",
+            "tool": tool_id,
+            "run_id": run.id,
+            "status": run.status,
+            "message": f"Started background run `{run.id}`",
+        }
+
+    from jarvis.tools.runner import run_sync
+
+    result = run_sync(tool_id, params, timeout=int(params.get("timeout") or 600))
+    if result.get("ok") is None and tool.run:
+        result = tool.run(params)
     result["tool"] = tool_id
     result["label"] = tool.label
     result["elapsed_ms"] = int((time.time() - started) * 1000)
@@ -90,6 +104,27 @@ def execute_tool(
             pass
 
     return result
+
+
+def _run_aria_engineering(params: dict[str, Any]) -> dict[str, Any]:
+    """Delegate to built-in engineering behavior."""
+    task = str(params.get("task") or params.get("prompt") or "").strip()
+    if not task:
+        return {"ok": False, "error": "task required"}
+    try:
+        from jarvis.assistant_instance import get_assistant
+
+        assistant = get_assistant()
+        result = assistant.process(task, action="coding_task")
+        return {
+            "ok": bool(result.get("ok")),
+            "tool": "aria_engineering",
+            "message": result.get("message") or "",
+            "stdout": (result.get("message") or "")[:8000],
+            "data": result,
+        }
+    except Exception as exc:
+        return {"ok": False, "error": str(exc), "tool": "aria_engineering"}
 
 
 def _remember_tool_result(tool: ToolDescriptor, params: dict[str, Any], result: dict[str, Any]) -> None:

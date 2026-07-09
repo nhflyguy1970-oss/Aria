@@ -35,9 +35,12 @@ class TestToolRegistry(unittest.TestCase):
         self.assertFalse(result.get("ok"))
 
     def test_execute_aria_engineering_delegates(self):
-        result = execute_tool("aria_engineering", {"task": "fix"}, memory_sink=False)
+        mock_result = {"ok": True, "message": "engineering done"}
+        with patch("jarvis.assistant_instance.get_assistant") as ga:
+            ga.return_value.process.return_value = mock_result
+            result = execute_tool("aria_engineering", {"task": "fix auth"}, memory_sink=False)
         self.assertTrue(result.get("ok"))
-        self.assertEqual(result.get("delegated"), "aria_engineering")
+        self.assertEqual(result.get("tool"), "aria_engineering")
 
     @patch("jarvis.tools.registry._run_cli")
     def test_execute_cli_tool(self, mock_run):
@@ -56,7 +59,7 @@ class TestToolRegistry(unittest.TestCase):
 class TestToolsBehavior(unittest.TestCase):
     def test_tools_actions_registered(self):
         register_behaviors()
-        for action in ("tool_list", "tool_execute", "tool_select", "tool_status"):
+        for action in ("tool_list", "tool_execute", "tool_select", "tool_status", "tool_runs", "tool_run_status"):
             self.assertTrue(has_action(action))
 
 

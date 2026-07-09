@@ -437,6 +437,21 @@ def tools_execute(body: dict):
     return execute_tool(tool_id, body)
 
 
+@app.get("/api/tools/runs")
+def tools_runs(tool: str = ""):
+    from jarvis.tools.runner import list_runs
+
+    runs = [r.to_dict() for r in list_runs(tool_id=tool.strip())]
+    return {"ok": True, "runs": runs}
+
+
+@app.get("/api/tools/runs/{run_id}")
+def tools_run_status(run_id: str):
+    from jarvis.tools.runner import run_status
+
+    return run_status(run_id)
+
+
 @app.post("/api/agents/chain")
 def agents_chain(body: dict):
     from jarvis.agents.coordinator import run_agent_chain

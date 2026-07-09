@@ -14,6 +14,8 @@ _TOOL_ACTIONS = {
     "tool_status": lambda _p, _m: {"ok": True, "message": format_tool_status(), "data": tool_status()},
     "tool_execute": lambda p, _m: _execute(p),
     "tool_select": lambda p, m: _select(p, m),
+    "tool_runs": lambda p, _m: _runs(p),
+    "tool_run_status": lambda p, _m: _run_status(p),
 }
 
 
@@ -36,6 +38,27 @@ def _select(params: dict, message: str) -> dict:
         "message": f"Selected **{tool.label}** for this task.",
         "data": tool.to_dict(),
     }
+
+
+def _runs(params: dict) -> dict:
+    from jarvis.tools.runner import list_runs
+
+    tool_id = (params.get("tool") or params.get("tool_id") or "").strip()
+    runs = [r.to_dict() for r in list_runs(tool_id=tool_id)]
+    return {"ok": True, "runs": runs, "message": f"{len(runs)} recent tool run(s)"}
+
+
+def _run_status(params: dict) -> dict:
+    from jarvis.tools.runner import run_status
+
+    run_id = (params.get("run_id") or params.get("id") or "").strip()
+    if not run_id:
+        return {"ok": False, "message": "run_id required"}
+    result = run_status(run_id)
+    if not result.get("ok"):
+        return {"ok": False, "message": result.get("error", "not found")}
+    run = result.get("run") or {}
+    return {"ok": True, "message": f"Run `{run_id}` — {run.get('status')}", "data": result}
 
 
 @register_behavior
