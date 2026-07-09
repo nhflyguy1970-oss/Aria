@@ -368,6 +368,18 @@ def tools_execute(body: dict):
     return execute_tool(tool_id, body)
 
 
+@app.post("/api/agents/chain")
+def agents_chain(body: dict):
+    from jarvis.agents.coordinator import run_agent_chain
+    from jarvis.assistant_instance import get_assistant
+
+    goal = (body.get("goal") or "").strip()
+    if not goal:
+        return {"ok": False, "error": "goal required"}
+    roles = body.get("roles")
+    return run_agent_chain(get_assistant(), goal, roles=roles)
+
+
 @app.post("/api/services/ensure")
 def services_ensure():
     from jarvis.services import ensure_services

@@ -66,6 +66,7 @@ def _ensure_loaded() -> None:
     from jarvis.behaviors.smarthome import SmartHomeBehavior as _smarthome  # noqa: F401
     from jarvis.behaviors.operations import OperationsBehavior as _operations  # noqa: F401
     from jarvis.behaviors.tools import ToolsBehavior as _tools  # noqa: F401
+    from jarvis.behaviors.agents import AgentsBehavior as _agents  # noqa: F401
 
     _loaded = True
 
