@@ -28,6 +28,7 @@ _KNOWLEDGE_ACTIONS: dict[str, tuple[Any, bool]] = {
     "knowledge_registry": (KnowledgeEngine.knowledge_registry, True),
     "knowledge_sync": (KnowledgeEngine.knowledge_sync, False),
     "unified_search": (KnowledgeEngine.unified_search, False),
+    "knowledge_ingest": (KnowledgeEngine.knowledge_ingest, False),
 }
 
 _KNOWLEDGE_DEPENDENCIES = ["retrieval", "semantic_memory", "capability_registry"]

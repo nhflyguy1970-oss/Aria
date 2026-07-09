@@ -466,3 +466,17 @@ class KnowledgeOperations:
             **{k: result[k] for k in ("query", "hits", "strategies", "searched") if k in result},
         )
 
+    @classmethod
+    def knowledge_ingest(cls, ctx, params: dict, message: str) -> dict:
+        from jarvis.knowledge.ingestion import ingest_all
+
+        force = bool(params.get("force"))
+        result = ingest_all(force=force)
+        lines = [f"- {r.get('target')}: {'ok' if r.get('ok') else 'failed'}" for r in result.get("results") or []]
+        return _ok(
+            "**Knowledge ingest**\n\n" + "\n".join(lines),
+            module="knowledge",
+            type="knowledge_ingest",
+            data=result,
+        )
+

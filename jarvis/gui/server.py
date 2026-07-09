@@ -351,6 +351,13 @@ def knowledge_unified_search(q: str = "", limit: int = 12):
     return result
 
 
+@app.post("/api/knowledge/ingest")
+def knowledge_ingest(force: bool = False):
+    from jarvis.knowledge.ingestion import ingest_all
+
+    return ingest_all(force=force)
+
+
 @app.get("/api/tools")
 def tools_list():
     from jarvis.tools.executor import tool_status

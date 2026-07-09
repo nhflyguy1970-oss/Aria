@@ -33,6 +33,15 @@ def run_maintenance(*, smoke_tests: bool = False) -> dict[str, Any]:
         results.append({"job": "knowledge_sync", "ok": False, "error": str(exc)[:200]})
 
     try:
+        from jarvis.knowledge.ingestion import maybe_scheduled_ingest
+
+        ing = maybe_scheduled_ingest()
+        if ing:
+            results.append({"job": "knowledge_ingest", **ing})
+    except Exception as exc:
+        results.append({"job": "knowledge_ingest", "ok": False, "error": str(exc)[:200]})
+
+    try:
         from jarvis.workstation.operations import diagnose, recover_safe
 
         diag = diagnose(force=True)
