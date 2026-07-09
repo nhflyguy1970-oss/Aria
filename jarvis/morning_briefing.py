@@ -215,6 +215,19 @@ def build_briefing(
         except Exception:
             pass
 
+    if os.getenv("JARVIS_BRIEFING_WORKSTATION", "1") != "0":
+        try:
+            from jarvis.workstation.operations import diagnose
+
+            diag = diagnose(force=False)
+            if not diag.get("ok"):
+                issues = diag.get("issues") or []
+                critical = [i for i in issues if i.get("severity") == "critical"]
+                if critical:
+                    lines.extend(["", f"**Attention:** {critical[0].get('message', 'workstation issue')}"])
+        except Exception:
+            pass
+
     from jarvis.branding import assistant_name
 
     lines.extend([

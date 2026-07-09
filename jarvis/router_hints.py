@@ -54,6 +54,30 @@ def try_hint_route(message: str | None) -> dict[str, Any] | None:
     if re.search(r"\b(good morning|morning briefing)\b", lower):
         return _hit("morning_briefing")
 
+    if re.search(r"\bwhat am i working on\b", lower):
+        return _hit("what_am_i_working_on")
+
+    if re.search(r"\bwhat changed since yesterday\b", lower):
+        return _hit("what_changed_since_yesterday")
+
+    if re.search(r"\banything broken\b|\bwhat(?:'s| is) broken\b", lower):
+        return _hit("anything_broken")
+
+    if re.search(r"\brepositories? need attention\b|\bany repos?\b", lower):
+        return _hit("repos_need_attention")
+
+    if re.search(r"\bovernight (?:summary|activity|report)\b", lower):
+        return _hit("overnight_summary")
+
+    if re.search(r"\bwhat should i work on next\b|\bwhat(?:'s| is) next\b", lower):
+        return _hit("what_should_i_work_on_next")
+
+    if re.search(r"\breview (?:my )?(?:current )?branch\b", lower):
+        return _hit("review_current_branch")
+
+    if re.search(r"\btoday(?:'s)? (?:ai )?recommendations\b", lower):
+        return _hit("today_recommendations")
+
     if re.search(r"\b(situational briefing|what(?:'s| is) my status|status briefing)\b", lower):
         return _hit("situational_briefing")
 
