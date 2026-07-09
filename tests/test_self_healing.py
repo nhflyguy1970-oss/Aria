@@ -25,6 +25,36 @@ class TestSelfHealing(unittest.TestCase):
         report = diagnose(force=True)
         self.assertTrue(report.get("ok"))
 
+    @patch("jarvis.server_restart.request_restart")
+    def test_recover_aria_requests_restart(self, mock_restart):
+        mock_restart.return_value = {"ok": True, "message": "restarting"}
+        from jarvis.workstation.operations import _recover_aria
+
+        result = _recover_aria()
+        self.assertTrue(result.get("ok"))
+        mock_restart.assert_called_once()
+
+    @patch("jarvis.workstation.operations.registry_snapshot")
+    def test_diagnose_aria_offline_is_recoverable(self, mock_snap):
+        mock_snap.return_value = {
+            "components": [
+                {
+                    "id": "aria",
+                    "label": "Aria",
+                    "required": True,
+                    "running": False,
+                    "managed": False,
+                }
+            ],
+            "resources": {},
+            "environment": {},
+        }
+        report = diagnose(force=True)
+        aria_issues = [i for i in report.get("issues") or [] if i.get("component") == "aria"]
+        self.assertEqual(len(aria_issues), 1)
+        self.assertTrue(aria_issues[0].get("auto_recoverable"))
+        self.assertEqual(aria_issues[0].get("action"), "restart_aria")
+
     @patch("jarvis.workstation.operations.up")
     @patch("jarvis.workstation.operations.diagnose")
     def test_recover_no_issues(self, mock_diag, mock_up):

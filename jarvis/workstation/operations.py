@@ -131,7 +131,7 @@ def diagnose(*, force: bool = False) -> dict[str, Any]:
     for comp in snap.get("components") or []:
         cid = comp.get("id") or ""
         if comp.get("required") and not comp.get("running"):
-            action = _issue_action(cid)
+            action = "restart_aria" if cid == "aria" else _issue_action(cid)
             issues.append(
                 {
                     "severity": "critical",
@@ -139,7 +139,7 @@ def diagnose(*, force: bool = False) -> dict[str, Any]:
                     "label": comp.get("label"),
                     "message": f"Required component offline: {comp.get('label')}",
                     "action": action,
-                    "auto_recoverable": cid in SAFE_RESTART or comp.get("managed"),
+                    "auto_recoverable": cid == "aria" or cid in SAFE_RESTART or comp.get("managed"),
                 }
             )
         elif comp.get("managed") and comp.get("autostart") and not comp.get("running"):
@@ -201,6 +201,21 @@ def diagnose(*, force: bool = False) -> dict[str, Any]:
     }
 
 
+def _recover_aria() -> dict[str, Any]:
+    try:
+        from jarvis.server_restart import request_restart
+
+        result = request_restart(source="workstation_recover", detail="aria auto-recover")
+        return {
+            "component": "aria",
+            "action": "restart_aria",
+            "ok": bool(result.get("ok")),
+            "message": result.get("message"),
+        }
+    except Exception as exc:
+        return {"component": "aria", "action": "restart_aria", "ok": False, "error": str(exc)}
+
+
 def _recover_issue(issue: dict[str, Any]) -> dict[str, Any]:
     cid = issue.get("component") or ""
     action = issue.get("action") or "start"
@@ -222,6 +237,9 @@ def _recover_issue(issue: dict[str, Any]) -> dict[str, Any]:
             return {"component": cid, "action": action, "ok": True}
         except Exception as exc:
             return {"component": cid, "action": action, "ok": False, "error": str(exc)}
+
+    if action == "restart_aria":
+        return _recover_aria()
 
     if action == "restart" and cid in SAFE_RESTART:
         result = restart(cid)
@@ -254,7 +272,7 @@ def recover_safe(*, max_attempts: int = 3) -> dict[str, Any]:
         attempt = _recover_issue(issue)
         attempts.append(attempt)
         per_component[cid] = per_component.get(cid, 0) + 1
-        if attempt.get("ok") and issue.get("action") in ("restart", "start"):
+        if attempt.get("ok") and issue.get("action") in ("restart", "start", "restart_aria"):
             time.sleep(2)
 
     if not attempts:
