@@ -356,6 +356,99 @@ def backfill_memory(*, dry_run: bool = False) -> dict[str, Any]:
         return {"ok": False, "error": str(exc)}
 
 
+def backfill_semantic_vectors(*, dry_run: bool = False) -> dict[str, Any]:
+    """Mirror legacy embedding vectors into the platform vector store."""
+    if os.getenv("JARVIS_PLATFORM_SEMANTIC_MEMORY_ATTACHED") != "1":
+        return {"ok": False, "error": "platform semantic memory not attached"}
+
+    try:
+        from jarvis.config import MEMORY_VECTORS_FILE
+        from jarvis.modules.vector_store import SqliteVectorStore
+
+        store = SqliteVectorStore(path=MEMORY_VECTORS_FILE)
+        entries = store.iter_entries()
+        if dry_run:
+            return {"ok": True, "dry_run": True, "vectors": len(entries)}
+
+        from aiplatform.applications.semantic.bridge import mirror_upsert
+        from aiplatform.applications.semantic.metrics import reset_verification_counters
+
+        mirrored = 0
+        errors = 0
+        for row in entries:
+            try:
+                mirror_upsert(
+                    _APPLICATION_ID,
+                    row["memory_id"],
+                    row["vector"],
+                    namespace=row.get("namespace", "default"),
+                    entry_type=row.get("entry_type", "fact"),
+                )
+                mirrored += 1
+            except Exception as exc:
+                errors += 1
+                logger.debug("semantic backfill failed for %s: %s", row.get("memory_id"), exc)
+
+        reset = reset_verification_counters(_APPLICATION_ID)
+        state = _load()
+        state["semantic_backfill_completed_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        state["semantic_backfill_stats"] = {
+            "mirrored": mirrored,
+            "errors": errors,
+            "total": len(entries),
+            "reset_counters": reset,
+        }
+        _save(state)
+        return {"ok": errors == 0, "mirrored": mirrored, "errors": errors, "total": len(entries)}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def classify_cutover_failures(verification: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Classify cutover blockers by root cause category."""
+    data = verification or verify_readiness(persist=False)
+    categories: dict[str, list[str]] = {
+        "missing_vectors": [],
+        "stale_vectors": [],
+        "namespace_mismatch": [],
+        "embedding_mismatch": [],
+        "migration_bug": [],
+        "backfill_incomplete": [],
+        "attachment": [],
+        "other": [],
+    }
+    for blocker in data.get("blockers") or []:
+        low = blocker.lower()
+        if "namespace" in low and ("bridg" in low or "missing" in low):
+            categories["namespace_mismatch"].append(blocker)
+        elif "platform vector missing" in low or "read verification failures" in low:
+            categories["missing_vectors"].append(blocker)
+        elif "embedding" in low:
+            categories["embedding_mismatch"].append(blocker)
+        elif "backfill" in low or "parity mismatch" in low:
+            categories["backfill_incomplete"].append(blocker)
+        elif "not attached" in low or "not configured" in low:
+            categories["attachment"].append(blocker)
+        else:
+            categories["other"].append(blocker)
+
+    layers = data.get("layers") or {}
+    sem = layers.get("semantic") or {}
+    metrics = sem.get("metrics") or {}
+    read_failures = int(metrics.get("read_verification_failures") or 0)
+    if read_failures > 0 and not categories["missing_vectors"]:
+        categories["missing_vectors"].append(
+            f"semantic read verification failures: {read_failures}"
+        )
+
+    return {
+        "ready": bool(data.get("ready")),
+        "blocker_count": len(data.get("blockers") or []),
+        "categories": {k: v for k, v in categories.items() if v},
+        "verification": data,
+    }
+
+
 def enable_platform_authoritative(*, force_backfill: bool = False) -> dict[str, Any]:
     """Switch to platform-authoritative reads. Legacy data is never deleted."""
     verification = verify_readiness()

@@ -11,6 +11,7 @@ from unittest.mock import MagicMock, patch
 from jarvis.platform_cutover import (
     apply_cutover_state_on_startup,
     backfill_memory,
+    classify_cutover_failures,
     current_mode,
     enable_platform_authoritative,
     rollback_to_legacy,
@@ -161,6 +162,20 @@ class TestPlatformCutover(unittest.TestCase):
                 result = backfill_memory(dry_run=True)
         self.assertTrue(result.get("ok"))
         self.assertEqual(result.get("entries"), 2)
+
+    def test_classify_cutover_failures(self):
+        result = classify_cutover_failures(
+            {
+                "ready": False,
+                "blockers": [
+                    "memory backfill has not completed",
+                    "semantic read verification failures: 3",
+                ],
+            }
+        )
+        cats = result["categories"]
+        self.assertIn("backfill_incomplete", cats)
+        self.assertIn("missing_vectors", cats)
 
 
 if __name__ == "__main__":

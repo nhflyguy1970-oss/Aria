@@ -122,9 +122,28 @@ class SemanticMemoryAdapter:
             logger.warning("Platform semantic mirror delete failed (continuing): %s", exc)
 
     def _shadow_get(self, memory_id: str, legacy_vector: list[float]) -> None:
+        if not legacy_vector:
+            return
         try:
-            from aiplatform.applications.semantic.bridge import shadow_verify_get
+            from aiplatform.applications.semantic.bridge import (
+                mirror_upsert,
+                shadow_verify_get,
+            )
+            from aiplatform.applications.semantic.bridge import _platform_chunk
 
+            meta = (
+                self._legacy.get_metadata(memory_id)
+                if hasattr(self._legacy, "get_metadata")
+                else {"namespace": "default", "entry_type": "fact"}
+            )
+            if _platform_chunk(memory_id) is None:
+                mirror_upsert(
+                    self._application_id,
+                    memory_id,
+                    legacy_vector,
+                    namespace=meta.get("namespace", "default"),
+                    entry_type=meta.get("entry_type", "fact"),
+                )
             shadow_verify_get(self._application_id, memory_id, legacy_vector)
         except Exception as exc:
             logger.debug("Semantic shadow get verification skipped: %s", exc)

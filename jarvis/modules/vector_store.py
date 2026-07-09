@@ -157,6 +157,31 @@ class SqliteVectorStore:
         row = self._conn.execute("SELECT COUNT(*) FROM embeddings").fetchone()
         return int(row[0]) if row else 0
 
+    def iter_entries(self) -> list[dict[str, Any]]:
+        rows = self._conn.execute(
+            "SELECT memory_id, dims, vector, namespace, entry_type FROM embeddings"
+        ).fetchall()
+        out: list[dict[str, Any]] = []
+        for memory_id, dims, blob, namespace, entry_type in rows:
+            out.append(
+                {
+                    "memory_id": str(memory_id),
+                    "vector": self._unpack(int(dims), blob),
+                    "namespace": namespace or "default",
+                    "entry_type": entry_type or "fact",
+                }
+            )
+        return out
+
+    def get_metadata(self, memory_id: str) -> dict[str, str]:
+        row = self._conn.execute(
+            "SELECT namespace, entry_type FROM embeddings WHERE memory_id = ?",
+            (memory_id,),
+        ).fetchone()
+        if not row:
+            return {"namespace": "default", "entry_type": "fact"}
+        return {"namespace": row[0] or "default", "entry_type": row[1] or "fact"}
+
     def search(
         self,
         query_vector: list[float],
