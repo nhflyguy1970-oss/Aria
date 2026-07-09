@@ -49,18 +49,25 @@ class AriaApplicationHost:
         return True
 
     def start(self) -> bool:
+        from jarvis.application.desktop_launch import api_responsive, start_aria_server
         from jarvis.services import ensure_services
 
         ensure_services(pull_models=False)
-        return True
+        if api_responsive():
+            return True
+        return start_aria_server()
 
     def stop(self) -> bool:
+        from jarvis.application.desktop_launch import stop_aria_server
+
+        stop_aria_server()
         return True
 
     def health(self) -> bool:
+        from jarvis.application.desktop_launch import api_responsive
         from jarvis.services import _jarvis_port_open
 
-        return _jarvis_port_open()
+        return api_responsive(timeout=1) or _jarvis_port_open(timeout=1)
 
     def capabilities(self):
         Capabilities = _capabilities_class()
