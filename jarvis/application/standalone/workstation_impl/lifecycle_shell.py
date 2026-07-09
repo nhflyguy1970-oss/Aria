@@ -6,7 +6,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[2]
+from jarvis.env_loader import PROJECT_ROOT
+
+_ROOT = PROJECT_ROOT
 
 
 def _scripts_dir() -> Path:

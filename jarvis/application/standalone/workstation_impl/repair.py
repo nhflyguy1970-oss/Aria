@@ -170,6 +170,25 @@ def repair_permissions() -> dict[str, Any]:
     return {"ok": True, "fixed": fixed}
 
 
+def repair_aria_service() -> dict[str, Any]:
+    """Start Aria tray/server when the API is not responding."""
+    try:
+        from jarvis.application.desktop_launch import api_responsive, start_aria_server
+    except ImportError as exc:
+        return {"ok": False, "detail": str(exc)}
+
+    if api_responsive(timeout=2):
+        return {"ok": True, "detail": "already responsive"}
+    started = start_aria_server()
+    for _ in range(45):
+        if api_responsive(timeout=2):
+            return {"ok": True, "detail": "started", "started": started}
+        import time
+
+        time.sleep(1)
+    return {"ok": False, "detail": "Aria API not responsive after start", "started": started}
+
+
 def repair_desktop_shortcuts() -> dict[str, Any]:
     script = PROJECT_ROOT / "scripts" / "install-desktop-shortcuts.sh"
     if not script.is_file():
@@ -246,14 +265,7 @@ def repair_acceptance_failures(report: dict[str, Any] | None = None) -> list[dic
                 }
             )
         elif cid == "aria":
-            actions.append(
-                {
-                    "id": cid,
-                    "action": "start_aria",
-                    "detail": "Use desktop icon or ./workstation start",
-                    "human": True,
-                }
-            )
+            actions.append({"id": cid, "action": "aria_service", "fn": repair_aria_service})
     return actions
 
 
@@ -266,6 +278,7 @@ def run_repair(*, rerun_acceptance: bool = True) -> dict[str, Any]:
         "python_deps": repair_python_deps(),
         "litellm": repair_litellm_routing(),
         "docker": repair_docker_services(),
+        "aria": repair_aria_service(),
         "shortcuts": repair_desktop_shortcuts(),
     }
 

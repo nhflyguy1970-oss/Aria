@@ -40,3 +40,4 @@ tools/piper/
 .vscode/
 jarvis.log
 .aider*
+backups/*.tar.gz
