@@ -55,6 +55,7 @@ def main(argv: list[str] | None = None) -> int:
     opt_p.add_argument("--dry-run", action="store_true", help="Show changes without writing")
     sub.add_parser("doctor", help="Diagnose workstation + AI-Platform")
     sub.add_parser("repair", help="Automatically fix common workstation issues")
+    sub.add_parser("report", help="Full daily-use health report")
 
     sub.add_parser("status", help="Show workstation status (JSON)")
 
@@ -160,6 +161,14 @@ def main(argv: list[str] | None = None) -> int:
         result = run_repair()
         print(format_repair_markdown(result))
         return 0 if result.get("ok") else 1
+
+    if args.command == "report":
+        from jarvis.application.standalone.workstation_impl.daily_report import (
+            format_daily_report,
+        )
+
+        print(format_daily_report(force=True))
+        return 0
 
     lifecycle_commands = {
         "configure": lifecycle_shell.configure,

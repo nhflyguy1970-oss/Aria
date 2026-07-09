@@ -652,6 +652,37 @@ def run_acceptance(*, persist: bool = True, live: bool = True) -> dict[str, Any]
         PROBE_MAP,
         run_probe,
     )
+    from jarvis.application.standalone.workstation_impl.phase import (
+        current_phase,
+        is_transitional,
+    )
+
+    if is_transitional():
+        cached = last_acceptance()
+        phase = current_phase().value
+        message = f"Workstation is {phase} — acceptance scores deferred until startup completes."
+        if cached:
+            payload = dict(cached)
+            payload["transitional"] = True
+            payload["phase"] = phase
+            payload["message"] = message
+            payload["acceptance_passed"] = bool(cached.get("acceptance_passed"))
+            return payload
+        return {
+            "ok": True,
+            "transitional": True,
+            "phase": phase,
+            "message": message,
+            "acceptance_passed": None,
+            "score": {
+                "overall": None,
+                "daily_required": None,
+                "integration": None,
+                "production_readiness": None,
+            },
+            "summary": {"total": 0, "ready": 0, "needs_configuration": 0, "not_installed": 0},
+            "items": [],
+        }
 
     items: list[AcceptanceItem] = []
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -791,6 +822,27 @@ def format_acceptance_markdown(
     report: dict[str, Any] | None = None, *, verbose: bool = False
 ) -> str:
     data = report or run_acceptance(persist=False)
+    if data.get("transitional"):
+        phase = data.get("phase", "STARTING")
+        lines = [
+            "## Workstation Acceptance Report",
+            "",
+            f"**Status:** `{phase}` — startup in progress",
+            "",
+            data.get("message") or "Scores will update when the workstation is READY.",
+            "",
+        ]
+        if data.get("acceptance_passed") is not None:
+            scores = data.get("score") or {}
+            lines.extend(
+                [
+                    f"**Last known daily score:** {scores.get('daily_required', '—')}%",
+                    f"**Last passed:** {'YES' if data.get('acceptance_passed') else 'NO'}",
+                    "",
+                ]
+            )
+        return "\n".join(lines)
+
     scores = data.get("score") or {}
     summary = data.get("summary") or {}
     lines = [

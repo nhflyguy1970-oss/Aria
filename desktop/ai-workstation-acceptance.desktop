@@ -2,10 +2,10 @@
 Version=1.0
 Type=Application
 Name=AI Workstation Acceptance
-Comment=Full acceptance report and workstation score
-Exec=bash @JARVIS_ROOT@/scripts/workstation-gui.sh acceptance
+Comment=Run full daily acceptance report
+Exec=workstation acceptance
 Icon=@JARVIS_ROOT@/assets/jarvis-tray.png
-Path=@JARVIS_ROOT@
-Terminal=false
+Path=@HOME@
+Terminal=true
 Categories=Development;Utility;
 Keywords=AI;Workstation;Acceptance;

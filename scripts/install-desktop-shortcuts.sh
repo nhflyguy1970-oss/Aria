@@ -44,7 +44,7 @@ LEGACY_VARIANTS=(jarvis jarvis-uncensored jarvis-app jarvis-native aria-app aria
 for variant in "${APP_MENU_VARIANTS[@]}"; do
   src="$JARVIS_ROOT/desktop/$variant.desktop"
   [[ -f "$src" ]] || continue
-  sed "s|@JARVIS_ROOT@|$JARVIS_ROOT|g" "$src" > "$APPS_DIR/$variant.desktop"
+  sed "s|@JARVIS_ROOT@|$JARVIS_ROOT|g; s|@HOME@|$HOME|g" "$src" > "$APPS_DIR/$variant.desktop"
   chmod +x "$APPS_DIR/$variant.desktop"
 done
 
@@ -71,7 +71,7 @@ if [[ -d "$DESKTOP_DIR" ]]; then
     [[ -n "$variant" ]] || continue
     src="$JARVIS_ROOT/desktop/$variant.desktop"
     [[ -f "$src" ]] || { echo "Skip unknown desktop shortcut: $variant" >&2; continue; }
-    sed "s|@JARVIS_ROOT@|$JARVIS_ROOT|g" "$src" > "$DESKTOP_DIR/$variant.desktop"
+    sed "s|@JARVIS_ROOT@|$JARVIS_ROOT|g; s|@HOME@|$HOME|g" "$src" > "$DESKTOP_DIR/$variant.desktop"
     chmod +x "$DESKTOP_DIR/$variant.desktop"
     gio set "$DESKTOP_DIR/$variant.desktop" metadata::trusted true 2>/dev/null || true
   done

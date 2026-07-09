@@ -158,12 +158,14 @@ fi
 if [[ "$HEADLESS" == "1" || "$PROFILE" == "headless" ]]; then
   log "Headless profile — skip desktop shortcuts"
 else
+  [[ -f "$ROOT/scripts/install-global-commands.sh" ]] && run_script install-global-commands.sh
   [[ -f "$ROOT/scripts/install-desktop-shortcuts.sh" ]] && run_script install-desktop-shortcuts.sh
 fi
 
 log ""
 log "Install complete (profile: $PROFILE)."
-log "  Configure: ./workstation configure"
-log "  Verify:    ./workstation verify"
-log "  Inventory: ./workstation inventory"
-log "  Start:     ./workstation start"
+log "  Global commands: workstation, aria, aiplatform (in ~/.local/bin)"
+log "  Configure: workstation configure"
+log "  Verify:    workstation verify"
+log "  Inventory: workstation inventory"
+log "  Start:     workstation start"

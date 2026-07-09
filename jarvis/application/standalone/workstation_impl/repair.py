@@ -191,9 +191,15 @@ def repair_aria_service() -> dict[str, Any]:
 
 def repair_desktop_shortcuts() -> dict[str, Any]:
     script = PROJECT_ROOT / "scripts" / "install-desktop-shortcuts.sh"
+    global_script = PROJECT_ROOT / "scripts" / "install-global-commands.sh"
     if not script.is_file():
         return {"ok": False, "detail": "install-desktop-shortcuts.sh missing"}
-    return _run(["bash", str(script)])
+    result = _run(["bash", str(script)])
+    if global_script.is_file():
+        global_result = _run(["bash", str(global_script)])
+        result["global_commands"] = global_result
+        result["ok"] = bool(result.get("ok")) and bool(global_result.get("ok"))
+    return result
 
 
 def repair_docker_services() -> dict[str, Any]:
@@ -271,6 +277,16 @@ def repair_acceptance_failures(report: dict[str, Any] | None = None) -> list[dic
 
 def run_repair(*, rerun_acceptance: bool = True) -> dict[str, Any]:
     """Execute safe automatic repairs and optionally rerun acceptance."""
+    try:
+        from jarvis.application.standalone.workstation_impl.phase import (
+            WorkstationPhase,
+            set_phase,
+        )
+
+        set_phase(WorkstationPhase.RECOVERING, detail="repair in progress")
+    except ImportError:
+        pass
+
     steps: dict[str, Any] = {
         "permissions": repair_permissions(),
         "local_config": repair_local_config(),
@@ -301,6 +317,15 @@ def run_repair(*, rerun_acceptance: bool = True) -> dict[str, Any]:
     ok = bool(
         acceptance and scores.get("daily_required", 0) >= 95 and scores.get("integration", 0) >= 90
     )
+    try:
+        from jarvis.application.standalone.workstation_impl.phase import mark_degraded, mark_ready
+
+        if ok:
+            mark_ready(detail="repair complete")
+        else:
+            mark_degraded(detail="repair finished with acceptance gaps")
+    except ImportError:
+        pass
     return {
         "ok": ok,
         "steps": steps,
