@@ -7,8 +7,6 @@ Use:
 
 from __future__ import annotations
 
-import sys
-
 
 def _use_platform() -> bool:
     try:
