@@ -566,6 +566,86 @@ def _classify(item: AcceptanceItem) -> str:
     return AcceptanceStatus.NEEDS_CONFIGURATION.value
 
 
+def compute_score_gaps(
+    items: list[AcceptanceItem],
+    *,
+    daily_ids: set[str],
+    integration_ids: set[str],
+) -> dict[str, Any]:
+    """Explain why scores are below 100% and projected gain per fix."""
+    daily_items = [i for i in items if i.id in daily_ids]
+    integration_items = [i for i in items if i.id in integration_ids]
+
+    def _weight(group: list[AcceptanceItem]) -> float:
+        return 100.0 / len(group) if group else 0.0
+
+    daily_w = _weight(daily_items)
+    int_w = _weight(integration_items)
+
+    gaps: list[dict[str, Any]] = []
+    for item in daily_items:
+        if item.status == AcceptanceStatus.READY.value and (
+            not item.used_by_aria or item.integration_ok
+        ):
+            continue
+        gain = daily_w if item.status == AcceptanceStatus.NOT_INSTALLED.value else daily_w * 0.5
+        if item.used_by_aria and not item.integration_ok:
+            gain = max(gain, int_w * 0.5)
+        reason = item.fix_hint or item.functional_verification or item.detail or item.status
+        human = any(
+            x in (reason + item.functional_verification).lower()
+            for x in ("login", "auth", "not logged", "api key")
+        )
+        gaps.append(
+            {
+                "id": item.id,
+                "label": item.label,
+                "missing": f"{item.label} — {reason[:100]}",
+                "gain_daily": round(gain, 1),
+                "gain_integration": round(int_w if not item.integration_ok else 0, 1),
+                "fix": item.fix_hint or reason[:120],
+                "human_required": human,
+                "checked": False,
+            }
+        )
+
+    for item in integration_items:
+        if item.id in daily_ids or item.integration_ok:
+            continue
+        if item.status == AcceptanceStatus.NOT_INSTALLED.value:
+            continue
+        gaps.append(
+            {
+                "id": item.id,
+                "label": item.label,
+                "missing": f"{item.label} integration failed",
+                "gain_daily": 0.0,
+                "gain_integration": round(int_w, 1),
+                "fix": item.fix_hint or item.functional_verification or "run workstation repair",
+                "human_required": False,
+                "checked": False,
+            }
+        )
+
+    gaps.sort(key=lambda g: g["gain_daily"] + g["gain_integration"], reverse=True)
+    daily_score = round(
+        100.0 * sum(i.score_points for i in daily_items) / len(daily_items) if daily_items else 100,
+        1,
+    )
+    projected = min(
+        100.0,
+        round(
+            daily_score + sum(g["gain_daily"] for g in gaps if not g.get("human_required")),
+            1,
+        ),
+    )
+    return {
+        "daily_score": daily_score,
+        "projected_daily": projected,
+        "gaps": gaps,
+    }
+
+
 def run_acceptance(*, persist: bool = True, live: bool = True) -> dict[str, Any]:
     """Run full workstation acceptance and compute score."""
     from jarvis.workstation.integration_probes import PROBE_MAP, run_probe
@@ -610,6 +690,8 @@ def run_acceptance(*, persist: bool = True, live: bool = True) -> dict[str, Any]
     daily_items = [i for i in items if i.id in daily_ids]
     optional_items = [i for i in items if i.id not in daily_ids]
     integration_items = [i for i in items if i.used_by_aria and i.id in PROBE_MAP]
+    integration_ids = {i.id for i in integration_items}
+    gap_analysis = compute_score_gaps(items, daily_ids=daily_ids, integration_ids=integration_ids)
 
     def _avg_score(group: list[AcceptanceItem]) -> float:
         if not group:
@@ -661,7 +743,8 @@ def run_acceptance(*, persist: bool = True, live: bool = True) -> dict[str, Any]
 
     payload = {
         "ok": daily_score >= 100.0
-        and integration_score >= 90.0
+        and integration_score >= 95.0
+        and production_readiness >= 95.0
         and "aria" in ready
         and "ollama" in ready,
         "ts": time.time(),
@@ -686,12 +769,14 @@ def run_acceptance(*, persist: bool = True, live: bool = True) -> dict[str, Any]
         "items": [i.to_dict() for i in items],
         "daily_ready": daily_score >= 100.0,
         "acceptance_passed": daily_score >= 100.0
-        and integration_score >= 90.0
+        and integration_score >= 95.0
+        and production_readiness >= 95.0
         and "aria" in ready
         and "ollama" in ready,
         "remaining_work": remaining_work,
         "recommended_fixes": recommended_fixes,
         "known_issues": [f"{i['label']}: {i['status']}" for i in remaining_work[:8]],
+        "gap_analysis": gap_analysis,
     }
     if persist:
         _ACCEPTANCE_CACHE.parent.mkdir(parents=True, exist_ok=True)
@@ -719,6 +804,26 @@ def format_acceptance_markdown(
         f"Not installed: **{summary.get('not_installed', 0)}**",
         "",
     ]
+    gaps = data.get("gap_analysis") or {}
+    if gaps.get("gaps") and not data.get("acceptance_passed"):
+        lines.extend(
+            [
+                "### Why am I not at 100%?",
+                "",
+                f"**Daily score:** {gaps.get('daily_score', scores.get('daily_required', 0))}%",
+                "",
+                "**Missing:**",
+            ]
+        )
+        for gap in gaps.get("gaps") or []:
+            mark = "☐" if not gap.get("human_required") else "⚠"
+            gain = gap.get("gain_daily") or gap.get("gain_integration") or 0
+            lines.append(f"{mark} {gap.get('missing', gap.get('label'))} (+{gain:.0f}%)")
+            if gap.get("fix"):
+                lines.append(f"    fix: {gap['fix']}")
+        lines.append("")
+        lines.append(f"**Projected daily score:** {min(100, gaps.get('projected_daily', 0)):.0f}%")
+        lines.append("")
     daily_ids = {c[0] for c in _CATALOG if c[3]}
     for item in data.get("items") or []:
         status = item.get("status", "")

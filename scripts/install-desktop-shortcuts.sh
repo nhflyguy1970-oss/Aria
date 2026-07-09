@@ -26,6 +26,7 @@ APP_MENU_VARIANTS=(
   ai-workstation-stop
   ai-workstation-status
   ai-workstation-doctor
+  ai-workstation-repair
   ai-workstation-acceptance
   aria
   aria-pyside

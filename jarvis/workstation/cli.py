@@ -54,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     opt_p = sub.add_parser("optimize", help="Apply measured hardware tuning to jarvis.env")
     opt_p.add_argument("--dry-run", action="store_true", help="Show changes without writing")
     sub.add_parser("doctor", help="Diagnose workstation + AI-Platform")
+    sub.add_parser("repair", help="Automatically fix common workstation issues")
 
     sub.add_parser("status", help="Show workstation status (JSON)")
 
@@ -133,6 +134,13 @@ def main(argv: list[str] | None = None) -> int:
 
         result = run_first_run_setup()
         print(json.dumps(result, indent=2))
+        return 0 if result.get("ok") else 1
+
+    if args.command == "repair":
+        from jarvis.workstation.repair import format_repair_markdown, run_repair
+
+        result = run_repair()
+        print(format_repair_markdown(result))
         return 0 if result.get("ok") else 1
 
     lifecycle_commands = {

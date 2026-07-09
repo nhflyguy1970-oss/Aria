@@ -77,24 +77,6 @@ def bootstrap_workstation(*, wait_timeout: float = DEFAULT_WAIT_SECONDS) -> dict
 
 
 def startup_greeting() -> str:
-    """Plain-language summary for desktop notification after launch."""
-    from jarvis.morning_briefing import time_greeting
-    from jarvis.workstation.acceptance import last_acceptance
+    from jarvis.workstation.greeting import build_startup_notification
 
-    greet = time_greeting()
-    report = last_acceptance()
-    if not report.get("items"):
-        return f"{greet}, Jeff. Starting AI Workstation…"
-
-    scores = report.get("score") or {}
-    daily = scores.get("daily_required", 0)
-    summary = report.get("summary") or {}
-    ready = summary.get("ready", 0)
-    total = summary.get("total", 0)
-    if report.get("acceptance_passed"):
-        return f"{greet}, Jeff. All required services healthy ({daily:.0f}%). Ready to work."
-    needs = summary.get("needs_configuration", 0)
-    return (
-        f"{greet}, Jeff. {ready}/{total} components ready ({daily:.0f}% daily). "
-        f"{needs} need attention — open Acceptance for details."
-    )
+    return build_startup_notification()

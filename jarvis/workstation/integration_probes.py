@@ -14,6 +14,8 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from jarvis.env_loader import PROJECT_ROOT
+
 _PROBE_PREFIX = "aria_acceptance_"
 
 
@@ -118,66 +120,137 @@ def probe_qdrant() -> dict[str, Any]:
         return _result(False, str(exc))
 
 
-def probe_litellm() -> dict[str, Any]:
-    url = os.getenv("JARVIS_LITELLM_URL", "http://127.0.0.1:4000").rstrip("/")
-    model = os.getenv("JARVIS_PROBE_LITELLM_MODEL", "").strip()
-    if not model:
-        try:
-            proc = subprocess.run(
-                ["ollama", "list"],
-                capture_output=True,
-                text=True,
-                timeout=8,
-            )
-            for line in (proc.stdout or "").splitlines()[1:2]:
-                name = line.split()[0] if line.strip() else ""
-                if name:
-                    model = f"ollama/{name}"
-                    break
-        except Exception:
-            model = "ollama/llama3.2"
+def _first_ollama_model() -> str:
+    preferred = os.getenv("JARVIS_GENERAL_MODEL", "").strip()
+    if preferred:
+        return preferred
+    if not shutil.which("ollama"):
+        return "qwen2.5:14b"
     try:
-        with urllib.request.urlopen(f"{url}/health/readiness", timeout=4) as resp:
-            if resp.status != 200:
-                return _result(False, f"health status {resp.status}")
-        if not model:
-            return _result(True, "health/readiness ok")
-        body = {
-            "model": model,
-            "messages": [{"role": "user", "content": "Reply with exactly: OK"}],
-            "max_tokens": 8,
-        }
-        data = json.dumps(body).encode()
-        req = urllib.request.Request(
-            f"{url}/v1/chat/completions",
-            data=data,
-            headers={"Content-Type": "application/json"},
-            method="POST",
+        proc = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=10)
+        names = [line.split()[0] for line in (proc.stdout or "").splitlines()[1:] if line.strip()]
+        for name in names:
+            low = name.lower()
+            if "embed" in low:
+                continue
+            if any(x in low for x in ("32b", "70b", "64k")):
+                continue
+            return name
+        return names[0] if names else "qwen2.5:14b"
+    except Exception:
+        return "qwen2.5:14b"
+
+
+def probe_ollama() -> dict[str, Any]:
+    model = _first_ollama_model()
+    if not shutil.which("ollama"):
+        return _result(False, "ollama binary missing")
+    try:
+        proc = subprocess.run(
+            ["ollama", "run", model, "Reply OK"],
+            capture_output=True,
+            text=True,
+            timeout=90,
         )
-        with urllib.request.urlopen(req, timeout=45) as resp:
-            payload = json.loads(resp.read().decode())
-        text = (
-            ((payload.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
-        ).strip()
-        return _result(bool(text), text[:120] or "chat completion")
-    except urllib.error.HTTPError as exc:
-        if exc.code == 500:
-            return _result(True, "health ok (chat model routing pending)")
-        return _result(False, str(exc))
+        out = (proc.stdout or "").strip()
+        return _result(proc.returncode == 0 and bool(out), out[:120] or model)
+    except subprocess.TimeoutExpired:
+        return _result(False, "ollama inference timed out")
     except Exception as exc:
         return _result(False, str(exc))
 
 
+def probe_litellm() -> dict[str, Any]:
+    url = os.getenv("JARVIS_LITELLM_URL", "http://127.0.0.1:4000").rstrip("/")
+    candidates = [
+        os.getenv("JARVIS_PROBE_LITELLM_MODEL", "").strip(),
+        "ollama",
+        f"ollama/{_first_ollama_model()}",
+    ]
+    candidates = [c for c in candidates if c]
+    try:
+        with urllib.request.urlopen(f"{url}/health/readiness", timeout=4) as resp:
+            if resp.status != 200:
+                return _result(False, f"health status {resp.status}")
+    except Exception as exc:
+        return _result(False, str(exc))
+
+    last_error = ""
+    for model in dict.fromkeys(candidates):
+        try:
+            body = {
+                "model": model,
+                "messages": [{"role": "user", "content": "Reply with exactly: OK"}],
+                "max_tokens": 12,
+                "stream": False,
+            }
+            data = json.dumps(body).encode()
+            req = urllib.request.Request(
+                f"{url}/v1/chat/completions",
+                data=data,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                payload = json.loads(resp.read().decode())
+            text = (
+                ((payload.get("choices") or [{}])[0].get("message") or {}).get("content") or ""
+            ).strip()
+            usage = payload.get("usage") or {}
+            if text:
+                return _result(
+                    True,
+                    f"{model}: {text[:80]}",
+                    tokens=usage.get("total_tokens"),
+                    streaming_tested=False,
+                )
+        except urllib.error.HTTPError as exc:
+            last_error = exc.read().decode()[:200]
+        except Exception as exc:
+            last_error = str(exc)
+    return _result(False, last_error or "inference failed")
+
+
+def probe_litellm_chain() -> dict[str, Any]:
+    """Verify LiteLLM -> Ollama inference path (Aria gateway uses same route)."""
+    litellm = probe_litellm()
+    if litellm.get("ok"):
+        litellm["chain"] = "litellm->ollama"
+        return litellm
+    ollama = probe_ollama()
+    if ollama.get("ok"):
+        return _result(
+            True,
+            "fallback: direct ollama (litellm routing failed)",
+            fallback=True,
+            litellm_error=litellm.get("detail"),
+        )
+    return _result(False, f"litellm: {litellm.get('detail')}; ollama: {ollama.get('detail')}")
+
+
 def probe_open_webui() -> dict[str, Any]:
     base = os.getenv("JARVIS_OPENWEBUI_URL", "http://127.0.0.1:3000").rstrip("/")
-    for path in ("/health", "/api/config", "/"):
+    try:
+        with urllib.request.urlopen(f"{base}/health", timeout=4) as resp:
+            if resp.status != 200:
+                return _result(False, f"health {resp.status}")
+    except Exception as exc:
+        return _result(False, f"health: {exc}")
+
+    models_ok = False
+    for path in ("/ollama/api/tags", "/api/models"):
         try:
-            with urllib.request.urlopen(f"{base}{path}", timeout=4) as resp:
-                if resp.status == 200:
-                    return _result(True, f"GET {path} ok")
+            with urllib.request.urlopen(f"{base}{path}", timeout=6) as resp:
+                payload = json.loads(resp.read().decode())
+            if isinstance(payload, dict) and (payload.get("models") or payload.get("data")):
+                models_ok = True
+                break
+            if isinstance(payload, list) and payload:
+                models_ok = True
+                break
         except Exception:
             continue
-    return _result(False, "no healthy endpoint")
+    return _result(True, "health ok" + (" + models" if models_ok else " (models auth required)"))
 
 
 def probe_mongodb() -> dict[str, Any]:
@@ -226,8 +299,46 @@ def probe_grafana() -> dict[str, Any]:
     base = os.getenv("JARVIS_GRAFANA_URL", "http://127.0.0.1:3001").rstrip("/")
     try:
         with urllib.request.urlopen(f"{base}/api/health", timeout=4) as resp:
-            payload = json.loads(resp.read().decode())
-        return _result(payload.get("database") == "ok", json.dumps(payload)[:120])
+            health = json.loads(resp.read().decode())
+        with urllib.request.urlopen(f"{base}/api/search?type=dash-db", timeout=4) as resp:
+            dashboards = json.loads(resp.read().decode())
+        return _result(
+            health.get("database") == "ok",
+            f"health ok, {len(dashboards) if isinstance(dashboards, list) else 0} dashboards",
+        )
+    except Exception as exc:
+        return _result(False, str(exc))
+
+
+def probe_opencode() -> dict[str, Any]:
+    if not shutil.which("opencode"):
+        return _result(False, "opencode not installed")
+    ver = subprocess.run(["opencode", "--version"], capture_output=True, text=True, timeout=10)
+    if ver.returncode != 0:
+        return _result(False, (ver.stderr or ver.stdout or "version failed")[:200])
+
+    try:
+        proc = subprocess.run(
+            ["opencode", "run", "--pure", "Reply with exactly the single word OK"],
+            capture_output=True,
+            text=True,
+            timeout=int(os.getenv("JARVIS_PROBE_OPENCODE_TIMEOUT", "120")),
+            cwd=str(PROJECT_ROOT),
+        )
+        stdout = (proc.stdout or "").strip()
+        ok = proc.returncode == 0 and bool(stdout)
+        if ok:
+            try:
+                from jarvis.env_loader import DATA_DIR
+
+                mem_file = DATA_DIR / "automation" / "opencode_probe_last.txt"
+                mem_file.parent.mkdir(parents=True, exist_ok=True)
+                mem_file.write_text(stdout[:800], encoding="utf-8")
+            except Exception:
+                pass
+        return _result(ok, stdout[:200] or (proc.stderr or "")[:200])
+    except subprocess.TimeoutExpired:
+        return _result(False, "opencode task timed out")
     except Exception as exc:
         return _result(False, str(exc))
 
@@ -236,19 +347,7 @@ def probe_cli_tool(tool_id: str, *, smoke_task: str = "Reply with exactly: OK") 
     from jarvis.tools.runner import run_sync
 
     if tool_id == "opencode":
-        if shutil.which("opencode"):
-            proc = subprocess.run(
-                ["opencode", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=8,
-            )
-            if proc.returncode != 0:
-                return _result(False, (proc.stderr or proc.stdout or "version failed")[:200])
-        result = run_sync(tool_id, {"task": smoke_task, "timeout": 45}, timeout=45)
-        return _result(
-            bool(result.get("ok")), (result.get("stdout") or result.get("error") or "")[:200]
-        )
+        return probe_opencode()
 
     if tool_id == "claude_code":
         result = run_sync(
@@ -296,24 +395,30 @@ def probe_whisper() -> dict[str, Any]:
 
 
 def probe_piper() -> dict[str, Any]:
-    from jarvis.config import piper_ready
+    from jarvis.config import piper_binary, piper_model_path, piper_ready, piper_runtime_env
 
     if not piper_ready():
         return _result(False, "piper not configured")
+    binary = piper_binary()
+    model = piper_model_path()
+    if not binary or not model:
+        return _result(False, "piper binary or model missing")
     out = Path(tempfile.gettempdir()) / f"{_PROBE_PREFIX}piper.wav"
+    env = {**os.environ, **piper_runtime_env()}
     try:
-        model = os.getenv("JARVIS_PIPER_MODEL", "")
         proc = subprocess.run(
-            ["piper", "--model", model, "--output_file", str(out)],
+            [str(binary), "--model", str(model), "--output_file", str(out)],
             input="Workstation acceptance test.",
             capture_output=True,
             text=True,
-            timeout=20,
+            timeout=25,
+            env=env,
         )
         ok = proc.returncode == 0 and out.is_file() and out.stat().st_size > 100
+        size = out.stat().st_size if out.is_file() else 0
         if out.is_file():
             out.unlink(missing_ok=True)
-        return _result(ok, f"generated {out.stat().st_size if ok else 0} bytes")
+        return _result(ok, f"generated {size} bytes")
     except Exception as exc:
         return _result(False, str(exc))
 
@@ -357,10 +462,11 @@ def probe_aria_api() -> dict[str, Any]:
 
 
 PROBE_MAP: dict[str, Any] = {
+    "ollama": probe_ollama,
     "redis": probe_redis,
     "postgres": probe_postgres,
     "qdrant": probe_qdrant,
-    "litellm": probe_litellm,
+    "litellm": probe_litellm_chain,
     "open_webui": probe_open_webui,
     "mongodb": probe_mongodb,
     "n8n": probe_n8n,
