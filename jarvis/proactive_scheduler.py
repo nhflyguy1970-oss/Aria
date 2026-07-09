@@ -100,6 +100,9 @@ def _loop() -> None:
             now = datetime.now()
             _maybe_briefing(now)
             _maybe_task_nudge(now)
+            from jarvis.automation.ops import maybe_nightly_maintenance
+
+            maybe_nightly_maintenance(now)
         except Exception as exc:
             logger.warning("Scheduler tick failed: %s", exc)
 

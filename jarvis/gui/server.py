@@ -393,6 +393,45 @@ def metrics():
     return snapshot()
 
 
+@app.get("/api/metrics/prometheus")
+def metrics_prometheus():
+    from fastapi.responses import PlainTextResponse
+
+    from jarvis.observability.prometheus import prometheus_text
+
+    return PlainTextResponse(prometheus_text(), media_type="text/plain; version=0.0.4")
+
+
+@app.post("/api/automation/maintenance")
+def automation_maintenance(smoke_tests: bool = False):
+    from jarvis.automation.ops import run_maintenance
+
+    return run_maintenance(smoke_tests=smoke_tests)
+
+
+@app.get("/api/automation/maintenance")
+def automation_maintenance_status():
+    from jarvis.automation.ops import last_maintenance
+
+    return last_maintenance()
+
+
+@app.get("/api/interfaces/openwebui")
+def openwebui_status():
+    from jarvis.interfaces.openwebui import inference_url, status
+
+    payload = status()
+    payload["inference_url"] = inference_url()
+    return payload
+
+
+@app.get("/api/training/status")
+def training_status_api():
+    from jarvis.training.workspace import training_status
+
+    return training_status()
+
+
 @app.get("/api/jobs")
 def jobs_center():
     from jarvis.jobs_center import snapshot

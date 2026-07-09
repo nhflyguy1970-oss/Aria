@@ -29,6 +29,7 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
         "message": _inference_status_message(),
         "data": _inference_status(),
     },
+    "maintenance_run": lambda _params, _message: _maintenance_run(),
 }
 
 
@@ -80,6 +81,17 @@ def _inference_status_message() -> str:
     cloud = "enabled" if status.get("cloud_enabled") else "disabled"
     vram = "low" if status.get("low_vram") else "ok"
     return f"Inference: mode={mode}, LiteLLM={litellm}, cloud={cloud}, VRAM={vram}"
+
+
+def _maintenance_run() -> dict:
+    from jarvis.automation.ops import run_maintenance
+
+    result = run_maintenance(smoke_tests=False)
+    return {
+        "ok": result.get("ok", False),
+        "message": f"Maintenance complete ({result.get('elapsed_ms', 0)}ms)",
+        "data": result,
+    }
 
 
 @register_behavior
