@@ -111,8 +111,9 @@ class TestWorkstationLifecycleCli(unittest.TestCase):
             main(["--help"])
         self.assertEqual(ctx.exception.code, 0)
 
-    @patch("jarvis.workstation.lifecycle_shell.verify", return_value=0)
-    def test_verify_delegates_to_script(self, mock_verify):
+    @patch("jarvis.workstation.inventory.verify_inventory", return_value={"ready": True, "blockers": [], "warnings": [], "inventory": {"summary": {"ready": True, "total": 1, "healthy": 1}}})
+    @patch("jarvis.workstation.inventory.format_inventory_text", return_value="## Inventory")
+    def test_verify_uses_inventory(self, _fmt, mock_verify):
         from jarvis.workstation.cli import main
 
         self.assertEqual(main(["verify"]), 0)

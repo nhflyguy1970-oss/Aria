@@ -18,15 +18,18 @@ usage() {
 Usage: $(basename "$0") <command>
 
 Lifecycle:
-  install     Fresh-machine install (venv, deps, platform init)
+  install     Fresh-machine install (--minimal|--developer|--full|--gpu|--headless)
   configure   Create jarvis.env and initialize platform paths
   start       Start Aria desktop (tray + server + window)
   stop        Stop tray + server
-  restart     Restart the API server (tray must be running)
+  restart     Restart Aria server (or: workstation restart <component>)
   update      git pull + pip sync + restart if running
   backup      Backup jarvis data and platform state
   restore     Restore from backup archive (pass path as arg)
-  verify      Hardware-agnostic install verification
+  verify      Validate install from inventory
+  inventory   Show installed/running/healthy components
+  hardware    Hardware detection and workload recommendations
+  optimize    Apply measured tuning to jarvis.env
   doctor      Workstation diagnose + AI-Platform doctor
   status      Server status (--full for workstation summary)
 
@@ -47,7 +50,7 @@ cmd="${1:-}"
 shift || true
 
 case "$cmd" in
-  install|configure|start|update|backup|verify|doctor)
+  install|configure|start|stop|update|backup|verify|doctor|inventory|optimize|hardware)
     exec "$JARVIS_ROOT/scripts/workstation.sh" "$cmd" "$@"
     ;;
   restore)

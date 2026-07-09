@@ -55,7 +55,14 @@ def verify() -> int:
 
 
 def hardware() -> int:
-    return run_script("workstation-hardware.sh")
+    from jarvis.workstation.hardware_report import format_hardware_markdown
+
+    print(format_hardware_markdown())
+    return 0
+
+
+def restart() -> int:
+    return run_script("restart-jarvis-server.sh")
 
 
 def doctor() -> int:
