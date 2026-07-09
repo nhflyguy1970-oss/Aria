@@ -16,6 +16,7 @@ _thread: threading.Thread | None = None
 _last_briefing_day = ""
 _last_nudge_day = ""
 _last_git_sync_ts = 0.0
+_last_auto_recover_ts = 0.0
 
 
 def _notify(title: str, body: str) -> None:
@@ -118,6 +119,34 @@ def _maybe_git_sync(now: datetime) -> None:
         logger.debug("Scheduled git sync failed: %s", exc)
 
 
+def _maybe_auto_recover(now: datetime) -> None:
+    global _last_auto_recover_ts
+    if os.getenv("JARVIS_AUTO_RECOVER", "1") == "0":
+        return
+    try:
+        interval = int(os.getenv("JARVIS_AUTO_RECOVER_INTERVAL_MIN", "5")) * 60
+    except ValueError:
+        interval = 300
+    now_ts = time.time()
+    if now_ts - _last_auto_recover_ts < interval:
+        return
+    _last_auto_recover_ts = now_ts
+    try:
+        from jarvis.interrupt_policy import check_services_health
+        from jarvis.workstation.operations import diagnose, recover_safe
+
+        check_services_health()
+        report = diagnose(force=False)
+        if not report.get("ok") or report.get("warnings", 0) > 0:
+            result = recover_safe(max_attempts=2)
+            if result.get("ok"):
+                logger.info("Auto-recover resolved workstation issues")
+            elif report.get("critical", 0) > 0:
+                logger.warning("Auto-recover could not fix critical issues")
+    except Exception as exc:
+        logger.debug("Auto-recover skipped: %s", exc)
+
+
 def _loop() -> None:
     while not _stop.wait(60):
         try:
@@ -125,6 +154,7 @@ def _loop() -> None:
             _maybe_briefing(now)
             _maybe_task_nudge(now)
             _maybe_git_sync(now)
+            _maybe_auto_recover(now)
             from jarvis.automation.ops import maybe_nightly_maintenance
 
             maybe_nightly_maintenance(now)

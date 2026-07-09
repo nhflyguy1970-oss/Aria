@@ -300,6 +300,7 @@ def _build_registry() -> None:
         health=_ollama_health,
         detail=_ollama_detail,
         start=_ensure_ollama,
+        restart=_ensure_ollama,
     )
 
     litellm_url = os.getenv("JARVIS_LITELLM_URL", "http://127.0.0.1:4000").rstrip("/")
@@ -484,12 +485,18 @@ def _build_registry() -> None:
         health=lambda: _http_ok(f"{n8n_url}/healthz") or _http_ok(n8n_url),
     )
 
+    def _scheduler_health() -> bool:
+        from jarvis import proactive_scheduler
+
+        thread = proactive_scheduler._thread
+        return thread is not None and thread.is_alive()
+
     _REGISTRY["scheduler"] = WorkstationComponent(
         id="scheduler",
         label="Platform Scheduler",
         category="automation",
         managed=False,
-        health=lambda: True,
+        health=_scheduler_health,
         detail=lambda: "aiplatform scheduler + proactive timers",
     )
 
