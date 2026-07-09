@@ -64,6 +64,9 @@ def ensure_ollama() -> bool:
 def start_server(open_browser: bool = False) -> subprocess.Popen:
     global _server_proc, _serve_log_handle
     load_jarvis_env()
+    from jarvis.platform_cutover import apply_cutover_state_on_startup
+
+    apply_cutover_state_on_startup()
     env = os.environ.copy()
     env["JARVIS_NO_BROWSER"] = "1" if not open_browser else "0"
     env["JARVIS_SERVICES_MANAGED"] = "1"
@@ -226,6 +229,9 @@ def run_tray(uncensored: bool = False) -> None:
 
     _setup_file_logging()
     load_jarvis_env()
+    from jarvis.platform_cutover import apply_cutover_state_on_startup
+
+    apply_cutover_state_on_startup()
     from jarvis.platform_attachment import attach_platform_infrastructure, validate_platform_startup
     from jarvis.platform_automation_event import (
         attach_platform_automation_event,
