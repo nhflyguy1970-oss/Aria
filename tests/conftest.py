@@ -21,6 +21,13 @@ if "ollama" not in sys.modules:
     sys.modules["ollama"] = _ollama
 
 
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line("markers", "network: requires outbound network access")
+    config.addinivalue_line("markers", "workstation: requires local workstation services")
+    config.addinivalue_line("markers", "integration: integration tests (optional services)")
+    config.addinivalue_line("markers", "gpu: requires GPU/CUDA")
+
+
 @pytest.fixture(autouse=True)
 def _live_data_guard():
     from jarvis.live_data_guard import disable_test_guard, enable_test_guard

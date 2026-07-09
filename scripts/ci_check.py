@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""CI gates for ARIA during decompile recovery.
+"""CI gates for ARIA — lint and test maintained paths only.
 
-Skips syntax-broken modules (invalid decompiler output) and lints only
-maintained paths until the tree is fully recovered.
+The full tree still contains legacy decompile artifacts; CI scopes ruff/pytest
+to paths that are syntactically valid and expected to pass on GitHub runners.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Paths known good after recovery work; expand as modules are repaired.
+# Maintained application code (expand as modules are recovered).
 RUFF_PATHS: tuple[str, ...] = (
     "jarvis/async_util.py",
     "jarvis/gpu_routing.py",
@@ -45,13 +45,48 @@ RUFF_PATHS: tuple[str, ...] = (
     "jarvis/extensions/security/handlers.py",
     "jarvis/handlers/__init__.py",
     "jarvis/modules/vector_store.py",
-    "tests/test_async_util.py",
-    "tests/test_gpu_routing.py",
+    "jarvis/modules/memory_adapter_store.py",
+    "jarvis/modules/knowledge_retrieval_adapter.py",
+    "jarvis/platform_cutover.py",
+    "jarvis/workflows",
+    "jarvis/behaviors/daily",
+    "jarvis/observability",
+    "jarvis/tools/runner.py",
+    "jarvis/tools/executor.py",
+    "jarvis/proactive_scheduler.py",
+    "jarvis/workstation",
+    "jarvis/personalization",
+    "jarvis/context",
+    "jarvis/jobs",
+    "jarvis/memory/hierarchy.py",
+    "jarvis/knowledge/git_sync.py",
+    "jarvis/knowledge/repo_index.py",
+    "jarvis/knowledge/registry.py",
+    "jarvis/inference",
+    "jarvis/automation",
+    "jarvis/interfaces",
+    "jarvis/morning_briefing.py",
+    "jarvis/router_hints.py",
+    "jarvis/jobs_center.py",
+    "jarvis/agents/coordinator.py",
+    "jarvis/agents/__init__.py",
 )
 
+# Unit tests expected to pass on a clean ubuntu-latest runner (no Ollama/GPU/Docker).
 PYTEST_PATHS: tuple[str, ...] = (
     "tests/test_async_util.py",
     "tests/test_gpu_routing.py",
+    "tests/test_platform_cutover.py",
+    "tests/test_daily_workflow.py",
+    "tests/test_self_healing.py",
+    "tests/test_memory_adapter.py",
+    "tests/test_checkpointed_jobs.py",
+    "tests/test_personalization_context.py",
+    "tests/test_tool_runner.py",
+    "tests/test_inference.py",
+    "tests/test_automation_ops.py",
+    "tests/test_knowledge_registry.py",
+    "tests/test_agents.py",
 )
 
 
@@ -71,13 +106,18 @@ def _compilable(path: Path) -> bool:
 
 def _expand_ruff_targets() -> list[Path]:
     targets: list[Path] = []
+    seen: set[Path] = set()
     for rel in RUFF_PATHS:
         path = _resolve(rel)
         if not path.exists():
             raise SystemExit(f"CI ruff path missing: {rel}")
         if path.is_dir():
-            targets.extend(sorted(path.rglob("*.py")))
-        else:
+            for child in sorted(path.rglob("*.py")):
+                if child not in seen:
+                    seen.add(child)
+                    targets.append(child)
+        elif path not in seen:
+            seen.add(path)
             targets.append(path)
     missing = [p for p in targets if not _compilable(p)]
     if missing:
@@ -86,18 +126,32 @@ def _expand_ruff_targets() -> list[Path]:
     return targets
 
 
-def run_ruff() -> int:
+def _ruff_cmd(*extra: str) -> list[str]:
     targets = _expand_ruff_targets()
-    cmd = [
+    return [
         sys.executable,
         "-m",
         "ruff",
-        "check",
+        *extra,
         "--config",
         str(ROOT / "ruff.toml"),
         *[str(p) for p in targets],
     ]
-    return subprocess.run(cmd, cwd=ROOT, check=False).returncode
+
+
+def run_ruff() -> int:
+    return subprocess.run(_ruff_cmd("check"), cwd=ROOT, check=False).returncode
+
+
+def run_format_check() -> int:
+    return subprocess.run(_ruff_cmd("format", "--check"), cwd=ROOT, check=False).returncode
+
+
+def run_format() -> int:
+    fix = subprocess.run(_ruff_cmd("check", "--fix"), cwd=ROOT, check=False).returncode
+    if fix != 0:
+        return fix
+    return subprocess.run(_ruff_cmd("format"), cwd=ROOT, check=False).returncode
 
 
 def run_pytest() -> int:
@@ -113,23 +167,31 @@ def run_pytest() -> int:
         "-q",
         "--tb=short",
         "-m",
-        "not network",
+        "not network and not workstation and not integration and not gpu",
     ]
     return subprocess.run(cmd, cwd=ROOT, check=False).returncode
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="ARIA CI recovery gates")
-    parser.add_argument("command", choices=("ruff", "pytest", "all"))
+    parser = argparse.ArgumentParser(description="ARIA CI gates")
+    parser.add_argument(
+        "command",
+        choices=("ruff", "format", "format-check", "pytest", "all"),
+    )
     args = parser.parse_args()
     if args.command == "ruff":
         return run_ruff()
+    if args.command == "format":
+        return run_format()
+    if args.command == "format-check":
+        return run_format_check()
     if args.command == "pytest":
         return run_pytest()
-    code = run_ruff()
-    if code != 0:
-        return code
-    return run_pytest()
+    for step in (run_ruff, run_format_check, run_pytest):
+        code = step()
+        if code != 0:
+            return code
+    return 0
 
 
 if __name__ == "__main__":

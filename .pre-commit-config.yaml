@@ -1,0 +1,30 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.20
+    hooks:
+      - id: ruff
+        name: ruff (maintained paths)
+        args: [--config, ruff.toml]
+        files: ^(jarvis/(async_util|gpu_routing|daemon|platform_cutover|workstation|workflows|inference|automation|observability|personalization|context|jobs|memory|knowledge|tools|behaviors/daily|interfaces)|scripts/ci_check)\.py$
+      - id: ruff-format
+        name: ruff format (maintained paths)
+        args: [--config, ruff.toml]
+        files: ^(jarvis/(async_util|gpu_routing|daemon|platform_cutover|workstation|workflows|inference|automation|observability|personalization|context|jobs|memory|knowledge|tools|behaviors/daily|interfaces)|scripts/ci_check)\.py$
+
+  - repo: local
+    hooks:
+      - id: aria-ci-gate
+        name: ARIA CI gate (ruff + format-check + pytest)
+        entry: python scripts/ci_check.py all
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+      - id: detect-private-key

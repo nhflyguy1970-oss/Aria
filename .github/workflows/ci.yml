@@ -20,5 +20,7 @@ jobs:
           pip install pytest ruff
       - name: Ruff (recovery gate)
         run: python scripts/ci_check.py ruff
+      - name: Ruff format check
+        run: python scripts/ci_check.py format-check
       - name: Pytest (recovery gate)
         run: python scripts/ci_check.py pytest
