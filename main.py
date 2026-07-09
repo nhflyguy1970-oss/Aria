@@ -15,6 +15,7 @@ from jarvis.platform_memory import attach_platform_memory
 from jarvis.platform_semantic_memory import attach_platform_semantic_memory
 from jarvis.platform_knowledge_retrieval import attach_platform_knowledge_retrieval
 from jarvis.platform_tool_capability import attach_platform_tool_capability
+from jarvis.platform_workflow_orchestration import attach_platform_workflow_orchestration
 
 attach_platform_infrastructure()
 attach_platform_inference()
@@ -22,6 +23,7 @@ attach_platform_memory()
 attach_platform_semantic_memory()
 attach_platform_knowledge_retrieval()
 attach_platform_tool_capability()
+attach_platform_workflow_orchestration()
 
 
 def print_help():

@@ -1,103 +1,108 @@
-# Source Generated with Decompyle++
-# File: job_framework.cpython-312.pyc (Python 3.12)
+"""Unified job queue interface (media, coding, background)."""
 
-'''Unified job queue interface (media, coding, background).'''
 from __future__ import annotations
+
 from typing import Any, Callable
-QUEUES = ('media', 'coding', 'background', 'audio')
 
-def stats(queue = None):
-    if queue == 'media':
-        job_stats = job_stats
-        import jarvis.media_jobs
-        return job_stats()
-    if None == 'coding':
-        job_stats = job_stats
-        import jarvis.coding_jobs
-        return job_stats()
-    if None == 'background':
-        job_stats = job_stats
-        import jarvis.coding_jobs
-        return job_stats()
-    if None == 'audio':
-        job_stats = job_stats
-        import jarvis.audio_progress
-        return job_stats()
-    raise None(f'''Unknown queue: {queue}''')
+QUEUES = ("media", "coding", "background", "audio")
 
 
-def get_job(queue = None, job_id = None):
-    if queue == 'media':
-        _get = get_job
-        import jarvis.media_jobs
+def stats(queue: str | None = None) -> dict[str, Any]:
+    if queue == "media":
+        from jarvis.media_jobs import job_stats
+
+        return job_stats()
+    if queue == "coding":
+        from jarvis.coding_jobs import job_stats
+
+        return job_stats()
+    if queue == "background":
+        from jarvis.coding_jobs import job_stats
+
+        return job_stats()
+    if queue == "audio":
+        from jarvis.audio_progress import job_stats
+
+        return job_stats()
+    raise ValueError(f"Unknown queue: {queue}")
+
+
+def get_job(queue: str | None, job_id: str | None) -> dict | None:
+    if queue == "media":
+        from jarvis.media_jobs import get_job as _get
+
         return _get(job_id)
-    if None in ('coding', 'background'):
-        _get = get_job
-        import jarvis.coding_jobs
+    if queue in ("coding", "background"):
+        from jarvis.coding_jobs import get_job as _get
+
         return _get(job_id)
-    if None == 'audio':
-        _get = get_job
-        import jarvis.audio_progress
+    if queue == "audio":
+        from jarvis.audio_progress import get_job as _get
+
         return _get(job_id)
-    raise None(f'''Unknown queue: {queue}''')
+    raise ValueError(f"Unknown queue: {queue}")
 
 
-def cancel(queue = None, job_id = None):
-    if queue == 'media':
-        cancel_job = cancel_job
-        import jarvis.media_jobs
+def cancel(queue: str | None, job_id: str | None) -> bool:
+    if queue == "media":
+        from jarvis.media_jobs import cancel_job
+
         return cancel_job(job_id)
-    if None in ('coding', 'background'):
-        cancel_job = cancel_job
-        import jarvis.coding_jobs
+    if queue in ("coding", "background"):
+        from jarvis.coding_jobs import cancel_job
+
         return cancel_job(job_id)
-    if None == 'audio':
-        cancel_job = cancel_job
-        import jarvis.audio_progress
+    if queue == "audio":
+        from jarvis.audio_progress import cancel_job
+
         return cancel_job(job_id)
-    raise None(f'''Unknown queue: {queue}''')
+    raise ValueError(f"Unknown queue: {queue}")
 
 
-def list_recent(queue = None, limit = None):
-    if queue == 'media':
-        list_recent = list_recent
-        import jarvis.media_jobs
-        return list_recent(limit)
-    if None in ('coding', 'background'):
-        list_recent = list_recent
-        import jarvis.coding_jobs
-        return list_recent(limit)
-    if None == 'audio':
-        list_recent = list_recent
-        import jarvis.audio_progress
-        return list_recent(limit)
-    raise None(f'''Unknown queue: {queue}''')
+def list_recent(queue: str | None, limit: int | None = None) -> list[dict]:
+    limit = limit or 10
+    if queue == "media":
+        from jarvis.media_jobs import list_recent as _list
+
+        return _list(limit)
+    if queue in ("coding", "background"):
+        from jarvis.coding_jobs import list_recent as _list
+
+        return _list(limit)
+    if queue == "audio":
+        from jarvis.audio_progress import list_recent as _list
+
+        return _list(limit)
+    raise ValueError(f"Unknown queue: {queue}")
 
 
-def submit(queue = None, label = None, fn = None):
-    if queue == 'media':
-        _submit = submit
-        import jarvis.media_jobs
-        return _submit(label, fn)
-    if None in ('coding', 'background'):
-        _submit = submit
-        import jarvis.coding_jobs
-        return _submit(label, fn)
-    raise None(f'''Queue {queue} does not support generic submit''')
+def submit(queue: str | None, label: str | None, fn: Callable[[], dict] | None) -> str:
+    if queue == "media":
+        from jarvis.media_jobs import submit as _submit
+
+        action = label or "job"
+        return _submit(action, label or action, fn)
+    if queue in ("coding", "background"):
+        from jarvis.coding_jobs import submit as _submit
+
+        return _submit(label or queue or "job", fn)
+    raise ValueError(f"Queue {queue} does not support generic submit")
 
 
-def submit_assistant_action(assistant = None, action = None, params = None, message = ('action', 'str', 'params', 'dict', 'message', 'str', 'return', 'str')):
-    '''Submit based on registry queue metadata.'''
-    submit_background = submit_action
-    import jarvis.background_jobs
-    get_queue = get_queue
-    import jarvis.handlers.registry
-    submit_media = submit_assistant_action
-    import jarvis.media_jobs
+def submit_assistant_action(
+    assistant: Any,
+    action: str,
+    params: dict,
+    message: str,
+) -> str:
+    """Submit based on registry queue metadata."""
+    from jarvis.background_jobs import submit_action as submit_background
+    from jarvis.handlers.registry import get_queue
+    from jarvis.media_jobs import submit_assistant_action as submit_media
+
     queue = get_queue(action)
-    if queue == 'media':
+    if queue == "media":
         return submit_media(assistant, action, params, message)
-    if None == 'background':
+    if queue == "background":
         return submit_background(assistant, action, params, message)
-    raise None(f'''Action {action} is not a queued action (queue={queue})''')
-
+    raise ValueError(f"Action {action} is not a queued action (queue={queue})")

@@ -140,6 +140,12 @@ def append_step(job_id: str, step: dict[str, Any]) -> None:
 
 
 def cancel_job(job_id: str) -> bool:
+    from jarvis.modules.workflow_orchestration_adapter import workflow_cancel
+
+    return workflow_cancel("coding", job_id, _cancel_job_impl, job_id)
+
+
+def _cancel_job_impl(job_id: str) -> bool:
     with _lock:
         job = _jobs.get(job_id)
         if not job or job.get("done"):
@@ -224,6 +230,12 @@ def _worker_loop() -> None:
 
 
 def submit(label: str, fn: Callable[[], dict]) -> str:
+    from jarvis.modules.workflow_orchestration_adapter import workflow_enqueue
+
+    return workflow_enqueue("coding", label, _submit_impl, label, fn)
+
+
+def _submit_impl(label: str, fn: Callable[[], dict]) -> str:
     _ensure_workers()
     job_id = uuid.uuid4().hex[:12]
     with _lock:

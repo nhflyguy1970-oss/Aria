@@ -363,6 +363,12 @@ def _notify_busy_done(label: str, result: dict) -> None:
 
 
 def submit(action: str, label: str, fn: Callable[[], dict]) -> str:
+    from jarvis.modules.workflow_orchestration_adapter import workflow_enqueue
+
+    return workflow_enqueue("media", action, _submit_impl, action, label, fn)
+
+
+def _submit_impl(action: str, label: str, fn: Callable[[], dict]) -> str:
     """Enqueue work; returns job id."""
     _ensure_worker()
     job_id = uuid.uuid4().hex[:12]
@@ -412,6 +418,12 @@ def get_job(job_id: str) -> dict | None:
 
 
 def cancel_job(job_id: str) -> bool:
+    from jarvis.modules.workflow_orchestration_adapter import workflow_cancel
+
+    return workflow_cancel("media", job_id, _cancel_job_impl, job_id)
+
+
+def _cancel_job_impl(job_id: str) -> bool:
     active = False
     with _lock:
         job = _jobs.get(job_id)

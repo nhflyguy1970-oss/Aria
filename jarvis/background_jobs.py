@@ -38,6 +38,22 @@ _HANDLER_METHODS: dict[str, str] = {
 
 
 def submit_action(assistant: "JarvisAssistant", action: str, params: dict, message: str) -> str:
+    from jarvis.modules.workflow_orchestration_adapter import workflow_enqueue
+
+    return workflow_enqueue(
+        "background",
+        action,
+        _submit_action_impl,
+        assistant,
+        action,
+        params,
+        message,
+    )
+
+
+def _submit_action_impl(
+    assistant: "JarvisAssistant", action: str, params: dict, message: str
+) -> str:
     from jarvis.coding_jobs import submit
     from jarvis.handlers import ensure_handlers_loaded
     from jarvis.handlers.registry import call_action, get_spec
