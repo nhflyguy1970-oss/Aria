@@ -260,6 +260,63 @@ def services_status():
     return get_status(force=False)
 
 
+@app.get("/api/workstation")
+def workstation_status():
+    from jarvis.workstation.lifecycle import status as ws_status
+
+    return ws_status(force=False)
+
+
+@app.get("/api/workstation/diagnose")
+def workstation_diagnose():
+    from jarvis.workstation.operations import diagnose, format_report
+
+    report = diagnose(force=True)
+    report["message"] = format_report(force=True)
+    return report
+
+
+@app.post("/api/workstation/up")
+def workstation_up(body: dict | None = None):
+    from jarvis.workstation.lifecycle import up as ws_up
+
+    body = body or {}
+    return ws_up(
+        (body.get("component") or body.get("target") or "").strip() or None,
+        profile=(body.get("profile") or "").strip() or None,
+    )
+
+
+@app.post("/api/workstation/down")
+def workstation_down(body: dict | None = None):
+    from jarvis.workstation.lifecycle import down as ws_down
+
+    body = body or {}
+    return ws_down(
+        (body.get("component") or body.get("target") or "").strip() or None,
+        profile=(body.get("profile") or "").strip() or None,
+    )
+
+
+@app.post("/api/workstation/restart")
+def workstation_restart(body: dict):
+    from jarvis.workstation.lifecycle import restart as ws_restart
+
+    target = (body.get("component") or body.get("target") or "").strip()
+    if not target:
+        return {"ok": False, "error": "component required"}
+    return ws_restart(target)
+
+
+@app.post("/api/workstation/recover")
+def workstation_recover():
+    from jarvis.workstation.operations import format_report, recover_safe
+
+    result = recover_safe()
+    result["message"] = format_report(force=True)
+    return result
+
+
 @app.post("/api/services/ensure")
 def services_ensure():
     from jarvis.services import ensure_services

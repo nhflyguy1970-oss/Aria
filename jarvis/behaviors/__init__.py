@@ -64,6 +64,7 @@ def _ensure_loaded() -> None:
     from jarvis.behaviors.memory import MemoryBehavior as _memory  # noqa: F401
     from jarvis.behaviors.planning import PlanningBehavior as _planning  # noqa: F401
     from jarvis.behaviors.smarthome import SmartHomeBehavior as _smarthome  # noqa: F401
+    from jarvis.behaviors.operations import OperationsBehavior as _operations  # noqa: F401
 
     _loaded = True
 

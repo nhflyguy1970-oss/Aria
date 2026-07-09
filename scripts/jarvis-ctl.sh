@@ -23,6 +23,7 @@ Usage: $(basename "$0") <command>
   restart   Restart the API server (required after code updates; tray must be running)
   stop      Stop tray + server
   status    Show whether server is up
+  workstation  Workstation registry (status/up/down/diagnose/recover)
   audit     Run 14-phase system audit (see: ./scripts/audit-system.sh)
 
 Tray tip: on GNOME/Ubuntu, left-click the tray icon for the menu — right-click often does nothing.
@@ -80,6 +81,10 @@ case "$cmd" in
   audit)
     shift
     exec "${JARVIS_ROOT}/scripts/audit-system.sh" "$@"
+    ;;
+  workstation)
+    shift
+    exec "${JARVIS_ROOT}/scripts/workstation.sh" "$@"
     ;;
   -h|--help|help|"")
     usage

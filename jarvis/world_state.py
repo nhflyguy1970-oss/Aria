@@ -211,21 +211,43 @@ def _recent_failures(memory_store=None, *, limit: int = 3) -> list[dict[str, str
 
 def _services_summary() -> dict[str, Any]:
     try:
-        from jarvis.services import get_status
+        from jarvis.workstation.registry import registry_snapshot
 
-        st = get_status()
-        svcs = st.get("services") or []
-        down = [s.get("name") for s in svcs if s.get("required") and not s.get("running")]
-        optional_down = [s.get("name") for s in svcs if not s.get("required") and not s.get("running")]
+        snap = registry_snapshot()
         return {
-            "ready": bool(st.get("ready")),
-            "ollama": bool(st.get("ollama", {}).get("running")),
-            "comfyui": bool(st.get("comfyui", {}).get("running")),
-            "required_down": down,
-            "optional_down": optional_down[:4],
+            "ready": bool(snap.get("ready")),
+            "ollama": any(
+                c.get("running")
+                for c in snap.get("components") or []
+                if c.get("id") == "ollama"
+            ),
+            "comfyui": any(
+                c.get("running")
+                for c in snap.get("components") or []
+                if c.get("id") == "comfyui"
+            ),
+            "required_down": snap.get("required_down") or [],
+            "optional_down": snap.get("optional_down") or [],
+            "running": (snap.get("summary") or {}).get("running"),
+            "total": (snap.get("summary") or {}).get("total"),
         }
     except Exception:
-        return {"ready": False, "required_down": []}
+        try:
+            from jarvis.services import get_status
+
+            st = get_status()
+            svcs = st.get("services") or []
+            down = [s.get("name") for s in svcs if s.get("required") and not s.get("running")]
+            optional_down = [s.get("name") for s in svcs if not s.get("required") and not s.get("running")]
+            return {
+                "ready": bool(st.get("ready")),
+                "ollama": bool(st.get("ollama", {}).get("running")),
+                "comfyui": bool(st.get("comfyui", {}).get("running")),
+                "required_down": down,
+                "optional_down": optional_down[:4],
+            }
+        except Exception:
+            return {"ready": False, "required_down": []}
 
 
 def build_world_state(*, memory_store=None) -> dict[str, Any]:

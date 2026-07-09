@@ -257,6 +257,11 @@ def ensure_comfyui_background() -> None:
     ).start()
 
 
+def stop_comfyui() -> None:
+    """Stop the Jarvis-managed ComfyUI process."""
+    _stop_comfyui()
+
+
 def _stop_comfyui() -> None:
     global _comfy_proc
     port = os.getenv("JARVIS_COMFYUI_PORT", "8188")
