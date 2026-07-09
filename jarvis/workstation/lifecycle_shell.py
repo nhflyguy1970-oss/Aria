@@ -54,6 +54,10 @@ def verify() -> int:
     return run_script("workstation-verify.sh")
 
 
+def hardware() -> int:
+    return run_script("workstation-hardware.sh")
+
+
 def doctor() -> int:
     from jarvis.workstation import operations
 

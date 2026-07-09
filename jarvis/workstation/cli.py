@@ -23,6 +23,7 @@ def main(argv: list[str] | None = None) -> int:
     restore_p = sub.add_parser("restore", help="Restore from backup-workstation archive")
     restore_p.add_argument("archive", help="Path to workstation_*.tar.gz")
     sub.add_parser("verify", help="Hardware-agnostic install verification")
+    sub.add_parser("hardware", help="Detect hardware and print workload recommendations")
     sub.add_parser("doctor", help="Diagnose workstation + AI-Platform")
 
     sub.add_parser("status", help="Show workstation status (JSON)")
@@ -59,6 +60,7 @@ def main(argv: list[str] | None = None) -> int:
         "update": lifecycle_shell.update,
         "backup": lifecycle_shell.backup,
         "verify": lifecycle_shell.verify,
+        "hardware": lifecycle_shell.hardware,
         "doctor": lifecycle_shell.doctor,
     }
     if args.command in lifecycle_commands:
