@@ -112,7 +112,10 @@ def build_command(tool_id: str, params: dict[str, Any]) -> tuple[list[str], str]
         return [binary, "--prompt", task], cwd
 
     if tool_id == "opencode":
-        return [binary, "run", task], cwd
+        subcmd = str(params.get("subcommand") or "run").strip()
+        if subcmd == "serve":
+            return [binary, "serve"], cwd
+        return [binary, subcmd, task], cwd
 
     return [binary, task], cwd
 
@@ -190,6 +193,8 @@ def start_background(tool_id: str, params: dict[str, Any]) -> ToolRun:
                     from jarvis.personalization.learner import learn_from_tool_result
 
                     learn_from_tool_result(tool_id, {"ok": True, "stdout": tool_run.stdout})
+                    if tool_id == "opencode":
+                        _remember_opencode_result(tool_run)
                 except Exception:
                     pass
 
@@ -214,6 +219,24 @@ def start_background(tool_id: str, params: dict[str, Any]) -> ToolRun:
         save_run(run)
 
     return run
+
+
+def _remember_opencode_result(run: ToolRun) -> None:
+    if not run.stdout:
+        return
+    try:
+        from jarvis.assistant_instance import get_assistant
+
+        assistant = get_assistant()
+        if hasattr(assistant, "memory") and assistant.memory:
+            assistant.memory.add(
+                f"[opencode:{run.id}] {run.task}\n{run.stdout[:600]}",
+                entry_type="tool_result",
+                namespace="opencode",
+                tags=["opencode", "coding"],
+            )
+    except Exception:
+        pass
 
 
 def run_status(run_id: str) -> dict[str, Any]:

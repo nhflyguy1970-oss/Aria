@@ -34,9 +34,34 @@ def collect_metrics() -> dict[str, float]:
         from jarvis.workstation.registry import registry_snapshot
 
         ws = registry_snapshot()
-        out["jarvis_workstation_components_total"] = float(ws.get("source_count") or 0)
-        out["jarvis_workstation_components_running"] = float(
-            sum(1 for c in ws.get("sources") or [] if c.get("running"))
+        summary = ws.get("summary") or {}
+        out["jarvis_workstation_components_total"] = float(summary.get("total") or 0)
+        out["jarvis_workstation_components_running"] = float(summary.get("running") or 0)
+    except Exception:
+        pass
+
+    try:
+        from jarvis.assistant_instance import get_assistant
+
+        mem = get_assistant().memory
+        if hasattr(mem, "list_entries"):
+            out["jarvis_memory_entries_total"] = float(len(mem.list_entries()))
+    except Exception:
+        pass
+
+    try:
+        from jarvis.tools.runner import list_runs
+
+        active = sum(1 for r in list_runs()[:50] if r.status == "running")
+        out["jarvis_tool_runs_active"] = float(active)
+    except Exception:
+        pass
+
+    try:
+        from jarvis.jobs.checkpointed import list_jobs
+
+        out["jarvis_agent_jobs_running"] = float(
+            sum(1 for j in list_jobs(status="running"))
         )
     except Exception:
         pass
