@@ -31,11 +31,23 @@ def configure() -> int:
 
 
 def start() -> int:
-    from jarvis.workstation import lifecycle
+    from jarvis.workstation.startup import bootstrap_workstation, startup_greeting
 
-    bootstrap = lifecycle.up()
-    if not bootstrap.get("ok"):
-        print("Warning: bootstrap services incomplete", file=sys.stderr)
+    result = bootstrap_workstation()
+    if not result.get("ok"):
+        print("Warning: bootstrap incomplete", file=sys.stderr)
+    try:
+        from jarvis.workstation.acceptance import run_acceptance
+
+        run_acceptance(persist=True)
+        greeting = startup_greeting()
+        if greeting:
+            subprocess.run(
+                ["bash", "-c", f'notify-send -a "AI Workstation" "{greeting}" 2>/dev/null || true'],
+                cwd=str(_ROOT),
+            )
+    except Exception:
+        pass
     return run_script("launch-jarvis.sh")
 
 

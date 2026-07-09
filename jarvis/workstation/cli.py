@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
     _add_install_profile_args(install_p)
 
     sub.add_parser("configure", help="Create jarvis.env and initialize platform paths")
+    sub.add_parser("setup", help="First-run setup: configure, services, models, acceptance")
     sub.add_parser("start", help="Start Aria desktop (tray + server + window)")
     sub.add_parser("stop", help="Stop tray and server")
     restart_p = sub.add_parser("restart", help="Restart Aria server or a managed component")
@@ -121,6 +122,16 @@ def main(argv: list[str] | None = None) -> int:
         from jarvis.workstation.optimize import apply_optimization
 
         result = apply_optimization(dry_run=bool(args.dry_run))
+        print(json.dumps(result, indent=2))
+        return 0 if result.get("ok") else 1
+
+    if args.command == "configure":
+        return lifecycle_shell.configure()
+
+    if args.command == "setup":
+        from jarvis.workstation.first_run import run_first_run_setup
+
+        result = run_first_run_setup()
         print(json.dumps(result, indent=2))
         return 0 if result.get("ok") else 1
 

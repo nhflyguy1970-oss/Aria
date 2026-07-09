@@ -25,6 +25,7 @@ def _item(**kwargs) -> AcceptanceItem:
         healthy=True,
         verified=True,
         used_by_aria=True,
+        integration_ok=True,
     )
     defaults.update(kwargs)
     return AcceptanceItem(**defaults)
@@ -40,7 +41,7 @@ def test_classify_not_installed():
 
 def test_classify_needs_config_when_unverified():
     assert (
-        _classify(_item(verified=False, used_by_aria=True))
+        _classify(_item(integration_ok=False, used_by_aria=True))
         == AcceptanceStatus.NEEDS_CONFIGURATION.value
     )
 
@@ -52,9 +53,11 @@ def test_run_acceptance_empty_catalog():
     assert report["items"] == []
 
 
+@patch("jarvis.workstation.integration_probes.run_probe")
 @patch("jarvis.workstation.acceptance._probe_aria_api")
 @patch("jarvis.workstation.acceptance._probe_registry")
-def test_run_acceptance_marks_aria_ready(mock_registry, mock_aria):
+def test_run_acceptance_marks_aria_ready(mock_registry, mock_aria, mock_run_probe):
+    mock_run_probe.return_value = {"ok": True, "detail": "ok"}
     mock_registry.return_value = {
         "installed": True,
         "running": True,

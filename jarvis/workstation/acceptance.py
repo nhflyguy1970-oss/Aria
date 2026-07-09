@@ -42,6 +42,8 @@ class AcceptanceItem:
     dependencies: list[str] = field(default_factory=list)
     detail: str = ""
     fix_hint: str = ""
+    functional_verification: str = ""
+    integration_ok: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -102,11 +104,12 @@ def _probe_registry(component_id: str) -> dict[str, Any]:
         installed = True
     else:
         installed = running or bool(comp.status_detail())
+    env_configured = _env_any(*comp.config_keys) if comp.config_keys else True
     return {
         "installed": installed,
         "running": running,
         "healthy": running,
-        "configured": _env_any(*comp.config_keys) if comp.config_keys else installed,
+        "configured": env_configured or running,
         "version": comp.status_detail(),
         "verified": running,
         "autostart_enabled": comp.autostart,
@@ -557,14 +560,16 @@ _CATALOG: list[tuple[str, str, str, bool, bool, bool, list[str], ProbeFn]] = [
 def _classify(item: AcceptanceItem) -> str:
     if not item.installed:
         return AcceptanceStatus.NOT_INSTALLED.value
-    integration_ok = item.verified if item.used_by_aria else True
+    integration_ok = item.integration_ok if item.used_by_aria else True
     if item.healthy and item.configured and integration_ok:
         return AcceptanceStatus.READY.value
     return AcceptanceStatus.NEEDS_CONFIGURATION.value
 
 
-def run_acceptance(*, persist: bool = True) -> dict[str, Any]:
+def run_acceptance(*, persist: bool = True, live: bool = True) -> dict[str, Any]:
     """Run full workstation acceptance and compute score."""
+    from jarvis.workstation.integration_probes import PROBE_MAP, run_probe
+
     items: list[AcceptanceItem] = []
     now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -588,32 +593,86 @@ def run_acceptance(*, persist: bool = True) -> dict[str, Any]:
             detail=str(raw.get("detail") or ""),
             fix_hint=str(raw.get("fix_hint") or ""),
         )
+        if live and cid in PROBE_MAP and item.installed and item.healthy:
+            probe_result = run_probe(cid)
+            item.functional_verification = str(probe_result.get("detail") or "")[:200]
+            item.integration_ok = bool(probe_result.get("ok"))
+            item.verified = item.integration_ok
+        elif item.installed and item.healthy:
+            item.integration_ok = bool(raw.get("verified"))
+            item.functional_verification = item.detail
+        else:
+            item.integration_ok = False
         item.status = _classify(item)
         items.append(item)
 
     daily_ids = {c[0] for c in _CATALOG if c[3]}
     daily_items = [i for i in items if i.id in daily_ids]
     optional_items = [i for i in items if i.id not in daily_ids]
+    integration_items = [i for i in items if i.used_by_aria and i.id in PROBE_MAP]
 
     def _avg_score(group: list[AcceptanceItem]) -> float:
         if not group:
             return 100.0
         return round(100.0 * sum(i.score_points for i in group) / len(group), 1)
 
+    def _integration_score(group: list[AcceptanceItem]) -> float:
+        if not group:
+            return 100.0
+        ok = sum(1 for i in group if i.integration_ok)
+        return round(100.0 * ok / len(group), 1)
+
     overall = _avg_score(items)
     daily_score = _avg_score(daily_items)
+    integration_score = _integration_score(integration_items)
+    hardware_score = 100.0
+    try:
+        from jarvis.workstation.hardware_report import collect_hardware
+
+        hw = collect_hardware(benchmark=False)
+        if hw.get("gpus"):
+            hardware_score = 85.0
+        if hw.get("recommendations"):
+            hardware_score = max(70.0, hardware_score - 5.0 * len(hw["recommendations"][:3]))
+    except Exception:
+        hardware_score = 0.0
+
+    production_readiness = round(
+        (daily_score * 0.45)
+        + (integration_score * 0.35)
+        + (overall * 0.1)
+        + (hardware_score * 0.1),
+        1,
+    )
     ready = [i.id for i in items if i.status == AcceptanceStatus.READY.value]
     needs = [i.id for i in items if i.status == AcceptanceStatus.NEEDS_CONFIGURATION.value]
     missing = [i.id for i in items if i.status == AcceptanceStatus.NOT_INSTALLED.value]
 
+    recommended_fixes = [
+        {"id": i.id, "label": i.label, "fix": i.fix_hint or i.functional_verification}
+        for i in items
+        if i.status != AcceptanceStatus.READY.value and (i.fix_hint or i.functional_verification)
+    ][:12]
+    remaining_work = [
+        {"id": i.id, "label": i.label, "status": i.status}
+        for i in items
+        if i.status != AcceptanceStatus.READY.value
+    ]
+
     payload = {
-        "ok": daily_score >= 80.0 and "aria" in ready and "ollama" in ready,
+        "ok": daily_score >= 100.0
+        and integration_score >= 90.0
+        and "aria" in ready
+        and "ollama" in ready,
         "ts": time.time(),
         "verified_at": now,
         "score": {
             "overall": overall,
             "daily_required": daily_score,
             "optional": _avg_score(optional_items),
+            "integration": integration_score,
+            "production_readiness": production_readiness,
+            "hardware_utilization": hardware_score,
         },
         "summary": {
             "total": len(items),
@@ -625,8 +684,14 @@ def run_acceptance(*, persist: bool = True) -> dict[str, Any]:
             "missing_ids": missing,
         },
         "items": [i.to_dict() for i in items],
-        "daily_ready": daily_score >= 80.0,
-        "acceptance_passed": daily_score >= 80.0 and "aria" in ready and "ollama" in ready,
+        "daily_ready": daily_score >= 100.0,
+        "acceptance_passed": daily_score >= 100.0
+        and integration_score >= 90.0
+        and "aria" in ready
+        and "ollama" in ready,
+        "remaining_work": remaining_work,
+        "recommended_fixes": recommended_fixes,
+        "known_issues": [f"{i['label']}: {i['status']}" for i in remaining_work[:8]],
     }
     if persist:
         _ACCEPTANCE_CACHE.parent.mkdir(parents=True, exist_ok=True)
@@ -645,6 +710,8 @@ def format_acceptance_markdown(
         "",
         f"**Overall score:** {scores.get('overall', 0)}%",
         f"**Daily-required score:** {scores.get('daily_required', 0)}%",
+        f"**Integration score:** {scores.get('integration', 0)}%",
+        f"**Production readiness:** {scores.get('production_readiness', 0)}%",
         f"**Passed:** {'YES' if data.get('acceptance_passed') else 'NO'}",
         "",
         f"Ready: **{summary.get('ready', 0)}** · "
@@ -660,13 +727,8 @@ def format_acceptance_markdown(
         lines.append(f"{mark} **{item.get('label')}**{daily} — `{status}`")
         if item.get("version"):
             lines.append(f"    version: {item['version']}")
-        if verbose:
-            lines.append(
-                f"    installed={item.get('installed')} configured={item.get('configured')} "
-                f"running={item.get('running')} healthy={item.get('healthy')} "
-                f"verified={item.get('verified')} aria={item.get('used_by_aria')} "
-                f"autostart={item.get('autostart_enabled')}"
-            )
+        if verbose and item.get("functional_verification"):
+            lines.append(f"    verified: {item['functional_verification']}")
             if item.get("data_location"):
                 lines.append(f"    data: {item['data_location']}")
             if item.get("dependencies"):

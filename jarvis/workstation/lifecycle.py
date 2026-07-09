@@ -10,6 +10,15 @@ from jarvis.workstation.registry import all_components, component, get_registry,
 logger = logging.getLogger("jarvis.workstation")
 
 
+def _autostart_ids() -> set[str]:
+    import os
+
+    raw = os.getenv("JARVIS_AUTOSTART_SERVICES", "").strip()
+    if not raw:
+        return set()
+    return {part.strip() for part in raw.split(",") if part.strip()}
+
+
 def status(*, force: bool = False) -> dict[str, Any]:
     """Full workstation status snapshot."""
     return registry_snapshot(force=force)
@@ -34,7 +43,10 @@ def up(target: str | None = None, *, profile: str | None = None) -> dict[str, An
         results.append({"id": "workstation", "ok": ok, "action": "start"})
 
     for comp in all_components():
-        if not comp.autostart or comp.id in ("workstation", "aria"):
+        if comp.id in ("workstation", "aria"):
+            continue
+        should_start = comp.autostart or comp.id in _autostart_ids()
+        if not should_start:
             continue
         if comp.healthy():
             results.append(
