@@ -68,6 +68,7 @@ def _ensure_loaded() -> None:
     from jarvis.behaviors.tools import ToolsBehavior as _tools  # noqa: F401
     from jarvis.behaviors.agents import AgentsBehavior as _agents  # noqa: F401
     from jarvis.behaviors.personalization import PersonalizationBehavior as _personalization  # noqa: F401
+    from jarvis.behaviors.daily import DailyWorkflowBehavior as _daily  # noqa: F401
 
     _loaded = True
 
