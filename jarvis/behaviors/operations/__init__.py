@@ -30,6 +30,7 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
         "data": _inference_status(),
     },
     "maintenance_run": lambda _params, _message: _maintenance_run(),
+    "context_preview": lambda params, message: _context_preview(params, message),
 }
 
 
@@ -91,6 +92,20 @@ def _maintenance_run() -> dict:
         "ok": result.get("ok", False),
         "message": f"Maintenance complete ({result.get('elapsed_ms', 0)}ms)",
         "data": result,
+    }
+
+
+def _context_preview(params: dict, message: str) -> dict:
+    from jarvis.assistant_instance import get_assistant
+    from jarvis.context.builder import build_unified_context
+
+    query = (params.get("query") or message or "status").strip()
+    result = build_unified_context(get_assistant(), query)
+    ctx = (result.get("context") or "")[:6000]
+    return {
+        "ok": result.get("ok", False),
+        "message": ctx or "_No context assembled._",
+        "data": {k: v for k, v in result.items() if k != "context"},
     }
 
 
