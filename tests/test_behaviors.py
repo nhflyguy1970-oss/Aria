@@ -65,5 +65,33 @@ class TestConversationBehavior(unittest.TestCase):
         self.assertIn("dependencies", health)
 
 
+class TestPlanningBehavior(unittest.TestCase):
+    def test_discover_planning_behavior(self):
+        behavior = get_behavior("planning")
+        from jarvis.behaviors.planning import PlanningBehavior
+
+        self.assertIsInstance(behavior, PlanningBehavior)
+        self.assertEqual(behavior.stability, "stable")
+        self.assertEqual(behavior.owner, "application")
+        self.assertIn("planner_set_timer", behavior.action_names)
+
+    def test_planning_registers_actions(self):
+        register_behaviors()
+        for action in (
+            "planner_add_task",
+            "planner_set_timer",
+            "planner_today",
+            "journal_schedule",
+        ):
+            self.assertTrue(has_action(action))
+
+    @patch("jarvis.feature_flags.planner_enabled", return_value=True)
+    def test_add_task_via_registry(self, _enabled):
+        register_behaviors()
+        with patch("jarvis.planner_store.add_task", return_value={"text": "buy milk"}):
+            result = call_action(MagicMock(), "planner_add_task", {"text": "buy milk"}, "add task")
+        self.assertIn("buy milk", result.get("message", ""))
+
+
 if __name__ == "__main__":
     unittest.main()

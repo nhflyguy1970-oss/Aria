@@ -26,12 +26,12 @@ def discover_behaviors() -> list[ApplicationBehavior]:
     return list(_BEHAVIORS)
 
 
-def register_behaviors(assistant: JarvisAssistant | None = None) -> list[ApplicationBehavior]:
+def register_behaviors(orchestrator: JarvisAssistant | None = None) -> list[ApplicationBehavior]:
     loaded = discover_behaviors()
     for behavior in loaded:
         behavior.attach()
-        if assistant is not None:
-            behavior.initialize(assistant)
+        if orchestrator is not None:
+            behavior.initialize(orchestrator)
     return loaded
 
 
@@ -55,5 +55,16 @@ def _ensure_loaded() -> None:
         return
     from jarvis.behaviors import conversation as _conversation  # noqa: F401
     from jarvis.behaviors import git as _git  # noqa: F401
+    from jarvis.behaviors.planning import PlanningBehavior as _planning  # noqa: F401
 
     _loaded = True
+
+
+__all__ = [
+    "ApplicationBehavior",
+    "behavior_descriptors",
+    "discover_behaviors",
+    "get_behavior",
+    "register_behavior",
+    "register_behaviors",
+]

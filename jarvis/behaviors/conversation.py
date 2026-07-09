@@ -9,7 +9,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from jarvis import llm
-from jarvis.behaviors import ApplicationBehavior, register_behavior
+from jarvis.behaviors.lifecycle import ApplicationBehavior
+
+from jarvis.behaviors import register_behavior
 from jarvis.config import is_uncensored
 from jarvis.handlers.registry import register_action
 from jarvis.ollama_health import check_ollama

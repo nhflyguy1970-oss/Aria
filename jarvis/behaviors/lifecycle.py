@@ -21,9 +21,11 @@ class ApplicationBehavior:
     test_module: str = ""
     action_names: list[str] = field(default_factory=list)
     dependencies: list[str] = field(default_factory=list)
+    stability: str = "stable"
+    owner: str = "application"
 
-    def initialize(self, assistant: JarvisAssistant) -> None:
-        """Bind this behavior to a running assistant instance."""
+    def initialize(self, orchestrator: Any) -> None:
+        """Bind this behavior to a running orchestrator instance."""
 
     def attach(self) -> list[str]:
         """Register handlers, platform metadata, and runtime hooks."""
@@ -35,7 +37,7 @@ class ApplicationBehavior:
 
     def execute(
         self,
-        assistant: JarvisAssistant,
+        orchestrator: Any,
         action: str,
         params: dict,
         message: str,
@@ -67,6 +69,8 @@ class ApplicationBehavior:
             "test_module": self.test_module,
             "actions": list(self.action_names),
             "dependencies": list(self.dependencies),
+            "stability": self.stability,
+            "owner": self.owner,
             "extracted": True,
             "application_id": application_id,
         }

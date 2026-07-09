@@ -631,8 +631,6 @@ class JarvisAssistant:
             "journal_migrate": self._journal_migrate,
             "journal_search": self._journal_search,
             "journal_remember": self._journal_remember,
-            "journal_schedule": self._journal_schedule,
-            "journal_thread": self._journal_thread,
             "journal_review": self._journal_review,
             "data_chart": self._data_chart,
             "data_sql": self._data_sql,
@@ -4391,55 +4389,6 @@ PROJECT: {context}"""
         self.memory.add("fact", content, namespace=ns)
         self.session.note_module("memory")
         return _ok(f"Saved to memory (`{ns}`):\n\n{content}", module="journal")
-
-    def _journal_task_disambiguation(self, candidates: list[dict], hint: str = "") -> dict:
-        lines = "\n".join(
-            f"• {t.get('content', '?')} `[{str(t.get('id', ''))[:8]}]` ({t.get('section', '')})"
-            for t in candidates[:8]
-        )
-        prefix = f" for “{hint}”" if hint else ""
-        return _ok(
-            f"Which task{prefix}?\n{lines}\n\nSay the task name or include the bullet ID.",
-            module="journal",
-        )
-
-    def _journal_schedule(self, params: dict, message: str) -> dict:
-        from jarvis.modules.journal import _month_key
-
-        month = params.get("month") or _month_key()
-        task, candidates, hint = self.journal.match_open_task(
-            message,
-            bullet_id=params.get("bullet_id"),
-            task_query=params.get("task_query"),
-        )
-        if not task:
-            if not candidates:
-                return _ok("No open tasks to schedule.", module="journal")
-            return self._journal_task_disambiguation(candidates, hint)
-        b = self.journal.bullet_schedule(task["id"], month)
-        if not b:
-            return _err("Could not schedule task.")
-        return _ok(f"Scheduled to future log ({month}): {b.get('content', '')}", module="journal")
-
-    def _journal_thread(self, params: dict, message: str) -> dict:
-        from jarvis.modules.journal import _today
-
-        day = params.get("day") or _today()
-        dup = params.get("duplicate") in (True, "true", "1")
-        task, candidates, hint = self.journal.match_open_task(
-            message,
-            bullet_id=params.get("bullet_id"),
-            task_query=params.get("task_query"),
-        )
-        if not task:
-            if not candidates:
-                return _ok("No open tasks to thread.", module="journal")
-            return self._journal_task_disambiguation(candidates, hint)
-        b = self.journal.bullet_thread_to_daily(task["id"], day, duplicate=dup)
-        if not b:
-            return _err("Could not thread task to daily log.")
-        verb = "Copied" if dup else "Migrated"
-        return _ok(f"{verb} to {day}: {b.get('content', '')}", module="journal")
 
     def _journal_review(self, params: dict, message: str) -> dict:
         scope = "week" if "week" in message.lower() else "month"
