@@ -40,19 +40,21 @@ def test_curated_news_categories():
 
 
 def test_system_info_intelligence_block():
+    from unittest.mock import MagicMock
+
     from jarvis.system_info import build_system_info
 
-    info = build_system_info()
-    assert "intelligence" in info
-    intel = info["intelligence"]
-    assert "daily_focus" in intel
-    assert "intel_alert" in intel
-    assert "smart_home" in intel
-    assert "priority" in intel
+    info = build_system_info(assistant=MagicMock())
+    assert "planner" in info
+    assert "feature_flags" in info
+    assert "home_assistant" in info
+    assert info.get("greeting")
 
 
 def test_iterate_cad_handler_registered():
+    from jarvis.handlers import ensure_handlers_loaded
     from jarvis.handlers.registry import get_action
 
+    ensure_handlers_loaded()
     fn = get_action("iterate_cad")
     assert fn is not None

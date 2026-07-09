@@ -73,6 +73,11 @@ def get_spec(name: str) -> ActionSpec | None:
     return _REGISTRY.get(name)
 
 
+def get_action(name: str) -> HandlerFn | None:
+    spec = _REGISTRY.get(name)
+    return spec.handler if spec else None
+
+
 def get_queue(name: str) -> str | None:
     spec = _REGISTRY.get(name)
     return spec.queue if spec else None
