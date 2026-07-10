@@ -97,6 +97,20 @@ def is_runtime_introspection_question(message: str) -> bool:
 def classify_runtime_action(message: str) -> str:
     """Pick the most specific runtime action for a self-introspection question."""
     text = (message or "").strip()
+    lower = text.lower()
+    literal = {
+        "runtime_status": "runtime_status",
+        "runtime_mode": "runtime_mode",
+        "runtime_health": "runtime_health",
+        "runtime_platform": "runtime_platform",
+        "runtime_services": "runtime_services",
+        "runtime_models": "runtime_models",
+        "runtime_gpu": "runtime_gpu",
+        "runtime_jobs": "runtime_jobs",
+        "runtime_providers": "runtime_providers",
+    }
+    if lower in literal:
+        return literal[lower]
     for pattern, action in _RUNTIME_ACTION_PATTERNS:
         if pattern.search(text):
             return action
@@ -405,7 +419,45 @@ def collect_runtime_health() -> dict[str, Any]:
 
 
 def collect_runtime_status() -> dict[str, Any]:
-    """Full live runtime snapshot."""
+    """Full live runtime snapshot — sourced from AI Platform Mission Control."""
+    try:
+        from aiplatform.mission_control.aggregator import collect_mission_control
+
+        mc = collect_mission_control(record_metrics=False)
+        ov = mc.get("overview") or {}
+        return {
+            "ok": True,
+            "ts": mc.get("ts") or datetime.now().isoformat(timespec="seconds"),
+            "source": "mission_control",
+            "identity": {
+                "name": os.getenv("JARVIS_ASSISTANT_NAME", "Aria"),
+                "version": "3.1.0",
+                "install_path": str(PROJECT_ROOT),
+            },
+            "execution_mode": ov.get("execution_mode") or execution_mode(),
+            "host": _host_status(),
+            "platform": _platform_attachment(),
+            "cutover": _cutover_status(),
+            "phase": ov.get("phase") or _phase_status(),
+            "acceptance": {
+                "overall": ov.get("acceptance_overall"),
+                "production_readiness": ov.get("production_readiness"),
+            },
+            "providers": mc.get("providers") or _providers(),
+            "services": {
+                "ready": mc.get("services_ready"),
+                "services": mc.get("services") or [],
+                "databases": mc.get("databases") or [],
+            },
+            "models": mc.get("inference") or _models(),
+            "gpu": mc.get("hardware") or _gpu_cpu_memory(),
+            "jobs": mc.get("jobs") or _jobs(),
+            "workspace": _workspace_git(),
+            "health": mc.get("recovery", {}).get("health") or _health(),
+            "overview": ov,
+        }
+    except Exception:
+        pass
     return {
         "ok": True,
         "ts": datetime.now().isoformat(timespec="seconds"),
@@ -574,7 +626,20 @@ def is_status_command(message: str) -> str | None:
     text = (message or "").strip().lower()
     if text.startswith("/"):
         text = text[1:].strip()
-    return STATUS_COMMANDS.get(text)
+    if text in STATUS_COMMANDS:
+        return STATUS_COMMANDS[text]
+    literal = {
+        "runtime_status": "runtime_status",
+        "runtime_mode": "runtime_mode",
+        "runtime_health": "runtime_health",
+        "runtime_platform": "runtime_platform",
+        "runtime_services": "runtime_services",
+        "runtime_models": "runtime_models",
+        "runtime_gpu": "runtime_gpu",
+        "runtime_jobs": "runtime_jobs",
+        "runtime_providers": "runtime_providers",
+    }
+    return literal.get(text)
 
 
 def _memory_detail() -> dict[str, Any]:

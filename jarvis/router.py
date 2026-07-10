@@ -526,6 +526,10 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
 
 
 def _is_capabilities_question(lower: str) -> bool:
+    from jarvis.runtime_introspection import is_runtime_introspection_question
+
+    if is_runtime_introspection_question(lower):
+        return False
     patterns = [
         r"what (can you do|do you do|are you able|services|features|capabilities)",
         r"what(?:'s| is) (?:your|jarvis)",
@@ -686,21 +690,20 @@ def _quick_route(message: str, attachment: dict | None, session: SessionContext)
     if follow:
         return follow
 
+    # Runtime introspection — highest priority (before router table / web search).
+    from jarvis.runtime_introspection import is_status_command, route_runtime_introspection
+
+    if runtime_hit := route_runtime_introspection(message):
+        return runtime_hit
+
+    if status_action := is_status_command(message):
+        return {"action": status_action, "params": {}, "thinking": "workstation status"}
+
     from jarvis.router_table import match_router_table
 
     table_hit = match_router_table(message, session)
     if table_hit:
         return table_hit
-
-    from jarvis.runtime_introspection import route_runtime_introspection
-
-    if runtime_hit := route_runtime_introspection(message):
-        return runtime_hit
-
-    from jarvis.runtime_introspection import is_status_command
-
-    if status_action := is_status_command(message):
-        return {"action": status_action, "params": {}, "thinking": "workstation status"}
 
     lower = message.lower().strip()
 
@@ -1199,6 +1202,14 @@ def _quick_route(message: str, attachment: dict | None, session: SessionContext)
     if re.search(r"\b(search (the )?web|web search|look up online|google)\b", lower):
         q = re.sub(r"^(please\s+)?(search (the )?web for|web search|look up online|google)\s*[:\-]?\s*", "", message, flags=re.I).strip()
         return {"action": "web_search", "params": {"query": q or message}}
+
+    from jarvis.runtime_introspection import is_runtime_introspection_question
+
+    if is_runtime_introspection_question(message):
+        from jarvis.runtime_introspection import route_runtime_introspection
+
+        if runtime_hit := route_runtime_introspection(message):
+            return runtime_hit
 
     if is_general_knowledge_question(message, session):
         return {"action": "web_search", "params": {"query": message}, "thinking": "general knowledge"}
