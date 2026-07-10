@@ -129,20 +129,56 @@ def test_execution_mode_returns_string():
     from jarvis.runtime_introspection import execution_mode
 
     mode = execution_mode()
-    assert mode in ("standalone", "attached", "compatibility", "platform-authoritative")
+    assert mode in (
+        "standalone",
+        "attached",
+        "compatibility",
+        "platform-authoritative",
+        "platform-attached",
+        "disconnected",
+    )
 
 
-def test_collect_runtime_status_shape():
+@patch("jarvis.runtime_introspection.get_runtime_client")
+def test_collect_runtime_status_shape(mock_get_client):
+    from unittest.mock import MagicMock
+
+    client = MagicMock()
+    client.snapshot.return_value = {
+        "ok": True,
+        "ts": "2026-07-09T12:00:00",
+        "overview": {"execution_mode": "platform-attached"},
+        "services": [],
+        "databases": [],
+        "applications": [],
+        "inference": {},
+        "hardware": {},
+        "jobs": {},
+        "recovery": {},
+    }
+    mock_get_client.return_value = client
+
     from jarvis.runtime_introspection import collect_runtime_status
 
     data = collect_runtime_status()
     assert data.get("ok") is True
+    assert data.get("source") == "mission_control"
     assert "execution_mode" in data
     assert "identity" in data
-    assert "providers" in data
 
 
-def test_runtime_action_result_has_message():
+@patch("jarvis.runtime_introspection.get_runtime_client")
+def test_runtime_action_result_has_message(mock_get_client):
+    from unittest.mock import MagicMock
+
+    client = MagicMock()
+    client.snapshot.return_value = {
+        "ok": True,
+        "overview": {"execution_mode": "platform-attached", "phase": {"phase": "production"}},
+        "applications": [{"id": "aria", "running": True, "healthy": True}],
+    }
+    mock_get_client.return_value = client
+
     from jarvis.runtime_introspection import runtime_action_result
 
     result = runtime_action_result("runtime_mode")

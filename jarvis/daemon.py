@@ -335,6 +335,18 @@ def run_tray(uncensored: bool = False) -> None:
             "AI Platform behavior extraction attached for Aria (%s behaviors)",
             behavior_report.get("registered_behaviors", 0),
         )
+    from jarvis.platform_runtime import bootstrap_runtime_connection
+
+    runtime_report = bootstrap_runtime_connection()
+    if not runtime_report.get("ok"):
+        issues = "; ".join(runtime_report.get("issues") or ["unknown"])
+        logger.warning("Runtime connection incomplete: %s", issues)
+        _notify("Aria", "Platform runtime not synced — start AI Platform")
+    else:
+        logger.info(
+            "Platform Connected · Mission Control Connected · Runtime Synced (%s)",
+            runtime_report.get("connection_mode"),
+        )
     _install_restart_signal_handler()
     if uncensored:
         os.environ["JARVIS_UNCENSORED"] = "1"

@@ -34,6 +34,26 @@ attach_platform_automation_event()
 attach_platform_behavior_extraction()
 
 
+def _bootstrap_platform_runtime() -> None:
+    import logging
+
+    logger = logging.getLogger("jarvis.main")
+    try:
+        from jarvis.platform_runtime import bootstrap_runtime_connection
+
+        report = bootstrap_runtime_connection()
+        if not report.get("ok"):
+            logger.warning(
+                "Runtime connection incomplete: %s",
+                "; ".join(report.get("issues") or []),
+            )
+    except Exception as exc:
+        logger.warning("Platform runtime bootstrap failed: %s", exc)
+
+
+_bootstrap_platform_runtime()
+
+
 def print_help():
     from jarvis.branding import assistant_full_name, assistant_name
 

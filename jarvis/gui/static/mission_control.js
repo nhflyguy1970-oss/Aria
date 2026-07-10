@@ -2,6 +2,7 @@
 
 const MC_TABS = [
   "overview",
+  "connection",
   "applications",
   "inference",
   "memory",
@@ -221,11 +222,58 @@ function renderRecovery(d) {
     ])}`;
 }
 
+function renderConnection(conn) {
+  const checks = conn.checks || {};
+  const row = (label, ok) =>
+    `<tr><td>${mcEsc(label)}</td><td>${mcBadge(ok, "Yes", "No")}</td></tr>`;
+  const issues = (conn.issues || []).map((i) => `<li>${mcEsc(i)}</li>`).join("");
+  return mcGrid([
+    mcCard(
+      "Runtime connection",
+      `<table class="mc-table">
+        ${row("Platform discovered", conn.platform_discovered)}
+        ${row("Mission Control reachable", conn.mission_control_reachable)}
+        ${row("ApplicationHost connected", conn.application_host_connected)}
+        ${row("Application registered", conn.application_registered)}
+        ${row("Runtime synced", conn.runtime_synced)}
+      </table>
+      <p class="muted">Mode: <code>${mcEsc(conn.connection_mode || "none")}</code></p>
+      <p class="muted">URL: <code>${mcEsc(conn.mission_control_url || "—")}</code></p>`
+    ),
+    mcCard(
+      "Heartbeat & API",
+      `<p>Heartbeat age: <strong>${conn.heartbeat_age_seconds ?? "—"}</strong>s</p>
+       <p>Last API: <strong>${mcEsc(conn.last_api_call || "—")}</strong></p>
+       <p>Path: <code>${mcEsc(conn.last_api_path || "—")}</code></p>
+       <p>Latency: <strong>${conn.connection_latency_ms ?? "—"}</strong> ms</p>
+       <p>Last error: ${mcEsc(conn.last_error || "—")}</p>`
+    ),
+    mcCard(
+      "Self-test checks",
+      `<table class="mc-table">${Object.entries(checks)
+        .map(([k, v]) => row(k.replace(/_/g, " "), v))
+        .join("")}</table>`
+    ),
+    mcCard("Issues", issues ? `<ul class="mc-list">${issues}</ul>` : "<p class='muted'>None</p>"),
+  ]);
+}
+
 async function renderMcTab(tab) {
   const body = mc$("mcTabBody");
-  if (!body || !_mcData) return;
+  if (!body) return;
+  if (tab !== "connection" && !_mcData) return;
   body.innerHTML = "<p class='muted'>Loading…</p>";
   let html = "";
+  if (tab === "connection") {
+    try {
+      const conn = await mcFetch("/api/runtime/connection");
+      html = renderConnection(conn);
+    } catch (e) {
+      html = `<p class="muted">${mcEsc(e.message)}</p>`;
+    }
+    body.innerHTML = html;
+    return;
+  }
   switch (tab) {
     case "overview":
       html = renderOverview(_mcData);
@@ -355,8 +403,9 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       window.switchToView?.("workstation");
-      if (target === "workstationActivityList") switchMcTab("activity");
-      else if (target && target !== "workstation") switchMcTab("overview");
+          if (target === "workstationActivityList") switchMcTab("activity");
+          else if (target === "workstationConnection") switchMcTab("connection");
+          else if (target && target !== "workstation") switchMcTab("overview");
     });
   });
 });

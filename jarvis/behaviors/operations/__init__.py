@@ -43,6 +43,7 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "runtime_jobs": lambda _params, _message: _runtime_action("runtime_jobs"),
     "runtime_gpu": lambda _params, _message: _runtime_action("runtime_gpu"),
     "runtime_platform": lambda _params, _message: _runtime_action("runtime_platform"),
+    "runtime_applications": lambda _params, _message: _runtime_action("runtime_applications"),
     "status_summary": lambda _params, _message: _status_summary(),
 }
 

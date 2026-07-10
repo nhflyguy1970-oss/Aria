@@ -44,6 +44,16 @@ async def lifespan(app: FastAPI):
 
     recover_stale_jobs()
     try:
+        from jarvis.platform_runtime import bootstrap_runtime_connection
+
+        threading.Thread(
+            target=bootstrap_runtime_connection,
+            daemon=True,
+            name="runtime-bootstrap",
+        ).start()
+    except Exception:
+        pass
+    try:
         from jarvis.workstation_activity import load_recent_from_disk, record_event
         from jarvis.platform_notifications import load_notifications_from_disk, notify
 
@@ -336,10 +346,21 @@ def workstation_inference():
 
 @app.get("/api/runtime/status")
 def runtime_status_api():
-    from jarvis.runtime_introspection import collect_runtime_status, format_runtime_markdown
+    from jarvis.runtime_introspection import collect_runtime, format_runtime_markdown
 
-    data = collect_runtime_status()
-    return {"ok": True, "data": data, "message": format_runtime_markdown("runtime_status", data)}
+    result = collect_runtime("runtime_status")
+    data = result.get("data") or {}
+    result["message"] = format_runtime_markdown(
+        "runtime_status", data if result.get("ok") else result
+    )
+    return result
+
+
+@app.get("/api/runtime/connection")
+def runtime_connection_api():
+    from jarvis.platform_runtime import runtime_connection_status
+
+    return runtime_connection_status()
 
 
 @app.get("/api/runtime/{section}")
@@ -349,7 +370,7 @@ def runtime_section_api(section: str):
     action = f"runtime_{section}" if not section.startswith("runtime_") else section
     result = collect_runtime(action)
     data = result.get("data") or {}
-    result["message"] = format_runtime_markdown(action, data)
+    result["message"] = format_runtime_markdown(action, data if result.get("ok") else result)
     return result
 
 
