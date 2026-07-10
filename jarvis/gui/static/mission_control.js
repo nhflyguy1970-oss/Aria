@@ -5,6 +5,7 @@ const MC_TABS = [
   "routing",
   "timeline",
   "intent_analytics",
+  "release",
   "connection",
   "applications",
   "inference",
@@ -198,14 +199,28 @@ function renderActivity(d, filters = {}) {
 }
 
 function renderPerformance(d) {
-  const samples = d.performance?.samples || [];
-  if (!samples.length) return "<p class='muted'>Collecting metrics — check back after a few minutes of use.</p>";
-  const rows = samples
-    .slice(-20)
-    .reverse()
-    .map((s) => `<tr><td>${mcEsc(s.iso)}</td><td>${s.acceptance ?? "—"}</td><td>${s.ram_gb ?? "—"}</td><td>${s.vram_mb ?? "—"}</td><td>${s.active_jobs ?? "—"}</td></tr>`)
-    .join("");
-  return `<table class="mc-table"><thead><tr><th>Time</th><th>Acceptance</th><th>RAM GB</th><th>VRAM MB</th><th>Jobs</th></tr></thead><tbody>${rows}</tbody></table>`;
+  const perf = d?.performance || d || {};
+  const latest = perf.latest;
+  const trends = perf.trends || {};
+  const labels = { mission_control_ms: "Mission Control", aria_ms: "Aria", routing_write_ms: "Routing write", timeline_write_ms: "Timeline write" };
+  const cards = Object.entries(labels).map(([key, label]) => {
+    const block = latest?.metrics?.[key];
+    const p50 = block?.p50_ms ?? trends[key]?.latest_p50_ms ?? "—";
+    return mcCard(label, `<p><strong>${p50}</strong> ms p50</p>`);
+  });
+  return `<div class="mc-routing-toolbar">
+    <button type="button" class="ghost-btn small" id="mcPerfRunBtn">Run benchmark</button>
+    <a class="ghost-btn small" href="/api/mission-control/bug-report/export?format=json" download="bug-report.json">Bug report</a>
+  </div>${mcGrid(cards)}<p class="muted">Runs: ${perf.run_count ?? 0}</p>`;
+}
+
+function renderReleaseDashboard(r) {
+  const warnings = (r.warnings || []).map((w) => `<li>${mcEsc(w)}</li>`).join("") || "<li class='muted'>None</li>";
+  return `${mcGrid([
+    mcCard("Readiness", `<p>Production: <strong>${r.production_readiness ?? "—"}%</strong></p><p>Acceptance: <strong>${r.acceptance_overall ?? "—"}%</strong></p>`),
+    mcCard("Warnings", mcList([warnings])),
+    mcCard("Export", `<a class="ghost-btn small" href="/api/mission-control/bug-report/export?format=markdown" download="bug-report.md">Download bug report</a>`),
+  ])}`;
 }
 
 function renderSettings(d) {
@@ -565,8 +580,19 @@ async function renderMcTab(tab) {
   if (tab === "intent_analytics") {
     body.innerHTML = "<p class='muted'>Loading intent analytics…</p>";
     try {
-      const data = await loadIntentAnalytics();
+      const data = await mcFetch("/api/mission-control/intent-analytics?window=week");
       body.innerHTML = renderIntentAnalytics(data);
+    } catch (e) {
+      body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
+    }
+    return;
+  }
+  if (tab === "release") {
+    body.innerHTML = "<p class='muted'>Loading release readiness…</p>";
+    try {
+      const data = await mcFetch("/api/mission-control/release");
+      body.innerHTML = renderReleaseDashboard(data);
+      wireMcTabActions();
     } catch (e) {
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
@@ -644,6 +670,15 @@ function wireMcTabActions(tab) {
   mc$("#mcAcceptanceBtn")?.addEventListener("click", () => {
     window.switchToView?.("chat");
     window.sendMessage?.("workstation acceptance");
+  });
+  mc$("#mcPerfRunBtn")?.addEventListener("click", async () => {
+    try {
+      await mcFetch("/api/mission-control/performance-lab/run", { method: "POST" });
+      window.showAriaToast?.("Benchmark complete", "ok");
+      loadMissionControl();
+    } catch (e) {
+      window.showAriaToast?.(e.message, "err");
+    }
   });
   document.querySelectorAll("[data-mc-launch]").forEach((btn) => {
     btn.addEventListener("click", () => {

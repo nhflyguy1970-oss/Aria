@@ -535,6 +535,79 @@ def mission_control_intent_registry():
     return {"ok": True, "intents": list_intents()}
 
 
+@app.get("/api/mission-control/intent-analytics")
+def mission_control_intent_analytics(window: str = "week"):
+    try:
+        from aiplatform.mission_control.intent_analytics import intent_analytics
+
+        return intent_analytics(window=window)
+    except ImportError:
+        return {"ok": False, "week": {}}
+
+
+@app.get("/api/mission-control/performance-lab")
+def mission_control_performance_lab():
+    try:
+        from aiplatform.mission_control.performance_lab import performance_panel
+
+        return performance_panel()
+    except ImportError:
+        return {"ok": False, "run_count": 0}
+
+
+@app.post("/api/mission-control/performance-lab/run")
+def mission_control_performance_lab_run(quick: bool = True):
+    try:
+        from aiplatform.mission_control.performance_lab import run_benchmark_suite
+
+        return run_benchmark_suite(quick=quick)
+    except ImportError as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@app.get("/api/mission-control/release")
+def mission_control_release():
+    try:
+        from aiplatform.mission_control.release_dashboard import release_panel
+
+        return release_panel()
+    except ImportError as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@app.get("/api/mission-control/diagnostics")
+def mission_control_diagnostics():
+    try:
+        from aiplatform.mission_control.diagnostics import run_self_check
+
+        return run_self_check()
+    except ImportError as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@app.get("/api/mission-control/endurance")
+def mission_control_endurance():
+    try:
+        from aiplatform.mission_control.endurance import endurance_panel
+
+        return endurance_panel()
+    except ImportError as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@app.get("/api/mission-control/bug-report/export")
+def mission_control_bug_report_export(format: str = "json"):
+    from fastapi.responses import PlainTextResponse
+
+    try:
+        from aiplatform.mission_control.bug_report import export_bug_report
+    except ImportError as exc:
+        return {"ok": False, "error": str(exc)}
+    body = export_bug_report(fmt=format)
+    media = "application/json" if format != "markdown" else "text/markdown"
+    return PlainTextResponse(body, media_type=media)
+
+
 @app.get("/api/mission-control/{tab}")
 def mission_control_tab_api(tab: str):
     from jarvis.mission_control import get_tab
