@@ -46,4 +46,25 @@ fi
 
 jarvis_notify "AI Platform" "Opening Mission Control…"
 jarvis_log "Launching native Mission Control desktop (PySide6)"
-exec "$(jarvis_python)" -m aiplatform.mission_control.desktop
+"$(jarvis_python)" -m aiplatform.mission_control.desktop &
+DESKTOP_PID=$!
+
+deadline=$((SECONDS + 30))
+visible=0
+while (( SECONDS < deadline )); do
+  if "$(jarvis_python)" -c "from aiplatform.mission_control.desktop.health import desktop_window_visible; import sys; sys.exit(0 if desktop_window_visible() else 1)"; then
+    visible=1
+    break
+  fi
+  sleep 0.5
+done
+
+if (( visible != 1 )); then
+  jarvis_notify "AI Platform" "Mission Control window did not appear — check logs"
+  jarvis_log "Desktop window visibility check failed (pid=${DESKTOP_PID})"
+  exit 1
+fi
+
+jarvis_notify "AI Platform" "Mission Control ready"
+jarvis_log "Mission Control desktop visible (pid=${DESKTOP_PID})"
+wait "${DESKTOP_PID}"
