@@ -10,13 +10,13 @@ from jarvis.mission_control import (
 )
 from jarvis.platform_metrics import list_samples, record_sample
 from jarvis.platform_notifications import list_notifications, notify
-from jarvis.workstation_activity import record_event
 
 
 def test_collect_mission_control_shape():
     data = collect_mission_control(record_metrics=False)
     assert data.get("ok") is True
     assert data.get("title") == "AI Platform Mission Control"
+    assert data.get("owner") == "aiplatform"
     for key in (
         "overview",
         "applications",
@@ -65,7 +65,9 @@ def test_format_overview_markdown():
 
 
 def test_export_activity_csv():
-    record_event("mc_export_test", component="test", detail="csv row")
+    from aiplatform.mission_control.activity import record_event as platform_record
+
+    platform_record("mc_export_test", component="test", detail="csv row")
     csv = export_activity_csv(limit=10)
     assert csv.startswith("timestamp,type,component")
     assert "mc_export_test" in csv
