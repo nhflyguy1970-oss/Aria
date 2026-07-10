@@ -8,15 +8,55 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      AI_ROOT: /tmp/ai-platform-ci
+      JARVIS_NLU_SKIP_BENCHMARK: "1"
+      MISSION_CONTROL_HOST: 127.0.0.1
+      MISSION_CONTROL_PORT: "8780"
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+
+      - name: Checkout AI Platform
+        uses: actions/checkout@v4
+        with:
+          repository: nhflyguy1970-oss/AI-Platform
+          path: AI-Platform
+          ref: main
+
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest ruff
+          pip install -e ./AI-Platform
+
+      - name: Prepare AI_ROOT
+        run: |
+          mkdir -p "$AI_ROOT/Data/history" "$AI_ROOT/Data/memory" "$AI_ROOT/applications" "$AI_ROOT/compose"
+
+      - name: Start Mission Control
+        run: |
+          python -m aiplatform.mission_control.server --host 127.0.0.1 --port 8780 &
+          echo $! > /tmp/mission_control.pid
+          for i in $(seq 1 45); do
+            if curl -sf "http://127.0.0.1:8780/api/health"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Mission Control failed to start"
+          exit 1
+
       - name: CI gates
         run: python scripts/ci_check.py all
+
+      - name: Stop Mission Control
+        if: always()
+        run: |
+          if [ -f /tmp/mission_control.pid ]; then
+            kill "$(cat /tmp/mission_control.pid)" 2>/dev/null || true
+          fi

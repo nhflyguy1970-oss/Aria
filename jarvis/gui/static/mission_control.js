@@ -64,9 +64,34 @@ function mcList(items) {
   return `<ul class="mc-list">${items.join("")}</ul>`;
 }
 
+function renderOperationalAdvisor(advisor) {
+  const adv = advisor || {};
+  const recs = adv.recommendations || [];
+  if (!adv.headline && !recs.length) return "";
+  const severityClass = (s) => {
+    if (s === "warning") return "mc-advisor--warn";
+    if (s === "info") return "mc-advisor--info";
+    return "mc-advisor--ok";
+  };
+  const items = recs.map((r) => `
+    <div class="mc-advisor-item ${severityClass(r.severity)}">
+      <p><strong>${mcEsc(r.title)}</strong></p>
+      ${r.reason ? `<p class="muted">${mcEsc(r.reason)}</p>` : ""}
+      ${r.impact ? `<p>Impact: ${mcEsc(r.impact)}</p>` : ""}
+      ${r.action ? `<p>Action: ${mcEsc(r.action)}</p>` : ""}
+      ${r.duration_estimate ? `<p class="muted">Est. ${mcEsc(r.duration_estimate)}</p>` : ""}
+    </div>`).join("");
+  const healthy = adv.healthy ? "mc-advisor--ok" : recs.length ? "mc-advisor--warn" : "mc-advisor--ok";
+  return mcCard(
+    "Operational advisor",
+    `<p class="mc-advisor-headline ${healthy}"><strong>${mcEsc(adv.headline || "—")}</strong></p>${items || "<p class='muted'>No recommendations</p>"}`
+  );
+}
+
 function renderOverview(d) {
   const ov = d.overview || {};
   const phase = (ov.phase || {}).phase || "?";
+  const advisor = ov.operational_advisor || d.operational_advisor || {};
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -76,6 +101,7 @@ function renderOverview(d) {
       <div class="mc-hero-stat"><span class="muted">Model</span><strong><code>${mcEsc(ov.current_model || "—")}</code></strong></div>
       <div class="mc-hero-stat"><span class="muted">Jobs</span><strong>${ov.active_jobs ?? 0}</strong></div>
     </div>
+    ${renderOperationalAdvisor(advisor)}
     ${mcGrid([
       mcCard("User & project", `<p><strong>${mcEsc(ov.user)}</strong></p><p>Project: ${mcEsc(ov.project || "—")}</p><p>Branch: <code>${mcEsc(ov.aria_branch || "?")}</code></p>`),
       mcCard("Providers", `<p>Inference: <strong>${mcEsc(ov.inference_provider)}</strong></p><p>Memory: <strong>${mcEsc(ov.memory_provider)}</strong></p><p>Knowledge: <strong>${mcEsc(ov.knowledge_provider)}</strong></p>`),

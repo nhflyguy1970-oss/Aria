@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the same gates as .github/workflows/ci.yml locally (commit gate).
+# Pre-push validation for Aria — mirrors GitHub Actions with extended lint/format.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "${ROOT}"
@@ -43,4 +43,7 @@ fi
 cleanup() { [[ -n "${MC_PID}" ]] && kill "${MC_PID}" 2>/dev/null || true; }
 trap cleanup EXIT
 
+echo "==> ruff fix + format"
+"${PY}" scripts/ci_check.py format
+echo "==> ruff check + format-check + pytest"
 exec "${PY}" scripts/ci_check.py all
