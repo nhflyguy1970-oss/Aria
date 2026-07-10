@@ -2,9 +2,27 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from jarvis.learning_notice import learning_notice, memory_retrieval_hint
 from jarvis.runtime_introspection import collect_dashboard, format_status_summary, is_status_command
 from jarvis.workstation_activity import list_events, record_event
+
+from test_runtime_client import SAMPLE_MC, _mock_client
+
+FULL_MC = {
+    **SAMPLE_MC,
+    "memory": {"provider": "platform", "entry_count": 0},
+    "knowledge": {"retrieval": "platform", "documents": 0},
+    "activity": {"events": []},
+    "performance": {"run_count": 0},
+    "notifications": [],
+    "settings": {"mission_control_port": "8780"},
+}
+
+OVERVIEW_MARKDOWN = (
+    "## Mission Control\n**Status:** healthy\n**Mode:** platform-attached\n**Acceptance:** 100%"
+)
 
 
 def test_status_command_maps():
@@ -13,7 +31,9 @@ def test_status_command_maps():
     assert is_status_command("hello") is None
 
 
-def test_collect_dashboard_shape():
+@patch("jarvis.runtime_introspection.get_runtime_client")
+def test_collect_dashboard_shape(mock_get_client):
+    mock_get_client.return_value = _mock_client(FULL_MC)
     data = collect_dashboard()
     assert data.get("ok") is True
     assert "overview" in data
@@ -24,12 +44,14 @@ def test_collect_dashboard_shape():
     assert "applications" in data
 
 
-def test_format_status_summary_has_key_lines():
+@patch("jarvis.mission_control.format_overview_markdown", return_value=OVERVIEW_MARKDOWN)
+def test_format_status_summary_has_key_lines(mock_md):
     text = format_status_summary()
     assert "Mission Control" in text
     assert "Status:" in text
     assert "Mode:" in text
     assert "Acceptance:" in text
+    mock_md.assert_called_once()
 
 
 def test_activity_record_and_filter():
