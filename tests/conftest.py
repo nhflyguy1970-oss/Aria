@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import importlib.util
 import sys
+import types
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -11,6 +13,29 @@ import pytest
 _PLATFORM_ROOT = Path(__file__).resolve().parents[2] / "AI-Platform"
 if _PLATFORM_ROOT.is_dir() and str(_PLATFORM_ROOT) not in sys.path:
     sys.path.insert(0, str(_PLATFORM_ROOT))
+
+
+def _install_aiplatform_stub() -> None:
+    """Allow Mission Control unit tests to patch aiplatform on runners without the private repo."""
+    if importlib.util.find_spec("aiplatform") is not None:
+        return
+    aggregator = types.ModuleType("aiplatform.mission_control.aggregator")
+    activity = types.ModuleType("aiplatform.mission_control.activity")
+    mission_control = types.ModuleType("aiplatform.mission_control")
+    aiplatform = types.ModuleType("aiplatform")
+    mission_control.aggregator = aggregator
+    mission_control.activity = activity
+    aiplatform.mission_control = mission_control
+    for name, mod in (
+        ("aiplatform", aiplatform),
+        ("aiplatform.mission_control", mission_control),
+        ("aiplatform.mission_control.aggregator", aggregator),
+        ("aiplatform.mission_control.activity", activity),
+    ):
+        sys.modules[name] = mod
+
+
+_install_aiplatform_stub()
 
 # Tests import jarvis.llm which pulls ollama at import time.
 if "ollama" not in sys.modules:
