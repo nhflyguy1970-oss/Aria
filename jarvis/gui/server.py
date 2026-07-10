@@ -470,6 +470,71 @@ def mission_control_routing_detail(record_id: str):
     return {"ok": True, "record": item}
 
 
+@app.get("/api/mission-control/timeline/export")
+def mission_control_timeline_export(format: str = "json", limit: int = 500):
+    from fastapi.responses import HTMLResponse, PlainTextResponse
+
+    try:
+        from aiplatform.mission_control.timeline import export_timeline
+    except ImportError:
+        return {"ok": False, "error": "timeline unavailable"}
+    body = export_timeline(fmt=format, limit=min(limit, 5000))
+    if format == "html":
+        return HTMLResponse(body)
+    media = "application/json"
+    if format == "csv":
+        media = "text/csv"
+    elif format == "markdown":
+        media = "text/markdown"
+    return PlainTextResponse(body, media_type=media)
+
+
+@app.get("/api/mission-control/timeline/stats")
+def mission_control_timeline_stats():
+    try:
+        from aiplatform.mission_control.timeline import timeline_stats
+    except ImportError:
+        return {"ok": False, "count": 0}
+    return timeline_stats()
+
+
+@app.get("/api/mission-control/timeline")
+def mission_control_timeline_list(
+    limit: int = 150,
+    q: str = "",
+    application: str = "",
+    category: str = "",
+    component: str = "",
+    severity: str = "",
+    type: str = "",
+):
+    try:
+        from aiplatform.mission_control.timeline import list_timeline
+    except ImportError:
+        return {"ok": True, "events": []}
+    return {
+        "ok": True,
+        "events": list_timeline(
+            limit=min(limit, 500),
+            query=q,
+            application=application,
+            category=category,
+            component=component,
+            severity=severity,
+            event_type=type,
+        ),
+    }
+
+
+@app.get("/api/mission-control/intent-registry")
+def mission_control_intent_registry():
+    try:
+        from aiplatform.mission_control.intent_registry import list_intents
+    except ImportError:
+        return {"ok": True, "intents": []}
+    return {"ok": True, "intents": list_intents()}
+
+
 @app.get("/api/mission-control/{tab}")
 def mission_control_tab_api(tab: str):
     from jarvis.mission_control import get_tab

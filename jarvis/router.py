@@ -683,6 +683,15 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
     from jarvis.runtime_routing_trace import log_route_decision
 
     action = intent.get("action")
+    if action in ("documentation_search",) or str(action or "").startswith("documentation_"):
+        return log_route_decision(
+            message=message,
+            intent=intent,
+            stage="finalize",
+            reason=intent.get("route_reason") or "documentation",
+            confidence=intent.get("route_confidence"),
+            handler=intent.get("route_handler") or "DocumentationEngine",
+        )
     if action == "web_search" and is_runtime_routing_question(message):
         runtime = route_runtime_priority(message)
         if runtime:
@@ -707,12 +716,18 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
     return log_route_decision(message=message, intent=intent, stage="finalize")
 
 
-def _quick_route(message: str, attachment: dict | None, session: SessionContext) -> dict | None:
+def _quick_route(
+    message: str,
+    attachment: dict | None,
+    session: SessionContext,
+    *,
+    skip_runtime_priority: bool = False,
+) -> dict | None:
     follow = _follow_up_route(message, session)
     if follow:
         return follow
 
-    # Runtime — highest priority (before router table / web search / chat fallback).
+    # Runtime keyword fallback — only when NLU did not run.
     from jarvis.routing_inspector import is_routing_command
     from jarvis.runtime_routing import route_runtime_priority
 
@@ -724,8 +739,9 @@ def _quick_route(message: str, attachment: dict | None, session: SessionContext)
             "route_handler": "RoutingInspector",
         }
 
-    if runtime_hit := route_runtime_priority(message):
-        return runtime_hit
+    if not skip_runtime_priority:
+        if runtime_hit := route_runtime_priority(message):
+            return runtime_hit
 
     from jarvis.router_table import match_router_table
 
@@ -1474,7 +1490,45 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
             "thinking": "clarification resolved",
         }
 
-    quick = _quick_route(message, attachment, session)
+    follow = _follow_up_route(message, session)
+    if follow:
+        follow.setdefault("thinking", "follow-up")
+        return _finalize_intent(normalize_route_intent(follow), message, session)
+
+    from jarvis.routing_inspector import is_routing_command
+    from jarvis.timeline_commands import is_timeline_command
+
+    if routing_cmd := is_routing_command(message):
+        intent = {
+            "action": routing_cmd,
+            "params": {},
+            "thinking": "routing inspector",
+            "route_handler": "RoutingInspector",
+        }
+        return _finalize_intent(intent, message, session)
+
+    if timeline_cmd := is_timeline_command(message):
+        intent = {
+            "action": timeline_cmd,
+            "params": {},
+            "thinking": "timeline",
+            "route_handler": "Timeline",
+        }
+        return _finalize_intent(intent, message, session)
+
+    nlu_used = False
+    from jarvis.nlu.pipeline import nlu_enabled, route_via_nlu
+
+    if nlu_enabled():
+        nlu_intent = route_via_nlu(message, session, attachment)
+        if nlu_intent:
+            nlu_used = True
+            nlu_intent.setdefault("thinking", "nlu")
+            nlu_intent = normalize_route_intent(nlu_intent)
+            nlu_intent = _maybe_downgrade_coding_chat(nlu_intent, message, session)
+            return _finalize_intent(nlu_intent, message, session)
+
+    quick = _quick_route(message, attachment, session, skip_runtime_priority=nlu_used)
     if quick:
         quick.setdefault("thinking", "pattern match")
         quick = normalize_route_intent(quick)

@@ -19,6 +19,8 @@ def classify_route(action: str) -> str:
         return "Runtime"
     if act in ("web_search", "learn_about"):
         return "Search" if act == "web_search" else "Knowledge"
+    if act in ("documentation_search",) or act.startswith("documentation_"):
+        return "Documentation"
     if act.startswith("memory_") or act in ("remember", "recall"):
         return "Memory"
     if act.startswith("coding_") or act in (
@@ -79,6 +81,7 @@ def handler_for_action(action: str) -> str:
         "Runtime": "RuntimeClient",
         "Search": "WebSearch",
         "Knowledge": "KnowledgeEngine",
+        "Documentation": "DocumentationEngine",
         "Memory": "MemoryStore",
         "Coding": "EngineeringEngine",
         "Vision": "VisionPipeline",
@@ -106,6 +109,8 @@ def backend_for_route(route: str, *, mission_control_source: str | None = None) 
         return route
     if route == "Coding":
         return "Engineering"
+    if route == "Documentation":
+        return "Local Docs"
     if route == "Chat":
         return "LLM"
     return route
@@ -120,7 +125,7 @@ def build_execution_flow(
     backend: str,
     stage: str,
 ) -> list[str]:
-    lines = ["User", "    ↓", "Intent Classifier"]
+    lines = ["User", "    ↓", "Conversation Context", "    ↓", "Natural Language Understanding"]
     if route == "Runtime":
         lines.extend(
             ["    ↓", "Runtime Priority", "    ↓", handler, "    ↓", backend, "    ↓", "Response"]
@@ -128,7 +133,9 @@ def build_execution_flow(
     elif route == "Search":
         lines.extend(["    ↓", "Web Search", "    ↓", "Summarizer", "    ↓", "Response"])
     elif route == "Knowledge":
-        lines.extend(["    ↓", "Knowledge Retrieval", "    ↓", handler, "    ↓", "Response"])
+        lines.extend(["    ↓", "Knowledge Engine", "    ↓", handler, "    ↓", "Response"])
+    elif route == "Documentation":
+        lines.extend(["    ↓", "Documentation Engine", "    ↓", "Local Docs", "    ↓", "Response"])
     elif route == "Memory":
         lines.extend(["    ↓", "Memory Store", "    ↓", handler, "    ↓", "Response"])
     elif route == "Coding":
@@ -262,9 +269,29 @@ def record_prompt_execution(
     try:
         from aiplatform.mission_control.routing_log import record_routing
 
-        return record_routing(record)
+        saved = record_routing(record)
     except ImportError:
-        return _local_record(record)
+        saved = _local_record(record)
+    else:
+        saved = saved or record
+    try:
+        from aiplatform.mission_control.timeline import record_timeline_event
+
+        record_timeline_event(
+            "routing_complete",
+            application="aria",
+            component="router",
+            category="routing",
+            severity="error" if error else "info",
+            duration_ms=int(latency_ms) if latency_ms else None,
+            source="routing_inspector",
+            result="error" if error else "ok",
+            detail=f"{action} → {route} ({handler})",
+            related_routing_id=str(saved.get("id") or ""),
+        )
+    except Exception:
+        pass
+    return saved
 
 
 def _local_record(record: dict[str, Any]) -> dict[str, Any]:

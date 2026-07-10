@@ -3,6 +3,7 @@
 const MC_TABS = [
   "overview",
   "routing",
+  "timeline",
   "connection",
   "applications",
   "inference",
@@ -208,7 +209,89 @@ function renderPerformance(d) {
 
 function renderSettings(d) {
   const s = d.settings || {};
-  return `<pre class="mc-pre">${mcEsc(JSON.stringify(s, null, 2))}</pre>`;
+  const registry = s.intent_registry?.intents || [];
+  const regRows = registry
+    .map(
+      (i) =>
+        `<tr><td>${mcEsc(i.intent)}</td><td>${mcEsc(i.handler)}</td>` +
+        `<td>${i.uses ?? 0}</td><td>${i.avg_confidence ?? "—"}</td>` +
+        `<td>${i.success_rate ?? "—"}%</td></tr>`
+    )
+    .join("");
+  return mcGrid([
+    mcCard("Platform", `<pre class="mc-pre">${mcEsc(JSON.stringify(s, null, 2).slice(0, 1200))}</pre>`),
+    mcCard(
+      "Intent Registry",
+      regRows
+        ? `<table class="mc-table"><thead><tr><th>Intent</th><th>Handler</th><th>Uses</th><th>Confidence</th><th>Success</th></tr></thead><tbody>${regRows}</tbody></table>`
+        : "<p class='muted'>No intent statistics yet.</p>"
+    ),
+  ]);
+}
+
+function timelineSeverityClass(ev) {
+  const sev = (ev.severity || "info").toLowerCase();
+  if (sev === "error" || sev === "critical") return "mc-route-error";
+  if (sev === "warning") return "mc-route-fallback";
+  return "mc-route-ok";
+}
+
+function renderTimelineInspector(events, stats) {
+  const rows = (events || [])
+    .map((ev) => {
+      const cls = timelineSeverityClass(ev);
+      return `<tr class="${cls}"><td>${mcEsc(ev.iso)}</td><td>${mcEsc(ev.type)}</td>` +
+        `<td>${mcEsc(ev.application)}/${mcEsc(ev.component)}</td>` +
+        `<td>${mcEsc(ev.severity)}</td><td>${mcEsc(ev.detail || "")}</td></tr>`;
+    })
+    .join("");
+  const exportBtns = `
+    <a class="ghost-btn small" href="/api/mission-control/timeline/export?format=json" target="_blank">JSON</a>
+    <a class="ghost-btn small" href="/api/mission-control/timeline/export?format=csv" target="_blank">CSV</a>
+    <a class="ghost-btn small" href="/api/mission-control/timeline/export?format=markdown" target="_blank">Markdown</a>
+    <a class="ghost-btn small" href="/api/mission-control/timeline/export?format=html" target="_blank">HTML</a>`;
+  return `
+    <div class="mc-routing-toolbar">
+      <input type="search" id="mcTimelineSearch" placeholder="Search timeline…" value="">
+      <select id="mcTimelineSeverity"><option value="">All severities</option>
+        <option value="info">Info</option><option value="warning">Warning</option>
+        <option value="error">Error</option></select>
+      ${exportBtns}
+    </div>
+    <p class="muted">Events: ${stats?.count ?? events?.length ?? 0}</p>
+    <table class="mc-table"><thead><tr><th>Time</th><th>Type</th><th>App/Component</th><th>Severity</th><th>Detail</th></tr></thead>
+    <tbody>${rows || "<tr><td colspan='5' class='muted'>No events</td></tr>"}</tbody></table>`;
+}
+
+async function loadTimelineInspector() {
+  const params = new URLSearchParams({ limit: "200" });
+  const q = mc$("mcTimelineSearch")?.value?.trim();
+  const sev = mc$("mcTimelineSeverity")?.value;
+  if (q) params.set("q", q);
+  if (sev) params.set("severity", sev);
+  const [eventsResp, stats] = await Promise.all([
+    mcFetch(`/api/mission-control/timeline?${params}`),
+    mcFetch("/api/mission-control/timeline/stats"),
+  ]);
+  return { events: eventsResp.events || [], stats };
+}
+
+function wireTimelineInspector() {
+  const search = mc$("mcTimelineSearch");
+  const sev = mc$("mcTimelineSeverity");
+  const reload = async () => {
+    const body = mc$("mcTabBody");
+    if (!body || _mcTab !== "timeline") return;
+    try {
+      const { events, stats } = await loadTimelineInspector();
+      body.innerHTML = renderTimelineInspector(events, stats);
+      wireTimelineInspector();
+    } catch (e) {
+      body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
+    }
+  };
+  search?.addEventListener("input", () => setTimeout(reload, 250));
+  sev?.addEventListener("change", reload);
 }
 
 function renderRecovery(d) {
@@ -432,6 +515,17 @@ async function renderMcTab(tab) {
       body.innerHTML = renderRoutingInspector(records, stats);
       wireRoutingInspector();
       if (_mcRoutingLive) body.scrollTop = body.scrollHeight;
+    } catch (e) {
+      body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
+    }
+    return;
+  }
+  if (tab === "timeline") {
+    body.innerHTML = "<p class='muted'>Loading event timeline…</p>";
+    try {
+      const { events, stats } = await loadTimelineInspector();
+      body.innerHTML = renderTimelineInspector(events, stats);
+      wireTimelineInspector();
     } catch (e) {
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }

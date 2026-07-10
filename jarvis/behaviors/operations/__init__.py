@@ -48,6 +48,15 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "routing_last": lambda _params, _message: _routing_last(),
     "routing_history": lambda _params, _message: _routing_history(),
     "routing_stats": lambda _params, _message: _routing_stats(),
+    "timeline_recent": lambda _params, _message: _timeline("timeline_recent"),
+    "timeline_today": lambda _params, _message: _timeline("timeline_today"),
+    "timeline_startup": lambda _params, _message: _timeline("timeline_startup"),
+    "timeline_failures": lambda _params, _message: _timeline("timeline_failures"),
+    "timeline_services": lambda _params, _message: _timeline("timeline_services"),
+    "timeline_models": lambda _params, _message: _timeline("timeline_models"),
+    "timeline_repairs": lambda _params, _message: _timeline("timeline_repairs"),
+    "timeline_backups": lambda _params, _message: _timeline("timeline_backups"),
+    "documentation_search": lambda params, message: _documentation_search(params, message),
 }
 
 
@@ -193,6 +202,20 @@ def _routing_stats() -> dict:
 
     stats = routing_stats_summary()
     return {"ok": True, "message": format_routing_stats_markdown(stats), "data": stats, "type": "info"}
+
+
+def _timeline(action: str) -> dict:
+    from jarvis.timeline_commands import execute_timeline_command
+
+    return execute_timeline_command(action)
+
+
+def _documentation_search(params: dict, message: str) -> dict:
+    from jarvis.documentation_engine import search_documentation
+
+    query = (params.get("query") or message or "").strip()
+    subject = (params.get("subject") or "").strip()
+    return search_documentation(query, subject=subject)
 
 
 @register_behavior
