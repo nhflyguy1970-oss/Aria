@@ -31,10 +31,9 @@ jobs:
       - name: CI gates
         run: python scripts/ci_check.py all
 
-  # Optional full integration when AI_PLATFORM_REPO_TOKEN secret is configured
-  # (AI-Platform is private; default GITHUB_TOKEN cannot cross-checkout).
+  # Enable when AI_PLATFORM_REPO_TOKEN secret is configured (private AI-Platform checkout).
   integration:
-    if: ${{ secrets.AI_PLATFORM_REPO_TOKEN != '' }}
+    if: false
     runs-on: ubuntu-latest
     env:
       AI_ROOT: /tmp/ai-platform-ci
