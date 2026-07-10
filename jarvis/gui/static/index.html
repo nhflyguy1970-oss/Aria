@@ -107,7 +107,7 @@
 
       <div class="sidebar-section sidebar-section--workstation" data-section="workstation">
         <button type="button" class="sidebar-section-head" aria-expanded="true">
-          <p class="sidebar-section-title">Workstation</p><span class="section-chevron">▾</span>
+          <p class="sidebar-section-title">Mission Control</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body ws-menu">
           <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstation">Dashboard</button>
@@ -417,7 +417,7 @@
       <nav class="view-tabs">
         <button type="button" class="view-tab active" data-view="chat">Chat</button>
         <button type="button" class="view-tab" data-view="dashboard">Dashboard</button>
-        <button type="button" class="view-tab" data-view="workstation">Workstation</button>
+        <button type="button" class="view-tab" data-view="workstation">Mission Control</button>
         <button type="button" class="view-tab" data-view="planner">Planner</button>
         <button type="button" class="view-tab" data-view="calendar">Calendar</button>
         <button type="button" class="view-tab" data-view="flytying">Fly tying</button>
@@ -1122,25 +1122,16 @@
       </div>
 
       <div id="workstationView" class="view-panel hidden">
-        <div class="ws-page-header">
-          <h2>Workstation</h2>
-          <p class="muted">Live operational dashboard — platform, services, inference, memory, and activity.</p>
-          <div class="ws-toolbar">
-            <button type="button" id="workstationRefreshBtn" class="ghost-btn small">Refresh</button>
-            <button type="button" id="workstationRepairBtn" class="ghost-btn small">Repair</button>
-            <span id="workstationLoadStatus" class="muted"></span>
+        <div class="mc-page-header">
+          <h2>AI Platform Mission Control</h2>
+          <p class="muted">Operational console — runtime, services, applications, health, and activity.</p>
+          <div class="mc-toolbar">
+            <button type="button" id="mcRefreshBtn" class="ghost-btn small">Refresh</button>
+            <span id="mcLoadStatus" class="muted"></span>
           </div>
+          <nav id="mcTabNav" class="mc-tab-nav" aria-label="Mission Control sections"></nav>
         </div>
-        <div id="workstationDashboardBody" class="ws-dashboard-body"></div>
-        <section class="ws-activity-section" id="workstationActivitySection">
-          <h3>Activity</h3>
-          <div class="ws-activity-filters">
-            <input type="search" id="workstationActivityQuery" placeholder="Search events…" class="audio-path-input" />
-            <input type="text" id="workstationActivityComponent" placeholder="Component filter" class="audio-path-input" />
-            <button type="button" id="workstationActivityFilterBtn" class="ghost-btn small">Filter</button>
-          </div>
-          <ul id="workstationActivityList" class="ws-activity-list"></ul>
-        </section>
+        <div id="mcTabBody" class="mc-tab-body"></div>
       </div>
 
       <div id="plannerView" class="view-panel hidden">
@@ -1726,7 +1717,7 @@
   <script type="module" src="/static/modules/jobs.mjs?v=5.16.70"></script>
   <script type="module" src="/static/modules/health.mjs?v=5.16.70"></script>
   <script src="/static/planner.js?v=5.16.70"></script>
-  <script src="/static/workstation_dashboard.js?v=1.0.0"></script>
+  <script src="/static/mission_control.js?v=1.0.0"></script>
   <script src="/static/calendar.js?v=5.16.73"></script>
   <script src="/static/flytying.js?v=5.16.70"></script>
   <script src="/static/projects.js?v=5.16.70"></script>

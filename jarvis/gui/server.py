@@ -45,9 +45,12 @@ async def lifespan(app: FastAPI):
     recover_stale_jobs()
     try:
         from jarvis.workstation_activity import load_recent_from_disk, record_event
+        from jarvis.platform_notifications import load_notifications_from_disk, notify
 
         load_recent_from_disk()
-        record_event("startup", component="aria", detail="Server lifespan started")
+        load_notifications_from_disk()
+        record_event("startup", component="platform", detail="Mission Control online")
+        notify("AI Platform started", detail="Mission Control is online", level="info")
     except Exception:
         pass
     audio_wakeword.configure(chat_processor=assistant.process)
@@ -352,9 +355,32 @@ def runtime_section_api(section: str):
 
 @app.get("/api/workstation/dashboard")
 def workstation_dashboard_api():
-    from jarvis.runtime_introspection import collect_dashboard
+    from jarvis.mission_control import collect_mission_control
 
-    return collect_dashboard()
+    return collect_mission_control()
+
+
+@app.get("/api/mission-control")
+def mission_control_api():
+    from jarvis.mission_control import collect_mission_control
+
+    return collect_mission_control()
+
+
+@app.get("/api/mission-control/activity/export")
+def mission_control_activity_export(limit: int = 200):
+    from fastapi.responses import PlainTextResponse
+
+    from jarvis.mission_control import export_activity_csv
+
+    return PlainTextResponse(export_activity_csv(limit=min(limit, 500)), media_type="text/csv")
+
+
+@app.get("/api/mission-control/{tab}")
+def mission_control_tab_api(tab: str):
+    from jarvis.mission_control import get_tab
+
+    return get_tab(tab)
 
 
 @app.get("/api/workstation/startup-summary")

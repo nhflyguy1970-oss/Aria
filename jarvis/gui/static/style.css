@@ -4229,3 +4229,27 @@ body.light-theme .service-row--action:hover { background: rgba(0, 0, 0, 0.05); }
 .ws-activity-ts { color: var(--muted); }
 @media (max-width: 720px) { .ws-activity-item { grid-template-columns: 1fr; } }
 
+/* Mission Control console */
+.mc-page-header { margin-bottom: 0.75rem; }
+.mc-toolbar { display: flex; gap: 0.5rem; align-items: center; margin: 0.5rem 0; }
+.mc-tab-nav { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.75rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+.mc-tab { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.78rem; cursor: pointer; }
+.mc-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(212, 160, 84, 0.1); }
+.mc-tab-body { min-height: 200px; }
+.mc-hero { display: flex; flex-wrap: wrap; gap: 1rem; padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 8px; background: rgba(212, 160, 84, 0.08); border: 1px solid var(--border); }
+.mc-hero-stat { display: flex; flex-direction: column; min-width: 100px; }
+.mc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+.mc-card { padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); }
+.mc-card h3 { margin: 0 0 0.5rem; font-size: 0.9rem; color: var(--accent); }
+.mc-list { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+.mc-list li { padding: 0.2rem 0; }
+.mc-badge { font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.25rem; }
+.mc-badge--ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+.mc-badge--down { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.mc-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.mc-table th, .mc-table td { text-align: left; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.mc-pre { font-size: 0.75rem; overflow: auto; max-height: 240px; background: rgba(0,0,0,0.2); padding: 0.5rem; border-radius: 6px; }
+.mc-activity-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; }
+.mc-recovery-actions { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+.mc-actions { white-space: nowrap; }
+

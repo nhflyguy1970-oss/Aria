@@ -666,110 +666,17 @@ def _recent_activity_summary(*, limit: int = 12) -> list[dict[str, Any]]:
 
 
 def collect_dashboard() -> dict[str, Any]:
-    """Structured payload for the Workstation Dashboard UI."""
-    status = collect_runtime_status()
-    gpu_env = status.get("gpu") or {}
-    env = gpu_env.get("environment") if isinstance(gpu_env, dict) else {}
-    resources = env.get("resources") if isinstance(env, dict) else {}
-    models = status.get("models") or {}
-    active = models.get("active") or {}
-    providers = status.get("providers") or {}
-    acc = status.get("acceptance") or {}
-    return {
-        "ok": True,
-        "ts": status.get("ts"),
-        "summary": format_status_summary(status),
-        "applications": _applications(),
-        "runtime": {
-            "mode": status.get("execution_mode"),
-            "phase": status.get("phase"),
-            "host": status.get("host"),
-            "platform": status.get("platform"),
-            "cutover": status.get("cutover"),
-        },
-        "inference": {
-            "gateway": (providers.get("inference") or {}).get("gateway") or {},
-            "active_models": active,
-            "general": active.get("general"),
-            "coder": active.get("coder"),
-            "embed": active.get("embed"),
-            "vision": active.get("vision") or models.get("vision_model"),
-            "ollama_running": models.get("ollama_running"),
-        },
-        "memory": _memory_detail(),
-        "knowledge": _knowledge_detail(),
-        "databases": (status.get("services") or {}).get("databases") or [],
-        "services": (status.get("services") or {}).get("services") or [],
-        "services_ready": (status.get("services") or {}).get("ready"),
-        "infrastructure": {
-            "docker": any(
-                s.get("id") == "docker" and s.get("running")
-                for s in (status.get("services") or {}).get("services") or []
-            ),
-            "scheduler": next(
-                (
-                    s
-                    for s in (status.get("services") or {}).get("services") or []
-                    if s.get("id") == "scheduler"
-                ),
-                {},
-            ),
-            "jobs": status.get("jobs") or {},
-        },
-        "hardware": {
-            "gpu": env.get("gpu") if isinstance(env, dict) else {},
-            "resources": resources or {},
-            "disk_free_gb": env.get("disk_free_gb") if isinstance(env, dict) else None,
-        },
-        "health": {
-            "diagnose": status.get("health"),
-            "acceptance": acc,
-            "production_readiness": acc.get("production_readiness"),
-            "overall": acc.get("overall"),
-            "acceptance_passed": acc.get("acceptance_passed"),
-        },
-        "git": status.get("workspace") or {},
-        "recent_activity": _recent_activity_summary(),
-        "providers": providers,
-    }
+    """Structured payload for Mission Control UI (alias)."""
+    from jarvis.mission_control import collect_mission_control
+
+    return collect_mission_control()
 
 
 def format_status_summary(data: dict[str, Any] | None = None) -> str:
-    """Compact one-screen status for chat `status` command."""
-    snap = data or collect_runtime_status()
-    mode = snap.get("execution_mode", "?")
-    phase = (snap.get("phase") or {}).get("phase", "?")
-    host = snap.get("host") or {}
-    attached = "Attached" if host.get("attached") else "Standalone"
-    models = (snap.get("models") or {}).get("active") or {}
-    general = models.get("general") or models.get("coder") or "—"
-    mem_src = "Platform" if os.getenv("JARVIS_PLATFORM_MEMORY_ATTACHED") == "1" else "Local"
-    know_src = (
-        "Platform" if os.getenv("JARVIS_PLATFORM_KNOWLEDGE_RETRIEVAL_ATTACHED") == "1" else "Local"
-    )
-    acc = snap.get("acceptance") or {}
-    acc_pct = acc.get("overall")
-    acc_label = f"{acc_pct}%" if acc_pct is not None else "—"
-    svc = snap.get("services") or {}
-    svc_ok = "Healthy" if svc.get("ready") else "Degraded"
-    jobs = snap.get("jobs") or {}
-    job_n = jobs.get("active_count") or jobs.get("busy_count") or 0
-    lines = [
-        "## Workstation Status",
-        "",
-        f"**Platform:** {attached}",
-        f"**Mode:** {mode.title()}",
-        f"**Phase:** {phase}",
-        f"**Inference:** Ollama · `{general}`",
-        f"**Memory:** {mem_src}",
-        f"**Knowledge:** {know_src}",
-        f"**Acceptance:** {acc_label}",
-        f"**Services:** {svc_ok}",
-        f"**Background jobs:** {job_n} running",
-        "",
-        "_Live runtime — no search._",
-    ]
-    return "\n".join(lines)
+    """Compact status for chat — sourced from Mission Control."""
+    from jarvis.mission_control import format_overview_markdown
+
+    return format_overview_markdown()
 
 
 def format_startup_summary() -> dict[str, Any]:

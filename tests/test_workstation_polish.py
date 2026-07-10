@@ -16,16 +16,18 @@ def test_status_command_maps():
 def test_collect_dashboard_shape():
     data = collect_dashboard()
     assert data.get("ok") is True
-    assert "runtime" in data
+    assert "overview" in data
     assert "inference" in data
     assert "memory" in data
     assert "services" in data
-    assert "recent_activity" in data
+    assert "activity" in data
+    assert "applications" in data
 
 
 def test_format_status_summary_has_key_lines():
     text = format_status_summary()
-    assert "Platform:" in text
+    assert "Mission Control" in text
+    assert "Status:" in text
     assert "Mode:" in text
     assert "Acceptance:" in text
 

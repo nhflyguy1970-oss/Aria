@@ -153,10 +153,15 @@ def _runtime_action(action: str) -> dict:
 
 
 def _status_summary() -> dict:
-    from jarvis.runtime_introspection import collect_runtime_status, format_status_summary
+    from jarvis.mission_control import collect_mission_control, format_overview_markdown
 
-    data = collect_runtime_status()
-    return {"ok": True, "message": format_status_summary(data), "data": data, "type": "info"}
+    data = collect_mission_control(record_metrics=False)
+    return {
+        "ok": True,
+        "message": format_overview_markdown(),
+        "data": data.get("overview"),
+        "type": "info",
+    }
 
 
 @register_behavior
