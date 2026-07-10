@@ -11,6 +11,18 @@ _USING = re.compile(
     r"^(?:what|which)\s+(?P<object>[\w\s-]+?)\s+(?:am|are)\s+(?:i|we)\s+(?P<verb>\w+)",
     re.I,
 )
+_USING2 = re.compile(
+    r"^(?:am|are)\s+(?:i|we)\s+(?P<verb>using)\s+(?:the\s+)?(?P<object>.+?)\??$",
+    re.I,
+)
+_USING_YOU = re.compile(
+    r"^what\s+(?P<object>[\w\s-]+?)\s+are\s+you\s+using\??$",
+    re.I,
+)
+_MY_GPU = re.compile(
+    r"^what\s+is\s+my\s+(?:current\s+)?(?P<object>gpu|graphics card|cpu|model)\??$",
+    re.I,
+)
 _WHAT_IS = re.compile(
     r"^what\s+(?:is|are)\s+(?:a|an|the)?\s*(?P<object>.+?)\??$",
     re.I,
@@ -32,7 +44,24 @@ _SEARCH_WEB = re.compile(
     re.I,
 )
 _SHOW_DOCS = re.compile(
-    r"^(?:show|find|get)\s+(?P<object>.+?)\s+documentation\.?$",
+    r"^(?:show|find|get)\s+(?P<object>.+?)\s+(?:documentation|docs?)\.?$",
+    re.I,
+)
+_SHOW_DOCS_SHORT = re.compile(r"^show\s+(?P<object>.+?)\s+docs\.?$", re.I)
+_IS_RUNNING = re.compile(
+    r"^is\s+(?P<object>.+?)\s+running\??$",
+    re.I,
+)
+_WHICH_ACTIVE = re.compile(
+    r"^which\s+(?P<object>[\w\s-]+?)\s+(?:is\s+)?active\??$",
+    re.I,
+)
+_HARDWARE_INFERENCE = re.compile(
+    r"^what\s+hardware\s+is\s+running\s+inference\??$",
+    re.I,
+)
+_CONFIGURE = re.compile(
+    r"^configure\s+(?P<object>.+?)\.?$",
     re.I,
 )
 
@@ -47,6 +76,18 @@ def analyze_syntax(text: str, grammar: GrammarAnalysis) -> SyntaxAnalysis:
         obj = m.group("object").strip()
         verb = stem_word(m.group("verb"))
         subject = "i"
+    elif m := _USING2.match(lower):
+        verb = stem_word(m.group("verb"))
+        obj = m.group("object").strip()
+        subject = "i"
+    elif m := _MY_GPU.match(lower):
+        obj = m.group("object").strip()
+        verb = "using"
+        subject = "i"
+    elif m := _USING_YOU.match(lower):
+        obj = m.group("object").strip()
+        verb = "using"
+        subject = "you"
     elif m := _WHAT_IS.match(lower):
         obj = m.group("object").strip().rstrip("?")
         verb = "explain"
@@ -66,10 +107,30 @@ def analyze_syntax(text: str, grammar: GrammarAnalysis) -> SyntaxAnalysis:
         obj = m.group("object").strip()
         verb = "search"
         subject = "web"
+    elif m := _SHOW_DOCS_SHORT.match(lower):
+        obj = m.group("object").strip()
+        verb = "show"
+        subject = "reference"
     elif m := _SHOW_DOCS.match(lower):
         obj = m.group("object").strip()
         verb = "show"
-        subject = "documentation"
+        subject = "reference"
+    elif m := _IS_RUNNING.match(lower):
+        obj = m.group("object").strip()
+        verb = "running"
+        subject = "i"
+    elif m := _WHICH_ACTIVE.match(lower):
+        obj = m.group("object").strip()
+        verb = "active"
+        subject = "i"
+    elif _HARDWARE_INFERENCE.match(lower):
+        obj = "hardware"
+        verb = "running"
+        subject = "inference"
+    elif m := _CONFIGURE.match(lower):
+        obj = m.group("object").strip()
+        verb = "configure"
+        subject = "i"
 
     if grammar.mood == "comparison" and not obj:
         obj = raw

@@ -22,7 +22,7 @@ _VALID_INTENTS = frozenset(
     {
         "runtime",
         "knowledge",
-        "documentation",
+        "reference",
         "memory",
         "web_search",
         "coding",
@@ -45,7 +45,7 @@ def _system_prompt() -> str:
         "Intents:\n"
         "- runtime: LIVE workstation state only (my GPU, services running, status, health, models loaded)\n"
         "- knowledge: explain concepts, teach, compare, history, what is X (encyclopedic)\n"
-        "- documentation: how to configure/setup, show docs, manuals, README, project docs\n"
+        "- reference: how to configure/setup, show docs/manuals/README/project reference\n"
         "- memory: search my memory, recall, remember facts about Jeff\n"
         "- web_search: explicit search the web / look up online\n"
         "- coding: fix/implement/refactor code files\n"
@@ -108,8 +108,21 @@ def classify_semantic(
         return None
 
     cfg = placement_config()
-    model = str(cfg.get("model") or "qwen2.5:1.5b")
+    model = str(cfg.get("model") or "structure")
     device = str(cfg.get("device") or "cpu")
+    if model == "structure":
+        return None
+
+    try:
+        from jarvis.nlu.health import (
+            record_classify_failure,
+            record_classify_success,
+            record_queue_enqueue,
+        )
+
+        record_queue_enqueue()
+    except Exception:
+        pass
 
     try:
         from jarvis import llm
@@ -131,11 +144,21 @@ def classify_semantic(
         latency_ms = (time.perf_counter() - t0) * 1000.0
         parsed = _parse_json(raw)
         if not parsed:
+            try:
+                record_classify_failure("invalid_json")
+            except Exception:
+                pass
             return None
         intent = str(parsed.get("intent") or "chat").strip().lower()
+        if intent == "documentation":
+            intent = "reference"
         if intent not in _VALID_INTENTS:
             intent = "chat"
         confidence = float(parsed.get("confidence") or 0.5)
+        try:
+            record_classify_success(latency_ms=latency_ms, model=model, device=device)
+        except Exception:
+            pass
         return SemanticClassification(
             intent=intent,
             action=str(parsed.get("action") or "").strip().lower(),
@@ -147,4 +170,10 @@ def classify_semantic(
         )
     except Exception as exc:
         log.debug("semantic classifier skipped: %s", exc)
+        try:
+            from jarvis.nlu.health import record_classify_failure
+
+            record_classify_failure(str(exc))
+        except Exception:
+            pass
         return None

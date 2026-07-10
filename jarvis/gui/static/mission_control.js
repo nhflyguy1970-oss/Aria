@@ -4,6 +4,7 @@ const MC_TABS = [
   "overview",
   "routing",
   "timeline",
+  "intent_analytics",
   "connection",
   "applications",
   "inference",
@@ -440,21 +441,62 @@ function wireRoutingInspector() {
         const data = await mcFetch(`/api/mission-control/routing/${encodeURIComponent(id)}`);
         const rec = data.record || {};
         const debug = rec.debug || {};
+        const sem = rec.semantic_report || {};
         detail.classList.remove("hidden");
-        detail.innerHTML = `<h4>Routing record</h4>
+        detail.innerHTML = `<h4>Semantic Report</h4>
           <p><strong>Prompt:</strong> ${mcEsc(rec.prompt)}</p>
-          <p><strong>Intent:</strong> <code>${mcEsc(rec.intent)}</code></p>
+          <p><strong>Intent:</strong> <code>${mcEsc(rec.intent)}</code> · <strong>Confidence:</strong> ${rec.confidence ?? "—"}</p>
           <p><strong>Route:</strong> ${mcEsc(rec.route)} · <strong>Handler:</strong> ${mcEsc(rec.handler)}</p>
-          <p><strong>Backend:</strong> ${mcEsc(rec.backend)} · <strong>Latency:</strong> ${rec.latency_ms} ms</p>
-          <p><strong>Rule matched:</strong> ${mcEsc(rec.rule_matched || debug.rule_matched || "—")}</p>
-          <p><strong>Router stage:</strong> ${mcEsc(rec.router_stage || debug.router_stage || "—")}</p>
-          <p><strong>MC endpoint:</strong> <code>${mcEsc(rec.mc_endpoint || debug.mission_control_endpoint || "—")}</code></p>
-          <pre class="mc-pre">${mcEsc(JSON.stringify(debug, null, 2))}</pre>`;
+          <p><strong>Latency:</strong> ${rec.latency_ms} ms · <strong>Band:</strong> ${mcEsc(rec.confidence_band || "—")}</p>
+          <h5>Classifier output</h5>
+          <pre class="mc-pre">${mcEsc(JSON.stringify(sem.semantic || sem, null, 2))}</pre>
+          <h5>Grammar / Morphology / Syntax</h5>
+          <pre class="mc-pre">${mcEsc(JSON.stringify({grammar: sem.grammar, morphology: sem.morphology, syntax: sem.syntax}, null, 2))}</pre>
+          <p><strong>Rule matched:</strong> ${mcEsc(rec.rule_matched || "—")} · <strong>Stage:</strong> ${mcEsc(rec.router_stage || "—")}</p>`;
       } catch (e) {
         detail.textContent = e.message;
       }
     });
   });
+}
+
+function renderIntentAnalytics(data) {
+  const week = data?.week || data || {};
+  const dist = week.distribution || [];
+  const rows = dist
+    .map(
+      (d) =>
+        `<tr><td>${mcEsc(d.intent)}</td><td>${d.count}</td><td>${d.pct}%</td>` +
+        `<td>${d.avg_confidence ?? "—"}</td><td>${d.avg_route_latency_ms ?? "—"}</td></tr>`
+    )
+    .join("");
+  return mcGrid([
+    mcCard(
+      "Summary (week)",
+      `<p>Records: <strong>${week.count ?? 0}</strong></p>
+       <p>Clarification rate: ${week.clarification_rate ?? 0}% · Fallback: ${week.fallback_rate ?? 0}%</p>
+       <p>Success: ${week.success_rate ?? 0}% · Errors: ${week.error_rate ?? 0}%</p>`
+    ),
+    mcCard(
+      "Intent distribution",
+      rows
+        ? `<table class="mc-table"><thead><tr><th>Intent</th><th>Count</th><th>%</th><th>Conf</th><th>Route ms</th></tr></thead><tbody>${rows}</tbody></table>`
+        : "<p class='muted'>No analytics yet.</p>"
+    ),
+    mcCard("Classifier", renderClassifierCard()),
+  ]);
+}
+
+function renderClassifierCard() {
+  const c = _mcData?.classifier_health || _mcData?.settings?.classifier || {};
+  return `<p><strong>Model:</strong> <code>${mcEsc(c.model || "—")}</code></p>
+    <p><strong>Device:</strong> ${mcEsc(c.device || "—")} · <strong>Status:</strong> ${mcEsc(c.benchmark_status || "—")}</p>
+    <p><strong>Latency:</strong> ${c.average_latency_ms ?? "—"} ms · <strong>Healthy:</strong> ${c.healthy ? "yes" : "no"}</p>
+    <p class="muted">${mcEsc(c.selection_reason || "")}</p>`;
+}
+
+async function loadIntentAnalytics() {
+  return mcFetch("/api/mission-control/intent-analytics?window=week");
 }
 
 function renderConnection(conn) {
@@ -515,6 +557,16 @@ async function renderMcTab(tab) {
       body.innerHTML = renderRoutingInspector(records, stats);
       wireRoutingInspector();
       if (_mcRoutingLive) body.scrollTop = body.scrollHeight;
+    } catch (e) {
+      body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
+    }
+    return;
+  }
+  if (tab === "intent_analytics") {
+    body.innerHTML = "<p class='muted'>Loading intent analytics…</p>";
+    try {
+      const data = await loadIntentAnalytics();
+      body.innerHTML = renderIntentAnalytics(data);
     } catch (e) {
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }

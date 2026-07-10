@@ -1,4 +1,4 @@
-"""Classifier hardware placement — from benchmark or env override."""
+"""Classifier placement — adaptive benchmark results."""
 
 from __future__ import annotations
 
@@ -9,16 +9,11 @@ from typing import Any
 from jarvis.config import DATA_DIR
 
 _PLACEMENT_FILE = DATA_DIR / "nlu_placement.json"
-_CANDIDATE_MODELS = (
-    "smollm:360m",
-    "qwen2.5:1.5b",
-    "qwen2.5:0.5b",
-    "gemma2:2b",
-    "qwen3:1.7b",
-)
+_BENCHMARK_RAN = False
 
 
 def placement_config() -> dict[str, Any]:
+    global _BENCHMARK_RAN
     env_model = (os.getenv("JARVIS_NLU_MODEL") or "").strip()
     env_device = (os.getenv("JARVIS_NLU_DEVICE") or "").strip()
     if env_model:
@@ -26,7 +21,20 @@ def placement_config() -> dict[str, Any]:
             "model": env_model,
             "device": env_device or "cpu",
             "source": "env",
+            "version": "1.0",
         }
+    if not _BENCHMARK_RAN and os.getenv("JARVIS_NLU_SKIP_BENCHMARK", "").lower() not in (
+        "1",
+        "true",
+        "yes",
+    ):
+        try:
+            from jarvis.nlu.benchmark import ensure_benchmark
+
+            ensure_benchmark()
+            _BENCHMARK_RAN = True
+        except Exception:
+            _BENCHMARK_RAN = True
     if _PLACEMENT_FILE.is_file():
         try:
             data = json.loads(_PLACEMENT_FILE.read_text(encoding="utf-8"))
@@ -35,10 +43,11 @@ def placement_config() -> dict[str, Any]:
         except (json.JSONDecodeError, OSError):
             pass
     return {
-        "model": "qwen2.5:1.5b",
+        "model": "structure",
         "device": "cpu",
-        "source": "default",
-        "candidates": list(_CANDIDATE_MODELS),
+        "source": "structure_fallback",
+        "selection_reason": "Structural NLU (grammar/syntax) until benchmark completes",
+        "version": "1.0",
     }
 
 

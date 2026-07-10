@@ -56,7 +56,9 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "timeline_models": lambda _params, _message: _timeline("timeline_models"),
     "timeline_repairs": lambda _params, _message: _timeline("timeline_repairs"),
     "timeline_backups": lambda _params, _message: _timeline("timeline_backups"),
-    "documentation_search": lambda params, message: _documentation_search(params, message),
+    "reference_search": lambda params, message: _reference_search(params, message),
+    "documentation_search": lambda params, message: _reference_search(params, message),
+    "nlu_clarify": lambda params, message: _nlu_clarify(params, message),
 }
 
 
@@ -210,12 +212,21 @@ def _timeline(action: str) -> dict:
     return execute_timeline_command(action)
 
 
-def _documentation_search(params: dict, message: str) -> dict:
-    from jarvis.documentation_engine import search_documentation
+def _reference_search(params: dict, message: str) -> dict:
+    from jarvis.reference_engine import search_reference
 
     query = (params.get("query") or message or "").strip()
     subject = (params.get("subject") or "").strip()
-    return search_documentation(query, subject=subject)
+    return search_reference(query, subject=subject)
+
+
+def _nlu_clarify(params: dict, message: str) -> dict:
+    choices = params.get("choices") or []
+    question = params.get("clarification_question") or "What did you mean?"
+    lines = [question, ""]
+    for idx, label in enumerate(choices, 1):
+        lines.append(f"{idx}. {label}")
+    return {"ok": True, "message": "\n".join(lines), "type": "clarify"}
 
 
 @register_behavior

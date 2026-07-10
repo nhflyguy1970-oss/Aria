@@ -683,14 +683,24 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
     from jarvis.runtime_routing_trace import log_route_decision
 
     action = intent.get("action")
-    if action in ("documentation_search",) or str(action or "").startswith("documentation_"):
+    if action in ("reference_search",) or str(action or "").startswith("reference_"):
         return log_route_decision(
             message=message,
             intent=intent,
             stage="finalize",
-            reason=intent.get("route_reason") or "documentation",
+            reason=intent.get("route_reason") or "reference",
             confidence=intent.get("route_confidence"),
-            handler=intent.get("route_handler") or "DocumentationEngine",
+            handler=intent.get("route_handler") or "ReferenceEngine",
+        )
+    if action in ("documentation_search",) or str(action or "").startswith("documentation_"):
+        intent = {**intent, "action": "reference_search", "route_handler": "ReferenceEngine"}
+        return log_route_decision(
+            message=message,
+            intent=intent,
+            stage="finalize",
+            reason="reference_compat",
+            confidence=intent.get("route_confidence"),
+            handler="ReferenceEngine",
         )
     if action == "web_search" and is_runtime_routing_question(message):
         runtime = route_runtime_priority(message)
@@ -1478,6 +1488,20 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
         choice = message.strip()
         pending = session.pending_clarification
         session.pending_clarification = None
+        if pending.get("type") == "nlu_intent":
+            from jarvis.nlu.confidence import resolve_clarification_choice
+
+            resolved = resolve_clarification_choice(choice, pending)
+            if resolved:
+                return _finalize_intent(resolved, pending.get("original_prompt") or message, session)
+            from jarvis.nlu.learning import reject_correction
+
+            reject_correction(pending.get("original_prompt") or message)
+            return _finalize_intent(
+                {"action": "chat", "params": {}, "thinking": "clarification rejected"},
+                message,
+                session,
+            )
         if choice.isdigit():
             idx = int(choice) - 1
             choices = pending.get("choices", [])
@@ -1523,6 +1547,14 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
         nlu_intent = route_via_nlu(message, session, attachment)
         if nlu_intent:
             nlu_used = True
+            if nlu_intent.get("needs_clarification"):
+                session.pending_clarification = {
+                    "type": "nlu_intent",
+                    "original_prompt": message,
+                    "subject": nlu_intent.get("params", {}).get("subject", ""),
+                    "clarification_options": nlu_intent.get("clarification_options", {}),
+                    "choices": nlu_intent.get("choices", []),
+                }
             nlu_intent.setdefault("thinking", "nlu")
             nlu_intent = normalize_route_intent(nlu_intent)
             nlu_intent = _maybe_downgrade_coding_chat(nlu_intent, message, session)

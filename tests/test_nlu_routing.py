@@ -15,9 +15,9 @@ from jarvis.session import SessionContext
 VALIDATION_CASES = [
     ("What GPU am I using?", "runtime", "runtime_gpu"),
     ("What is a GPU?", "knowledge", "chat"),
-    ("Show Docker Compose documentation.", "documentation", "documentation_search"),
+    ("Show Docker Compose documentation.", "reference", "reference_search"),
     ("Explain Docker Compose.", "knowledge", "chat"),
-    ("How do I configure Docker Compose?", "documentation", "documentation_search"),
+    ("How do I configure Docker Compose?", "reference", "reference_search"),
     ("Search my memory for Docker.", "memory", "memory_search"),
     ("Search the web for Docker Compose.", "web_search", "web_search"),
 ]
@@ -48,16 +48,16 @@ def test_router_uses_nlu_primary(prompt, expected_intent, expected_action):
         assert intent.get("action") == expected_action
         if expected_intent == "runtime":
             assert classify_route(intent.get("action")) == "Runtime"
-        elif expected_intent == "documentation":
-            assert classify_route(intent.get("action")) == "Documentation"
+        elif expected_intent == "reference":
+            assert classify_route(intent.get("action")) == "Reference"
 
 
-def test_documentation_never_runtime_client():
+def test_reference_never_runtime_client():
     result = _result_for("Show Docker Compose documentation.")
     intent = nlu_to_router_intent(result)
     assert intent is not None
-    assert intent.get("route_handler") == "DocumentationEngine"
-    assert classify_route(intent["action"]) == "Documentation"
+    assert intent.get("route_handler") == "ReferenceEngine"
+    assert classify_route(intent["action"]) == "Reference"
 
 
 def test_runtime_never_web_search():

@@ -19,8 +19,10 @@ def classify_route(action: str) -> str:
         return "Runtime"
     if act in ("web_search", "learn_about"):
         return "Search" if act == "web_search" else "Knowledge"
-    if act in ("documentation_search",) or act.startswith("documentation_"):
-        return "Documentation"
+    if act in ("reference_search", "documentation_search") or act.startswith(
+        ("reference_", "documentation_")
+    ):
+        return "Reference"
     if act.startswith("memory_") or act in ("remember", "recall"):
         return "Memory"
     if act.startswith("coding_") or act in (
@@ -81,7 +83,7 @@ def handler_for_action(action: str) -> str:
         "Runtime": "RuntimeClient",
         "Search": "WebSearch",
         "Knowledge": "KnowledgeEngine",
-        "Documentation": "DocumentationEngine",
+        "Reference": "ReferenceEngine",
         "Memory": "MemoryStore",
         "Coding": "EngineeringEngine",
         "Vision": "VisionPipeline",
@@ -109,8 +111,8 @@ def backend_for_route(route: str, *, mission_control_source: str | None = None) 
         return route
     if route == "Coding":
         return "Engineering"
-    if route == "Documentation":
-        return "Local Docs"
+    if route == "Reference":
+        return "Local Reference"
     if route == "Chat":
         return "LLM"
     return route
@@ -134,8 +136,8 @@ def build_execution_flow(
         lines.extend(["    ↓", "Web Search", "    ↓", "Summarizer", "    ↓", "Response"])
     elif route == "Knowledge":
         lines.extend(["    ↓", "Knowledge Engine", "    ↓", handler, "    ↓", "Response"])
-    elif route == "Documentation":
-        lines.extend(["    ↓", "Documentation Engine", "    ↓", "Local Docs", "    ↓", "Response"])
+    elif route == "Reference":
+        lines.extend(["    ↓", "Reference Engine", "    ↓", "Local Sources", "    ↓", "Response"])
     elif route == "Memory":
         lines.extend(["    ↓", "Memory Store", "    ↓", handler, "    ↓", "Response"])
     elif route == "Coding":
@@ -256,6 +258,12 @@ def record_prompt_execution(
         "rule_matched": intent.get("route_reason") or trace.get("reason"),
         "router_stage": trace.get("stage"),
         "mc_endpoint": "/api/mission-control" if route == "Runtime" else None,
+        "semantic_report": intent.get("semantic_report") or intent.get("nlu") or {},
+        "clarification_accepted": bool(intent.get("clarification_accepted")),
+        "clarification_rejected": bool(intent.get("clarification_rejected")),
+        "final_intent": intent.get("final_intent"),
+        "confidence_band": intent.get("confidence_band"),
+        "flag_for_review": bool(intent.get("flag_for_review")),
         "debug": {
             "intent_classifier_result": action,
             "rule_matched": intent.get("route_reason") or trace.get("reason"),
