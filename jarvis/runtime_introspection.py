@@ -355,10 +355,10 @@ def collect_runtime(action: str) -> dict[str, Any]:
 
 def _format_connection_warning(detail: str) -> str:
     return (
-        "## Runtime unavailable\n\n"
-        f"Mission Control is not reachable: {detail}\n\n"
-        "Start **AI Platform** first so Mission Control can serve live runtime state. "
-        "Aria does not answer runtime questions from local state or web search."
+        "Mission Control could not provide live runtime information.\n\n"
+        f"{detail}\n\n"
+        "Start **AI Platform** and ensure Mission Control is reachable. "
+        "Aria does not answer runtime questions from local state, RAG, embeddings, or web search."
     )
 
 

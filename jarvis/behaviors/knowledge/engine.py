@@ -61,11 +61,11 @@ class KnowledgeEngine(KnowledgeOperations):
 
         from jarvis import web_search
         from jarvis.profiles import web_search_disabled
-        from jarvis.runtime_introspection import is_runtime_introspection_question
+        from jarvis.runtime_routing import is_runtime_routing_question
 
         if (
             not general
-            and not is_runtime_introspection_question(message)
+            and not is_runtime_routing_question(message)
             and not web_search_disabled()
             and web_search.auto_search_enabled()
             and web_search.should_auto_search(message)

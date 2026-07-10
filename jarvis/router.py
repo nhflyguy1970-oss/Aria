@@ -312,9 +312,9 @@ _GENERAL_TECH = re.compile(
 
 def is_general_knowledge_question(message: str, session: SessionContext | None = None) -> bool:
     """General tech / hardware / AI product questions — not about this repo."""
-    from jarvis.runtime_introspection import is_runtime_introspection_question
+    from jarvis.runtime_routing import is_runtime_routing_question
 
-    if is_runtime_introspection_question(message):
+    if is_runtime_routing_question(message):
         return False
     if is_codebase_question(message, session):
         return False
@@ -526,9 +526,9 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
 
 
 def _is_capabilities_question(lower: str) -> bool:
-    from jarvis.runtime_introspection import is_runtime_introspection_question
+    from jarvis.runtime_routing import is_runtime_routing_question
 
-    if is_runtime_introspection_question(lower):
+    if is_runtime_routing_question(lower):
         return False
     patterns = [
         r"what (can you do|do you do|are you able|services|features|capabilities)",
@@ -544,6 +544,10 @@ def _is_capabilities_question(lower: str) -> bool:
 
 
 def _is_models_question(lower: str) -> bool:
+    from jarvis.runtime_routing import is_runtime_routing_question
+
+    if is_runtime_routing_question(lower):
+        return False
     return bool(re.search(
         r"\b(what models|which models|model recommendations?|best models|recommended models|what ollama)\b",
         lower,
@@ -674,15 +678,33 @@ def _maybe_inpaint_route(message: str, lower: str, session: SessionContext) -> d
 
 
 def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dict:
-    """Last-line guard: never inpaint unless message clearly targets an image edit."""
+    """Last-line guards before executing the routed action."""
+    from jarvis.runtime_routing import is_runtime_routing_question, route_runtime_priority
+    from jarvis.runtime_routing_trace import log_route_decision
+
     action = intent.get("action")
+    if action == "web_search" and is_runtime_routing_question(message):
+        runtime = route_runtime_priority(message)
+        if runtime:
+            intent = runtime
+            action = intent.get("action")
+
     if action != "inpaint_image":
-        return intent
+        return log_route_decision(
+            message=message,
+            intent=intent,
+            stage="finalize",
+            reason=intent.get("route_reason"),
+            confidence=intent.get("route_confidence"),
+            handler=intent.get("route_handler"),
+        )
     if _is_meta_self_question(message):
-        return {"action": "chat", "params": {}, "thinking": "meta self-improvement"}
+        intent = {"action": "chat", "params": {}, "thinking": "meta self-improvement"}
+        return log_route_decision(message=message, intent=intent, stage="finalize_inpaint_guard")
     if _maybe_inpaint_route(message, message.lower(), session) is None:
-        return {"action": "chat", "params": {}, "thinking": "not an image edit"}
-    return intent
+        intent = {"action": "chat", "params": {}, "thinking": "not an image edit"}
+        return log_route_decision(message=message, intent=intent, stage="finalize_inpaint_guard")
+    return log_route_decision(message=message, intent=intent, stage="finalize")
 
 
 def _quick_route(message: str, attachment: dict | None, session: SessionContext) -> dict | None:
@@ -690,14 +712,11 @@ def _quick_route(message: str, attachment: dict | None, session: SessionContext)
     if follow:
         return follow
 
-    # Runtime introspection — highest priority (before router table / web search).
-    from jarvis.runtime_introspection import is_status_command, route_runtime_introspection
+    # Runtime — highest priority (before router table / web search / chat fallback).
+    from jarvis.runtime_routing import route_runtime_priority
 
-    if runtime_hit := route_runtime_introspection(message):
+    if runtime_hit := route_runtime_priority(message):
         return runtime_hit
-
-    if status_action := is_status_command(message):
-        return {"action": status_action, "params": {}, "thinking": "workstation status"}
 
     from jarvis.router_table import match_router_table
 
@@ -1203,13 +1222,10 @@ def _quick_route(message: str, attachment: dict | None, session: SessionContext)
         q = re.sub(r"^(please\s+)?(search (the )?web for|web search|look up online|google)\s*[:\-]?\s*", "", message, flags=re.I).strip()
         return {"action": "web_search", "params": {"query": q or message}}
 
-    from jarvis.runtime_introspection import is_runtime_introspection_question
+    from jarvis.runtime_routing import route_runtime_priority
 
-    if is_runtime_introspection_question(message):
-        from jarvis.runtime_introspection import route_runtime_introspection
-
-        if runtime_hit := route_runtime_introspection(message):
-            return runtime_hit
+    if runtime_hit := route_runtime_priority(message):
+        return runtime_hit
 
     if is_general_knowledge_question(message, session):
         return {"action": "web_search", "params": {"query": message}, "thinking": "general knowledge"}
@@ -1507,4 +1523,13 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
     except (json.JSONDecodeError, KeyError):
         pass
 
-    return {"action": "chat", "params": {}, "thinking": "fallback"}
+    from jarvis.runtime_routing import route_runtime_priority
+
+    if runtime_hit := route_runtime_priority(message):
+        return _finalize_intent(runtime_hit, message, session)
+
+    return _finalize_intent(
+        {"action": "chat", "params": {}, "thinking": "fallback"},
+        message,
+        session,
+    )

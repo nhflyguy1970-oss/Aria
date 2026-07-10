@@ -904,6 +904,15 @@ class JarvisAssistant:
             return
 
         if action == "web_search":
+            from jarvis.runtime_routing import is_runtime_routing_question, route_runtime_priority
+
+            if is_runtime_routing_question(message):
+                from jarvis.runtime_introspection import runtime_action_result
+
+                runtime = route_runtime_priority(message) or {"action": "runtime_status"}
+                result = runtime_action_result(runtime.get("action", "runtime_status"))
+                yield _stream_done(result)
+                return
             from jarvis import web_search
             from jarvis.profiles import web_search_disabled
 
