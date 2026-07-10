@@ -565,12 +565,32 @@ def mission_control_performance_lab_run(quick: bool = True):
         return {"ok": False, "error": str(exc)}
 
 
+@app.get("/api/mission-control/startup")
+def mission_control_startup():
+    try:
+        from aiplatform.mission_control.startup_pipeline import pipeline_snapshot
+
+        return pipeline_snapshot()
+    except ImportError as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@app.get("/api/mission-control/sessions")
+def mission_control_sessions():
+    try:
+        from aiplatform.mission_control.session_recorder import sessions_panel
+
+        return sessions_panel()
+    except ImportError as exc:
+        return {"ok": False, "error": str(exc)}
+
+
 @app.get("/api/mission-control/release")
 def mission_control_release():
     try:
-        from aiplatform.mission_control.release_dashboard import release_panel
+        from aiplatform.mission_control.release_management import release_management_panel
 
-        return release_panel()
+        return release_management_panel()
     except ImportError as exc:
         return {"ok": False, "error": str(exc)}
 
