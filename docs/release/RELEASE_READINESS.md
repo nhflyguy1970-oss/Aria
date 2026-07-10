@@ -1,12 +1,22 @@
 # Release Readiness
 
-**Status:** READY FOR DAILY USE (compatibility mode)  
-**Date:** 2026-07-09  
-**Production Readiness Score:** **99.2%**
+**Status:** RELEASE CANDIDATE 1 (RC1)  
+**Date:** 2026-07-10  
+**Production Readiness Score:** **99.2%** (last acceptance)
 
 ## Executive summary
 
-The AI Workstation is ready for Jeff to use as a daily local-first AI environment. Core path — power on, Aria chat, memory, knowledge, Docker infrastructure, repair, acceptance, and platform cutover verification — is complete and tested. Platform-authoritative memory mode is **verified but not enabled** by design.
+The AI Workstation is ready for Jeff to use as a daily local-first AI environment. RC1 adds measured benchmarks, release checklist, packaging recommendation, standalone Mission Control observability tabs (Routing, Timeline, Intent Analytics), and synchronized user documentation. Core path — power on, Aria chat, NLU routing, Mission Control observability, memory, knowledge, repair, acceptance — is complete and tested.
+
+## RC1 deliverables
+
+| Artifact | Location |
+|----------|----------|
+| Release checklist | AI-Platform `docs/RELEASE_RC1_CHECKLIST.md` |
+| User guide | AI-Platform `docs/USER_GUIDE.md` |
+| Benchmark harness | AI-Platform `scripts/benchmark_rc1.py` |
+| Endurance sampler | AI-Platform `scripts/endurance_rc1.py` |
+| Packaging recommendation | AI-Platform `docs/PACKAGING_RECOMMENDATION.md` |
 
 ## Scores (latest acceptance)
 
@@ -21,31 +31,25 @@ The AI Workstation is ready for Jeff to use as a daily local-first AI environmen
 
 - Desktop start: `./workstation start` / AI Workstation icon
 - Aria standalone + platform attach
-- 447 memory entries mirrored and verified
-- 1691 semantic vectors in application index
+- NLU routing v1.0 with confidence bands and classifier placement
+- Mission Control: Routing Inspector, Event Timeline, Intent Analytics
+- Reference Engine (documentation lookup)
 - Cutover verify: `ready: true` in `dual_write` mode
-- Repair: Docker, LiteLLM, Aria auto-restart, acceptance rerun
-- Backup/restore: `./workstation backup` / `restore`
-- CI: Aria ~101 tests, Platform ~722 tests — green
-- GitHub Actions: green on `main`
+- Repair, backup/restore, acceptance, report
+- CI: Aria ~239 tests, Platform ~738 tests — green on `main`
 
 ## What is intentionally deferred
 
 | Item | Recommendation |
 |------|----------------|
-| Platform-authoritative mode | **Wait** — stay in compatibility mode for daily use; enable only after 1–2 weeks of dogfooding |
+| Platform-authoritative mode | Stay in compatibility mode until 2+ weeks RC1 dogfooding |
+| Debian/AppImage packaging | See packaging recommendation — installer script for RC1 |
+| 8h/24h/48h endurance sign-off | Run `scripts/endurance_rc1.py`; mark checklist when complete |
 | Optional apps (Continue, OpenHands, etc.) | Not installed; no action needed |
-| Home Assistant | Optional; enable when smart-home use resumes |
 
 ## Failure injection (2026-07-09)
 
-21/25 checks passed on first full run. Failures addressed in this release:
-
-- Repair now auto-starts Aria when stopped
-- `workstation start` treats healthy Aria as success even if launch reported timeout
-- Failure-inject chat probe uses correct API format
-
-Re-run: `./scripts/failure-inject-workstation.sh`
+21/25 checks passed on first full run. Failures addressed in prior release. Re-run: `./scripts/failure-inject-workstation.sh`
 
 ## Hardware
 
@@ -56,6 +60,6 @@ Re-run: `./scripts/failure-inject-workstation.sh`
 
 ## Recommendation
 
-**Begin daily use now** in compatibility mode. Run `./workstation acceptance` weekly and `./workstation backup` before major updates.
+**Use RC1 daily.** Run `./workstation acceptance` weekly, archive `benchmark_rc1.py` output before tagging, and `./workstation backup` before major updates.
 
-Do **not** enable platform-authoritative mode on day one.
+Do **not** enable platform-authoritative mode until RC1 checklist is signed off.

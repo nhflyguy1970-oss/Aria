@@ -41,3 +41,4 @@ tools/piper/
 jarvis.log
 .aider*
 backups/*.tar.gz
+unsloth_compiled_cache/
