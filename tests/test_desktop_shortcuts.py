@@ -145,6 +145,7 @@ def test_platform_launcher_opens_native_mission_control():
     assert "--console" in text
     assert "api/health" in text
     assert "aiplatform.mission_control.desktop" in text
+    assert "desktop_window_visible" in text
     assert "gui_launcher" not in text
     assert "#workstation" not in text
-    assert "http://" not in text.split("exec")[1] if "exec" in text.lower() else True
+    assert "xdg-open" not in text
