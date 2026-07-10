@@ -139,10 +139,12 @@ def test_install_script_chmod_platform_launcher():
     assert "update-desktop-database" in text
 
 
-def test_platform_launcher_opens_mission_control_port():
+def test_platform_launcher_opens_native_mission_control():
     text = (ROOT / "scripts" / "desktop-launch-platform.sh").read_text(encoding="utf-8")
     assert "workstation" in text and "start" in text
     assert "--console" in text
-    assert "8780" in text or "MISSION_CONTROL_PORT" in text
     assert "api/health" in text
+    assert "aiplatform.mission_control.desktop" in text
+    assert "gui_launcher" not in text
     assert "#workstation" not in text
+    assert "http://" not in text.split("exec")[1] if "exec" in text.lower() else True

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch AI Platform — bootstrap workstation and open Mission Control (platform-owned).
+# Launch AI Platform — bootstrap workstation and open native Mission Control desktop.
 # GNOME/Zorin sessions use minimal PATH; .desktop Exec must be an absolute path.
 set -euo pipefail
 
@@ -27,23 +27,23 @@ if ! "${JARVIS_ROOT}/workstation" start --console --no-app >>"$LOG_FILE" 2>&1; t
   exit 1
 fi
 
-MC_URL="http://${CLIENT_HOST}:${MC_PORT}/"
-jarvis_log "Waiting for Mission Control at ${MC_URL}"
+MC_API="http://${CLIENT_HOST}:${MC_PORT}/api/health"
+jarvis_log "Ensuring Mission Control API at ${MC_API}"
 
 deadline=$((SECONDS + 20))
 while (( SECONDS < deadline )); do
-  if curl -sf --max-time 2 "${MC_URL}api/health" >/dev/null 2>&1; then
+  if curl -sf --max-time 2 "${MC_API}" >/dev/null 2>&1; then
     break
   fi
   sleep 0.5
 done
 
-if ! curl -sf --max-time 2 "${MC_URL}api/health" >/dev/null 2>&1; then
-  jarvis_notify "AI Platform" "Mission Control not ready — check logs"
-  jarvis_log "Mission Control failed health check at ${MC_URL}"
+if ! curl -sf --max-time 2 "${MC_API}" >/dev/null 2>&1; then
+  jarvis_notify "AI Platform" "Platform API not ready — check logs"
+  jarvis_log "Mission Control API failed health check at ${MC_API}"
   exit 1
 fi
 
 jarvis_notify "AI Platform" "Opening Mission Control…"
-jarvis_log "Opening Mission Control at ${MC_URL}"
-exec "$(jarvis_python)" -m jarvis.gui_launcher "${MC_URL}"
+jarvis_log "Launching native Mission Control desktop (PySide6)"
+exec "$(jarvis_python)" -m aiplatform.mission_control.desktop

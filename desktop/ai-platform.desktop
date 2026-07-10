@@ -9,6 +9,6 @@ Path=@HOME@
 Terminal=false
 Categories=Development;System;Utility;
 StartupNotify=true
-StartupWMClass=ai-platform
+StartupWMClass=ai-platform-mission-control
 Keywords=AI;Platform;Workstation;Dashboard;Runtime;Control;
 MimeType=
