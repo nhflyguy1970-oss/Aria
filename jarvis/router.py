@@ -713,7 +713,16 @@ def _quick_route(message: str, attachment: dict | None, session: SessionContext)
         return follow
 
     # Runtime — highest priority (before router table / web search / chat fallback).
+    from jarvis.routing_inspector import is_routing_command
     from jarvis.runtime_routing import route_runtime_priority
+
+    if routing_cmd := is_routing_command(message):
+        return {
+            "action": routing_cmd,
+            "params": {},
+            "thinking": "routing inspector",
+            "route_handler": "RoutingInspector",
+        }
 
     if runtime_hit := route_runtime_priority(message):
         return runtime_hit

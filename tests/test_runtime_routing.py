@@ -94,7 +94,19 @@ def test_finalize_intent_blocks_web_search_for_runtime(mock_search):
     mock_search.assert_not_called()
 
 
-def test_runtime_routing_trace_metadata():
+def test_user_memory_prompt_not_runtime_routing():
+    from jarvis.runtime_routing import is_runtime_routing_question, route_runtime_priority
+
+    assert not is_runtime_routing_question("search my memory for vacation plans")
+    assert route_runtime_priority("search my memory for vacation plans") is None
+
+
+def test_memory_provider_still_runtime_routing():
+    from jarvis.runtime_routing import route_runtime_priority
+
+    hit = route_runtime_priority("memory provider status")
+    assert hit is not None
+    assert hit.get("action") == "runtime_providers"
     from jarvis.runtime_routing import route_runtime_priority
 
     hit = route_runtime_priority("postgres status")

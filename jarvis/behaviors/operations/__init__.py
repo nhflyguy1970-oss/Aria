@@ -45,6 +45,9 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "runtime_platform": lambda _params, _message: _runtime_action("runtime_platform"),
     "runtime_applications": lambda _params, _message: _runtime_action("runtime_applications"),
     "status_summary": lambda _params, _message: _status_summary(),
+    "routing_last": lambda _params, _message: _routing_last(),
+    "routing_history": lambda _params, _message: _routing_history(),
+    "routing_stats": lambda _params, _message: _routing_stats(),
 }
 
 
@@ -163,6 +166,33 @@ def _status_summary() -> dict:
         "data": data.get("overview"),
         "type": "info",
     }
+
+
+def _routing_last() -> dict:
+    from jarvis.routing_inspector import format_routing_record_markdown, last_routing_record
+
+    record = last_routing_record()
+    return {"ok": True, "message": format_routing_record_markdown(record), "data": record, "type": "info"}
+
+
+def _routing_history() -> dict:
+    from jarvis.routing_inspector import format_routing_record_markdown, routing_history
+
+    items = routing_history(limit=10)
+    lines = ["## Routing history (last 10)", ""]
+    for item in items:
+        lines.append(
+            f"- `{item.get('iso')}` **{item.get('intent')}** → {item.get('route')} "
+            f"({item.get('latency_ms')} ms)"
+        )
+    return {"ok": True, "message": "\n".join(lines), "data": items, "type": "info"}
+
+
+def _routing_stats() -> dict:
+    from jarvis.routing_inspector import format_routing_stats_markdown, routing_stats_summary
+
+    stats = routing_stats_summary()
+    return {"ok": True, "message": format_routing_stats_markdown(stats), "data": stats, "type": "info"}
 
 
 @register_behavior

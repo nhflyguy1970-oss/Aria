@@ -506,7 +506,22 @@ class JarvisAssistant:
                 self.session.note_data(path)
             elif path and kind == "document":
                 self.session.note_document(path)
+        import time
+
+        t_route = time.perf_counter()
         intent = route(message, self.session, attachment)
+        route_latency_ms = round((time.perf_counter() - t_route) * 1000, 1)
+        try:
+            from jarvis.routing_inspector import begin_routing
+
+            begin_routing(
+                prompt=message,
+                intent=intent,
+                conversation_id=getattr(self.branches, "active_id", None) or "main",
+                route_latency_ms=route_latency_ms,
+            )
+        except Exception:
+            pass
         try:
             from jarvis.workstation_activity import record_event
 
@@ -597,8 +612,25 @@ class JarvisAssistant:
                 record_tool_outcome(self.memory, action=action, detail=message[:120], ok=True)
             if action == "chat":
                 self.branches.persist(session=self.session)
+            try:
+                from jarvis.routing_inspector import complete_routing
+
+                complete_routing(
+                    result,
+                    error=str(result.get("error") or result.get("message") or "")
+                    if result.get("ok") is False
+                    else None,
+                )
+            except Exception:
+                pass
             return result
         except Exception as e:
+            try:
+                from jarvis.routing_inspector import complete_routing
+
+                complete_routing(None, error=str(e))
+            except Exception:
+                pass
             return _err(f"Something went wrong: {e}")
 
     def process_stream(
@@ -703,7 +735,22 @@ class JarvisAssistant:
                 self.session.note_data(path)
             elif path and kind == "document":
                 self.session.note_document(path)
+        import time
+
+        t_route = time.perf_counter()
         intent = route(message, self.session, attachment)
+        route_latency_ms = round((time.perf_counter() - t_route) * 1000, 1)
+        try:
+            from jarvis.routing_inspector import begin_routing
+
+            begin_routing(
+                prompt=message,
+                intent=intent,
+                conversation_id=getattr(self.branches, "active_id", None) or "main",
+                route_latency_ms=route_latency_ms,
+            )
+        except Exception:
+            pass
         action = intent.get("action", "chat")
         if isinstance(action, dict):
             action = str(action.get("name") or action.get("action") or "chat")

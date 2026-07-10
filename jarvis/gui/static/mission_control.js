@@ -2,6 +2,7 @@
 
 const MC_TABS = [
   "overview",
+  "routing",
   "connection",
   "applications",
   "inference",
@@ -19,6 +20,10 @@ const MC_TABS = [
 let _mcData = null;
 let _mcTab = "overview";
 let _mcPoll = null;
+let _mcRoutingLive = false;
+let _mcRoutingPoll = null;
+let _mcRoutingFilter = "";
+let _mcRoutingSearch = "";
 
 function mc$(id) {
   return document.getElementById(id);
@@ -73,6 +78,7 @@ function renderOverview(d) {
       mcCard("Providers", `<p>Inference: <strong>${mcEsc(ov.inference_provider)}</strong></p><p>Memory: <strong>${mcEsc(ov.memory_provider)}</strong></p><p>Knowledge: <strong>${mcEsc(ov.knowledge_provider)}</strong></p>`),
       mcCard("Hardware", `<p>GPU: ${mcEsc(ov.gpu || "—")}</p><p>RAM free: ${ov.ram_available_gb ?? "—"} GB</p><p>VRAM free: ${ov.free_vram_mb ?? "—"} MB</p><p>Load: ${ov.cpu_load ?? "—"}</p>`),
       mcCard("Attention", (ov.needs_attention || []).map((n) => `<p>• ${mcEsc(n)}</p>`).join("") || "<p class='muted'>All clear</p>"),
+      renderRoutingOverviewCard(d.routing_stats),
     ])}
     ${renderNotifications(d.notifications)}
   `;
@@ -222,6 +228,152 @@ function renderRecovery(d) {
     ])}`;
 }
 
+function renderRoutingOverviewCard(stats) {
+  const s = stats || {};
+  if (!s.count) {
+    return mcCard("Routing", "<p class='muted'>No routing records yet.</p>");
+  }
+  const last = s.last_route || {};
+  return mcCard(
+    "Routing",
+    `<p><strong>Last route:</strong> ${mcEsc(last.intent || "—")} → ${mcEsc(last.route || "—")}</p>
+     <p>Avg latency: <strong>${s.average_latency_ms ?? "—"}</strong> ms</p>
+     <p>Runtime ${s.runtime_pct ?? 0}% · Search ${s.search_pct ?? 0}% · Knowledge ${s.knowledge_pct ?? 0}% · Tools ${s.tool_pct ?? 0}%</p>
+     <p>Fallback ${s.fallback_pct ?? 0}% · Errors ${s.error_pct ?? 0}%</p>`
+  );
+}
+
+function routingStatusClass(rec) {
+  if (rec.error) return "mc-route-error";
+  if (rec.fallback_used) return "mc-route-fallback";
+  const lat = Number(rec.latency_ms || 0);
+  if (lat >= 2000) return "mc-route-slow";
+  return "mc-route-ok";
+}
+
+function renderRoutingInspector(records, stats) {
+  const filters = [
+    "Runtime",
+    "Search",
+    "Knowledge",
+    "Memory",
+    "Inference",
+    "Tools",
+    "Coding",
+    "Vision",
+    "Voice",
+    "Automation",
+    "Jobs",
+    "Errors",
+    "Fallbacks",
+  ];
+  const filterBtns = filters
+    .map(
+      (f) =>
+        `<button type="button" class="ghost-btn small mc-route-filter${_mcRoutingFilter === f ? " active" : ""}" data-route-filter="${mcEsc(f)}">${mcEsc(f)}</button>`
+    )
+    .join(" ");
+  const rows = (records || [])
+    .map((r) => {
+      const cls = routingStatusClass(r);
+      const flow = (r.flow || []).join("\n");
+      return `<tr class="${cls}" data-route-id="${mcEsc(r.id)}">
+        <td>${mcEsc(r.iso)}</td>
+        <td title="${mcEsc(r.prompt)}">${mcEsc((r.prompt || "").slice(0, 80))}</td>
+        <td><code>${mcEsc(r.intent)}</code></td>
+        <td>${mcEsc(r.route)}</td>
+        <td>${mcEsc(r.handler)}</td>
+        <td>${r.latency_ms ?? "—"}</td>
+        <td>${r.confidence ?? "—"}</td>
+        <td>${r.fallback_used ? mcEsc(r.fallback || "yes") : "None"}</td>
+        <td><pre class="mc-flow">${mcEsc(flow)}</pre></td>
+      </tr>`;
+    })
+    .join("");
+  const exportBtns = `
+    <a class="ghost-btn small" href="/api/mission-control/routing/export?format=json" target="_blank">Export JSON</a>
+    <a class="ghost-btn small" href="/api/mission-control/routing/export?format=csv" target="_blank">Export CSV</a>
+    <a class="ghost-btn small" href="/api/mission-control/routing/export?format=markdown" target="_blank">Export Markdown</a>`;
+  return `
+    <div class="mc-routing-toolbar">
+      <input id="mcRoutingSearch" type="search" placeholder="Search prompt, intent, handler…" value="${mcEsc(_mcRoutingSearch)}" />
+      <button type="button" class="ghost-btn small" id="mcRoutingLiveBtn">${_mcRoutingLive ? "Live Routing: ON" : "Live Routing: OFF"}</button>
+      ${exportBtns}
+    </div>
+    <div class="mc-routing-filters">${filterBtns}</div>
+    ${renderRoutingOverviewCard(stats)}
+    <table class="mc-table mc-routing-table"><thead><tr>
+      <th>Time</th><th>Prompt</th><th>Intent</th><th>Route</th><th>Handler</th><th>Latency</th><th>Conf</th><th>Fallback</th><th>Flow</th>
+    </tr></thead><tbody>${rows || "<tr><td colspan='9' class='muted'>No records</td></tr>"}</tbody></table>
+    <div id="mcRoutingDetail" class="mc-routing-detail hidden"></div>`;
+}
+
+async function loadRoutingInspector() {
+  const params = new URLSearchParams({ limit: "100" });
+  if (_mcRoutingSearch) params.set("q", _mcRoutingSearch);
+  if (_mcRoutingFilter === "Errors") params.set("errors", "1");
+  else if (_mcRoutingFilter === "Fallbacks") params.set("fallbacks", "1");
+  else if (_mcRoutingFilter) params.set("category", _mcRoutingFilter);
+  const [recordsResp, statsResp] = await Promise.all([
+    mcFetch(`/api/mission-control/routing?${params}`),
+    mcFetch("/api/mission-control/routing/stats"),
+  ]);
+  return { records: recordsResp.records || [], stats: statsResp };
+}
+
+function wireRoutingInspector() {
+  mc$("#mcRoutingSearch")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      _mcRoutingSearch = e.target.value || "";
+      renderMcTab("routing");
+    }
+  });
+  document.querySelectorAll(".mc-route-filter").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const f = btn.dataset.routeFilter || "";
+      _mcRoutingFilter = _mcRoutingFilter === f ? "" : f;
+      renderMcTab("routing");
+    });
+  });
+  mc$("#mcRoutingLiveBtn")?.addEventListener("click", () => {
+    _mcRoutingLive = !_mcRoutingLive;
+    if (_mcRoutingLive) {
+      if (_mcRoutingPoll) clearInterval(_mcRoutingPoll);
+      _mcRoutingPoll = setInterval(() => {
+        if (_mcTab === "routing") renderMcTab("routing");
+      }, 2000);
+    } else if (_mcRoutingPoll) {
+      clearInterval(_mcRoutingPoll);
+      _mcRoutingPoll = null;
+    }
+    renderMcTab("routing");
+  });
+  document.querySelectorAll(".mc-routing-table tbody tr[data-route-id]").forEach((row) => {
+    row.addEventListener("click", async () => {
+      const id = row.dataset.routeId;
+      const detail = mc$("#mcRoutingDetail");
+      if (!detail || !id) return;
+      try {
+        const data = await mcFetch(`/api/mission-control/routing/${encodeURIComponent(id)}`);
+        const rec = data.record || {};
+        const debug = rec.debug || {};
+        detail.classList.remove("hidden");
+        detail.innerHTML = `<h4>Routing record</h4>
+          <p><strong>Prompt:</strong> ${mcEsc(rec.prompt)}</p>
+          <p><strong>Intent:</strong> <code>${mcEsc(rec.intent)}</code></p>
+          <p><strong>Route:</strong> ${mcEsc(rec.route)} · <strong>Handler:</strong> ${mcEsc(rec.handler)}</p>
+          <p><strong>Backend:</strong> ${mcEsc(rec.backend)} · <strong>Latency:</strong> ${rec.latency_ms} ms</p>
+          <p><strong>Rule matched:</strong> ${mcEsc(rec.rule_matched || debug.rule_matched || "—")}</p>
+          <p><strong>Router stage:</strong> ${mcEsc(rec.router_stage || debug.router_stage || "—")}</p>
+          <p><strong>MC endpoint:</strong> <code>${mcEsc(rec.mc_endpoint || debug.mission_control_endpoint || "—")}</code></p>
+          <pre class="mc-pre">${mcEsc(JSON.stringify(debug, null, 2))}</pre>`;
+      } catch (e) {
+        detail.textContent = e.message;
+      }
+    });
+  });
+}
+
 function renderConnection(conn) {
   const checks = conn.checks || {};
   const row = (label, ok) =>
@@ -261,10 +413,9 @@ function renderConnection(conn) {
 async function renderMcTab(tab) {
   const body = mc$("mcTabBody");
   if (!body) return;
-  if (tab !== "connection" && !_mcData) return;
-  body.innerHTML = "<p class='muted'>Loading…</p>";
-  let html = "";
   if (tab === "connection") {
+    body.innerHTML = "<p class='muted'>Loading…</p>";
+    let html = "";
     try {
       const conn = await mcFetch("/api/runtime/connection");
       html = renderConnection(conn);
@@ -274,6 +425,21 @@ async function renderMcTab(tab) {
     body.innerHTML = html;
     return;
   }
+  if (tab === "routing") {
+    body.innerHTML = "<p class='muted'>Loading routing inspector…</p>";
+    try {
+      const { records, stats } = await loadRoutingInspector();
+      body.innerHTML = renderRoutingInspector(records, stats);
+      wireRoutingInspector();
+      if (_mcRoutingLive) body.scrollTop = body.scrollHeight;
+    } catch (e) {
+      body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
+    }
+    return;
+  }
+  if (!_mcData) return;
+  body.innerHTML = "<p class='muted'>Loading…</p>";
+  let html = "";
   switch (tab) {
     case "overview":
       html = renderOverview(_mcData);

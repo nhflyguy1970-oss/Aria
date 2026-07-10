@@ -397,6 +397,79 @@ def mission_control_activity_export(limit: int = 200):
     return PlainTextResponse(export_activity_csv(limit=min(limit, 500)), media_type="text/csv")
 
 
+@app.get("/api/mission-control/routing/export")
+def mission_control_routing_export(format: str = "json", limit: int = 500):
+    from fastapi.responses import PlainTextResponse
+
+    try:
+        from aiplatform.mission_control.routing_log import export_routing
+    except ImportError:
+        return {"ok": False, "error": "routing log unavailable"}
+
+    body = export_routing(fmt=format, limit=min(limit, 5000))
+    media = "application/json"
+    if format == "csv":
+        media = "text/csv"
+    elif format == "markdown":
+        media = "text/markdown"
+    return PlainTextResponse(body, media_type=media)
+
+
+@app.get("/api/mission-control/routing/stats")
+def mission_control_routing_stats():
+    try:
+        from aiplatform.mission_control.routing_log import routing_stats
+    except ImportError:
+        return {"ok": False, "count": 0}
+    return routing_stats()
+
+
+@app.get("/api/mission-control/routing")
+def mission_control_routing_list(
+    limit: int = 100,
+    q: str = "",
+    conversation: str = "",
+    intent: str = "",
+    handler: str = "",
+    backend: str = "",
+    route: str = "",
+    category: str = "",
+    errors: bool = False,
+    fallbacks: bool = False,
+):
+    try:
+        from aiplatform.mission_control.routing_log import list_routing
+    except ImportError:
+        return {"ok": True, "records": []}
+    return {
+        "ok": True,
+        "records": list_routing(
+            limit=min(limit, 500),
+            query=q,
+            conversation_id=conversation,
+            intent=intent,
+            handler=handler,
+            backend=backend,
+            route=route,
+            category=category,
+            errors_only=errors,
+            fallbacks_only=fallbacks,
+        ),
+    }
+
+
+@app.get("/api/mission-control/routing/{record_id}")
+def mission_control_routing_detail(record_id: str):
+    try:
+        from aiplatform.mission_control.routing_log import get_routing
+    except ImportError:
+        return {"ok": False, "error": "routing log unavailable"}
+    item = get_routing(record_id)
+    if not item:
+        return {"ok": False, "error": "not found"}
+    return {"ok": True, "record": item}
+
+
 @app.get("/api/mission-control/{tab}")
 def mission_control_tab_api(tab: str):
     from jarvis.mission_control import get_tab

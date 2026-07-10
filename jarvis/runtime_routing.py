@@ -59,6 +59,18 @@ _ENCYCLOPEDIC_EXCLUDE = re.compile(
     re.I,
 )
 
+# User memory commands — must route to MemoryStore, not RuntimeClient.
+_USER_MEMORY_EXCLUDE = re.compile(
+    r"\b("
+    r"search my memory|search memory|find in memory|memory search|"
+    r"what do you remember|recall|my memories|"
+    r"remember (?:that|these)|don't forget|note that|keep in mind|"
+    r"forget|delete memory|remove memory|"
+    r"something i like|what do i like|about me|who am i|tell me about myself"
+    r")\b",
+    re.I,
+)
+
 _KEYWORD_ACTION_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (
         re.compile(
@@ -70,7 +82,7 @@ _KEYWORD_ACTION_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\b(models?|ollama|litellm)\b", re.I), "runtime_models"),
     (re.compile(r"\b(gpu|vram|cpu|ram|swap|hardware)\b", re.I), "runtime_gpu"),
     (re.compile(r"\b(jobs?|activity)\b", re.I), "runtime_jobs"),
-    (re.compile(r"\b(providers?|memory|knowledge)\b", re.I), "runtime_providers"),
+    (re.compile(r"\b(providers?|memory provider|knowledge provider)\b", re.I), "runtime_providers"),
     (
         re.compile(r"\b(platform|mission control|runtime|attached|connected)\b", re.I),
         "runtime_platform",
@@ -92,6 +104,8 @@ def is_runtime_routing_question(message: str) -> bool:
     if len(text) < 2:
         return False
     if _ENCYCLOPEDIC_EXCLUDE.search(text):
+        return False
+    if _USER_MEMORY_EXCLUDE.search(text):
         return False
     return bool(_RUNTIME_KEYWORD_RE.search(text))
 

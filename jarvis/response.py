@@ -51,6 +51,17 @@ def cap_stream_payload(result: dict, *, lite_ui: bool = False) -> dict:
 
 
 def stream_done(result: dict, *, lite_ui: bool = False) -> dict:
+    try:
+        from jarvis.routing_inspector import complete_routing
+
+        complete_routing(
+            result,
+            error=str(result.get("error") or result.get("message") or "")
+            if result.get("ok") is False
+            else None,
+        )
+    except Exception:
+        pass
     payload = cap_stream_payload(dict(result), lite_ui=lite_ui)
     if payload.get("type") and payload["type"] != "done":
         payload["result_type"] = payload["type"]
