@@ -52,8 +52,8 @@ def _probe_import(module_path: str) -> dict[str, Any]:
 def health(capability_id: str | None = None) -> dict[str, Any]:
     """Probe provider importability without executing side-effect verbs."""
     probes = {
-        "remember": "jarvis.modules.memory",
-        "recall": "jarvis.modules.memory",
+        "remember": "aria_core.memory_manager",
+        "recall": "aria_core.memory_manager",
         "learn": "aria_core.learning_manager",
         "reason": "jarvis.assistant",
         "plan": "jarvis.agents.coordinator",
@@ -100,20 +100,12 @@ def remember(
     tags: list[str] | None = None,
     namespace: str | None = None,
 ) -> Any:
-    """Persist memory — delegates to MemoryStore.add."""
+    """Persist memory — Cap Bus → Core Memory Manager → organ."""
 
     def _body() -> Any:
-        from aria_core import memory
+        from aria_core.memory import remember as core_remember
 
-        store = memory.MemoryStore()
-        entry = store.add(entry_type, content, tags=tags, namespace=namespace)
-        _emit(
-            "MemoryCreated",
-            entry_id=(entry or {}).get("id") if isinstance(entry, dict) else None,
-            entry_type=entry_type,
-            namespace=namespace,
-        )
-        return entry
+        return core_remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
 
     return _orchestrate("remember", _body)
 
@@ -125,17 +117,16 @@ def recall(
     limit: int = 10,
     **kwargs: Any,
 ) -> Any:
-    """Retrieve memory — delegates to MemoryStore.get/search."""
+    """Retrieve memory — Cap Bus → Core Memory Manager → organ."""
 
     def _body() -> Any:
-        from aria_core import memory
+        from aria_core.memory import get_memory, search_memory
 
-        store = memory.MemoryStore()
         if entry_id:
-            return store.get(entry_id)
+            return get_memory(entry_id)
         if query is None:
             return []
-        return store.search(query, limit=limit, **kwargs)
+        return search_memory(query, limit=limit, namespace=kwargs.get("namespace"))
 
     return _orchestrate("recall", _body)
 

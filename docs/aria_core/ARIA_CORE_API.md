@@ -25,9 +25,9 @@ Reverse imports into Core from implementations should not be added. Existing cyc
 | Module | Owner | Public API (Phase 2/3) | Delegates to | Future owner |
 |--------|-------|----------------------|--------------|--------------|
 | `aria_core.identity` | aria_core.identity | `profile_name`, `is_uncensored`, `system_prompt`, `identity_snapshot` | `jarvis.config` | same |
-| `aria_core.memory` | aria_core.memory | `MemoryStore`, `create_memory_store` | `jarvis.modules.memory` | same |
+| `aria_core.memory` | aria_core.memory | `remember`, `forget`, `search_memory`, … | `aria_core.memory_manager` → `jarvis.modules.memory` | same |
 | `aria_core.knowledge` | aria_core.knowledge | `registry`, `search` | `jarvis.knowledge` | same |
-| `aria_core.learning` | aria_core.learning | `propose`, `commit`, `enabled`, `Proposal` | `jarvis.learning_governor` | same |
+| `aria_core.learning` | aria_core.learning | `propose`, `commit`, `enabled`, `Proposal` | `aria_core.learning_manager` | same |
 | `aria_core.reasoning` | aria_core.reasoning | `get_assistant`, `chat` | `jarvis.assistant` | same |
 | `aria_core.planning` | aria_core.planning | `coordinator_available`, `get_coordinator` | `jarvis.agents` | same |
 | `aria_core.reference` | aria_core.reference | `search_reference` | `jarvis.reference_engine` | same |
@@ -81,15 +81,24 @@ Cap Bus verbs run through `aria_core.cognition` / `cognitive_orchestrator`.
 Organs (Memory, Knowledge, Planning, Reasoning) are coordinated, not moved.
 See [`COGNITION.md`](COGNITION.md) and [`PHASE6.md`](PHASE6.md).
 
+## Phase 7 — Memory ownership
+
+Memory is owned by Aria Core (`aria_core.memory_manager`).
+`jarvis.modules.memory` remains the storage organ underneath (no schema/DB changes).
+See [`MEMORY.md`](MEMORY.md) and [`PHASE7.md`](PHASE7.md).
+
+Mission Control **Memory** tab renders `aria_core.memory.mission_control_panel()`
+(operational metadata only — contents not exposed by default).
+
 Full ownership metadata: `aria_core.ownership.OWNERSHIP`.
 
 ## Delegation path (example)
 
 ```text
 Caller
-  → aria_core.memory.MemoryStore(...)
-    → jarvis.modules.memory.MemoryStore(...)
-      → existing JSON/SQLite + Learning Governor passthrough on add
+  → aria_core.memory.remember(...)
+  → aria_core.memory_manager.remember(...)
+  → jarvis.modules.memory.MemoryStore.add(...)
 ```
 
 ```text

@@ -8,6 +8,12 @@ EVENT_VERSION = "2.0-phase4"
 MemoryCreated = "MemoryCreated"
 MemoryUpdated = "MemoryUpdated"
 MemoryDeleted = "MemoryDeleted"
+MemoryRead = "MemoryRead"
+MemoryWritten = "MemoryWritten"
+MemoryMerged = "MemoryMerged"
+MemorySearch = "MemorySearch"
+MemoryCommit = "MemoryCommit"
+MemoryRollback = "MemoryRollback"
 KnowledgeAdded = "KnowledgeAdded"
 KnowledgeUpdated = "KnowledgeUpdated"
 LearningProposed = "LearningProposed"
@@ -54,6 +60,12 @@ ALL_EVENT_TYPES: tuple[str, ...] = (
     MemoryCreated,
     MemoryUpdated,
     MemoryDeleted,
+    MemoryRead,
+    MemoryWritten,
+    MemoryMerged,
+    MemorySearch,
+    MemoryCommit,
+    MemoryRollback,
     KnowledgeAdded,
     KnowledgeUpdated,
     LearningProposed,
