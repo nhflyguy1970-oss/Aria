@@ -9,7 +9,9 @@ from jarvis.handlers.registry import register_action
 from jarvis.response import ok
 
 
-@register_action("capabilities", info=True, module="general", description="List assistant capabilities")
+@register_action(
+    "capabilities", info=True, module="general", description="List assistant capabilities"
+)
 def capabilities(assistant, params: dict, message: str) -> dict:
     return ok(capabilities_message(), module=None, type="info")
 
@@ -28,8 +30,12 @@ def models_info(assistant, params: dict, message: str) -> dict:
 
 @register_action("greeting", info=True, module="general", description="Friendly hello")
 def greeting(assistant, params: dict, message: str) -> dict:
+    """Instant social hello — never invoke briefing/NLU/LLM for trivial greets."""
     lower = (message or "").lower().strip()
-    if re.search(r"good (morning|afternoon|evening)\b", lower):
+    # Explicit briefing requests still get the full morning briefing.
+    if re.search(r"good (morning|afternoon|evening)\b", lower) and re.search(
+        r"\b(briefing|brief|status|news|update|report)\b", lower
+    ):
         from jarvis.handlers.registry import call_action
 
         return call_action(assistant, "morning_briefing", params, message)

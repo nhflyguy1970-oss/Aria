@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from jarvis.session import SessionContext
 
@@ -28,6 +28,7 @@ def _rules() -> list[RouteRule]:
         _is_capabilities_question,
         _is_greeting,
         _is_models_question,
+        _is_social_checkin,
     )
 
     return [
@@ -47,9 +48,9 @@ def _rules() -> list[RouteRule]:
             "capabilities",
             10,
             "capabilities question",
-            lambda m, lower, _s: _is_capabilities_question(lower)
-            or (
-                re.search(r"^(hi|hello|hey)\b", lower) and _is_capabilities_question(lower)
+            lambda m, lower, _s: (
+                _is_capabilities_question(lower)
+                or (re.search(r"^(hi|hello|hey)\b", lower) and _is_capabilities_question(lower))
             ),
         ),
         RouteRule(
@@ -58,6 +59,7 @@ def _rules() -> list[RouteRule]:
             "morning briefing",
             lambda m, lower, _s: bool(
                 re.search(r"^good morning\b", lower)
+                and re.search(r"\b(briefing|brief|status|news|update|report)\b", lower)
                 and os.getenv("JARVIS_BRIEFING", "1") != "0"
             ),
         ),
@@ -65,15 +67,14 @@ def _rules() -> list[RouteRule]:
             "greeting",
             12,
             "greeting",
-            lambda m, lower, _s: _is_greeting(lower),
+            lambda m, lower, _s: _is_greeting(lower) or _is_social_checkin(lower),
         ),
         RouteRule(
             "capabilities",
             14,
             "hello + help",
             lambda m, lower, _s: bool(
-                re.match(r"^(hi|hello|hey)[\s!.?,]*$", lower)
-                and re.search(r"\bhelp\b", lower)
+                re.match(r"^(hi|hello|hey)[\s!.?,]*$", lower) and re.search(r"\bhelp\b", lower)
             ),
         ),
         RouteRule(

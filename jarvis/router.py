@@ -102,9 +102,17 @@ def _image_edit_route(message: str, lower: str, session: SessionContext) -> dict
     if m:
         part = m.group(1).strip()
         if len(part) >= 3:
-            return {"action": "edit_image", "params": {"path": path, "prompt": part}, "thinking": "image edit"}
+            return {
+                "action": "edit_image",
+                "params": {"path": path, "prompt": part},
+                "thinking": "image edit",
+            }
     if re.search(r"\b(?:edit|change|modify)\s+(?:the\s+)?(?:image|picture|photo)\b", lower):
-        return {"action": "edit_image", "params": {"path": path, "prompt": message.strip()}, "thinking": "image edit"}
+        return {
+            "action": "edit_image",
+            "params": {"path": path, "prompt": message.strip()},
+            "thinking": "image edit",
+        }
     return None
 
 
@@ -135,6 +143,7 @@ def py_file_exists(path: str) -> bool:
         return False
     from jarvis import fs
     from jarvis.config import PROJECT_ROOT
+
     try:
         return fs.resolve_path(path, base=PROJECT_ROOT).exists()
     except (ValueError, OSError):
@@ -384,7 +393,10 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
     if re.match(r"^undo[\s!.?,]*$", lower):
         return {"action": "undo_apply", "params": {}, "thinking": "follow-up"}
 
-    if re.search(r"\b(dismiss|reject|cancel|don't apply|never mind)\b", lower) and session.last_proposal_id:
+    if (
+        re.search(r"\b(dismiss|reject|cancel|don't apply|never mind)\b", lower)
+        and session.last_proposal_id
+    ):
         return {"action": "dismiss_proposal", "params": {}, "thinking": "follow-up"}
 
     if re.search(r"\b(verify upgrade|test upgrade|run upgrade tests)\b", lower):
@@ -396,45 +408,88 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
     if re.search(r"\b(rollback upgrade|undo upgrade|rollback jarvis)\b", lower):
         return {"action": "upgrade_rollback", "params": {}, "thinking": "upgrade rollback"}
 
-    if re.search(
-        r"\b(remember key points|remember what you learned|save key points from that)\b",
-        lower,
-    ) and session.last_knowledge_slug:
+    if (
+        re.search(
+            r"\b(remember key points|remember what you learned|save key points from that)\b",
+            lower,
+        )
+        and session.last_knowledge_slug
+    ):
         return {
             "action": "learn_remember",
             "params": {"slug": session.last_knowledge_slug},
             "thinking": "learn remember",
         }
 
-    if re.search(r"\b(fix (it|that)|repair (it|that)|debug (it|that))\b", lower) and session.last_file:
-        return {"action": "coding_fix", "params": {"path": session.last_file}, "thinking": "follow-up"}
+    if (
+        re.search(r"\b(fix (it|that)|repair (it|that)|debug (it|that))\b", lower)
+        and session.last_file
+    ):
+        return {
+            "action": "coding_fix",
+            "params": {"path": session.last_file},
+            "thinking": "follow-up",
+        }
 
     if re.search(r"\b(refactor (it|that)|refactor across)\b", lower) and session.last_file:
-        if session.last_coding_mode == "refactor" or re.search(r"\b(across|modules?|project|files?)\b", lower):
+        if session.last_coding_mode == "refactor" or re.search(
+            r"\b(across|modules?|project|files?)\b", lower
+        ):
             return {
                 "action": "coding_refactor",
                 "params": {"task": message, "path": session.last_file},
                 "thinking": "follow-up",
             }
-        return {"action": "coding_improve", "params": {"path": session.last_file}, "thinking": "follow-up"}
+        return {
+            "action": "coding_improve",
+            "params": {"path": session.last_file},
+            "thinking": "follow-up",
+        }
 
     if re.search(r"\b(improve (it|that)|clean (it|that) up)\b", lower) and session.last_file:
-        return {"action": "coding_improve", "params": {"path": session.last_file}, "thinking": "follow-up"}
+        return {
+            "action": "coding_improve",
+            "params": {"path": session.last_file},
+            "thinking": "follow-up",
+        }
 
     if re.search(r"\b(run (it|that)|execute (it|that))\b", lower) and session.last_file:
-        return {"action": "coding_run", "params": {"path": session.last_file}, "thinking": "follow-up"}
+        return {
+            "action": "coding_run",
+            "params": {"path": session.last_file},
+            "thinking": "follow-up",
+        }
 
-    if re.search(r"\b(show (it|that)|open (it|that)|display (it|that))\b", lower) and session.last_file:
-        return {"action": "coding_show", "params": {"path": session.last_file}, "thinking": "follow-up"}
+    if (
+        re.search(r"\b(show (it|that)|open (it|that)|display (it|that))\b", lower)
+        and session.last_file
+    ):
+        return {
+            "action": "coding_show",
+            "params": {"path": session.last_file},
+            "thinking": "follow-up",
+        }
 
     if re.search(r"\b(that file|the file|same file)\b", lower) and session.last_file:
         if "fix" in lower:
-            return {"action": "coding_fix", "params": {"path": session.last_file}, "thinking": "follow-up"}
+            return {
+                "action": "coding_fix",
+                "params": {"path": session.last_file},
+                "thinking": "follow-up",
+            }
         if "run" in lower:
-            return {"action": "coding_run", "params": {"path": session.last_file}, "thinking": "follow-up"}
+            return {
+                "action": "coding_run",
+                "params": {"path": session.last_file},
+                "thinking": "follow-up",
+            }
 
     if re.search(r"\b(search (for )?that|same search)\b", lower) and session.last_search_query:
-        return {"action": "coding_search", "params": {"query": session.last_search_query}, "thinking": "follow-up"}
+        return {
+            "action": "coding_search",
+            "params": {"query": session.last_search_query},
+            "thinking": "follow-up",
+        }
 
     if re.search(r"\b(summarize (the )?data|data summary)\b", lower) and session.last_data_path:
         return {"action": "data_summary", "params": {}, "thinking": "follow-up"}
@@ -443,19 +498,28 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
         r"\b((?:export|save)\s+(?:to\s+)?(?:csv|json|pdf|results)|export\s+(?:the\s+)?(?:data|report))\b",
         lower,
     ):
-        return {"action": "data_export", "params": {"instruction": message}, "thinking": "export data"}
+        return {
+            "action": "data_export",
+            "params": {"instruction": message},
+            "thinking": "export data",
+        }
 
     if session.last_data_path and re.search(
         r"\b(clean|fix null|fill null|drop duplicates?|remove duplicates?)\b",
         lower,
     ):
-        return {"action": "data_clean", "params": {"instruction": message}, "thinking": "clean data"}
+        return {
+            "action": "data_clean",
+            "params": {"instruction": message},
+            "thinking": "clean data",
+        }
 
     if session.last_data_path and re.search(
         r"\b(chart|graph|plot)\b",
         lower,
     ):
         from jarvis.modules.data import parse_chart_request
+
         spec = parse_chart_request(message)
         return {"action": "data_chart", "params": spec, "thinking": "chart data"}
 
@@ -463,13 +527,21 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
         r"\b(how many|average|mean|sum|total|count|group by|median|min|max|what columns|describe)\b",
         lower,
     ):
-        return {"action": "data_query", "params": {"question": message}, "thinking": "data follow-up"}
+        return {
+            "action": "data_query",
+            "params": {"question": message},
+            "thinking": "data follow-up",
+        }
 
     if session.last_document_path and re.search(
         r"\b(summarize (the )?document|document summary|summarize (it|that|the pdf|the warranty))\b",
         lower,
     ):
-        return {"action": "document_summarize", "params": {"path": session.last_document_path}, "thinking": "document follow-up"}
+        return {
+            "action": "document_summarize",
+            "params": {"path": session.last_document_path},
+            "thinking": "document follow-up",
+        }
 
     if session.last_document_path and (
         session.last_module == "document"
@@ -486,7 +558,11 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
             }
 
     if re.search(r"\b(describe (it|that|the image|this))\b", lower) and session.last_image:
-        return {"action": "describe_image", "params": {"path": session.last_image}, "thinking": "follow-up"}
+        return {
+            "action": "describe_image",
+            "params": {"path": session.last_image},
+            "thinking": "follow-up",
+        }
 
     if session.last_image and session.last_module == "vision":
         if not (
@@ -494,7 +570,9 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
             or _is_models_question(lower)
             or _is_greeting(lower)
             or re.match(r"^clear\b", lower)
-            or re.search(r"\b(remember|recall|search the web|generate|create|implement|fix |debug )\b", lower)
+            or re.search(
+                r"\b(remember|recall|search the web|generate|create|implement|fix |debug )\b", lower
+            )
         ):
             vision_follow_up = (
                 re.search(
@@ -519,8 +597,17 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
                     "thinking": "vision follow-up",
                 }
 
-    if re.search(r"\b(edit (it|that)|trim (it|that)|cut (it|that)|make it louder|speed it up)\b", lower) and session.last_audio:
-        return {"action": "edit_audio", "params": {"path": session.last_audio, "instruction": message}, "thinking": "follow-up"}
+    if (
+        re.search(
+            r"\b(edit (it|that)|trim (it|that)|cut (it|that)|make it louder|speed it up)\b", lower
+        )
+        and session.last_audio
+    ):
+        return {
+            "action": "edit_audio",
+            "params": {"path": session.last_audio, "instruction": message},
+            "thinking": "follow-up",
+        }
 
     return None
 
@@ -548,17 +635,57 @@ def _is_models_question(lower: str) -> bool:
 
     if is_runtime_routing_question(lower):
         return False
-    return bool(re.search(
-        r"\b(what models|which models|model recommendations?|best models|recommended models|what ollama)\b",
-        lower,
-    ))
+    return bool(
+        re.search(
+            r"\b(what models|which models|model recommendations?|best models|recommended models|what ollama)\b",
+            lower,
+        )
+    )
+
+
+# Optional address after a greeting ("Hello Aria", "Hi Jarvis").
+_GREETING_NAME = r"(?:aria|jarvis|assistant|friend|there|everyone|all)"
+_GREETING_CORE = (
+    r"(?:hi|hello|hey|greetings|yo|howdy|"
+    r"good\s+(?:morning|afternoon|evening|day))"
+)
+_SOCIAL_CHECKIN = (
+    r"(?:how\s+are\s+you(?:\s+doing)?|how'?s\s+it\s+going|"
+    r"how\s+are\s+things|what'?s\s+up|sup)"
+)
 
 
 def _is_greeting(lower: str) -> bool:
-    return bool(re.match(
-        r"^(hi|hello|hey|greetings|good (morning|afternoon|evening)|yo)[\s!.?,]*$",
-        lower,
-    ))
+    """True for trivial hellos — including optional name address."""
+    text = (lower or "").strip()
+    if not text:
+        return False
+    return bool(
+        re.match(
+            rf"^{_GREETING_CORE}(?:\s+{_GREETING_NAME})?[\s!.?,]*$",
+            text,
+        )
+    )
+
+
+def _is_social_checkin(lower: str) -> bool:
+    """True for trivial wellbeing check-ins (must stay off the chat/NLU path)."""
+    text = (lower or "").strip()
+    if not text:
+        return False
+    return bool(
+        re.match(
+            rf"^(?:{_GREETING_CORE}\s+)?{_SOCIAL_CHECKIN}"
+            rf"(?:\s+{_GREETING_NAME})?[\s!.?,]*$",
+            text,
+        )
+    )
+
+
+def is_trivial_social_prompt(message: str) -> bool:
+    """Fast social prompts that must never wait on NLU / LLM / embeds."""
+    lower = (message or "").lower().strip()
+    return _is_greeting(lower) or _is_social_checkin(lower)
 
 
 _INPAINT_IMAGE_WORDS = (
@@ -650,11 +777,15 @@ def _maybe_inpaint_route(message: str, lower: str, session: SessionContext) -> d
                 "params": {"prompt": prompt, "region": parse_region(message, None)},
             }
 
-    if has_last_image and re.search(
-        rf"\b(?:fix|replace|change|remove|edit)\s+(?:the\s+)?(?:it|this|that)\b", lower
-    ) and re.search(
-        rf"\b(?:{image_words}|region|area|mask|top|bottom|left|right|center|corner|half|quarter)\b",
-        lower,
+    if (
+        has_last_image
+        and re.search(
+            r"\b(?:fix|replace|change|remove|edit)\s+(?:the\s+)?(?:it|this|that)\b", lower
+        )
+        and re.search(
+            rf"\b(?:{image_words}|region|area|mask|top|bottom|left|right|center|corner|half|quarter)\b",
+            lower,
+        )
     ):
         prompt = _extract_inpaint_prompt(message)
         if len(prompt) > 2:
@@ -664,8 +795,10 @@ def _maybe_inpaint_route(message: str, lower: str, session: SessionContext) -> d
             }
 
     region = parse_region(message, None)
-    if has_last_image and region and re.search(
-        r"\b(?:fix|replace|change|remove|edit|erase|delete|inpaint)\b", lower
+    if (
+        has_last_image
+        and region
+        and re.search(r"\b(?:fix|replace|change|remove|edit|erase|delete|inpaint)\b", lower)
     ):
         prompt = _extract_inpaint_prompt(message)
         if len(prompt) > 2:
@@ -811,10 +944,15 @@ def _quick_route(
     ):
         return {"action": "capabilities", "params": {}, "thinking": "capabilities question"}
 
-    if re.search(r"^good morning\b", lower) and os.getenv("JARVIS_BRIEFING", "1") != "0":
+    # Bare "good morning" is a greeting. Explicit briefing requests keep morning_briefing.
+    if (
+        os.getenv("JARVIS_BRIEFING", "1") != "0"
+        and re.search(r"^good morning\b", lower)
+        and re.search(r"\b(briefing|brief|status|news|update|report)\b", lower)
+    ):
         return {"action": "morning_briefing", "params": {}, "thinking": "morning briefing"}
 
-    if _is_greeting(lower):
+    if is_trivial_social_prompt(message):
         return {"action": "greeting", "params": {}, "thinking": "greeting"}
 
     if re.match(r"^clear[\s!.?,]*$", lower):
@@ -869,6 +1007,7 @@ def _quick_route(
                 return {"action": "image_to_code", "params": {"path": path}}
             if action == "region":
                 from jarvis.vision_media import parse_region
+
                 crop = parse_region(message, attachment.get("crop"))
                 return {
                     "action": "analyze_region",
@@ -876,7 +1015,10 @@ def _quick_route(
                 }
             return {"action": "analyze_image", "params": {"path": path, "question": message}}
         if kind == "video_frame":
-            return {"action": "analyze_video_frame", "params": {"path": path, "question": message or "Describe this video frame."}}
+            return {
+                "action": "analyze_video_frame",
+                "params": {"path": path, "question": message or "Describe this video frame."},
+            }
         if kind == "audio":
             if any(w in lower for w in ("genre", "remix", "transform", "make it sound like")) or (
                 "convert to" in lower and _AUDIO_TRANSFORM_RE.search(message)
@@ -884,7 +1026,21 @@ def _quick_route(
                 return {"action": "transform_genre", "params": {"path": path, "genre": message}}
             if any(w in lower for w in ("sing", "singing", "voice to song", "make me sing")):
                 return {"action": "voice_to_song", "params": {"path": path, "lyrics": message}}
-            if any(w in lower for w in ("edit", "trim", "cut", "crop", "fade", "volume", "speed", "normalize", "louder", "quieter")):
+            if any(
+                w in lower
+                for w in (
+                    "edit",
+                    "trim",
+                    "cut",
+                    "crop",
+                    "fade",
+                    "volume",
+                    "speed",
+                    "normalize",
+                    "louder",
+                    "quieter",
+                )
+            ):
                 return {"action": "edit_audio", "params": {"path": path, "instruction": message}}
             if any(w in lower for w in ("diarize", "who spoke", "speakers", "speaker")):
                 return {"action": "diarize_audio", "params": {"path": path}}
@@ -900,18 +1056,28 @@ def _quick_route(
 
             act = document_attachment_action(message)
             if act == "info":
-                return {"action": "document_info", "params": {"path": path}, "thinking": "document info"}
+                return {
+                    "action": "document_info",
+                    "params": {"path": path},
+                    "thinking": "document info",
+                }
             if act == "query":
                 return {
                     "action": "document_query",
                     "params": {"path": path, "question": message},
                     "thinking": "document question",
                 }
-            return {"action": "document_summarize", "params": {"path": path}, "thinking": "document summarize"}
+            return {
+                "action": "document_summarize",
+                "params": {"path": path},
+                "thinking": "document summarize",
+            }
         if kind == "file":
             return {"action": "chat", "params": {"file_path": path}, "thinking": "file attachment"}
 
-    if re.search(r"\b(record and transcribe|record transcribe|transcribe (?:what )?i say)\b", lower):
+    if re.search(
+        r"\b(record and transcribe|record transcribe|transcribe (?:what )?i say)\b", lower
+    ):
         m = re.search(r"(\d+)\s*seconds?", lower)
         return {"action": "record_transcribe", "params": {"duration": int(m.group(1)) if m else 5}}
 
@@ -934,7 +1100,10 @@ def _quick_route(
         from jarvis.modules.journal import _today
 
         day = _today() if m.group(2).lower() == "today" else m.group(2)
-        return {"action": "journal_thread", "params": {"task_query": m.group(1).strip(), "day": day}}
+        return {
+            "action": "journal_thread",
+            "params": {"task_query": m.group(1).strip(), "day": day},
+        }
 
     if re.search(r"\b(thread tasks to today|pull tasks to today)\b", lower):
         return {"action": "journal_thread", "params": {}}
@@ -949,7 +1118,9 @@ def _quick_route(
     if re.search(r"\b(month.?end review|weekly review|run journal review)\b", lower):
         return {"action": "journal_review", "params": {}}
 
-    if re.search(r"\b(remember (this )?bullet|save journal to memory|remember journal entry)\b", lower):
+    if re.search(
+        r"\b(remember (this )?bullet|save journal to memory|remember journal entry)\b", lower
+    ):
         m = re.search(r"\b([a-f0-9]{8})\b", message)
         return {"action": "journal_remember", "params": {"bullet_id": m.group(1) if m else ""}}
 
@@ -975,24 +1146,34 @@ def _quick_route(
         r")\b",
         lower,
     ):
-        return {"action": "memory_about_user", "params": {"question": message}, "thinking": "user profile"}
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "user profile",
+        }
 
     if re.search(r"\b(search my memory|search memory|find in memory|memory search)\b", lower):
-        query = re.sub(
-            r"^(please\s+)?(search my memory|search memory|find in memory|memory search)\s*(for\s+)?",
-            "",
-            message,
-            flags=re.I,
-        ).strip() or message
+        query = (
+            re.sub(
+                r"^(please\s+)?(search my memory|search memory|find in memory|memory search)\s*(for\s+)?",
+                "",
+                message,
+                flags=re.I,
+            ).strip()
+            or message
+        )
         return {"action": "memory_search", "params": {"query": query}, "thinking": "memory search"}
 
     if re.search(r"\b(forget|delete memory|remove memory)\b", lower):
-        query = re.sub(
-            r"^(please\s+)?(forget|delete memory|remove memory)\s*(about\s+)?",
-            "",
-            message,
-            flags=re.I,
-        ).strip() or message
+        query = (
+            re.sub(
+                r"^(please\s+)?(forget|delete memory|remove memory)\s*(about\s+)?",
+                "",
+                message,
+                flags=re.I,
+            ).strip()
+            or message
+        )
         return {"action": "memory_forget", "params": {"query": query}, "thinking": "forget memory"}
 
     if re.search(
@@ -1034,7 +1215,11 @@ def _quick_route(
         from jarvis.cheatsheets import resolve_key_from_message
 
         key = resolve_key_from_message(message) or ""
-        return {"action": "cheatsheet_reset", "params": {"key": key}, "thinking": "reset cheatsheet"}
+        return {
+            "action": "cheatsheet_reset",
+            "params": {"key": key},
+            "thinking": "reset cheatsheet",
+        }
 
     if re.search(r"\bcheat\s*sheets?\b", lower):
         from jarvis.cheatsheets import resolve_key_from_message
@@ -1080,10 +1265,14 @@ def _quick_route(
     ):
         return {"action": "coding_fix", "params": {"path": m.group(1)}}
 
-    if m := re.search(r"\b(?:fix|repair|debug)\s+(?:the\s+)?(?:file\s+)?[`'\"]?([^\s`'\"]+\.py)", lower):
+    if m := re.search(
+        r"\b(?:fix|repair|debug)\s+(?:the\s+)?(?:file\s+)?[`'\"]?([^\s`'\"]+\.py)", lower
+    ):
         return {"action": "coding_fix", "params": {"path": m.group(1)}}
 
-    if m := re.search(r"\b(?:improve|refactor|clean up)\s+(?:the\s+)?(?:file\s+)?[`'\"]?([^\s`'\"]+)", lower):
+    if m := re.search(
+        r"\b(?:improve|refactor|clean up)\s+(?:the\s+)?(?:file\s+)?[`'\"]?([^\s`'\"]+)", lower
+    ):
         return {"action": "coding_improve", "params": {"path": m.group(1)}}
 
     if m := re.search(r"\b(?:run|execute)\s+(?:the\s+)?(?:file\s+)?[`'\"]?([^\s`'\"]+\.py)", lower):
@@ -1108,7 +1297,11 @@ def _quick_route(
         r"\b(search|find in) (?:my )?(?:documents?|document library|files in library)\b",
         lower,
     ):
-        return {"action": "document_search", "params": {"query": message}, "thinking": "document library search"}
+        return {
+            "action": "document_search",
+            "params": {"query": message},
+            "thinking": "document library search",
+        }
 
     doc_path = _document_path_in_message(message)
     if doc_path and re.search(
@@ -1116,8 +1309,16 @@ def _quick_route(
         lower,
     ):
         if re.search(r"\b(summarize|summary|overview|explain)\b", lower):
-            return {"action": "document_summarize", "params": {"path": doc_path}, "thinking": "document path summarize"}
-        return {"action": "document_query", "params": {"path": doc_path, "question": message}, "thinking": "document path query"}
+            return {
+                "action": "document_summarize",
+                "params": {"path": doc_path},
+                "thinking": "document path summarize",
+            }
+        return {
+            "action": "document_query",
+            "params": {"path": doc_path, "question": message},
+            "thinking": "document path query",
+        }
 
     if re.search(r"\b(what did i write|journal today|today'?s journal|daily log)\b", lower):
         return {"action": "journal_today", "params": {}, "thinking": "journal today"}
@@ -1131,7 +1332,9 @@ def _quick_route(
     ):
         return {"action": "journal_open_tasks", "params": {}, "thinking": "journal tasks"}
 
-    if re.search(r"\b(journal reflect|reflect on my journal|monthly review|weekly review)\b", lower):
+    if re.search(
+        r"\b(journal reflect|reflect on my journal|monthly review|weekly review)\b", lower
+    ):
         return {"action": "journal_reflect", "params": {}}
 
     if re.search(r"\b(migrate journal|monthly migration)\b", lower):
@@ -1200,10 +1403,18 @@ def _quick_route(
             path = m.group(1)
         return {"action": "coding_diagnose", "params": {"path": path, "task": message}}
 
-    if re.search(r"\b(fix|improve)\b.*\b(selection|selected)\b", lower) or re.match(r"^fix selection\s*$", lower):
-        return {"action": "coding_fix", "params": {"use_selection": True}, "thinking": "editor selection"}
+    if re.search(r"\b(fix|improve)\b.*\b(selection|selected)\b", lower) or re.match(
+        r"^fix selection\s*$", lower
+    ):
+        return {
+            "action": "coding_fix",
+            "params": {"use_selection": True},
+            "thinking": "editor selection",
+        }
 
-    if re.search(r"\bexplain\b.*\b(selection|selected|this code)\b", lower) or re.match(r"^explain selection\s*$", lower):
+    if re.search(r"\bexplain\b.*\b(selection|selected|this code)\b", lower) or re.match(
+        r"^explain selection\s*$", lower
+    ):
         return {"action": "coding_explain_selection", "params": {}, "thinking": "editor selection"}
 
     if re.search(r"\b(editor context|what'?s in (my )?editor|cursor (file|selection))\b", lower):
@@ -1214,7 +1425,11 @@ def _quick_route(
         if m := re.search(r"[`'\"]?([^\s`'\"]+\.py)", message):
             path = m.group(1)
         if path:
-            return {"action": "coding_fix_tests", "params": {"path": path}, "thinking": "pattern match"}
+            return {
+                "action": "coding_fix_tests",
+                "params": {"path": path},
+                "thinking": "pattern match",
+            }
 
     if re.search(
         r"\b(implement|build|add feature)\b",
@@ -1235,10 +1450,16 @@ def _quick_route(
         if m := re.search(r"[`'\"]?([^\s`'\"]+\.py)", message):
             path = m.group(1)
         max_steps = 2 if re.search(r"\bdebug until\b", lower) else 5
-        return {"action": "coding_agent", "params": {"task": message, "path": path, "max_steps": max_steps}}
+        return {
+            "action": "coding_agent",
+            "params": {"task": message, "path": path, "max_steps": max_steps},
+        }
 
     if re.search(r"\brefactor\b", lower) and re.search(r"\b(files?|modules?|project)\b", lower):
-        return {"action": "coding_refactor", "params": {"task": message, "path": session.last_file or ""}}
+        return {
+            "action": "coding_refactor",
+            "params": {"task": message, "path": session.last_file or ""},
+        }
 
     if re.search(
         r"\b(how does|where is|explain (the )?code|what does .+ do|how is .+ implemented)\b",
@@ -1247,14 +1468,23 @@ def _quick_route(
         return {"action": "coding_chat", "params": {"query": message}}
 
     if re.search(r"\b(keep going|continue coding|run tests again)\b", lower):
-        return {"action": "coding_agent", "params": {"task": message, "path": session.last_file or ""}}
+        return {
+            "action": "coding_agent",
+            "params": {"task": message, "path": session.last_file or ""},
+        }
 
     if re.search(r"\b(chart|graph|plot)\b", lower) and re.search(r"\b(data|csv|column)\b", lower):
         from jarvis.modules.data import parse_chart_request
+
         return {"action": "data_chart", "params": parse_chart_request(message)}
 
     if re.search(r"\b(search (the )?web|web search|look up online|google)\b", lower):
-        q = re.sub(r"^(please\s+)?(search (the )?web for|web search|look up online|google)\s*[:\-]?\s*", "", message, flags=re.I).strip()
+        q = re.sub(
+            r"^(please\s+)?(search (the )?web for|web search|look up online|google)\s*[:\-]?\s*",
+            "",
+            message,
+            flags=re.I,
+        ).strip()
         return {"action": "web_search", "params": {"query": q or message}}
 
     from jarvis.runtime_routing import route_runtime_priority
@@ -1263,7 +1493,11 @@ def _quick_route(
         return runtime_hit
 
     if is_general_knowledge_question(message, session):
-        return {"action": "web_search", "params": {"query": message}, "thinking": "general knowledge"}
+        return {
+            "action": "web_search",
+            "params": {"query": message},
+            "thinking": "general knowledge",
+        }
 
     if re.search(
         r"\b(weather|forecast|temperature|rain|snow|sunny|cloudy|humid|wind)\b",
@@ -1328,10 +1562,17 @@ def _quick_route(
     if re.search(r"\bresume\b.*\bcoding task\b", lower):
         return {"action": "coding_task", "params": {"action": "resume"}}
 
-    if m := re.search(r"\bextract\s+lines?\s+(\d+)\s*[-–]\s*(\d+)\s+(?:as|into)\s+(\w+)", message, re.I):
+    if m := re.search(
+        r"\bextract\s+lines?\s+(\d+)\s*[-–]\s*(\d+)\s+(?:as|into)\s+(\w+)", message, re.I
+    ):
         return {
             "action": "extract_function",
-            "params": {"start_line": int(m.group(1)), "end_line": int(m.group(2)), "name": m.group(3), "path": session.last_file or ""},
+            "params": {
+                "start_line": int(m.group(1)),
+                "end_line": int(m.group(2)),
+                "name": m.group(3),
+                "path": session.last_file or "",
+            },
         }
 
     if m := re.search(r"\bmove\s+(?:module\s+)?(\S+\.py)\s+to\s+(\S+)", message, re.I):
@@ -1350,10 +1591,16 @@ def _quick_route(
             lower,
         )
     ):
-        return {"action": "transform_genre", "params": {"genre": message, "path": session.last_audio or ""}}
+        return {
+            "action": "transform_genre",
+            "params": {"genre": message, "path": session.last_audio or ""},
+        }
 
     if re.search(r"\b(sing|turn my voice|voice to song|make me sing)\b", lower):
-        return {"action": "voice_to_song", "params": {"path": session.last_audio or "", "lyrics": message}}
+        return {
+            "action": "voice_to_song",
+            "params": {"path": session.last_audio or "", "lyrics": message},
+        }
 
     if re.search(r"\b(new branch|fork (this )?chat|branch (this )?conversation)\b", lower):
         name = re.sub(r".*branch\s*", "", message, flags=re.I).strip() or "Branch"
@@ -1394,7 +1641,7 @@ def _quick_route(
         return {"action": "generate_video", "params": {"prompt": m.group(1).strip()}}
 
     if m := re.search(
-        r'\b(?:make|create|generate)\s+(?:an?\s+)?meme\s+(?:with\s+)?'
+        r"\b(?:make|create|generate)\s+(?:an?\s+)?meme\s+(?:with\s+)?"
         r'(?:top\s+["\']?(.+?)["\']?\s+)?(?:and\s+)?(?:bottom\s+["\']?(.+?)["\']?)?$',
         message,
         re.I,
@@ -1433,21 +1680,38 @@ def _quick_route(
         r"\b(?:apply|run|use)\s+(voice|music|scout|gaming|flat)\s+(?:eq|vst|chain)\b",
         lower,
     ):
-        return {"action": "process_audio_vst", "params": {"chain": m.group(1), "path": session.last_audio}}
+        return {
+            "action": "process_audio_vst",
+            "params": {"chain": m.group(1), "path": session.last_audio},
+        }
 
-    if re.search(r"\b(eq|vst|process)\s+(the\s+)?(audio|recording|clip)\b", lower) and session.last_audio:
+    if (
+        re.search(r"\b(eq|vst|process)\s+(the\s+)?(audio|recording|clip)\b", lower)
+        and session.last_audio
+    ):
         chain = "voice"
         for key in ("scout", "gaming", "music", "voice"):
             if key in lower:
                 chain = key
                 break
-        return {"action": "process_audio_vst", "params": {"chain": chain, "path": session.last_audio}}
+        return {
+            "action": "process_audio_vst",
+            "params": {"chain": chain, "path": session.last_audio},
+        }
 
     if re.search(r"\b(edit (the )?audio|trim (the )?audio|cut (the )?audio)\b", lower):
-        return {"action": "edit_audio", "params": {"path": session.last_audio, "instruction": message}}
+        return {
+            "action": "edit_audio",
+            "params": {"path": session.last_audio, "instruction": message},
+        }
 
     if re.search(r"\b(read (it|aloud|this)|speak|say that)\b", lower):
-        text = re.sub(r"^(please\s+)?(read (it|aloud|this)|speak|say that)\s*[:\-]?\s*", "", message, flags=re.I).strip()
+        text = re.sub(
+            r"^(please\s+)?(read (it|aloud|this)|speak|say that)\s*[:\-]?\s*",
+            "",
+            message,
+            flags=re.I,
+        ).strip()
         return {"action": "generate_audio", "params": {"text": text or message}}
 
     return None
@@ -1493,7 +1757,9 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
 
             resolved = resolve_clarification_choice(choice, pending)
             if resolved:
-                return _finalize_intent(resolved, pending.get("original_prompt") or message, session)
+                return _finalize_intent(
+                    resolved, pending.get("original_prompt") or message, session
+                )
             from jarvis.nlu.learning import reject_correction
 
             reject_correction(pending.get("original_prompt") or message)
@@ -1540,6 +1806,39 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
         }
         return _finalize_intent(intent, message, session)
 
+    # Trivial greetings / check-ins must never wait on NLU classify or chat.
+    # ("Hello Aria" historically took 30s+ on the NLU model before missing the fast path.)
+    if not attachment and is_trivial_social_prompt(message):
+        intent = {
+            "action": "greeting",
+            "params": {},
+            "thinking": "trivial social",
+            "route_handler": "greeting",
+            "router": "quick",
+            "router_stage": "pre_nlu_social",
+        }
+        return _finalize_intent(normalize_route_intent(intent), message, session)
+
+    # Explicit morning briefing must also beat NLU (bare "good morning" is greeting above).
+    if (
+        not attachment
+        and os.getenv("JARVIS_BRIEFING", "1") != "0"
+        and re.search(r"^good morning\b", (message or "").lower())
+        and re.search(
+            r"\b(briefing|brief|status|news|update|report)\b",
+            (message or "").lower(),
+        )
+    ):
+        intent = {
+            "action": "morning_briefing",
+            "params": {},
+            "thinking": "morning briefing",
+            "route_handler": "SituationalBriefing",
+            "router": "quick",
+            "router_stage": "pre_nlu_briefing",
+        }
+        return _finalize_intent(normalize_route_intent(intent), message, session)
+
     nlu_used = False
     from jarvis.nlu.pipeline import nlu_enabled, route_via_nlu
 
@@ -1565,7 +1864,13 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
         quick.setdefault("thinking", "pattern match")
         quick = normalize_route_intent(quick)
         quick = _maybe_downgrade_coding_chat(quick, message, session)
-        if quick["action"] in ("coding_fix", "coding_improve", "coding_run", "coding_show", "coding_read"):
+        if quick["action"] in (
+            "coding_fix",
+            "coding_improve",
+            "coding_run",
+            "coding_show",
+            "coding_read",
+        ):
             path = quick.get("params", {}).get("path") or session.resolve_path(None)
             if not path:
                 amb = _resolve_ambiguous_path(path, session)

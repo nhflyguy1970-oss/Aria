@@ -1,7 +1,8 @@
 import json
 import os
 import re
-from typing import Iterator
+import time
+from collections.abc import Iterator
 
 from ollama import chat, embed, generate
 
@@ -88,8 +89,7 @@ def ask_with_system(model: str, system: str, user: str, **kwargs) -> str:
         return response["message"]["content"]
     except Exception as e:
         raise RuntimeError(
-            f"Ollama error with model '{model}': {e}. "
-            "Is Ollama running? Try: ollama serve"
+            f"Ollama error with model '{model}': {e}. Is Ollama running? Try: ollama serve"
         ) from e
 
 
@@ -132,8 +132,7 @@ def ask_stream(
                 yield content
     except Exception as e:
         raise RuntimeError(
-            f"Ollama error with model '{model}': {e}. "
-            "Is Ollama running? Try: ollama serve"
+            f"Ollama error with model '{model}': {e}. Is Ollama running? Try: ollama serve"
         ) from e
 
 
@@ -143,11 +142,26 @@ def generate_text(model: str, prompt: str, **kwargs) -> str:
 
 
 def embed_available() -> bool:
-    """True if the embed model returns a non-empty vector."""
-    return bool(embed_text("ping"))
+    """True if the embed model returns a non-empty vector.
+
+    Cached so chat context assembly does not probe Ollama on every request.
+    """
+    now = time.monotonic()
+    cached = _EMBED_AVAIL_CACHE.get("ok")
+    cached_at = float(_EMBED_AVAIL_CACHE.get("at") or 0)
+    ttl = _EMBED_AVAIL_TTL_OK if cached else _EMBED_AVAIL_TTL_FAIL
+    if cached is not None and (now - cached_at) < ttl:
+        return bool(cached)
+    ok = bool(embed_text("ping"))
+    _EMBED_AVAIL_CACHE["ok"] = ok
+    _EMBED_AVAIL_CACHE["at"] = now
+    return ok
 
 
 _embed_warned = False
+_EMBED_AVAIL_CACHE: dict[str, object] = {}
+_EMBED_AVAIL_TTL_OK = float(os.getenv("JARVIS_EMBED_AVAIL_TTL", "60"))
+_EMBED_AVAIL_TTL_FAIL = float(os.getenv("JARVIS_EMBED_AVAIL_FAIL_TTL", "5"))
 
 
 def embed_text(text: str) -> list[float]:
@@ -323,7 +337,10 @@ def parse_code_response(response_text: str) -> tuple[str, str]:
         explanation = parts[0].replace("EXPLANATION:", "").strip()
         explanation = re.sub(r"^[-*]\s*", "", explanation, flags=re.M).strip()
         code = sanitize_python_code(parts[1])
-        if explanation and explanation.lower() not in ("no explanation provided.", "- what the script does"):
+        if explanation and explanation.lower() not in (
+            "no explanation provided.",
+            "- what the script does",
+        ):
             return explanation, code
         return "Script ready to apply.", code
 
@@ -448,6 +465,7 @@ def generate_python_fix(
 
 def _lang_for_path(path: str) -> str:
     from pathlib import Path
+
     return CODE_EXTENSIONS_LANG.get(Path(path).suffix.lower(), "code")
 
 
@@ -518,7 +536,9 @@ def _parse_patch_or_code_response(raw: str, default_path: str = "") -> tuple[str
     exp, code = parse_code_response(raw)
     if code:
         path = default_path or "data/scripts/script.py"
-        return exp or explanation, [{"path": path, "code": sanitize_python_code(code) if path.endswith(".py") else code}]
+        return exp or explanation, [
+            {"path": path, "code": sanitize_python_code(code) if path.endswith(".py") else code}
+        ]
     return explanation or "No changes generated.", []
 
 
@@ -692,4 +712,3 @@ def image_model() -> str:
 
 def embed_model() -> str:
     return model_for("embed")
-

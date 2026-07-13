@@ -268,10 +268,13 @@ def should_rebenchmark() -> bool:
 
 
 def ensure_benchmark() -> dict[str, Any]:
-    from jarvis.nlu.placement import placement_config
-
+    """Run classifier benchmark when needed; never recurse into hot-path placement."""
     if os.getenv("JARVIS_NLU_MODEL"):
+        from jarvis.nlu.placement import placement_config
+
         return placement_config()
     if should_rebenchmark():
         return run_benchmark()
-    return placement_config()
+    from jarvis.nlu.placement import _load_placement_file, _structure_fallback
+
+    return _load_placement_file() or _structure_fallback()
