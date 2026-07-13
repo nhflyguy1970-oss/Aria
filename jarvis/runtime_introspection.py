@@ -56,7 +56,9 @@ _RUNTIME_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(
         r"\bwhat are you running on\b|"
         r"\bwhat (?:gpu|cpu|hardware)\b.*\b(?:using|have|available)\b|"
-        r"\bruntime[_ ](?:status|health|mode|providers?|services?|models?|jobs?|gpu|platform)\b",
+        r"\bhow much (?:ram|memory|vram)\b|"
+        r"\b(?:ram|vram|disk|storage)\b.*\b(?:available|free|using)\b|"
+        r"\bruntime[_ ](?:status|health|mode|providers?|services?|models?|jobs?|gpu|platform|report)\b",
         re.I,
     ),
     re.compile(
@@ -74,19 +76,37 @@ _RUNTIME_PATTERNS: tuple[re.Pattern[str], ...] = (
 _RUNTIME_ACTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (
         re.compile(
+            r"\b(?:full status|runtime report|system report|diagnostics?|full runtime)\b",
+            re.I,
+        ),
+        "runtime_report",
+    ),
+    (
+        re.compile(
             r"\b(?:execution |runtime )?mode\b|standalone|attached|platform[- ]?authoritative|compatibility\b",
             re.I,
         ),
         "runtime_mode",
     ),
-    (re.compile(r"\bhealth\b|diagnos", re.I), "runtime_health"),
+    (
+        re.compile(r"\bwhat needs attention\b|\bneeds attention\b|\battention\b", re.I),
+        "runtime_attention",
+    ),
+    (re.compile(r"\bhealth\b", re.I), "runtime_health"),
     (re.compile(r"\bproviders?\b", re.I), "runtime_providers"),
     (
-        re.compile(r"\bservices?\b|databases?\b|redis|postgres|mongo|qdrant\b", re.I),
-        "runtime_services",
+        re.compile(r"\bdatabases?\b|postgres|mongodb|mongo\b|redis\b|qdrant\b", re.I),
+        "runtime_databases",
     ),
+    (re.compile(r"\bservices?\b", re.I), "runtime_services"),
     (re.compile(r"\bmodels?\b|ollama|litellm\b", re.I), "runtime_models"),
-    (re.compile(r"\bgpu\b|vram\b|cpu\b|memory\b|hardware\b", re.I), "runtime_gpu"),
+    (
+        re.compile(r"\b(?:how much )?ram\b|\bsystem memory\b|\bavailable memory\b", re.I),
+        "runtime_ram",
+    ),
+    (re.compile(r"\b(?:disk|storage)\b", re.I), "runtime_storage"),
+    (re.compile(r"\bnetwork\b", re.I), "runtime_network"),
+    (re.compile(r"\bgpu\b|vram\b|graphics\b|hardware\b|\bcpu\b", re.I), "runtime_gpu"),
     (re.compile(r"\bjobs?\b|background tasks?\b|queues?\b", re.I), "runtime_jobs"),
     (re.compile(r"\bplatform\b|cutover\b|attachment\b", re.I), "runtime_platform"),
     (re.compile(r"\bapplications?\b", re.I), "runtime_applications"),
@@ -105,15 +125,21 @@ def classify_runtime_action(message: str) -> str:
     lower = text.lower()
     literal = {
         "runtime_status": "runtime_status",
+        "runtime_report": "runtime_report",
         "runtime_mode": "runtime_mode",
         "runtime_health": "runtime_health",
         "runtime_platform": "runtime_platform",
         "runtime_services": "runtime_services",
+        "runtime_databases": "runtime_databases",
         "runtime_models": "runtime_models",
         "runtime_gpu": "runtime_gpu",
+        "runtime_ram": "runtime_ram",
+        "runtime_storage": "runtime_storage",
+        "runtime_network": "runtime_network",
         "runtime_jobs": "runtime_jobs",
         "runtime_providers": "runtime_providers",
         "runtime_applications": "runtime_applications",
+        "runtime_attention": "runtime_attention",
     }
     if lower in literal:
         return literal[lower]
@@ -176,14 +202,28 @@ def collect_runtime_status() -> dict[str, Any]:
             "memory": ov.get("memory_provider"),
             "knowledge": ov.get("knowledge_provider"),
         },
+        "platform_status": ov.get("platform_status"),
         "services": {
             "ready": mc.get("services_ready"),
             "services": mc.get("services") or [],
             "databases": mc.get("databases") or [],
         },
+        "databases": mc.get("databases") or [],
         "models": mc.get("inference") or {},
-        "gpu": mc.get("hardware") or {},
+        "inference": mc.get("inference") or {},
+        "current_model": ov.get("current_model"),
+        "provider": ov.get("inference_provider"),
+        "gpu": {
+            "name": ov.get("gpu") or (mc.get("hardware") or {}).get("gpu_name"),
+            "vram_mb": ov.get("vram_mb") or (mc.get("hardware") or {}).get("vram_mb"),
+            "free_vram_mb": ov.get("free_vram_mb")
+            or (mc.get("hardware") or {}).get("free_vram_mb"),
+        },
+        "hardware": mc.get("hardware") or {},
+        "ram_available_gb": ov.get("ram_available_gb")
+        or (mc.get("hardware") or {}).get("ram_available_gb"),
         "jobs": mc.get("jobs") or {},
+        "active_jobs": ov.get("active_jobs"),
         "applications": mc.get("applications") or [],
         "activity": mc.get("activity") or {},
         "performance": mc.get("performance") or {},
@@ -258,6 +298,10 @@ def collect_runtime_services() -> dict[str, Any]:
     }
 
 
+def collect_runtime_databases() -> dict[str, Any]:
+    return collect_runtime_services()
+
+
 def collect_runtime_models() -> dict[str, Any]:
     mc = _mc_snapshot(required=True)
     inf = mc.get("inference") or {}
@@ -268,7 +312,11 @@ def collect_runtime_models() -> dict[str, Any]:
         "active": inf.get("active_models") or {"current": ov.get("current_model")},
         "current_model": ov.get("current_model") or inf.get("current_model"),
         "provider": ov.get("inference_provider") or inf.get("provider"),
+        "profile": ov.get("profile") or inf.get("profile"),
+        "device": inf.get("device") or inf.get("placement"),
+        "context_length": inf.get("context_length") or inf.get("num_ctx"),
         "inference": inf,
+        "overview": ov,
     }
 
 
@@ -288,6 +336,18 @@ def collect_runtime_gpu() -> dict[str, Any]:
         "ram_available_gb": ov.get("ram_available_gb") or hw.get("ram_available_gb"),
         "hardware": hw,
     }
+
+
+def collect_runtime_ram() -> dict[str, Any]:
+    return collect_runtime_gpu()
+
+
+def collect_runtime_storage() -> dict[str, Any]:
+    return collect_runtime_gpu()
+
+
+def collect_runtime_network() -> dict[str, Any]:
+    return collect_runtime_gpu()
 
 
 def collect_runtime_jobs() -> dict[str, Any]:
@@ -321,20 +381,35 @@ def collect_runtime_health() -> dict[str, Any]:
             "services": mc.get("services") or [],
         },
         "needs_attention": ov.get("needs_attention") or [],
+        "overview": ov,
     }
+
+
+def collect_runtime_attention() -> dict[str, Any]:
+    return collect_runtime_health()
+
+
+def collect_runtime_report() -> dict[str, Any]:
+    return collect_runtime_status()
 
 
 _COLLECTORS: dict[str, Any] = {
     "runtime_status": collect_runtime_status,
+    "runtime_report": collect_runtime_report,
     "runtime_mode": collect_runtime_mode,
     "runtime_platform": collect_runtime_platform,
     "runtime_applications": collect_runtime_applications,
     "runtime_providers": collect_runtime_providers,
     "runtime_services": collect_runtime_services,
+    "runtime_databases": collect_runtime_databases,
     "runtime_models": collect_runtime_models,
     "runtime_gpu": collect_runtime_gpu,
+    "runtime_ram": collect_runtime_ram,
+    "runtime_storage": collect_runtime_storage,
+    "runtime_network": collect_runtime_network,
     "runtime_jobs": collect_runtime_jobs,
     "runtime_health": collect_runtime_health,
+    "runtime_attention": collect_runtime_attention,
 }
 
 
@@ -370,104 +445,10 @@ def format_runtime_markdown(action: str, data: dict[str, Any] | None = None) -> 
     if isinstance(payload, dict) and payload.get("ok") is False:
         return _format_connection_warning(payload.get("error", "unknown"))
 
-    lines = ["## Aria Runtime Report", ""]
+    from jarvis.runtime_formatters import format_runtime_intent
 
-    if action in ("runtime_status", "runtime_mode", "runtime_platform"):
-        mode = payload.get("execution_mode")
-        if mode:
-            lines.append(f"**Execution mode:** `{mode}`")
-        host = payload.get("host") or {}
-        if host:
-            lines.append(
-                f"**ApplicationHost:** attached={host.get('attached')}, "
-                f"healthy={host.get('healthy')}"
-            )
-        phase = payload.get("phase") or {}
-        if isinstance(phase, dict) and phase.get("phase"):
-            lines.append(
-                f"**Workstation phase:** `{phase.get('phase')}` — {phase.get('detail', '')}"
-            )
-
-    if action in ("runtime_status", "runtime_health"):
-        acc = payload.get("acceptance") or {}
-        if acc.get("overall") is not None:
-            lines.append(
-                f"**Acceptance:** {acc.get('overall')}% overall, "
-                f"production readiness {acc.get('production_readiness')}%"
-            )
-        status = payload.get("platform_status")
-        if status:
-            lines.append(f"**Platform status:** {status}")
-        needs = payload.get("needs_attention") or []
-        if needs:
-            lines.append("**Needs attention:**")
-            lines.extend(f"- {item}" for item in needs)
-
-    if action in ("runtime_status", "runtime_models", "runtime_providers"):
-        model = payload.get("current_model")
-        if not model:
-            models = payload.get("models") or payload.get("inference") or {}
-            if isinstance(models, dict):
-                model = models.get("current_model")
-                active = models.get("active_models") or models.get("active")
-                if active and isinstance(active, dict):
-                    lines.append("**Models:**")
-                    for role, name in active.items():
-                        if name:
-                            lines.append(f"- {role}: `{name}`")
-        if model:
-            lines.append(f"**Current model:** `{model}`")
-
-    if action in ("runtime_status", "runtime_services"):
-        svc = payload.get("services") or payload
-        if isinstance(svc, dict):
-            services = svc.get("services") if "services" in svc else svc
-            if isinstance(services, list) and services:
-                running = [s.get("name") or s.get("id") for s in services if s.get("running")]
-                lines.append(f"**Services running:** {', '.join(running) or 'none'}")
-            dbs = svc.get("databases") if isinstance(svc, dict) else payload.get("databases")
-            if dbs:
-                db_line = ", ".join(
-                    f"{d.get('name') or d.get('id')}={'up' if d.get('running') else 'down'}"
-                    for d in dbs
-                )
-                lines.append(f"**Databases:** {db_line}")
-
-    if action in ("runtime_status", "runtime_applications"):
-        apps = payload.get("applications") or []
-        if apps:
-            lines.append("**Applications:**")
-            for app in apps:
-                label = app.get("label") or app.get("id")
-                state = "running" if app.get("running") else "stopped"
-                lines.append(f"- {label}: {state}")
-
-    if action in ("runtime_status", "runtime_providers"):
-        prov = payload.get("providers") or {}
-        if prov:
-            lines.append("**Providers:**")
-            for name, value in prov.items():
-                lines.append(f"- {name}: `{value}`")
-
-    if action in ("runtime_status", "runtime_gpu"):
-        gpu = payload.get("gpu") or {}
-        if gpu.get("name"):
-            lines.append(f"**GPU:** {gpu.get('name')}")
-        if gpu.get("free_vram_mb") is not None:
-            lines.append(f"**Free VRAM:** {gpu.get('free_vram_mb')} MB")
-
-    if action in ("runtime_status", "runtime_jobs"):
-        active = payload.get("active_jobs")
-        if active is None:
-            jobs = payload.get("jobs") or {}
-            active = jobs.get("active_count") or jobs.get("busy_count") or 0
-        lines.append(f"**Active background jobs:** {active}")
-
-    if len(lines) <= 2:
-        lines.append("_No live Mission Control fields matched this query._")
-    lines.append("")
-    lines.append("_Source: AI Platform Mission Control (live)._")
-    return "\n".join(lines)
+    body = format_runtime_intent(action, payload if isinstance(payload, dict) else {})
+    return body.rstrip() + "\n\n_Source: AI Platform Mission Control (live)._"
 
 
 def runtime_action_result(action: str) -> dict[str, Any]:
@@ -492,11 +473,14 @@ STATUS_COMMANDS: dict[str, str] = {
     "status": "status_summary",
     "health": "runtime_health",
     "services": "runtime_services",
+    "databases": "runtime_databases",
     "models": "runtime_models",
     "memory": "runtime_providers",
+    "ram": "runtime_ram",
     "providers": "runtime_providers",
     "gpu": "runtime_gpu",
     "jobs": "runtime_jobs",
+    "attention": "runtime_attention",
 }
 
 
@@ -508,15 +492,21 @@ def is_status_command(message: str) -> str | None:
         return STATUS_COMMANDS[text]
     literal = {
         "runtime_status": "runtime_status",
+        "runtime_report": "runtime_report",
         "runtime_mode": "runtime_mode",
         "runtime_health": "runtime_health",
         "runtime_platform": "runtime_platform",
         "runtime_services": "runtime_services",
+        "runtime_databases": "runtime_databases",
         "runtime_models": "runtime_models",
         "runtime_gpu": "runtime_gpu",
+        "runtime_ram": "runtime_ram",
+        "runtime_storage": "runtime_storage",
+        "runtime_network": "runtime_network",
         "runtime_jobs": "runtime_jobs",
         "runtime_providers": "runtime_providers",
         "runtime_applications": "runtime_applications",
+        "runtime_attention": "runtime_attention",
     }
     return literal.get(text)
 

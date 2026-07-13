@@ -42,14 +42,22 @@ def _runtime_action(subject: str, verb: str, prompt: str = "") -> str:
     lower = (prompt or "").strip().lower()
     if lower in ("status", "health", "platform health", "mission control status"):
         return "status_summary"
-    blob = f"{subject} {verb}".lower()
-    if re.search(r"\b(gpu|vram|cpu|ram|hardware|graphics|inference)\b", blob):
+    if re.search(r"\b(full status|runtime report|system report|diagnostics?)\b", lower):
+        return "runtime_report"
+    blob = f"{subject} {verb} {prompt}".lower()
+    if re.search(r"\b(how much )?ram\b|\bsystem memory\b|\bavailable memory\b", blob):
+        return "runtime_ram"
+    if re.search(r"\b(gpu|vram|cpu|hardware|graphics)\b", blob):
         return "runtime_gpu"
+    if re.search(r"\b(disk|storage)\b", blob):
+        return "runtime_storage"
+    if re.search(r"\bnetwork\b", blob):
+        return "runtime_network"
     if re.search(r"\b(model|ollama|litellm)\b", blob):
         return "runtime_models"
-    if re.search(r"\b(service|redis|postgres|database|mongodb|qdrant|docker)\b", blob):
-        if re.search(r"\bis\b.*\brunning\b", blob) or "running" in blob:
-            return "runtime_services"
+    if re.search(r"\b(database|postgres|mongodb|mongo|redis|qdrant)\b", blob):
+        return "runtime_databases"
+    if re.search(r"\b(service|docker)\b", blob):
         return "runtime_services"
     if re.search(r"\b(job|activity)\b", blob):
         return "runtime_jobs"
@@ -57,6 +65,8 @@ def _runtime_action(subject: str, verb: str, prompt: str = "") -> str:
         return "runtime_providers"
     if re.search(r"\b(application|app)\b", blob):
         return "runtime_applications"
+    if re.search(r"\b(needs attention|attention)\b", blob):
+        return "runtime_attention"
     if re.search(r"\b(platform|mission control|runtime)\b", blob):
         return "runtime_platform"
     return "runtime_status"
@@ -144,11 +154,14 @@ _EXACT_RUNTIME_COMMANDS: dict[str, str] = {
     "status": "status_summary",
     "health": "runtime_health",
     "services": "runtime_services",
+    "databases": "runtime_databases",
     "models": "runtime_models",
     "memory": "runtime_providers",
+    "ram": "runtime_ram",
     "providers": "runtime_providers",
     "gpu": "runtime_gpu",
     "jobs": "runtime_jobs",
+    "attention": "runtime_attention",
 }
 
 

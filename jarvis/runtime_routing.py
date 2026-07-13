@@ -73,14 +73,19 @@ _USER_MEMORY_EXCLUDE = re.compile(
 
 _KEYWORD_ACTION_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (
-        re.compile(
-            r"\b(services?|databases?|redis|postgres|mongodb|qdrant|grafana|prometheus|n8n)\b",
-            re.I,
-        ),
-        "runtime_services",
+        re.compile(r"\b(full status|runtime report|system report|diagnostics?)\b", re.I),
+        "runtime_report",
     ),
+    (
+        re.compile(r"\b(databases?|postgres|mongodb|mongo|redis|qdrant)\b", re.I),
+        "runtime_databases",
+    ),
+    (re.compile(r"\b(services?|grafana|prometheus|n8n)\b", re.I), "runtime_services"),
     (re.compile(r"\b(models?|ollama|litellm)\b", re.I), "runtime_models"),
-    (re.compile(r"\b(gpu|vram|cpu|ram|swap|hardware)\b", re.I), "runtime_gpu"),
+    (re.compile(r"\b(how much )?ram\b|\bsystem memory\b", re.I), "runtime_ram"),
+    (re.compile(r"\b(disk|storage)\b", re.I), "runtime_storage"),
+    (re.compile(r"\bnetwork\b", re.I), "runtime_network"),
+    (re.compile(r"\b(gpu|vram|cpu|hardware|graphics)\b", re.I), "runtime_gpu"),
     (re.compile(r"\b(jobs?|activity)\b", re.I), "runtime_jobs"),
     (re.compile(r"\b(providers?|memory provider|knowledge provider)\b", re.I), "runtime_providers"),
     (
@@ -88,7 +93,8 @@ _KEYWORD_ACTION_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
         "runtime_platform",
     ),
     (re.compile(r"\bapplications?\b", re.I), "runtime_applications"),
-    (re.compile(r"\b(status|health|diagnos)\b", re.I), "runtime_health"),
+    (re.compile(r"\b(needs attention|attention)\b", re.I), "runtime_attention"),
+    (re.compile(r"\b(status|health)\b", re.I), "runtime_health"),
 )
 
 

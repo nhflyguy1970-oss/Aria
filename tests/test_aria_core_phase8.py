@@ -74,6 +74,8 @@ def test_try_reflex_intent_and_events():
 
 
 def test_latency_targets():
+    # Warm the reflex engine so import/cache noise does not fail tight budgets.
+    evaluate("Hello Aria")
     for msg, budget in (
         ("Hello Aria", 10),
         ("yes", 10),

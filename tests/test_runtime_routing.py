@@ -112,7 +112,7 @@ def test_memory_provider_still_runtime_routing():
     hit = route_runtime_priority("postgres status")
     assert hit is not None
     assert hit.get("route_handler") == "RuntimeClient"
-    assert hit.get("action") == "runtime_services"
+    assert hit.get("action") == "runtime_databases"
 
 
 @patch("jarvis.runtime_introspection.get_runtime_client")
