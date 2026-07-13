@@ -42,3 +42,7 @@ Generic workstation lifecycle, infrastructure registry, integration probes, inve
 - `aiplatform.workstation.*` for platform mode
 
 See AI Platform [ADR-0020](https://github.com/nhflyguy1970-oss/AI-Platform/blob/main/docs/adr/ADR-0020-workstation-ownership.md).
+
+## Daily Use Mode
+
+Architecture is in maintenance mode. Product improvement is driven by Problem Reports in Mission Control Product Backlog. See [DAILY_USE_MODE.md](DAILY_USE_MODE.md).
