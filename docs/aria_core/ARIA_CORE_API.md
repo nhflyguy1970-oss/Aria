@@ -66,6 +66,15 @@ Governor / Capability Bus / MC
 
 Mission Control **Events** tab renders Event Bus live ring, rates, subscribers, publishers.
 
+## Phase 5 — Learning ownership
+
+Learning is owned by Aria Core (`aria_core.learning_manager`).
+`jarvis.learning_governor` is a compatibility shim.
+See [`LEARNING.md`](LEARNING.md) and [`PHASE5.md`](PHASE5.md).
+
+Behavior remains: propose → immediate commit → apply().
+Mission Control **Learning** tab renders `aria_core.learning.mission_control_panel()`.
+
 Full ownership metadata: `aria_core.ownership.OWNERSHIP`.
 
 ## Delegation path (example)

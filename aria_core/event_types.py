@@ -13,6 +13,9 @@ KnowledgeUpdated = "KnowledgeUpdated"
 LearningProposed = "LearningProposed"
 LearningAccepted = "LearningAccepted"
 LearningRejected = "LearningRejected"
+LearningCommitted = "LearningCommitted"
+LearningReplayed = "LearningReplayed"
+LearningRolledBack = "LearningRolledBack"
 ReferenceLookup = "ReferenceLookup"
 ReferenceIndexed = "ReferenceIndexed"
 ReasoningStarted = "ReasoningStarted"
@@ -46,6 +49,9 @@ ALL_EVENT_TYPES: tuple[str, ...] = (
     LearningProposed,
     LearningAccepted,
     LearningRejected,
+    LearningCommitted,
+    LearningReplayed,
+    LearningRolledBack,
     ReferenceLookup,
     ReferenceIndexed,
     ReasoningStarted,

@@ -47,7 +47,7 @@ def health(capability_id: str | None = None) -> dict[str, Any]:
     probes = {
         "remember": "jarvis.modules.memory",
         "recall": "jarvis.modules.memory",
-        "learn": "jarvis.learning_governor",
+        "learn": "aria_core.learning_manager",
         "reason": "jarvis.assistant",
         "plan": "jarvis.agents.coordinator",
         "reference": "jarvis.reference_engine",
