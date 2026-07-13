@@ -41,7 +41,14 @@ def propose(
     payload: dict[str, Any] | None = None,
     source: str = "",
 ) -> Proposal:
-    return Proposal(kind=kind, payload=dict(payload or {}), source=source)
+    proposal = Proposal(kind=kind, payload=dict(payload or {}), source=source)
+    _emit_learning(
+        "LearningProposed",
+        kind=proposal.kind,
+        proposal_source=proposal.source,
+        payload_keys=sorted(proposal.payload.keys()),
+    )
+    return proposal
 
 
 def commit(proposal: Proposal, apply: Callable[[], T]) -> T:
@@ -52,9 +59,34 @@ def commit(proposal: Proposal, apply: Callable[[], T]) -> T:
     """
     if not enabled():
         return apply()
-    result = apply()
+    try:
+        result = apply()
+    except Exception as exc:
+        _emit_learning(
+            "LearningRejected",
+            kind=proposal.kind,
+            proposal_source=proposal.source,
+            error=type(exc).__name__,
+        )
+        raise
     _record_audit(proposal, ok=True)
+    _emit_learning(
+        "LearningAccepted",
+        kind=proposal.kind,
+        proposal_source=proposal.source,
+        ok=True,
+    )
     return result
+
+
+def _emit_learning(name: str, **payload: Any) -> None:
+    """Best-effort Aria Core Event Bus publish — never affects learning behavior."""
+    try:
+        from aria_core.event_bus import safe_publish
+
+        safe_publish(name, source="jarvis.learning_governor", **payload)
+    except Exception:
+        pass
 
 
 def _record_audit(proposal: Proposal, *, ok: bool) -> None:

@@ -239,6 +239,34 @@ OWNERSHIP: dict[str, dict[str, Any]] = {
         "implementation": "jarvis.vram_guard",
         "future_owner": "aria_core.infrastructure",
     },
+    "events": {
+        "owner": "aria_core.events",
+        "responsibilities": [
+            "In-process Event Bus",
+            "Event contracts and observability ring",
+        ],
+        "public_api": [
+            "subscribe",
+            "unsubscribe",
+            "publish",
+            "publish_name",
+            "safe_publish",
+            "recent_events",
+            "mission_control_panel",
+        ],
+        "private_api": ["InProcessEventBus", "reset_for_tests"],
+        "dependencies": ["aria_core.event_types", "aria_core.event_contracts"],
+        "consumers": ["capabilities", "learning", "operations", "timeline"],
+        "allowed_writers": [
+            "aria_core.events",
+            "jarvis.learning_governor",
+            "aria_core.capability_bus",
+        ],
+        "allowed_readers": ["*"],
+        "source_of_truth": "aria_core.event_bus (in-process)",
+        "implementation": "aria_core.event_bus",
+        "future_owner": "aria_core.events",
+    },
 }
 
 

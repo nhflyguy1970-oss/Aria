@@ -25,6 +25,16 @@ OWNER = module_ownership("capabilities")
 BUS_VERSION = CAPABILITY_VERSION
 
 
+def _emit(name: str, **payload: Any) -> None:
+    """Best-effort Event Bus publish — never changes capability behavior."""
+    try:
+        from aria_core.event_bus import safe_publish
+
+        safe_publish(name, source="aria_core.capability_bus", **payload)
+    except Exception:
+        pass
+
+
 def _probe_import(module_path: str) -> dict[str, Any]:
     mod = soft_import(module_path)
     if mod is None:
@@ -87,7 +97,14 @@ def remember(
     from aria_core import memory
 
     store = memory.MemoryStore()
-    return store.add(entry_type, content, tags=tags, namespace=namespace)
+    entry = store.add(entry_type, content, tags=tags, namespace=namespace)
+    _emit(
+        "MemoryCreated",
+        entry_id=(entry or {}).get("id") if isinstance(entry, dict) else None,
+        entry_type=entry_type,
+        namespace=namespace,
+    )
+    return entry
 
 
 def recall(
@@ -118,6 +135,7 @@ def learn(
     """Learning Governor propose (and optional commit)."""
     from aria_core import learning
 
+    # Governor publishes LearningProposed / LearningAccepted / LearningRejected.
     proposal = learning.propose(kind=kind, payload=payload, source=source)
     if apply is None:
         return proposal
@@ -128,32 +146,50 @@ def reason(message: str, **kwargs: Any) -> Any:
     """Conversational reasoning — delegates to aria_core.reasoning.chat."""
     from aria_core import reasoning
 
-    return reasoning.chat(message, **kwargs)
+    _emit("ReasoningStarted", message_len=len(message or ""))
+    try:
+        result = reasoning.chat(message, **kwargs)
+    except Exception as exc:
+        _emit("ReasoningFinished", ok=False, error=type(exc).__name__)
+        raise
+    _emit("ReasoningFinished", ok=True)
+    return result
 
 
 def plan(*, action: str = "status", **kwargs: Any) -> dict[str, Any]:
     """Planning surface — status / coordinator access (no new planner)."""
     from aria_core import planning
 
+    _emit("PlanStarted", action=action)
     available = planning.coordinator_available()
     if action == "status":
-        return {
+        out = {
             "ok": True,
             "available": available,
             "planner_store": planning.planner_store_path(),
             "owner": OWNER["owner"],
         }
+        _emit("PlanCompleted", action=action, ok=True)
+        return out
     if action == "coordinator":
         if not available:
-            return {"ok": False, "available": False, "error": "coordinator unavailable"}
-        return {"ok": True, "available": True, "coordinator": planning.get_coordinator()}
-    return {"ok": False, "error": f"unknown plan action: {action}", **kwargs}
+            out = {"ok": False, "available": False, "error": "coordinator unavailable"}
+            _emit("PlanCompleted", action=action, ok=False)
+            return out
+        out = {"ok": True, "available": True, "coordinator": planning.get_coordinator()}
+        _emit("PlanCompleted", action=action, ok=True)
+        return out
+    out = {"ok": False, "error": f"unknown plan action: {action}", **kwargs}
+    _emit("PlanCompleted", action=action, ok=False)
+    return out
 
 
 def reference(query: str, *, subject: str = "") -> dict[str, Any]:
     from aria_core import reference as reference_mod
 
-    return reference_mod.search_reference(query, subject=subject)
+    result = reference_mod.search_reference(query, subject=subject)
+    _emit("ReferenceLookup", query=query, subject=subject)
+    return result
 
 
 def search(query: str, **kwargs: Any) -> Any:
@@ -164,14 +200,22 @@ def search(query: str, **kwargs: Any) -> Any:
 
 def infer(prompt: str, *, model: str | None = None, **kwargs: Any) -> Any:
     """LLM inference — delegates to jarvis.llm.generate_text when present."""
-    llm = soft_import("jarvis.llm")
-    if llm is not None and hasattr(llm, "generate_text"):
-        use_model = model or (llm.general_model() if hasattr(llm, "general_model") else None)
-        if use_model:
-            return llm.generate_text(use_model, prompt, **kwargs)
-        return llm.generate_text(prompt, **kwargs)  # type: ignore[misc]
-    # Fall back to reasoning chat (same organ stack).
-    return reason(prompt, **kwargs)
+    _emit("InferenceStarted", prompt_len=len(prompt or ""))
+    try:
+        llm = soft_import("jarvis.llm")
+        if llm is not None and hasattr(llm, "generate_text"):
+            use_model = model or (llm.general_model() if hasattr(llm, "general_model") else None)
+            if use_model:
+                result = llm.generate_text(use_model, prompt, **kwargs)
+            else:
+                result = llm.generate_text(prompt, **kwargs)  # type: ignore[misc]
+            _emit("InferenceFinished", ok=True)
+            return result
+        # Fall back to reasoning chat (same organ stack) — reason() emits its own pair.
+        return reason(prompt, **kwargs)
+    except Exception as exc:
+        _emit("InferenceFinished", ok=False, error=type(exc).__name__)
+        raise
 
 
 def list_tools() -> list[dict[str, Any]]:
@@ -187,7 +231,14 @@ def execute_tool(assistant: Any, action: str, params: dict | None = None, messag
     """Dispatch registered handler — existing call_action semantics."""
     from jarvis.handlers.registry import call_action
 
-    return call_action(assistant, action, params or {}, message)
+    _emit("ToolStarted", action=action)
+    try:
+        result = call_action(assistant, action, params or {}, message)
+    except Exception as exc:
+        _emit("ToolCompleted", action=action, ok=False, error=type(exc).__name__)
+        raise
+    _emit("ToolCompleted", action=action, ok=True)
+    return result
 
 
 def schedule(*, op: str = "status", **kwargs: Any) -> dict[str, Any]:
@@ -233,8 +284,10 @@ def diagnose(*, force: bool = False) -> dict[str, Any]:
 
 def repair(*, mode: str = "safe") -> dict[str, Any]:
     """Safe repair only — delegates to recover_safe (existing semantics)."""
-    del mode
-    return recover()
+    _emit("RepairStarted", mode=mode)
+    result = recover()
+    _emit("RepairCompleted", ok=bool(result.get("ok")))
+    return result
 
 
 def latest_backup_hint() -> dict[str, Any]:
@@ -265,8 +318,14 @@ def backup(*, op: str = "hint") -> dict[str, Any]:
 def recover() -> dict[str, Any]:
     mod = soft_import("aiplatform.workstation.operations")
     if mod is None:
-        return {"ok": False, "error": "workstation.operations unavailable"}
-    return dict(mod.recover_safe())
+        out = {"ok": False, "error": "workstation.operations unavailable"}
+        _emit("RecoveryStarted")
+        _emit("RecoveryCompleted", ok=False)
+        return out
+    _emit("RecoveryStarted")
+    result = dict(mod.recover_safe())
+    _emit("RecoveryCompleted", ok=bool(result.get("ok")))
+    return result
 
 
 def invoke(capability_id: str, *args: Any, **kwargs: Any) -> Any:

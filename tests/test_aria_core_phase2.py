@@ -22,6 +22,7 @@ REQUIRED_MODULES = {
     "services",
     "operations",
     "infrastructure",
+    "events",
 }
 
 OWNER_FIELDS = {

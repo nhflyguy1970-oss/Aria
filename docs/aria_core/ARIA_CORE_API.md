@@ -54,6 +54,18 @@ Caller / Application
 
 Mission Control **Capabilities** tab renders `mission_control_panel()` (visibility only).
 
+## Phase 4 — Event Bus
+
+In-process pub/sub circulatory system. See [`EVENT_BUS.md`](EVENT_BUS.md).
+
+```text
+Governor / Capability Bus / MC
+  → aria_core.event_bus.safe_publish(...)
+    → subscribers (Timeline bridge, MC Events tab)
+```
+
+Mission Control **Events** tab renders Event Bus live ring, rates, subscribers, publishers.
+
 Full ownership metadata: `aria_core.ownership.OWNERSHIP`.
 
 ## Delegation path (example)
