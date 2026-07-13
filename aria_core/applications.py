@@ -38,3 +38,10 @@ def attach_aria_if_present() -> bool:
         return bool(attach_if_present())
     except Exception:
         return False
+
+
+def capability_interface() -> dict[str, Any]:
+    """Future app consumption pointer — apps are not migrated in Phase 3."""
+    from aria_core.capabilities import capability_interface as _iface
+
+    return _iface()

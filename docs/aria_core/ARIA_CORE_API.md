@@ -22,7 +22,7 @@ Reverse imports into Core from implementations should not be added. Existing cyc
 
 ## Modules
 
-| Module | Owner | Public API (Phase 2) | Delegates to | Future owner |
+| Module | Owner | Public API (Phase 2/3) | Delegates to | Future owner |
 |--------|-------|----------------------|--------------|--------------|
 | `aria_core.identity` | aria_core.identity | `profile_name`, `is_uncensored`, `system_prompt`, `identity_snapshot` | `jarvis.config` | same |
 | `aria_core.memory` | aria_core.memory | `MemoryStore`, `create_memory_store` | `jarvis.modules.memory` | same |
@@ -32,13 +32,27 @@ Reverse imports into Core from implementations should not be added. Existing cyc
 | `aria_core.planning` | aria_core.planning | `coordinator_available`, `get_coordinator` | `jarvis.agents` | same |
 | `aria_core.reference` | aria_core.reference | `search_reference` | `jarvis.reference_engine` | same |
 | `aria_core.runtime` | aria_core.runtime | `RuntimeClient`, `execution_mode` | `jarvis.runtime_client` | same |
-| `aria_core.capabilities` | aria_core.capabilities | `list_capability_ids`, `describe` | Behavioral Contract + handlers | same |
+| `aria_core.capabilities` | aria_core.capabilities | Capability Bus verbs + catalog | registry → organs | same |
 | `aria_core.interfaces` | aria_core.interfaces | `describe_interfaces` | GUI/CLI/MC pointers | same |
-| `aria_core.applications` | aria_core.applications | `get_host_module`, `application_ids` | `jarvis.application.host` | same |
+| `aria_core.applications` | aria_core.applications | `get_host_module`, `capability_interface` | `jarvis.application.host` | same |
 | `aria_core.platform` | aria_core.platform | `workstation_available`, `platform_snapshot` | `aiplatform.workstation` | same |
 | `aria_core.services` | aria_core.services | `list_managed_services` | `jarvis.services` | same |
 | `aria_core.operations` | aria_core.operations | `collect_overview`, `collect_mission_control` | `aiplatform.mission_control.aggregator` | same |
 | `aria_core.infrastructure` | aria_core.infrastructure | `vram_guard_available` | `jarvis.vram_guard` | same |
+
+## Phase 3 — Capability Bus
+
+Applications should eventually call Capability Bus verbs (`remember`, `recall`, `learn`, …).
+See [`CAPABILITY_BUS.md`](CAPABILITY_BUS.md) and [`CAPABILITY_CONTRACTS.md`](CAPABILITY_CONTRACTS.md).
+
+```text
+Caller / Application
+  → aria_core.capability_bus.<verb>(...)
+    → aria_core.<module> or soft-import
+      → existing jarvis / aiplatform implementation
+```
+
+Mission Control **Capabilities** tab renders `mission_control_panel()` (visibility only).
 
 Full ownership metadata: `aria_core.ownership.OWNERSHIP`.
 

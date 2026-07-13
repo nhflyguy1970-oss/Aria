@@ -1,0 +1,360 @@
+"""Aria Core Capability Bus (Phase 3).
+
+Applications will request capabilities here. Each verb delegates to today's
+implementation via Aria Core modules or soft-imports. No organ moves.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from aria_core._delegate import soft_import
+from aria_core.capability_contracts import get_contract, list_contracts, validate_contracts
+from aria_core.capability_registry import (
+    CAPABILITY_VERSION,
+    all_capability_ids,
+    dependency_graph,
+    get_capability,
+    list_capabilities,
+    validate_registry,
+)
+from aria_core.ownership import module_ownership
+
+OWNER = module_ownership("capabilities")
+BUS_VERSION = CAPABILITY_VERSION
+
+
+def _probe_import(module_path: str) -> dict[str, Any]:
+    mod = soft_import(module_path)
+    if mod is None:
+        return {"ok": False, "module": module_path, "status": "unavailable"}
+    return {"ok": True, "module": module_path, "status": "ok"}
+
+
+def health(capability_id: str | None = None) -> dict[str, Any]:
+    """Probe provider importability without executing side-effect verbs."""
+    probes = {
+        "remember": "jarvis.modules.memory",
+        "recall": "jarvis.modules.memory",
+        "learn": "jarvis.learning_governor",
+        "reason": "jarvis.assistant",
+        "plan": "jarvis.agents.coordinator",
+        "reference": "jarvis.reference_engine",
+        "search": "jarvis.knowledge",
+        "infer": "jarvis.llm",
+        "execute_tool": "jarvis.handlers.registry",
+        "schedule": "jarvis.handlers.registry",
+        "observe": "aiplatform.mission_control.aggregator",
+        "notify": "aiplatform.mission_control.notifications",
+        "diagnose": "aiplatform.workstation.operations",
+        "repair": "aiplatform.workstation.operations",
+        "backup": "jarvis",
+        "recover": "aiplatform.workstation.operations",
+    }
+    if capability_id:
+        if capability_id not in probes:
+            return {"ok": False, "id": capability_id, "status": "unknown"}
+        result = _probe_import(probes[capability_id])
+        result["id"] = capability_id
+        meta = get_capability(capability_id) or {}
+        result["owner"] = meta.get("owner")
+        result["provider"] = meta.get("provider")
+        result["current_implementation"] = meta.get("current_implementation")
+        return result
+
+    items = []
+    for cid in all_capability_ids():
+        items.append(health(cid))
+    healthy = sum(1 for i in items if i.get("ok"))
+    return {
+        "ok": healthy == len(items),
+        "version": BUS_VERSION,
+        "healthy": healthy,
+        "total": len(items),
+        "capabilities": items,
+    }
+
+
+def remember(
+    content: str,
+    *,
+    entry_type: str = "fact",
+    tags: list[str] | None = None,
+    namespace: str | None = None,
+) -> Any:
+    """Persist memory — delegates to MemoryStore.add."""
+    from aria_core import memory
+
+    store = memory.MemoryStore()
+    return store.add(entry_type, content, tags=tags, namespace=namespace)
+
+
+def recall(
+    query: str | None = None,
+    *,
+    entry_id: str | None = None,
+    limit: int = 10,
+    **kwargs: Any,
+) -> Any:
+    """Retrieve memory — delegates to MemoryStore.get/search."""
+    from aria_core import memory
+
+    store = memory.MemoryStore()
+    if entry_id:
+        return store.get(entry_id)
+    if query is None:
+        return []
+    return store.search(query, limit=limit, **kwargs)
+
+
+def learn(
+    *,
+    kind: str,
+    payload: dict[str, Any] | None = None,
+    source: str = "",
+    apply=None,
+) -> Any:
+    """Learning Governor propose (and optional commit)."""
+    from aria_core import learning
+
+    proposal = learning.propose(kind=kind, payload=payload, source=source)
+    if apply is None:
+        return proposal
+    return learning.commit(proposal, apply)
+
+
+def reason(message: str, **kwargs: Any) -> Any:
+    """Conversational reasoning — delegates to aria_core.reasoning.chat."""
+    from aria_core import reasoning
+
+    return reasoning.chat(message, **kwargs)
+
+
+def plan(*, action: str = "status", **kwargs: Any) -> dict[str, Any]:
+    """Planning surface — status / coordinator access (no new planner)."""
+    from aria_core import planning
+
+    available = planning.coordinator_available()
+    if action == "status":
+        return {
+            "ok": True,
+            "available": available,
+            "planner_store": planning.planner_store_path(),
+            "owner": OWNER["owner"],
+        }
+    if action == "coordinator":
+        if not available:
+            return {"ok": False, "available": False, "error": "coordinator unavailable"}
+        return {"ok": True, "available": True, "coordinator": planning.get_coordinator()}
+    return {"ok": False, "error": f"unknown plan action: {action}", **kwargs}
+
+
+def reference(query: str, *, subject: str = "") -> dict[str, Any]:
+    from aria_core import reference as reference_mod
+
+    return reference_mod.search_reference(query, subject=subject)
+
+
+def search(query: str, **kwargs: Any) -> Any:
+    from aria_core import knowledge
+
+    return knowledge.search(query, **kwargs)
+
+
+def infer(prompt: str, *, model: str | None = None, **kwargs: Any) -> Any:
+    """LLM inference — delegates to jarvis.llm.generate_text when present."""
+    llm = soft_import("jarvis.llm")
+    if llm is not None and hasattr(llm, "generate_text"):
+        use_model = model or (llm.general_model() if hasattr(llm, "general_model") else None)
+        if use_model:
+            return llm.generate_text(use_model, prompt, **kwargs)
+        return llm.generate_text(prompt, **kwargs)  # type: ignore[misc]
+    # Fall back to reasoning chat (same organ stack).
+    return reason(prompt, **kwargs)
+
+
+def list_tools() -> list[dict[str, Any]]:
+    try:
+        from jarvis.handlers.registry import all_actions
+
+        return list(all_actions())
+    except Exception:
+        return []
+
+
+def execute_tool(assistant: Any, action: str, params: dict | None = None, message: str = "") -> Any:
+    """Dispatch registered handler — existing call_action semantics."""
+    from jarvis.handlers.registry import call_action
+
+    return call_action(assistant, action, params or {}, message)
+
+
+def schedule(*, op: str = "status", **kwargs: Any) -> dict[str, Any]:
+    """Job/queue observation — does not invent a new scheduler."""
+    del kwargs
+    detail: dict[str, Any] = {"ok": True, "op": op, "queues": []}
+    try:
+        from jarvis.handlers.registry import all_actions
+
+        queues = sorted({a.get("queue") for a in all_actions() if a.get("queue")})
+        detail["queues"] = queues
+    except Exception as exc:
+        detail["queues_error"] = str(exc)
+    try:
+        from jarvis.runtime_introspection import _jobs
+
+        detail["jobs"] = _jobs()
+    except Exception as exc:
+        detail["jobs"] = {"any_busy": False, "recent": [], "error": str(exc)}
+    return detail
+
+
+def observe(**kwargs: Any) -> dict[str, Any]:
+    from aria_core import operations
+
+    return operations.collect_overview(**kwargs)
+
+
+def notify(message: str, *, detail: str = "", **kwargs: Any) -> dict[str, Any]:
+    mod = soft_import("aiplatform.mission_control.notifications")
+    if mod is None or not hasattr(mod, "notify"):
+        return {"ok": False, "error": "notifications unavailable"}
+    mod.notify(message, detail=detail, **kwargs)
+    return {"ok": True}
+
+
+def diagnose(*, force: bool = False) -> dict[str, Any]:
+    mod = soft_import("aiplatform.workstation.operations")
+    if mod is None:
+        return {"ok": False, "error": "workstation.operations unavailable"}
+    return dict(mod.diagnose(force=force))
+
+
+def repair(*, mode: str = "safe") -> dict[str, Any]:
+    """Safe repair only — delegates to recover_safe (existing semantics)."""
+    del mode
+    return recover()
+
+
+def latest_backup_hint() -> dict[str, Any]:
+    """Describe backup script / latest archive without running backup."""
+    root = Path(__file__).resolve().parents[1]
+    script = root / "scripts" / "backup-data.sh"
+    backups = root / "backups"
+    latest = None
+    if backups.is_dir():
+        archives = sorted(backups.glob("*.tar.gz"), reverse=True)
+        if archives:
+            latest = archives[0].name
+    return {
+        "ok": True,
+        "script_available": script.is_file(),
+        "script": str(script) if script.is_file() else None,
+        "latest": latest,
+    }
+
+
+def backup(*, op: str = "hint") -> dict[str, Any]:
+    """Phase 3: hint/status only — does not run backup scripts."""
+    if op in ("hint", "status"):
+        return latest_backup_hint()
+    return {"ok": False, "error": f"backup op not enabled in Phase 3: {op}"}
+
+
+def recover() -> dict[str, Any]:
+    mod = soft_import("aiplatform.workstation.operations")
+    if mod is None:
+        return {"ok": False, "error": "workstation.operations unavailable"}
+    return dict(mod.recover_safe())
+
+
+def invoke(capability_id: str, *args: Any, **kwargs: Any) -> Any:
+    """Generic dispatch by capability id."""
+    fn = globals().get(capability_id)
+    if not callable(fn) or capability_id.startswith("_"):
+        raise KeyError(f"unknown capability: {capability_id}")
+    if capability_id in {
+        "health",
+        "invoke",
+        "mission_control_panel",
+        "list_tools",
+        "latest_backup_hint",
+    }:
+        raise KeyError(f"not a bus verb: {capability_id}")
+    return fn(*args, **kwargs)
+
+
+def mission_control_panel() -> dict[str, Any]:
+    """Operational visibility payload for Mission Control Capabilities tab."""
+    reg_errors = validate_registry()
+    contract_errors = validate_contracts()
+    health_snap = health()
+    caps = []
+    for rec in list_capabilities():
+        cid = rec["id"]
+        h = next((x for x in health_snap.get("capabilities") or [] if x.get("id") == cid), {})
+        caps.append(
+            {
+                "id": cid,
+                "purpose": rec.get("purpose"),
+                "owner": rec.get("owner"),
+                "provider": rec.get("provider"),
+                "implementation": rec.get("current_implementation"),
+                "consumers": rec.get("consumers"),
+                "dependencies": rec.get("dependencies"),
+                "health": "ok" if h.get("ok") else "degraded",
+                "health_detail": h,
+                "version": rec.get("version"),
+                "public_api": rec.get("public_api"),
+                "permission_requirements": rec.get("permission_requirements"),
+                "learning_effects": rec.get("learning_effects"),
+                "memory_effects": rec.get("memory_effects"),
+                "recovery_behavior": rec.get("recovery_behavior"),
+                "contract": get_contract(cid),
+                "future_implementation_owner": rec.get("future_implementation_owner"),
+            }
+        )
+    return {
+        "ok": not reg_errors and not contract_errors,
+        "title": "Aria Core Capability Bus",
+        "version": BUS_VERSION,
+        "owner": OWNER["owner"],
+        "summary": {
+            "total": health_snap.get("total"),
+            "healthy": health_snap.get("healthy"),
+            "registry_errors": reg_errors,
+            "contract_errors": contract_errors,
+        },
+        "capabilities": caps,
+        "dependency_graph": dependency_graph(),
+        "contracts": list_contracts(),
+        "note": "Visibility only — organs unchanged; verbs delegate to existing implementations.",
+    }
+
+
+__all__ = [
+    "BUS_VERSION",
+    "OWNER",
+    "backup",
+    "diagnose",
+    "execute_tool",
+    "health",
+    "infer",
+    "invoke",
+    "latest_backup_hint",
+    "learn",
+    "list_tools",
+    "mission_control_panel",
+    "notify",
+    "observe",
+    "plan",
+    "reason",
+    "recall",
+    "recover",
+    "reference",
+    "remember",
+    "repair",
+    "schedule",
+    "search",
+]
