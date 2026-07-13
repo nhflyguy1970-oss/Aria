@@ -137,10 +137,27 @@ class DualWriteMemoryAdapter:
         *,
         namespace: str | None = None,
     ) -> dict:
-        entry = self._legacy.add(entry_type, content, tags, namespace=namespace)
-        self._record_legacy_write(entry.get("namespace"))
-        self._mirror_add(entry)
-        return entry
+        """Persist memory via Learning Governor passthrough (Phase 1)."""
+
+        def _apply() -> dict:
+            entry = self._legacy.add(entry_type, content, tags, namespace=namespace)
+            self._record_legacy_write(entry.get("namespace"))
+            self._mirror_add(entry)
+            return entry
+
+        from jarvis.learning_governor import commit, propose
+
+        proposal = propose(
+            kind="memory_add",
+            source="jarvis.modules.memory_adapter_store.add",
+            payload={
+                "entry_type": entry_type,
+                "content": (content or "")[:500],
+                "namespace": namespace,
+                "tags": list(tags or []),
+            },
+        )
+        return commit(proposal, _apply)
 
     def update(
         self,

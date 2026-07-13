@@ -28,20 +28,39 @@ def record_correction(
     confidence: float | None = None,
     status: str = "pending",
 ) -> dict[str, Any]:
-    item = {
-        "id": f"{int(time.time() * 1000)}",
-        "ts": time.time(),
-        "prompt": prompt[:500],
-        "original_intent": original_intent,
-        "corrected_intent": corrected_intent,
-        "context": (context or "")[:400],
-        "confidence": confidence,
-        "status": status,
-    }
-    _CORRECTIONS.parent.mkdir(parents=True, exist_ok=True)
-    with _CORRECTIONS.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(item, ensure_ascii=False) + "\n")
-    return item
+    """Record an NLU correction (Learning Governor passthrough in Phase 1)."""
+
+    def _apply() -> dict[str, Any]:
+        item = {
+            "id": f"{int(time.time() * 1000)}",
+            "ts": time.time(),
+            "prompt": prompt[:500],
+            "original_intent": original_intent,
+            "corrected_intent": corrected_intent,
+            "context": (context or "")[:400],
+            "confidence": confidence,
+            "status": status,
+        }
+        _CORRECTIONS.parent.mkdir(parents=True, exist_ok=True)
+        with _CORRECTIONS.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(item, ensure_ascii=False) + "\n")
+        return item
+
+    from jarvis.learning_governor import commit, propose
+
+    proposal = propose(
+        kind="nlu_correction",
+        source="jarvis.nlu.learning.record_correction",
+        payload={
+            "prompt": prompt[:500],
+            "original_intent": original_intent,
+            "corrected_intent": corrected_intent,
+            "context": (context or "")[:400],
+            "confidence": confidence,
+            "status": status,
+        },
+    )
+    return commit(proposal, _apply)
 
 
 def reject_correction(prompt: str) -> None:

@@ -135,6 +135,7 @@ def test_execution_mode_returns_string():
         "compatibility",
         "platform-authoritative",
         "platform-attached",
+        "platform-only",
         "disconnected",
     )
 

@@ -63,6 +63,7 @@ RUFF_PATHS: tuple[str, ...] = (
     "jarvis/nlu/benchmark.py",
     "jarvis/nlu/confidence.py",
     "jarvis/nlu/health.py",
+    "jarvis/learning_governor.py",
     "jarvis/reference_engine.py",
     "jarvis/documentation_engine.py",
     "jarvis/timeline_commands.py",
@@ -120,6 +121,9 @@ PYTEST_PATHS: tuple[str, ...] = (
     "tests/test_automation_ops.py",
     "tests/test_knowledge_registry.py",
     "tests/test_agents.py",
+    "tests/test_learning_governor.py",
+    "tests/test_aria_core_contract.py",
+    "tests/test_uncensored_auth.py",
 )
 
 
