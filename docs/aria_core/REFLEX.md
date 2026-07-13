@@ -1,7 +1,7 @@
 # Aria Core Reflex Layer — Phase 8
 
-**Status:** Active  
-**Owner:** `aria_core.reflex` (`aria_core.reflex_engine`)  
+**Status:** Active
+**Owner:** `aria_core.reflex` (`aria_core.reflex_engine`)
 **Position:** Before Capability Bus, Cognitive Orchestrator, and all organs
 
 ## Why
@@ -27,8 +27,8 @@ User input
 
 ## Categories
 
-social.greeting · social.checkin · social.farewell · social.ack · social.confirm · social.negate  
-session.clear · session.interrupt · session.continue · session.repeat  
+social.greeting · social.checkin · social.farewell · social.ack · social.confirm · social.negate
+session.clear · session.interrupt · session.continue · session.repeat
 meta.help · meta.models · briefing.morning · ui.mission_control
 
 ## Events

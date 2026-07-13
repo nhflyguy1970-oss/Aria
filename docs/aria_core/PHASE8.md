@@ -1,13 +1,13 @@
 # Aria Core V2.0 — Phase 8
 
-**Status:** Complete when CI green  
-**Scope:** Reflex Layer before cognition · replace greeting hacks · MC Reflex view · no organ transplants  
+**Status:** Complete when CI green
+**Scope:** Reflex Layer before cognition · replace greeting hacks · MC Reflex view · no organ transplants
 
 ## Non-goals
 
-- Migrate Memory / Knowledge / Planning / Reasoning further  
-- Change Cap Bus or Cognitive Orchestrator contracts  
-- Grow ad-hoc regex lists in `router.py`  
+- Migrate Memory / Knowledge / Planning / Reasoning further
+- Change Cap Bus or Cognitive Orchestrator contracts
+- Grow ad-hoc regex lists in `router.py`
 
 ## Artifacts
 
@@ -41,9 +41,9 @@ bash scripts/ci-local.sh
 
 ## Success checklist
 
-- [x] Reflex Layer exists  
-- [x] Greeting hacks replaced by Reflex Engine  
-- [x] Feature catalog (not regex sprawl)  
-- [x] Simple interactions bypass cognition  
-- [x] Mission Control Reflex view  
-- [ ] Compat + CI green (pending run / GHA)  
+- [x] Reflex Layer exists
+- [x] Greeting hacks replaced by Reflex Engine
+- [x] Feature catalog (not regex sprawl)
+- [x] Simple interactions bypass cognition
+- [x] Mission Control Reflex view
+- [ ] Compat + CI green (pending run / GHA)
