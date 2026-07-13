@@ -23,6 +23,7 @@ REQUIRED_MODULES = {
     "operations",
     "infrastructure",
     "events",
+    "cognition",
 }
 
 OWNER_FIELDS = {

@@ -39,6 +39,16 @@ RecoveryCompleted = "RecoveryCompleted"
 StartupPhaseChanged = "StartupPhaseChanged"
 ShutdownStarted = "ShutdownStarted"
 ShutdownCompleted = "ShutdownCompleted"
+CognitionStarted = "CognitionStarted"
+CapabilitySelected = "CapabilitySelected"
+CapabilitySkipped = "CapabilitySkipped"
+PlanningRequested = "PlanningRequested"
+ReasoningRequested = "ReasoningRequested"
+ReferenceRequested = "ReferenceRequested"
+MemoryRequested = "MemoryRequested"
+KnowledgeRequested = "KnowledgeRequested"
+LearningRequested = "LearningRequested"
+CognitionCompleted = "CognitionCompleted"
 
 ALL_EVENT_TYPES: tuple[str, ...] = (
     MemoryCreated,
@@ -75,4 +85,14 @@ ALL_EVENT_TYPES: tuple[str, ...] = (
     StartupPhaseChanged,
     ShutdownStarted,
     ShutdownCompleted,
+    CognitionStarted,
+    CapabilitySelected,
+    CapabilitySkipped,
+    PlanningRequested,
+    ReasoningRequested,
+    ReferenceRequested,
+    MemoryRequested,
+    KnowledgeRequested,
+    LearningRequested,
+    CognitionCompleted,
 )

@@ -25,6 +25,13 @@ OWNER = module_ownership("capabilities")
 BUS_VERSION = CAPABILITY_VERSION
 
 
+def _orchestrate(capability: str, fn, *, meta: dict[str, Any] | None = None):
+    """Cap Bus → Cognitive Orchestrator → existing organ work."""
+    from aria_core.cognitive_orchestrator import run as _run
+
+    return _run(capability, fn, meta=meta)
+
+
 def _emit(name: str, **payload: Any) -> None:
     """Best-effort Event Bus publish — never changes capability behavior."""
     try:
@@ -94,17 +101,21 @@ def remember(
     namespace: str | None = None,
 ) -> Any:
     """Persist memory — delegates to MemoryStore.add."""
-    from aria_core import memory
 
-    store = memory.MemoryStore()
-    entry = store.add(entry_type, content, tags=tags, namespace=namespace)
-    _emit(
-        "MemoryCreated",
-        entry_id=(entry or {}).get("id") if isinstance(entry, dict) else None,
-        entry_type=entry_type,
-        namespace=namespace,
-    )
-    return entry
+    def _body() -> Any:
+        from aria_core import memory
+
+        store = memory.MemoryStore()
+        entry = store.add(entry_type, content, tags=tags, namespace=namespace)
+        _emit(
+            "MemoryCreated",
+            entry_id=(entry or {}).get("id") if isinstance(entry, dict) else None,
+            entry_type=entry_type,
+            namespace=namespace,
+        )
+        return entry
+
+    return _orchestrate("remember", _body)
 
 
 def recall(
@@ -115,14 +126,18 @@ def recall(
     **kwargs: Any,
 ) -> Any:
     """Retrieve memory — delegates to MemoryStore.get/search."""
-    from aria_core import memory
 
-    store = memory.MemoryStore()
-    if entry_id:
-        return store.get(entry_id)
-    if query is None:
-        return []
-    return store.search(query, limit=limit, **kwargs)
+    def _body() -> Any:
+        from aria_core import memory
+
+        store = memory.MemoryStore()
+        if entry_id:
+            return store.get(entry_id)
+        if query is None:
+            return []
+        return store.search(query, limit=limit, **kwargs)
+
+    return _orchestrate("recall", _body)
 
 
 def learn(
@@ -133,89 +148,112 @@ def learn(
     apply=None,
 ) -> Any:
     """Learning Governor propose (and optional commit)."""
-    from aria_core import learning
 
-    # Governor publishes LearningProposed / LearningAccepted / LearningRejected.
-    proposal = learning.propose(kind=kind, payload=payload, source=source)
-    if apply is None:
-        return proposal
-    return learning.commit(proposal, apply)
+    def _body() -> Any:
+        from aria_core import learning
+
+        proposal = learning.propose(kind=kind, payload=payload, source=source)
+        if apply is None:
+            return proposal
+        return learning.commit(proposal, apply)
+
+    return _orchestrate("learn", _body, meta={"kind": kind})
 
 
 def reason(message: str, **kwargs: Any) -> Any:
     """Conversational reasoning — delegates to aria_core.reasoning.chat."""
-    from aria_core import reasoning
 
-    _emit("ReasoningStarted", message_len=len(message or ""))
-    try:
-        result = reasoning.chat(message, **kwargs)
-    except Exception as exc:
-        _emit("ReasoningFinished", ok=False, error=type(exc).__name__)
-        raise
-    _emit("ReasoningFinished", ok=True)
-    return result
+    def _body() -> Any:
+        from aria_core import reasoning
+
+        _emit("ReasoningStarted", message_len=len(message or ""))
+        try:
+            result = reasoning.chat(message, **kwargs)
+        except Exception as exc:
+            _emit("ReasoningFinished", ok=False, error=type(exc).__name__)
+            raise
+        _emit("ReasoningFinished", ok=True)
+        return result
+
+    return _orchestrate("reason", _body, meta={"query_len": len(message or "")})
 
 
 def plan(*, action: str = "status", **kwargs: Any) -> dict[str, Any]:
     """Planning surface — status / coordinator access (no new planner)."""
-    from aria_core import planning
 
-    _emit("PlanStarted", action=action)
-    available = planning.coordinator_available()
-    if action == "status":
-        out = {
-            "ok": True,
-            "available": available,
-            "planner_store": planning.planner_store_path(),
-            "owner": OWNER["owner"],
-        }
-        _emit("PlanCompleted", action=action, ok=True)
-        return out
-    if action == "coordinator":
-        if not available:
-            out = {"ok": False, "available": False, "error": "coordinator unavailable"}
-            _emit("PlanCompleted", action=action, ok=False)
+    def _body() -> dict[str, Any]:
+        from aria_core import planning
+
+        _emit("PlanStarted", action=action)
+        available = planning.coordinator_available()
+        if action == "status":
+            out = {
+                "ok": True,
+                "available": available,
+                "planner_store": planning.planner_store_path(),
+                "owner": OWNER["owner"],
+            }
+            _emit("PlanCompleted", action=action, ok=True)
             return out
-        out = {"ok": True, "available": True, "coordinator": planning.get_coordinator()}
-        _emit("PlanCompleted", action=action, ok=True)
+        if action == "coordinator":
+            if not available:
+                out = {"ok": False, "available": False, "error": "coordinator unavailable"}
+                _emit("PlanCompleted", action=action, ok=False)
+                return out
+            out = {"ok": True, "available": True, "coordinator": planning.get_coordinator()}
+            _emit("PlanCompleted", action=action, ok=True)
+            return out
+        out = {"ok": False, "error": f"unknown plan action: {action}", **kwargs}
+        _emit("PlanCompleted", action=action, ok=False)
         return out
-    out = {"ok": False, "error": f"unknown plan action: {action}", **kwargs}
-    _emit("PlanCompleted", action=action, ok=False)
-    return out
+
+    return _orchestrate("plan", _body, meta={"action": action})
 
 
 def reference(query: str, *, subject: str = "") -> dict[str, Any]:
-    from aria_core import reference as reference_mod
+    def _body() -> dict[str, Any]:
+        from aria_core import reference as reference_mod
 
-    result = reference_mod.search_reference(query, subject=subject)
-    _emit("ReferenceLookup", query=query, subject=subject)
-    return result
+        result = reference_mod.search_reference(query, subject=subject)
+        _emit("ReferenceLookup", query=query, subject=subject)
+        return result
+
+    return _orchestrate("reference", _body, meta={"query_len": len(query or "")})
 
 
 def search(query: str, **kwargs: Any) -> Any:
-    from aria_core import knowledge
+    def _body() -> Any:
+        from aria_core import knowledge
 
-    return knowledge.search(query, **kwargs)
+        return knowledge.search(query, **kwargs)
+
+    return _orchestrate("search", _body, meta={"query_len": len(query or "")})
 
 
 def infer(prompt: str, *, model: str | None = None, **kwargs: Any) -> Any:
     """LLM inference — delegates to jarvis.llm.generate_text when present."""
-    _emit("InferenceStarted", prompt_len=len(prompt or ""))
-    try:
-        llm = soft_import("jarvis.llm")
-        if llm is not None and hasattr(llm, "generate_text"):
-            use_model = model or (llm.general_model() if hasattr(llm, "general_model") else None)
-            if use_model:
-                result = llm.generate_text(use_model, prompt, **kwargs)
-            else:
-                result = llm.generate_text(prompt, **kwargs)  # type: ignore[misc]
-            _emit("InferenceFinished", ok=True)
-            return result
-        # Fall back to reasoning chat (same organ stack) — reason() emits its own pair.
-        return reason(prompt, **kwargs)
-    except Exception as exc:
-        _emit("InferenceFinished", ok=False, error=type(exc).__name__)
-        raise
+
+    def _body() -> Any:
+        _emit("InferenceStarted", prompt_len=len(prompt or ""))
+        try:
+            llm = soft_import("jarvis.llm")
+            if llm is not None and hasattr(llm, "generate_text"):
+                use_model = model or (
+                    llm.general_model() if hasattr(llm, "general_model") else None
+                )
+                if use_model:
+                    result = llm.generate_text(use_model, prompt, **kwargs)
+                else:
+                    result = llm.generate_text(prompt, **kwargs)  # type: ignore[misc]
+                _emit("InferenceFinished", ok=True)
+                return result
+            # Fall back to reasoning chat (same organ stack) — reason() emits its own pair.
+            return reason(prompt, **kwargs)
+        except Exception as exc:
+            _emit("InferenceFinished", ok=False, error=type(exc).__name__)
+            raise
+
+    return _orchestrate("infer", _body, meta={"query_len": len(prompt or "")})
 
 
 def list_tools() -> list[dict[str, Any]]:
@@ -229,65 +267,87 @@ def list_tools() -> list[dict[str, Any]]:
 
 def execute_tool(assistant: Any, action: str, params: dict | None = None, message: str = "") -> Any:
     """Dispatch registered handler — existing call_action semantics."""
-    from jarvis.handlers.registry import call_action
 
-    _emit("ToolStarted", action=action)
-    try:
-        result = call_action(assistant, action, params or {}, message)
-    except Exception as exc:
-        _emit("ToolCompleted", action=action, ok=False, error=type(exc).__name__)
-        raise
-    _emit("ToolCompleted", action=action, ok=True)
-    return result
+    def _body() -> Any:
+        from jarvis.handlers.registry import call_action
+
+        _emit("ToolStarted", action=action)
+        try:
+            result = call_action(assistant, action, params or {}, message)
+        except Exception as exc:
+            _emit("ToolCompleted", action=action, ok=False, error=type(exc).__name__)
+            raise
+        _emit("ToolCompleted", action=action, ok=True)
+        return result
+
+    return _orchestrate("execute_tool", _body, meta={"action": action})
 
 
 def schedule(*, op: str = "status", **kwargs: Any) -> dict[str, Any]:
     """Job/queue observation — does not invent a new scheduler."""
-    del kwargs
-    detail: dict[str, Any] = {"ok": True, "op": op, "queues": []}
-    try:
-        from jarvis.handlers.registry import all_actions
 
-        queues = sorted({a.get("queue") for a in all_actions() if a.get("queue")})
-        detail["queues"] = queues
-    except Exception as exc:
-        detail["queues_error"] = str(exc)
-    try:
-        from jarvis.runtime_introspection import _jobs
+    def _body() -> dict[str, Any]:
+        detail: dict[str, Any] = {"ok": True, "op": op, "queues": []}
+        if kwargs:
+            detail["extra_keys"] = sorted(kwargs.keys())
+        try:
+            from jarvis.handlers.registry import all_actions
 
-        detail["jobs"] = _jobs()
-    except Exception as exc:
-        detail["jobs"] = {"any_busy": False, "recent": [], "error": str(exc)}
-    return detail
+            queues = sorted({a.get("queue") for a in all_actions() if a.get("queue")})
+            detail["queues"] = queues
+        except Exception as exc:
+            detail["queues_error"] = str(exc)
+        try:
+            from jarvis.runtime_introspection import _jobs
+
+            detail["jobs"] = _jobs()
+        except Exception as exc:
+            detail["jobs"] = {"any_busy": False, "recent": [], "error": str(exc)}
+        return detail
+
+    return _orchestrate("schedule", _body, meta={"action": op})
 
 
 def observe(**kwargs: Any) -> dict[str, Any]:
-    from aria_core import operations
+    def _body() -> dict[str, Any]:
+        from aria_core import operations
 
-    return operations.collect_overview(**kwargs)
+        return operations.collect_overview(**kwargs)
+
+    return _orchestrate("observe", _body)
 
 
 def notify(message: str, *, detail: str = "", **kwargs: Any) -> dict[str, Any]:
-    mod = soft_import("aiplatform.mission_control.notifications")
-    if mod is None or not hasattr(mod, "notify"):
-        return {"ok": False, "error": "notifications unavailable"}
-    mod.notify(message, detail=detail, **kwargs)
-    return {"ok": True}
+    def _body() -> dict[str, Any]:
+        mod = soft_import("aiplatform.mission_control.notifications")
+        if mod is None or not hasattr(mod, "notify"):
+            return {"ok": False, "error": "notifications unavailable"}
+        mod.notify(message, detail=detail, **kwargs)
+        return {"ok": True}
+
+    return _orchestrate("notify", _body)
 
 
 def diagnose(*, force: bool = False) -> dict[str, Any]:
-    mod = soft_import("aiplatform.workstation.operations")
-    if mod is None:
-        return {"ok": False, "error": "workstation.operations unavailable"}
-    return dict(mod.diagnose(force=force))
+    def _body() -> dict[str, Any]:
+        mod = soft_import("aiplatform.workstation.operations")
+        if mod is None:
+            return {"ok": False, "error": "workstation.operations unavailable"}
+        return dict(mod.diagnose(force=force))
+
+    return _orchestrate("diagnose", _body)
 
 
 def repair(*, mode: str = "safe") -> dict[str, Any]:
     """Safe repair only — delegates to recover_safe (existing semantics)."""
-    _emit("RepairStarted", mode=mode)
-    result = recover()
-    _emit("RepairCompleted", ok=bool(result.get("ok")))
-    return result
+
+    def _body() -> dict[str, Any]:
+        _emit("RepairStarted", mode=mode)
+        result = recover()
+        _emit("RepairCompleted", ok=bool(result.get("ok")))
+        return result
+
+    return _orchestrate("repair", _body, meta={"action": mode})
 
 
 def latest_backup_hint() -> dict[str, Any]:
@@ -310,22 +370,30 @@ def latest_backup_hint() -> dict[str, Any]:
 
 def backup(*, op: str = "hint") -> dict[str, Any]:
     """Phase 3: hint/status only — does not run backup scripts."""
-    if op in ("hint", "status"):
-        return latest_backup_hint()
-    return {"ok": False, "error": f"backup op not enabled in Phase 3: {op}"}
+
+    def _body() -> dict[str, Any]:
+        if op in ("hint", "status"):
+            return latest_backup_hint()
+        return {"ok": False, "error": f"backup op not enabled in Phase 3: {op}"}
+
+    return _orchestrate("backup", _body, meta={"action": op})
 
 
 def recover() -> dict[str, Any]:
-    mod = soft_import("aiplatform.workstation.operations")
-    if mod is None:
-        out = {"ok": False, "error": "workstation.operations unavailable"}
+    def _body() -> dict[str, Any]:
+        mod = soft_import("aiplatform.workstation.operations")
+        if mod is None:
+            out = {"ok": False, "error": "workstation.operations unavailable"}
+            _emit("RecoveryStarted")
+            _emit("RecoveryCompleted", ok=False)
+            return out
         _emit("RecoveryStarted")
-        _emit("RecoveryCompleted", ok=False)
-        return out
-    _emit("RecoveryStarted")
-    result = dict(mod.recover_safe())
-    _emit("RecoveryCompleted", ok=bool(result.get("ok")))
-    return result
+        result = dict(mod.recover_safe())
+        _emit("RecoveryCompleted", ok=bool(result.get("ok")))
+        return result
+
+    # When called from repair(), nested orchestrate is suppressed.
+    return _orchestrate("recover", _body)
 
 
 def invoke(capability_id: str, *args: Any, **kwargs: Any) -> Any:

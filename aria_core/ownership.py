@@ -284,6 +284,30 @@ OWNERSHIP: dict[str, dict[str, Any]] = {
         "implementation": "aria_core.event_bus",
         "future_owner": "aria_core.events",
     },
+    "cognition": {
+        "owner": "aria_core.cognition",
+        "responsibilities": [
+            "Cognitive Orchestrator — coordinate Cap Bus cognition",
+            "Participation policy and execution metadata",
+            "Mission Control Cognition view",
+        ],
+        "public_api": [
+            "orchestrate",
+            "run",
+            "participation_for",
+            "recent_pipelines",
+            "cognition_statistics",
+            "mission_control_panel",
+        ],
+        "private_api": ["cognitive_orchestrator"],
+        "dependencies": ["aria_core.event_bus", "aria_core.capabilities"],
+        "consumers": ["capability_bus", "operations", "interfaces"],
+        "allowed_writers": ["aria_core.cognition", "aria_core.capability_bus"],
+        "allowed_readers": ["*"],
+        "source_of_truth": "aria_core.cognitive_orchestrator",
+        "implementation": "aria_core.cognitive_orchestrator (organs unchanged)",
+        "future_owner": "aria_core.cognition",
+    },
 }
 
 

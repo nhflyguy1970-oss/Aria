@@ -75,6 +75,12 @@ See [`LEARNING.md`](LEARNING.md) and [`PHASE5.md`](PHASE5.md).
 Behavior remains: propose → immediate commit → apply().
 Mission Control **Learning** tab renders `aria_core.learning.mission_control_panel()`.
 
+## Phase 6 — Cognitive Orchestrator
+
+Cap Bus verbs run through `aria_core.cognition` / `cognitive_orchestrator`.
+Organs (Memory, Knowledge, Planning, Reasoning) are coordinated, not moved.
+See [`COGNITION.md`](COGNITION.md) and [`PHASE6.md`](PHASE6.md).
+
 Full ownership metadata: `aria_core.ownership.OWNERSHIP`.
 
 ## Delegation path (example)
