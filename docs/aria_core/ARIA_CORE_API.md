@@ -1,7 +1,7 @@
 # Aria Core API — Phase 2
 
-**Status:** Sovereign API surface (delegation only)  
-**Package:** `aria_core` (Aria repository)  
+**Status:** Sovereign API surface (delegation only)
+**Package:** `aria_core` (Aria repository)
 **Rule:** Core API → existing implementation. No organ moves.
 
 ## Purpose
@@ -127,14 +127,14 @@ Caller
 
 ## Private vs public
 
-- **Public:** functions exported by each `aria_core.<module>` listed above  
-- **Private:** `aria_core._delegate`, ownership internals, audit helpers  
+- **Public:** functions exported by each `aria_core.<module>` listed above
+- **Private:** `aria_core._delegate`, ownership internals, audit helpers
 
 ## How to extend safely
 
-1. Add public function on the Core module  
-2. Delegate immediately to existing implementation  
-3. Update `OWNERSHIP` + this document  
-4. Run `scripts/aria_core_compat.sh` (standard + uncensored)  
+1. Add public function on the Core module
+2. Delegate immediately to existing implementation
+3. Update `OWNERSHIP` + this document
+4. Run `scripts/aria_core_compat.sh` (standard + uncensored)
 
 Do **not** move implementation bodies into `aria_core` in Phase 2.

@@ -1,14 +1,14 @@
 # Aria Core V2.0 — Phase 7
 
-**Status:** Complete when CI green  
-**Scope:** Memory ownership → Aria Core · organ storage underneath · MC Memory view · no other organ moves  
+**Status:** Complete when CI green
+**Scope:** Memory ownership → Aria Core · organ storage underneath · MC Memory view · no other organ moves
 
 ## Non-goals
 
-- Migrate Knowledge / Planning / Reasoning / Runtime  
-- Rewrite storage, schema, or databases  
-- Migrate persisted data  
-- Change Cap Bus / Cognitive Orchestrator public contracts  
+- Migrate Knowledge / Planning / Reasoning / Runtime
+- Rewrite storage, schema, or databases
+- Migrate persisted data
+- Change Cap Bus / Cognitive Orchestrator public contracts
 
 ## Artifacts
 
@@ -41,10 +41,10 @@ bash scripts/ci-local.sh
 
 ## Success checklist
 
-- [x] Memory owned by Aria Core  
-- [x] Existing MemoryStore underneath  
-- [x] Applications unchanged  
-- [x] Capability Bus / Cognitive Orchestrator behavior preserved  
-- [x] MC Memory operational view (no contents by default)  
-- [x] Event Bus memory lifecycle  
-- [ ] Compat + CI green (pending run / GHA)  
+- [x] Memory owned by Aria Core
+- [x] Existing MemoryStore underneath
+- [x] Applications unchanged
+- [x] Capability Bus / Cognitive Orchestrator behavior preserved
+- [x] MC Memory operational view (no contents by default)
+- [x] Event Bus memory lifecycle
+- [ ] Compat + CI green (pending run / GHA)

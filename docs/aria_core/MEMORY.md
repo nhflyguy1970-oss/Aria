@@ -1,7 +1,7 @@
 # Aria Core Memory — Phase 7
 
-**Status:** Active  
-**Owner:** `aria_core.memory` (`aria_core.memory_manager`)  
+**Status:** Active
+**Owner:** `aria_core.memory` (`aria_core.memory_manager`)
 **Underneath:** `jarvis.modules.memory` (storage / schema unchanged)
 
 ## Behavior (unchanged)
@@ -33,7 +33,7 @@ Applications and Cap Bus see the same remember/recall results.
 
 ## Events
 
-MemoryRequested · MemoryCreated · MemoryWritten · MemoryUpdated · MemoryDeleted ·  
+MemoryRequested · MemoryCreated · MemoryWritten · MemoryUpdated · MemoryDeleted ·
 MemoryRead · MemorySearch · MemoryMerged · MemoryCommit · MemoryRollback
 
 Payloads carry ids/counts/latency only — **not** memory contents.
