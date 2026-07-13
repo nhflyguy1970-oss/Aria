@@ -643,49 +643,26 @@ def _is_models_question(lower: str) -> bool:
     )
 
 
-# Optional address after a greeting ("Hello Aria", "Hi Jarvis").
-_GREETING_NAME = r"(?:aria|jarvis|assistant|friend|there|everyone|all)"
-_GREETING_CORE = (
-    r"(?:hi|hello|hey|greetings|yo|howdy|"
-    r"good\s+(?:morning|afternoon|evening|day))"
-)
-_SOCIAL_CHECKIN = (
-    r"(?:how\s+are\s+you(?:\s+doing)?|how'?s\s+it\s+going|"
-    r"how\s+are\s+things|what'?s\s+up|sup)"
-)
-
-
 def _is_greeting(lower: str) -> bool:
-    """True for trivial hellos — including optional name address."""
-    text = (lower or "").strip()
-    if not text:
-        return False
-    return bool(
-        re.match(
-            rf"^{_GREETING_CORE}(?:\s+{_GREETING_NAME})?[\s!.?,]*$",
-            text,
-        )
-    )
+    """Compat shim — Reflex Engine owns trivial social matching (Phase 8)."""
+    from aria_core.reflex import is_reflex
+
+    return is_reflex(lower)
 
 
 def _is_social_checkin(lower: str) -> bool:
-    """True for trivial wellbeing check-ins (must stay off the chat/NLU path)."""
-    text = (lower or "").strip()
-    if not text:
-        return False
-    return bool(
-        re.match(
-            rf"^(?:{_GREETING_CORE}\s+)?{_SOCIAL_CHECKIN}"
-            rf"(?:\s+{_GREETING_NAME})?[\s!.?,]*$",
-            text,
-        )
-    )
+    """Compat shim — Reflex Engine owns check-in matching (Phase 8)."""
+    from aria_core.reflex import evaluate
+
+    hit = evaluate(lower)
+    return bool(hit and str(hit.get("category") or "").startswith("social."))
 
 
 def is_trivial_social_prompt(message: str) -> bool:
-    """Fast social prompts that must never wait on NLU / LLM / embeds."""
-    lower = (message or "").lower().strip()
-    return _is_greeting(lower) or _is_social_checkin(lower)
+    """Compat shim for tests/timing — prefer aria_core.reflex.is_reflex."""
+    from aria_core.reflex import is_reflex
+
+    return is_reflex(message)
 
 
 _INPAINT_IMAGE_WORDS = (
@@ -1806,38 +1783,13 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
         }
         return _finalize_intent(intent, message, session)
 
-    # Trivial greetings / check-ins must never wait on NLU classify or chat.
-    # ("Hello Aria" historically took 30s+ on the NLU model before missing the fast path.)
-    if not attachment and is_trivial_social_prompt(message):
-        intent = {
-            "action": "greeting",
-            "params": {},
-            "thinking": "trivial social",
-            "route_handler": "greeting",
-            "router": "quick",
-            "router_stage": "pre_nlu_social",
-        }
-        return _finalize_intent(normalize_route_intent(intent), message, session)
+    # Reflex Layer (Phase 8) — before NLU / Cap Bus / Cognition / organs.
+    if not attachment:
+        from aria_core.reflex import try_reflex
 
-    # Explicit morning briefing must also beat NLU (bare "good morning" is greeting above).
-    if (
-        not attachment
-        and os.getenv("JARVIS_BRIEFING", "1") != "0"
-        and re.search(r"^good morning\b", (message or "").lower())
-        and re.search(
-            r"\b(briefing|brief|status|news|update|report)\b",
-            (message or "").lower(),
-        )
-    ):
-        intent = {
-            "action": "morning_briefing",
-            "params": {},
-            "thinking": "morning briefing",
-            "route_handler": "SituationalBriefing",
-            "router": "quick",
-            "router_stage": "pre_nlu_briefing",
-        }
-        return _finalize_intent(normalize_route_intent(intent), message, session)
+        reflex = try_reflex(message, session, attachment=attachment)
+        if reflex:
+            return _finalize_intent(normalize_route_intent(reflex), message, session)
 
     nlu_used = False
     from jarvis.nlu.pipeline import nlu_enabled, route_via_nlu

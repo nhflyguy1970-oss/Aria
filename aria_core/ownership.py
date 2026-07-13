@@ -333,6 +333,38 @@ OWNERSHIP: dict[str, dict[str, Any]] = {
         "implementation": "aria_core.cognitive_orchestrator (organs unchanged)",
         "future_owner": "aria_core.cognition",
     },
+    "reflex": {
+        "owner": "aria_core.reflex",
+        "responsibilities": [
+            "Pre-cognition Reflex Layer",
+            "Deterministic lightweight interaction handling",
+            "Bypass Cap Bus / Cognitive Orchestrator / organs for trivial requests",
+            "Mission Control Reflex view",
+        ],
+        "public_api": [
+            "try_reflex",
+            "is_reflex",
+            "evaluate",
+            "extract_features",
+            "reflex_history",
+            "reflex_statistics",
+            "mission_control_panel",
+        ],
+        "private_api": ["reflex_engine"],
+        "dependencies": [
+            "aria_core.reflex_engine",
+            "jarvis.nlu.grammar",
+            "jarvis.nlu.morphology",
+            "jarvis.nlu.syntax",
+            "aria_core.event_bus",
+        ],
+        "consumers": ["router", "interfaces", "mission_control"],
+        "allowed_writers": ["aria_core.reflex", "aria_core.reflex_engine"],
+        "allowed_readers": ["*"],
+        "source_of_truth": "aria_core.reflex_engine",
+        "implementation": "aria_core.reflex_engine (feature catalog; no Cap Bus)",
+        "future_owner": "aria_core.reflex",
+    },
 }
 
 

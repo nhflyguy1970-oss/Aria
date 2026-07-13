@@ -90,6 +90,18 @@ See [`MEMORY.md`](MEMORY.md) and [`PHASE7.md`](PHASE7.md).
 Mission Control **Memory** tab renders `aria_core.memory.mission_control_panel()`
 (operational metadata only — contents not exposed by default).
 
+## Phase 8 — Reflex Layer
+
+Pre-cognition Reflex Engine owns trivial interactions.
+See [`REFLEX.md`](REFLEX.md) and [`PHASE8.md`](PHASE8.md).
+
+```text
+User → Reflex Engine → (hit) handler
+                     → (miss) NLU / Cap Bus / Cognition
+```
+
+Mission Control **Reflex** tab renders `aria_core.reflex.mission_control_panel()`.
+
 Full ownership metadata: `aria_core.ownership.OWNERSHIP`.
 
 ## Delegation path (example)

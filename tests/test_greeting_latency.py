@@ -40,7 +40,7 @@ def test_greetings_route_to_greeting_without_nlu(message: str, monkeypatch):
     intent = route(message, SessionContext())
     assert intent["action"] == "greeting"
     assert calls["nlu"] == 0
-    assert intent.get("router_stage") == "pre_nlu_social"
+    assert intent.get("router_stage") == "pre_nlu_reflex"
 
 
 @pytest.mark.parametrize("message", GREETINGS)

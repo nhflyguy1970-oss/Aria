@@ -24,6 +24,7 @@ REQUIRED_MODULES = {
     "infrastructure",
     "events",
     "cognition",
+    "reflex",
 }
 
 OWNER_FIELDS = {

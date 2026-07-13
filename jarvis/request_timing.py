@@ -59,19 +59,22 @@ class StageTimer:
 
 def time_greeting_route(message: str = "Hello Aria") -> dict[str, Any]:
     """Instrument router stages for a greeting without invoking the LLM."""
-    from jarvis.router import is_trivial_social_prompt, route
+    from jarvis.router import route
     from jarvis.session import SessionContext
 
     timer = StageTimer()
     session = SessionContext()
     with timer.stage("user_input_received"):
         text = (message or "").strip()
-    with timer.stage("trivial_social_check"):
-        trivial = is_trivial_social_prompt(text)
+    with timer.stage("reflex_check"):
+        from aria_core.reflex import is_reflex, try_reflex
+
+        trivial = is_reflex(text)
+        reflex_intent = try_reflex(text, session) if trivial else None
     with timer.stage("router"):
-        intent = route(text, session)
+        intent = route(text, session) if reflex_intent is None else reflex_intent
     with timer.stage("capability_bus"):
-        cap_bus_invoked = False  # GUI greeting path does not use Cap Bus
+        cap_bus_invoked = False
     with timer.stage("cognitive_orchestrator"):
         cognition_invoked = False
     with timer.stage("classifier_nlu"):
@@ -89,7 +92,8 @@ def time_greeting_route(message: str = "Hello Aria") -> dict[str, Any]:
     with timer.stage("model_request"):
         model_invoked = False
     with timer.stage("event_bus_publish"):
-        event_bus_invoked = False
+        # Reflex may publish lifecycle events; Cap Bus / cognition must not run.
+        event_bus_invoked = True
     with timer.stage("timeline"):
         timeline_invoked = False
     with timer.stage("mission_control"):

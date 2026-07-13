@@ -55,6 +55,10 @@ MemoryRequested = "MemoryRequested"
 KnowledgeRequested = "KnowledgeRequested"
 LearningRequested = "LearningRequested"
 CognitionCompleted = "CognitionCompleted"
+ReflexMatched = "ReflexMatched"
+ReflexEscalated = "ReflexEscalated"
+ReflexFailed = "ReflexFailed"
+ReflexLatency = "ReflexLatency"
 
 ALL_EVENT_TYPES: tuple[str, ...] = (
     MemoryCreated,
@@ -107,4 +111,8 @@ ALL_EVENT_TYPES: tuple[str, ...] = (
     KnowledgeRequested,
     LearningRequested,
     CognitionCompleted,
+    ReflexMatched,
+    ReflexEscalated,
+    ReflexFailed,
+    ReflexLatency,
 )
