@@ -168,6 +168,7 @@ def begin_routing(
     intent: dict[str, Any],
     conversation_id: str = "",
     route_latency_ms: float | None = None,
+    request_id: str = "",
 ) -> None:
     _PENDING.set(
         {
@@ -175,6 +176,7 @@ def begin_routing(
             "intent": intent,
             "conversation_id": conversation_id,
             "route_latency_ms": route_latency_ms,
+            "request_id": request_id or "",
             "t_start": time.perf_counter(),
         }
     )
@@ -194,6 +196,7 @@ def complete_routing(result: dict[str, Any] | None = None, *, error: str | None 
         route_latency_ms=ctx.get("route_latency_ms"),
         result=result,
         error=error,
+        request_id=str(ctx.get("request_id") or ""),
     )
 
 
@@ -206,6 +209,7 @@ def record_prompt_execution(
     route_latency_ms: float | None = None,
     result: dict[str, Any] | None = None,
     error: str | None = None,
+    request_id: str = "",
 ) -> dict[str, Any]:
     """Record one complete prompt execution path."""
     action = str(intent.get("action") or "chat")
@@ -229,9 +233,31 @@ def record_prompt_execution(
         if not error and result.get("ok") is False:
             error = str(result.get("error") or result.get("message") or "")[:500] or None
 
+    conversation_trace: dict[str, Any] = {}
+    try:
+        from aria_core.conversation_trace import build_conversation_trace
+
+        conversation_trace = build_conversation_trace(
+            prompt=prompt,
+            intent=intent if isinstance(intent, dict) else {},
+            action=action,
+            route=route,
+            handler=handler,
+            latency_ms=latency_ms,
+            route_latency_ms=route_latency_ms,
+            response_length=response_length,
+            error=error,
+            conversation_id=conversation_id,
+            request_id=request_id,
+        )
+    except Exception:
+        conversation_trace = {}
+
     record = {
         "conversation_id": conversation_id,
+        "request_id": request_id or "",
         "prompt": (prompt or "")[:500],
+        "prompt_len": len(prompt or ""),
         "intent": action,
         "route": route,
         "handler": handler,
@@ -256,22 +282,28 @@ def record_prompt_execution(
         "stage": trace.get("stage"),
         "reason": trace.get("reason"),
         "rule_matched": intent.get("route_reason") or trace.get("reason"),
-        "router_stage": trace.get("stage"),
+        "router_stage": intent.get("router_stage") or trace.get("stage"),
         "mc_endpoint": "/api/mission-control" if route == "Runtime" else None,
         "semantic_report": intent.get("semantic_report") or intent.get("nlu") or {},
         "clarification_accepted": bool(intent.get("clarification_accepted")),
         "clarification_rejected": bool(intent.get("clarification_rejected")),
+        "clarification_required": bool(intent.get("needs_clarification")),
         "final_intent": intent.get("final_intent"),
         "confidence_band": intent.get("confidence_band"),
         "flag_for_review": bool(intent.get("flag_for_review")),
+        "profile": conversation_trace.get("profile"),
+        "uncensored": conversation_trace.get("uncensored"),
+        "reflex_category": intent.get("reflex_category"),
+        "conversation_trace": conversation_trace,
         "debug": {
             "intent_classifier_result": action,
             "rule_matched": intent.get("route_reason") or trace.get("reason"),
-            "router_stage": trace.get("stage"),
+            "router_stage": intent.get("router_stage") or trace.get("stage"),
             "selected_handler": handler,
             "mission_control_endpoint": "/api/mission-control" if route == "Runtime" else None,
             "execution_duration_ms": latency_ms,
             "route_latency_ms": route_latency_ms,
+            "request_id": request_id or "",
         },
     }
     try:

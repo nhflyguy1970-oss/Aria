@@ -537,12 +537,19 @@ class JarvisAssistant:
             choices = intent.get("choices", [])
             question = intent.get("clarification_question", "Which one?")
             lines = "\n".join(f"{i+1}. {c}" for i, c in enumerate(choices))
-            return _ok(
+            result = _ok(
                 f"{question}\n\n{lines}\n\nReply with a number or name.",
                 module="general",
                 type="clarification",
                 choices=choices,
             )
+            try:
+                from jarvis.routing_inspector import complete_routing
+
+                complete_routing(result)
+            except Exception:
+                pass
+            return result
 
         action = intent.get("action", "chat")
         if isinstance(action, dict):
@@ -649,15 +656,27 @@ class JarvisAssistant:
         self._request_lock.acquire()
         self._stream_lite_ui = lite_ui
         try:
+            yield from self._process_stream_unlocked(
+                message, attachment, branch_id, attachment2, request_id,
+                lite_ui=lite_ui,
+            )
+        except Exception as e:
+            logger.exception("process_stream failed")
             try:
-                yield from self._process_stream_unlocked(
-                    message, attachment, branch_id, attachment2, request_id,
-                    lite_ui=lite_ui,
-                )
-            except Exception as e:
-                logger.exception("process_stream failed")
-                yield _stream_done(_err(f"Something went wrong: {e}"), lite_ui=lite_ui)
+                from jarvis.routing_inspector import complete_routing
+
+                complete_routing(None, error=str(e))
+            except Exception:
+                pass
+            yield _stream_done(_err(f"Something went wrong: {e}"), lite_ui=lite_ui)
         finally:
+            # Passive flush if stream path began routing but never completed.
+            try:
+                from jarvis.routing_inspector import complete_routing
+
+                complete_routing({"ok": True, "message": "", "action": "stream"})
+            except Exception:
+                pass
             self._stream_lite_ui = False
             self._request_lock.release()
             end()
@@ -748,6 +767,7 @@ class JarvisAssistant:
                 intent=intent,
                 conversation_id=getattr(self.branches, "active_id", None) or "main",
                 route_latency_ms=route_latency_ms,
+                request_id=request_id or "",
             )
         except Exception:
             pass
@@ -1058,11 +1078,31 @@ class JarvisAssistant:
 
         from jarvis.behaviors.conversation import ensure_conversation_engine
 
-        yield from ensure_conversation_engine(self).execute_stream(
+        final: dict = {"ok": True, "message": "", "action": "chat"}
+        for event in ensure_conversation_engine(self).execute_stream(
             message,
             params,
             request_id=request_id,
-        )
+        ):
+            if isinstance(event, dict) and event.get("type") == "done":
+                final = {
+                    "ok": event.get("ok", True),
+                    "message": event.get("message") or "",
+                    "action": "chat",
+                    "uncensored": event.get("uncensored"),
+                }
+            yield event
+        try:
+            from jarvis.routing_inspector import complete_routing
+
+            complete_routing(
+                final,
+                error=str(final.get("message") or "stream failed")
+                if final.get("ok") is False
+                else None,
+            )
+        except Exception:
+            pass
 
     def _auto_remember(self, user_msg: str, assistant_msg: str) -> None:
         from jarvis.behaviors.memory import get_memory_behavior
