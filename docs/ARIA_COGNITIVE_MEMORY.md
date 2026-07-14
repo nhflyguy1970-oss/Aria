@@ -4,7 +4,15 @@
 **Mode:** Architecture only — no implementation, migration, or prototype authorized by this document  
 **Foundation:** Experiences · Concepts · Associations · Goal Space · Remembering · Reconsolidation · Sleep  
 
-**Governance:** Future work proceeds only under **Daily Use Mode** (Problem Reports → measure → minimal change → regressions → Trace/MC). This document is the **north star**, not a build queue.
+**Document triad (distinct purposes):**
+
+| Document | Role |
+|----------|------|
+| [`MEMORY_DESIGN_PRINCIPLES.md`](MEMORY_DESIGN_PRINCIPLES.md) | **Constitution** — immutable cognitive *why* |
+| **This file** | **Architecture** — *how* cognition is structured |
+| [`COGNITIVE_MEMORY_TEST_STRATEGY.md`](COGNITIVE_MEMORY_TEST_STRATEGY.md) | **Validation** — *how migration will prove cognition* (includes M0 harness + observability) |
+
+**Governance:** Future work proceeds only under **Daily Use Mode** (Problem Reports → measure → minimal change → regressions → Trace/MC). This document is the architectural north star, not a build queue. Principles decide whether a change is cognitively legitimate; the test strategy decides whether a milestone is done.
 
 ---
 
@@ -284,27 +292,23 @@ Associative / schema / analogical inference allowed if tagged. Hypotheticals san
 
 ## 11. Observability
 
-Trace/MC: goals & bias, context, attention class, reconsolidation versions, Sleep health, pending assents, explanation class, latencies. No contents by default. User: pin, correct, forget, veto, erase, export.
+ACM must become observable as **cognitive behavior**, not only as execution.
+
+Normative detail lives in [`COGNITIVE_MEMORY_TEST_STRATEGY.md`](COGNITIVE_MEMORY_TEST_STRATEGY.md) (§ Observability strategy). Architecture requires:
+
+**Conversation Trace** evolves to record memory operation, context/attention/goal *classes*, activation summaries, association path *types*, reconsolidation class, explanation class, Policy Gate outcomes, and latencies—without chain-of-thought, hidden prompts, or default memory contents.
+
+**Mission Control** eventually visualizes activated concepts, association neighborhoods (on inspect), confidence and strength movements, reconsolidation and Sleep activity, goal/attention/context influence, and identity growth metrics—contents off by default.
+
+User-facing explanations remain template-bound ([`MEMORY_DESIGN_PRINCIPLES.md`](MEMORY_DESIGN_PRINCIPLES.md) P22). User controls: pin, correct, forget, veto, erase, export.
 
 ---
 
 ## 12. Testability (architectural contracts)
 
-ACM is testable **without** choosing a graph/vector vendor:
+Behavioral contracts and probe families are defined in [`COGNITIVE_MEMORY_TEST_STRATEGY.md`](COGNITIVE_MEMORY_TEST_STRATEGY.md). Architecturally, ACM must remain testable without choosing a graph or vector vendor: context truth, goal bias, reconsolidation lineage, forget precision, Sleep assent tiers, knowledge wall, and template explanations must be demonstrable as cognition.
 
-| Contract | Example behavioral probe |
-|----------|---------------------------|
-| Encode under Attention | Low-salience chatter does not outrank pinned identity prefs |
-| Context truth | Work brevity vs docs detail both recallable in-context |
-| Goal bias | Active goal surfaces unfinished thread over cold trivia |
-| Reconsolidation | “Actually…” supersedes; lineage retained for dig |
-| Forget precision | Forget coffee ≠ forget color |
-| Sleep assent | Identity flip does not silent-apply |
-| Knowledge wall | Doc ingest does not become autobiography |
-| Explanation class | User text matches allowed templates only |
-| Trace | Diagnostics present; secrets/contents absent in default panel |
-
-Implementation phases must ship these as regressions under Daily Use Mode.
+**M0 (Validation Harness)**—before M1—provides the development measurement capability for those contracts. M0 is not a runtime organ.
 
 ---
 
@@ -349,9 +353,12 @@ Local-first objects + append log + *some* association index + optional affinity 
 
 ## 17. Cognitive roadmap (milestones)
 
+Order optimized for **stable identity first**, then associative life, then future-directed and reflective cognition. Design-foundation documents (this triad) are complete; coding remains unauthorized until a Daily Use migration phase is declared.
+
 | Phase | Milestone |
 |-------|-----------|
-| **M0** | Design freeze (this document) |
+| **Foundation** | Principles + Architecture + Validation strategy (complete; no code) |
+| **M0** | **Cognitive Memory Validation Harness** — measure cognition before migrating it |
 | **M1** | Identity Memory |
 | **M2** | Working Memory (Buffer + Context + Attention) |
 | **M3** | Concept Formation |
@@ -368,18 +375,21 @@ Local-first objects + append log + *some* association index + optional affinity 
 | **M14** | Autobiographical Memory |
 | **M15** | Meta-memory |
 
-Planning is late by design.
+**M0 before M1:** no Identity migration without the ability to observe activation, confidence movement, policy assent, and lifecycle transitions. Planning is late by design.
 
 ---
 
 ## 18. Freeze decision
 
-**Approved as Aria’s canonical Cognitive Memory architecture (v2.1), with the final edits in this document.**
+**Approved as Aria’s canonical Cognitive Memory architecture (v2.1).**
 
-- North star for all future Memory work.  
-- **No implementation** until a migration/delivery phase is explicitly planned under Daily Use Mode.  
-- Recommend **committing** this file as the architectural baseline.
+Design foundation completion adds the constitutional principles and validation strategy. Together they are the canonical reference for every future Memory decision.
+
+- Architecture north star: this file  
+- Cognitive legitimacy: `MEMORY_DESIGN_PRINCIPLES.md`  
+- Migration proof: `COGNITIVE_MEMORY_TEST_STRATEGY.md`  
+- **No implementation** until an explicit Daily Use Mode migration phase is authorized (starting with M0 harness when planning begins)  
 
 ---
 
-*RFC freeze. No implementation implied.*
+*RFC freeze + design foundation complete. No implementation implied.*
