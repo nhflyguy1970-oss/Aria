@@ -419,6 +419,42 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         "max_ms": max(latencies) if latencies else None,
         "p50_ms": sorted(latencies)[len(latencies) // 2] if latencies else None,
     }
+    # Lifecycle metadata only — never contents.
+    lifecycle_counts: dict[str, int] = {
+        "created": 0,
+        "updated": 0,
+        "merged": 0,
+        "referenced": 0,
+        "last_used": 0,
+    }
+    lifecycle_rows: list[dict[str, Any]] = []
+    for r in hist:
+        op = str(r.get("op") or "")
+        stage = {
+            "write": "created",
+            "commit": "created",
+            "update": "updated",
+            "merge": "merged",
+            "read": "referenced",
+            "search": "referenced",
+            "hit": "last_used",
+        }.get(op, op or "unknown")
+        if stage in lifecycle_counts:
+            lifecycle_counts[stage] += 1
+        lifecycle_rows.append(
+            {
+                "id": r.get("entry_id") or r.get("id"),
+                "iso": r.get("iso"),
+                "stage": stage,
+                "op": op,
+                "confidence": r.get("confidence"),
+                "origin": r.get("origin") or r.get("namespace") or r.get("source") or "memory",
+                "consumers": r.get("consumers")
+                or ["capability_bus", "cognitive_orchestrator", "learning"],
+                "last_used_ts": r.get("ts"),
+                "duration_ms": r.get("duration_ms"),
+            }
+        )
     return {
         "ok": bool(health.get("ok")),
         "title": "Aria Core Memory",
@@ -441,6 +477,21 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         "fragmentation": fragmentation,
         "namespaces": namespaces,
         "history": hist,
+        "lifecycle": {
+            "stages": [
+                "Created",
+                "Updated",
+                "Merged",
+                "Referenced",
+                "Last Used",
+                "Confidence",
+                "Origin",
+                "Consumers",
+            ],
+            "counts": lifecycle_counts,
+            "rows": lifecycle_rows[-limit:],
+            "note": "Lifecycle metadata only — memory contents are not exposed by default.",
+        },
         "latency": latency,
         "latency_hint": "see history duration_ms fields",
         "consumers": ["capability_bus", "cognitive_orchestrator", "learning", "nlu/adapters"],

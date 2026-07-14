@@ -51,6 +51,7 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "runtime_applications": lambda _params, _message: _runtime_action("runtime_applications"),
     "runtime_attention": lambda _params, _message: _runtime_action("runtime_attention"),
     "status_summary": lambda _params, _message: _status_summary(),
+    "cognitive_compose": lambda params, message: _cognitive_compose(params, message),
     "routing_last": lambda _params, _message: _routing_last(),
     "routing_history": lambda _params, _message: _routing_history(),
     "routing_stats": lambda _params, _message: _routing_stats(),
@@ -173,6 +174,53 @@ def _runtime_action(action: str) -> dict:
     return runtime_action_result(action)
 
 
+def _cognitive_compose(params: dict, message: str) -> dict:
+    """Multi-capability plan → execute → compose (Problem Report ce2a6e07).
+
+    Observability attachments (maturity pass): composed_plan, provenance,
+    section_confidence — execution metadata for Conversation Trace / MC only.
+    """
+    text = (params.get("text") or message or "").strip()
+    if not text:
+        return {"ok": False, "error": "empty_prompt"}
+    try:
+        from aria_core.cognitive_orchestrator import orchestrate_compose
+        from aria_core.observability import capability_plan_view
+
+        result = orchestrate_compose(text)
+        plan = (result.get("data") or {}).get("plan") or {}
+        duration_ms = (result.get("data") or {}).get("duration_ms")
+        if isinstance(params, dict):
+            params["composed_plan"] = plan
+            params["plan"] = plan
+            params["capabilities"] = list(plan.get("selected") or plan.get("executed") or [])
+            params["capability_plan"] = capability_plan_view(plan, action="cognitive_compose")
+            params["provenance"] = plan.get("provenance") or []
+            params["section_confidence"] = plan.get("section_confidence") or {}
+            params["composition_stage"] = "final_response"
+            params["compose_duration_ms"] = duration_ms
+        return {
+            "ok": bool(result.get("ok")),
+            "reply": result.get("message") or "",
+            "composed": True,
+            "plan": {
+                "capabilities": list(plan.get("selected") or []),
+                "executed": list(plan.get("executed") or []),
+                "skipped": list(plan.get("skipped") or []),
+                "failed": list(plan.get("failed") or []),
+                "skip_reasons": plan.get("skip_reasons") or {},
+                "plan_view": plan.get("plan_view") or {},
+                "provenance": plan.get("provenance") or [],
+                "section_confidence": plan.get("section_confidence") or {},
+                "latency_ms": duration_ms,
+                "execution_plan_display": plan.get("execution_plan_display"),
+            },
+            "intent": "cognitive_compose",
+        }
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:240], "intent": "cognitive_compose"}
+
+
 def _status_summary() -> dict:
     from jarvis.mission_control import collect_mission_control, format_overview_markdown
 
@@ -189,11 +237,16 @@ def _routing_last() -> dict:
     from jarvis.routing_inspector import format_routing_record_markdown, last_routing_record
 
     record = last_routing_record()
-    return {"ok": True, "message": format_routing_record_markdown(record), "data": record, "type": "info"}
+    return {
+        "ok": True,
+        "message": format_routing_record_markdown(record),
+        "data": record,
+        "type": "info",
+    }
 
 
 def _routing_history() -> dict:
-    from jarvis.routing_inspector import format_routing_record_markdown, routing_history
+    from jarvis.routing_inspector import routing_history
 
     items = routing_history(limit=10)
     lines = ["## Routing history (last 10)", ""]
@@ -209,7 +262,12 @@ def _routing_stats() -> dict:
     from jarvis.routing_inspector import format_routing_stats_markdown, routing_stats_summary
 
     stats = routing_stats_summary()
-    return {"ok": True, "message": format_routing_stats_markdown(stats), "data": stats, "type": "info"}
+    return {
+        "ok": True,
+        "message": format_routing_stats_markdown(stats),
+        "data": stats,
+        "type": "info",
+    }
 
 
 def _timeline(action: str) -> dict:

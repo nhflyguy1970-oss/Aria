@@ -792,6 +792,36 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
     from jarvis.runtime_routing import is_runtime_routing_question, route_runtime_priority
     from jarvis.runtime_routing_trace import log_route_decision
 
+    # Multi-capability compose takes precedence over single-intent XOR.
+    try:
+        from aria_core.cognition import plan_request
+
+        compose_plan = plan_request(message)
+        if compose_plan.get("combine"):
+            intent = {
+                **intent,
+                "action": "cognitive_compose",
+                "params": {
+                    **(intent.get("params") or {}),
+                    "plan": compose_plan,
+                    "capabilities": list(compose_plan.get("selected") or []),
+                },
+                "thinking": "cognitive_compose",
+                "route_reason": "multi_capability_compose",
+                "route_handler": "CognitiveOrchestrator",
+                "route_confidence": 1.0,
+            }
+            return log_route_decision(
+                message=message,
+                intent=intent,
+                stage="finalize",
+                reason="multi_capability_compose",
+                confidence=1.0,
+                handler="CognitiveOrchestrator",
+            )
+    except Exception:
+        pass
+
     action = intent.get("action")
     if action in ("reference_search",) or str(action or "").startswith("reference_"):
         return log_route_decision(
@@ -1790,6 +1820,33 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
         reflex = try_reflex(message, session, attachment=attachment)
         if reflex:
             return _finalize_intent(normalize_route_intent(reflex), message, session)
+
+    # Multi-capability composition — before NLU XOR collapses complementary organs.
+    if not attachment:
+        try:
+            from aria_core.cognition import plan_request
+
+            compose_plan = plan_request(message)
+            if compose_plan.get("combine"):
+                return _finalize_intent(
+                    normalize_route_intent(
+                        {
+                            "action": "cognitive_compose",
+                            "params": {
+                                "plan": compose_plan,
+                                "capabilities": list(compose_plan.get("selected") or []),
+                            },
+                            "thinking": "cognitive_compose",
+                            "route_reason": "multi_capability_compose",
+                            "route_handler": "CognitiveOrchestrator",
+                            "route_confidence": 1.0,
+                        }
+                    ),
+                    message,
+                    session,
+                )
+        except Exception:
+            pass
 
     nlu_used = False
     from jarvis.nlu.pipeline import nlu_enabled, route_via_nlu

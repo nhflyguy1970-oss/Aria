@@ -81,6 +81,17 @@ def infer_organs(intent: dict[str, Any], action: str) -> dict[str, Any]:
         organs["memory"] = _organ_slot(used=True, write=True, skipped=False)
     elif action in ("recall", "memory_search", "memory_about_user"):
         organs["memory"] = _organ_slot(used=True, read=True, skipped=False)
+    elif action == "cognitive_compose":
+        caps = intent.get("params", {}).get("capabilities") or []
+        plan = intent.get("params", {}).get("plan") or {}
+        for name in caps or plan.get("selected") or []:
+            key = str(name)
+            if key in organs:
+                organs[key] = _organ_slot(used=True, read=True, skipped=False)
+        for name in plan.get("executed") or []:
+            key = str(name)
+            if key in organs:
+                organs[key] = _organ_slot(used=True, read=True, skipped=False)
     elif action in ("search_reference", "reference") or "reference" in action:
         organs["reference"] = _organ_slot(used=True, read=True, skipped=False)
     elif action.startswith("runtime_") or action == "status_summary":
@@ -207,6 +218,33 @@ def build_stages(
     return stages
 
 
+def _capability_plan_block(intent: dict[str, Any], action: str) -> dict[str, Any]:
+    """Planning + execution visibility for Conversation Trace (metadata only)."""
+    from aria_core.observability import capability_plan_view
+
+    params = intent.get("params") or {}
+    plan = params.get("plan") if isinstance(params.get("plan"), dict) else {}
+    # Prefer post-exec plan if attached after compose
+    if isinstance(params.get("composed_plan"), dict):
+        plan = params["composed_plan"]
+    view = capability_plan_view(plan, action=action)
+    provenance = plan.get("provenance") or params.get("provenance") or []
+    confidence = plan.get("section_confidence") or params.get("section_confidence") or {}
+    return {
+        **view,
+        "provenance": provenance,
+        "section_confidence": confidence,
+        "final_response_latency_ms": params.get("compose_duration_ms")
+        or plan.get("duration_ms")
+        or (plan.get("plan_view") or {}).get("final_response_latency_ms"),
+        "composition_stage_label": (
+            "composer"
+            if action == "cognitive_compose" or plan.get("combine")
+            else "single_capability"
+        ),
+    }
+
+
 def build_conversation_trace(
     *,
     prompt: str,
@@ -270,19 +308,53 @@ def build_conversation_trace(
             "clarification_requested": bool(intent.get("needs_clarification")),
         },
         "capability_bus": {
-            "requested": [] if reflex_used else [action],
-            "execution_order": [] if reflex_used else [action],
-            "skipped": ["all"] if reflex_used else [],
+            "requested": []
+            if reflex_used
+            else (
+                list((intent.get("params") or {}).get("capabilities") or [action])
+                if action == "cognitive_compose"
+                else [action]
+            ),
+            "execution_order": []
+            if reflex_used
+            else (
+                list(
+                    ((intent.get("params") or {}).get("plan") or {}).get("execution_order")
+                    or (intent.get("params") or {}).get("capabilities")
+                    or [action]
+                )
+                if action == "cognitive_compose"
+                else [action]
+            ),
+            "skipped": ["all"]
+            if reflex_used
+            else (
+                list(((intent.get("params") or {}).get("plan") or {}).get("skipped") or [])
+                if action == "cognitive_compose"
+                else []
+            ),
             "failures": [error] if error else [],
         },
         "cognition": {
             "pipeline": None if reflex_used else action,
-            "execution_order": [] if reflex_used else [action],
+            "execution_order": []
+            if reflex_used
+            else (
+                list(
+                    ((intent.get("params") or {}).get("plan") or {}).get("execution_order")
+                    or (intent.get("params") or {}).get("capabilities")
+                    or [action]
+                )
+                if action == "cognitive_compose"
+                else [action]
+            ),
             "subsystems_consulted": [k for k, v in organs.items() if v.get("used")],
             "subsystems_skipped": [k for k, v in organs.items() if v.get("skipped")],
+            "composition_stage": action == "cognitive_compose",
             "latency_ms": None if reflex_used else latency_ms,
         },
         "organs": organs,
+        "capability_plan": _capability_plan_block(intent, action),
         "events": {
             "note": "Event counts correlated at Mission Control read time",
             "published": None,

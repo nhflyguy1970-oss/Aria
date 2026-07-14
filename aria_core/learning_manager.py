@@ -338,6 +338,31 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         nlu = learning_summary()
     except Exception:
         nlu = {}
+    by_decision = stats.get("by_decision") or {}
+    # Visibility lifecycle only — no behavior change.
+    transparency = {
+        "observed": int(by_decision.get("pending", 0))
+        + int(by_decision.get("accepted", 0))
+        + int(by_decision.get("rejected", 0))
+        + int(by_decision.get("rolled_back", 0))
+        + int(by_decision.get("committed", 0))
+        + int(by_decision.get("applied", 0)),
+        "proposed": int(by_decision.get("pending", 0)) + int(stats.get("total", 0)),
+        "accepted": int(by_decision.get("accepted", 0)),
+        "rejected": int(by_decision.get("rejected", 0)),
+        "committed": int(by_decision.get("committed", 0) or by_decision.get("accepted", 0)),
+        "applied": int(by_decision.get("applied", 0) or by_decision.get("accepted", 0)),
+        "rolled_back": int(by_decision.get("rolled_back", 0)),
+        "stages": [
+            "Observed",
+            "Proposed",
+            "Accepted",
+            "Rejected",
+            "Committed",
+            "Applied",
+            "Rolled Back",
+        ],
+    }
     return {
         "ok": True,
         "title": "Aria Core Learning",
@@ -345,10 +370,12 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         "implementation": "aria_core.learning_manager",
         "health": {"ok": True, "enabled": enabled()},
         "statistics": stats,
+        "transparency": transparency,
         "proposals": hist,
         "accepted": [r for r in hist if r.get("decision") == "accepted"],
         "rejected": [r for r in hist if r.get("decision") == "rejected"],
         "pending": [r for r in hist if r.get("decision") == "pending"],
+        "rolled_back": [r for r in hist if r.get("decision") == "rolled_back"],
         "sources": stats.get("by_source") or {},
         "applications": sorted(
             {str(r.get("application") or "") for r in hist if r.get("application")}
@@ -360,5 +387,8 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         },
         "replay": learning_history(limit=min(20, limit)),
         "nlu_summary": nlu,
-        "note": "Core-owned Learning Manager; organs underneath unchanged. Visibility only.",
+        "note": (
+            "Learning transparency is visibility only — Observed → Proposed → Accepted / Rejected → "
+            "Committed → Applied → Rolled Back. No learning behavior changes."
+        ),
     }

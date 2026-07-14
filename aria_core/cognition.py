@@ -8,7 +8,9 @@ from aria_core.cognitive_orchestrator import (
     VERB_POLICY,
     cognition_statistics,
     mission_control_panel,
+    orchestrate_compose,
     participation_for,
+    plan_request,
     recent_pipelines,
     run,
 )
@@ -26,7 +28,9 @@ __all__ = [
     "cognition_statistics",
     "mission_control_panel",
     "orchestrate",
+    "orchestrate_compose",
     "participation_for",
+    "plan_request",
     "recent_pipelines",
     "run",
 ]
