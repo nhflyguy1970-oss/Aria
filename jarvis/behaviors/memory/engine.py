@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 import re
+from datetime import UTC
 from pathlib import Path
 from typing import Any
 
@@ -47,7 +48,10 @@ class MemoryEngine:
                 citation["type"] = kind
             citations.append(citation)
 
-        from jarvis.memory_context import contextualize_memory_for_chat, should_inject_resume_context
+        from jarvis.memory_context import (
+            contextualize_memory_for_chat,
+            should_inject_resume_context,
+        )
         from jarvis.trust_memory import filter_trusted_content, trust_context_for_chat
 
         lower_msg = message.lower()
@@ -89,6 +93,7 @@ class MemoryEngine:
 
         if not skip_project_context:
             from jarvis.memory.hierarchy import hierarchical_search
+            from jarvis.modules.memory_common import is_user_facing_entry
 
             memories = hierarchical_search(
                 ctx.memory,
@@ -98,6 +103,7 @@ class MemoryEngine:
             )
             if len(memories) < 2 and ns and ns != "default":
                 memories = hierarchical_search(ctx.memory, message, limit=3)
+            memories = [m for m in memories if is_user_facing_entry(m)]
             memory_lines = []
             for memory in memories:
                 line = contextualize_memory_for_chat(memory["content"])
@@ -105,7 +111,9 @@ class MemoryEngine:
                 if line and line not in memory_lines:
                     memory_lines.append(line)
             if memory_lines:
-                parts.append("Relevant memories:\n" + "\n".join(f"- {line}" for line in memory_lines))
+                parts.append(
+                    "Relevant memories:\n" + "\n".join(f"- {line}" for line in memory_lines)
+                )
             for memory in memories:
                 _cite(memory)
 
@@ -157,7 +165,7 @@ class MemoryEngine:
 
     @classmethod
     def auto_checkpoint(cls, ctx: MemoryContext, *, reason: str = "exit") -> dict:
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime, timedelta
 
         from jarvis.config import load_auto_checkpoint
         from jarvis.memory_context import build_quick_checkpoint
@@ -170,8 +178,10 @@ class MemoryEngine:
         existing = ctx.memory.latest_checkpoint(ns)
         if existing:
             try:
-                age = datetime.now(timezone.utc) - _parse_ts(existing.get("timestamp", ""))
-                if age < timedelta(minutes=30) and "Auto-saved on exit" in existing.get("content", ""):
+                age = datetime.now(UTC) - _parse_ts(existing.get("timestamp", ""))
+                if age < timedelta(minutes=30) and "Auto-saved on exit" in existing.get(
+                    "content", ""
+                ):
                     return {"ok": False, "skipped": True, "reason": "recent"}
             except (TypeError, ValueError):
                 pass
@@ -243,7 +253,9 @@ class MemoryEngine:
         ctx.refresh_system_prompt()
         from jarvis.learning_notice import learning_notice
 
-        notice = learning_notice("long_term" if namespace == "default" else "project", detail=namespace)
+        notice = learning_notice(
+            "long_term" if namespace == "default" else "project", detail=namespace
+        )
         if len(stored) == 1:
             body = stored[0]
         else:
@@ -257,35 +269,44 @@ class MemoryEngine:
 
     @classmethod
     def recall(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from jarvis.modules.memory_common import filter_user_facing, format_recall_answer
         from jarvis.trust_memory import filter_entry_list
 
-        profile = ctx.memory.list_entries(namespace="profile")
+        profile = filter_entry_list(
+            ctx.memory.list_entries(namespace="profile"), user_facing_only=True
+        )
         ns = ctx.session.memory_namespace
         other = ctx.memory.list_entries(namespace=ns if ns and ns != "default" else None)
         if not other:
             other = [e for e in ctx.memory.list_entries() if e.get("namespace") != "profile"]
-        other = filter_entry_list(other[:15])
-        entries = profile + other
+        other = filter_entry_list(other, user_facing_only=True)
+        entries = filter_user_facing(profile + other)
         if not entries:
-            return ok("I don't have anything stored yet. Just tell me what to remember.", module="memory")
-        lines = "\n".join(
-            f"• [{e.get('type', 'fact')}/{e.get('namespace', 'default')}] {e['content']}"
-            for e in entries[:25]
-        )
-        return ok(f"Here's what I remember ({len(entries)} total):\n\n{lines}", module="memory")
+            return ok(
+                "I don't have anything stored yet. Just tell me what to remember.", module="memory"
+            )
+        # Explicit list/recall still summarizes in natural language, not a metadata dump.
+        lines = "\n".join(f"• {format_recall_answer(e)}" for e in entries[:25])
+        return ok(f"Here's what I remember:\n\n{lines}", module="memory")
 
     @classmethod
     def memory_about_user(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from jarvis.modules.memory_common import filter_user_facing, format_recall_answer
         from jarvis.trust_memory import filter_entry_list
 
         lower = (params.get("question") or message).lower()
-        profile = ctx.memory.list_entries(namespace="profile")
+        profile = filter_entry_list(
+            ctx.memory.list_entries(namespace="profile"), user_facing_only=True
+        )
 
         if not profile:
-            hits = filter_entry_list(ctx.memory.search(message, limit=5))
+            hits = filter_entry_list(
+                ctx.memory.search(message, limit=8, user_facing_only=True),
+                user_facing_only=True,
+            )
             if hits:
-                lines = "\n".join(f"• {h['content']}" for h in hits)
-                return ok(f"From memory:\n\n{lines}", module="memory")
+                summary = " ".join(format_recall_answer(h) for h in hits[:4])
+                return ok(summary, module="memory")
             return ok(
                 "I don't have a profile yet. Complete the **About you** questionnaire when it appears, "
                 "or say **Remember that I enjoy …**",
@@ -329,29 +350,55 @@ class MemoryEngine:
         if summary:
             return ok(f"Here's what I know about you:\n\n{summary['content']}", module="memory")
 
-        lines = "\n".join(f"• {p['content']}" for p in profile[:8])
-        return ok(f"From your profile:\n\n{lines}", module="memory")
+        facts = filter_user_facing(profile)[:8]
+        if len(facts) == 1:
+            return ok(format_recall_answer(facts[0]), module="memory")
+        lines = "\n".join(f"• {format_recall_answer(p)}" for p in facts)
+        return ok(f"Here's what I know about you:\n\n{lines}", module="memory")
 
     @classmethod
     def memory_search(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from jarvis.modules.memory_common import (
+            format_recall_answer,
+            is_fact_question,
+            normalize_memory_query,
+        )
         from jarvis.trust_memory import filter_entry_list
 
-        query = params.get("query") or message
+        raw_query = params.get("query") or message
+        query = normalize_memory_query(raw_query)
         ns = ctx.session.memory_namespace
         results = filter_entry_list(
-            ctx.memory.search(query, namespace=ns if ns and ns != "default" else None)
+            ctx.memory.search(
+                query,
+                namespace=ns if ns and ns != "default" else None,
+                user_facing_only=True,
+            ),
+            user_facing_only=True,
         )
         if not results and ns and ns != "default":
-            results = filter_entry_list(ctx.memory.search(query))
+            results = filter_entry_list(
+                ctx.memory.search(query, user_facing_only=True),
+                user_facing_only=True,
+            )
         if not results:
             return ok("No matching memories found.", module="memory")
-        lines = "\n".join(
-            f"• [{e['type']}/{e.get('namespace', 'default')}] {e['content']}" for e in results
-        )
+
+        # Fact questions get a spoken answer; explicit search returns ranked hits.
+        if is_fact_question(raw_query) or re.search(
+            r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b", raw_query, re.I
+        ):
+            return ok(
+                format_recall_answer(results[0]), module="memory", remembered=results[0]["content"]
+            )
+
+        lines = "\n".join(f"• {e['content']}" for e in results)
         return ok(f"Found these memories:\n\n{lines}", module="memory")
 
     @classmethod
     def memory_forget(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from jarvis.modules.memory_common import select_forget_targets
+
         query = params.get("query") or message
         query = re.sub(
             r"^(please\s+)?(forget|delete|remove)\s+(that|about|the memory)?\s*",
@@ -361,11 +408,11 @@ class MemoryEngine:
         ).strip()
         if not query:
             return err("What should I forget? Give me a phrase to search for.")
-        results = ctx.memory.search(query, limit=5)
-        if not results:
+        targets = select_forget_targets(ctx.memory.list_entries(), query, limit=3)
+        if not targets:
             return ok("No matching memories to delete.", module="memory")
         removed_lines: list[str] = []
-        for entry in results[:3]:
+        for entry in targets:
             if ctx.memory.delete_id(entry["id"]):
                 removed_lines.append(entry["content"][:120])
         ctx.refresh_system_prompt()
@@ -397,7 +444,9 @@ class MemoryEngine:
             msg = f"Replaced **{removed}** old entr{'y' if removed == 1 else 'ies'}. " + msg
         if strategy_created:
             msg += "\n\n_Also saved as a behavior strategy from your correction._"
-        return ok(msg, module="memory", remembered=entry["content"], strategy_created=strategy_created)
+        return ok(
+            msg, module="memory", remembered=entry["content"], strategy_created=strategy_created
+        )
 
     @classmethod
     def memory_prune(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
@@ -432,9 +481,7 @@ class MemoryEngine:
         from jarvis.config import load_memory_namespace
 
         recent = [
-            m
-            for m in ctx.conversation.messages[-12:]
-            if m.get("role") in ("user", "assistant")
+            m for m in ctx.conversation.messages[-12:] if m.get("role") in ("user", "assistant")
         ]
         if len(recent) < 2:
             return err("Not enough conversation to summarize yet.")
@@ -481,9 +528,7 @@ class MemoryEngine:
 
         ns = params.get("namespace") or cls.project_namespace(ctx)
         recent = [
-            m
-            for m in ctx.conversation.messages[-14:]
-            if m.get("role") in ("user", "assistant")
+            m for m in ctx.conversation.messages[-14:] if m.get("role") in ("user", "assistant")
         ]
         blob = "\n".join(f"{m['role']}: {m['content'][:600]}" for m in recent)
         session_bits = ctx.session.context_summary()

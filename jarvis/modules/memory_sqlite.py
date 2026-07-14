@@ -5,10 +5,10 @@ from __future__ import annotations
 import json
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from jarvis import llm
 from jarvis import config as jarvis_config
+from jarvis import llm
 from jarvis.config import DATA_DIR
 from jarvis.modules.memory_common import (
     DEFAULT_NAMESPACE,
@@ -89,7 +89,9 @@ class SqliteMemoryStore:
         return list(self._conn.execute("SELECT * FROM memories ORDER BY timestamp"))
 
     def _iter_entries(self, *, include_embedding: bool = False) -> list[dict]:
-        return [self._row_to_entry(r, include_embedding=include_embedding) for r in self._all_rows()]
+        return [
+            self._row_to_entry(r, include_embedding=include_embedding) for r in self._all_rows()
+        ]
 
     @property
     def _data(self) -> dict:
@@ -227,7 +229,8 @@ class SqliteMemoryStore:
         if query:
             q = query.lower().strip()
             entries = [
-                e for e in entries
+                e
+                for e in entries
                 if q in e.get("content", "").lower()
                 or any(q in t.lower() for t in e.get("tags", []))
                 or q in e.get("namespace", "").lower()
@@ -281,7 +284,14 @@ class SqliteMemoryStore:
         self._conn.commit()
         return True
 
-    def search(self, query: str, limit: int = 10, *, namespace: str | None = None) -> list[dict]:
+    def search(
+        self,
+        query: str,
+        limit: int = 10,
+        *,
+        namespace: str | None = None,
+        user_facing_only: bool = False,
+    ) -> list[dict]:
         pool = self._iter_entries()
 
         def _get_emb(e: dict) -> list[float]:
@@ -299,6 +309,7 @@ class SqliteMemoryStore:
             set_embedding=_set_emb,
             touch=self.touch,
             flush_touches=self._apply_pending_touches,
+            user_facing_only=user_facing_only,
         )
 
     def delete(self, index: int) -> bool:
@@ -347,7 +358,7 @@ class SqliteMemoryStore:
         min_score: float = 0.35,
         types: tuple[str, ...] = ("auto",),
     ) -> int:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         remove_ids: list[str] = []
         for r in self._all_rows():
             entry = self._row_to_entry(r)
@@ -365,7 +376,9 @@ class SqliteMemoryStore:
         return len(remove_ids)
 
     def namespaces(self) -> list[str]:
-        rows = self._conn.execute("SELECT DISTINCT namespace FROM memories ORDER BY namespace").fetchall()
+        rows = self._conn.execute(
+            "SELECT DISTINCT namespace FROM memories ORDER BY namespace"
+        ).fetchall()
         ns = [r[0] for r in rows if r[0]]
         return ns or [DEFAULT_NAMESPACE]
 
@@ -432,9 +445,7 @@ class SqliteMemoryStore:
         if not merge:
             self.clear()
         existing_ids = {r["id"] for r in self._all_rows()}
-        existing_content = {
-            (r["content"] or "").lower().strip() for r in self._all_rows()
-        }
+        existing_content = {(r["content"] or "").lower().strip() for r in self._all_rows()}
         added = 0
         for raw in incoming:
             if not isinstance(raw, dict):
@@ -449,7 +460,11 @@ class SqliteMemoryStore:
             if eid in existing_ids:
                 eid = self._next_id()
             eid = eid or self._next_id()
-            emb = raw.get("embedding") if isinstance(raw.get("embedding"), list) else llm.embed_text(content)
+            emb = (
+                raw.get("embedding")
+                if isinstance(raw.get("embedding"), list)
+                else llm.embed_text(content)
+            )
             self._conn.execute(
                 """
                 INSERT INTO memories(id, type, content, namespace, timestamp, access_count, relevance, tags)

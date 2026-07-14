@@ -6,16 +6,15 @@ import json
 import logging
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
-from jarvis import llm
 from jarvis import config as jarvis_config
+from jarvis import llm
 from jarvis.config import DATA_DIR
 from jarvis.modules.memory_common import (
     DEFAULT_NAMESPACE,
     MEMORY_TYPES,
-    keyword_score,
     normalize_entry,
     parse_remember,
     parse_ts,
@@ -137,7 +136,12 @@ class JsonMemoryStore:
             raise ValueError("Empty memory content")
         from jarvis.trust_memory import is_trusted_memory_content
 
-        if entry_type not in ("failure", "strategy", "teaching", "success") and not is_trusted_memory_content(content):
+        if entry_type not in (
+            "failure",
+            "strategy",
+            "teaching",
+            "success",
+        ) and not is_trusted_memory_content(content):
             raise ValueError("Refusing to store test-artifact content in live memory")
         entry_type = entry_type if entry_type in MEMORY_TYPES else "fact"
         embedding = llm.embed_text(content)
@@ -197,7 +201,8 @@ class JsonMemoryStore:
         if query:
             q = query.lower().strip()
             entries = [
-                e for e in entries
+                e
+                for e in entries
                 if q in e.get("content", "").lower()
                 or any(q in t.lower() for t in e.get("tags", []))
                 or q in e.get("namespace", "").lower()
@@ -245,7 +250,14 @@ class JsonMemoryStore:
             return True
         return False
 
-    def search(self, query: str, limit: int = 10, *, namespace: str | None = None) -> list[dict]:
+    def search(
+        self,
+        query: str,
+        limit: int = 10,
+        *,
+        namespace: str | None = None,
+        user_facing_only: bool = False,
+    ) -> list[dict]:
         pool = list(self._data["entries"])
 
         def _get_emb(e: dict) -> list[float]:
@@ -263,6 +275,7 @@ class JsonMemoryStore:
             set_embedding=_set_emb,
             touch=self.touch,
             flush_touches=self._apply_pending_touches,
+            user_facing_only=user_facing_only,
         )
 
     def delete(self, index: int) -> bool:
@@ -320,7 +333,7 @@ class JsonMemoryStore:
         min_score: float = 0.35,
         types: tuple[str, ...] = ("auto",),
     ) -> int:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         kept = []
         removed_ids: list[str] = []
         for e in self._data["entries"]:
@@ -356,10 +369,7 @@ class JsonMemoryStore:
         }
 
     def latest_checkpoint(self, namespace: str | None = None) -> dict | None:
-        candidates = [
-            e for e in self._data["entries"]
-            if "checkpoint" in (e.get("tags") or [])
-        ]
+        candidates = [e for e in self._data["entries"] if "checkpoint" in (e.get("tags") or [])]
         if namespace:
             candidates = [c for c in candidates if c.get("namespace") == namespace]
         if not candidates:
@@ -369,13 +379,11 @@ class JsonMemoryStore:
     def upsert_checkpoint(self, content: str, namespace: str = "default") -> dict:
         ns = (namespace or DEFAULT_NAMESPACE).strip() or DEFAULT_NAMESPACE
         remove_ids = [
-            e["id"] for e in self._data["entries"]
+            e["id"]
+            for e in self._data["entries"]
             if e.get("namespace") == ns and "checkpoint" in (e.get("tags") or [])
         ]
-        self._data["entries"] = [
-            e for e in self._data["entries"]
-            if e["id"] not in remove_ids
-        ]
+        self._data["entries"] = [e for e in self._data["entries"] if e["id"] not in remove_ids]
         if remove_ids:
             self._embeddings.delete_many(remove_ids)
         return self.add(
@@ -421,7 +429,11 @@ class JsonMemoryStore:
             if eid in existing_ids:
                 eid = self._next_id()
             eid = eid or self._next_id()
-            emb = raw.get("embedding") if isinstance(raw.get("embedding"), list) else llm.embed_text(content)
+            emb = (
+                raw.get("embedding")
+                if isinstance(raw.get("embedding"), list)
+                else llm.embed_text(content)
+            )
             entry = {
                 "id": eid,
                 "type": entry_type,

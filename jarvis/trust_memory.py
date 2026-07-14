@@ -172,25 +172,29 @@ def record_strategy(
 
 def correct_memory(store, new_fact: str, *, search_hint: str = "") -> tuple[int, dict | None, bool]:
     """Replace matching memories with a corrected fact. Returns (removed_count, new_entry)."""
+    from jarvis.modules.memory_common import select_forget_targets
+
     new_fact = new_fact.strip()
     if not new_fact:
         return 0, None
 
     removed = 0
     if search_hint:
-        for e in store.search(search_hint, limit=5):
+        targets = select_forget_targets(store.list_entries(), search_hint, limit=5)
+        for e in targets:
             if store.delete_id(e["id"]):
                 removed += 1
     else:
         # Replace near-duplicates of the same topic (e.g. birthday)
         key = _topic_key(new_fact)
         if key:
-            for e in store.list_entries():
-                if key in e.get("content", "").lower():
-                    if store.delete_id(e["id"]):
-                        removed += 1
+            for e in select_forget_targets(store.list_entries(), key, limit=5):
+                if store.delete_id(e["id"]):
+                    removed += 1
 
-    entry_type = "preference" if re.search(r"\bprefer\b", new_fact, re.I) else "fact"
+    entry_type = (
+        "preference" if re.search(r"\b(prefer|favorite|favourite)\b", new_fact, re.I) else "fact"
+    )
     if parse_strategy_remember(new_fact):
         entry_type = "strategy"
         new_fact = parse_strategy_remember(new_fact) or new_fact
@@ -207,7 +211,9 @@ def correct_memory(store, new_fact: str, *, search_hint: str = "") -> tuple[int,
     if not is_behavior:
         is_behavior = any(re.search(p, lower) for p in behavior_markers)
 
-    if is_behavior or (removed and re.search(r"\b(prefer|always|never|shorter|brief)\b", lower, re.I)):
+    if is_behavior or (
+        removed and re.search(r"\b(prefer|always|never|shorter|brief)\b", lower, re.I)
+    ):
         strategy_rule = f"When answering, remember: {new_fact.rstrip('.')}"
     elif re.search(r"\b(actually,?\s+)?(prefer|always|never)\b", lower, re.I):
         strategy_rule = f"When answering, remember: {new_fact.rstrip('.')}"
@@ -272,22 +278,22 @@ def trust_context_for_chat(store, message: str, session=None) -> str:
     lines: list[str] = []
 
     strategies = store.list_entries(entry_type="strategy")[:6]
-    strategy_lines = [
-        e["content"] for e in strategies if filter_trusted_content(e["content"])
-    ]
+    strategy_lines = [e["content"] for e in strategies if filter_trusted_content(e["content"])]
     if strategy_lines:
-        lines.append("Behavior rules (always follow):\n" + "\n".join(f"- {s}" for s in strategy_lines))
+        lines.append(
+            "Behavior rules (always follow):\n" + "\n".join(f"- {s}" for s in strategy_lines)
+        )
 
     coding = should_inject_resume_context(message, session)
     if coding:
         failures = [
-            e for e in store.list_entries(entry_type="failure")
+            e
+            for e in store.list_entries(entry_type="failure")
             if filter_trusted_content(e.get("content", ""))
         ][:4]
         if failures:
             lines.append(
-                "Recent coding failures/fixes:\n"
-                + "\n".join(f"- {e['content']}" for e in failures)
+                "Recent coding failures/fixes:\n" + "\n".join(f"- {e['content']}" for e in failures)
             )
 
     return "\n\n".join(lines)
@@ -317,7 +323,8 @@ def trust_status(store) -> dict:
     strategies = store.list_entries(entry_type="strategy")
     failures = store.list_entries(entry_type="failure")
     artifacts = sum(
-        1 for e in store.list_entries(include_embedding=True)
+        1
+        for e in store.list_entries(include_embedding=True)
         if is_test_artifact(e.get("content", ""))
     )
     return {
@@ -328,11 +335,16 @@ def trust_status(store) -> dict:
     }
 
 
-def filter_entry_list(entries: list[dict]) -> list[dict]:
+def filter_entry_list(entries: list[dict], *, user_facing_only: bool = False) -> list[dict]:
+    """Drop test artifacts; optionally keep only everyday user memory classes."""
+    from jarvis.modules.memory_common import filter_user_facing
+
     out = []
     for e in entries:
         if filter_trusted_content(e.get("content", "")):
             out.append(e)
+    if user_facing_only:
+        out = filter_user_facing(out)
     return out
 
 

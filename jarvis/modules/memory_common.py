@@ -4,37 +4,147 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timezone
-from typing import Callable
+from collections.abc import Callable
+from datetime import UTC, datetime
 
 from jarvis import llm
 
-MEMORY_TYPES = ("fact", "auto", "note", "preference", "project", "failure", "success", "strategy", "teaching")
+MEMORY_TYPES = (
+    "fact",
+    "auto",
+    "note",
+    "preference",
+    "project",
+    "failure",
+    "success",
+    "strategy",
+    "teaching",
+)
 DEFAULT_NAMESPACE = "default"
+
+# User-facing classes for normal recall/search/summary. Diagnostic types stay out
+# of everyday answers (strategies/telemetry only in diagnostics paths).
+USER_FACING_TYPES = frozenset({"fact", "preference", "note", "project", "teaching"})
+DIAGNOSTIC_TYPES = frozenset({"strategy", "failure", "success", "auto"})
+_DIAGNOSTIC_TAGS = frozenset(
+    {
+        "tool-outcome",
+        "telemetry",
+        "trust",
+        "coding",
+        "conversation-summary",
+        "checkpoint",
+        "fix-verified",
+        "auto-correction",
+    }
+)
+_QUERY_FILLER = re.compile(
+    r"^(?:please\s+)?"
+    r"(?:what\s+is\s+my|what'?s\s+my|do\s+you\s+remember\s+my|"
+    r"search\s+(?:my\s+)?memory(?:\s+for)?|find\s+in\s+memory|"
+    r"memory\s+search(?:\s+for)?|tell\s+me\s+(?:about\s+)?my)\s+",
+    re.I,
+)
+_FORGET_STOPWORDS = frozenset(
+    {
+        "my",
+        "the",
+        "a",
+        "an",
+        "please",
+        "forget",
+        "delete",
+        "remove",
+        "that",
+        "about",
+        "memory",
+        "memories",
+        "preference",
+        "preferences",
+        "fact",
+        "facts",
+        "note",
+        "notes",
+        "entry",
+        "entries",
+        "info",
+        "information",
+        "favorite",
+        "favourite",
+        "update",
+        "change",
+        "correct",
+        "fix",
+    }
+)
 
 
 def utc_now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 def parse_ts(ts: str) -> datetime:
     try:
         return datetime.fromisoformat(ts.replace("Z", "+00:00"))
     except (TypeError, ValueError):
-        return datetime.now(timezone.utc)
+        return datetime.now(UTC)
 
 
 def to_public(entry: dict) -> dict:
     return {k: v for k, v in entry.items() if k != "embedding"}
 
 
+def is_user_facing_entry(entry: dict) -> bool:
+    """True for facts/preferences/notes meant for everyday recall."""
+    etype = str(entry.get("type") or "")
+    if etype in DIAGNOSTIC_TYPES:
+        return False
+    if etype not in USER_FACING_TYPES:
+        return False
+    tags = {str(t).lower() for t in (entry.get("tags") or [])}
+    if tags & _DIAGNOSTIC_TAGS:
+        return False
+    ns = str(entry.get("namespace") or "").lower()
+    if ns in ("tools", "jarvis") and etype == "strategy":
+        return False
+    return True
+
+
+def filter_user_facing(entries: list[dict]) -> list[dict]:
+    return [e for e in entries if is_user_facing_entry(e)]
+
+
+def normalize_memory_query(query: str) -> str:
+    """Strip interrogative / search wrappers so ranking keys on the topic."""
+    text = (query or "").strip()
+    text = _QUERY_FILLER.sub("", text, count=1).strip()
+    text = re.sub(r"[?\s]+$", "", text).strip()
+    return text or (query or "").strip()
+
+
+def type_rank_boost(entry: dict) -> float:
+    """Semantic priority: user facts/preferences first; telemetry last."""
+    etype = str(entry.get("type") or "")
+    if etype == "preference":
+        return 1.25
+    if etype == "fact":
+        return 1.15
+    if etype in ("note", "teaching", "project"):
+        return 1.05
+    if etype == "auto":
+        return 0.35
+    if etype in ("strategy", "failure", "success"):
+        return 0.2
+    return 1.0
+
+
 def relevance_score(entry: dict) -> float:
     base = float(entry.get("relevance", 1.0))
-    age_days = max(0, (datetime.now(timezone.utc) - parse_ts(entry.get("timestamp", ""))).days)
+    age_days = max(0, (datetime.now(UTC) - parse_ts(entry.get("timestamp", ""))).days)
     decay = max(0.25, 1.0 - age_days * 0.008)
     access_boost = min(0.4, int(entry.get("access_count", 0)) * 0.04)
     type_penalty = 0.85 if entry.get("type") == "auto" else 1.0
-    return (base * decay + access_boost) * type_penalty
+    return (base * decay + access_boost) * type_penalty * type_rank_boost(entry)
 
 
 def keyword_score(entry: dict, query_lower: str) -> float:
@@ -48,6 +158,59 @@ def keyword_score(entry: dict, query_lower: str) -> float:
     if any(query_lower in t.lower() for t in entry.get("tags", [])):
         return 1.5
     return 0.0
+
+
+def forget_match_score(entry: dict, query: str) -> float:
+    """Precise topic match for delete — 'coffee' must not hit 'color'."""
+    if not is_user_facing_entry(entry):
+        return 0.0
+    q = normalize_memory_query(query).lower().strip()
+    if not q:
+        return 0.0
+    content = entry.get("content", "").lower()
+    if q in content:
+        return 10.0 + keyword_score(entry, q)
+    tokens = [w for w in re.split(r"\W+", q) if len(w) > 2 and w not in _FORGET_STOPWORDS]
+    if not tokens:
+        # Vague query with only stopwords — require full-phrase keyword hit.
+        return keyword_score(entry, q) if keyword_score(entry, q) >= 3.0 else 0.0
+    hits = [t for t in tokens if t in content]
+    if not hits:
+        return 0.0
+    # Require every distinctive token (coffee, not just "favorite").
+    if len(hits) < len(tokens):
+        return 0.0
+    return 5.0 + len(hits) + keyword_score(entry, q)
+
+
+def select_forget_targets(entries: list[dict], query: str, *, limit: int = 3) -> list[dict]:
+    scored = [(forget_match_score(e, query), e) for e in entries]
+    scored = [(s, e) for s, e in scored if s >= 5.0]
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [e for _, e in scored[:limit]]
+
+
+def format_recall_answer(entry: dict) -> str:
+    """Turn a stored fact into a spoken answer (not a search dump)."""
+    text = (entry.get("content") or "").strip()
+    if not text:
+        return ""
+    rewritten = re.sub(r"^(?:remember(?:\s+that)?\s+)?", "", text, flags=re.I).strip()
+    rewritten = re.sub(r"^My\b", "Your", rewritten)
+    rewritten = re.sub(r"^I\b", "You", rewritten)
+    if rewritten and rewritten[-1] not in ".!?":
+        rewritten += "."
+    return rewritten
+
+
+_FACT_QUESTION = re.compile(
+    r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bdo\s+you\s+remember\s+my\b",
+    re.I,
+)
+
+
+def is_fact_question(query: str) -> bool:
+    return bool(_FACT_QUESTION.search(query or ""))
 
 
 def normalize_entry(entry: dict, index: int = 0) -> dict:
@@ -77,10 +240,13 @@ def search_pool(
     set_embedding: Callable[[dict, list[float]], None],
     touch: Callable[[str], None],
     flush_touches: Callable[[], None],
+    user_facing_only: bool = False,
 ) -> list[dict]:
-    query_lower = query.lower().strip()
+    query_lower = normalize_memory_query(query).lower().strip() or query.lower().strip()
     if namespace:
         pool = [e for e in pool if e.get("namespace") == namespace]
+    if user_facing_only:
+        pool = filter_user_facing(pool)
 
     keyword_matches = [e for e in pool if keyword_score(e, query_lower) > 0]
     if keyword_matches:
@@ -98,7 +264,7 @@ def search_pool(
     if not llm.embed_available():
         return []
 
-    query_emb = llm.embed_text(query)
+    query_emb = llm.embed_text(query_lower or query)
     if not query_emb:
         return []
 
@@ -138,7 +304,7 @@ def parse_remember(text: str) -> tuple[str, str, str | None]:
     ):
         text = re.sub(prefix, "", text, flags=re.I).strip()
     entry_type = "fact"
-    if re.search(r"\b(preference|prefer)\b", lower):
+    if re.search(r"\b(preference|prefer|favorite|favourite)\b", lower):
         entry_type = "preference"
     elif re.search(r"\b(project|codename)\b", lower):
         entry_type = "project"

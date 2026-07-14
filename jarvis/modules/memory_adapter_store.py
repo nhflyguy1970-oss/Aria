@@ -331,8 +331,15 @@ class DualWriteMemoryAdapter:
             include_embedding=include_embedding,
         )
 
-    def search(self, query: str, limit: int = 10, *, namespace: str | None = None) -> list[dict]:
-        if platform_data_authoritative():
+    def search(
+        self,
+        query: str,
+        limit: int = 10,
+        *,
+        namespace: str | None = None,
+        user_facing_only: bool = False,
+    ) -> list[dict]:
+        if platform_data_authoritative() and not user_facing_only:
             try:
                 from aiplatform.memory.manager import manager as memory_manager
 
@@ -346,4 +353,6 @@ class DualWriteMemoryAdapter:
                     ]
             except Exception as exc:
                 logger.debug("platform search fallback: %s", exc)
-        return self._legacy.search(query, limit, namespace=namespace)
+        return self._legacy.search(
+            query, limit, namespace=namespace, user_facing_only=user_facing_only
+        )
