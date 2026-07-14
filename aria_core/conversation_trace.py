@@ -355,6 +355,7 @@ def build_conversation_trace(
         },
         "organs": organs,
         "capability_plan": _capability_plan_block(intent, action),
+        "reference": _reference_diagnostics(intent, action),
         "events": {
             "note": "Event counts correlated at Mission Control read time",
             "published": None,
@@ -368,6 +369,58 @@ def build_conversation_trace(
             latency_ms=latency_ms,
             error=error,
         ),
+    }
+
+
+def _reference_diagnostics(intent: dict[str, Any], action: str) -> dict[str, Any]:
+    """Attach Reference Engine execution metadata when Reference participated."""
+    params = intent.get("params") or {}
+    diag = params.get("reference_diagnostics")
+    if not diag:
+        data = params.get("reference_data") or {}
+        if isinstance(data, dict):
+            diag = data.get("diagnostics")
+    if not diag:
+        try:
+            from jarvis.reference_engine import reference_history
+
+            hist = reference_history(limit=1)
+            if hist and (
+                action in ("search_reference", "reference", "cognitive_compose")
+                or "reference" in action
+            ):
+                diag = hist[-1]
+        except Exception:
+            diag = None
+    used = bool(
+        action in ("search_reference", "reference")
+        or "reference" in (params.get("capabilities") or [])
+        or (isinstance(diag, dict) and diag.get("mode"))
+    )
+    if not isinstance(diag, dict):
+        return {
+            "used": used,
+            "note": "No reference diagnostics attached",
+        }
+    return {
+        "used": True,
+        "mode": diag.get("mode"),
+        "documents_searched": diag.get("documents_searched"),
+        "documents_selected": diag.get("documents_selected") or [],
+        "documents_rejected": diag.get("documents_rejected") or [],
+        "ranking_scores": [
+            {"title": d.get("title"), "score": d.get("score")}
+            for d in (diag.get("documents_selected") or [])
+        ],
+        "stages": diag.get("stages") or {},
+        "search_ms": diag.get("search_ms"),
+        "ranking_ms": diag.get("ranking_ms"),
+        "qa_ms": diag.get("qa_ms"),
+        "summarization_ms": diag.get("summarization_ms"),
+        "composition_ms": diag.get("composition_ms"),
+        "total_ms": diag.get("total_ms"),
+        "unknown": bool(diag.get("unknown")),
+        "dump_blocked": bool(diag.get("dump_blocked", True)),
     }
 
 

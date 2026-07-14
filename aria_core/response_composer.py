@@ -16,11 +16,13 @@ _HEADER_LINE = re.compile(r"^#{1,3}\s+.+$", re.M)
 _HR = re.compile(r"^\s*-{3,}\s*$", re.M)
 
 
-def _clean_part(text: str) -> str:
+def _clean_part(text: str, *, capability: str = "") -> str:
     t = (text or "").strip()
     t = _SOURCE_FOOTER.sub("", t).strip()
     t = _HR.sub("", t)
-    t = _HEADER_LINE.sub("", t).strip()
+    # Keep reference document/section titles; strip only for other organs
+    if capability != "reference":
+        t = _HEADER_LINE.sub("", t).strip()
     t = re.sub(r"\n{3,}", "\n\n", t)
     return t.strip()
 
@@ -36,7 +38,7 @@ def compose_natural(parts: list[dict[str, Any]]) -> str:
     for part in parts:
         cap = str(part.get("capability") or "capability")
         if part.get("ok") and (part.get("message") or "").strip():
-            successful.append(_clean_part(str(part["message"])))
+            successful.append(_clean_part(str(part["message"]), capability=cap))
         else:
             err = part.get("error") or part.get("message") or "unavailable"
             notes.append(f"{cap.title()} information could not be retrieved ({err}).")

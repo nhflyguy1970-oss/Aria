@@ -199,8 +199,16 @@ def _cognitive_compose(params: dict, message: str) -> dict:
             params["section_confidence"] = plan.get("section_confidence") or {}
             params["composition_stage"] = "final_response"
             params["compose_duration_ms"] = duration_ms
+            for part in (result.get("data") or {}).get("parts") or []:
+                if part.get("capability") == "reference":
+                    ref_diag = (part.get("data") or {}).get("diagnostics")
+                    if ref_diag:
+                        params["reference_diagnostics"] = ref_diag
+                        params["reference_data"] = part.get("data") or {}
+                    break
         return {
             "ok": bool(result.get("ok")),
+            "message": result.get("message") or "",
             "reply": result.get("message") or "",
             "composed": True,
             "plan": {
@@ -216,6 +224,7 @@ def _cognitive_compose(params: dict, message: str) -> dict:
                 "execution_plan_display": plan.get("execution_plan_display"),
             },
             "intent": "cognitive_compose",
+            "data": result.get("data") or {},
         }
     except Exception as e:
         return {"ok": False, "error": str(e)[:240], "intent": "cognitive_compose"}

@@ -198,11 +198,18 @@ def _execute_organ(organ: str, plan: dict[str, Any]) -> dict[str, Any]:
             query = str(plan.get("reference_query") or prompt).strip()
             result = search_reference(query)
             ok = bool(result.get("ok", True)) and bool(str(result.get("message") or "").strip())
+            data = dict(result.get("data") or {})
+            if result.get("diagnostics"):
+                data["diagnostics"] = result["diagnostics"]
+            if result.get("selected") is not None:
+                data["selected"] = result.get("selected")
+            if result.get("rejected") is not None:
+                data["rejected"] = result.get("rejected")
             return {
                 "capability": "reference",
                 "ok": ok,
                 "message": result.get("message") or "",
-                "data": result.get("data") or result,
+                "data": data,
                 "error": None if ok else (result.get("error") or "empty reference result"),
                 "latency_ms": round((time.perf_counter() - t0) * 1000, 3),
             }

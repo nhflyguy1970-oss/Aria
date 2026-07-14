@@ -391,7 +391,7 @@ def cross_capability_analytics(*, limit: int = 200) -> dict[str, Any]:
 
 
 def mission_control_panel() -> dict[str, Any]:
-    return {
+    panel = {
         "ok": True,
         "title": "Product Observability",
         "owner": "aria_core.observability",
@@ -399,3 +399,10 @@ def mission_control_panel() -> dict[str, Any]:
         "cross_capability": cross_capability_analytics(),
         "note": "Observability only — architecture frozen; Daily Use Mode governs implementation.",
     }
+    try:
+        from jarvis.reference_engine import mission_control_panel as ref_panel
+
+        panel["reference"] = ref_panel(limit=20)
+    except Exception as exc:
+        panel["reference"] = {"ok": False, "error": str(exc)[:160]}
+    return panel
