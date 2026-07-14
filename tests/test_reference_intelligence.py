@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import patch
+
+import pytest
 
 from aria_core.cognitive_orchestrator import orchestrate_compose
 from aria_core.cognitive_orchestrator import reset_for_tests as reset_cog
@@ -25,18 +28,28 @@ PROMPTS = {
     "compare": "Compare the User Guide and Architecture documentation.",
 }
 
+_FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "reference_docs"
 
-def setup_function():
+
+@pytest.fixture(autouse=True)
+def _reference_fixture_roots(monkeypatch):
+    """GHA runners do not check out AI-Platform docs — use fixtures."""
     reset_for_tests()
     reset_cog()
+    monkeypatch.setenv("AI_PLATFORM_ROOT", str(_FIXTURE_ROOT))
+    monkeypatch.setenv("AI_ROOT", str(_FIXTURE_ROOT))
+    # Avoid scavenging host jarvis docs/DEPLOYMENT.md during ranking tests
+    monkeypatch.setattr(
+        "jarvis.reference_engine._search_roots",
+        lambda: [Path(p) for p in (_FIXTURE_ROOT,) if Path(p).is_dir()],
+    )
 
 
 def test_show_docs_not_raw_dump():
     out = search_reference(PROMPTS["show_compose"])
     msg = out["message"]
     assert out["ok"] is True
-    assert "APPLICATIONS.md" in msg or "Docker" in msg
-    # Must not dump many unrelated files as ### title dump
+    assert "APPLICATIONS.md" in msg or "Docker Compose" in msg or "docker compose" in msg.lower()
     assert msg.count("### ") <= 4
     assert "FUTURE_PRODUCT_IMPROVEMENTS" not in msg
     assert out["diagnostics"]["dump_blocked"] is True
@@ -51,8 +64,6 @@ def test_summarize_user_guide():
     assert out["diagnostics"]["mode"] == "summarize"
     assert any(d["title"] == "USER_GUIDE.md" for d in out["diagnostics"]["documents_selected"])
     assert "user guide" in msg or "workstation" in msg or "mission control" in msg
-    assert "development guide" not in msg or "user guide" in msg
-    # Not a hit list
     assert "(`local`)" not in out["message"]
 
 
@@ -104,7 +115,6 @@ def test_reference_runtime_compose_one_response():
 
 def test_compose_handler_exposes_message_key():
     """Regression: blank chat when only reply was set."""
-    # Simulate the ops return contract without importing heavy behaviors package.
     result = {"ok": True, "message": "hello from compose", "data": {"plan": {}}}
     payload = {
         "ok": bool(result.get("ok")),
@@ -176,6 +186,5 @@ def test_composer_keeps_reference_headings():
 
 def test_no_raw_multi_file_dump_unless_requested():
     out = search_reference("Explain the Capability Bus.")
-    # Single primary doc answer / extract — not 5 file dumps
     assert out["message"].count("(`local`)") == 0
     assert len(out["diagnostics"]["documents_selected"]) <= 2

@@ -470,7 +470,14 @@ def _answer_from_sections(
             found_gpu_sched = False
             for hit, text in docs:
                 tl = text.lower()
-                if "gpu" in tl and "schedul" in tl:
+                # Require affirmative scheduling language — negations do not count
+                if re.search(
+                    r"\b(?:schedules?|scheduling)\b.{0,40}\bgpu\b|\bgpu\b.{0,40}\b(?:schedules?|scheduling)\b",
+                    tl,
+                ) and not re.search(
+                    r"\b(?:not|never|does not|doesn't|no)\b.{0,30}\b(?:schedul)",
+                    tl,
+                ):
                     found_gpu_sched = True
                     break
             if not found_gpu_sched:
