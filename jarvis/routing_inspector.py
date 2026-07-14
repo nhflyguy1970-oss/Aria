@@ -232,6 +232,21 @@ def record_prompt_execution(
             response_length = len(msg)
         if not error and result.get("ok") is False:
             error = str(result.get("error") or result.get("message") or "")[:500] or None
+        # Surface gateway usage into intent for Conversation Trace execution block.
+        usage = result.get("usage") if isinstance(result.get("usage"), dict) else None
+        if usage and isinstance(intent, dict):
+            intent = dict(intent)
+            intent["usage"] = usage
+            intent.setdefault(
+                "execution",
+                {
+                    "provider": usage.get("execution_provider") or usage.get("backend"),
+                    "model": usage.get("execution_model") or usage.get("model"),
+                    "hardware": usage.get("execution_hardware"),
+                    "execution_path": usage.get("route_reason") or "inference_gateway",
+                    "capability": action,
+                },
+            )
 
     conversation_trace: dict[str, Any] = {}
     try:

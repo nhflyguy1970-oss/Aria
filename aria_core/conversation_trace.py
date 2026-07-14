@@ -245,6 +245,63 @@ def _capability_plan_block(intent: dict[str, Any], action: str) -> dict[str, Any
     }
 
 
+def _execution_metadata(
+    intent: dict[str, Any],
+    *,
+    action: str,
+    route: str,
+) -> dict[str, Any]:
+    """Capability/provider/model/hardware — never CoT."""
+    explicit = intent.get("execution") if isinstance(intent.get("execution"), dict) else {}
+    usage = intent.get("usage") if isinstance(intent.get("usage"), dict) else {}
+    result = intent.get("result") if isinstance(intent.get("result"), dict) else {}
+    result_usage = result.get("usage") if isinstance(result.get("usage"), dict) else {}
+    merged = {**usage, **result_usage, **explicit}
+
+    request_class = str(
+        explicit.get("request_class")
+        or intent.get("request_class")
+        or action
+        or "chat"
+    ).lower()
+
+    plan: dict[str, Any] = {}
+    try:
+        from jarvis.inference.execution_policy import resolve_execution
+
+        # Chat-style LLM actions need require_llm; reflex/reference stay non-LLM.
+        require_llm = None
+        if action in ("chat", "code", "review", "vision", "planner", "reason"):
+            require_llm = True
+        plan = resolve_execution(request_class, require_llm=require_llm).to_dict()
+    except Exception:
+        plan = {}
+
+    return {
+        "capability": merged.get("capability") or plan.get("capability") or action,
+        "provider": merged.get("execution_provider")
+        or merged.get("provider")
+        or plan.get("provider")
+        or ("none" if route in ("Greeting", "Local") else "ollama"),
+        "model": merged.get("execution_model") or merged.get("model") or plan.get("model"),
+        "hardware": merged.get("execution_hardware")
+        or merged.get("hardware")
+        or plan.get("hardware"),
+        "execution_path": merged.get("execution_path") or plan.get("execution_path") or route,
+        "workload": merged.get("execution_workload") or plan.get("workload"),
+        "benchmark_profile": merged.get("execution_source") or plan.get("source"),
+        "benchmark_reason": merged.get("execution_reason") or plan.get("reason"),
+        "fallback_reason": merged.get("execution_fallback_reason")
+        or plan.get("fallback_reason")
+        or "",
+        "fallback_model": merged.get("execution_fallback_model") or None,
+        "fallback_hardware": merged.get("execution_fallback_hardware") or None,
+        "expected_latency_ms": plan.get("expected_latency_ms"),
+        "confidence": plan.get("confidence"),
+        "latency_ms": merged.get("total_duration_ms") or merged.get("latency_ms"),
+    }
+
+
 def build_conversation_trace(
     *,
     prompt: str,
@@ -307,6 +364,7 @@ def build_conversation_trace(
             else None,
             "clarification_requested": bool(intent.get("needs_clarification")),
         },
+        "execution": _execution_metadata(intent, action=action, route=route),
         "capability_bus": {
             "requested": []
             if reflex_used

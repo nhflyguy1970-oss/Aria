@@ -154,20 +154,56 @@ def chat_with_usage(
     route: InferenceRoute | None = None,
     **kwargs,
 ) -> tuple[str, dict]:
-    """Route chat to the best available backend."""
-    chosen = route or select_route(model, role=role, messages=messages)
+    """Route chat to the best available backend with benchmark-driven model/hardware."""
+    from jarvis.inference.execution_policy import apply_policy_to_route
+    from jarvis.nlu.placement import ollama_options_for_device
+
+    overlay = apply_policy_to_route(model=model, role=role)
+    chosen_model = str(overlay.get("model") or model)
+    hardware = str(overlay.get("hardware") or "cpu")
+    options = dict(kwargs.get("options") or {})
+    for key, value in ollama_options_for_device(hardware).items():
+        options.setdefault(key, value)
+    kwargs["options"] = options
+
+    chosen = route or select_route(
+        chosen_model,
+        role=role,
+        messages=messages,
+        lock_model=overlay.get("source") == "benchmark",
+    )
     if chosen.backend == "litellm":
         try:
             text, usage = _litellm_chat_with_usage(chosen.model, messages, **kwargs)
             usage["route_reason"] = chosen.reason
+            usage["execution_model"] = chosen.model
+            usage["execution_hardware"] = hardware
+            usage["execution_source"] = overlay.get("source")
+            usage["execution_reason"] = overlay.get("reason")
+            usage["execution_workload"] = overlay.get("workload")
             return text, usage
         except Exception as exc:
             logger.warning("LiteLLM failed (%s), falling back to Ollama: %s", chosen.reason, exc)
     text, usage = _ollama_chat_with_usage(chosen.model, messages, **kwargs)
     usage["backend"] = "ollama"
     usage["route_reason"] = (
-        chosen.reason if route else select_route(model, role=role, messages=messages).reason
+        chosen.reason
+        if route
+        else select_route(
+            chosen_model,
+            role=role,
+            messages=messages,
+            lock_model=overlay.get("source") == "benchmark",
+        ).reason
     )
+    usage["execution_model"] = chosen.model
+    usage["execution_hardware"] = hardware
+    usage["execution_provider"] = "ollama"
+    usage["execution_source"] = overlay.get("source")
+    usage["execution_reason"] = overlay.get("reason")
+    usage["execution_workload"] = overlay.get("workload")
+    usage["execution_fallback_model"] = overlay.get("fallback_model")
+    usage["execution_fallback_hardware"] = overlay.get("fallback_hardware")
     return text, usage
 
 
@@ -179,7 +215,23 @@ def stream_chat(
     route: InferenceRoute | None = None,
     **kwargs,
 ) -> Iterator[str]:
-    chosen = route or select_route(model, role=role, messages=messages)
+    from jarvis.inference.execution_policy import apply_policy_to_route
+    from jarvis.nlu.placement import ollama_options_for_device
+
+    overlay = apply_policy_to_route(model=model, role=role)
+    chosen_model = str(overlay.get("model") or model)
+    hardware = str(overlay.get("hardware") or "cpu")
+    options = dict(kwargs.get("options") or {})
+    for key, value in ollama_options_for_device(hardware).items():
+        options.setdefault(key, value)
+    kwargs["options"] = options
+
+    chosen = route or select_route(
+        chosen_model,
+        role=role,
+        messages=messages,
+        lock_model=overlay.get("source") == "benchmark",
+    )
     if chosen.backend == "litellm":
         try:
             yield from _litellm_stream(chosen.model, messages, **kwargs)

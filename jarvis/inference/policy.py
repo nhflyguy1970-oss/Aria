@@ -92,8 +92,14 @@ def select_route(
     role: str = "general",
     messages: list[dict] | None = None,
     prefer_local: bool | None = None,
+    lock_model: bool = False,
 ) -> InferenceRoute:
-    """Choose inference backend and model for a request."""
+    """Choose inference backend and model for a request.
+
+    When ``lock_model`` is True (benchmark policy winner), personalization and
+    low-VRAM swaps must not replace the measured model. Hardware options remain
+    the caller's responsibility (gateway).
+    """
     from jarvis.inference.gateway import litellm_available
 
     mode = gateway_mode()
@@ -104,25 +110,27 @@ def select_route(
     model = (model or "").strip()
     context_tokens = _estimate_context_tokens(messages or [])
     cloud_model = _is_cloud_model(model)
+    vram_reason = ""
 
-    try:
-        from jarvis.personalization.store import preferred_model
+    if not lock_model:
+        try:
+            from jarvis.personalization.store import preferred_model
 
-        pref = preferred_model(role, fallback="")
-        if pref and not cloud_model and gateway_mode() != "litellm":
-            model = pref
-    except Exception:
-        pass
+            pref = preferred_model(role, fallback="")
+            if pref and not cloud_model and gateway_mode() != "litellm":
+                model = pref
+        except Exception:
+            pass
 
-    if _low_vram() and not cloud_model:
-        adjusted = _smaller_model(model, role)
-        if adjusted != model:
-            model = adjusted
-            vram_reason = "low_vram_smaller_model"
-        else:
-            vram_reason = "low_vram"
+        if _low_vram() and not cloud_model:
+            adjusted = _smaller_model(model, role)
+            if adjusted != model:
+                model = adjusted
+                vram_reason = "low_vram_smaller_model"
+            else:
+                vram_reason = "low_vram"
     else:
-        vram_reason = ""
+        vram_reason = "benchmark_locked"
 
     if mode == "ollama":
         reason = vram_reason or "gateway=ollama"
