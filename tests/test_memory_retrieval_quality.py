@@ -168,7 +168,9 @@ def test_update_then_recall(mem_ctx):
     )
     assert "dark roast" in result["message"].lower()
     remaining = [
-        e["content"] for e in mem_ctx.memory.list_entries() if "coffee" in e["content"].lower()
+        e["content"]
+        for e in mem_ctx.memory.list_entries()
+        if "coffee" in e["content"].lower() and "superseded" not in (e.get("tags") or [])
     ]
     assert any("dark roast" in c.lower() for c in remaining)
     assert not any("medium roast" in c.lower() for c in remaining)

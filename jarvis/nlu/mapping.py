@@ -71,12 +71,15 @@ _MEMORY_SUMMARY = re.compile(
     r"what\s+do\s+you\s+know\s+about\s+me|tell\s+me\s+something\s+about\s+me|"
     r"tell\s+me\s+about\s+myself|about\s+me\b|who\s+am\s+i\b|"
     r"what\s+do\s+you\s+remember(?:\s+about\s+me)?|"
-    r"my\s+memories|something\s+i\s+like|what\s+do\s+i\s+like"
+    r"my\s+memories|something\s+i\s+like|what\s+do\s+i\s+like|"
+    r"what\s+preferences?\s+(?:do\s+you\s+)?know|"
+    r"preferences?\s+(?:do\s+you\s+know|about\s+me)"
     r")\b",
     re.I,
 )
 _MEMORY_RECALL_FACT = re.compile(
-    r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bdo\s+you\s+remember\s+my\b",
+    r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bdo\s+you\s+remember\s+my\b|"
+    r"\bwhat\s+do\s+you\s+know\s+about\s+(?!me\b)",
     re.I,
 )
 _MEMORY_RECALL_RUNTIME = re.compile(

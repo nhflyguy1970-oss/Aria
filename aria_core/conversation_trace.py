@@ -362,6 +362,19 @@ def build_conversation_trace(
             "clarification_requested": bool(intent.get("needs_clarification")),
         },
         "execution": _execution_metadata(intent, action=action, route=route),
+        "memory_operation": {
+            "action": action
+            if action.startswith("memory")
+            or action
+            in (
+                "remember",
+                "recall",
+                "forget",
+            )
+            else None,
+            "retrieval": intent.get("memory_retrieval")
+            or (intent.get("params") or {}).get("memory_retrieval"),
+        },
         "capability_bus": {
             "requested": []
             if reflex_used

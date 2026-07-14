@@ -172,25 +172,40 @@ def record_strategy(
 
 def correct_memory(store, new_fact: str, *, search_hint: str = "") -> tuple[int, dict | None, bool]:
     """Replace matching memories with a corrected fact. Returns (removed_count, new_entry)."""
-    from jarvis.modules.memory_common import select_forget_targets
+    from jarvis.modules.memory_common import derive_topic_hint, select_forget_targets
 
     new_fact = new_fact.strip()
     if not new_fact:
         return 0, None
 
+    hint = (search_hint or "").strip() or derive_topic_hint(new_fact)
     removed = 0
-    if search_hint:
-        targets = select_forget_targets(store.list_entries(), search_hint, limit=5)
+    superseded_ids: list[str] = []
+    if hint:
+        targets = select_forget_targets(store.list_entries(), hint, limit=5)
         for e in targets:
-            if store.delete_id(e["id"]):
+            tags = list(e.get("tags") or [])
+            if "superseded" not in tags:
+                tags.append("superseded")
+            updated = False
+            try:
+                if hasattr(store, "update"):
+                    updated = bool(store.update(e["id"], tags=tags))
+            except Exception:
+                updated = False
+            if updated:
+                superseded_ids.append(e["id"])
+                removed += 1
+            elif store.delete_id(e["id"]):
+                superseded_ids.append(e["id"])
                 removed += 1
     else:
-        # Replace near-duplicates of the same topic (e.g. birthday)
         key = _topic_key(new_fact)
         if key:
             for e in select_forget_targets(store.list_entries(), key, limit=5):
                 if store.delete_id(e["id"]):
                     removed += 1
+                    superseded_ids.append(e["id"])
 
     entry_type = (
         "preference" if re.search(r"\b(prefer|favorite|favourite)\b", new_fact, re.I) else "fact"
@@ -199,35 +214,45 @@ def correct_memory(store, new_fact: str, *, search_hint: str = "") -> tuple[int,
         entry_type = "strategy"
         new_fact = parse_strategy_remember(new_fact) or new_fact
 
-    new_entry = store.add(entry_type, new_fact)
-
-    strategy_rule = None
-    lower = new_fact.lower()
-    behavior_markers = (
-        r"\b(prefer|always|never|don't|do not|shorter|brief|concise|tone|format|emoji|markdown)\b",
-        r"\b(keep answers|answer in|respond with|use bullet|no disclaimer)\b",
+    new_entry = store.add(
+        entry_type,
+        new_fact,
+        tags=["active", f"topic:{hint}"] if hint else ["active"],
     )
-    is_behavior = entry_type == "strategy" or entry_type == "preference"
-    if not is_behavior:
-        is_behavior = any(re.search(p, lower) for p in behavior_markers)
 
-    if is_behavior or (
-        removed and re.search(r"\b(prefer|always|never|shorter|brief)\b", lower, re.I)
-    ):
-        strategy_rule = f"When answering, remember: {new_fact.rstrip('.')}"
-    elif re.search(r"\b(actually,?\s+)?(prefer|always|never)\b", lower, re.I):
-        strategy_rule = f"When answering, remember: {new_fact.rstrip('.')}"
+    try:
+        from aria_core import memory_manager as mm
+
+        mm.record_update_supersede(
+            new_id=(new_entry or {}).get("id"),
+            superseded_ids=superseded_ids,
+            topic=hint,
+            removed=removed,
+        )
+    except Exception:
+        pass
+
+    lower = new_fact.lower()
+    style_preference = bool(
+        re.search(
+            r"\b(prefer|always|never|shorter|brief|concise|tone|format|communication|documentation)\b",
+            lower,
+            re.I,
+        )
+    ) and not re.search(r"\bfavorite\b", lower, re.I)
 
     strategy_created = False
-    if strategy_rule and not _similar_strategy_exists(store, strategy_rule):
-        store.add("strategy", strategy_rule, tags=["trust", "auto-correction"])
-        strategy_created = True
-        try:
-            from jarvis.events import emit_memory_updated
+    if style_preference:
+        strategy_rule = f"When answering, remember: {new_fact.rstrip('.')}"
+        if not _similar_strategy_exists(store, strategy_rule):
+            store.add("strategy", strategy_rule, tags=["trust", "auto-correction"])
+            strategy_created = True
+            try:
+                from jarvis.events import emit_memory_updated
 
-            emit_memory_updated(action="strategy_created", entry_id=new_entry.get("id"))
-        except Exception:
-            pass
+                emit_memory_updated(action="strategy_created", entry_id=new_entry.get("id"))
+            except Exception:
+                pass
 
     return removed, new_entry, strategy_created
 
@@ -248,8 +273,13 @@ def _similar_strategy_exists(store, content: str, threshold: float = 0.88) -> bo
 
 
 def _topic_key(fact: str) -> str | None:
+    from jarvis.modules.memory_common import derive_topic_hint
+
+    hinted = derive_topic_hint(fact)
+    if hinted:
+        return hinted
     lower = fact.lower()
-    for key in ("birthday", "broken_calc", "mom", "mother"):
+    for key in ("birthday", "broken_calc", "mom", "mother", "coffee", "color", "zeus"):
         if key in lower:
             return key
     return None

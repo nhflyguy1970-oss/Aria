@@ -28,6 +28,9 @@ _STATS: dict[str, int] = {
     "commits": 0,
     "rollbacks": 0,
     "duplicates_detected": 0,
+    "retrievals": 0,
+    "superseded": 0,
+    "ranking_decisions": 0,
 }
 
 
@@ -389,6 +392,49 @@ def reset_stats() -> None:
         _STATS[k] = 0
 
 
+def record_retrieval_decision(decision: dict[str, Any]) -> dict[str, Any]:
+    """Record ranking/retrieval diagnostics — ids and scores only, never contents."""
+    _bump("retrievals")
+    _bump("searches")
+    _bump("ranking_decisions")
+    clean = {
+        "query_len": len(str(decision.get("query") or "")),
+        "normalized_query": str(decision.get("normalized_query") or "")[:80],
+        "intent": decision.get("intent"),
+        "selected_id": decision.get("selected_id"),
+        "selected_type": decision.get("selected_type"),
+        "candidate_count": decision.get("candidate_count"),
+        "confidence": decision.get("confidence"),
+        "ranking_latency_ms": decision.get("ranking_latency_ms"),
+        "reason_selected": decision.get("reason_selected"),
+        "rejected_count": len(decision.get("rejected") or []),
+        "decision": "ranked",
+        "duration_ms": decision.get("ranking_latency_ms"),
+    }
+    return _record("retrieval", **clean)
+
+
+def record_update_supersede(
+    *,
+    new_id: str | None,
+    superseded_ids: list[str] | None = None,
+    topic: str = "",
+    removed: int = 0,
+) -> dict[str, Any]:
+    """Record that an update superseded prior active facts on the same topic."""
+    _bump("updates")
+    for _ in superseded_ids or []:
+        _bump("superseded")
+    return _record(
+        "update",
+        entry_id=new_id,
+        superseded_ids=list(superseded_ids or [])[:8],
+        topic=(topic or "")[:80],
+        removed=removed,
+        decision="supersede",
+    )
+
+
 def reset_for_tests() -> None:
     clear_history()
     reset_stats()
@@ -414,10 +460,40 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         "note": "Operational proxy; storage layout unchanged",
     }
     latencies = [r.get("duration_ms") for r in hist if r.get("duration_ms") is not None]
+    retrieval_rows = [r for r in hist if r.get("op") == "retrieval"]
+    ranking_latencies = [
+        r.get("ranking_latency_ms") or r.get("duration_ms")
+        for r in retrieval_rows
+        if (r.get("ranking_latency_ms") or r.get("duration_ms")) is not None
+    ]
+    update_rows = [r for r in hist if r.get("op") == "update" or r.get("decision") == "supersede"]
+    delete_rows = [r for r in hist if r.get("op") in ("delete", "forget")]
+    active_facts = None
+    superseded_facts = counters.get("superseded", 0)
+    duplicate_groups = counters.get("duplicates_detected", 0)
+    try:
+        store = _store()
+        entries = store.list_entries() if hasattr(store, "list_entries") else []
+        active_facts = sum(
+            1
+            for e in entries
+            if e.get("type") in ("fact", "preference")
+            and "superseded" not in (e.get("tags") or [])
+            and e.get("type") not in ("strategy", "auto", "failure")
+        )
+        superseded_facts = sum(1 for e in entries if "superseded" in (e.get("tags") or []))
+    except Exception:
+        pass
     latency = {
         "samples": len(latencies),
         "max_ms": max(latencies) if latencies else None,
         "p50_ms": sorted(latencies)[len(latencies) // 2] if latencies else None,
+        "avg_retrieval_ms": (
+            round(sum(ranking_latencies) / len(ranking_latencies), 3) if ranking_latencies else None
+        ),
+        "avg_ranking_ms": (
+            round(sum(ranking_latencies) / len(ranking_latencies), 3) if ranking_latencies else None
+        ),
     }
     # Lifecycle metadata only — never contents.
     lifecycle_counts: dict[str, int] = {
@@ -468,15 +544,31 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         "counters": counters,
         "reads": counters.get("reads", 0),
         "writes": counters.get("writes", 0),
+        "updates": counters.get("updates", 0) or len(update_rows),
+        "deletes": counters.get("deletes", 0) or len(delete_rows),
+        "retrievals": counters.get("retrievals", 0) or len(retrieval_rows),
         "searches": counters.get("searches", 0),
         "merges": counters.get("merges", 0),
         "learning_commits": learning_commits,
         "duplicates_detected": stats.get("duplicates_detected", 0),
         "duplicate_detection": stats.get("duplicates_detected", 0),
+        "duplicate_groups": duplicate_groups,
+        "active_facts": active_facts,
+        "superseded_facts": superseded_facts,
+        "ranking_decisions": counters.get("ranking_decisions", 0) or len(retrieval_rows),
         "growth": entry_count,
         "fragmentation": fragmentation,
         "namespaces": namespaces,
         "history": hist,
+        "retrieval_history": retrieval_rows[-limit:],
+        "memory_health": {
+            "ok": bool(health.get("ok")),
+            "active_facts": active_facts,
+            "superseded_facts": superseded_facts,
+            "duplicate_groups": duplicate_groups,
+            "avg_retrieval_ms": latency.get("avg_retrieval_ms"),
+            "avg_ranking_ms": latency.get("avg_ranking_ms"),
+        },
         "lifecycle": {
             "stages": [
                 "Created",

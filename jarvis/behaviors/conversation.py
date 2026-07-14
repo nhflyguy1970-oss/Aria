@@ -28,6 +28,44 @@ _CONVERSATION_DEPENDENCIES = [
     "workflow_manager",
 ]
 
+_USER_SAFE_BACKEND = (
+    "I couldn't complete that reply just now. Please try again in a moment — "
+    "if it keeps failing, check that the local model service is running."
+)
+
+
+def _sanitize_user_error(exc: BaseException | str) -> str:
+    """Never surface backend/model implementation details to end users."""
+    text = str(exc or "").strip()
+    lower = text.lower()
+    if (
+        "returned empty" in lower
+        or "ollama" in lower
+        or re.search(r"\bmodel\s*[`']?[\w.:-]+", text, re.I)
+        or "connection refused" in lower
+        or "status code" in lower
+        or "traceback" in lower
+    ):
+        return _USER_SAFE_BACKEND
+    if len(text) > 240:
+        return _USER_SAFE_BACKEND
+    return text or _USER_SAFE_BACKEND
+
+
+def _record_backend_failure(detail: str) -> None:
+    """Keep failure diagnostics off the user path (Conversation Trace / events)."""
+    try:
+        from aria_core.event_bus import safe_publish
+
+        safe_publish(
+            "InferenceBackendFailure",
+            source="jarvis.conversation",
+            detail=(detail or "")[:240],
+            user_visible=False,
+        )
+    except Exception:
+        pass
+
 
 class ConversationEngine:
     """Conversation context assembly, LLM dispatch, and persistence."""
@@ -233,13 +271,13 @@ class ConversationEngine:
             inference_ms = int((time.perf_counter() - t0) * 1000)
         except Exception as exc:
             self._a.conversation.pop_last_user()
-            return _err(str(exc), module=None)
+            _record_backend_failure(str(exc))
+            return _err(_sanitize_user_error(exc), module=None)
         if not answer.strip():
             self._a.conversation.pop_last_user()
-            return _err(
-                f"Model `{llm.general_model()}` returned empty. Try: `ollama pull {llm.general_model()}`",
-                module=None,
-            )
+            detail = f"Model `{llm.general_model()}` returned empty"
+            _record_backend_failure(detail)
+            return _err(_sanitize_user_error(detail), module=None)
         self._a.conversation.add_assistant(answer)
         self.auto_remember(message, answer)
         self._learn_preferences(model)
@@ -343,19 +381,19 @@ class ConversationEngine:
         if not answer.strip():
             if saved_user:
                 self._a.conversation.pop_last_user()
+            detail = f"Model `{llm.general_model()}` returned empty"
+            _record_backend_failure(detail)
             yield {
                 "type": "done",
                 "ok": False,
-                "message": (
-                    f"Model `{llm.general_model()}` returned empty. "
-                    f"Try: `ollama pull {llm.general_model()}`"
-                ),
+                "message": _sanitize_user_error(detail),
+                "backend_error": detail,
             }
             return
 
         self._a.conversation.add_assistant(answer)
         self.auto_remember(message, answer)
-        self._learn_preferences(model)
+        self._learn_preferences(chat_model)
         self._a.branches.persist(session=self._a.session)
         inference_ms = int((time.perf_counter() - t0) * 1000)
         done_payload = {

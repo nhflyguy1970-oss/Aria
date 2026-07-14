@@ -36,11 +36,32 @@ _DIAGNOSTIC_TAGS = frozenset(
         "checkpoint",
         "fix-verified",
         "auto-correction",
+        "superseded",
     }
+)
+_JOURNAL_TAGS = frozenset(
+    {
+        "journal",
+        "journal-learn",
+        "bullet-journal",
+        "journal-learned",
+    }
+)
+_JOURNAL_CONTENT = re.compile(r"^from bullet journal\b|^from journal\b", re.I)
+_TOPIC_HINT = re.compile(
+    r"\b("
+    r"favorite\s+(?:coffee|colou?r|tea|food|movie|book|song|drink)|"
+    r"(?:coffee|colou?r|tea)\s+preference|"
+    r"dog'?s?\s+name|my\s+dog|"
+    r"preferred?\s+\w+|communication\s+style|documentation\s+preference|"
+    r"decision\s+style"
+    r")\b",
+    re.I,
 )
 _QUERY_FILLER = re.compile(
     r"^(?:please\s+)?"
     r"(?:what\s+is\s+my|what'?s\s+my|do\s+you\s+remember\s+my|"
+    r"what\s+do\s+you\s+know\s+about|"
     r"search\s+(?:my\s+)?memory(?:\s+for)?|find\s+in\s+memory|"
     r"memory\s+search(?:\s+for)?|tell\s+me\s+(?:about\s+)?my)\s+",
     re.I,
@@ -104,10 +125,42 @@ def is_user_facing_entry(entry: dict) -> bool:
     tags = {str(t).lower() for t in (entry.get("tags") or [])}
     if tags & _DIAGNOSTIC_TAGS:
         return False
+    if "superseded" in tags:
+        return False
     ns = str(entry.get("namespace") or "").lower()
     if ns in ("tools", "jarvis") and etype == "strategy":
         return False
     return True
+
+
+def is_journal_entry(entry: dict) -> bool:
+    tags = {str(t).lower() for t in (entry.get("tags") or [])}
+    if tags & _JOURNAL_TAGS:
+        return True
+    ns = str(entry.get("namespace") or "").lower()
+    if ns in ("journal", "journal-learned") or ns.startswith("journal"):
+        return True
+    return bool(_JOURNAL_CONTENT.search(entry.get("content") or ""))
+
+
+def derive_topic_hint(text: str) -> str:
+    """Extract a stable topic key so updates supersede prior facts on the same concept."""
+    raw = (text or "").strip()
+    if not raw:
+        return ""
+    m = _TOPIC_HINT.search(raw)
+    if m:
+        return m.group(1).lower().strip()
+    # Fallback: distinctive tokens after stripping common verbs/stopwords.
+    cleaned = re.sub(
+        r"^(?:actually,?\s*)?(?:please\s+)?(?:update|change|correct|fix|remember(?:\s+that)?)\s+",
+        "",
+        raw,
+        flags=re.I,
+    )
+    cleaned = re.sub(r"\b(?:is|now|to|the|a|an|my)\b", " ", cleaned, flags=re.I)
+    tokens = [w for w in re.split(r"\W+", cleaned.lower()) if len(w) > 2 and w not in _FORGET_STOPWORDS]
+    return " ".join(tokens[:3]).strip()
 
 
 def filter_user_facing(entries: list[dict]) -> list[dict]:
@@ -123,7 +176,9 @@ def normalize_memory_query(query: str) -> str:
 
 
 def type_rank_boost(entry: dict) -> float:
-    """Semantic priority: user facts/preferences first; telemetry last."""
+    """Semantic priority: user facts/preferences first; journal/telemetry last."""
+    if is_journal_entry(entry):
+        return 0.45
     etype = str(entry.get("type") or "")
     if etype == "preference":
         return 1.25
@@ -196,21 +251,30 @@ def format_recall_answer(entry: dict) -> str:
     if not text:
         return ""
     rewritten = re.sub(r"^(?:remember(?:\s+that)?\s+)?", "", text, flags=re.I).strip()
-    rewritten = re.sub(r"^My\b", "Your", rewritten)
-    rewritten = re.sub(r"^I\b", "You", rewritten)
+    rewritten = re.sub(r"^(?:My|my)\b", "Your", rewritten)
+    rewritten = re.sub(r"^(?:I|i)\b", "You", rewritten)
     if rewritten and rewritten[-1] not in ".!?":
         rewritten += "."
     return rewritten
 
 
 _FACT_QUESTION = re.compile(
-    r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bdo\s+you\s+remember\s+my\b",
+    r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bdo\s+you\s+remember\s+my\b|"
+    r"\bwhat\s+do\s+you\s+know\s+about\s+(?!me\b)",
+    re.I,
+)
+_PREFERENCE_SUMMARY = re.compile(
+    r"\b(?:what\s+)?preferences?\b|\bwhat\s+do\s+you\s+know\s+about\s+my\s+preferences\b",
     re.I,
 )
 
 
 def is_fact_question(query: str) -> bool:
     return bool(_FACT_QUESTION.search(query or ""))
+
+
+def is_preference_summary_query(query: str) -> bool:
+    return bool(_PREFERENCE_SUMMARY.search(query or ""))
 
 
 def normalize_entry(entry: dict, index: int = 0) -> dict:
@@ -252,7 +316,11 @@ def search_pool(
     if keyword_matches:
         ranked = sorted(
             keyword_matches,
-            key=lambda e: (keyword_score(e, query_lower), relevance_score(e)),
+            key=lambda e: (
+                keyword_score(e, query_lower) * (0.4 if is_journal_entry(e) else 1.0),
+                relevance_score(e) * (0.5 if is_journal_entry(e) else 1.0),
+                -len(e.get("content") or ""),
+            ),
             reverse=True,
         )
         results = ranked[:limit]

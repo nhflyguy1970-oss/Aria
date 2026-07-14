@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import random
 import re
+import time
 from datetime import UTC
 from pathlib import Path
 from typing import Any
@@ -291,15 +292,43 @@ class MemoryEngine:
 
     @classmethod
     def memory_about_user(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
-        from jarvis.modules.memory_common import filter_user_facing, format_recall_answer
+        from jarvis.modules.memory_common import (
+            filter_user_facing,
+            format_recall_answer,
+            is_preference_summary_query,
+        )
         from jarvis.trust_memory import filter_entry_list
 
         lower = (params.get("question") or message).lower()
         profile = filter_entry_list(
             ctx.memory.list_entries(namespace="profile"), user_facing_only=True
         )
+        prefs = filter_user_facing(
+            [
+                e
+                for e in ctx.memory.list_entries(entry_type="preference")
+                if e.get("namespace") != "profile"
+            ]
+        )
+        facts = filter_user_facing(
+            [
+                e
+                for e in ctx.memory.list_entries(entry_type="fact")
+                if e.get("namespace") not in ("profile",)
+            ]
+        )
 
-        if not profile:
+        if is_preference_summary_query(message) or "preference" in lower:
+            if not prefs:
+                return ok(
+                    "I don't have stored preferences yet. Tell me things like "
+                    "**Remember that I prefer concise answers.**",
+                    module="memory",
+                )
+            lines = "\n".join(f"• {format_recall_answer(p)}" for p in prefs[:12])
+            return ok(f"Here are preferences I know about you:\n\n{lines}", module="memory")
+
+        if not profile and not prefs and not facts:
             hits = filter_entry_list(
                 ctx.memory.search(message, limit=8, user_facing_only=True),
                 user_facing_only=True,
@@ -328,10 +357,10 @@ class MemoryEngine:
             lower,
         ):
             if interests:
-                text = interests["content"]
-                if ": " in text:
-                    text = text.split(": ", 1)[1]
-                items = [item.strip() for item in re.split(r",| and ", text) if item.strip()]
+                text_i = interests["content"]
+                if ": " in text_i:
+                    text_i = text_i.split(": ", 1)[1]
+                items = [item.strip() for item in re.split(r",| and ", text_i) if item.strip()]
                 if items:
                     pick = random.choice(items)
                     rest = [item for item in items if item != pick][:4]
@@ -346,54 +375,81 @@ class MemoryEngine:
                         module="memory",
                     )
 
+        parts: list[str] = []
         summary = next((p for p in profile if "summary" in (p.get("tags") or [])), None)
         if summary:
-            return ok(f"Here's what I know about you:\n\n{summary['content']}", module="memory")
-
-        facts = filter_user_facing(profile)[:8]
-        if len(facts) == 1:
-            return ok(format_recall_answer(facts[0]), module="memory")
-        lines = "\n".join(f"• {format_recall_answer(p)}" for p in facts)
-        return ok(f"Here's what I know about you:\n\n{lines}", module="memory")
+            parts.append(summary["content"])
+        elif profile:
+            parts.extend(format_recall_answer(p) for p in filter_user_facing(profile)[:4])
+        if prefs:
+            parts.append(
+                "Preferences:\n" + "\n".join(f"• {format_recall_answer(p)}" for p in prefs[:8])
+            )
+        if facts:
+            parts.append("Facts:\n" + "\n".join(f"• {format_recall_answer(f)}" for f in facts[:8]))
+        if not parts:
+            return ok(
+                "I'm still learning about you. Tell me preferences or facts to remember.",
+                module="memory",
+            )
+        return ok("Here's what I know about you:\n\n" + "\n\n".join(parts), module="memory")
 
     @classmethod
     def memory_search(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from jarvis.memory.retrieval_diagnostics import rank_for_query
         from jarvis.modules.memory_common import (
             format_recall_answer,
             is_fact_question,
             normalize_memory_query,
         )
-        from jarvis.trust_memory import filter_entry_list
 
         raw_query = params.get("query") or message
-        query = normalize_memory_query(raw_query)
+        _ = normalize_memory_query(raw_query)
         ns = ctx.session.memory_namespace
-        results = filter_entry_list(
-            ctx.memory.search(
-                query,
-                namespace=ns if ns and ns != "default" else None,
-                user_facing_only=True,
-            ),
-            user_facing_only=True,
+        pool = list(
+            ctx.memory.list_entries(namespace=ns if ns and ns != "default" else None)
         )
-        if not results and ns and ns != "default":
-            results = filter_entry_list(
-                ctx.memory.search(query, user_facing_only=True),
-                user_facing_only=True,
-            )
-        if not results:
-            return ok("No matching memories found.", module="memory")
+        if ns and ns != "default":
+            default_entries = ctx.memory.list_entries(namespace="default")
+            seen = {e.get("id") for e in pool}
+            pool.extend(e for e in default_entries if e.get("id") not in seen)
+        if not pool:
+            pool = list(ctx.memory.list_entries())
 
-        # Fact questions get a spoken answer; explicit search returns ranked hits.
+        t0 = time.perf_counter()
+        hits, decision = rank_for_query(
+            pool,
+            raw_query,
+            intent="memory_search",
+            limit=8,
+            fact_mode=is_fact_question(raw_query),
+        )
+        decision["retrieval_latency_ms"] = round((time.perf_counter() - t0) * 1000, 3)
+        if not hits:
+            return ok(
+                "No matching memories found.",
+                module="memory",
+                memory_retrieval=decision,
+            )
+
         if is_fact_question(raw_query) or re.search(
-            r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b", raw_query, re.I
+            r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bwhat\s+do\s+you\s+know\s+about\s+(?!me\b)",
+            raw_query,
+            re.I,
         ):
             return ok(
-                format_recall_answer(results[0]), module="memory", remembered=results[0]["content"]
+                format_recall_answer(hits[0]),
+                module="memory",
+                remembered=hits[0]["content"],
+                memory_retrieval=decision,
             )
 
-        lines = "\n".join(f"• {e['content']}" for e in results)
-        return ok(f"Found these memories:\n\n{lines}", module="memory")
+        lines = "\n".join(f"• {e['content']}" for e in hits)
+        return ok(
+            f"Found these memories:\n\n{lines}",
+            module="memory",
+            memory_retrieval=decision,
+        )
 
     @classmethod
     def memory_forget(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
