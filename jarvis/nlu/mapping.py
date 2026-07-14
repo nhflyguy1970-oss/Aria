@@ -34,8 +34,150 @@ _REF = re.compile(
 )
 _EXPLICIT_WEB = re.compile(r"\bsearch\s+(?:the\s+)?web\b|\blook\s+up\s+online\b", re.I)
 _USER_MEMORY = re.compile(
-    r"\bsearch\s+(?:my\s+)?memory\b|\brecall\b|\bwhat\s+do\s+you\s+remember\b", re.I
+    r"\bsearch\s+(?:my\s+)?memory\b|\brecall\b|\bwhat\s+do\s+you\s+remember\b|"
+    r"\bwhat\s+do\s+you\s+know\s+about\s+me\b|"
+    r"\b(?:please\s+)?(?:remember|don'?t\s+forget|note\s+that|keep\s+in\s+mind)\b|"
+    r"\b(?:please\s+)?(?:forget|delete\s+memory|remove\s+memory)\b|"
+    r"\b(?:please\s+)?(?:update|change|correct|fix)\s+my\b|"
+    r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b",
+    re.I,
 )
+
+# Imperative write — "remember that …" but not "what do you remember" / "do you remember …?"
+_MEMORY_WRITE = re.compile(
+    r"\b(?:please\s+)?(?:remember|don'?t\s+forget|note\s+that|keep\s+in\s+mind)\b",
+    re.I,
+)
+_MEMORY_WRITE_QUESTION = re.compile(
+    r"\b(?:what\s+do\s+you\s+remember|do\s+you\s+remember|did\s+you\s+remember)\b",
+    re.I,
+)
+_MEMORY_FORGET = re.compile(
+    r"\b(?:please\s+)?(?:forget|delete\s+memory|remove\s+memory)\b",
+    re.I,
+)
+_MEMORY_UPDATE = re.compile(
+    r"\b(?:please\s+)?(?:correct|update|fix|change)\s+"
+    r"(?:that|the\s+fact|memory|my\s+memory|my)\b|"
+    r"^(?:please\s+)?(?:update|change|correct|fix)\s+my\b|"
+    r"^(?:please\s+)?actually,?\s+",
+    re.I,
+)
+_MEMORY_SEARCH = re.compile(
+    r"\b(?:search\s+my\s+memory|search\s+memory|find\s+in\s+memory|memory\s+search)\b",
+    re.I,
+)
+_MEMORY_SUMMARY = re.compile(
+    r"\b(?:"
+    r"what\s+do\s+you\s+know\s+about\s+me|tell\s+me\s+something\s+about\s+me|"
+    r"tell\s+me\s+about\s+myself|about\s+me\b|who\s+am\s+i\b|"
+    r"what\s+do\s+you\s+remember(?:\s+about\s+me)?|"
+    r"my\s+memories|something\s+i\s+like|what\s+do\s+i\s+like"
+    r")\b",
+    re.I,
+)
+_MEMORY_RECALL_FACT = re.compile(
+    r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bdo\s+you\s+remember\s+my\b",
+    re.I,
+)
+_MEMORY_LIST = re.compile(
+    r"\b(?:recall|list\s+(?:my\s+)?memor(?:y|ies)|show\s+(?:my\s+)?memor(?:y|ies))\b", re.I
+)
+
+
+def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
+    """Map memory verbs to distinct router actions (write ≠ search ≠ dump).
+
+    Returns a partial intent dict with action/params, or None if not a memory utterance.
+    """
+    message = (prompt or "").strip()
+    if not message:
+        return None
+    lower = message.lower()
+
+    # Order matters: write before interrogative remember; search before generic recall.
+    if _MEMORY_SEARCH.search(lower):
+        query = (
+            re.sub(
+                r"^(please\s+)?(search my memory|search memory|find in memory|memory search)\s*(for\s+)?",
+                "",
+                message,
+                flags=re.I,
+            ).strip()
+            or message
+        )
+        return {"action": "memory_search", "params": {"query": query}, "thinking": "memory search"}
+
+    if _MEMORY_FORGET.search(lower):
+        query = (
+            re.sub(
+                r"^(please\s+)?(forget|delete memory|remove memory)\s*(about\s+)?",
+                "",
+                message,
+                flags=re.I,
+            ).strip()
+            or message
+        )
+        return {"action": "memory_forget", "params": {"query": query}, "thinking": "forget memory"}
+
+    if _MEMORY_UPDATE.search(lower):
+        from jarvis.trust_memory import parse_memory_correct
+
+        parsed = parse_memory_correct(message)
+        if parsed:
+            hint, new_fact = parsed
+            return {
+                "action": "memory_correct",
+                "params": {"new_fact": new_fact, "search_hint": hint},
+                "thinking": "correct memory",
+            }
+        # Soft update: "Update my favorite coffee" → correct with hint, await new value
+        hint = re.sub(
+            r"^(please\s+)?(update|change|correct|fix)\s+(my\s+)?",
+            "",
+            message,
+            flags=re.I,
+        ).strip()
+        return {
+            "action": "memory_correct",
+            "params": {"new_fact": "", "search_hint": hint or message},
+            "thinking": "update memory",
+        }
+
+    if _MEMORY_WRITE.search(lower) and not _MEMORY_WRITE_QUESTION.search(lower):
+        text = re.sub(
+            r"^(please\s+)?(remember|don't forget|don'?t forget|note that|keep in mind)\s*(that\s+)?",
+            "",
+            message,
+            flags=re.I,
+        ).strip()
+        text = re.sub(r"^(these|the following)\s+facts?\s*:?\s*", "", text, flags=re.I).strip()
+        if text:
+            return {"action": "remember", "params": {"text": text}, "thinking": "remember"}
+
+    if _MEMORY_SUMMARY.search(lower):
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "memory summary",
+        }
+
+    if _MEMORY_RECALL_FACT.search(lower):
+        # Targeted fact retrieval — never dump the whole store.
+        return {
+            "action": "memory_search",
+            "params": {"query": message},
+            "thinking": "memory recall fact",
+        }
+
+    if _MEMORY_LIST.search(lower):
+        return {"action": "recall", "params": {}, "thinking": "memory list"}
+
+    if _USER_MEMORY.search(message):
+        # Fallback for other memory-ish phrasing matched by structure.
+        return {"action": "memory_search", "params": {"query": message}, "thinking": "memory"}
+
+    return None
 
 
 def _runtime_action(subject: str, verb: str, prompt: str = "") -> str:
@@ -178,9 +320,20 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
     params: dict[str, Any] = {}
     action = "chat"
 
+    # Imperative memory verbs must never collapse to recall dump / docs.
+    mem = resolve_memory_route(result.prompt)
+    if mem:
+        write_ops = {"remember", "memory_forget", "memory_correct"}
+        if mem["action"] in write_ops or intent == "memory" or _USER_MEMORY.search(result.prompt):
+            intent = "memory"
+            action = str(mem["action"])
+            params = dict(mem.get("params") or {})
+
     exact = _EXACT_RUNTIME_COMMANDS.get(result.prompt.strip().lower())
     if exact:
         action = exact
+    elif action != "chat" and intent == "memory" and mem:
+        pass  # already set from resolve_memory_route
     elif intent == "runtime":
         action = _runtime_action(subject, verb, result.prompt)
     elif intent == "knowledge":
@@ -196,11 +349,13 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
         action = "reference_search"
         params = {"query": subject or result.prompt, "subject": subject}
     elif intent == "memory":
-        if result.syntax.subject == "memory" or "search" in result.prompt.lower():
-            action = "memory_search"
-            params = {"query": subject or result.prompt}
-        else:
-            action = "recall"
+        if not mem:
+            if result.syntax.subject == "memory" or "search" in result.prompt.lower():
+                action = "memory_search"
+                params = {"query": subject or result.prompt}
+            else:
+                action = "memory_search"
+                params = {"query": subject or result.prompt}
     elif intent == "web_search":
         action = "web_search"
         params = {"query": subject or result.prompt}
@@ -214,14 +369,16 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
             action = "coding_chat"
             params = {"query": result.prompt}
     elif intent == "chat":
-        action = "chat"
+        if action == "chat":
+            action = "chat"
     else:
-        return None
+        if action == "chat":
+            return None
 
     out = {
         "action": action,
         "params": params,
-        "thinking": "nlu",
+        "thinking": (mem or {}).get("thinking") or "nlu",
         "route_reason": "nlu_semantic",
         "route_confidence": confidence,
         "route_handler": handler_for_intent(intent),

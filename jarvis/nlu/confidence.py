@@ -117,8 +117,15 @@ def resolve_clarification_choice(choice: str, pending: dict[str, Any]) -> dict[s
         action = "chat"
         params = {"knowledge_mode": True, "query": prompt}
     elif intent == "memory":
-        action = "memory_search"
-        params = {"query": syntax.object or prompt}
+        from jarvis.nlu.mapping import resolve_memory_route
+
+        mem = resolve_memory_route(prompt)
+        if mem:
+            action = str(mem["action"])
+            params = dict(mem.get("params") or {})
+        else:
+            action = "memory_search"
+            params = {"query": syntax.object or prompt}
     elif intent == "web_search":
         action = "web_search"
         params = {"query": prompt}

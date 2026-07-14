@@ -46,7 +46,7 @@ def _system_prompt() -> str:
         "- runtime: LIVE workstation state only (my GPU, services running, status, health, models loaded)\n"
         "- knowledge: explain concepts, teach, compare, history, what is X (encyclopedic)\n"
         "- reference: how to configure/setup, show docs/manuals/README/project reference\n"
-        "- memory: search my memory, recall, remember facts about Jeff\n"
+        "- memory: remember facts, forget facts, update facts, recall, or search my memory\n"
         "- web_search: explicit search the web / look up online\n"
         "- coding: fix/implement/refactor code files\n"
         "- chat: general conversation\n"
