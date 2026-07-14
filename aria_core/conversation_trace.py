@@ -259,10 +259,7 @@ def _execution_metadata(
     merged = {**usage, **result_usage, **explicit}
 
     request_class = str(
-        explicit.get("request_class")
-        or intent.get("request_class")
-        or action
-        or "chat"
+        explicit.get("request_class") or intent.get("request_class") or action or "chat"
     ).lower()
 
     plan: dict[str, Any] = {}

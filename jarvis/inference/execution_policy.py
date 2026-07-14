@@ -125,7 +125,9 @@ def save_policy(policy: dict[str, Any]) -> Path:
     policy = dict(policy)
     policy.setdefault("version", _POLICY_VERSION)
     policy["saved_at"] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime())
-    _POLICY_FILE.write_text(json.dumps(policy, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    _POLICY_FILE.write_text(
+        json.dumps(policy, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     return _POLICY_FILE
 
 

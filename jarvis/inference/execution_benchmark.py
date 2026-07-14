@@ -44,7 +44,9 @@ def _has_size_token(name: str, token: str) -> bool:
     return re.search(pat, lower) is not None
 
 
-def _matches_hints(name: str, *, size_tokens: tuple[str, ...] = (), name_hints: tuple[str, ...] = ()) -> bool:
+def _matches_hints(
+    name: str, *, size_tokens: tuple[str, ...] = (), name_hints: tuple[str, ...] = ()
+) -> bool:
     lower = name.lower()
     if any(h in lower for h in name_hints):
         return True
@@ -351,9 +353,7 @@ def bench_model_device(
         }
     warm_lat = [float(w["wall_ms"]) for w in warm_ok] or [float(cold["wall_ms"])]
     tps_vals = [
-        float(w["completion_tokens_per_sec"])
-        for w in warm_ok
-        if w.get("completion_tokens_per_sec")
+        float(w["completion_tokens_per_sec"]) for w in warm_ok if w.get("completion_tokens_per_sec")
     ]
     ptps_vals = [
         float(w["prompt_tokens_per_sec"]) for w in warm_ok if w.get("prompt_tokens_per_sec")
@@ -439,7 +439,14 @@ def run_execution_benchmark(
             continue
         best = wl_results[0]
         # Second-best for fallback (different device or model)
-        fallback = next((r for r in wl_results[1:] if r["model"] != best["model"] or r["device"] != best["device"]), None)
+        fallback = next(
+            (
+                r
+                for r in wl_results[1:]
+                if r["model"] != best["model"] or r["device"] != best["device"]
+            ),
+            None,
+        )
         winners[workload] = {
             "provider": "ollama",
             "model": best["model"],
@@ -536,9 +543,7 @@ def _write_docs(policy: dict[str, Any]) -> None:
         lines.append("_No prior policy or no changes._")
     else:
         for ch in changes:
-            lines.append(
-                f"- **{ch['workload']}**: `{ch['from']}` → `{ch['to']}`"
-            )
+            lines.append(f"- **{ch['workload']}**: `{ch['from']}` → `{ch['to']}`")
     lines.extend(
         [
             "",
