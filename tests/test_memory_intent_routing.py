@@ -59,6 +59,19 @@ def test_remember_does_not_dump():
         assert "dark roast" in (intent.get("params") or {}).get("text", "")
 
 
+def test_gpu_what_is_my_stays_runtime():
+    """'What is my GPU?' must not be captured by memory fact recall."""
+    assert resolve_memory_route("What is my GPU?") is None
+    assert resolve_memory_route("What is my current GPU?") is None
+    with patch("jarvis.runtime_introspection.get_runtime_client") as mock_client:
+        mock_client.return_value = MagicMock()
+        from jarvis.router import route
+
+        intent = route("What is my GPU?", SessionContext(), None)
+        action = intent.get("action") or ""
+        assert action.startswith("runtime_") or action == "status_summary", intent
+
+
 def test_nlu_mapping_remember_not_recall():
     from jarvis.nlu.mapping import nlu_to_router_intent
     from jarvis.nlu.types import (

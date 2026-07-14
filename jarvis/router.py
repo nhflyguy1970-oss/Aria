@@ -1848,16 +1848,16 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
         except Exception:
             pass
 
-    # Imperative memory verbs (Remember / Forget / Update) before NLU so coarse
-    # semantic "memory" cannot collapse them into recall dumps.
+    # Memory verbs (Remember / Forget / Update / What is my… / Search memory…)
+    # before NLU so coarse "memory" never collapses into clarification or dump.
     try:
         from jarvis.nlu.mapping import resolve_memory_route
 
         mem = resolve_memory_route(message)
-        if mem and mem.get("action") in ("remember", "memory_forget", "memory_correct"):
+        if mem:
             intent = {
                 **mem,
-                "route_reason": "memory_imperative",
+                "route_reason": "memory_verb",
                 "route_handler": "MemoryEngine",
                 "route_confidence": 1.0,
                 "router": "memory_verb",

@@ -38,8 +38,7 @@ _USER_MEMORY = re.compile(
     r"\bwhat\s+do\s+you\s+know\s+about\s+me\b|"
     r"\b(?:please\s+)?(?:remember|don'?t\s+forget|note\s+that|keep\s+in\s+mind)\b|"
     r"\b(?:please\s+)?(?:forget|delete\s+memory|remove\s+memory)\b|"
-    r"\b(?:please\s+)?(?:update|change|correct|fix)\s+my\b|"
-    r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b",
+    r"\b(?:please\s+)?(?:update|change|correct|fix)\s+my\b",
     re.I,
 )
 
@@ -80,8 +79,14 @@ _MEMORY_RECALL_FACT = re.compile(
     r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bdo\s+you\s+remember\s+my\b",
     re.I,
 )
+_MEMORY_RECALL_RUNTIME = re.compile(
+    r"\b(?:gpu|vram|cpu|ram|model|hardware|graphics|card|disk|storage|"
+    r"service|platform|mission\s+control|ollama|docker|provider|job)\b",
+    re.I,
+)
 _MEMORY_LIST = re.compile(
-    r"\b(?:recall|list\s+(?:my\s+)?memor(?:y|ies)|show\s+(?:my\s+)?memor(?:y|ies))\b", re.I
+    r"\b(?:recall|list\s+(?:my\s+)?memor(?:y|ies)|show\s+(?:my\s+)?memor(?:y|ies))\b",
+    re.I,
 )
 
 
@@ -162,7 +167,7 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
             "thinking": "memory summary",
         }
 
-    if _MEMORY_RECALL_FACT.search(lower):
+    if _MEMORY_RECALL_FACT.search(lower) and not _MEMORY_RECALL_RUNTIME.search(lower):
         # Targeted fact retrieval — never dump the whole store.
         return {
             "action": "memory_search",
@@ -320,19 +325,17 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
     params: dict[str, Any] = {}
     action = "chat"
 
-    # Imperative memory verbs must never collapse to recall dump / docs.
+    # Distinct memory verbs (write/forget/update/search/summary) never collapse to dump.
     mem = resolve_memory_route(result.prompt)
     if mem:
-        write_ops = {"remember", "memory_forget", "memory_correct"}
-        if mem["action"] in write_ops or intent == "memory" or _USER_MEMORY.search(result.prompt):
-            intent = "memory"
-            action = str(mem["action"])
-            params = dict(mem.get("params") or {})
+        intent = "memory"
+        action = str(mem["action"])
+        params = dict(mem.get("params") or {})
 
     exact = _EXACT_RUNTIME_COMMANDS.get(result.prompt.strip().lower())
     if exact:
         action = exact
-    elif action != "chat" and intent == "memory" and mem:
+    elif mem:
         pass  # already set from resolve_memory_route
     elif intent == "runtime":
         action = _runtime_action(subject, verb, result.prompt)
