@@ -1059,17 +1059,24 @@ class CognitiveEngine:
         return self.identity.who_am_i()
 
     def classify_request(self, text: str) -> dict[str, Any]:
-        """Classify whether a request requires cognitive memory before speech."""
+        """Cognitive Intent Classification — ownership before speech (D039)."""
         from acm.authority.classification import classify_memory_request
 
         return classify_memory_request(text).to_public()
 
+    def route_request(self, text: str) -> dict[str, Any]:
+        """Classify + determine cognitive organ ownership (no reconstruction yet)."""
+        from acm.authority.routing import CognitiveRoutingEngine
+
+        return CognitiveRoutingEngine(self).decide(text).to_public()
+
     def cognitive_respond(self, request: str) -> dict[str, Any]:
-        """Memory Authority pipeline: classify → ACM reconstruct → structured result.
+        """Memory Authority: classify → route → ACM reconstruct → CognitiveMemoryResult.
 
         Returns ``CognitiveMemoryResult.to_public()``. Hosts MUST invoke this (or
         equivalent organ verbs) for memory requests **before** language-model
         generation. Language models must only speak via ``speak_cognitive_result``.
+        The language model never chooses which organ answers.
         """
         from acm.authority.pipeline import CognitiveResponsePipeline
 

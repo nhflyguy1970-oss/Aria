@@ -63,7 +63,7 @@ Focus: replace Aria cognitive memory with an **independent vendored ACM copy**.
 | # | Item | Status | Notes |
 |---|------|--------|-------|
 | 1 | Integration blueprint (Parts 1–10) | Done | `docs/acm_integration/` · A001 |
-| 2 | M0 Vendor `aria_acm/` | **Done** | Pin ACM `v0.15.0` · `aria-acm-v0.15.0-1` (M0A) |
+| 2 | M0 Vendor `aria_acm/` | **Done** | Pin ACM `v0.16.0` · `aria-acm-v0.16.0-1` (M0B) |
 | 3 | M1 Shadow measure | **Done** | Measure phase complete |
 | 4 | M2 Harvest INTO ACM | **Done** | `acm_harvest` · operator CLI |
 | 5 | M3 ACM primary | **Done** | Flag-gated cutover · A005 |

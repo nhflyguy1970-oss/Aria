@@ -53,6 +53,9 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "gpu: requires GPU/CUDA")
     config.addinivalue_line("markers", "m0: Aria ACM integration milestone M0 (vendoring)")
     config.addinivalue_line("markers", "m0a: Aria ACM promotion M0A (Memory Authority v0.15.0)")
+    config.addinivalue_line(
+        "markers", "m0b: Aria ACM promotion M0B (Cognitive Intent Classification v0.16.0)"
+    )
     config.addinivalue_line("markers", "m1: Aria ACM integration milestone M1 (shadow)")
     config.addinivalue_line("markers", "m2: Aria ACM integration milestone M2 (harvest)")
     config.addinivalue_line("markers", "m3: Aria ACM integration milestone M3 (primary)")

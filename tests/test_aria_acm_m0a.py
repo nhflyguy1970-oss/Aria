@@ -118,6 +118,7 @@ def test_m0a_05_identity_uses_pipeline() -> None:
     """M0A-05: identity requests route through Memory Authority."""
     cog = acm_bridge.primary_cognitive_speak("Who are you?")
     result = cog["result"]
-    assert result.get("intent") == "identity"
+    assert result.get("intent") in {"identity", "assistant_identity"}
     assert result.get("is_memory_request") is True
-    assert "classify_memory_request" in (result.get("reasoning_path") or [])
+    path = result.get("reasoning_path") or []
+    assert any("classify" in step for step in path)

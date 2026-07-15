@@ -1,15 +1,15 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.15.0-1",
+  "aria_acm_local_version": "aria-acm-v0.16.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.15.0",
-  "source_tag": "v0.15.0",
-  "source_commit": "b78a85747291b024252ddf3e5baafe5247f5ff5d",
+  "source_version": "0.16.0",
+  "source_tag": "v0.16.0",
+  "source_commit": "6f6d0f89d0af35b018c2a781a38748d21e303ae0",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-15",
-  "tree_sha256": "011581a6f519f2cd6c5ac890276e74260eba156eac28ec3bed3989447071bd10",
+  "tree_sha256": "cf1794e83a8fce177f1c890d3601af60ede0bb48fe31f988f830f6003a12d454",
   "license": "Apache-2.0",
   "certification_ref": "ACM docs/ACM_CERTIFIED_v1.md",
-  "promotion": "M0A",
-  "promotion_decision": "D038",
-  "notes": "M0A promotion of certified ACM v0.15.0 (Memory Authority). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0A.md"
+  "promotion": "M0B",
+  "promotion_decision": "D039",
+  "notes": "M0B promotion of certified ACM v0.16.0 (Cognitive Intent Classification & Routing). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0B.md"
 }

@@ -516,9 +516,25 @@ def primary_remember(
 
 
 def primary_classify_request(text: str) -> dict[str, Any]:
-    """Classify whether inbound text is a cognitive memory request (D038)."""
+    """Cognitive Intent Classification — ownership before speech (D039)."""
     engine = get_engine()
     return engine.classify_request(text)
+
+
+def primary_route_request(text: str) -> dict[str, Any]:
+    """Classify + determine cognitive organ ownership (D039). No reconstruction."""
+    engine = get_engine()
+    decision = engine.route_request(text)
+    ownership = (decision.get("ownership") or {}) if isinstance(decision, dict) else {}
+    classification = (decision.get("classification") or {}) if isinstance(decision, dict) else {}
+    _set_last_primary(
+        acm_verb="route_request",
+        intent=classification.get("intent"),
+        is_memory_request=classification.get("is_memory_request"),
+        primary_organ=ownership.get("primary_organ"),
+        uncertain=bool(classification.get("uncertain") or ownership.get("uncertain")),
+    )
+    return decision
 
 
 def _memory_request_for_search(query: str) -> str:
@@ -536,8 +552,11 @@ def _memory_request_for_search(query: str) -> str:
 
 
 def primary_cognitive_respond(request: str) -> dict[str, Any]:
-    """Memory Authority: classify → ACM reconstruct → CognitiveMemoryResult."""
+    """Memory Authority: classify → route → ACM reconstruct → CognitiveMemoryResult."""
     t0 = time.perf_counter()
+    # Explicit ownership step (D039); cognitive_respond also routes internally.
+    route = primary_route_request(request)
+    ownership = (route.get("ownership") or {}) if isinstance(route, dict) else {}
     engine = get_engine()
     result = engine.cognitive_respond(request)
     ms = (time.perf_counter() - t0) * 1000.0
@@ -549,17 +568,19 @@ def primary_cognitive_respond(request: str) -> dict[str, Any]:
         cognitive_status=result.get("status"),
         is_memory_request=result.get("is_memory_request"),
         intent=result.get("intent"),
+        primary_organ=ownership.get("primary_organ"),
+        uncertain=bool((route.get("classification") or {}).get("uncertain")),
     )
     return result
 
 
 def primary_cognitive_speak(request: str) -> dict[str, Any]:
-    """Full Memory Authority path: cognitive_respond → faithful speak."""
+    """Full path: classify → route → cognitive_respond → faithful speak."""
     result = primary_cognitive_respond(request)
     speech = ""
     if result.get("is_memory_request"):
         speech = get_engine().speak_cognitive_result(result)
-    return {"result": result, "speech": speech}
+    return {"result": result, "speech": speech, "route": last_primary_op()}
 
 
 def cognitive_result_to_hits(
@@ -611,7 +632,7 @@ def primary_search(
     limit: int = 10,
     namespace: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Authoritative ACM recall → host-shaped hit list via Memory Authority (M0A)."""
+    """Authoritative ACM recall → host-shaped hit list via Memory Authority (M0B)."""
     if namespace:
         get_engine().set_context(f"ns:{namespace}")
     request = _memory_request_for_search(query)

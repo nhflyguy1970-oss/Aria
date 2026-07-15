@@ -138,3 +138,23 @@ M0A promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Host search cues translate to memory-request text at the façade only (`_memory_request_for_search`)  
 - Encode protection (`llm_generated`, speech contamination) active in vendored ACM  
 - **STOP** — no further integration milestones without explicit approval
+
+---
+
+## A008 — M0B complete: promote ACM v0.16.0 Cognitive Intent Classification (2026-07-15)
+
+**Status:** Accepted  
+**Related:** A001–A007 · standalone ACM D039 · tag `v0.16.0` · commit `6f6d0f89…`
+
+### Decision
+
+M0B promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.16.0** (`aria-acm-v0.16.0-1`). Cognitive Intent Classification and Cognitive Routing are active. Memory requests route through `classify_request` → `route_request` → owning organs → `CognitiveMemoryResult` → `speak_cognitive_result`. Aria does not determine cognitive ownership, invent memory, or alter ACM results. Memory Authority (D038 / A007) remains intact.
+
+### Consequences
+
+- Embedded pin: tag `v0.16.0`, commit `6f6d0f89d0af35b018c2a781a38748d21e303ae0`  
+- `aria_core/acm_bridge.py` exposes `primary_route_request`  
+- Assistant vs user identity routing active  
+- Goal / project / reflection / learning / association ownership via ACM  
+- Uncertain self-referent classifications remain cognitive-conservative  
+- **STOP** — no further implementation without explicit approval; next approved step is Daily Use Test 1 comparison

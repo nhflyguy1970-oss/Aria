@@ -4,6 +4,9 @@
 
 ### Added
 
+- **M0B:** Promoted certified standalone ACM **v0.16.0** (D039 Cognitive Intent Classification & Routing) into `aria_acm/` as `aria-acm-v0.16.0-1`. Cap Bus / Core / MemoryEngine use `classify_request` → `route_request` → `cognitive_respond` → `speak_cognitive_result`.
+- M0B gates: `tests/test_aria_acm_m0b.py` (M0B-01..M0B-07); wired into CI.
+
 - **M0A:** Promoted certified standalone ACM **v0.15.0** (D038 Memory Authority) into `aria_acm/` as `aria-acm-v0.15.0-1`. Cap Bus / Core / MemoryEngine recall routes through `classify_request` → `cognitive_respond` → `CognitiveMemoryResult` → `speak_cognitive_result`.
 - M0A gates: `tests/test_aria_acm_m0a.py` (M0A-01..M0A-05); wired into CI.
 
@@ -15,8 +18,8 @@
 
 - **M2:** Operator-triggered harvest of legacy MemoryStore **INTO** vendored ACM (`aria_core/acm_harvest.py`, `scripts/acm_harvest.py`).
 - **M1:** ACM Shadow measure.
-- **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; promoted to `aria-acm-v0.15.0-1` in M0A).
-- ACM Integration Blueprint; governance A001–A007.
+- **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; current pin `aria-acm-v0.16.0-1` via M0B).
+- ACM Integration Blueprint; governance A001–A008.
 
 ### Notes
 

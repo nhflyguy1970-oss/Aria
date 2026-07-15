@@ -10,6 +10,7 @@ _acm_sys.modules.setdefault("acm", _acm_sys.modules[__name__])
 from acm._version import __version__
 from acm.api.engine import CognitiveEngine, RememberResult
 from acm.authority import (
+    CognitiveIntent,
     CognitiveMemoryResult,
     MemoryStatus,
     classify_memory_request,
@@ -21,6 +22,7 @@ from acm.validation.harness import ValidationHarness
 
 __all__ = [
     "CognitiveEngine",
+    "CognitiveIntent",
     "CognitiveMemoryResult",
     "MemoryStatus",
     "RememberResult",

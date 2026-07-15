@@ -33,10 +33,10 @@ def test_m0_01_version_json_pin_matches_tree_hash() -> None:
     """M0-01: VERSION.json pin matches tree hash of aria_acm/acm/."""
     assert VERSION_PATH.is_file(), "aria_acm/VERSION.json missing"
     meta = json.loads(VERSION_PATH.read_text(encoding="utf-8"))
-    assert meta["source_commit"] == "b78a85747291b024252ddf3e5baafe5247f5ff5d"
-    assert meta["source_tag"] == "v0.15.0"
-    assert meta["source_version"] == "0.15.0"
-    assert meta["aria_acm_local_version"] == "aria-acm-v0.15.0-1"
+    assert meta["source_commit"] == "6f6d0f89d0af35b018c2a781a38748d21e303ae0"
+    assert meta["source_tag"] == "v0.16.0"
+    assert meta["source_version"] == "0.16.0"
+    assert meta["aria_acm_local_version"] == "aria-acm-v0.16.0-1"
     assert meta["license"] == "Apache-2.0"
     assert ACM_TREE.is_dir()
     assert _tree_sha256(ACM_TREE) == meta["tree_sha256"]

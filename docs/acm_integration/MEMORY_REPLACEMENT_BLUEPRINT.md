@@ -2,7 +2,7 @@
 
 **Status:** APPROVED / LOCKED — implementation in progress by milestone  
 **Date:** 2026-07-15  
-**M0:** Complete (`aria_acm/` · `aria-acm-v0.15.0-1` promoted M0A)  
+**M0:** Complete (`aria_acm/` · `aria-acm-v0.16.0-1` promoted M0B)  
 **M1:** Complete (Shadow · `aria_core/acm_bridge.py` · authoritative=legacy)  
 **M2:** Complete (Harvest · `aria_core/acm_harvest.py` · `scripts/acm_harvest.py`)  
 **M3:** Complete (PRIMARY · Cap Bus / MemoryEngine → ACM)  

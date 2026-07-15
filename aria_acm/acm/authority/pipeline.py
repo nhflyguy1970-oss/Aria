@@ -1,33 +1,37 @@
-"""Cognitive Memory Response Pipeline — ACM before any language generation."""
+"""Cognitive Memory Response Pipeline — classify → route → reconstruct → result."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from acm.authority.classification import (
-    MemoryIntent,
-    classify_memory_request,
-)
 from acm.authority.gates import gate_status, uncertainty_label
 from acm.authority.result import CognitiveMemoryResult, MemoryStatus
+from acm.authority.routing import CognitiveRoutingEngine
 from acm.authority.speak import speak_cognitive_result
+from acm.authority.taxonomy import ORGAN_NONE
 
 if TYPE_CHECKING:
     from acm.api.engine import CognitiveEngine
 
 
 class CognitiveResponsePipeline:
-    """Formal pipeline: classify → ACM reconstruct → structured result → optional speak."""
+    """Formal pipeline: intent classify → cognitive route → ACM result → speak."""
 
     def __init__(self, engine: CognitiveEngine) -> None:
         self.engine = engine
+        self.router = CognitiveRoutingEngine(engine)
 
     def respond(self, request: str) -> CognitiveMemoryResult:
-        """Run the Memory Authority pipeline for one inbound request."""
-        classification = classify_memory_request(request)
-        path: list[str] = ["classify_memory_request"]
+        """Run Memory Authority with Cognitive Intent Classification + Routing."""
+        decision, organ_payload = self.router.execute(request)
+        classification = decision.classification
+        path = list(decision.reasoning_path)
 
-        if not classification.is_memory_request:
+        non_cognitive = (
+            classification.is_memory_request is False
+            or decision.ownership.primary_organ == ORGAN_NONE
+        )
+        if non_cognitive:
             path.append("bypass_non_memory")
             return CognitiveMemoryResult(
                 status=MemoryStatus.NOT_MEMORY,
@@ -39,154 +43,26 @@ class CognitiveResponsePipeline:
                 allow_encode_from_speech=False,
                 classification=classification.to_public(),
                 reasoning_path=path,
+                organ_payload={
+                    "ownership": decision.ownership.to_public(),
+                },
             )
 
-        path.append(f"route:{classification.intent.value}")
-        organ_payload, organ_path = self._route(classification.intent, request)
-        path.extend(organ_path)
-
-        return self._materialize(classification, organ_payload, path)
+        path.append("cognitive_route_execute")
+        return self._materialize(classification, organ_payload, path, decision.ownership)
 
     def speak(self, result: CognitiveMemoryResult) -> str:
         """Speech only after ACM reconstruction — faithful templates."""
         if not result.language_may_speak and result.is_memory_request:
-            # Still allow speak for unknown statuses (communicating uncertainty).
             pass
         return speak_cognitive_result(result)
-
-    def _route(self, intent: MemoryIntent, request: str) -> tuple[dict[str, Any], list[str]]:
-        engine = self.engine
-        path: list[str] = []
-
-        if intent == MemoryIntent.IDENTITY:
-            path.append("who_am_i")
-            who = engine.who_am_i()
-            return {
-                "memory": who.get("answer"),
-                "confidence": float(who.get("confidence") or 0.0),
-                "explanation_class": who.get("explanation_class") or "experience",
-                "ambiguous": False,
-                "concepts": who.get("central_concepts") or [],
-                "cue_matched": True,
-                "experiences": [],
-                "associations": [],
-                "raw": who,
-            }, path
-
-        if intent == MemoryIntent.LEARNING:
-            path.append("learn")
-            learned = engine.learn(cue=request)
-            answer = learned.get("answer")
-            adaptations = learned.get("adaptations") or []
-            lessons = learned.get("lessons") or []
-            conf = 0.75 if adaptations or lessons else 0.0
-            if not answer and adaptations:
-                answer = "; ".join(str(a) for a in lessons[:3]) or "Learned adaptations recorded."
-            return {
-                "memory": answer if adaptations or lessons else None,
-                "confidence": conf,
-                "explanation_class": "experience" if adaptations else "unknown",
-                "ambiguous": False,
-                "concepts": [],
-                "cue_matched": bool(adaptations or lessons),
-                "experiences": [],
-                "associations": [],
-                "learning": adaptations or lessons,
-                "raw": learned,
-            }, path
-
-        if intent in (MemoryIntent.REFLECTION, MemoryIntent.CONFIDENCE):
-            if intent == MemoryIntent.CONFIDENCE or "certain" in request.lower():
-                path.append("how_certain_am_i")
-                certain = engine.how_certain_am_i(request)
-                return {
-                    "memory": certain.get("answer"),
-                    "confidence": float(certain.get("overall_confidence") or 0.0),
-                    "explanation_class": "experience",
-                    "ambiguous": False,
-                    "concepts": [],
-                    "cue_matched": True,
-                    "experiences": [],
-                    "associations": [],
-                    "raw": certain,
-                }, path
-            path.append("what_do_i_think")
-            thought = engine.what_do_i_think(request)
-            return {
-                "memory": thought.get("summary") or thought.get("answer"),
-                "confidence": float(thought.get("confidence") or 0.5),
-                "explanation_class": (
-                    "unknown" if thought.get("insufficient_evidence") else "experience"
-                ),
-                "ambiguous": bool(thought.get("hypotheses")),
-                "concepts": [],
-                "cue_matched": not bool(thought.get("insufficient_evidence")),
-                "experiences": [],
-                "associations": [],
-                "reflective": thought.get("outcomes") or [],
-                "raw": thought,
-            }, path
-
-        if intent == MemoryIntent.RECONCILIATION:
-            path.append("how_should_memory_reconcile")
-            recon = engine.how_should_memory_reconcile(request)
-            return {
-                "memory": recon.get("answer"),
-                "confidence": float((recon.get("reconciliation") or {}).get("confidence") or 0.4),
-                "explanation_class": "contested",
-                "ambiguous": True,
-                "concepts": [],
-                "cue_matched": True,
-                "experiences": [],
-                "associations": [],
-                "raw": recon,
-            }, path
-
-        # Default cognitive remembering path (experiences, preferences, autobiography, …)
-        path.append("remember")
-        remembered = engine.remember(request)
-        recon = remembered.reconstruction or {}
-        cue = request.lower()
-        cue_tokens = [t for t in cue.split() if len(t) > 2]
-        memory_text = (remembered.answer or "").strip()
-        # Cue grounding: memory text or primary label shares a token with the cue
-        primary_label = str(recon.get("primary_label") or "")
-        cue_matched = bool(memory_text) and (
-            any(tok in memory_text.lower() for tok in cue_tokens)
-            or any(tok in primary_label.lower() for tok in cue_tokens)
-            or remembered.explanation_class.value == "preference"
-            or bool(recon.get("identity_influenced"))
-        )
-        concepts = [
-            {"id": cid}
-            for cid in (remembered.activated_concept_ids or [])[:8]
-        ]
-        experiences = [
-            {"id": eid, "summary": summary}
-            for eid, summary in zip(
-                recon.get("experience_ids") or [],
-                recon.get("experience_summaries") or [],
-                strict=False,
-            )
-        ]
-        associations = [{"id": aid} for aid in (recon.get("association_ids") or [])[:8]]
-        return {
-            "memory": memory_text or None,
-            "confidence": float(remembered.confidence),
-            "explanation_class": remembered.explanation_class.value,
-            "ambiguous": bool(remembered.ambiguous),
-            "concepts": concepts,
-            "cue_matched": cue_matched,
-            "experiences": experiences,
-            "associations": associations,
-            "raw": recon,
-        }, path
 
     def _materialize(
         self,
         classification: Any,
         organ_payload: dict[str, Any],
         path: list[str],
+        ownership: Any = None,
     ) -> CognitiveMemoryResult:
         memory_text = organ_payload.get("memory")
         if isinstance(memory_text, str):
@@ -205,9 +81,13 @@ class CognitiveResponsePipeline:
             supporting_experience_count=len(experiences),
             cue_matched=bool(organ_payload.get("cue_matched")),
         )
+        # Uncertain classification cannot silently become "known" without grounding.
+        if getattr(classification, "uncertain", False) and status == MemoryStatus.KNOWN:
+            if conf < 0.75 or not organ_payload.get("cue_matched"):
+                status = MemoryStatus.LOW_CONFIDENCE
+                path.append("uncertain_classification_cap")
         path.append(f"gate:{status.value}")
 
-        # Authority: strip propositional memory when not KNOWN / CONFLICTING disclosure
         authoritative_memory = memory_text
         if status in (
             MemoryStatus.UNKNOWN,
@@ -248,10 +128,11 @@ class CognitiveResponsePipeline:
             ambiguous=ambiguous,
             language_may_speak=True,
             allow_encode_from_speech=False,
-            classification=classification.to_public(),
-            organ_payload={
-                k: v for k, v in organ_payload.items() if k != "raw"
+            classification={
+                **classification.to_public(),
+                "ownership": ownership.to_public() if ownership is not None else {},
             },
+            organ_payload={k: v for k, v in organ_payload.items() if k != "raw"},
         )
         path.append("cognitive_memory_result")
         result.reasoning_path = list(path)
