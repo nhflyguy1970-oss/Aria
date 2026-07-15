@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from jarvis import llm
 
@@ -15,7 +15,7 @@ _CONSOLIDATION_TAG = "brain-consolidated"
 
 
 def _recent_cutoff(days: int = 2) -> str:
-    return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+    return (datetime.now(UTC) - timedelta(days=days)).isoformat()
 
 
 def _collect_source_entries(memory_store, *, limit: int = 40) -> list[dict]:
@@ -60,7 +60,7 @@ def _distill_facts(blob: str, *, max_facts: int = 6) -> list[str]:
 
 
 def run_consolidation(memory_store, *, target_namespace: str = "profile") -> dict:
-    """Distill recent branch summaries + auto memories into profile/project facts."""
+    """Distill recent notes into durable facts via ACM encode (M4 — no SoT distill-write)."""
     from jarvis.brain_memory import consolidation_enabled
     from jarvis.memory_context import detect_project_namespace
 
@@ -79,6 +79,20 @@ def run_consolidation(memory_store, *, target_namespace: str = "profile") -> dic
     ns = target_namespace or detect_project_namespace()
     added = 0
     for fact in facts:
+        try:
+            from aria_core import acm_bridge
+
+            if acm_bridge.acm_is_authoritative():
+                acm_bridge.primary_remember(
+                    fact,
+                    entry_type="fact",
+                    tags=[_CONSOLIDATION_TAG, "auto-learn"],
+                    namespace=ns,
+                )
+                added += 1
+                continue
+        except Exception:
+            pass
         if memory_store.similar_exists(fact, namespace=ns):
             continue
         memory_store.add(

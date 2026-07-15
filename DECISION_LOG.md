@@ -98,3 +98,24 @@ M3 authority transition is complete for Cap Bus / Core Memory Manager and Memory
 - Soft `cool_memory` / `revise_experience` — no Experience hard-delete  
 - Legacy cognitive SoT retirement deferred to M4  
 - Operators enable PRIMARY per environment; rollout is controlled, not automatic
+
+---
+
+## A006 — M4 complete: ACM sole cognitive SoT; legacy retirement (2026-07-15)
+
+**Status:** Accepted  
+**Related:** A001–A005 · blueprint M4 · REMOVAL_PLAN · LEGACY_RETIREMENT_REPORT
+
+### Decision
+
+M4 is complete. **Vendored ACM is Aria's only cognitive memory implementation.** Legacy MemoryStore / DualWrite / parallel domain writers are retired as cognitive authority. Cap Bus, Core Memory Manager, and MemoryEngine serve ACM. Reintroducing legacy as cognitive primary requires a new DECISION_LOG entry and Supremacy Rule 6 re-certification.
+
+### Consequences
+
+- `ARIA_ACM_PRIMARY` defaults **on**; `ARIA_ACM_LEGACY_READ_FALLBACK` defaults **off**  
+- DualWrite wrap is a no-op unless emergency `JARVIS_ALLOW_DUALWRITE_LEGACY` (and never while ACM authoritative)  
+- `MemoryStore.add` redirects to ACM encode when authoritative  
+- Specialized modules are ACM clients; hierarchy SoT consolidate disabled under PRIMARY  
+- CI `acm_supremacy_check` enforces M4 gates  
+- Cold vault via operator script; ROLLBACK flag is window-only  
+- See `docs/acm_integration/LEGACY_RETIREMENT_REPORT.md`

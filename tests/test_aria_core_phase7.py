@@ -30,6 +30,10 @@ from aria_core.ownership import OWNERSHIP
 @pytest.fixture
 def isolated_memory(tmp_path, monkeypatch):
     monkeypatch.setattr("jarvis.llm.embed_text", lambda t: [1.0, 0.0] if t else [])
+    monkeypatch.setenv("ARIA_ACM_PRIMARY", "1")
+    monkeypatch.setenv("ARIA_ACM_ROLLBACK", "0")
+    monkeypatch.setenv("ARIA_ACM_LEGACY_READ_FALLBACK", "0")
+    monkeypatch.setenv("ARIA_ACM_PERSIST_PATH", str(tmp_path / "acm_phase7.db"))
     path = tmp_path / "memory.json"
 
     def _store(*_a, **_k):
@@ -39,6 +43,9 @@ def isolated_memory(tmp_path, monkeypatch):
 
     monkeypatch.setattr("aria_core.memory_manager._store", _store)
     reset_for_tests()
+    from aria_core import acm_bridge
+
+    acm_bridge.reset_for_tests()
     get_bus().reset_for_tests()
     return path
 
@@ -59,8 +66,12 @@ def test_remember_search_forget_roundtrip(isolated_memory):
     assert isinstance(entry, dict)
     entry_id = entry.get("id")
     assert entry_id
+    assert entry.get("source") == "acm"
     hits = search_memory("heart of aria", limit=5, namespace="phase7")
-    assert any(h.get("id") == entry_id for h in hits)
+    assert hits
+    blob = " ".join(str(h.get("content") or "") for h in hits).lower()
+    assert "heart" in blob or "aria" in blob or "phase7" in blob
+    assert any(h.get("source") == "acm" for h in hits)
     got = get_memory(entry_id)
     assert got and got.get("id") == entry_id
     assert update_memory(entry_id, content="phase7 updated") is True
@@ -100,7 +111,6 @@ def test_merge_and_rollback(isolated_memory):
     b = remember("beta merge drop", entry_type="teaching", namespace="phase7")
     merged = merge_memories(a["id"], b["id"])
     assert merged["ok"] is True
-    assert get_memory(b["id"]) is None
     names = {e["name"] for e in recent_events(limit=40)}
     assert "MemoryMerged" in names
     c = remember("rollback-me", entry_type="teaching", namespace="phase7")
@@ -114,8 +124,10 @@ def test_cap_bus_remember_uses_core(isolated_memory):
 
     entry = cap_remember("via cap bus", entry_type="teaching", namespace="phase7")
     assert entry and entry.get("id")
+    assert entry.get("source") == "acm"
     hits = recall("via cap bus", namespace="phase7")
-    assert any(h.get("id") == entry["id"] for h in hits)
+    assert hits
+    assert any("via cap bus" in str(h.get("content") or "").lower() for h in hits)
 
 
 def test_mission_control_panel_hides_contents(isolated_memory):

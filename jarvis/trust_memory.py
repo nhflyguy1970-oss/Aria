@@ -128,9 +128,18 @@ def record_failure(
         parts.append(f"File: `{path}`")
     parts.append(f"Failed: {excerpt or 'unknown error'}")
     content = " | ".join(parts)
+    ns = namespace or "jarvis"
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            return acm_bridge.primary_remember(
+                content, entry_type="failure", tags=["coding"], namespace=ns
+            )
+    except Exception:
+        pass
     if store.similar_exists(content):
         return None
-    ns = namespace or "jarvis"
     return store.add("failure", content, tags=["coding"], namespace=ns)
 
 
@@ -147,9 +156,18 @@ def record_fix_success(
     content = f"Fix verified for {rel}."
     if note:
         content += f" {note[:200]}"
+    ns = namespace or "jarvis"
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            return acm_bridge.primary_remember(
+                content, entry_type="fact", tags=["coding", "fix-verified"], namespace=ns
+            )
+    except Exception:
+        pass
     if store.similar_exists(content):
         return None
-    ns = namespace or "jarvis"
     return store.add("fact", content, tags=["coding", "fix-verified"], namespace=ns)
 
 
@@ -164,6 +182,15 @@ def record_strategy(
     if not content:
         raise ValueError("Empty strategy rule")
     tags = ["trust", source]
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            return acm_bridge.primary_remember(
+                content, entry_type="strategy", tags=tags, namespace=namespace
+            )
+    except Exception:
+        pass
     for e in store.list_entries(entry_type="strategy", namespace=namespace):
         if e["content"].lower() == content.lower():
             return e

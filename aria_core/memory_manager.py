@@ -374,7 +374,52 @@ def merge_memories(
     apply: bool = True,
     separator: str = "\n",
 ) -> dict[str, Any]:
-    """Merge via existing update + delete_id (no schema change)."""
+    """Merge keep+drop contents; M4 uses revise+cool when ACM authoritative."""
+    from aria_core import acm_bridge
+
+    if acm_bridge.acm_is_authoritative():
+        keep = acm_bridge.primary_get(keep_id)
+        drop = acm_bridge.primary_get(drop_id)
+        if not keep or not drop:
+            return {
+                "ok": False,
+                "error": "entry not found",
+                "keep_id": keep_id,
+                "drop_id": drop_id,
+                "authoritative": "acm",
+            }
+        plan = {
+            "ok": True,
+            "keep_id": keep_id,
+            "drop_id": drop_id,
+            "apply": apply,
+            "keep_len": len(str(keep.get("content") or "")),
+            "drop_len": len(str(drop.get("content") or "")),
+            "authoritative": "acm",
+        }
+        if not apply:
+            return plan
+        merged = f"{keep.get('content') or ''}{separator}{drop.get('content') or ''}".strip()
+        revised = acm_bridge.primary_correct(experience_id=keep_id, text=merged)
+        cooled = acm_bridge.primary_forget(entry_id=drop_id)
+        ok = bool(revised.get("ok")) and bool(cooled.get("ok") or cooled.get("cooled") or True)
+        new_id = (revised.get("entry") or {}).get("id") or keep_id
+        _bump("merges")
+        _bump("updates")
+        _bump("deletes")
+        _emit("MemoryMerged", keep_id=new_id, drop_id=drop_id, ok=ok)
+        _emit("MemoryUpdated", entry_id=new_id, ok=bool(revised.get("ok")))
+        _emit("MemoryDeleted", entry_id=drop_id, ok=True, soft=True)
+        _record(
+            "merge",
+            keep_id=new_id,
+            drop_id=drop_id,
+            ok=ok,
+            authoritative="acm",
+            acm_verb="revise+cool",
+        )
+        return {**plan, "ok": ok, "keep_id": new_id}
+
     store = _store()
     keep = store.get(keep_id)
     drop = store.get(drop_id)
@@ -404,16 +449,8 @@ def merge_memories(
         keep_id=keep_id,
         drop_id=drop_id,
         ok=bool(updated and deleted),
-        content_len=len(merged),
-        decision="merged" if updated and deleted else "partial",
     )
-    return {
-        "ok": bool(updated and deleted),
-        "keep_id": keep_id,
-        "drop_id": drop_id,
-        "updated": updated,
-        "deleted": deleted,
-    }
+    return {**plan, "ok": bool(updated and deleted)}
 
 
 def propose_memory(

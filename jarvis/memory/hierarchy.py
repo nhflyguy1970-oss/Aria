@@ -152,7 +152,24 @@ def should_prune(entry: dict) -> bool:
 
 
 def consolidate(memory: Any, *, dry_run: bool = False) -> dict[str, Any]:
-    """Promote important memories and prune stale low-value entries."""
+    """Promote/prune — M4d: no legacy SoT mutation when ACM is authoritative."""
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            return {
+                "ok": True,
+                "promoted": 0,
+                "layers_updated": 0,
+                "pruned": 0,
+                "dry_run": dry_run,
+                "total": 0,
+                "authoritative": "acm",
+                "note": "M4d: hierarchy SoT consolidate disabled; ACM owns accessibility",
+            }
+    except Exception:
+        pass
+
     promoted = 0
     pruned = 0
     layers_updated = 0

@@ -1,12 +1,12 @@
-"""Aria ↔ ACM thin translation façade (M1 Shadow · M3 Primary).
+"""Aria ↔ ACM thin translation façade (M1 Shadow · M3 Primary · M4 Sole SoT).
 
-Blueprint: docs/acm_integration/MEMORY_API_MAPPING.md · ARIA_ACM_IMPORT_PLAN.md
+Blueprint: docs/acm_integration/MEMORY_API_MAPPING.md · REMOVAL_PLAN.md
 
 Rules:
-- M1: ARIA_ACM_SHADOW dual-call; authoritative=legacy; no user-visible ACM answers.
-- M3: When ARIA_ACM_PRIMARY=true (and not ROLLBACK), Cap Bus / Core façades use ACM.
-  Default PRIMARY remains off — never hard-enabled globally.
-- ARIA_ACM_ROLLBACK forces legacy façades (pre-M4).
+- M4: ARIA_ACM_PRIMARY defaults **on** — ACM is Aria's sole cognitive SoT.
+- Legacy MemoryStore writes redirect to ACM when authoritative.
+- DualWrite cognitive authority retired (M4b).
+- ARIA_ACM_ROLLBACK forces legacy façades only during the M4 rollback window.
 - Do not reimplement ACM organs. Do not modify aria_acm cognition.
 """
 
@@ -51,18 +51,43 @@ def shadow_enabled() -> bool:
 
 
 def primary_enabled() -> bool:
-    """ARIA_ACM_PRIMARY — opt-in ACM authority (M3+). Default off."""
-    return _env_bool("ARIA_ACM_PRIMARY", "0")
+    """ARIA_ACM_PRIMARY — ACM production authority (M4 default on).
+
+    Default ``1`` after M4. Set ``0`` only with explicit ``ARIA_ACM_ROLLBACK``
+    emergency window (legacy forensic façades) — reintroducing legacy as
+    product primary requires DECISION_LOG re-certification (Rule 6).
+    """
+    return _env_bool("ARIA_ACM_PRIMARY", "1")
 
 
 def rollback_enabled() -> bool:
-    """ARIA_ACM_ROLLBACK — force legacy façade (pre-M4)."""
+    """ARIA_ACM_ROLLBACK — force legacy façade (M4 rollback window only)."""
     return _env_bool("ARIA_ACM_ROLLBACK", "0")
 
 
 def legacy_read_fallback_enabled() -> bool:
-    """Optional legacy read when ACM returns empty under PRIMARY (blueprint M3)."""
-    return _env_bool("ARIA_ACM_LEGACY_READ_FALLBACK", "1")
+    """Optional legacy read when ACM returns empty (M3); default off after M4."""
+    return _env_bool("ARIA_ACM_LEGACY_READ_FALLBACK", "0")
+
+
+def redirect_legacy_write_to_acm(
+    content: str,
+    *,
+    entry_type: str = "fact",
+    tags: list[str] | None = None,
+    namespace: str | None = None,
+) -> dict[str, Any] | None:
+    """M4: MemoryStore.add sinks → Cap Bus/ACM when ACM is authoritative.
+
+    Returns host-shaped entry when redirected; ``None`` → caller may write
+    legacy (ROLLBACK / PRIMARY=0 forensic window only).
+    """
+    if not acm_is_authoritative():
+        return None
+    # Import manager lazily to avoid cycle at module import time.
+    from aria_core import memory_manager
+
+    return memory_manager.remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
 
 
 def auto_persist_enabled() -> bool:

@@ -105,7 +105,9 @@ def parse_relationship_recall_query(message: str) -> str:
     return (m.group(1) or m.group(2) or "").strip()
 
 
-def extract_triples_heuristic(content: str, *, default_subject: str = "User") -> list[tuple[str, str, str]]:
+def extract_triples_heuristic(
+    content: str, *, default_subject: str = "User"
+) -> list[tuple[str, str, str]]:
     text = (content or "").strip()
     if not text:
         return []
@@ -162,19 +164,59 @@ def record_link(
     namespace: str = RELATIONSHIP_NAMESPACE,
     memory_id: str = "",
 ) -> dict:
-    graph = get_graph_store()
-    graph.merge_relationship(
-        subject,
-        predicate,
-        obj,
-        namespace=namespace,
-        memory_id=memory_id,
-    )
+    """Record a relationship: ACM encode (cognitive SoT) + optional graph viz."""
+    pred = normalize_predicate(predicate)
+    subj = subject.strip()
+    obj_s = obj.strip()
+    text = f"{subj} {pred.replace('_', ' ').lower()} {obj_s}".strip()
+    acm_id = memory_id
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative() and text:
+            host = acm_bridge.primary_remember(
+                text,
+                entry_type="fact",
+                tags=["relationship", f"pred:{pred}"],
+                namespace=namespace,
+            )
+            acm_id = str((host or {}).get("id") or memory_id)
+        elif text:
+            # ROLLBACK / forensic: Cap Bus still preferred over raw graph SoT
+            from aria_core import memory as core_memory
+
+            host = core_memory.remember(
+                text,
+                entry_type="fact",
+                tags=["relationship", f"pred:{pred}"],
+                namespace=namespace,
+            )
+            acm_id = (
+                str((host or {}).get("id") or memory_id) if isinstance(host, dict) else memory_id
+            )
+    except Exception:
+        pass
+
+    # Graph DB is KEEP-HOST viz only after M4 — never sole cognitive authority.
+    try:
+        graph = get_graph_store()
+        graph.merge_relationship(
+            subj,
+            predicate,
+            obj_s,
+            namespace=namespace,
+            memory_id=acm_id or memory_id,
+        )
+    except Exception as exc:
+        logger.debug("relationship graph viz write skipped: %s", exc)
+
     return {
-        "subject": subject.strip(),
-        "predicate": normalize_predicate(predicate),
-        "object": obj.strip(),
+        "subject": subj,
+        "predicate": pred,
+        "object": obj_s,
         "namespace": namespace,
+        "source": "acm" if acm_id else "graph",
+        "id": acm_id,
     }
 
 
@@ -207,7 +249,7 @@ def sync_memory_entry(entry: dict) -> list[dict]:
         triples.extend(extract_triples_llm(content))
     if not triples:
         return []
-  # dedupe
+    # dedupe
     seen: set[tuple[str, str, str]] = set()
     unique: list[tuple[str, str, str]] = []
     for t in triples:
@@ -245,9 +287,29 @@ def relationship_stats() -> dict:
 def _entity_tokens(message: str) -> list[str]:
     words = re.findall(r"[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?|\b[a-z]{4,}\b", message or "")
     stop = {
-        "what", "when", "where", "which", "about", "help", "please", "could",
-        "would", "should", "there", "their", "this", "that", "with", "from",
-        "have", "been", "being", "your", "mine", "does", "doing",
+        "what",
+        "when",
+        "where",
+        "which",
+        "about",
+        "help",
+        "please",
+        "could",
+        "would",
+        "should",
+        "there",
+        "their",
+        "this",
+        "that",
+        "with",
+        "from",
+        "have",
+        "been",
+        "being",
+        "your",
+        "mine",
+        "does",
+        "doing",
     }
     return [w for w in words if w.lower() not in stop][:6]
 
@@ -269,17 +331,11 @@ def relationship_context_for_chat(message: str, *, limit: int = 8) -> str:
                 break
     if not triples:
         return ""
-    lines = [
-        f"- {t['subject']} —[{t['predicate']}]→ {t['object']}"
-        for t in triples[:limit]
-    ]
+    lines = [f"- {t['subject']} —[{t['predicate']}]→ {t['object']}" for t in triples[:limit]]
     return "Known relationships (use as grounded context):\n" + "\n".join(lines)
 
 
 def format_triples_markdown(triples: list[dict]) -> str:
     if not triples:
         return "_No connections found._"
-    return "\n".join(
-        f"• **{t['subject']}** —{t['predicate']}→ **{t['object']}**"
-        for t in triples
-    )
+    return "\n".join(f"• **{t['subject']}** —{t['predicate']}→ **{t['object']}**" for t in triples)

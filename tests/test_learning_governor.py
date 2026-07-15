@@ -63,10 +63,18 @@ def test_record_correction_via_governor(tmp_path, monkeypatch):
 def test_memory_add_via_governor(tmp_path, monkeypatch):
     monkeypatch.delenv("ARIA_LEARNING_GOVERNOR", raising=False)
     monkeypatch.setenv("JARVIS_MEMORY_COMPACT", "1")
+    monkeypatch.setenv("ARIA_ACM_PRIMARY", "1")
+    monkeypatch.setenv("ARIA_ACM_PERSIST_PATH", str(tmp_path / "acm_gov.db"))
+    from aria_core import acm_bridge, memory_manager
+
+    memory_manager.reset_for_tests()
+    acm_bridge.reset_for_tests()
     from jarvis.modules.memory import MemoryStore
 
     store = MemoryStore(path=tmp_path / "memory.json")
     monkeypatch.setattr("jarvis.modules.memory.llm.embed_text", lambda _t: None)
     entry = store.add("fact", "Jeff prefers barbless hooks for trout")
     assert "barbless" in entry["content"]
-    assert any(e["id"] == entry["id"] for e in store.list_entries())
+    assert entry.get("source") == "acm"
+    # M4: autobiographical write redirects to ACM — not listed on empty legacy JSON
+    assert not any(e.get("id") == entry["id"] for e in store.list_entries())

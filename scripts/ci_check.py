@@ -147,6 +147,7 @@ PYTEST_PATHS: tuple[str, ...] = (
     "tests/test_aria_acm_m1.py",
     "tests/test_aria_acm_m2.py",
     "tests/test_aria_acm_m3.py",
+    "tests/test_aria_acm_m4.py",
 )
 
 
@@ -232,11 +233,16 @@ def run_pytest() -> int:
     return subprocess.run(cmd, cwd=ROOT, check=False).returncode
 
 
+def run_supremacy() -> int:
+    script = ROOT / "scripts" / "acm_supremacy_check.py"
+    return subprocess.run([sys.executable, str(script)], cwd=ROOT, check=False).returncode
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="ARIA CI gates")
     parser.add_argument(
         "command",
-        choices=("ruff", "format", "format-check", "pytest", "all"),
+        choices=("ruff", "format", "format-check", "pytest", "supremacy", "all"),
     )
     args = parser.parse_args()
     if args.command == "ruff":
@@ -247,7 +253,9 @@ def main() -> int:
         return run_format_check()
     if args.command == "pytest":
         return run_pytest()
-    for step in (run_ruff, run_format_check, run_pytest):
+    if args.command == "supremacy":
+        return run_supremacy()
+    for step in (run_ruff, run_format_check, run_supremacy, run_pytest):
         code = step()
         if code != 0:
             return code

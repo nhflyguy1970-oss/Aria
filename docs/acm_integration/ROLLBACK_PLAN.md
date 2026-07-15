@@ -1,7 +1,7 @@
 # Rollback Plan — Aria Memory Replacement
 
-**Status:** DESIGN + M3 FAÇADE WIRING — flags live; rehearse R1 before production PRIMARY  
-**Goal:** If cutover fails, Aria returns to its **original** memory system with no cognitive data loss.
+**Status:** M4 LIVE — legacy emergency via ROLLBACK window; thereafter ACM snapshot restore  
+**Goal:** If cutover fails, Aria returns to its **original** memory system with no cognitive data loss (pre-window). After M4 product default is ACM-only.
 
 ---
 

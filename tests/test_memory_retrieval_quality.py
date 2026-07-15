@@ -19,7 +19,10 @@ from jarvis.session import SessionContext
 
 
 @pytest.fixture()
-def mem_ctx(tmp_path: Path):
+def mem_ctx(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    # Forensic CRUD ranking helpers — run with PRIMARY off (ROLLBACK window tests).
+    monkeypatch.setenv("ARIA_ACM_PRIMARY", "0")
+    monkeypatch.setenv("ARIA_ACM_ROLLBACK", "0")
     store = create_memory_store(tmp_path / "mem.json")
     store.add(
         "preference",

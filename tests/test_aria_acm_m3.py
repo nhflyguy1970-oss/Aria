@@ -172,11 +172,11 @@ def test_m3_06_rollback_drill(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.mark.m3
-def test_m3_default_primary_off() -> None:
-    """PRIMARY not enabled globally by default."""
+def test_m3_isolation_keeps_legacy_available() -> None:
+    """M3 suite isolations force PRIMARY off so legacy façades remain testable."""
     assert acm_bridge.primary_enabled() is False
     assert acm_bridge.acm_is_authoritative() is False
-    entry = memory_manager.remember("still legacy by default", entry_type="fact")
+    entry = memory_manager.remember("still legacy when primary forced off", entry_type="fact")
     assert entry.get("source") != "acm"
 
 

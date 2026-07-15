@@ -1,4 +1,10 @@
-"""Dual-write memory adapter — legacy storage remains authoritative."""
+"""Legacy DualWrite adapter — RETIRED as cognitive authority (M4 / REMOVAL_PLAN M4b).
+
+Historical DualWrite mirrored Aria MemoryStore ↔ AI-Platform CRUD. After M4,
+ACM is Aria's sole cognitive SoT. ``wrap_memory_store`` is a no-op.
+The DualWriteMemoryAdapter class remains only for forensic/unit archival tests
+behind ``JARVIS_ALLOW_DUALWRITE_LEGACY=1`` (never when ACM is authoritative).
+"""
 
 from __future__ import annotations
 
@@ -12,10 +18,25 @@ _APPLICATION_ID = "aria"
 
 
 def memory_adapter_enabled() -> bool:
+    """M4b: DualWrite cognitive path permanently disabled by default."""
+    allow = os.getenv("JARVIS_ALLOW_DUALWRITE_LEGACY", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if not allow:
+        return False
     if os.getenv("JARVIS_DISABLE_PLATFORM_MEMORY", "").lower() in ("1", "true", "yes"):
         return False
     if os.getenv("JARVIS_DISABLE_PLATFORM_ATTACHMENT", "").lower() in ("1", "true", "yes"):
         return False
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            return False
+    except Exception:
+        pass
     if os.getenv("JARVIS_PLATFORM_MEMORY_ATTACHED") == "1":
         return True
     try:
@@ -27,6 +48,9 @@ def memory_adapter_enabled() -> bool:
 
 
 def platform_data_authoritative() -> bool:
+    """Platform CRUD is never Aria's cognitive authority after M4."""
+    if not memory_adapter_enabled():
+        return False
     if os.getenv("JARVIS_PLATFORM_DATA_AUTHORITATIVE", "").lower() in ("1", "true", "yes"):
         return True
     try:

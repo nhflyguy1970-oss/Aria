@@ -52,16 +52,21 @@ class TestMemoryAdapter(unittest.TestCase):
             wrapped = wrap_memory_store(legacy)
         self.assertIs(wrapped, legacy)
 
+    def test_m4_dualwrite_disabled_by_default(self):
+        """M4b: DualWrite cognitive authority retired."""
+        self.assertFalse(_mod.memory_adapter_enabled())
+        legacy = _FakeLegacy()
+        self.assertIs(wrap_memory_store(legacy), legacy)
+
     def test_dual_write_delegates_get(self):
         legacy = _FakeLegacy()
         adapter = DualWriteMemoryAdapter(legacy)
         with patch.object(_mod, "platform_data_authoritative", return_value=False):
             self.assertEqual(adapter.get("1"), legacy.get("1"))
 
-    def test_platform_authoritative_env(self):
+    def test_platform_authoritative_off_when_dualwrite_retired(self):
         with patch.dict("os.environ", {"JARVIS_PLATFORM_DATA_AUTHORITATIVE": "1"}):
-            self.assertTrue(platform_data_authoritative())
-
+            self.assertFalse(platform_data_authoritative())
 
     def test_dual_write_list_entries_forwards_kwargs(self):
         legacy = _FakeLegacy()

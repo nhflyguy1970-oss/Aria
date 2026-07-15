@@ -148,6 +148,16 @@ class SqliteMemoryStore:
         if entry_type not in ("failure", "strategy") and not is_trusted_memory_content(content):
             raise ValueError("Refusing to store test-artifact content in live memory")
         entry_type = entry_type if entry_type in MEMORY_TYPES else "fact"
+        try:
+            from aria_core.acm_bridge import redirect_legacy_write_to_acm
+
+            redirected = redirect_legacy_write_to_acm(
+                content, entry_type=entry_type, tags=tags, namespace=namespace
+            )
+            if redirected is not None:
+                return redirected
+        except Exception:
+            pass
         eid = self._next_id()
         embedding = llm.embed_text(content)
         entry = {

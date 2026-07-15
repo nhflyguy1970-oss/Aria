@@ -70,7 +70,7 @@ def record_experience(
     namespace: str = EXPERIENCE_NAMESPACE,
     tags: list[str] | None = None,
 ) -> dict | None:
-    """Store a success or failure experience."""
+    """Store a success or failure experience (ACM client when PRIMARY — M4c)."""
     outcome = outcome if outcome in EXPERIENCE_TYPES else "failure"
     content = _format_content(
         outcome=outcome,
@@ -79,13 +79,25 @@ def record_experience(
         module=module,
         context=context,
     )
-    if store.similar_exists(content):
-        return None
     entry_tags = ["experience", f"outcome-{outcome}"]
     if module:
         entry_tags.append(module)
     if tags:
         entry_tags.extend(tags)
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            return acm_bridge.primary_remember(
+                content,
+                entry_type=outcome if outcome in ("success", "failure") else "fact",
+                tags=entry_tags,
+                namespace=namespace,
+            )
+    except Exception:
+        pass
+    if hasattr(store, "similar_exists") and store.similar_exists(content):
+        return None
     return store.add(outcome, content, tags=entry_tags, namespace=namespace)
 
 

@@ -1,5 +1,18 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-15 — M4: Retire legacy cognitive SoT (ACM sole authority)
+
+Implemented blueprint Phase **M4** (final integration milestone):
+
+- `ARIA_ACM_PRIMARY` defaults **on**; legacy read fallback defaults **off**
+- DualWrite cognitive path disabled (M4b); wrap is identity
+- `MemoryStore.add` redirects to Cap Bus/ACM when authoritative (bypass closure)
+- Parallel modules (experience / relationship / trust writers / consolidation) → ACM clients
+- Hierarchy SoT consolidate no-op under PRIMARY (M4d)
+- CI supremacy gate `scripts/acm_supremacy_check.py`; vault operator tool
+- Legacy retirement report; docs ACM-authoritative
+- M4-01..03 tests green; full CI green
+
 ## 2026-07-15 — M3: ACM primary authority (opt-in)
 
 Implemented blueprint Phase **M3** only:

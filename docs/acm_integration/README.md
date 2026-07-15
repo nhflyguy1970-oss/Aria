@@ -1,9 +1,9 @@
-# Aria ← ACM Integration Blueprint (Design + Implementation Progress)
+# Aria ← ACM Integration Blueprint (Complete)
 
-**Status:** M3 COMPLETE — design locked; M4 by approval only  
-**Verdict:** Blueprint approved. **M0–M3 done.** Do not start M4 without approval.  
+**Status:** M0–M4 COMPLETE — ACM is Aria's sole cognitive SoT  
+**Verdict:** Blueprint implemented end-to-end. Further cognition changes need Rule 6 re-certification.  
 **Governing policy:** [`ARIA_ACM_ARCHITECTURE.md`](ARIA_ACM_ARCHITECTURE.md) — **ACM SUPREMACY RULES 1–6**  
-**ACM decisions:** D036 · D037 · **Aria:** A001 · A002 · A003 · A004 · A005
+**ACM decisions:** D036 · D037 · **Aria:** A001–A006 · [Retirement report](LEGACY_RETIREMENT_REPORT.md)
 
 ---
 
