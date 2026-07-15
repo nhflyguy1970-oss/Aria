@@ -1,9 +1,9 @@
 # Aria ← ACM Integration Blueprint (Design Only)
 
-**Status:** M0 COMPLETE — design locked; further milestones by approval  
-**Verdict:** Blueprint approved. **M0 done.** Do not start M1 without approval.  
+**Status:** M1 COMPLETE — design locked; further milestones by approval  
+**Verdict:** Blueprint approved. **M0+M1 done.** Do not start M2 without approval.  
 **Governing policy:** [`ARIA_ACM_ARCHITECTURE.md`](ARIA_ACM_ARCHITECTURE.md) — **ACM SUPREMACY RULES 1–6**  
-**ACM decisions:** D036 · D037 · **Aria:** A001 · A002
+**ACM decisions:** D036 · D037 · **Aria:** A001 · A002 · A003
 
 ---
 

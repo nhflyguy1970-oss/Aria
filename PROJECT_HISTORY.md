@@ -1,5 +1,17 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-15 — M1: ACM Shadow measure
+
+Implemented blueprint Phase **M1** only:
+
+- Added `aria_core/acm_bridge.py` (thin façade; Shadow compare; panel observables)
+- Dual-call from Core `remember` / `search_memory` when `ARIA_ACM_SHADOW=1`
+- Authoritative route remains **legacy**; ACM answers never user-visible in M1
+- Mission Control `shadow` counters; Conversation Trace `memory_operation.v2`
+- Tests M1-01..M1-04 green; CI updated
+
+No data harvest. No PRIMARY. No legacy removal.
+
 ## 2026-07-15 — M0: Vendor ACM into Aria
 
 Implemented blueprint Phase **M0** only:
@@ -15,13 +27,7 @@ Problem report: `docs/acm_integration/PROBLEM_REPORT_M0.md` (version harvest vs 
 
 ACM Operational Certification completed and ACM approved for integration into Aria.
 
-Produced a **design-only** engineering blueprint for full cognitive memory replacement:
-
-- Independent vendored copy model (`aria_acm/`) — standalone ACM remains research/reference  
-- ACM Supremacy Rules 1–6  
-- Complete capability matrix, import/API/migration/MC/Trace/removal/test/rollback plans  
-
-**Verdict:** READY TO IMPLEMENT — approved. Authoritative docs: `docs/acm_integration/` · Decision **A001**.
+Produced a **design-only** engineering blueprint for full cognitive memory replacement. Authoritative docs: `docs/acm_integration/` · Decision **A001**.
 
 ## Prior eras
 

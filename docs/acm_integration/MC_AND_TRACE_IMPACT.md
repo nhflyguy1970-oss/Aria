@@ -1,7 +1,12 @@
 # Mission Control & Conversation Trace — Integration Impact
 
-**Status:** DESIGN ONLY · No UI redesign  
+**Status:** M1 IMPLEMENTED (observables live) · No UI redesign  
 **Parts:** 5 (Mission Control) · 6 (Conversation Trace)
+
+M1 delivered:
+
+- `mission_control_panel()["shadow"]` agreement counters / authoritative=legacy  
+- Trace `memory_operation` additive `schema=memory_operation.v2`, `authoritative`, `shadow_agree`, `acm_verb`
 
 ---
 

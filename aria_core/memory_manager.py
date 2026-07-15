@@ -87,7 +87,11 @@ def remember(
     tags: list[str] | None = None,
     namespace: str | None = None,
 ) -> Any:
-    """Write memory — delegates to MemoryStore.add."""
+    """Write memory — delegates to MemoryStore.add.
+
+    M1 Shadow: optionally dual-call ACM encode for measurement; return value is
+    always the legacy entry (authoritative=legacy).
+    """
     t0 = time.perf_counter()
     store = _store()
     if hasattr(store, "similar_exists") and store.similar_exists(content):
@@ -100,6 +104,15 @@ def remember(
     _emit("MemoryWritten", entry_id=entry_id, entry_type=entry_type, namespace=namespace)
     _emit("MemoryCreated", entry_id=entry_id, entry_type=entry_type, namespace=namespace)
     _emit("MemoryCommit", entry_id=entry_id, ok=True, duration_ms=duration_ms)
+    shadow_meta: dict[str, Any] | None = None
+    try:
+        from aria_core import acm_bridge
+
+        shadow_meta = acm_bridge.shadow_remember_after_legacy(
+            content, entry_type=entry_type, tags=tags, namespace=namespace
+        )
+    except Exception:
+        shadow_meta = None
     _record(
         "write",
         entry_id=entry_id,
@@ -108,6 +121,10 @@ def remember(
         content_len=len(content or ""),
         duration_ms=duration_ms,
         decision="committed",
+        authoritative="legacy",
+        acm_verb=(shadow_meta or {}).get("acm_verb"),
+        shadow_ms=(shadow_meta or {}).get("duration_ms"),
+        user_visible_changed=False,
     )
     return entry
 
@@ -162,6 +179,10 @@ def search_memory(
     limit: int = 10,
     namespace: str | None = None,
 ) -> list[dict[str, Any]]:
+    """Search memory — legacy store is authoritative through M2.
+
+    M1 Shadow: dual-call ACM recall and record agreement; returned hits are legacy only.
+    """
     t0 = time.perf_counter()
     store = _store()
     hits = store.search(query, limit=limit, namespace=namespace)
@@ -172,6 +193,13 @@ def search_memory(
     hit_ids = [h.get("id") for h in hits if isinstance(h, dict)]
     _emit("MemorySearch", query_len=len(query or ""), hit_count=len(hits), duration_ms=duration_ms)
     _emit("MemoryRead", hit_count=len(hits), mode="search")
+    shadow_meta: dict[str, Any] | None = None
+    try:
+        from aria_core import acm_bridge
+
+        shadow_meta = acm_bridge.shadow_search_after_legacy(query, list(hits))
+    except Exception:
+        shadow_meta = None
     _record(
         "search",
         query_len=len(query or ""),
@@ -179,6 +207,11 @@ def search_memory(
         hit_ids=hit_ids[:20],
         duration_ms=duration_ms,
         namespace=namespace,
+        authoritative="legacy",
+        acm_verb=(shadow_meta or {}).get("acm_verb"),
+        shadow_agree=(shadow_meta or {}).get("shadow_agree"),
+        shadow_ms=(shadow_meta or {}).get("duration_ms"),
+        user_visible_changed=False,
     )
     return list(hits)
 
@@ -438,6 +471,12 @@ def record_update_supersede(
 def reset_for_tests() -> None:
     clear_history()
     reset_stats()
+    try:
+        from aria_core import acm_bridge
+
+        acm_bridge.reset_for_tests()
+    except Exception:
+        pass
 
 
 def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
@@ -531,6 +570,21 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
                 "duration_ms": r.get("duration_ms"),
             }
         )
+    shadow_block: dict[str, Any] = {
+        "shadow_enabled": False,
+        "authoritative": "legacy",
+        "note": "M1 Shadow off",
+    }
+    try:
+        from aria_core import acm_bridge
+
+        shadow_block = acm_bridge.panel_observables()
+    except Exception as exc:
+        shadow_block = {
+            "shadow_enabled": False,
+            "authoritative": "legacy",
+            "error": type(exc).__name__,
+        }
     return {
         "ok": bool(health.get("ok")),
         "title": "Aria Core Memory",
@@ -538,6 +592,7 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         "version": MEMORY_VERSION,
         "implementation": "jarvis.modules.memory (underneath)",
         "provider": "aria_core.memory → jarvis.modules.memory",
+        "authoritative": shadow_block.get("authoritative", "legacy"),
         "entry_count": entry_count,
         "health": health,
         "statistics": stats,
@@ -586,9 +641,11 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         },
         "latency": latency,
         "latency_hint": "see history duration_ms fields",
+        "shadow": shadow_block,
         "consumers": ["capability_bus", "cognitive_orchestrator", "learning", "nlu/adapters"],
         "note": (
             "Core-owned Memory API; organ storage unchanged. "
-            "Operational metadata only — contents not exposed by default."
+            "Operational metadata only — contents not exposed by default. "
+            "M1: authoritative=legacy; Shadow metrics in 'shadow' when enabled."
         ),
     }

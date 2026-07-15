@@ -43,3 +43,20 @@ M0 implementation is complete: certified ACM is vendored at `aria_acm/` (`aria-a
 ### Notes
 
 PR-M0-001 documented and closed via harvest-from-pin (`source_version` 0.14.0 at commit `454dcb90…`).
+
+---
+
+## A003 — M1 complete: Shadow measure; wait for M2 approval (2026-07-15)
+
+**Status:** Accepted  
+**Related:** A001 · A002 · blueprint M1
+
+### Decision
+
+M1 Shadow is complete: Cap Bus / Core memory dual-calls vendored ACM for measurement only. **Authoritative cognition remains legacy.** ACM answers are not user-visible. **M2+ must not start without explicit approval.**
+
+### Consequences
+
+- `ARIA_ACM_SHADOW=1` enables dual-call; default remains off for production until operators opt in  
+- `ARIA_ACM_PRIMARY` must remain false until M3  
+- Mission Control exposes shadow agreement counters without contents

@@ -52,6 +52,7 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "integration: integration tests (optional services)")
     config.addinivalue_line("markers", "gpu: requires GPU/CUDA")
     config.addinivalue_line("markers", "m0: Aria ACM integration milestone M0 (vendoring)")
+    config.addinivalue_line("markers", "m1: Aria ACM integration milestone M1 (shadow)")
 
 
 @pytest.fixture(autouse=True)

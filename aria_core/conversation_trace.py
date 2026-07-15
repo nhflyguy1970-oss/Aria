@@ -51,6 +51,30 @@ def _organ_slot(
     }
 
 
+def _shadow_memory_fields() -> dict[str, Any]:
+    """Additive memory_operation.v2 fields from M1 Shadow (ids/flags only)."""
+    try:
+        from aria_core import acm_bridge
+
+        cmp = acm_bridge.last_shadow_compare()
+        out: dict[str, Any] = {
+            "authoritative": acm_bridge.authoritative_route()
+            if acm_bridge.authoritative_route() != "rollback"
+            else "legacy",
+            "schema": "memory_operation.v2",
+        }
+        if acm_bridge.shadow_enabled() and cmp is not None:
+            out["shadow_agree"] = cmp.get("agree")
+            out["acm_verb"] = "remember"
+            out["user_visible_changed"] = False
+        elif acm_bridge.shadow_enabled():
+            out["shadow_agree"] = None
+            out["user_visible_changed"] = False
+        return out
+    except Exception:
+        return {"authoritative": "legacy", "schema": "memory_operation.v2"}
+
+
 def infer_organs(intent: dict[str, Any], action: str) -> dict[str, Any]:
     """Best-effort organ usage from intent/action — metadata only."""
     stage = str(intent.get("router_stage") or intent.get("router") or "")
@@ -374,6 +398,7 @@ def build_conversation_trace(
             else None,
             "retrieval": intent.get("memory_retrieval")
             or (intent.get("params") or {}).get("memory_retrieval"),
+            **_shadow_memory_fields(),
         },
         "capability_bus": {
             "requested": []
