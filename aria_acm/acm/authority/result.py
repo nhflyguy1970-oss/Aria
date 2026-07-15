@@ -45,6 +45,7 @@ class CognitiveMemoryResult:
     allow_encode_from_speech: bool = False
     classification: dict[str, Any] = field(default_factory=dict)
     organ_payload: dict[str, Any] = field(default_factory=dict)
+    diagnostics: dict[str, Any] = field(default_factory=dict)
     schema: str = "cognitive_memory_result.v1"
 
     def to_public(self) -> dict[str, Any]:

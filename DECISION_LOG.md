@@ -158,3 +158,22 @@ M0B promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Goal / project / reflection / learning / association ownership via ACM  
 - Uncertain self-referent classifications remain cognitive-conservative  
 - **STOP** — no further implementation without explicit approval; next approved step is Daily Use Test 1 comparison
+
+---
+
+## A009 — M0C complete: promote ACM v0.17.0 End-to-End Cognitive Dispatch (2026-07-15)
+
+**Status:** Accepted  
+**Related:** A001–A008 · standalone ACM D040 · tag `v0.17.0` · commit `af108d08…`
+
+### Decision
+
+M0C promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.17.0** (`aria-acm-v0.17.0-1`). End-to-End Cognitive Dispatch is active. Memory requests route through `classify_request` → `route_request` → `dispatch_request` → owning organs → `CognitiveMemoryResult` → `speak_cognitive_result`. Aria does not determine ownership, perform dispatch, invent memory, or terminate cognition in infrastructure. D038 Memory Authority and D039 Intent Classification remain intact.
+
+### Consequences
+
+- Embedded pin: tag `v0.17.0`, commit `af108d0893c7aee11f21f96fba51e8641f219ae2`  
+- `aria_core/acm_bridge.py` exposes `primary_dispatch_request`  
+- Diagnostics expose `terminated_at`, ownership, dispatch path  
+- Organ-only termination enforced by vendored ACM  
+- **STOP** — no further implementation without explicit approval; next approved step is Daily Use Test 1 comparison

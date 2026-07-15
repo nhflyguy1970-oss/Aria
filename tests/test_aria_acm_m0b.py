@@ -51,7 +51,7 @@ def test_m0b_01_intent_routing_apis_present() -> None:
         ("Who am I?", "user_identity", "identity"),
         ("What projects are we working on?", "project", "remembering"),
         ("What is our long-term goal?", "goal", "goals"),
-        ("How has your understanding changed?", "learning", "learning"),
+        ("How has your understanding changed?", "reflection", "reflection"),
         ("What do you think about ACM?", "reflection", "reflection"),
         ("How are coffee and tea related?", "association", "associations"),
         ("What have you learned?", "learning", "learning"),

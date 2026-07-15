@@ -537,6 +537,25 @@ def primary_route_request(text: str) -> dict[str, Any]:
     return decision
 
 
+def primary_dispatch_request(text: str) -> dict[str, Any]:
+    """End-to-end cognitive dispatch via ACM (D040). Aria does not dispatch."""
+    engine = get_engine()
+    outcome = engine.dispatch_request(text)
+    record = (outcome.get("record") or {}) if isinstance(outcome, dict) else {}
+    decision = (outcome.get("decision") or {}) if isinstance(outcome, dict) else {}
+    classification = (decision.get("classification") or {}) if isinstance(decision, dict) else {}
+    _set_last_primary(
+        acm_verb="dispatch_request",
+        intent=record.get("intent") or classification.get("intent"),
+        is_memory_request=classification.get("is_memory_request"),
+        primary_organ=record.get("primary_organ"),
+        terminated_at=record.get("terminated_at"),
+        supporting_organs=record.get("supporting_organs"),
+        uncertain=bool(record.get("uncertain") or classification.get("uncertain")),
+    )
+    return outcome
+
+
 def _memory_request_for_search(query: str) -> str:
     """Translate host search cue → ACM memory-request text (façade only)."""
     text = (query or "").strip()
@@ -552,35 +571,47 @@ def _memory_request_for_search(query: str) -> str:
 
 
 def primary_cognitive_respond(request: str) -> dict[str, Any]:
-    """Memory Authority: classify → route → ACM reconstruct → CognitiveMemoryResult."""
+    """classify → route → dispatch → organ terminate → CognitiveMemoryResult."""
     t0 = time.perf_counter()
-    # Explicit ownership step (D039); cognitive_respond also routes internally.
+    # Explicit ownership + dispatch steps (D039 · D040). ACM owns execution.
     route = primary_route_request(request)
     ownership = (route.get("ownership") or {}) if isinstance(route, dict) else {}
+    dispatched = primary_dispatch_request(request)
+    record = (dispatched.get("record") or {}) if isinstance(dispatched, dict) else {}
     engine = get_engine()
     result = engine.cognitive_respond(request)
     ms = (time.perf_counter() - t0) * 1000.0
     _record_ms(ms)
     _bump("primary_recall")
+    diag = (result.get("diagnostics") or {}) if isinstance(result, dict) else {}
     _set_last_primary(
         acm_verb="cognitive_respond",
         duration_ms=round(ms, 3),
         cognitive_status=result.get("status"),
         is_memory_request=result.get("is_memory_request"),
-        intent=result.get("intent"),
-        primary_organ=ownership.get("primary_organ"),
-        uncertain=bool((route.get("classification") or {}).get("uncertain")),
+        intent=result.get("intent") or ownership.get("intent"),
+        primary_organ=diag.get("primary_organ") or ownership.get("primary_organ"),
+        terminated_at=diag.get("terminated_at") or record.get("terminated_at"),
+        supporting_organs=diag.get("supporting_organs") or record.get("supporting_organs"),
+        uncertain=bool(
+            diag.get("uncertain") or (route.get("classification") or {}).get("uncertain")
+        ),
     )
     return result
 
 
 def primary_cognitive_speak(request: str) -> dict[str, Any]:
-    """Full path: classify → route → cognitive_respond → faithful speak."""
+    """Full path: classify → route → dispatch → respond → faithful speak."""
     result = primary_cognitive_respond(request)
     speech = ""
     if result.get("is_memory_request"):
         speech = get_engine().speak_cognitive_result(result)
-    return {"result": result, "speech": speech, "route": last_primary_op()}
+    return {
+        "result": result,
+        "speech": speech,
+        "diagnostics": result.get("diagnostics") or {},
+        "route": last_primary_op(),
+    }
 
 
 def cognitive_result_to_hits(
@@ -632,7 +663,7 @@ def primary_search(
     limit: int = 10,
     namespace: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Authoritative ACM recall → host-shaped hit list via Memory Authority (M0B)."""
+    """Authoritative ACM recall → host-shaped hit list via Memory Authority (M0C)."""
     if namespace:
         get_engine().set_context(f"ns:{namespace}")
     request = _memory_request_for_search(query)

@@ -1,12 +1,13 @@
-"""Cognitive Memory Response Pipeline — classify → route → reconstruct → result."""
+"""Cognitive Memory Response Pipeline — classify → dispatch → result → speak."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from acm.authority.dispatch import CognitiveDispatchEngine
 from acm.authority.gates import gate_status, uncertainty_label
+from acm.authority.handlers import sanitize_cognitive_text
 from acm.authority.result import CognitiveMemoryResult, MemoryStatus
-from acm.authority.routing import CognitiveRoutingEngine
 from acm.authority.speak import speak_cognitive_result
 from acm.authority.taxonomy import ORGAN_NONE
 
@@ -15,21 +16,22 @@ if TYPE_CHECKING:
 
 
 class CognitiveResponsePipeline:
-    """Formal pipeline: intent classify → cognitive route → ACM result → speak."""
+    """Formal pipeline: intent → ownership → dispatch → organ terminate → speak."""
 
     def __init__(self, engine: CognitiveEngine) -> None:
         self.engine = engine
-        self.router = CognitiveRoutingEngine(engine)
+        self.dispatcher = CognitiveDispatchEngine(engine)
 
     def respond(self, request: str) -> CognitiveMemoryResult:
-        """Run Memory Authority with Cognitive Intent Classification + Routing."""
-        decision, organ_payload = self.router.execute(request)
-        classification = decision.classification
-        path = list(decision.reasoning_path)
+        """Run end-to-end Cognitive Dispatch (D038 · D039 · D040)."""
+        outcome = self.dispatcher.dispatch(request)
+        classification = outcome.decision.classification
+        organ_payload = outcome.payload
+        path = list(outcome.decision.reasoning_path)
 
         non_cognitive = (
             classification.is_memory_request is False
-            or decision.ownership.primary_organ == ORGAN_NONE
+            or outcome.decision.ownership.primary_organ == ORGAN_NONE
         )
         if non_cognitive:
             path.append("bypass_non_memory")
@@ -43,13 +45,18 @@ class CognitiveResponsePipeline:
                 allow_encode_from_speech=False,
                 classification=classification.to_public(),
                 reasoning_path=path,
-                organ_payload={
-                    "ownership": decision.ownership.to_public(),
-                },
+                organ_payload={"ownership": outcome.decision.ownership.to_public()},
+                diagnostics=outcome.record.to_public(),
             )
 
-        path.append("cognitive_route_execute")
-        return self._materialize(classification, organ_payload, path, decision.ownership)
+        path.append("cognitive_dispatch_complete")
+        return self._materialize(
+            classification,
+            organ_payload,
+            path,
+            outcome.decision.ownership,
+            outcome.record.to_public(),
+        )
 
     def speak(self, result: CognitiveMemoryResult) -> str:
         """Speech only after ACM reconstruction — faithful templates."""
@@ -63,10 +70,9 @@ class CognitiveResponsePipeline:
         organ_payload: dict[str, Any],
         path: list[str],
         ownership: Any = None,
+        diagnostics: dict[str, Any] | None = None,
     ) -> CognitiveMemoryResult:
-        memory_text = organ_payload.get("memory")
-        if isinstance(memory_text, str):
-            memory_text = memory_text.strip() or None
+        memory_text = sanitize_cognitive_text(organ_payload.get("memory"))
         conf = float(organ_payload.get("confidence") or 0.0)
         expl = str(organ_payload.get("explanation_class") or "unknown")
         ambiguous = bool(organ_payload.get("ambiguous"))
@@ -81,12 +87,19 @@ class CognitiveResponsePipeline:
             supporting_experience_count=len(experiences),
             cue_matched=bool(organ_payload.get("cue_matched")),
         )
-        # Uncertain classification cannot silently become "known" without grounding.
         if getattr(classification, "uncertain", False) and status == MemoryStatus.KNOWN:
             if conf < 0.75 or not organ_payload.get("cue_matched"):
                 status = MemoryStatus.LOW_CONFIDENCE
                 path.append("uncertain_classification_cap")
         path.append(f"gate:{status.value}")
+
+        terminated = str(
+            (diagnostics or {}).get("terminated_at")
+            or organ_payload.get("terminated_at")
+            or (ownership.primary_organ if ownership is not None else "")
+        )
+        if terminated and terminated not in ("", ORGAN_NONE):
+            path.append(f"terminated_at:{terminated}")
 
         authoritative_memory = memory_text
         if status in (
@@ -110,6 +123,21 @@ class CognitiveResponsePipeline:
             except Exception:
                 provenance.append({"artifact_id": eid, "origin": "experience"})
 
+        diag = dict(diagnostics or {})
+        diag.setdefault("intent", classification.intent.value)
+        diag.setdefault(
+            "primary_organ",
+            ownership.primary_organ if ownership is not None else "",
+        )
+        diag.setdefault(
+            "supporting_organs",
+            list(ownership.supporting_organs) if ownership is not None else [],
+        )
+        diag["confidence"] = conf
+        diag["uncertainty"] = uncertainty_label(status, conf)
+        diag["provenance_count"] = len(provenance)
+        diag["infrastructure_role"] = diag.get("infrastructure_role") or "substrate_only"
+
         result = CognitiveMemoryResult(
             status=status,
             is_memory_request=True,
@@ -132,7 +160,12 @@ class CognitiveResponsePipeline:
                 **classification.to_public(),
                 "ownership": ownership.to_public() if ownership is not None else {},
             },
-            organ_payload={k: v for k, v in organ_payload.items() if k != "raw"},
+            organ_payload={
+                k: v
+                for k, v in organ_payload.items()
+                if k not in ("raw", "dispatch")
+            },
+            diagnostics=diag,
         )
         path.append("cognitive_memory_result")
         result.reasoning_path = list(path)

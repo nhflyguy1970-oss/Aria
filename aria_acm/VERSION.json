@@ -1,15 +1,15 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.16.0-1",
+  "aria_acm_local_version": "aria-acm-v0.17.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.16.0",
-  "source_tag": "v0.16.0",
-  "source_commit": "6f6d0f89d0af35b018c2a781a38748d21e303ae0",
+  "source_version": "0.17.0",
+  "source_tag": "v0.17.0",
+  "source_commit": "af108d0893c7aee11f21f96fba51e8641f219ae2",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-15",
-  "tree_sha256": "cf1794e83a8fce177f1c890d3601af60ede0bb48fe31f988f830f6003a12d454",
+  "tree_sha256": "0de87a552a03b3a2d09575a3ecc0956df7cf9ded51606d2b01ac86d459f02b57",
   "license": "Apache-2.0",
   "certification_ref": "ACM docs/ACM_CERTIFIED_v1.md",
-  "promotion": "M0B",
-  "promotion_decision": "D039",
-  "notes": "M0B promotion of certified ACM v0.16.0 (Cognitive Intent Classification & Routing). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0B.md"
+  "promotion": "M0C",
+  "promotion_decision": "D040",
+  "notes": "M0C promotion of certified ACM v0.17.0 (End-to-End Cognitive Dispatch). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0C.md"
 }

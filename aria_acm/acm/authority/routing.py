@@ -148,12 +148,12 @@ _OWNERSHIP_TABLE: dict[CognitiveIntent, tuple[str, tuple[str, ...], str]] = {
     ),
     CognitiveIntent.REFLECTION: (
         ORGAN_REFLECTION,
-        (ORGAN_REMEMBERING,),
-        "Reflection Organ",
+        (ORGAN_LEARNING, ORGAN_EXPERIENCES, ORGAN_REMEMBERING),
+        "Reflection Organ; learning + experiences support understanding-change",
     ),
     CognitiveIntent.LEARNING: (
         ORGAN_LEARNING,
-        (ORGAN_REMEMBERING,),
+        (ORGAN_REMEMBERING, ORGAN_EXPERIENCES),
         "Learning Organ",
     ),
     CognitiveIntent.CONFIDENCE: (

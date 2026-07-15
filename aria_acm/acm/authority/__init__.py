@@ -5,8 +5,8 @@ before any language-model generation for memory requests. Language models may
 only *speak* ``CognitiveMemoryResult`` via ``speak_cognitive_result`` — never
 invent, fill, or become memory.
 
-Every request first passes Cognitive Intent Classification; Cognitive Routing
-assigns organ ownership (D038 · D039).
+Pipeline (D038 · D039 · D040):
+  classify → route/ownership → dispatch → organ terminate → CognitiveMemoryResult
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from acm.authority.classification import (
     classify_memory_request,
     classify_request,
 )
+from acm.authority.dispatch import CognitiveDispatchEngine, DispatchOutcome, DispatchRecord
 from acm.authority.pipeline import CognitiveResponsePipeline
 from acm.authority.protection import (
     MEMORY_PROTECTION_TAGS,
@@ -33,11 +34,14 @@ from acm.authority.speak import speak_cognitive_result
 from acm.authority.taxonomy import CognitiveIntent
 
 __all__ = [
+    "CognitiveDispatchEngine",
     "CognitiveIntent",
     "CognitiveMemoryResult",
     "CognitiveOwnership",
     "CognitiveResponsePipeline",
     "CognitiveRoutingEngine",
+    "DispatchOutcome",
+    "DispatchRecord",
     "MEMORY_PROTECTION_TAGS",
     "MemoryIntent",
     "MemoryRequestClassification",

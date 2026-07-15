@@ -20,6 +20,7 @@ def speak_cognitive_result(result: CognitiveMemoryResult) -> str:
     Rules:
     - NEVER invent facts, identities, goals, or experiences.
     - NEVER fill gaps when status is unknown / insufficient / low confidence.
+    - NEVER speak raw storage / adaptation dumps.
     - When known, speak the ACM ``memory`` field verbatim (ACM-owned text).
     - When not a memory request, return empty — host may use LM for non-memory tasks.
     """
@@ -34,7 +35,9 @@ def speak_cognitive_result(result: CognitiveMemoryResult) -> str:
 
     if result.status == MemoryStatus.KNOWN:
         text = (result.memory or "").strip()
-        if not text:
+        if not text or text.startswith("{") or text.startswith("["):
+            return _UNKNOWN_PHRASES[MemoryStatus.UNKNOWN]
+        if "'id':" in text and "'kind':" in text:
             return _UNKNOWN_PHRASES[MemoryStatus.UNKNOWN]
         if result.ambiguous:
             return f"{text} (competing memories; confidence {result.confidence:.2f})"

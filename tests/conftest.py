@@ -56,6 +56,9 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line(
         "markers", "m0b: Aria ACM promotion M0B (Cognitive Intent Classification v0.16.0)"
     )
+    config.addinivalue_line(
+        "markers", "m0c: Aria ACM promotion M0C (Cognitive Dispatch v0.17.0)"
+    )
     config.addinivalue_line("markers", "m1: Aria ACM integration milestone M1 (shadow)")
     config.addinivalue_line("markers", "m2: Aria ACM integration milestone M2 (harvest)")
     config.addinivalue_line("markers", "m3: Aria ACM integration milestone M3 (primary)")

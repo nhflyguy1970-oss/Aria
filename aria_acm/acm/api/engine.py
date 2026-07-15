@@ -1070,13 +1070,20 @@ class CognitiveEngine:
 
         return CognitiveRoutingEngine(self).decide(text).to_public()
 
+    def dispatch_request(self, text: str) -> dict[str, Any]:
+        """End-to-end cognitive dispatch (ownership + organ execution) without speak."""
+        from acm.authority.dispatch import CognitiveDispatchEngine
+
+        return CognitiveDispatchEngine(self).dispatch(text).to_public()
+
     def cognitive_respond(self, request: str) -> dict[str, Any]:
-        """Memory Authority: classify → route → ACM reconstruct → CognitiveMemoryResult.
+        """Memory Authority: classify → route → dispatch → organ → CognitiveMemoryResult.
 
         Returns ``CognitiveMemoryResult.to_public()``. Hosts MUST invoke this (or
         equivalent organ verbs) for memory requests **before** language-model
         generation. Language models must only speak via ``speak_cognitive_result``.
-        The language model never chooses which organ answers.
+        The language model never chooses which organ answers. Infrastructure never
+        terminates a cognitive request (D040).
         """
         from acm.authority.pipeline import CognitiveResponsePipeline
 

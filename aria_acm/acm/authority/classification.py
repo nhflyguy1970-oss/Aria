@@ -163,7 +163,6 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         CognitiveIntent.LEARNING,
         re.compile(
             r"\b(what\s+have\s+you\s+learned|what\s+did\s+you\s+learn|"
-            r"how\s+has\s+your\s+(?:understanding|knowledge)\s+changed|"
             r"what\s+changed\s+in\s+your\s+(?:understanding|beliefs?)|"
             r"what\s+did\s+you\s+(?:pick\s+up|take\s+away)|"
             r"lessons?\s+learned)\b",
@@ -189,11 +188,12 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
             r"\b(what\s+do\s+you\s+think\s+about|reflect(?:ion|ing)?\s+on|"
             r"why\s+do\s+you\s+(?:believe|think)|"
             r"how\s+do\s+you\s+(?:see|view|interpret)|"
-            r"your\s+(?:opinion|reflection)\s+on)\b",
+            r"your\s+(?:opinion|reflection)\s+on|"
+            r"how\s+has\s+your\s+(?:understanding|knowledge)\s+changed)\b",
             re.I,
         ),
         "reflection_cue",
-        0.92,
+        0.93,
     ),
     (
         CognitiveIntent.RECONCILIATION,
