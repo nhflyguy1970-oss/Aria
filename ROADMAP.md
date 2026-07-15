@@ -7,11 +7,12 @@
 | Item | Status | Notes |
 |------|--------|-------|
 | ACM Integration Blueprint | Approved / locked | `docs/acm_integration/` · A001 |
-| Phase M0 — Vendor ACM into `aria_acm/` | **Complete** | `aria-acm-v0.14.0-1` |
+| Phase M0 — Vendor ACM into `aria_acm/` | **Complete** | `aria-acm-v0.15.0-1` (M0A promoted) |
 | Phase M1 — Shadow measure | **Complete** | Measure phase ended for production |
 | Phase M2 — Harvest migrate INTO ACM | **Complete** | Operator harvest CLI |
 | Phase M3 — ACM primary cognition | **Complete** | Flag-gated authority |
 | **Phase M4 — Retire legacy cognitive SoT** | **Complete** | ACM sole SoT · A006 |
+| **Phase M0A — Promote ACM v0.15.0 (Memory Authority)** | **Complete** | D038 · `aria-acm-v0.15.0-1` · A007 |
 
 Standalone ACM remains research/reference. Aria production copy: `aria_acm/`.
 

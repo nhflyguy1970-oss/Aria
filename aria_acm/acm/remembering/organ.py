@@ -202,6 +202,25 @@ class RememberingOrgan:
         concept = self.store.concepts[top.target_id]
         answer, expl, conf = self._format_from_concept(cue, concept, top.energy)
 
+        if expl == ExplanationClass.UNKNOWN or not (answer or "").strip():
+            exp_nodes = sorted(field.experiences.values(), key=lambda n: -n.energy)[:6]
+            return Reconstruction(
+                cue=cue,
+                answer="I don't have anything solid about that yet.",
+                explanation_class=ExplanationClass.UNKNOWN.value,
+                confidence=0.0,
+                activated_concept_ids=[n.target_id for n in ranked],
+                association_ids=list(field.associations.keys())[:16],
+                experience_ids=[n.target_id for n in exp_nodes],
+                experience_summaries=[n.label for n in exp_nodes],
+                activation=field.to_public(),
+                cue_classes=list(field.cue_classes),
+                goal_influenced=field.goal_influenced,
+                identity_influenced=field.identity_influenced,
+                context_influenced=field.context_influenced,
+                working_influenced=field.working_influenced,
+            )
+
         competing: list[CompetingRecollection] = []
         ambiguous = False
         tokens = [tok for tok in cue.lower().split() if len(tok) > 2]
@@ -270,14 +289,20 @@ class RememberingOrgan:
                 best_attr = attr
                 break
         if best_attr is None:
-            active_attrs = [a for a in concept.attributes if a.active]
-            best_attr = active_attrs[0] if active_attrs else None
-        if best_attr is None:
-            return (
-                concept.labels[0] if concept.labels else "something related",
-                ExplanationClass.EXPERIENCE,
-                min(1.0, concept.confidence * (0.5 + 0.5 * min(1.0, energy))),
-            )
+            # Memory Authority: do not confabulate from an unrelated first attribute
+            # or bare concept label when the cue does not ground in attributes.
+            label_hit = False
+            for lab in concept.labels or ():
+                if any(tok in lab.lower() for tok in tokens):
+                    label_hit = True
+                    break
+            if label_hit and concept.labels:
+                conf = min(1.0, concept.confidence * (0.45 + 0.4 * min(1.0, energy)))
+                answer = concept.labels[0]
+                if not answer.endswith("."):
+                    answer += "."
+                return answer, ExplanationClass.STALE, conf
+            return ("", ExplanationClass.UNKNOWN, 0.0)
 
         conf = min(
             1.0,
@@ -302,6 +327,11 @@ class RememberingOrgan:
     def _reconsolidate(self, reconstruction: Reconstruction, cue: str) -> None:
         cid = reconstruction.primary_concept_id
         if not cid:
+            return
+        # Memory Authority: do not reinforce confidence on unknown / weak recall
+        if reconstruction.explanation_class == ExplanationClass.UNKNOWN.value:
+            return
+        if float(reconstruction.confidence or 0.0) < 0.45:
             return
         concept = self.store.concepts.get(cid)
         if concept is None:

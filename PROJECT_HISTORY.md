@@ -44,9 +44,13 @@ Implemented blueprint Phase **M1** only:
 - Mission Control `shadow` counters; Conversation Trace `memory_operation.v2`
 - Tests M1-01..M1-04 green; CI updated
 
+## 2026-07-15 — M0A: Promote ACM v0.15.0 (Memory Authority)
+
+Promoted standalone ACM tag `v0.15.0` / commit `b78a857…` into `aria_acm/` as `aria-acm-v0.15.0-1` (decision D038). Wired Aria recall/search through Memory Authority pipeline via `acm_bridge`. Tests M0A-01..M0A-05 green; full CI green.
+
 ## 2026-07-15 — M0: Vendor ACM into Aria
 
-Implemented blueprint Phase **M0** only. Vendored ACM at pin `v0.14.0` / `454dcb90…` as `aria-acm-v0.14.0-1`.
+Implemented blueprint Phase **M0** only. Vendored ACM at pin `v0.14.0` / `454dcb90…` as `aria-acm-v0.14.0-1` (superseded by M0A promotion).
 
 ## 2026-07-15 — ACM Integration Blueprint (design only)
 

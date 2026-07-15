@@ -288,7 +288,7 @@ def search_memory(
             duration_ms=duration_ms,
             namespace=namespace,
             authoritative="acm",
-            acm_verb="remember",
+            acm_verb="cognitive_respond",
             shadow_ms=last.get("duration_ms"),
             user_visible_changed=True,
         )

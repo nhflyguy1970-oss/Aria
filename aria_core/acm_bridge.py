@@ -515,57 +515,113 @@ def primary_remember(
     return host
 
 
+def primary_classify_request(text: str) -> dict[str, Any]:
+    """Classify whether inbound text is a cognitive memory request (D038)."""
+    engine = get_engine()
+    return engine.classify_request(text)
+
+
+def _memory_request_for_search(query: str) -> str:
+    """Translate host search cue → ACM memory-request text (façade only)."""
+    text = (query or "").strip()
+    if not text:
+        return "What do you remember about me?"
+    lowered = text.lower()
+    if lowered in ("about me", "me"):
+        return "What do you remember about me?"
+    classification = primary_classify_request(text)
+    if classification.get("is_memory_request"):
+        return text
+    return f"What do you remember about {text}?"
+
+
+def primary_cognitive_respond(request: str) -> dict[str, Any]:
+    """Memory Authority: classify → ACM reconstruct → CognitiveMemoryResult."""
+    t0 = time.perf_counter()
+    engine = get_engine()
+    result = engine.cognitive_respond(request)
+    ms = (time.perf_counter() - t0) * 1000.0
+    _record_ms(ms)
+    _bump("primary_recall")
+    _set_last_primary(
+        acm_verb="cognitive_respond",
+        duration_ms=round(ms, 3),
+        cognitive_status=result.get("status"),
+        is_memory_request=result.get("is_memory_request"),
+        intent=result.get("intent"),
+    )
+    return result
+
+
+def primary_cognitive_speak(request: str) -> dict[str, Any]:
+    """Full Memory Authority path: cognitive_respond → faithful speak."""
+    result = primary_cognitive_respond(request)
+    speech = ""
+    if result.get("is_memory_request"):
+        speech = get_engine().speak_cognitive_result(result)
+    return {"result": result, "speech": speech}
+
+
+def cognitive_result_to_hits(
+    result: dict[str, Any],
+    *,
+    speech: str = "",
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """Map CognitiveMemoryResult → host-shaped hits (faithful, never invented)."""
+    if not isinstance(result, dict) or not result.get("is_memory_request"):
+        return []
+    text = (speech or str(result.get("memory") or "")).strip()
+    if not text:
+        return []
+    raw = result.get("organ_payload") or {}
+    if isinstance(raw, dict):
+        raw_view = raw.get("raw") or {}
+    else:
+        raw_view = {}
+    hit_id = ""
+    if isinstance(raw_view, dict):
+        hit_id = str(
+            raw_view.get("experience_id")
+            or raw_view.get("primary_concept_id")
+            or raw_view.get("concept_id")
+            or ""
+        )
+    hits = [
+        {
+            "id": hit_id,
+            "content": text,
+            "type": "fact",
+            "score": result.get("confidence"),
+            "source": "acm",
+            "ambiguous": result.get("ambiguous"),
+            "cognitive_status": result.get("status"),
+            "intent": result.get("intent"),
+            "provenance": result.get("provenance"),
+            "uncertainty": result.get("uncertainty"),
+            "explanation_class": result.get("explanation_class"),
+        }
+    ]
+    return hits[:limit]
+
+
 def primary_search(
     query: str,
     *,
     limit: int = 10,
     namespace: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Authoritative ACM recall → host-shaped hit list (M3)."""
-    t0 = time.perf_counter()
-    engine = get_engine()
+    """Authoritative ACM recall → host-shaped hit list via Memory Authority (M0A)."""
     if namespace:
-        engine.set_context(f"ns:{namespace}")
-    view = engine.what_do_i_remember(query)
-    ms = (time.perf_counter() - t0) * 1000.0
-    _record_ms(ms)
-    _bump("primary_recall")
-    hits: list[dict[str, Any]] = []
-    if isinstance(view, dict):
-        answer = str(view.get("answer") or view.get("text") or "").strip()
-        if answer:
-            hits.append(
-                {
-                    "id": str(view.get("primary_concept_id") or view.get("experience_id") or ""),
-                    "content": answer,
-                    "type": "fact",
-                    "score": view.get("confidence"),
-                    "source": "acm",
-                    "ambiguous": view.get("ambiguous"),
-                }
-            )
-        for eid in list(view.get("activated_concept_ids") or [])[: max(0, limit - 1)]:
-            if str(eid) == hits[0].get("id") if hits else False:
-                continue
-            concept = engine.store.concepts.get(str(eid))
-            if concept is None:
-                continue
-            label = concept.labels[0] if getattr(concept, "labels", None) else str(eid)
-            hits.append(
-                {
-                    "id": str(eid),
-                    "content": label,
-                    "type": "fact",
-                    "score": getattr(concept, "confidence", None),
-                    "source": "acm",
-                }
-            )
-    hits = hits[:limit]
+        get_engine().set_context(f"ns:{namespace}")
+    request = _memory_request_for_search(query)
+    cog = primary_cognitive_speak(request)
+    hits = cognitive_result_to_hits(cog["result"], speech=cog["speech"], limit=limit)
     _set_last_primary(
-        acm_verb="remember",
-        duration_ms=round(ms, 3),
+        acm_verb="cognitive_respond",
         hit_count=len(hits),
-        ambiguous=(view or {}).get("ambiguous") if isinstance(view, dict) else None,
+        ambiguous=(cog["result"] or {}).get("ambiguous"),
+        cognitive_status=(cog["result"] or {}).get("status"),
     )
     return hits
 
@@ -663,21 +719,18 @@ def primary_correct(
 
 
 def primary_context_fragments(message: str, *, limit: int = 5) -> list[str]:
-    """Prompt fragments from ACM recall — no CoT / no prompts leaked."""
-    engine = get_engine()
+    """Prompt fragments from Memory Authority — no CoT / no prompts leaked."""
+    cog = primary_cognitive_speak(message)
+    result = cog["result"]
     parts: list[str] = []
-    who = engine.who_am_i()
-    if isinstance(who, dict):
-        sketch = who.get("answer") or who.get("summary") or who.get("identity")
-        if isinstance(sketch, str) and sketch.strip():
-            parts.append(f"Identity:\n- {sketch.strip()[:500]}")
-        elif isinstance(sketch, dict):
-            line = str(sketch.get("answer") or sketch.get("summary") or "").strip()
-            if line:
-                parts.append(f"Identity:\n- {line[:500]}")
-    view = engine.what_do_i_remember(message)
-    answer = str((view or {}).get("answer") or "").strip()
-    if answer:
-        parts.append(f"Relevant memories:\n- {answer[:800]}")
-    _set_last_primary(acm_verb="remember", context_parts=len(parts[:limit]))
+    if isinstance(result, dict) and result.get("is_memory_request"):
+        speech = str(cog.get("speech") or "").strip()
+        mem = str(result.get("memory") or "").strip()
+        if result.get("intent") == "identity" and mem:
+            parts.append(f"Identity:\n- {mem[:500]}")
+        elif speech:
+            parts.append(f"Relevant memories:\n- {speech[:800]}")
+        elif mem:
+            parts.append(f"Relevant memories:\n- {mem[:800]}")
+    _set_last_primary(acm_verb="cognitive_respond", context_parts=len(parts[:limit]))
     return parts[:limit]

@@ -119,3 +119,22 @@ M4 is complete. **Vendored ACM is Aria's only cognitive memory implementation.**
 - CI `acm_supremacy_check` enforces M4 gates  
 - Cold vault via operator script; ROLLBACK flag is window-only  
 - See `docs/acm_integration/LEGACY_RETIREMENT_REPORT.md`
+
+---
+
+## A007 — M0A complete: promote ACM v0.15.0 Memory Authority (2026-07-15)
+
+**Status:** Accepted  
+**Related:** A001–A006 · standalone ACM D038 · tag `v0.15.0` · commit `b78a857…`
+
+### Decision
+
+M0A promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.15.0** (`aria-acm-v0.15.0-1`). Memory requests in Aria route through the Memory Authority pipeline (`classify_request` → ACM reconstruction → `CognitiveMemoryResult` → faithful `speak_cognitive_result`). Aria does not reconstruct, supplement, or invent cognitive memory.
+
+### Consequences
+
+- Embedded pin: tag `v0.15.0`, commit `b78a85747291b024252ddf3e5baafe5247f5ff5d`  
+- `aria_core/acm_bridge.py` exposes `primary_cognitive_respond` / `primary_cognitive_speak`  
+- Host search cues translate to memory-request text at the façade only (`_memory_request_for_search`)  
+- Encode protection (`llm_generated`, speech contamination) active in vendored ACM  
+- **STOP** — no further integration milestones without explicit approval

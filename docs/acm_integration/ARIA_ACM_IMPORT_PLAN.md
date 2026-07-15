@@ -2,8 +2,8 @@
 
 **Status:** M0 IMPLEMENTED — design decisions remain **locked**  
 **Policy:** ACM SUPREMACY RULES · Independent copy (not shared library)  
-**Baseline pin:** ACM `v0.14.0` · commit `454dcb90a352a3f1daa44aa95ff7b2801994f4e3` · harvested `source_version` `0.14.0`  
-**Local copy:** `aria-acm-v0.14.0-1` · see `aria_acm/VERSION.json`
+**Baseline pin:** ACM `v0.15.0` · commit `b78a85747291b024252ddf3e5baafe5247f5ff5d` · harvested `source_version` `0.15.0`  
+**Local copy:** `aria-acm-v0.15.0-1` · see `aria_acm/VERSION.json`
 
 ---
 

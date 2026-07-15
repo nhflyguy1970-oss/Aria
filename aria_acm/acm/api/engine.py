@@ -335,6 +335,16 @@ class CognitiveEngine:
         t_start: float | None = None,
         t_end: float | None = None,
     ) -> dict[str, Any]:
+        from acm.authority.protection import reject_speech_contamination
+
+        blocked = reject_speech_contamination(
+            text=text,
+            context_tags=context_tags,
+            external_kind=external_kind,
+        )
+        if blocked is not None:
+            return blocked
+
         t0 = perf_counter()
         self.context = infer_context(text, self.context)
         if context_tags:
@@ -1047,6 +1057,51 @@ class CognitiveEngine:
     def who_am_i(self) -> dict[str, Any]:
         """Reconstruct agent identity from schemas + lived structure."""
         return self.identity.who_am_i()
+
+    def classify_request(self, text: str) -> dict[str, Any]:
+        """Classify whether a request requires cognitive memory before speech."""
+        from acm.authority.classification import classify_memory_request
+
+        return classify_memory_request(text).to_public()
+
+    def cognitive_respond(self, request: str) -> dict[str, Any]:
+        """Memory Authority pipeline: classify → ACM reconstruct → structured result.
+
+        Returns ``CognitiveMemoryResult.to_public()``. Hosts MUST invoke this (or
+        equivalent organ verbs) for memory requests **before** language-model
+        generation. Language models must only speak via ``speak_cognitive_result``.
+        """
+        from acm.authority.pipeline import CognitiveResponsePipeline
+
+        result = CognitiveResponsePipeline(self).respond(request)
+        return result.to_public()
+
+    def speak_cognitive_result(self, result: dict[str, Any] | Any) -> str:
+        """Faithful speech for a Cognitive Memory Result — never invents memory."""
+        from acm.authority.result import CognitiveMemoryResult, MemoryStatus
+        from acm.authority.speak import speak_cognitive_result
+
+        if isinstance(result, CognitiveMemoryResult):
+            return speak_cognitive_result(result)
+        if not isinstance(result, dict):
+            return ""
+        status_raw = result.get("status") or "unknown"
+        try:
+            status = MemoryStatus(status_raw)
+        except ValueError:
+            status = MemoryStatus.UNKNOWN
+        obj = CognitiveMemoryResult(
+            status=status,
+            is_memory_request=bool(result.get("is_memory_request")),
+            intent=str(result.get("intent") or ""),
+            memory=result.get("memory"),
+            confidence=float(result.get("confidence") or 0.0),
+            uncertainty=result.get("uncertainty"),
+            explanation_class=str(result.get("explanation_class") or "unknown"),
+            ambiguous=bool(result.get("ambiguous")),
+            language_may_speak=bool(result.get("language_may_speak", True)),
+        )
+        return speak_cognitive_result(obj)
 
     def identity_snapshot(self) -> dict[str, Any]:
         snap = self.identity.snapshot()

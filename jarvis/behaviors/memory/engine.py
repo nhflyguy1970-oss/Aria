@@ -309,23 +309,25 @@ class MemoryEngine:
     @classmethod
     def recall(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
         from aria_core import acm_bridge
-        from aria_core import memory as core_memory
-        from jarvis.modules.memory_common import format_recall_answer
 
         if acm_bridge.acm_is_authoritative():
             try:
                 query = (params.get("query") or message or "").strip()
-                hits = core_memory.search_memory(query or "about me", limit=5)
-                if not hits:
+                request = acm_bridge._memory_request_for_search(query or "about me")
+                cog = acm_bridge.primary_cognitive_speak(request)
+                result = cog.get("result") or {}
+                speech = str(cog.get("speech") or "").strip()
+                if not result.get("is_memory_request") or not speech:
                     return ok(
                         "I don't have a clear memory for that yet.", module="memory", source="acm"
                     )
-                answer = format_recall_answer(hits[0]) if hits else ""
+                hits = acm_bridge.cognitive_result_to_hits(result, speech=speech, limit=5)
                 return ok(
-                    answer or str(hits[0].get("content") or ""),
+                    speech,
                     module="memory",
                     source="acm",
                     memories=hits,
+                    cognitive_status=result.get("status"),
                 )
             except Exception as exc:
                 return err(f"ACM recall failed: {type(exc).__name__}")
@@ -352,6 +354,24 @@ class MemoryEngine:
 
     @classmethod
     def memory_about_user(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            try:
+                question = (params.get("question") or message or "").strip()
+                cog = acm_bridge.primary_cognitive_speak(question)
+                result = cog.get("result") or {}
+                speech = str(cog.get("speech") or "").strip()
+                if result.get("is_memory_request") and speech:
+                    return ok(speech, module="memory", source="acm", cognitive_status=result.get("status"))
+                return ok(
+                    "I'm still learning about you. Tell me preferences or facts to remember.",
+                    module="memory",
+                    source="acm",
+                )
+            except Exception as exc:
+                return err(f"ACM memory-about failed: {type(exc).__name__}")
+
         from jarvis.modules.memory_common import (
             filter_user_facing,
             format_recall_answer,
@@ -457,12 +477,15 @@ class MemoryEngine:
     @classmethod
     def memory_search(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
         from aria_core import acm_bridge
-        from aria_core import memory as core_memory
 
         if acm_bridge.acm_is_authoritative():
             try:
                 query = (params.get("query") or message or "").strip()
-                hits = core_memory.search_memory(query, limit=int(params.get("limit") or 8))
+                from aria_core import memory as core_memory
+
+                hits = core_memory.search_memory(
+                    query, limit=int(params.get("limit") or 8)
+                )
                 if not hits:
                     return ok("No matching memories.", module="memory", source="acm")
                 lines = "\n".join(f"• {h.get('content')}" for h in hits if h.get("content"))

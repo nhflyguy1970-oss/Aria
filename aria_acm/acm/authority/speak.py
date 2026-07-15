@@ -1,0 +1,45 @@
+"""Faithful speech templates — express ACM results only; never invent memory."""
+
+from __future__ import annotations
+
+from acm.authority.result import CognitiveMemoryResult, MemoryStatus
+
+_UNKNOWN_PHRASES = {
+    MemoryStatus.UNKNOWN: "I don't currently know.",
+    MemoryStatus.INSUFFICIENT_EVIDENCE: "I don't yet have enough experiences to answer that.",
+    MemoryStatus.LOW_CONFIDENCE: "I am not confident enough to answer from memory.",
+    MemoryStatus.CONFLICTING: (
+        "I have conflicting memories and cannot settle on a single answer yet."
+    ),
+}
+
+
+def speak_cognitive_result(result: CognitiveMemoryResult) -> str:
+    """Render speech that *only* expresses the ACM Cognitive Memory Result.
+
+    Rules:
+    - NEVER invent facts, identities, goals, or experiences.
+    - NEVER fill gaps when status is unknown / insufficient / low confidence.
+    - When known, speak the ACM ``memory`` field verbatim (ACM-owned text).
+    - When not a memory request, return empty — host may use LM for non-memory tasks.
+    """
+    if not result.is_memory_request or result.status == MemoryStatus.NOT_MEMORY:
+        return ""
+
+    if result.status in _UNKNOWN_PHRASES:
+        base = _UNKNOWN_PHRASES[result.status]
+        if result.uncertainty:
+            return f"{base} ({result.uncertainty})"
+        return base
+
+    if result.status == MemoryStatus.KNOWN:
+        text = (result.memory or "").strip()
+        if not text:
+            return _UNKNOWN_PHRASES[MemoryStatus.UNKNOWN]
+        if result.ambiguous:
+            return f"{text} (competing memories; confidence {result.confidence:.2f})"
+        if result.confidence < 0.7:
+            return f"{text} (confidence {result.confidence:.2f})"
+        return text
+
+    return _UNKNOWN_PHRASES[MemoryStatus.UNKNOWN]
