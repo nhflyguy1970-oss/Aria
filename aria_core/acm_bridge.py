@@ -328,7 +328,39 @@ def panel_observables() -> dict[str, Any]:
         "shadow_samples": len(samples),
         "persist_path_set": bool(persist_path()),
         "note": "M1 Shadow metrics — no memory contents",
+        "harvest": _harvest_panel(),
     }
+
+
+def _harvest_panel() -> dict[str, Any]:
+    try:
+        from aria_core.acm_harvest import last_harvest_report
+
+        last = last_harvest_report()
+        if not last:
+            return {"last_report": None, "note": "No M2 harvest run in this process"}
+        # Drop content-bearing fields; mapping count only
+        return {
+            "last_report": {
+                k: last[k]
+                for k in (
+                    "ok",
+                    "imported",
+                    "skipped_existing",
+                    "encode_failures",
+                    "completeness_rate",
+                    "identity_assented",
+                    "journal_imported",
+                    "preference_imported",
+                    "project_imported",
+                    "authoritative",
+                    "duration_ms",
+                )
+                if k in last
+            }
+        }
+    except Exception as exc:
+        return {"error": type(exc).__name__}
 
 
 def shadow_remember_after_legacy(content: str, **kwargs: Any) -> dict[str, Any] | None:

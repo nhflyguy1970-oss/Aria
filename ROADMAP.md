@@ -8,9 +8,9 @@
 |------|--------|-------|
 | ACM Integration Blueprint | Approved / locked | `docs/acm_integration/` · A001 |
 | Phase M0 — Vendor ACM into `aria_acm/` | **Complete** | `aria-acm-v0.14.0-1` |
-| **Phase M1 — Shadow measure** | **Complete** | `ARIA_ACM_SHADOW`; authoritative=legacy; `aria_core/acm_bridge.py` |
-| Phase M2 — Harvest migrate INTO ACM | Not started | Awaiting approval after M1 |
-| Phase M3 — ACM primary cognition | Not started | |
+| Phase M1 — Shadow measure | **Complete** | `ARIA_ACM_SHADOW`; authoritative=legacy |
+| **Phase M2 — Harvest migrate INTO ACM** | **Complete** | `scripts/acm_harvest.py` · `aria_core/acm_harvest.py` |
+| Phase M3 — ACM primary cognition | Not started | Awaiting approval after M2 |
 | Phase M4 — Retire legacy cognitive SoT | Not started | |
 
 Standalone ACM remains research/reference. Aria production copy: `aria_acm/`.
@@ -23,6 +23,6 @@ See [`docs/PHASE_ROADMAP.md`](docs/PHASE_ROADMAP.md) and [`UPGRADES.md`](UPGRADE
 
 ## Explicit non-goals (this epoch)
 
-- Beginning M2+ without explicit approval  
-- Serving ACM answers while Shadow only (user_visible_changed must stay false)  
+- Beginning M3+ without explicit approval  
+- Automatic / background harvest  
 - Dual cognitive SoTs as a permanent architecture

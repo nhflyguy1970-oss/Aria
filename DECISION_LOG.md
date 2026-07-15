@@ -60,3 +60,21 @@ M1 Shadow is complete: Cap Bus / Core memory dual-calls vendored ACM for measure
 - `ARIA_ACM_SHADOW=1` enables dual-call; default remains off for production until operators opt in  
 - `ARIA_ACM_PRIMARY` must remain false until M3  
 - Mission Control exposes shadow agreement counters without contents
+
+---
+
+## A004 — M2 complete: harvest INTO ACM; wait for M3 approval (2026-07-15)
+
+**Status:** Accepted  
+**Related:** A001–A003 · blueprint M2 · DATA_MIGRATION_PLAN
+
+### Decision
+
+M2 harvest is complete: operator-triggered encoding of legacy MemoryStore history into vendored ACM. **Authoritative cognition remains legacy.** **M3+ must not start without explicit approval.**
+
+### Consequences
+
+- Harvest via `python scripts/acm_harvest.py` only — never automatic  
+- Idempotent `legacy_id` + `LEGACY_IMPORT` provenance  
+- Known revise links only (`revises:<legacy_id>`); unresolved supersedes reported, never invented  
+- `ARIA_ACM_PRIMARY` remains false until M3

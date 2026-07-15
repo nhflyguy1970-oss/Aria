@@ -4,9 +4,10 @@
 **Date:** 2026-07-15  
 **M0:** Complete (`aria_acm/` · `aria-acm-v0.14.0-1`)  
 **M1:** Complete (Shadow · `aria_core/acm_bridge.py` · authoritative=legacy)  
+**M2:** Complete (Harvest · `aria_core/acm_harvest.py` · `scripts/acm_harvest.py`)  
 **Governing policy:** [`ARIA_ACM_ARCHITECTURE.md`](ARIA_ACM_ARCHITECTURE.md) (**ACM SUPREMACY RULES**)  
 **ACM decisions:** D036 · D037  
-**Aria decisions:** A001 · A002 · A003 ([`DECISION_LOG.md`](../../DECISION_LOG.md))
+**Aria decisions:** A001 · A002 · A003 · A004 ([`DECISION_LOG.md`](../../DECISION_LOG.md))
 
 ---
 
@@ -73,7 +74,7 @@ Flat path aliases under `docs/*.md` point here. Index: [`README.md`](README.md).
 |-------|------|-------------------------|---------|--------|
 | M0 | Import copy + build | Legacy | Compile/vendoring only | **Complete** |
 | M1 | Shadow measure | **Legacy** | ACM parallel; no user-visible ACM truth | **Complete** |
-| M2 | Harvest migrate | Legacy | Encode history INTO ACM | Not started |
+| M2 | Harvest migrate | Legacy | Encode history INTO ACM | **Complete** |
 | M3 | ACM primary | **ACM** | Legacy read fallback optional | Not started |
 | M4 | Retire legacy | **ACM only** | Remove bypass paths (Rule 3) | Not started |
 

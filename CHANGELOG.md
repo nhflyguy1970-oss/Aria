@@ -4,15 +4,13 @@
 
 ### Added
 
-- **M1:** ACM Shadow measure — `aria_core/acm_bridge.py` dual-calls vendored ACM on Core `remember`/`search_memory` while **legacy remains authoritative**.
-- Shadow metrics on Mission Control memory panel (`shadow` block) and Conversation Trace `memory_operation.v2` fields.
-- M1 gates: `tests/test_aria_acm_m1.py` (M1-01..M1-04 + SUP-04); wired into CI.
-- Env knobs documented in `jarvis.env.example`: `ARIA_ACM_SHADOW`, `ARIA_ACM_PRIMARY`, `ARIA_ACM_ROLLBACK`, `ARIA_ACM_PERSIST_PATH`, `ARIA_ACM_AUTO_PERSIST`.
+- **M2:** Operator-triggered harvest of legacy MemoryStore **INTO** vendored ACM (`aria_core/acm_harvest.py`, `scripts/acm_harvest.py`). Idempotent `legacy_id` mapping, revise lineage when known, identity assent, migration report. Legacy remains authoritative.
+- M2 gates: `tests/test_aria_acm_m2.py` (M2-01..M2-04); wired into CI.
 
-- **M0:** Vendored certified ACM into `aria_acm/` (pin `v0.14.0` / commit `454dcb90…`, local `aria-acm-v0.14.0-1`).
-- ACM Integration Blueprint under `docs/acm_integration/`; governance A001/A002/A003.
+- **M1:** ACM Shadow measure — `aria_core/acm_bridge.py` dual-calls vendored ACM on Core `remember`/`search_memory` while **legacy remains authoritative**.
+- **M0:** Vendored certified ACM into `aria_acm/` (`aria-acm-v0.14.0-1`).
+- ACM Integration Blueprint under `docs/acm_integration/`; governance A001–A004.
 
 ### Notes
 
-- User-visible memory answers are unchanged under M1 (`user_visible_changed=false`).
-- No harvest (M2), no PRIMARY cutover (M3).
+- Harvest never runs automatically. No PRIMARY cutover (M3). No legacy deletion (M4).

@@ -145,6 +145,7 @@ PYTEST_PATHS: tuple[str, ...] = (
     "tests/test_uncensored_auth.py",
     "tests/test_aria_acm_m0.py",
     "tests/test_aria_acm_m1.py",
+    "tests/test_aria_acm_m2.py",
 )
 
 

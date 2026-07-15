@@ -1,8 +1,8 @@
 # Data Migration Plan — INTO ACM Only
 
-**Status:** DESIGN ONLY · Nothing migrates automatically  
+**Status:** M2 IMPLEMENTED — operator harvest live; nothing migrates automatically  
 **Direction:** Historical Aria memory → ACM Experiences/Concepts/Associations/Identity (Supremacy Rule 5)  
-**Operator entry:** explicit CLI / maintenance command (implementation later) — never background auto-migrate.
+**Operator entry:** `python scripts/acm_harvest.py` · `aria_core.acm_harvest.harvest_into_acm` — never background auto-migrate.
 
 ---
 
