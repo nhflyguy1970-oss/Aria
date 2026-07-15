@@ -1,6 +1,6 @@
 # Rollback Plan — Aria Memory Replacement
 
-**Status:** DESIGN ONLY  
+**Status:** DESIGN + M3 FAÇADE WIRING — flags live; rehearse R1 before production PRIMARY  
 **Goal:** If cutover fails, Aria returns to its **original** memory system with no cognitive data loss.
 
 ---

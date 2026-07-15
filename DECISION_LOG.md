@@ -77,4 +77,24 @@ M2 harvest is complete: operator-triggered encoding of legacy MemoryStore histor
 - Harvest via `python scripts/acm_harvest.py` only — never automatic  
 - Idempotent `legacy_id` + `LEGACY_IMPORT` provenance  
 - Known revise links only (`revises:<legacy_id>`); unresolved supersedes reported, never invented  
-- `ARIA_ACM_PRIMARY` remains false until M3
+- `ARIA_ACM_PRIMARY` remained false until M3 (opt-in after A005)
+
+---
+
+## A005 — M3 complete: ACM primary opt-in; wait for M4 approval (2026-07-15)
+
+**Status:** Accepted  
+**Related:** A001–A004 · blueprint M3 · ROLLBACK_PLAN
+
+### Decision
+
+M3 authority transition is complete for Cap Bus / Core Memory Manager and MemoryEngine memory verbs. When `ARIA_ACM_PRIMARY=true` and `ARIA_ACM_ROLLBACK` is unset, **ACM is authoritative** for remember / recall / search / soft forget / correct / prepare_context. **Default PRIMARY remains false** (not enabled globally). **M4 must not start without explicit approval.**
+
+### Consequences
+
+- Flag precedence: `ROLLBACK` → legacy; else `PRIMARY` → acm; else legacy  
+- SUP-02: no legacy MemoryStore writes while PRIMARY  
+- Optional `ARIA_ACM_LEGACY_READ_FALLBACK` for empty ACM reads only  
+- Soft `cool_memory` / `revise_experience` — no Experience hard-delete  
+- Legacy cognitive SoT retirement deferred to M4  
+- Operators enable PRIMARY per environment; rollout is controlled, not automatic

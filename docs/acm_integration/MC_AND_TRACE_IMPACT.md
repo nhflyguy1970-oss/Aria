@@ -1,12 +1,13 @@
 # Mission Control & Conversation Trace — Integration Impact
 
-**Status:** M1 IMPLEMENTED (observables live) · No UI redesign  
+**Status:** M1–M3 IMPLEMENTED (observables live) · No UI redesign
 **Parts:** 5 (Mission Control) · 6 (Conversation Trace)
 
 M1 delivered:
 
-- `mission_control_panel()["shadow"]` agreement counters / authoritative=legacy  
+- `mission_control_panel()["shadow"]` agreement counters / authoritative route (legacy|acm|rollback)
 - Trace `memory_operation` additive `schema=memory_operation.v2`, `authoritative`, `shadow_agree`, `acm_verb`
+- M3: when PRIMARY, `authoritative=acm` and primary op counters; ROLLBACK restores legacy
 
 ---
 

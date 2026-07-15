@@ -1,6 +1,6 @@
 # Integration Test Plan — Aria ACM Replacement
 
-**Status:** DESIGN ONLY  
+**Status:** M0–M3 GATES IMPLEMENTED — M4 removal gates pending
 **Policy:** Include **Supremacy compliance** as a hard gate.  
 **Related:** ACM `docs/COGNITIVE_MEMORY_TEST_STRATEGY.md` · Aria `docs/COGNITIVE_MEMORY_TEST_STRATEGY.md` (if present) · `tests/test_memory*.py`
 

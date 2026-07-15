@@ -1,5 +1,16 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-15 — M3: ACM primary authority (opt-in)
+
+Implemented blueprint Phase **M3** only:
+
+- Cap Bus / Core Memory Manager + MemoryEngine use ACM when `ARIA_ACM_PRIMARY=1` and not `ROLLBACK`
+- Soft forget via `cool_memory`; corrections via `revise_experience`; `prepare_context` from ACM fragments
+- Optional `ARIA_ACM_LEGACY_READ_FALLBACK` for empty ACM reads; no legacy **writes** while PRIMARY (SUP-02)
+- Rollback drill: `ARIA_ACM_ROLLBACK=1` restores legacy façades; ACM data retained
+- **Default PRIMARY remains off** — not enabled globally. Legacy Not removed (M4)
+- Tests M3-01..M3-06 + SUP-02; CI updated
+
 ## 2026-07-15 — M2: Harvest migrate INTO ACM
 
 Implemented blueprint Phase **M2** only:

@@ -35,6 +35,15 @@ class MemoryEngine:
         general: bool = False,
         skip_project_context: bool = False,
     ) -> tuple[list[str], list[dict]]:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            try:
+                parts = acm_bridge.primary_context_fragments(message, limit=5)
+                return parts, []
+            except Exception:
+                return [], []
+
         parts: list[str] = []
         citations: list[dict] = []
         seen_ids: set[str] = set()
@@ -207,9 +216,38 @@ class MemoryEngine:
 
     @classmethod
     def remember(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from aria_core import acm_bridge
+        from aria_core import memory as core_memory
         from jarvis.config import load_memory_namespace
         from jarvis.modules.memory import MemoryStore
         from jarvis.trust_memory import parse_strategy_remember, record_strategy
+
+        if acm_bridge.acm_is_authoritative():
+            try:
+                raw = params.get("text") or message
+                content, entry_type, parsed_ns = MemoryStore.parse_remember(raw)
+                namespace = (
+                    params.get("namespace")
+                    or parsed_ns
+                    or ctx.session.memory_namespace
+                    or load_memory_namespace()
+                )
+                if not content:
+                    return err("What should I remember?")
+                entry = core_memory.remember(
+                    content, entry_type=entry_type or "fact", namespace=namespace
+                )
+                ctx.session.note_module("memory")
+                ctx.refresh_system_prompt()
+                body = (entry or {}).get("content") or content
+                return ok(
+                    f"Stored via ACM:\n\n{body}",
+                    module="memory",
+                    remembered=body,
+                    source="acm",
+                )
+            except Exception as exc:
+                return err(f"ACM remember failed: {type(exc).__name__}")
 
         raw = params.get("text") or message
         strategy = parse_strategy_remember(raw)
@@ -270,6 +308,28 @@ class MemoryEngine:
 
     @classmethod
     def recall(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from aria_core import acm_bridge
+        from aria_core import memory as core_memory
+        from jarvis.modules.memory_common import format_recall_answer
+
+        if acm_bridge.acm_is_authoritative():
+            try:
+                query = (params.get("query") or message or "").strip()
+                hits = core_memory.search_memory(query or "about me", limit=5)
+                if not hits:
+                    return ok(
+                        "I don't have a clear memory for that yet.", module="memory", source="acm"
+                    )
+                answer = format_recall_answer(hits[0]) if hits else ""
+                return ok(
+                    answer or str(hits[0].get("content") or ""),
+                    module="memory",
+                    source="acm",
+                    memories=hits,
+                )
+            except Exception as exc:
+                return err(f"ACM recall failed: {type(exc).__name__}")
+
         from jarvis.modules.memory_common import filter_user_facing, format_recall_answer
         from jarvis.trust_memory import filter_entry_list
 
@@ -396,6 +456,20 @@ class MemoryEngine:
 
     @classmethod
     def memory_search(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
+        from aria_core import acm_bridge
+        from aria_core import memory as core_memory
+
+        if acm_bridge.acm_is_authoritative():
+            try:
+                query = (params.get("query") or message or "").strip()
+                hits = core_memory.search_memory(query, limit=int(params.get("limit") or 8))
+                if not hits:
+                    return ok("No matching memories.", module="memory", source="acm")
+                lines = "\n".join(f"• {h.get('content')}" for h in hits if h.get("content"))
+                return ok(lines, module="memory", source="acm", memories=hits)
+            except Exception as exc:
+                return err(f"ACM search failed: {type(exc).__name__}")
+
         from jarvis.memory.retrieval_diagnostics import rank_for_query
         from jarvis.modules.memory_common import (
             format_recall_answer,
@@ -406,9 +480,7 @@ class MemoryEngine:
         raw_query = params.get("query") or message
         _ = normalize_memory_query(raw_query)
         ns = ctx.session.memory_namespace
-        pool = list(
-            ctx.memory.list_entries(namespace=ns if ns and ns != "default" else None)
-        )
+        pool = list(ctx.memory.list_entries(namespace=ns if ns and ns != "default" else None))
         if ns and ns != "default":
             default_entries = ctx.memory.list_entries(namespace="default")
             seen = {e.get("id") for e in pool}
@@ -453,8 +525,6 @@ class MemoryEngine:
 
     @classmethod
     def memory_forget(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
-        from jarvis.modules.memory_common import select_forget_targets
-
         query = params.get("query") or message
         query = re.sub(
             r"^(please\s+)?(forget|delete|remove)\s+(that|about|the memory)?\s*",
@@ -464,6 +534,27 @@ class MemoryEngine:
         ).strip()
         if not query:
             return err("What should I forget? Give me a phrase to search for.")
+
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            try:
+                out = acm_bridge.primary_forget(query=query)
+                ctx.refresh_system_prompt()
+                if out.get("cooled"):
+                    return ok(
+                        "Cooled that memory (soft forget — experiences retained).",
+                        module="memory",
+                        source="acm",
+                        cooled=True,
+                        deleted=False,
+                    )
+                return ok("No matching memories to cool.", module="memory", source="acm")
+            except Exception as exc:
+                return err(f"ACM forget failed: {type(exc).__name__}")
+
+        from jarvis.modules.memory_common import select_forget_targets
+
         targets = select_forget_targets(ctx.memory.list_entries(), query, limit=3)
         if not targets:
             return ok("No matching memories to delete.", module="memory")
@@ -491,6 +582,25 @@ class MemoryEngine:
             if not parsed:
                 return err("What should I correct? Try: `correct that mom's birthday is June 9`")
             search_hint, new_fact = parsed
+
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            try:
+                out = acm_bridge.primary_correct(query=search_hint or new_fact, text=new_fact)
+                ctx.refresh_system_prompt()
+                entry = out.get("entry") or {}
+                body = entry.get("content") or new_fact
+                return ok(
+                    f"Updated memory via ACM revise:\n\n**{body}**",
+                    module="memory",
+                    remembered=body,
+                    source="acm",
+                    revised=bool(out.get("revised")),
+                )
+            except Exception as exc:
+                return err(f"ACM correct failed: {type(exc).__name__}")
+
         removed, entry, strategy_created = correct_memory(
             ctx.memory, new_fact, search_hint=search_hint
         )

@@ -75,7 +75,7 @@ Flat path aliases under `docs/*.md` point here. Index: [`README.md`](README.md).
 | M0 | Import copy + build | Legacy | Compile/vendoring only | **Complete** |
 | M1 | Shadow measure | **Legacy** | ACM parallel; no user-visible ACM truth | **Complete** |
 | M2 | Harvest migrate | Legacy | Encode history INTO ACM | **Complete** |
-| M3 | ACM primary | **ACM** | Legacy read fallback optional | Not started |
+| M3 | ACM primary | **ACM** | Legacy read fallback optional | **Complete** (PRIMARY opt-in) |
 | M4 | Retire legacy | **ACM only** | Remove bypass paths (Rule 3) | Not started |
 
 Shadow never becomes permanent dual authority (Rule 1).

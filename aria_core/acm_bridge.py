@@ -1,11 +1,12 @@
-"""Aria ↔ ACM thin translation façade (M1 Shadow).
+"""Aria ↔ ACM thin translation façade (M1 Shadow · M3 Primary).
 
 Blueprint: docs/acm_integration/MEMORY_API_MAPPING.md · ARIA_ACM_IMPORT_PLAN.md
 
-Rules (M1):
-- Authoritative cognition remains **legacy** MemoryStore.
-- When ARIA_ACM_SHADOW is on, dual-call vendored ACM for measurement only.
-- Never serve ACM answers to users while authoritative_route() == \"legacy\".
+Rules:
+- M1: ARIA_ACM_SHADOW dual-call; authoritative=legacy; no user-visible ACM answers.
+- M3: When ARIA_ACM_PRIMARY=true (and not ROLLBACK), Cap Bus / Core façades use ACM.
+  Default PRIMARY remains off — never hard-enabled globally.
+- ARIA_ACM_ROLLBACK forces legacy façades (pre-M4).
 - Do not reimplement ACM organs. Do not modify aria_acm cognition.
 """
 
@@ -26,10 +27,17 @@ _METRICS: dict[str, Any] = {
     "shadow_encode": 0,
     "shadow_recall": 0,
     "shadow_ms_samples": [],  # capped list of ACM-side ms
+    "primary_encode": 0,
+    "primary_recall": 0,
+    "primary_cool": 0,
+    "primary_revise": 0,
+    "legacy_writes_while_primary": 0,
+    "legacy_fallback_reads": 0,
 }
 _METRICS_SAMPLES_CAP = 500
 _ENGINE: Any = None
 _LAST_COMPARE: dict[str, Any] | None = None
+_LAST_PRIMARY: dict[str, Any] | None = None
 
 
 def _env_bool(name: str, default: str = "0") -> bool:
@@ -43,13 +51,18 @@ def shadow_enabled() -> bool:
 
 
 def primary_enabled() -> bool:
-    """ARIA_ACM_PRIMARY — must stay false until M3."""
+    """ARIA_ACM_PRIMARY — opt-in ACM authority (M3+). Default off."""
     return _env_bool("ARIA_ACM_PRIMARY", "0")
 
 
 def rollback_enabled() -> bool:
     """ARIA_ACM_ROLLBACK — force legacy façade (pre-M4)."""
     return _env_bool("ARIA_ACM_ROLLBACK", "0")
+
+
+def legacy_read_fallback_enabled() -> bool:
+    """Optional legacy read when ACM returns empty under PRIMARY (blueprint M3)."""
+    return _env_bool("ARIA_ACM_LEGACY_READ_FALLBACK", "1")
 
 
 def auto_persist_enabled() -> bool:
@@ -80,8 +93,25 @@ def authoritative_route() -> str:
 
 
 def user_visible_uses_acm() -> bool:
-    """M1: always False unless PRIMARY (forbidden until M3)."""
+    """True only when PRIMARY and not ROLLBACK."""
     return authoritative_route() == "acm"
+
+
+def acm_is_authoritative() -> bool:
+    return authoritative_route() == "acm"
+
+
+def note_legacy_write_while_primary() -> None:
+    """SUP-02 observability — must stay 0 when PRIMARY (except ROLLBACK)."""
+    _bump("legacy_writes_while_primary")
+
+
+def note_legacy_fallback_read() -> None:
+    _bump("legacy_fallback_reads")
+
+
+def last_primary_op() -> dict[str, Any] | None:
+    return dict(_LAST_PRIMARY) if _LAST_PRIMARY else None
 
 
 def _bump(key: str, n: int = 1) -> None:
@@ -97,9 +127,10 @@ def _record_ms(ms: float) -> None:
 
 def reset_for_tests() -> None:
     """Clear engine singleton and metrics (tests only)."""
-    global _ENGINE, _LAST_COMPARE
+    global _ENGINE, _LAST_COMPARE, _LAST_PRIMARY
     _ENGINE = None
     _LAST_COMPARE = None
+    _LAST_PRIMARY = None
     for k in list(_METRICS.keys()):
         if k == "shadow_ms_samples":
             _METRICS[k] = []
@@ -327,7 +358,14 @@ def panel_observables() -> dict[str, Any]:
         "shadow_p95_ms": p95,
         "shadow_samples": len(samples),
         "persist_path_set": bool(persist_path()),
-        "note": "M1 Shadow metrics — no memory contents",
+        "primary_encode": int(_METRICS.get("primary_encode", 0)),
+        "primary_recall": int(_METRICS.get("primary_recall", 0)),
+        "primary_cool": int(_METRICS.get("primary_cool", 0)),
+        "primary_revise": int(_METRICS.get("primary_revise", 0)),
+        "legacy_writes_while_primary": int(_METRICS.get("legacy_writes_while_primary", 0)),
+        "legacy_fallback_reads": int(_METRICS.get("legacy_fallback_reads", 0)),
+        "legacy_read_fallback": legacy_read_fallback_enabled(),
+        "note": "M1 Shadow / M3 Primary metrics — no memory contents",
         "harvest": _harvest_panel(),
     }
 
@@ -395,3 +433,226 @@ def shadow_search_after_legacy(
         "user_visible_changed": False,
         "error": acm.get("error"),
     }
+
+
+def _set_last_primary(**fields: Any) -> dict[str, Any]:
+    global _LAST_PRIMARY
+    _LAST_PRIMARY = {
+        "authoritative": "acm",
+        "user_visible_changed": True,
+        **fields,
+    }
+    return dict(_LAST_PRIMARY)
+
+
+def primary_remember(
+    content: str,
+    *,
+    entry_type: str = "fact",
+    tags: list[str] | None = None,
+    namespace: str | None = None,
+) -> dict[str, Any]:
+    """Authoritative ACM encode → host-shaped entry (M3). No MemoryStore write."""
+    from aria_acm.acm.context.frame import ContextFrame
+
+    t0 = time.perf_counter()
+    engine = get_engine()
+    engine.context = ContextFrame()
+    kind = "preference" if entry_type == "preference" else "experience"
+    if entry_type == "identity" or (namespace == "profile" and "identity" in (tags or [])):
+        kind = "identity"
+    context_tags: list[str] = [str(t) for t in (tags or []) if t]
+    if namespace:
+        context_tags.append(f"ns:{namespace}")
+    context_tags.append(f"legacy_type:{entry_type}")
+    out = engine.encode(
+        content,
+        kind=kind,
+        pin=True,
+        context_tags=tuple(dict.fromkeys(context_tags)) or None,
+    )
+    ms = (time.perf_counter() - t0) * 1000.0
+    _record_ms(ms)
+    _bump("primary_encode")
+    exp_id = str(out.get("experience_id") or "")
+    host = {
+        "id": exp_id or str(out.get("concept_id") or ""),
+        "content": content,
+        "type": entry_type,
+        "namespace": namespace or "default",
+        "tags": list(tags or []),
+        "source": "acm",
+        "encoded": bool(out.get("encoded") or exp_id),
+        "attention": out.get("attention"),
+        "concept_id": out.get("concept_id"),
+    }
+    _set_last_primary(acm_verb="encode", duration_ms=round(ms, 3), experience_id=exp_id)
+    return host
+
+
+def primary_search(
+    query: str,
+    *,
+    limit: int = 10,
+    namespace: str | None = None,
+) -> list[dict[str, Any]]:
+    """Authoritative ACM recall → host-shaped hit list (M3)."""
+    t0 = time.perf_counter()
+    engine = get_engine()
+    if namespace:
+        engine.set_context(f"ns:{namespace}")
+    view = engine.what_do_i_remember(query)
+    ms = (time.perf_counter() - t0) * 1000.0
+    _record_ms(ms)
+    _bump("primary_recall")
+    hits: list[dict[str, Any]] = []
+    if isinstance(view, dict):
+        answer = str(view.get("answer") or view.get("text") or "").strip()
+        if answer:
+            hits.append(
+                {
+                    "id": str(view.get("primary_concept_id") or view.get("experience_id") or ""),
+                    "content": answer,
+                    "type": "fact",
+                    "score": view.get("confidence"),
+                    "source": "acm",
+                    "ambiguous": view.get("ambiguous"),
+                }
+            )
+        for eid in list(view.get("activated_concept_ids") or [])[: max(0, limit - 1)]:
+            if str(eid) == hits[0].get("id") if hits else False:
+                continue
+            concept = engine.store.concepts.get(str(eid))
+            if concept is None:
+                continue
+            label = concept.labels[0] if getattr(concept, "labels", None) else str(eid)
+            hits.append(
+                {
+                    "id": str(eid),
+                    "content": label,
+                    "type": "fact",
+                    "score": getattr(concept, "confidence", None),
+                    "source": "acm",
+                }
+            )
+    hits = hits[:limit]
+    _set_last_primary(
+        acm_verb="remember",
+        duration_ms=round(ms, 3),
+        hit_count=len(hits),
+        ambiguous=(view or {}).get("ambiguous") if isinstance(view, dict) else None,
+    )
+    return hits
+
+
+def primary_get(entry_id: str) -> dict[str, Any] | None:
+    engine = get_engine()
+    exp = engine.store.experiences.get(entry_id)
+    if exp is not None:
+        pub = engine.experiences.public_view(exp)
+        return {
+            "id": exp.id,
+            "content": exp.summary,
+            "type": "fact",
+            "source": "acm",
+            "tags": list(exp.context_tags),
+            "public": pub,
+        }
+    concept = engine.store.concepts.get(entry_id)
+    if concept is not None:
+        return {
+            "id": concept.id,
+            "content": concept.labels[0] if concept.labels else concept.id,
+            "type": "fact",
+            "source": "acm",
+        }
+    return None
+
+
+def primary_forget(
+    *,
+    entry_id: str | None = None,
+    query: str | None = None,
+) -> dict[str, Any]:
+    """Soft forget via cool_memory (never hard-delete Experiences)."""
+    engine = get_engine()
+    concept_id = entry_id
+    if entry_id and entry_id in engine.store.experiences:
+        exp = engine.store.experiences[entry_id]
+        concept_id = exp.concept_ids[0] if exp.concept_ids else None
+    if not concept_id and query:
+        view = engine.what_do_i_remember(query)
+        concept_id = str((view or {}).get("primary_concept_id") or "") or None
+    if not concept_id:
+        return {"ok": False, "cooled": False, "deleted": False, "reason": "no_concept"}
+    t0 = time.perf_counter()
+    out = engine.cool_memory(str(concept_id), steps=1)
+    ms = (time.perf_counter() - t0) * 1000.0
+    _record_ms(ms)
+    _bump("primary_cool")
+    _set_last_primary(acm_verb="cool", duration_ms=round(ms, 3), concept_id=concept_id)
+    return {
+        "ok": bool(out.get("cooled")),
+        "cooled": bool(out.get("cooled")),
+        "deleted": False,
+        "experiences_unchanged": out.get("experiences_unchanged", True),
+        "id": concept_id,
+    }
+
+
+def primary_correct(
+    *,
+    experience_id: str | None = None,
+    query: str | None = None,
+    text: str,
+) -> dict[str, Any]:
+    """revise_experience — immutable lineage correction."""
+    engine = get_engine()
+    eid = experience_id
+    if not eid and query:
+        # encode new correction revises best match if we can locate prior
+        view = engine.what_do_i_remember(query)
+        eid = str((view or {}).get("experience_id") or "") or None
+        if not eid:
+            # fall through: encode as pinned preference/fact without revise link
+            host = primary_remember(text, entry_type="fact", tags=["correction"])
+            return {"ok": bool(host.get("encoded")), "entry": host, "revised": False}
+    if not eid:
+        host = primary_remember(text, entry_type="fact", tags=["correction"])
+        return {"ok": bool(host.get("encoded")), "entry": host, "revised": False}
+    t0 = time.perf_counter()
+    out = engine.revise_experience(str(eid), text)
+    ms = (time.perf_counter() - t0) * 1000.0
+    _record_ms(ms)
+    _bump("primary_revise")
+    new_id = str(out.get("experience_id") or "")
+    host = {
+        "id": new_id,
+        "content": text,
+        "type": "fact",
+        "source": "acm",
+        "revises_id": eid,
+    }
+    _set_last_primary(acm_verb="revise", duration_ms=round(ms, 3), experience_id=new_id)
+    return {"ok": bool(out.get("encoded") or new_id), "entry": host, "revised": True}
+
+
+def primary_context_fragments(message: str, *, limit: int = 5) -> list[str]:
+    """Prompt fragments from ACM recall — no CoT / no prompts leaked."""
+    engine = get_engine()
+    parts: list[str] = []
+    who = engine.who_am_i()
+    if isinstance(who, dict):
+        sketch = who.get("answer") or who.get("summary") or who.get("identity")
+        if isinstance(sketch, str) and sketch.strip():
+            parts.append(f"Identity:\n- {sketch.strip()[:500]}")
+        elif isinstance(sketch, dict):
+            line = str(sketch.get("answer") or sketch.get("summary") or "").strip()
+            if line:
+                parts.append(f"Identity:\n- {line[:500]}")
+    view = engine.what_do_i_remember(message)
+    answer = str((view or {}).get("answer") or "").strip()
+    if answer:
+        parts.append(f"Relevant memories:\n- {answer[:800]}")
+    _set_last_primary(acm_verb="remember", context_parts=len(parts[:limit]))
+    return parts[:limit]

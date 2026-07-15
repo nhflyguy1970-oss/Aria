@@ -87,11 +87,40 @@ def remember(
     tags: list[str] | None = None,
     namespace: str | None = None,
 ) -> Any:
-    """Write memory — delegates to MemoryStore.add.
+    """Write memory.
 
-    M1 Shadow: optionally dual-call ACM encode for measurement; return value is
-    always the legacy entry (authoritative=legacy).
+    M3: when ARIA_ACM_PRIMARY (and not ROLLBACK), encode via ACM — no legacy SoT write.
+    M1 Shadow: optional dual-call after legacy write when still legacy-authoritative.
     """
+    from aria_core import acm_bridge
+
+    if acm_bridge.acm_is_authoritative():
+        # SUP-02: never fall through to MemoryStore while ACM is authoritative.
+        t0 = time.perf_counter()
+        entry = acm_bridge.primary_remember(
+            content, entry_type=entry_type, tags=tags, namespace=namespace
+        )
+        duration_ms = round((time.perf_counter() - t0) * 1000, 3)
+        _bump("writes")
+        _bump("commits")
+        entry_id = (entry or {}).get("id") if isinstance(entry, dict) else None
+        _emit("MemoryWritten", entry_id=entry_id, entry_type=entry_type, namespace=namespace)
+        _emit("MemoryCreated", entry_id=entry_id, entry_type=entry_type, namespace=namespace)
+        _emit("MemoryCommit", entry_id=entry_id, ok=True, duration_ms=duration_ms)
+        _record(
+            "write",
+            entry_id=entry_id,
+            entry_type=entry_type,
+            namespace=namespace,
+            content_len=len(content or ""),
+            duration_ms=duration_ms,
+            decision="committed",
+            authoritative="acm",
+            acm_verb="encode",
+            user_visible_changed=True,
+        )
+        return entry
+
     t0 = time.perf_counter()
     store = _store()
     if hasattr(store, "similar_exists") and store.similar_exists(content):
@@ -106,8 +135,6 @@ def remember(
     _emit("MemoryCommit", entry_id=entry_id, ok=True, duration_ms=duration_ms)
     shadow_meta: dict[str, Any] | None = None
     try:
-        from aria_core import acm_bridge
-
         shadow_meta = acm_bridge.shadow_remember_after_legacy(
             content, entry_type=entry_type, tags=tags, namespace=namespace
         )
@@ -130,7 +157,28 @@ def remember(
 
 
 def forget(entry_id: str | None = None, *, index: int | None = None) -> bool:
-    """Delete memory — delegates to MemoryStore.delete_id / delete."""
+    """Delete / cool memory.
+
+    M3 PRIMARY: soft cool via ACM (never hard-delete Experiences).
+    """
+    from aria_core import acm_bridge
+
+    if acm_bridge.acm_is_authoritative():
+        out = acm_bridge.primary_forget(entry_id=entry_id)
+        ok = bool(out.get("ok") or out.get("cooled"))
+        _bump("deletes")
+        _emit("MemoryDeleted", entry_id=entry_id, index=index, ok=ok, soft=True)
+        _record(
+            "delete",
+            entry_id=entry_id,
+            index=index,
+            ok=ok,
+            decision="cooled" if ok else "miss",
+            authoritative="acm",
+            acm_verb="cool",
+        )
+        return ok
+
     store = _store()
     ok = False
     if entry_id:
@@ -151,6 +199,24 @@ def update_memory(
     tags: list[str] | None = None,
     namespace: str | None = None,
 ) -> bool:
+    from aria_core import acm_bridge
+
+    if acm_bridge.acm_is_authoritative() and content is not None:
+        out = acm_bridge.primary_correct(experience_id=entry_id, text=content)
+        ok = bool(out.get("ok"))
+        _bump("updates")
+        _emit("MemoryUpdated", entry_id=entry_id, ok=ok)
+        _record(
+            "update",
+            entry_id=(out.get("entry") or {}).get("id") or entry_id,
+            ok=ok,
+            content_len=len(content),
+            decision="revised" if ok else "miss",
+            authoritative="acm",
+            acm_verb="revise",
+        )
+        return ok
+
     store = _store()
     ok = bool(
         store.update(
@@ -179,24 +245,66 @@ def search_memory(
     limit: int = 10,
     namespace: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Search memory — legacy store is authoritative through M2.
+    """Search / recall memory.
 
-    M1 Shadow: dual-call ACM recall and record agreement; returned hits are legacy only.
+    M3 PRIMARY: ACM what_do_i_remember (optional empty→legacy read fallback).
+    M1 Shadow: dual-call after legacy search when legacy-authoritative.
     """
+    from aria_core import acm_bridge
+
+    if acm_bridge.acm_is_authoritative():
+        t0 = time.perf_counter()
+        hits = acm_bridge.primary_search(query, limit=limit, namespace=namespace)
+        if (
+            not hits
+            and acm_bridge.legacy_read_fallback_enabled()
+            and not acm_bridge.rollback_enabled()
+        ):
+            store = _store()
+            legacy_hits = store.search(query, limit=limit, namespace=namespace)
+            if legacy_hits:
+                acm_bridge.note_legacy_fallback_read()
+                hits = list(legacy_hits)
+                for h in hits:
+                    if isinstance(h, dict):
+                        h.setdefault("source", "legacy_fallback")
+        duration_ms = round((time.perf_counter() - t0) * 1000, 3)
+        _bump("searches")
+        _bump("reads")
+        hit_ids = [h.get("id") for h in hits if isinstance(h, dict)]
+        _emit(
+            "MemorySearch",
+            query_len=len(query or ""),
+            hit_count=len(hits),
+            duration_ms=duration_ms,
+        )
+        _emit("MemoryRead", hit_count=len(hits), mode="search")
+        last = acm_bridge.last_primary_op() or {}
+        _record(
+            "search",
+            query_len=len(query or ""),
+            hit_count=len(hits),
+            hit_ids=hit_ids[:20],
+            duration_ms=duration_ms,
+            namespace=namespace,
+            authoritative="acm",
+            acm_verb="remember",
+            shadow_ms=last.get("duration_ms"),
+            user_visible_changed=True,
+        )
+        return list(hits)
+
     t0 = time.perf_counter()
     store = _store()
     hits = store.search(query, limit=limit, namespace=namespace)
     duration_ms = round((time.perf_counter() - t0) * 1000, 3)
     _bump("searches")
     _bump("reads")
-    # Strip content from event payloads — ids/counts only
     hit_ids = [h.get("id") for h in hits if isinstance(h, dict)]
     _emit("MemorySearch", query_len=len(query or ""), hit_count=len(hits), duration_ms=duration_ms)
     _emit("MemoryRead", hit_count=len(hits), mode="search")
     shadow_meta: dict[str, Any] | None = None
     try:
-        from aria_core import acm_bridge
-
         shadow_meta = acm_bridge.shadow_search_after_legacy(query, list(hits))
     except Exception:
         shadow_meta = None
@@ -217,7 +325,30 @@ def search_memory(
 
 
 def get_memory(entry_id: str) -> dict[str, Any] | None:
-    """Read one memory entry by id — delegates to MemoryStore.get."""
+    """Read one memory entry by id."""
+    from aria_core import acm_bridge
+
+    if acm_bridge.acm_is_authoritative():
+        hit = acm_bridge.primary_get(entry_id)
+        _bump("reads")
+        _emit("MemoryRead", hit_count=1 if hit else 0, mode="get", entry_id=entry_id)
+        _record(
+            "read",
+            entry_id=entry_id,
+            hit_count=1 if hit else 0,
+            mode="get",
+            authoritative="acm",
+        )
+        if hit:
+            return hit
+        if acm_bridge.legacy_read_fallback_enabled():
+            store = _store()
+            legacy = store.get(entry_id)
+            if legacy:
+                acm_bridge.note_legacy_fallback_read()
+                return legacy
+        return None
+
     store = _store()
     hit = store.get(entry_id)
     _bump("reads")
@@ -646,6 +777,7 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         "note": (
             "Core-owned Memory API; organ storage unchanged. "
             "Operational metadata only — contents not exposed by default. "
-            "M1: authoritative=legacy; Shadow metrics in 'shadow' when enabled."
+            "M3: when ARIA_ACM_PRIMARY (and not ROLLBACK), authoritative=acm; "
+            "legacy read fallback optional. M4 still owns legacy removal."
         ),
     }
