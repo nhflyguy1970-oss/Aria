@@ -315,9 +315,7 @@ def panel_observables() -> dict[str, Any]:
         p95 = round(ordered[idx], 3)
     return {
         "shadow_enabled": shadow_enabled(),
-        "authoritative": "legacy"
-        if authoritative_route() == "rollback"
-        else authoritative_route(),
+        "authoritative": "legacy" if authoritative_route() == "rollback" else authoritative_route(),
         "user_visible_changed": user_visible_uses_acm(),
         "shadow_calls": int(_METRICS.get("shadow_calls", 0)),
         "shadow_encode": int(_METRICS.get("shadow_encode", 0)),
@@ -347,7 +345,9 @@ def shadow_remember_after_legacy(content: str, **kwargs: Any) -> dict[str, Any] 
     )
 
 
-def shadow_search_after_legacy(query: str, legacy_hits: list[dict[str, Any]]) -> dict[str, Any] | None:
+def shadow_search_after_legacy(
+    query: str, legacy_hits: list[dict[str, Any]]
+) -> dict[str, Any] | None:
     """Best-effort ACM recall + compare after legacy search. Legacy hits unchanged."""
     if not shadow_enabled() or user_visible_uses_acm():
         return None
