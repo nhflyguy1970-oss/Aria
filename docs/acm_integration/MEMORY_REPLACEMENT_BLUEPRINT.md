@@ -1,10 +1,11 @@
 # Memory Replacement Blueprint — Aria ← ACM Copy
 
-**Status:** DESIGN ONLY — no implementation  
+**Status:** APPROVED / LOCKED — implementation in progress by milestone  
 **Date:** 2026-07-15  
+**M0:** Complete (`aria_acm/` vendored · `aria-acm-v0.14.0-1`)  
 **Governing policy:** [`ARIA_ACM_ARCHITECTURE.md`](ARIA_ACM_ARCHITECTURE.md) (**ACM SUPREMACY RULES**)  
 **ACM decisions:** D036 (full replacement via independent copy), D037 (Supremacy Rules)  
-**Aria decision:** A001 ([`DECISION_LOG.md`](../../DECISION_LOG.md))
+**Aria decisions:** A001 · A002 ([`DECISION_LOG.md`](../../DECISION_LOG.md))
 
 ---
 
@@ -67,13 +68,13 @@ Flat path aliases under `docs/*.md` point here. Index: [`README.md`](README.md).
 
 ## Phased cutover (design)
 
-| Phase | Name | Authoritative cognition | Allowed |
-|-------|------|-------------------------|---------|
-| M0 | Import copy + build | Legacy | Compile/vendoring only |
-| M1 | Shadow measure | **Legacy** | ACM parallel; no user-visible ACM truth |
-| M2 | Harvest migrate | Legacy | Encode history INTO ACM |
-| M3 | ACM primary | **ACM** | Legacy read fallback optional |
-| M4 | Retire legacy | **ACM only** | Remove bypass paths (Rule 3) |
+| Phase | Name | Authoritative cognition | Allowed | Status |
+|-------|------|-------------------------|---------|--------|
+| M0 | Import copy + build | Legacy | Compile/vendoring only | **Complete** |
+| M1 | Shadow measure | **Legacy** | ACM parallel; no user-visible ACM truth | Not started |
+| M2 | Harvest migrate | Legacy | Encode history INTO ACM | Not started |
+| M3 | ACM primary | **ACM** | Legacy read fallback optional | Not started |
+| M4 | Retire legacy | **ACM only** | Remove bypass paths (Rule 3) | Not started |
 
 Shadow never becomes permanent dual authority (Rule 1).
 

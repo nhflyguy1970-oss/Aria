@@ -41,7 +41,7 @@ Legacy surfaces become **thin translation façades into ACM** (temporary) or **r
 | Python import | `from aria_acm.acm import …` / `from aria_acm.acm.api.engine import CognitiveEngine` |
 | Package layout | `aria_acm/acm/` = literal copy of ACM package `acm/` |
 | Bridge (future) | `aria_core/acm_bridge.py` — thin façades only |
-| Baseline pin | ACM tag `v0.14.0`, commit `454dcb90a352a3f1daa44aa95ff7b2801994f4e3`, project version `0.14.1` |
+| Baseline pin | ACM tag `v0.14.0`, commit `454dcb90a352a3f1daa44aa95ff7b2801994f4e3`, harvested version `0.14.0` (`aria-acm-v0.14.0-1`) |
 
 See [`ARIA_ACM_IMPORT_PLAN.md`](ARIA_ACM_IMPORT_PLAN.md) for include/exclude file lists.
 

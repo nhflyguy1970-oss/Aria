@@ -1,8 +1,9 @@
 # Aria ACM Import Plan — Vendored Copy
 
-**Status:** DESIGN ONLY — design decisions **locked**  
+**Status:** M0 IMPLEMENTED — design decisions remain **locked**  
 **Policy:** ACM SUPREMACY RULES · Independent copy (not shared library)  
-**Baseline pin:** ACM `v0.14.0` · commit `454dcb90a352a3f1daa44aa95ff7b2801994f4e3` · version `0.14.1`
+**Baseline pin:** ACM `v0.14.0` · commit `454dcb90a352a3f1daa44aa95ff7b2801994f4e3` · harvested `source_version` `0.14.0`  
+**Local copy:** `aria-acm-v0.14.0-1` · see `aria_acm/VERSION.json`
 
 ---
 

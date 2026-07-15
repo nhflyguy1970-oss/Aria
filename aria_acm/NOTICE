@@ -1,0 +1,14 @@
+Aria Cognitive Memory (`aria_acm`) is an independent copy of ACM (Aria Cognitive
+Memory engine), derived from the certified standalone ACM repository
+(Apache-2.0). Modifications inside Aria do not update the standalone project
+unless explicitly contributed upstream. Automatic synchronization is forbidden.
+Standalone ACM remains the research and reference implementation.
+
+Source pin (M0):
+  tag:    v0.14.0
+  commit: 454dcb90a352a3f1daa44aa95ff7b2801994f4e3
+  version harvested from pin: 0.14.0
+
+Aria-local bootstrap: `aria_acm/acm/__init__.py` registers `sys.modules["acm"]`
+so the literal package copy's absolute `acm.*` imports resolve to this tree
+without depending on site-packages or the standalone repository.

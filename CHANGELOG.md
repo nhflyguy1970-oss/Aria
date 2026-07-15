@@ -4,10 +4,11 @@
 
 ### Added
 
-- **ACM Integration Blueprint** (design only) under `docs/acm_integration/`, with flat path aliases under `docs/`.
-- Aria governance docs: `ROADMAP.md`, `PROJECT_HISTORY.md`, `DECISION_LOG.md`, this `CHANGELOG.md`.
-- Decision **A001**: full memory replacement via independent ACM copy; Supremacy Rules adopted.
+- **M0:** Vendored certified ACM into `aria_acm/` (pin `v0.14.0` / commit `454dcb90…`, local `aria-acm-v0.14.0-1`).
+- M0 gates: `tests/test_aria_acm_m0.py` (VERSION hash, import authority, encode/remember smoke); wired into `scripts/ci_check.py`.
+- ACM Integration Blueprint (design) under `docs/acm_integration/` (earlier); governance docs A001.
 
 ### Notes
 
-- No runtime behavior change. No ACM source imported yet. No migration executed.
+- Legacy memory remains authoritative. No Shadow (M1), harvest (M2), or cutover.
+- PR-M0-001: blueprint schema example `source_version` 0.14.1 vs pin harvest 0.14.0 — resolved by harvest-from-pin.

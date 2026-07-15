@@ -1,0 +1,13 @@
+{
+  "aria_acm_local_version": "aria-acm-v0.14.0-1",
+  "source_project": "aria-cognitive-memory",
+  "source_version": "0.14.0",
+  "source_tag": "v0.14.0",
+  "source_commit": "454dcb90a352a3f1daa44aa95ff7b2801994f4e3",
+  "source_repo": "/media/jeff/AI/ACM",
+  "copy_date": "2026-07-15",
+  "tree_sha256": "239f2aae4da3dac0a88b58518ed42c4e32f5cf2f659dbe44f2cef3534a2fff76",
+  "license": "Apache-2.0",
+  "certification_ref": "ACM docs/ACM_CERTIFIED_v1.md",
+  "notes": "source_version harvested from pinned commit (0.14.0). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0.md"
+}

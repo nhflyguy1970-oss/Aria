@@ -28,3 +28,18 @@ Replace Aria’s existing cognitive memory system entirely with an **independent
 - Permanent dual-write legacy + ACM cognition  
 - Reshaping ACM to mimic Aria CRUD semantics as the product goal  
 - Reimplementing ACM organs inside Aria
+
+---
+
+## A002 — M0 complete: ACM vendored; proceed only with explicit M1 approval (2026-07-15)
+
+**Status:** Accepted  
+**Related:** A001 · blueprint M0
+
+### Decision
+
+M0 implementation is complete: certified ACM is vendored at `aria_acm/` (`aria-acm-v0.14.0-1`). Legacy cognitive memory remains authoritative until later milestones. **M1+ must not start without explicit approval.**
+
+### Notes
+
+PR-M0-001 documented and closed via harvest-from-pin (`source_version` 0.14.0 at commit `454dcb90…`).

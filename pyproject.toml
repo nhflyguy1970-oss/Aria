@@ -3,10 +3,17 @@ name = "jarvis"
 version = "3.1.0"
 requires-python = ">=3.12"
 
+# Aria Cognitive Memory (vendored ACM under aria_acm/). Not a PyPI cognition dependency.
+# Discovery: repo-root packages aria_acm + aria_core used via PYTHONPATH / editable layout.
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["jarvis*", "aria_core*", "aria_acm*"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 140
-src = ["jarvis", "aria_core", "tests"]
+src = ["jarvis", "aria_core", "aria_acm", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

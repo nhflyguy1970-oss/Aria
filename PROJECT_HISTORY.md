@@ -1,24 +1,28 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-15 — M0: Vendor ACM into Aria
+
+Implemented blueprint Phase **M0** only:
+
+- Copied certified ACM package (`acm/`) + `LICENSE` into `aria_acm/` at pin `v0.14.0` / `454dcb90a352a3f1daa44aa95ff7b2801994f4e3`
+- Wrote `VERSION.json`, `NOTICE`, package marker; minimal `acm` import bootstrap for nested literal copy
+- Packaging/CI discovery; M0-01..M0-03 tests green
+- Legacy memory still authoritative; no M1 Shadow, no data migration
+
+Problem report: `docs/acm_integration/PROBLEM_REPORT_M0.md` (version harvest vs schema example).
+
 ## 2026-07-15 — ACM Integration Blueprint (design only)
 
 ACM Operational Certification completed and ACM approved for integration into Aria.
 
 Produced a **design-only** engineering blueprint for full cognitive memory replacement:
 
-- Independent vendored copy model (`jarvis/aria_acm/`) — standalone ACM remains research/reference  
+- Independent vendored copy model (`aria_acm/`) — standalone ACM remains research/reference  
 - ACM Supremacy Rules 1–6  
-- Complete capability matrix (no unmapped memory capability)  
-- Import plan with pinned ACM commit `454dcb90…` (`v0.14.0` / `0.14.1`)  
-- API field maps and façade rules  
-- Data migration INTO ACM only (no automatic migrate)  
-- Mission Control / Conversation Trace impact (no redesign)  
-- Removal, test (quantified gates), and rollback plans  
+- Complete capability matrix, import/API/migration/MC/Trace/removal/test/rollback plans  
 
-**Verdict:** READY TO IMPLEMENT — pending blueprint approval. No Aria runtime code changed; no ACM copy performed; no data migrated.
-
-Authoritative docs: `docs/acm_integration/` · Decision **A001**.
+**Verdict:** READY TO IMPLEMENT — approved. Authoritative docs: `docs/acm_integration/` · Decision **A001**.
 
 ## Prior eras
 
-Product and platform history continues in `docs/PHASE_ROADMAP.md` (Phases 1–3 complete/in progress) and `UPGRADES.md` (Iron Man / daily-use build-out).
+Product and platform history continues in `docs/PHASE_ROADMAP.md` and `UPGRADES.md`.

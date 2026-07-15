@@ -55,21 +55,21 @@ Target: new ability = registry entry + handler + test (see `docs/ADDING_AN_ACTIO
 
 ---
 
-## Phase 4 — Cognitive memory replacement (ACM) — design complete
+## Phase 4 — Cognitive memory replacement (ACM)
 
 Focus: replace Aria cognitive memory with an **independent vendored ACM copy**.  
-**Status:** Blueprint **READY TO IMPLEMENT** — awaiting approval. No implementation started.
+**Blueprint:** Approved / locked. **M0:** Complete. **M1+:** Awaiting approval.
 
 | # | Item | Status | Notes |
 |---|------|--------|-------|
-| 1 | Integration blueprint (Parts 1–10) | Done (design) | `docs/acm_integration/` · Decision A001 |
-| 2 | M0 Vendor `jarvis/aria_acm/` | Not started | Pin ACM `v0.14.0` |
-| 3 | M1 Shadow measure | Not started | Legacy authoritative |
+| 1 | Integration blueprint (Parts 1–10) | Done | `docs/acm_integration/` · A001 |
+| 2 | M0 Vendor `aria_acm/` | **Done** | Pin ACM `v0.14.0` · `aria-acm-v0.14.0-1` |
+| 3 | M1 Shadow measure | Not started | Needs explicit approval |
 | 4 | M2 Harvest INTO ACM | Not started | Operator-triggered only |
 | 5 | M3 ACM primary | Not started | |
 | 6 | M4 Retire legacy SoT | Not started | After UAT + rollback window |
 
-Canonical roadmap entry also: root [`ROADMAP.md`](../ROADMAP.md).
+Canonical roadmap: root [`ROADMAP.md`](../ROADMAP.md).
 
 ---
 

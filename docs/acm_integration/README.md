@@ -1,9 +1,9 @@
 # Aria ← ACM Integration Blueprint (Design Only)
 
-**Status:** DESIGN COMPLETE — no implementation  
-**Verdict:** **READY TO IMPLEMENT** (see [`MEMORY_REPLACEMENT_BLUEPRINT.md`](MEMORY_REPLACEMENT_BLUEPRINT.md))  
+**Status:** M0 COMPLETE — design locked; further milestones by approval  
+**Verdict:** Blueprint approved. **M0 done.** Do not start M1 without approval.  
 **Governing policy:** [`ARIA_ACM_ARCHITECTURE.md`](ARIA_ACM_ARCHITECTURE.md) — **ACM SUPREMACY RULES 1–6**  
-**ACM decisions:** D036 · D037 · **Aria:** A001
+**ACM decisions:** D036 · D037 · **Aria:** A001 · A002
 
 ---
 

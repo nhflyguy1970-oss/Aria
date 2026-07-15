@@ -1,6 +1,6 @@
 target-version = "py312"
 line-length = 100
-exclude = ["venv", ".venv", "data", "tools"]
+exclude = ["venv", ".venv", "data", "tools", "aria_acm/acm"]
 
 [lint]
 select = ["E", "F", "I", "UP"]
