@@ -99,6 +99,26 @@ def _search_code(query: str, limit: int) -> list[dict[str, Any]]:
 def _search_memory(query: str, limit: int) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     try:
+        try:
+            from aria_core import acm_bridge
+
+            if acm_bridge.acm_is_authoritative():
+                hits = acm_bridge.primary_search(query, limit=limit)
+                for h in hits:
+                    content = h.get("content") or h.get("text") or str(h)
+                    out.append({
+                        "source_type": "conversation",
+                        "source_label": "ACM Cognition",
+                        "title": (h.get("id") or "acm")[:40],
+                        "excerpt": content[:400],
+                        "location": h.get("namespace") or "acm",
+                        "strategy": "acm_authority",
+                        "score": float(h.get("score") or 0.7),
+                        "raw": h,
+                    })
+                return out
+        except Exception:
+            pass
         from jarvis.assistant_instance import get_assistant
 
         mem = get_assistant().memory

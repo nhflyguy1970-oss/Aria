@@ -63,6 +63,9 @@ def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "m2: Aria ACM integration milestone M2 (harvest)")
     config.addinivalue_line("markers", "m3: Aria ACM integration milestone M3 (primary)")
     config.addinivalue_line("markers", "m4: Aria ACM integration milestone M4 (retire legacy)")
+    config.addinivalue_line(
+        "markers", "cic: Cognitive infrastructure conversion (ACM sole brain)"
+    )
 
 
 @pytest.fixture(autouse=True)

@@ -15,10 +15,11 @@
 | **Phase M0A — Promote ACM v0.15.0 (Memory Authority)** | **Complete** | D038 · `aria-acm-v0.15.0-1` · A007 |
 | **Phase M0B — Promote ACM v0.16.0 (Cognitive Intent)** | **Complete** | D039 · `aria-acm-v0.16.0-1` · A008 |
 | **Phase M0C — Promote ACM v0.17.0 (Cognitive Dispatch)** | **Complete** | D040 · `aria-acm-v0.17.0-1` · A009 |
+| **Cognitive Infrastructure Conversion** | **Complete** | ACM sole brain · MC/Trace ACM · A010 |
 
 Standalone ACM remains research/reference. Aria production copy: `aria_acm/`.
 
-See: [`docs/acm_integration/MEMORY_REPLACEMENT_BLUEPRINT.md`](docs/acm_integration/MEMORY_REPLACEMENT_BLUEPRINT.md) · [`LEGACY_RETIREMENT_REPORT.md`](docs/acm_integration/LEGACY_RETIREMENT_REPORT.md)
+See: [`docs/COGNITIVE_INFRASTRUCTURE_CONVERSION.md`](docs/COGNITIVE_INFRASTRUCTURE_CONVERSION.md) · [`docs/acm_integration/MEMORY_REPLACEMENT_BLUEPRINT.md`](docs/acm_integration/MEMORY_REPLACEMENT_BLUEPRINT.md) · [`LEGACY_RETIREMENT_FINAL.md`](docs/LEGACY_RETIREMENT_FINAL.md)
 
 ## Platform & product (ongoing)
 

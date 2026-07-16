@@ -100,13 +100,18 @@ def test_m4_store_add_redirects_to_acm(tmp_path: Path, monkeypatch: pytest.Monke
     from jarvis.modules.memory import create_memory_store
 
     store = create_memory_store(tmp_path / "legacy.json")
-    before = len(store.list_entries()) if hasattr(store, "list_entries") else 0
+    impl = getattr(store, "_impl", store)
+    before_legacy = len(getattr(impl, "_data", {}).get("entries", []))
     entry = store.add("fact", "redirected autobiographical fact zeta99")
     assert entry.get("source") == "acm"
     # Legacy JSON body must not grow cognitive writes
-    after = len(store.list_entries())
-    assert after == before
-
+    after_legacy = len(getattr(impl, "_data", {}).get("entries", []))
+    assert after_legacy == before_legacy
+    # Authoritative list projects ACM (may grow)
+    assert any(
+        "zeta99" in str(e.get("content") or "").lower() or e.get("id") == entry.get("id")
+        for e in store.list_entries()
+    )
 
 @pytest.mark.m4
 def test_m4_hierarchy_consolidate_noop_under_acm(tmp_path: Path) -> None:

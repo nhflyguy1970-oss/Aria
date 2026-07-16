@@ -52,7 +52,7 @@ def _organ_slot(
 
 
 def _shadow_memory_fields() -> dict[str, Any]:
-    """Additive memory_operation.v2 fields from M1 Shadow / M3 Primary (ids/flags only)."""
+    """ACM cognitive diagnostics for Conversation Trace (ids/flags only)."""
     try:
         from aria_core import acm_bridge
 
@@ -60,13 +60,43 @@ def _shadow_memory_fields() -> dict[str, Any]:
         auth = "legacy" if route == "rollback" else route
         out: dict[str, Any] = {
             "authoritative": auth,
-            "schema": "memory_operation.v2",
+            "schema": "memory_operation.v3",
             "user_visible_changed": acm_bridge.user_visible_uses_acm(),
         }
         if acm_bridge.acm_is_authoritative():
             last = acm_bridge.last_primary_op() or {}
-            out["acm_verb"] = last.get("acm_verb")
-            out["shadow_agree"] = None
+            out.update(
+                {
+                    "acm_verb": last.get("acm_verb"),
+                    "intent": last.get("intent"),
+                    "primary_cognitive_owner": last.get("primary_organ"),
+                    "supporting_organs": last.get("supporting_organs") or [],
+                    "dispatch_path": last.get("dispatch_path")
+                    or (
+                        [
+                            "classify_request",
+                            "route_request",
+                            "dispatch_request",
+                            last.get("primary_organ"),
+                        ]
+                        if last.get("primary_organ")
+                        else ["classify_request", "route_request", "dispatch_request"]
+                    ),
+                    "reconstruction_path": last.get("reconstruction_path") or last.get("acm_verb"),
+                    "termination_organ": last.get("terminated_at") or last.get("primary_organ"),
+                    "confidence": last.get("confidence"),
+                    "uncertainty": last.get("uncertain"),
+                    "provenance": last.get("provenance"),
+                    "cognitive_status": last.get("cognitive_status"),
+                    "cognitive_memory_result": {
+                        "intent": last.get("intent"),
+                        "primary_organ": last.get("primary_organ"),
+                        "terminated_at": last.get("terminated_at"),
+                        "status": last.get("cognitive_status"),
+                    },
+                    "shadow_agree": None,
+                }
+            )
             return out
         cmp = acm_bridge.last_shadow_compare()
         if acm_bridge.shadow_enabled() and cmp is not None:
@@ -76,7 +106,7 @@ def _shadow_memory_fields() -> dict[str, Any]:
             out["shadow_agree"] = None
         return out
     except Exception:
-        return {"authoritative": "legacy", "schema": "memory_operation.v2"}
+        return {"authoritative": "legacy", "schema": "memory_operation.v3"}
 
 
 def infer_organs(intent: dict[str, Any], action: str) -> dict[str, Any]:
@@ -360,6 +390,7 @@ def build_conversation_trace(
         organs=organs,
         error=error,
     )
+    acm_mem = _shadow_memory_fields()
     return {
         "schema": "conversation_trace/1",
         "conversation_id": conversation_id,
@@ -402,7 +433,7 @@ def build_conversation_trace(
             else None,
             "retrieval": intent.get("memory_retrieval")
             or (intent.get("params") or {}).get("memory_retrieval"),
-            **_shadow_memory_fields(),
+            **acm_mem,
         },
         "capability_bus": {
             "requested": []
@@ -449,6 +480,23 @@ def build_conversation_trace(
             "subsystems_skipped": [k for k, v in organs.items() if v.get("skipped")],
             "composition_stage": action == "cognitive_compose",
             "latency_ms": None if reflex_used else latency_ms,
+            **(
+                {
+                    "acm": {
+                        "intent": acm_mem.get("intent"),
+                        "primary_cognitive_owner": acm_mem.get("primary_cognitive_owner"),
+                        "termination_organ": acm_mem.get("termination_organ"),
+                        "supporting_organs": acm_mem.get("supporting_organs"),
+                        "dispatch_path": acm_mem.get("dispatch_path"),
+                        "reconstruction_path": acm_mem.get("reconstruction_path"),
+                        "confidence": acm_mem.get("confidence"),
+                        "uncertainty": acm_mem.get("uncertainty"),
+                        "provenance": acm_mem.get("provenance"),
+                    }
+                }
+                if not reflex_used
+                else {}
+            ),
         },
         "organs": organs,
         "capability_plan": _capability_plan_block(intent, action),

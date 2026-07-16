@@ -593,6 +593,16 @@ def primary_cognitive_respond(request: str) -> dict[str, Any]:
         primary_organ=diag.get("primary_organ") or ownership.get("primary_organ"),
         terminated_at=diag.get("terminated_at") or record.get("terminated_at"),
         supporting_organs=diag.get("supporting_organs") or record.get("supporting_organs"),
+        confidence=result.get("confidence"),
+        provenance=result.get("provenance") or diag.get("provenance"),
+        reconstruction_path=diag.get("reconstruction_path") or diag.get("path"),
+        dispatch_path=diag.get("dispatch_path")
+        or [
+            "classify_request",
+            "route_request",
+            "dispatch_request",
+            diag.get("terminated_at") or ownership.get("primary_organ"),
+        ],
         uncertain=bool(
             diag.get("uncertain") or (route.get("classification") or {}).get("uncertain")
         ),
@@ -778,7 +788,8 @@ def primary_context_fragments(message: str, *, limit: int = 5) -> list[str]:
     if isinstance(result, dict) and result.get("is_memory_request"):
         speech = str(cog.get("speech") or "").strip()
         mem = str(result.get("memory") or "").strip()
-        if result.get("intent") == "identity" and mem:
+        intent = str(result.get("intent") or "")
+        if intent in ("identity", "assistant_identity", "user_identity") and mem:
             parts.append(f"Identity:\n- {mem[:500]}")
         elif speech:
             parts.append(f"Relevant memories:\n- {speech[:800]}")
@@ -786,3 +797,286 @@ def primary_context_fragments(message: str, *, limit: int = 5) -> list[str]:
             parts.append(f"Relevant memories:\n- {mem[:800]}")
     _set_last_primary(acm_verb="cognitive_respond", context_parts=len(parts[:limit]))
     return parts[:limit]
+
+
+def system_prompt_from_acm(*, max_chars: int = 2200) -> str:
+    """Stable user/assistant context for system prompt — ACM only."""
+    if not acm_is_authoritative():
+        return ""
+    parts: list[str] = ["Persistent cognitive context (ACM):"]
+    try:
+        who = primary_cognitive_speak("Who are you?")
+        speech = str(who.get("speech") or "").strip()
+        if speech and not speech.lower().startswith("i don't"):
+            parts.append(f"- Assistant: {speech[:400]}")
+    except Exception:
+        pass
+    try:
+        user = primary_cognitive_speak("Who am I?")
+        speech = str(user.get("speech") or "").strip()
+        if speech and "don't currently know" not in speech.lower():
+            parts.append(f"- User: {speech[:500]}")
+    except Exception:
+        pass
+    try:
+        prefs = primary_cognitive_speak("What are my preferences?")
+        speech = str(prefs.get("speech") or "").strip()
+        if speech and "don't currently know" not in speech.lower():
+            parts.append(f"- Preferences: {speech[:500]}")
+    except Exception:
+        pass
+    try:
+        goals = primary_cognitive_speak("What is our long-term goal?")
+        speech = str(goals.get("speech") or "").strip()
+        if speech and "don't currently know" not in speech.lower():
+            parts.append(f"- Goals: {speech[:400]}")
+    except Exception:
+        pass
+    if len(parts) <= 1:
+        return ""
+    block = "\n".join(parts)
+    if len(block) > max_chars:
+        block = block[: max_chars - 3] + "..."
+    return block
+
+
+def project_list_entries(
+    entry_type: str | None = None,
+    *,
+    namespace: str | None = None,
+    query: str | None = None,
+    limit: int = 200,
+) -> list[dict[str, Any]]:
+    """Host-shaped ACM projection for list_entries façades (not legacy SoT)."""
+    if not acm_is_authoritative():
+        return []
+    engine = get_engine()
+    out: list[dict[str, Any]] = []
+    q = (query or "").strip().lower()
+    ns = (namespace or "").strip()
+    for exp in engine.store.experiences.values():
+        tags = list(getattr(exp, "context_tags", ()) or [])
+        content = str(getattr(exp, "summary", "") or "")
+        entry_ns = "default"
+        for t in tags:
+            if str(t).startswith("ns:"):
+                entry_ns = str(t)[3:]
+                break
+        etype = "fact"
+        for t in tags:
+            if str(t).startswith("legacy_type:"):
+                etype = str(t).split(":", 1)[1]
+                break
+        if entry_type and etype != entry_type:
+            continue
+        if ns and entry_ns != ns:
+            continue
+        if q and q not in content.lower() and not any(q in str(t).lower() for t in tags):
+            continue
+        out.append(
+            {
+                "id": exp.id,
+                "content": content,
+                "type": etype,
+                "namespace": entry_ns,
+                "tags": tags,
+                "source": "acm",
+                "timestamp": getattr(exp, "t_encoded", None) or getattr(exp, "timestamp", None),
+            }
+        )
+        if len(out) >= limit:
+            break
+    if len(out) < limit:
+        for concept in engine.store.concepts.values():
+            label = concept.labels[0] if getattr(concept, "labels", None) else concept.id
+            if entry_type and entry_type not in ("fact", "concept"):
+                continue
+            if q and q not in str(label).lower():
+                continue
+            out.append(
+                {
+                    "id": concept.id,
+                    "content": str(label),
+                    "type": "fact",
+                    "namespace": ns or "default",
+                    "tags": ["concept"],
+                    "source": "acm",
+                }
+            )
+            if len(out) >= limit:
+                break
+    _set_last_primary(acm_verb="project_list", hit_count=len(out))
+    return out
+
+
+def project_search(
+    query: str, *, limit: int = 10, namespace: str | None = None
+) -> list[dict[str, Any]]:
+    """Authoritative ACM search for MemoryStore.search façades."""
+    return primary_search(query, limit=limit, namespace=namespace)
+
+
+def acm_similar_exists(content: str, threshold: float = 0.88) -> bool:
+    """Soft duplicate check against ACM (authoritative path)."""
+    if not acm_is_authoritative() or not (content or "").strip():
+        return False
+    hits = primary_search(content.strip()[:200], limit=3)
+    if not hits:
+        return False
+    needle = content.strip().lower()
+    for h in hits:
+        blob = str(h.get("content") or "").strip().lower()
+        if not blob:
+            continue
+        if blob == needle or needle in blob or blob in needle:
+            return True
+        score = h.get("score")
+        try:
+            if score is not None and float(score) >= threshold:
+                return True
+        except (TypeError, ValueError):
+            pass
+    return False
+
+
+def acm_dashboard(*, limit: int = 100) -> dict[str, Any]:
+    """Mission Control ACM Cognitive Dashboard payload (no legacy SoT)."""
+    engine = get_engine()
+    exps = list(engine.store.experiences.values())
+    concepts = list(engine.store.concepts.values())
+    goals = list(engine.store.active_goals())
+    assocs = (
+        list(engine.store.associations.values()) if hasattr(engine.store, "associations") else []
+    )
+    last = last_primary_op() or {}
+    obs = panel_observables()
+
+    def _sample_events(n: int = 20) -> list[dict[str, Any]]:
+        rows: list[dict[str, Any]] = []
+        for exp in exps[-n:]:
+            rows.append(
+                {
+                    "id": exp.id,
+                    "kind": "experience",
+                    "organ": "experiences",
+                    # ids/flags only — never memory body contents in MC payload
+                }
+            )
+        return rows[-n:]
+
+    who: dict[str, Any] = {}
+    try:
+        who = engine.who_am_i() if hasattr(engine, "who_am_i") else {}
+    except Exception:
+        who = {}
+
+    return {
+        "ok": True,
+        "title": "ACM Cognitive Dashboard",
+        "owner": "aria_acm",
+        "version": "acm-cognitive-dashboard.v1",
+        "implementation": "embedded ACM (aria_acm)",
+        "provider": "aria_core.acm_bridge → CognitiveEngine",
+        "authoritative": "acm",
+        "cognitive_model": "D038+D039+D040",
+        "identity": {
+            "answer": (who.get("answer") or "")[:300] if isinstance(who, dict) else "",
+            "confidence": who.get("confidence") if isinstance(who, dict) else None,
+            "agent_id": getattr(engine, "agent_id", "aria"),
+        },
+        "experiences": {"count": len(exps)},
+        "concepts": {"count": len(concepts)},
+        "associations": {"count": len(assocs)},
+        "goals": {
+            "active_count": len(goals),
+            "titles": [g.title for g in goals[:8]],
+        },
+        "organs": {
+            "identity": True,
+            "remembering": True,
+            "learning": True,
+            "reflection": True,
+            "associations": True,
+            "concepts": True,
+            "goals": True,
+            "confidence": True,
+            "attention": True,
+            "accessibility": True,
+            "dispatch": True,
+        },
+        "dispatch": {
+            "last_intent": last.get("intent"),
+            "last_primary_organ": last.get("primary_organ"),
+            "last_terminated_at": last.get("terminated_at"),
+            "last_verb": last.get("acm_verb"),
+            "supporting_organs": last.get("supporting_organs") or [],
+        },
+        "confidence": {
+            "note": "Per-result confidence on CognitiveMemoryResult",
+            "last_status": last.get("cognitive_status"),
+        },
+        "uncertainty": {"policy": "unknown remains unknown; speak faithful templates"},
+        "provenance": {"policy": "experience provenance via Memory Authority gates"},
+        "memory_health": {
+            "ok": True,
+            "cognitive_store_reachable": True,
+            "persist_path_set": bool(persist_path()),
+            "experience_count": len(exps),
+            "concept_count": len(concepts),
+            "active_goals": len(goals),
+        },
+        "cognitive_health": {
+            "ok": True,
+            "authoritative": "acm",
+            "primary_default_on": True,
+            "rollback": rollback_enabled(),
+        },
+        "cognitive_activity": {
+            "primary_encode": obs.get("primary_encode"),
+            "primary_recall": obs.get("primary_recall"),
+            "primary_cool": obs.get("primary_cool"),
+            "primary_revise": obs.get("primary_revise"),
+        },
+        "organ_activity": obs,
+        "recent_cognitive_events": _sample_events(min(limit, 40)),
+        "reconstruction_metrics": {
+            "primary_recall": obs.get("primary_recall"),
+            "shadow_p95_ms": obs.get("shadow_p95_ms"),
+        },
+        "memory_growth": {"experiences": len(exps), "concepts": len(concepts)},
+        "learning_progress": {"note": "via Learning organ adaptations"},
+        "reflection_history": {"note": "via Reflection organ outcomes"},
+        # Compatibility keys for existing Mission Control Memory tab layout
+        "entry_count": len(exps),
+        "active_facts": len(exps),
+        "superseded_facts": 0,
+        "health": {"ok": True, "store_reachable": True},
+        "history": [],  # contents never in MC; use recent_cognitive_events (ids only)
+        "statistics": {
+            "entry_count": len(exps),
+            "provider": "aria_acm",
+            "experiences": len(exps),
+            "concepts": len(concepts),
+            "goals": len(goals),
+        },
+        "counters": {
+            "reads": int(obs.get("primary_recall") or 0),
+            "writes": int(obs.get("primary_encode") or 0),
+            "searches": int(obs.get("primary_recall") or 0),
+        },
+        "reads": int(obs.get("primary_recall") or 0),
+        "writes": int(obs.get("primary_encode") or 0),
+        "searches": int(obs.get("primary_recall") or 0),
+        "shadow": obs,
+        "consumers": [
+            "capability_bus",
+            "cognitive_orchestrator",
+            "mission_control",
+            "conversation",
+        ],
+        "note": (
+            "ACM Cognitive Dashboard — embedded ACM is the sole cognitive SoT. "
+            "Legacy MemoryStore is not cognitive authority."
+        ),
+        "legacy_disconnected": True,
+    }

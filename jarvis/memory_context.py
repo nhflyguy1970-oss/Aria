@@ -56,6 +56,16 @@ def detect_project_namespace(root: Path | None = None) -> str:
 
 def system_prompt_block(memory_store, *, max_chars: int = 2200) -> str:
     """Stable user context for the system prompt."""
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            block = acm_bridge.system_prompt_from_acm(max_chars=max_chars)
+            if block:
+                return block
+    except Exception:
+        pass
+
     from jarvis.trust_memory import filter_trusted_content, seed_default_strategies
 
     seed_default_strategies(memory_store)

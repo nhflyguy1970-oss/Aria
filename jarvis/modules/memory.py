@@ -173,6 +173,14 @@ class JsonMemoryStore:
         return entry
 
     def similar_exists(self, content: str, threshold: float = 0.88) -> bool:
+        try:
+            from aria_core.acm_store_facade import acm_similar_exists
+
+            hit = acm_similar_exists(content, threshold=threshold)
+            if hit is not None:
+                return hit
+        except Exception:
+            pass
         norm = content.lower().strip()
         if not norm:
             return True
@@ -203,6 +211,19 @@ class JsonMemoryStore:
         query: str | None = None,
         include_embedding: bool = False,
     ) -> list[dict]:
+        try:
+            from aria_core.acm_store_facade import acm_list_entries
+
+            projected = acm_list_entries(
+                entry_type,
+                namespace=namespace,
+                query=query,
+                include_embedding=include_embedding,
+            )
+            if projected is not None:
+                return projected
+        except Exception:
+            pass
         entries = list(self._data["entries"])
         if entry_type:
             entries = [e for e in entries if e.get("type") == entry_type]
@@ -223,6 +244,18 @@ class JsonMemoryStore:
         return [to_public(e) for e in entries]
 
     def get(self, entry_id: str) -> dict | None:
+        try:
+            from aria_core.acm_store_facade import acm_get
+
+            projected = acm_get(entry_id)
+            if projected is not None:
+                return projected
+            from aria_core import acm_bridge
+
+            if acm_bridge.acm_is_authoritative():
+                return None
+        except Exception:
+            pass
         for e in self._data["entries"]:
             if e.get("id") == entry_id:
                 return to_public(e)
@@ -243,6 +276,20 @@ class JsonMemoryStore:
         tags: list[str] | None = None,
         namespace: str | None = None,
     ) -> bool:
+        try:
+            from aria_core.acm_store_facade import acm_update
+
+            diverted = acm_update(
+                entry_id,
+                content=content,
+                entry_type=entry_type,
+                tags=tags,
+                namespace=namespace,
+            )
+            if diverted is not None:
+                return diverted
+        except Exception:
+            pass
         for e in self._data["entries"]:
             if e.get("id") != entry_id:
                 continue
@@ -268,6 +315,16 @@ class JsonMemoryStore:
         namespace: str | None = None,
         user_facing_only: bool = False,
     ) -> list[dict]:
+        try:
+            from aria_core.acm_store_facade import acm_search
+
+            projected = acm_search(
+                query, limit=limit, namespace=namespace, user_facing_only=user_facing_only
+            )
+            if projected is not None:
+                return projected
+        except Exception:
+            pass
         pool = list(self._data["entries"])
 
         def _get_emb(e: dict) -> list[float]:
@@ -299,6 +356,14 @@ class JsonMemoryStore:
         return False
 
     def delete_id(self, entry_id: str) -> bool:
+        try:
+            from aria_core.acm_store_facade import acm_delete_id
+
+            diverted = acm_delete_id(entry_id)
+            if diverted is not None:
+                return diverted
+        except Exception:
+            pass
         idx = self.find_index(entry_id)
         if idx is None:
             return False

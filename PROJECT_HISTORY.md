@@ -1,5 +1,16 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-15 — Cognitive Infrastructure Conversion (ACM sole brain)
+
+Final conversion of Aria cognition onto embedded ACM (A010):
+
+- MemoryStore JSON/SQLite **reads/updates/deletes** divert to ACM when PRIMARY
+- System prompt + knowledge memory search → ACM
+- Mission Control panel → ACM Cognitive Dashboard
+- Conversation Trace → `memory_operation.v3` ACM diagnostics
+- Dependency audit/graph + retirement docs
+- CIC-01..06 + full CI
+
 ## 2026-07-15 — M4: Retire legacy cognitive SoT (ACM sole authority)
 
 Implemented blueprint Phase **M4** (final integration milestone):

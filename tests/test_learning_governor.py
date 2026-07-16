@@ -76,5 +76,7 @@ def test_memory_add_via_governor(tmp_path, monkeypatch):
     entry = store.add("fact", "Jeff prefers barbless hooks for trout")
     assert "barbless" in entry["content"]
     assert entry.get("source") == "acm"
-    # M4: autobiographical write redirects to ACM — not listed on empty legacy JSON
-    assert not any(e.get("id") == entry["id"] for e in store.list_entries())
+    # M4/CIC: autobiographical write redirects to ACM — legacy JSON vault unchanged
+    legacy_rows = getattr(getattr(store, "_impl", store), "_data", {}).get("entries", [])
+    assert not any(e.get("id") == entry["id"] for e in legacy_rows)
+    assert any(e.get("id") == entry["id"] for e in store.list_entries())

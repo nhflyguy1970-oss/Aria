@@ -125,7 +125,7 @@ def test_m1_04_mission_control_agreement_counters(monkeypatch: pytest.MonkeyPatc
     )
     mop = trace.get("memory_operation") or {}
     assert mop.get("authoritative") == "legacy"
-    assert mop.get("schema") == "memory_operation.v2"
+    assert mop.get("schema") == "memory_operation.v3"
     assert "shadow_agree" in mop
 
 

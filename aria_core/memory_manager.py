@@ -539,6 +539,26 @@ def memory_history(*, limit: int = 100, op: str = "") -> list[dict[str, Any]]:
 
 
 def memory_statistics() -> dict[str, Any]:
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            dash = acm_bridge.acm_dashboard()
+            return {
+                "owner": "aria_acm",
+                "version": "acm-cognitive-dashboard.v1",
+                "counters": dash.get("cognitive_activity") or {},
+                "history_size": len(dash.get("recent_cognitive_events") or []),
+                "store": {
+                    "entry_count": dash.get("entry_count"),
+                    "experiences": (dash.get("experiences") or {}).get("count"),
+                    "concepts": (dash.get("concepts") or {}).get("count"),
+                    "provider": "aria_acm",
+                },
+                "duplicates_detected": 0,
+            }
+    except Exception:
+        pass
     store_stats: dict[str, Any] = {}
     try:
         store = _store()
@@ -565,6 +585,22 @@ def memory_statistics() -> dict[str, Any]:
 
 
 def memory_health() -> dict[str, Any]:
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            dash = acm_bridge.acm_dashboard()
+            mh = dash.get("memory_health") or {}
+            return {
+                "ok": bool(mh.get("ok", True)),
+                "owner": "aria_acm",
+                "implementation": "embedded ACM (aria_acm)",
+                "store_reachable": bool(mh.get("cognitive_store_reachable", True)),
+                "experience_count": mh.get("experience_count"),
+                "concept_count": mh.get("concept_count"),
+            }
+    except Exception:
+        pass
     try:
         store = _store()
         _ = store.list_entries() if hasattr(store, "list_entries") else []
@@ -648,7 +684,14 @@ def reset_for_tests() -> None:
 
 
 def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
-    """Operational Memory view — no memory contents by default."""
+    """Operational Memory view — ACM Cognitive Dashboard when authoritative."""
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            return acm_bridge.acm_dashboard(limit=limit)
+    except Exception:
+        pass
     stats = memory_statistics()
     health = memory_health()
     hist = memory_history(limit=limit)
@@ -741,7 +784,7 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
     shadow_block: dict[str, Any] = {
         "shadow_enabled": False,
         "authoritative": "legacy",
-        "note": "M1 Shadow off",
+        "note": "M1 Shadow off / ROLLBACK path",
     }
     try:
         from aria_core import acm_bridge
@@ -755,10 +798,10 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         }
     return {
         "ok": bool(health.get("ok")),
-        "title": "Aria Core Memory",
+        "title": "Aria Core Memory (ROLLBACK)",
         "owner": "aria_core.memory",
         "version": MEMORY_VERSION,
-        "implementation": "jarvis.modules.memory (underneath)",
+        "implementation": "jarvis.modules.memory (ROLLBACK only)",
         "provider": "aria_core.memory → jarvis.modules.memory",
         "authoritative": shadow_block.get("authoritative", "legacy"),
         "entry_count": entry_count,
@@ -812,9 +855,8 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         "shadow": shadow_block,
         "consumers": ["capability_bus", "cognitive_orchestrator", "learning", "nlu/adapters"],
         "note": (
-            "Core-owned Memory API; organ storage unchanged. "
-            "Operational metadata only — contents not exposed by default. "
-            "M3: when ARIA_ACM_PRIMARY (and not ROLLBACK), authoritative=acm; "
-            "legacy read fallback optional. M4 still owns legacy removal."
+            "ROLLBACK façade only. With ARIA_ACM_PRIMARY (default), "
+            "mission_control_panel returns acm_dashboard() instead."
         ),
+        "legacy_disconnected": False,
     }

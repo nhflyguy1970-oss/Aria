@@ -4,6 +4,8 @@
 
 ### Added
 
+- **Cognitive Infrastructure Conversion (A010):** ACM is Aria’s sole cognitive brain. MemoryStore search/list/get/update/delete façades divert to ACM; system prompt + knowledge search use ACM; Mission Control Memory panel → ACM Cognitive Dashboard; Conversation Trace `memory_operation.v3` with intent/owner/dispatch/termination/diagnostics. Docs: `COGNITIVE_INFRASTRUCTURE_CONVERSION.md`, `DEPENDENCY_AUDIT.md`, `DEPENDENCY_GRAPH.md`, `MISSION_CONTROL_ACM.md`, `CONVERSATION_TRACE_ACM.md`, `LEGACY_RETIREMENT_FINAL.md`. Gates: `tests/test_cognitive_infrastructure_conversion.py` (CIC-01..06).
+
 - **M0C:** Promoted certified standalone ACM **v0.17.0** (D040 End-to-End Cognitive Dispatch) into `aria_acm/` as `aria-acm-v0.17.0-1`. Cap Bus / Core / MemoryEngine use `classify_request` → `route_request` → `dispatch_request` → `cognitive_respond` → `speak_cognitive_result`.
 - M0C gates: `tests/test_aria_acm_m0c.py` (M0C-01..M0C-07); wired into CI.
 
@@ -22,7 +24,7 @@
 - **M2:** Operator-triggered harvest of legacy MemoryStore **INTO** vendored ACM (`aria_core/acm_harvest.py`, `scripts/acm_harvest.py`).
 - **M1:** ACM Shadow measure.
 - **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; current pin `aria-acm-v0.17.0-1` via M0C).
-- ACM Integration Blueprint; governance A001–A009.
+- ACM Integration Blueprint; governance A001–A010.
 
 ### Notes
 

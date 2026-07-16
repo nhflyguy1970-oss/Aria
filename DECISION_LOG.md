@@ -177,3 +177,23 @@ M0C promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Diagnostics expose `terminated_at`, ownership, dispatch path  
 - Organ-only termination enforced by vendored ACM  
 - **STOP** — no further implementation without explicit approval; next approved step is Daily Use Test 1 comparison
+
+---
+
+## A010 — Cognitive Infrastructure Conversion complete (2026-07-15)
+
+**Status:** Accepted  
+**Related:** A001–A009 · embedded ACM v0.17.0 (D038–D040)
+
+### Decision
+
+Final Aria cognitive infrastructure conversion is complete. Embedded ACM is the sole cognitive memory implementation. Every cognitive capability under PRIMARY depends only on ACM (bridge + store façades). Mission Control Memory panel is an ACM Cognitive Dashboard. Conversation Trace reports ACM cognition (`memory_operation.v3`). Standalone ACM repository was not modified.
+
+### Consequences
+
+- Store façades: `aria_core/acm_store_facade.py`  
+- Dashboard: `acm_bridge.acm_dashboard` via `mission_control_panel`  
+- Trace: intent / owner / dispatch / termination / confidence / provenance  
+- Legacy JSON/SQLite retained as vault + ROLLBACK only  
+- CIC-01..06 gates; docs package under `docs/`  
+- **STOP** — wait for approval before further implementation; authentic Daily Use Test 1 still gated on explicit approval
