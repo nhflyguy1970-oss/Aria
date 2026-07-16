@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from time import time
 from typing import TYPE_CHECKING, Any
 
+from acm.identity.assistant_profile import AssistantIdentityProfile
 from acm.identity.policy import IdentityPolicyGate, IdentityProposal
 from acm.types import Attribute, ConceptRole, EdgeType
 
@@ -22,6 +23,7 @@ _SELF_ROLE = re.compile(
     r"\b(i\s+am|i'?m|my\s+name\s+is|i\s+work\s+as|i\s+serve\s+as)\b",
     re.I,
 )
+_MY_NAME = re.compile(r"\bmy\s+name\s+is\b", re.I)
 _CAPABILITY = re.compile(
     r"\b(i\s+can|i\s+am\s+able\s+to|capable\s+of|my\s+(?:skill|capability))\b",
     re.I,
@@ -32,6 +34,11 @@ _WHO_QUERY = re.compile(
     re.I,
 )
 _USER_REFERENT = re.compile(r"\b(you\s+are|user'?s?\s+name|the\s+user\s+is)\b", re.I)
+_ASSISTANT_ADDRESS = re.compile(
+    r"\b(you\s+are|your\s+name\s+is|call\s+yourself)\b",
+    re.I,
+)
+_OPERATIONAL_TAG = "operational"
 
 
 @dataclass
@@ -76,6 +83,8 @@ class IdentityOrgan:
     _growth_events: int = 0
     _change_events: int = 0
     _stability_hits: int = 0
+    profile: AssistantIdentityProfile = field(default_factory=AssistantIdentityProfile)
+    _operational_applied: bool = False
 
     # --- schema anchors (organizational nuclei; content still experience-driven) ----
 
@@ -108,7 +117,68 @@ class IdentityOrgan:
                     growth=1,
                 )
             self._schema_ids[role] = concept.id
+        self.apply_operational_identity()
         return dict(self._schema_ids)
+
+    def apply_operational_identity(self, *, force: bool = False) -> None:
+        """Seed assistant schema from configuration (intrinsic operational identity)."""
+        if self._operational_applied and not force:
+            return
+        if "agent" not in self._schema_ids:
+            return
+        schema = self.store.concepts[self._schema_ids["agent"]]
+        profile = self.profile
+        name = profile.resolved_name(self.agent_id)
+        seeds: list[tuple[str, str]] = [("name", name)]
+        if profile.role:
+            seeds.append(("role", profile.role))
+        if profile.description:
+            seeds.append(("description", profile.description))
+        if profile.personality:
+            seeds.append(("personality", profile.personality))
+        for cap in profile.capabilities:
+            seeds.append(("capability", cap))
+        for key, value in profile.extra.items():
+            seeds.append((key, value))
+        for key, value in seeds:
+            existing = next(
+                (a for a in schema.attributes if a.key == key and a.active),
+                None,
+            )
+            if existing is not None:
+                if _OPERATIONAL_TAG in existing.context_tags:
+                    existing.value = value
+                    existing.confidence = max(existing.confidence, 0.95)
+                    continue
+                # Replace contaminated non-operational name with operational seed
+                if key == "name":
+                    existing.active = False
+                else:
+                    continue
+            schema.attributes.append(
+                Attribute(
+                    key=key,
+                    value=value,
+                    confidence=0.95,
+                    importance=0.95,
+                    context_tags=(_OPERATIONAL_TAG,),
+                    evidence_ids=["operational"],
+                )
+            )
+            schema.confidence = max(schema.confidence, 0.9)
+            schema.strength = max(schema.strength, 0.85)
+            schema.provisional = False
+        self._operational_applied = True
+        self.validation.record_identity(
+            action="operational_seed",
+            schema_id=schema.id,
+            name=name,
+        )
+
+    def set_assistant_profile(self, profile: AssistantIdentityProfile) -> None:
+        self.profile = profile
+        self._operational_applied = False
+        self.ensure_schemas()
 
     def schema_concept(self, role: str = "agent") -> Concept:
         ids = self.ensure_schemas()
@@ -140,14 +210,17 @@ class IdentityOrgan:
                     return "adjacent"
         except Exception:
             pass
-        if kind == "identity":
-            return "user" if _USER_REFERENT.search(text or "") else "agent"
-        if _USER_REFERENT.search(text or ""):
-            return "user"
-        if _SELF_ROLE.search(text or "") or _CAPABILITY.search(text or ""):
+        # Legacy fallback — first-person autobiography is USER (D043).
+        # Never map bare "my name is" / "I am" onto the assistant schema.
+        if _ASSISTANT_ADDRESS.search(text or "") and not _MY_NAME.search(text or ""):
             return "agent"
+        if _USER_REFERENT.search(text or "") or _MY_NAME.search(text or ""):
+            return "user"
+        if _SELF_ROLE.search(text or ""):
+            return "user"
         if kind == "preference" and re.search(r"\bmy\b", text or "", re.I):
-            # Preferences can become identity-adjacent, not schema statement content alone
+            return "adjacent"
+        if _CAPABILITY.search(text or "") and kind == "identity":
             return "adjacent"
         return None
 
@@ -284,6 +357,27 @@ class IdentityOrgan:
             else:
                 continue
 
+            # D043: never write user-name collisions onto assistant schema from
+            # conversational/tool text unless operational or explicit assent.
+            if schema_role == "agent" and prop == "name":
+                user = self.schema_concept("user")
+                user_names = {
+                    a.value.casefold()
+                    for a in user.attributes
+                    if a.key == "name" and a.active
+                }
+                if value.casefold() in user_names and not assent:
+                    applied.append(
+                        {
+                            "identity": True,
+                            "schema_role": "agent",
+                            "attribute_key": prop,
+                            "status": "rejected_user_collision",
+                            "value": value,
+                        }
+                    )
+                    continue
+
             if prop == "capability" or kind_val == FactKind.SKILL.value:
                 concept.identity = True
                 concept.role = ConceptRole.IDENTITY
@@ -325,6 +419,12 @@ class IdentityOrgan:
                 negate=update_op == "negate" or kind_val == FactKind.NEGATION.value,
                 result=result,
             )
+            if schema_role == "user" and prop == "name" and last.get("status") in (
+                "adopted",
+                "strengthened",
+                "superseded",
+            ):
+                self._scrub_assistant_user_name_collision(value)
             applied.append(last)
 
         if not applied:
@@ -702,34 +802,183 @@ class IdentityOrgan:
         )
 
     def who_am_i(self) -> dict[str, Any]:
-        snap = self.snapshot()
-        agent = snap.schemas.get("agent", {})
-        lines = [f"I am {self.agent_id}."]
-        for attr in agent.get("attributes", []):
-            if attr["key"] == "role":
-                lines.append(f"My role is {attr['value']}.")
-            elif attr["key"] == "name":
-                lines.append(f"I am known as {attr['value']}.")
-            elif attr["key"] == "capability":
-                lines.append(f"I can {attr['value']}.")
-            elif attr["key"] == "statement":
-                lines.append(attr["value"].rstrip(".") + ".")
-        if snap.capabilities:
-            lines.append("Capabilities: " + "; ".join(snap.capabilities[:5]) + ".")
-        if snap.active_goals:
-            lines.append("Active goals: " + "; ".join(snap.active_goals[:5]) + ".")
-        if snap.uncertainties:
-            lines.append(
-                "I am less certain about: " + ", ".join(snap.uncertainties[:4]) + "."
-            )
+        """Assistant-identity reconstruction — agent schema only (never user)."""
+        return self.render_assistant_identity()
+
+    def render_user_identity(self) -> dict[str, Any]:
+        """Structured user identity only — never assistant / operational profile."""
+        from acm.identity.rendering import (
+            IdentityRenderTarget,
+            isolate_identity_text,
+            user_forbidden_from_assistant,
+        )
+
+        self.ensure_schemas()
+        user = self.schema_concept("user")
+        agent = self.schema_concept("agent")
+        speak_keys = ("name", "preferred_name", "role", "location", "capability")
+        lines: list[str] = []
+        attr_confs: list[float] = []
+        for attr in user.attributes:
+            if not attr.active:
+                continue
+            if attr.key not in speak_keys and attr.key != "statement":
+                continue
+            if attr.key == "name":
+                lines.append(f"Your name is {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "preferred_name":
+                lines.append(f"You prefer to be called {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "role":
+                lines.append(f"You are {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "location":
+                lines.append(f"You live in {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "capability":
+                lines.append(f"You can {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "statement":
+                val = str(attr.value or "").strip()
+                low = val.lower()
+                if "please remember" in low or low.startswith("you are"):
+                    continue
+                lines.append(val.rstrip(".") + ".")
+                attr_confs.append(float(attr.confidence))
+
+        raw = " ".join(lines).strip() if lines else None
+        forbidden = user_forbidden_from_assistant(
+            [(a.key, a.value) for a in agent.attributes if a.active],
+            self.agent_id,
+        )
+        text = isolate_identity_text(
+            raw, target=IdentityRenderTarget.USER, forbidden_values=forbidden
+        )
+        conf = max(attr_confs) if text and attr_confs else 0.0
         return {
-            "answer": " ".join(lines),
-            "confidence": snap.confidence,
-            "explanation_class": "experience",
-            "schemas": {"agent": agent},
-            "evolution": snap.evolution,
-            "central_concepts": snap.central_concepts[:5],
+            "answer": text,
+            "confidence": conf if text else 0.0,
+            "explanation_class": "experience" if text else "unknown",
+            "schemas": {"user": {"concept_id": user.id}},
+            "source": "user_identity",
+            "isolated": True,
         }
+
+    def render_assistant_identity(self) -> dict[str, Any]:
+        """Structured assistant identity only — never user facts or personalization."""
+        from acm.identity.rendering import (
+            IdentityRenderTarget,
+            assistant_forbidden_from_user,
+            isolate_identity_text,
+        )
+
+        self.ensure_schemas()
+        agent = self.schema_concept("agent")
+        user = self.schema_concept("user")
+        user_names = {
+            a.value.casefold()
+            for a in user.attributes
+            if a.key == "name" and a.active
+        }
+        # Prefer operational attributes; never speak contaminated user-name copies.
+        speak_keys = ("name", "role", "description", "capability", "personality")
+        lines: list[str] = []
+        attr_confs: list[float] = []
+        spoken_name = False
+        for attr in agent.attributes:
+            if not attr.active or attr.key not in speak_keys:
+                continue
+            if (
+                attr.key == "name"
+                and attr.value.casefold() in user_names
+                and _OPERATIONAL_TAG not in attr.context_tags
+            ):
+                continue
+            # Skip non-operational statements that could personalize
+            if attr.key == "name":
+                lines.append(f"My name is {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+                spoken_name = True
+            elif attr.key == "role":
+                lines.append(f"My role is {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "description":
+                lines.append(str(attr.value).rstrip(".") + ".")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "capability":
+                lines.append(f"I can {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "personality":
+                lines.append(str(attr.value).rstrip(".") + ".")
+                attr_confs.append(float(attr.confidence))
+
+        if not spoken_name:
+            name = self.profile.resolved_name(self.agent_id)
+            lines.insert(0, f"My name is {name}.")
+            attr_confs.insert(0, 0.95)
+
+        raw = " ".join(lines).strip()
+        forbidden = assistant_forbidden_from_user(
+            [(a.key, a.value) for a in user.attributes if a.active]
+        )
+        text = isolate_identity_text(
+            raw,
+            target=IdentityRenderTarget.ASSISTANT,
+            forbidden_values=forbidden,
+        )
+        # Isolation must never erase operational name — re-seed if over-filtered
+        if not text:
+            name = self.profile.resolved_name(self.agent_id)
+            text = f"My name is {name}."
+            attr_confs = [0.95]
+
+        conf = max(attr_confs) if attr_confs else 0.95
+        agent_body = {
+            "concept_id": agent.id,
+            "label": agent.labels[0] if agent.labels else f"agent:{self.agent_id}",
+            "attributes": [
+                {
+                    "key": a.key,
+                    "value": a.value,
+                    "confidence": a.confidence,
+                    "operational": _OPERATIONAL_TAG in a.context_tags,
+                }
+                for a in agent.attributes
+                if a.active and a.key in speak_keys
+            ],
+        }
+        return {
+            "answer": text,
+            "confidence": conf,
+            "explanation_class": "experience",
+            "schemas": {"agent": agent_body},
+            "evolution": self.snapshot().evolution,
+            "central_concepts": [],
+            "source": "assistant_identity",
+            "isolated": True,
+        }
+
+    def _scrub_assistant_user_name_collision(self, user_name: str) -> None:
+        """Deactivate non-operational agent name attrs that equal the user name."""
+        agent = self.schema_concept("agent")
+        target = user_name.casefold()
+        for attr in agent.attributes:
+            if (
+                attr.active
+                and attr.key == "name"
+                and attr.value.casefold() == target
+                and _OPERATIONAL_TAG not in attr.context_tags
+            ):
+                attr.active = False
+                self.validation.record_identity(
+                    action="scrub_user_name_from_agent",
+                    schema_id=agent.id,
+                    value=attr.value,
+                )
+                # Re-seed operational name if wiped
+                self._operational_applied = False
+                self.apply_operational_identity(force=True)
 
     def observables(self) -> dict[str, Any]:
         snap = self.snapshot()

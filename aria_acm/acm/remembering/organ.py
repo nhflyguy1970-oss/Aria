@@ -138,6 +138,30 @@ class RememberingOrgan:
         attention_class: str,
     ) -> Reconstruction:
         assert self.identity is not None
+        low = (cue or "").lower()
+        # User identity questions must never reconstruct via assistant who_am_i.
+        user_cue = re.search(
+            r"\bwho\s+am\s+i\b|\bwhat\s+am\s+i\b|\bmy\s+name\b|\babout\s+(?:me|the\s+user)\b",
+            low,
+        )
+        if user_cue:
+            field = self.activation.activate(
+                cue,
+                context_tags=context_tags,
+                attention_weight=attention_weight,
+                identity_query=True,
+            )
+            # Defer to general reconstruction over user-cued activation — handlers
+            # own structured user identity; this path is a safety net only.
+            ranked = field.ranked_concepts(limit=6)
+            reconstruction = self._reconstruct(cue, field, ranked)
+            self._observe(
+                reconstruction,
+                attention_class=attention_class,
+                context_tags=tuple(context_tags),
+            )
+            return reconstruction
+
         who = self.identity.who_am_i()
         field = self.activation.activate(
             cue,
@@ -155,7 +179,8 @@ class RememberingOrgan:
             primary_label=(
                 who["central_concepts"][0]["label"] if who.get("central_concepts") else ""
             ),
-            activated_concept_ids=activated or [n.target_id for n in field.ranked_concepts(5)],
+            activated_concept_ids=activated
+            or [n.target_id for n in field.ranked_concepts(limit=5)],
             association_ids=list(field.associations.keys())[:12],
             experience_ids=list(field.experiences.keys())[:8],
             experience_summaries=[

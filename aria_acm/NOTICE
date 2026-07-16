@@ -4,17 +4,18 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M0D):
+Source pin (M0E):
+  tag:    v0.18.3
+  commit: 7a695275f6311f3c782e14721892dabfa5b42823
+  version harvested from pin: 0.18.3
+  decision: D044 — Identity Rendering Isolation (includes D043 Assistant Identity)
+  includes: D038 Memory Authority · D039 Intent Classification · D040 Cognitive
+            Dispatch · D041 Semantic Extraction · D042 User Identity Pipeline ·
+            D043 Assistant Identity · D044 Identity Rendering Isolation
+
+Prior pin (M0D):
   tag:    v0.18.1
   commit: 137c24a40e6332744b972f6cb726ccb624248e5d
-  version harvested from pin: 0.18.1
-  decision: D042 — Identity Pipeline Implementation Correction
-  includes: D038 Memory Authority · D039 Intent Classification · D040 Cognitive
-            Dispatch · D041 Semantic Extraction · D042 Identity Pipeline Debug
-
-Prior pin (M0C):
-  tag:    v0.17.0
-  commit: af108d0893c7aee11f21f96fba51e8641f219ae2
 
 Aria-local bootstrap: `aria_acm/acm/__init__.py` registers `sys.modules["acm"]`
 so the literal package copy's absolute `acm.*` imports resolve to this tree

@@ -212,6 +212,12 @@ class CognitiveDispatchEngine:
             associations.extend(contrib.associations)
             reflective.extend(contrib.reflective)
             learning.extend(contrib.learning)
+            # User identity is owned solely by the Identity organ — never fill
+            # gaps from remembering/experiences (D043 assistant bleed).
+            if ownership.intent == CognitiveIntent.USER_IDENTITY:
+                continue
+            if ownership.intent == CognitiveIntent.ASSISTANT_IDENTITY:
+                continue
             if not memory and contrib.memory:
                 memory = contrib.memory
                 conf = max(conf, contrib.confidence)
@@ -227,7 +233,6 @@ class CognitiveDispatchEngine:
                     CognitiveIntent.GOAL,
                     CognitiveIntent.PROJECT,
                     CognitiveIntent.REFLECTION,
-                    CognitiveIntent.USER_IDENTITY,
                 )
                 and contrib.memory not in memory
             ):

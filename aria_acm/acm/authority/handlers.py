@@ -241,85 +241,77 @@ class CognitiveOrganHandlers:
     def _identity(self, request: str, *, intent: CognitiveIntent) -> OrganContribution:
         if intent == CognitiveIntent.USER_IDENTITY:
             return self._user_identity(request)
-        steps = ["identity.who_am_i"]
-        who = self.engine.who_am_i()
+        return self._assistant_identity(request)
+
+    def _assistant_identity(self, request: str) -> OrganContribution:
+        """Assistant Identity path — operational/agent schema only; never user."""
+        from acm.identity.rendering import (
+            IdentityRenderTarget,
+            is_relationship_identity_request,
+            isolate_identity_text,
+        )
+
+        steps = ["identity.assistant_schema", "identity.operational", "identity.render_isolate"]
+        if is_relationship_identity_request(request):
+            steps.append("identity.relationship_allowed")
+        who = self.engine.identity.render_assistant_identity()
         answer = who.get("answer") if isinstance(who.get("answer"), str) else None
         text = sanitize_cognitive_text(answer)
+        if text and not is_relationship_identity_request(request):
+            user = self.engine.identity.schema_concept("user")
+            forbidden = {
+                a.value
+                for a in user.attributes
+                if a.active and a.key in ("name", "preferred_name", "location")
+            }
+            text = isolate_identity_text(
+                text,
+                target=IdentityRenderTarget.ASSISTANT,
+                forbidden_values=forbidden,
+            )
+        conf = float(who.get("confidence") or 0.0)
         return OrganContribution(
             organ=ORGAN_IDENTITY,
             memory=text,
-            confidence=float(who.get("confidence") or 0.0),
+            confidence=conf if text else 0.0,
             explanation_class=str(who.get("explanation_class") or "experience"),
             ambiguous=False,
-            cue_matched=True,
-            concepts=list(who.get("central_concepts") or [])[:8]
-            if isinstance(who.get("central_concepts"), list)
-            else [],
+            cue_matched=bool(text),
+            concepts=[{"id": self.engine.identity.schema_concept("agent").id}],
             reconstruction_steps=steps,
             substrate_touched=("cognitive_store",),
         )
 
     def _user_identity(self, request: str) -> OrganContribution:
+        from acm.identity.rendering import (
+            IdentityRenderTarget,
+            is_relationship_identity_request,
+            isolate_identity_text,
+        )
+
         engine = self.engine
-        engine.identity.ensure_schemas()
-        user = engine.identity.schema_concept("user")
-        steps = ["identity.user_schema"]
-        # Structured autobiographical attributes only — never concept-token noise
-        # (e.g. mentioned=user from cue extraction colliding with the user schema).
-        speak_keys = ("name", "preferred_name", "role", "location", "capability")
-        lines: list[str] = []
-        attr_confs: list[float] = []
-        for attr in user.attributes:
-            if not attr.active:
-                continue
-            if attr.key not in speak_keys and attr.key != "statement":
-                continue
-            if attr.key == "name":
-                lines.append(f"Your name is {attr.value}.")
-                attr_confs.append(float(attr.confidence))
-            elif attr.key == "preferred_name":
-                lines.append(f"You prefer to be called {attr.value}.")
-                attr_confs.append(float(attr.confidence))
-            elif attr.key == "role":
-                lines.append(f"You are {attr.value}.")
-                attr_confs.append(float(attr.confidence))
-            elif attr.key == "location":
-                lines.append(f"You live in {attr.value}.")
-                attr_confs.append(float(attr.confidence))
-            elif attr.key == "capability":
-                lines.append(f"You can {attr.value}.")
-                attr_confs.append(float(attr.confidence))
-            elif attr.key == "statement":
-                # Skip instructional / perspective-contaminated statements
-                val = str(attr.value or "").strip()
-                low = val.lower()
-                if "please remember" in low or low.startswith("you are"):
-                    continue
-                lines.append(val.rstrip(".") + ".")
-                attr_confs.append(float(attr.confidence))
-
-        text = " ".join(lines).strip() if lines else None
-        if text:
-            # Structured identity facts are authoritative — do not append
-            # free-form remembering noise that can dilute or confuse speech.
-            steps.append("identity.structured_attributes")
-            conf = max(attr_confs) if attr_confs else float(user.confidence or 0.4)
-        else:
-            # Cue remembering toward the *user*, never the assistant who-am-i path.
-            steps.append("remembering.user_biography_cue")
-            bio = engine.remember("what do you know about the user")
-            mem = sanitize_cognitive_text(
-                (bio.answer or "").strip() if hasattr(bio, "answer") else None,
-                agent_id=str(engine.agent_id or ""),
+        steps = ["identity.user_schema", "identity.render_isolate"]
+        who = engine.identity.render_user_identity()
+        text = who.get("answer") if isinstance(who.get("answer"), str) else None
+        text = sanitize_cognitive_text(text, agent_id=str(engine.agent_id or ""))
+        if text and not is_relationship_identity_request(request):
+            agent = engine.identity.schema_concept("agent")
+            forbidden = {a.value for a in agent.attributes if a.active and a.key == "name"}
+            if engine.agent_id:
+                forbidden.add(str(engine.agent_id))
+            text = isolate_identity_text(
+                text,
+                target=IdentityRenderTarget.USER,
+                forbidden_values=forbidden,
             )
-            text = mem or None
-            conf = float(user.confidence or 0.4)
-            if hasattr(bio, "confidence") and text:
-                conf = max(conf, float(bio.confidence or 0))
+        if text:
+            steps.append("identity.structured_attributes")
+            conf = float(who.get("confidence") or 0.0)
+        else:
+            steps.append("identity.user_insufficient")
+            conf = 0.0
 
-        if text and _ASSISTANT_BLEED.search(text) and "you" not in text.lower():
-            text = sanitize_cognitive_text(text, agent_id=str(engine.agent_id or ""))
-
+        user = engine.identity.schema_concept("user")
         return OrganContribution(
             organ=ORGAN_IDENTITY,
             memory=text,

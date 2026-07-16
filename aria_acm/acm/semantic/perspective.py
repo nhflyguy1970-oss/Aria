@@ -30,12 +30,14 @@ def resolve_perspective(
     Rules (host-independent):
     - Explicit speaker="user"|"assistant" wins.
     - "please remember" / teaching cues → first person = user (autobiographical teaching).
-    - "you are" / "your name" → second person = assistant; subject for those facts = assistant.
-    - kind=="identity" without teaching cues → first person = assistant (self-encode compat).
+    - "you are" / "your name" → second person = assistant (addressed facts only).
+    - kind=="identity" does **not** flip first person to assistant (D043).
+      Assistant self-encode requires speaker="assistant".
     - Otherwise first person defaults to user (human conversational autobiography).
     """
     t = text or ""
     hint = (speaker or "").strip().lower() or None
+    _ = kind  # kind no longer selects identity subject (D043)
 
     if hint in ("user", "human"):
         return PerspectiveResolution(
@@ -68,24 +70,15 @@ def resolve_perspective(
             reason="remember_instruction_teaching",
         )
 
-    if kind == "identity" and not _ASSISTANT_ADDRESS.search(t):
-        # Self-encode path used by existing identity tests / agent autobiography
+    # Conversational default: human first-person — never treat bare kind=identity
+    # as assistant autobiography (that contaminated agent schemas with user names).
+    if _FIRST_PERSON.search(t) or not _ASSISTANT_ADDRESS.search(t):
         return PerspectiveResolution(
-            first_person=PerspectiveSubject.ASSISTANT,
-            second_person=PerspectiveSubject.USER,
+            first_person=PerspectiveSubject.USER,
+            second_person=PerspectiveSubject.ASSISTANT,
             speaker_hint=hint,
-            reason="identity_kind_self_encode",
+            reason="conversational_default_user",
         )
-
-    if kind in ("preference", "experience", "") or kind not in ("identity",):
-        # Conversational default: human first-person
-        if _FIRST_PERSON.search(t) or not _ASSISTANT_ADDRESS.search(t):
-            return PerspectiveResolution(
-                first_person=PerspectiveSubject.USER,
-                second_person=PerspectiveSubject.ASSISTANT,
-                speaker_hint=hint,
-                reason="conversational_default_user",
-            )
 
     return PerspectiveResolution(
         first_person=PerspectiveSubject.USER,

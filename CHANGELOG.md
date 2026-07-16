@@ -4,6 +4,11 @@
 
 ### Added
 
+- **M0E:** Promoted certified standalone ACM **v0.18.3** (D044 Identity Rendering Isolation; includes D043 Assistant Identity) into `aria_acm/` as `aria-acm-v0.18.3-1`. Source commit `7a69527…`. Who am I? / Who are you? fully isolated via bridge.
+- M0E gates: `tests/test_aria_acm_m0e.py` (M0E-01..08); wired into CI.
+
+### Added (prior)
+
 - **M0D:** Promoted certified standalone ACM **v0.18.1** (D042 Identity Pipeline Correction; includes D041 Semantic Extraction) into `aria_acm/` as `aria-acm-v0.18.1-1`. Source commit `137c24a…`. Identity teach→retrieve works via Cap Bus / ACM bridge.
 - M0D gates: `tests/test_aria_acm_m0d.py` (M0D-01..06); wired into CI.
 
@@ -34,8 +39,8 @@
 
 - **M2:** Operator-triggered harvest of legacy MemoryStore **INTO** vendored ACM (`aria_core/acm_harvest.py`, `scripts/acm_harvest.py`).
 - **M1:** ACM Shadow measure.
-- **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; current pin `aria-acm-v0.18.1-1` via M0D).
-- ACM Integration Blueprint; governance A001–A012.
+- **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; current pin `aria-acm-v0.18.3-1` via M0E).
+- ACM Integration Blueprint; governance A001–A013.
 
 ### Notes
 

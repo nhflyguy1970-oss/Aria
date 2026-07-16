@@ -235,3 +235,22 @@ M0D promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Problem report: `docs/acm_integration/PROBLEM_REPORT_M0D.md`  
 - Gates: `tests/test_aria_acm_m0d.py`  
 - **STOP** — wait for approval; next approved step is Identity Behavioral Validation rerun
+
+---
+
+## A013 — M0E complete: promote ACM v0.18.3 Identity Rendering Isolation (2026-07-16)
+
+**Status:** Accepted  
+**Related:** A001–A012 · standalone ACM D044 (includes D043) · tag `v0.18.3` · commit `7a69527…`
+
+### Decision
+
+M0E promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.18.3** (`aria-acm-v0.18.3-1`). Assistant and User identity rendering are fully isolated. D043 Assistant Identity and D044 rendering isolation are active. Cap Bus / Core continue to use existing ACM façades without bridge redesign. D038–D042 remain intact.
+
+### Consequences
+
+- Embedded pin: tag `v0.18.3`, commit `7a695275f6311f3c782e14721892dabfa5b42823`  
+- Local copy: `aria-acm-v0.18.3-1`  
+- Problem report: `docs/acm_integration/PROBLEM_REPORT_M0E.md`  
+- Gates: `tests/test_aria_acm_m0e.py`  
+- **STOP** — wait for approval; next step is final Identity Behavioral Validation

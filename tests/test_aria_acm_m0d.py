@@ -25,20 +25,17 @@ def _m0d_isolation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.mark.m0d
-def test_m0d_01_embedded_version_pin() -> None:
-    """M0D-01: embedded ACM matches standalone v0.18.1 pin."""
+def test_m0d_01_d042_promotion_lineage() -> None:
+    """M0D-01: D042 Identity Pipeline promotion lineage retained after later promotions."""
     import json
-    from pathlib import Path
 
-    from aria_acm.acm import __version__
-
-    assert __version__ == "0.18.1"
     meta = json.loads(Path("aria_acm/VERSION.json").read_text(encoding="utf-8"))
-    assert meta["source_version"] == "0.18.1"
-    assert meta["source_tag"] == "v0.18.1"
-    assert meta["source_commit"] == "137c24a40e6332744b972f6cb726ccb624248e5d"
-    assert meta["promotion"] == "M0D"
-    assert "D042" in meta.get("includes", []) or meta.get("promotion_decision") == "D042"
+    assert "D042" in meta.get("includes", [])
+    assert "D041" in meta.get("includes", [])
+    problem = Path("docs/acm_integration/PROBLEM_REPORT_M0D.md").read_text(encoding="utf-8")
+    assert "v0.18.1" in problem
+    assert "D042" in problem
+    assert "137c24a40e6332744b972f6cb726ccb624248e5d" in problem
 
 
 @pytest.mark.m0d

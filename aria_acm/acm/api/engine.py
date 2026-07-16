@@ -68,7 +68,10 @@ class CognitiveEngine:
         buffer_capacity: int = 7,
         persist_path: str | None = None,
         auto_persist: bool = False,
+        assistant_identity: dict[str, Any] | None = None,
     ) -> None:
+        from acm.identity.assistant_profile import AssistantIdentityProfile
+
         self.agent_id = agent_id
         self.auto_persist = auto_persist
         self.durable = None
@@ -89,9 +92,14 @@ class CognitiveEngine:
             store=self.store, validation=self.validation, concepts=self.concepts
         )
         self.concepts.bind_associations(self.associations)
+        profile = AssistantIdentityProfile.from_mapping(assistant_identity, agent_id=agent_id)
         self.identity = IdentityOrgan(
-            agent_id=agent_id, store=self.store, validation=self.validation
+            agent_id=agent_id,
+            store=self.store,
+            validation=self.validation,
+            profile=profile,
         )
+        self.identity.ensure_schemas()
         self.attention = AttentionOrgan(store=self.store, validation=self.validation)
         self.forgetting = ForgettingOrgan(
             store=self.store, validation=self.validation, attention=self.attention

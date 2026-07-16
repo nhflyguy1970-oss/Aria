@@ -50,13 +50,15 @@ class CognitiveResponsePipeline:
             )
 
         path.append("cognitive_dispatch_complete")
-        return self._materialize(
+        result = self._materialize(
             classification,
             organ_payload,
             path,
             outcome.decision.ownership,
             outcome.record.to_public(),
+            request=request,
         )
+        return result
 
     def speak(self, result: CognitiveMemoryResult) -> str:
         """Speech only after ACM reconstruction — faithful templates."""
@@ -71,8 +73,54 @@ class CognitiveResponsePipeline:
         path: list[str],
         ownership: Any = None,
         diagnostics: dict[str, Any] | None = None,
+        request: str = "",
     ) -> CognitiveMemoryResult:
+        from acm.authority.taxonomy import CognitiveIntent
+        from acm.identity.rendering import (
+            IdentityRenderTarget,
+            is_relationship_identity_request,
+            isolate_identity_text,
+        )
+
         memory_text = sanitize_cognitive_text(organ_payload.get("memory"))
+        # D044 — identity rendering isolation at CognitiveMemoryResult boundary
+        intent = classification.intent
+        if intent in (CognitiveIntent.USER_IDENTITY, CognitiveIntent.ASSISTANT_IDENTITY):
+            if not is_relationship_identity_request(request):
+                path.append("identity_render_isolate")
+                if intent == CognitiveIntent.USER_IDENTITY:
+                    agent = self.engine.identity.schema_concept("agent")
+                    forbidden = {
+                        a.value for a in agent.attributes if a.active and a.key == "name"
+                    }
+                    if self.engine.agent_id:
+                        forbidden.add(str(self.engine.agent_id))
+                    memory_text = isolate_identity_text(
+                        memory_text,
+                        target=IdentityRenderTarget.USER,
+                        forbidden_values=forbidden,
+                    )
+                else:
+                    user = self.engine.identity.schema_concept("user")
+                    forbidden = {
+                        a.value
+                        for a in user.attributes
+                        if a.active and a.key in ("name", "preferred_name", "location")
+                    }
+                    memory_text = isolate_identity_text(
+                        memory_text,
+                        target=IdentityRenderTarget.ASSISTANT,
+                        forbidden_values=forbidden,
+                    )
+                    if not memory_text:
+                        # Never leave assistant identity empty after isolation
+                        who = self.engine.identity.render_assistant_identity()
+                        memory_text = sanitize_cognitive_text(who.get("answer"))
+                        organ_payload = dict(organ_payload)
+                        organ_payload["confidence"] = float(who.get("confidence") or 0.95)
+                        organ_payload["cue_matched"] = True
+                        organ_payload["explanation_class"] = "experience"
+
         conf = float(organ_payload.get("confidence") or 0.0)
         expl = str(organ_payload.get("explanation_class") or "unknown")
         ambiguous = bool(organ_payload.get("ambiguous"))

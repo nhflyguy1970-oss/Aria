@@ -22,6 +22,7 @@ def speak_cognitive_result(result: CognitiveMemoryResult) -> str:
     - NEVER fill gaps when status is unknown / insufficient / low confidence.
     - NEVER speak raw storage / adaptation dumps.
     - When known, speak the ACM ``memory`` field verbatim (ACM-owned text).
+    - Identity intents: never blend the other identity (D044).
     - When not a memory request, return empty — host may use LM for non-memory tasks.
     """
     if not result.is_memory_request or result.status == MemoryStatus.NOT_MEMORY:
@@ -39,6 +40,17 @@ def speak_cognitive_result(result: CognitiveMemoryResult) -> str:
             return _UNKNOWN_PHRASES[MemoryStatus.UNKNOWN]
         if "'id':" in text and "'kind':" in text:
             return _UNKNOWN_PHRASES[MemoryStatus.UNKNOWN]
+        # Final isolation pass for identity intents (defense in depth)
+        intent = (result.intent or "").lower()
+        if intent in ("user_identity", "assistant_identity"):
+            from acm.identity.rendering import IdentityRenderTarget, isolate_identity_text
+
+            target = (
+                IdentityRenderTarget.USER
+                if intent == "user_identity"
+                else IdentityRenderTarget.ASSISTANT
+            )
+            text = isolate_identity_text(text, target=target) or text
         if result.ambiguous:
             return f"{text} (competing memories; confidence {result.confidence:.2f})"
         if result.confidence < 0.7:

@@ -1,5 +1,11 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-16 — M0E: Promote ACM v0.18.3 (Identity Rendering Isolation / D044)
+
+Controlled promotion of certified standalone ACM **v0.18.3** into `aria_acm/`
+(`aria-acm-v0.18.3-1`). Includes Assistant Identity (D043) and Identity rendering
+isolation (D044). No Aria bridge redesign. M0E-01..08 + full CI green.
+
 ## 2026-07-16 — M0D: Promote ACM v0.18.1 (Identity Pipeline / D042)
 
 Controlled promotion of certified standalone ACM **v0.18.1** into `aria_acm/`
