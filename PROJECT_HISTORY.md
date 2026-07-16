@@ -1,5 +1,11 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-16 — M0D: Promote ACM v0.18.1 (Identity Pipeline / D042)
+
+Controlled promotion of certified standalone ACM **v0.18.1** into `aria_acm/`
+(`aria-acm-v0.18.1-1`). Includes Semantic Extraction (D041) and Identity pipeline
+correction (D042). No Aria bridge redesign. M0D-01..06 + full CI green.
+
 ## 2026-07-16 — Cognitive Memory Reset v1 (Post-D041 baseline)
 
 Archived Pre-D041 embedded ACM autobiographical durable store (contaminated identity

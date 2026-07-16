@@ -216,3 +216,22 @@ Aria’s embedded ACM durable autobiographical store is archived as **Pre-D041 B
 - Doc: `docs/COGNITIVE_MEMORY_RESET_v1.md`  
 - Official clean behavioral baseline for future memory formation  
 - **STOP** — wait for approval before teaching Aria any new memories
+
+---
+
+## A012 — M0D complete: promote ACM v0.18.1 Identity Pipeline Correction (2026-07-16)
+
+**Status:** Accepted  
+**Related:** A001–A011 · standalone ACM D042 (includes D041) · tag `v0.18.1` · commit `137c24a…`
+
+### Decision
+
+M0D promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.18.1** (`aria-acm-v0.18.1-1`). Identity formation/retrieval/confidence/rendering corrections are active. Semantic Extraction (D041) is included. Cap Bus / Core continue to use existing ACM façades without bridge redesign. D038–D040 remain intact.
+
+### Consequences
+
+- Embedded pin: tag `v0.18.1`, commit `137c24a40e6332744b972f6cb726ccb624248e5d`  
+- Local copy: `aria-acm-v0.18.1-1`  
+- Problem report: `docs/acm_integration/PROBLEM_REPORT_M0D.md`  
+- Gates: `tests/test_aria_acm_m0d.py`  
+- **STOP** — wait for approval; next approved step is Identity Behavioral Validation rerun

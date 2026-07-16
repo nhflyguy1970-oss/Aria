@@ -1,15 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.17.0-1",
+  "aria_acm_local_version": "aria-acm-v0.18.1-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.17.0",
-  "source_tag": "v0.17.0",
-  "source_commit": "af108d0893c7aee11f21f96fba51e8641f219ae2",
+  "source_version": "0.18.1",
+  "source_tag": "v0.18.1",
+  "source_commit": "137c24a40e6332744b972f6cb726ccb624248e5d",
   "source_repo": "/media/jeff/AI/ACM",
-  "copy_date": "2026-07-15",
-  "tree_sha256": "0de87a552a03b3a2d09575a3ecc0956df7cf9ded51606d2b01ac86d459f02b57",
+  "copy_date": "2026-07-16",
+  "tree_sha256": "7044b07eeb8fcb89dd1d1c1784118a25ba62b7c217c14a1c4fce21c6c42e5682",
   "license": "Apache-2.0",
   "certification_ref": "ACM docs/ACM_CERTIFIED_v1.md",
-  "promotion": "M0C",
-  "promotion_decision": "D040",
-  "notes": "M0C promotion of certified ACM v0.17.0 (End-to-End Cognitive Dispatch). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0C.md"
+  "promotion": "M0D",
+  "promotion_decision": "D042",
+  "includes": ["D038", "D039", "D040", "D041", "D042"],
+  "notes": "M0D promotion of certified ACM v0.18.1 (Identity Pipeline Implementation Correction D042; includes Semantic Extraction D041). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0D.md"
 }

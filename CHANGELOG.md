@@ -2,6 +2,11 @@
 
 ## [Unreleased] — 2026-07-16
 
+### Added
+
+- **M0D:** Promoted certified standalone ACM **v0.18.1** (D042 Identity Pipeline Correction; includes D041 Semantic Extraction) into `aria_acm/` as `aria-acm-v0.18.1-1`. Source commit `137c24a…`. Identity teach→retrieve works via Cap Bus / ACM bridge.
+- M0D gates: `tests/test_aria_acm_m0d.py` (M0D-01..06); wired into CI.
+
 ### Changed
 
 - **Cognitive Memory Reset v1:** Archived Pre-D041 embedded ACM autobiographical store (contaminated identity) and reset durable `data/acm/cognitive.db` to empty baseline. Architecture/organs/code unchanged. Operator: `scripts/acm_cognitive_memory_reset.py`. See `docs/COGNITIVE_MEMORY_RESET_v1.md`.
@@ -29,8 +34,8 @@
 
 - **M2:** Operator-triggered harvest of legacy MemoryStore **INTO** vendored ACM (`aria_core/acm_harvest.py`, `scripts/acm_harvest.py`).
 - **M1:** ACM Shadow measure.
-- **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; current pin `aria-acm-v0.17.0-1` via M0C).
-- ACM Integration Blueprint; governance A001–A010.
+- **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; current pin `aria-acm-v0.18.1-1` via M0D).
+- ACM Integration Blueprint; governance A001–A012.
 
 ### Notes
 

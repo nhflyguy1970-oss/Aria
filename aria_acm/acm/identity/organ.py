@@ -121,6 +121,25 @@ class IdentityOrgan:
 
     def classify_identity_signal(self, text: str, *, kind: str) -> str | None:
         """Return target schema role if text is identity-relevant, else None."""
+        try:
+            from acm.semantic import extract_semantics
+
+            extracted = extract_semantics(text, kind=kind)
+            id_facts = extracted.identity_facts()
+            if id_facts:
+                subjects = {f.subject.value for f in id_facts}
+                if "user" in subjects and "assistant" not in subjects:
+                    return "user"
+                if "assistant" in subjects and "user" not in subjects:
+                    return "agent"
+                if "assistant" in subjects:
+                    return "agent"
+                if "user" in subjects:
+                    return "user"
+                if any(f.kind.value == "relationship" for f in extracted.facts):
+                    return "adjacent"
+        except Exception:
+            pass
         if kind == "identity":
             return "user" if _USER_REFERENT.search(text or "") else "agent"
         if _USER_REFERENT.search(text or ""):
@@ -144,7 +163,22 @@ class IdentityOrgan:
         weight: float,
         assent: bool = False,
         proposal_id: str | None = None,
+        facts: list | None = None,
     ) -> dict[str, Any]:
+        # Prefer structured Semantic Extraction facts when provided
+        structured = list(facts or [])
+        if structured:
+            return self._integrate_facts(
+                facts=structured,
+                text=text,
+                kind=kind,
+                concept=concept,
+                experience_id=experience_id,
+                weight=weight,
+                assent=assent,
+                proposal_id=proposal_id,
+            )
+
         signal = self.classify_identity_signal(text, kind=kind)
         if signal is None:
             return {"identity": False}
@@ -170,6 +204,181 @@ class IdentityOrgan:
             "attribute_key": key,
         }
 
+        return self._upsert_attribute(
+            schema=schema,
+            key=key,
+            value=value,
+            experience_id=experience_id,
+            concept_id=concept.id,
+            weight=weight,
+            assent=assent,
+            proposal_id=proposal_id,
+            auto_revise=signal == "user" and key in ("name", "preferred_name", "location"),
+            result=result,
+        )
+
+    def _integrate_facts(
+        self,
+        *,
+        facts: list,
+        text: str,
+        kind: str,
+        concept: Concept,
+        experience_id: str,
+        weight: float,
+        assent: bool,
+        proposal_id: str | None,
+    ) -> dict[str, Any]:
+        from acm.semantic.model import FactKind, PerspectiveSubject
+
+        self.ensure_schemas()
+        applied: list[dict[str, Any]] = []
+        last: dict[str, Any] = {"identity": False}
+
+        for fact in facts:
+            kind_val = getattr(fact.kind, "value", str(fact.kind))
+            subject_val = getattr(fact.subject, "value", str(fact.subject))
+            prop = str(fact.property)
+            value = str(fact.value)
+
+            if kind_val == FactKind.RELATIONSHIP.value or (
+                subject_val == PerspectiveSubject.THIRD_PARTY.value
+            ):
+                # Relationship: adjacent link + attribute on a labeled concept
+                concept.metadata["relation_type"] = fact.relation_type or "related"
+                concept.metadata["relation_name"] = value
+                applied.append(
+                    {
+                        "kind": "relationship",
+                        "relation_type": fact.relation_type,
+                        "value": value,
+                        "status": "adjacent",
+                    }
+                )
+                last = self._link_adjacent(concept, weight=weight)
+                last["relationship"] = {
+                    "type": fact.relation_type,
+                    "name": value,
+                }
+                continue
+
+            if kind_val == FactKind.PREFERENCE.value:
+                last = self._link_adjacent(concept, weight=weight)
+                last["preference"] = {"key": prop, "value": value}
+                applied.append(last)
+                continue
+
+            if kind_val in (FactKind.GOAL.value, FactKind.PROJECT.value):
+                # Goals/projects handled by engine; mark adjacent identity influence
+                last = self._link_adjacent(concept, weight=weight * 0.5)
+                last[kind_val] = value
+                applied.append(last)
+                continue
+
+            if subject_val == PerspectiveSubject.USER.value:
+                schema = self.schema_concept("user")
+                schema_role = "user"
+            elif subject_val == PerspectiveSubject.ASSISTANT.value:
+                schema = self.schema_concept("agent")
+                schema_role = "agent"
+            else:
+                continue
+
+            if prop == "capability" or kind_val == FactKind.SKILL.value:
+                concept.identity = True
+                concept.role = ConceptRole.IDENTITY
+                concept.metadata["identity_role"] = "capability"
+                self._associate(
+                    schema.id, concept.id, EdgeType.OWNED_BY, weight=0.55 + 0.3 * weight
+                )
+                prop = "capability"
+
+            update_op = getattr(fact.update_op, "value", str(getattr(fact, "update_op", "set")))
+            auto_revise = schema_role == "user" and prop in (
+                "name",
+                "preferred_name",
+                "location",
+                "role",
+            )
+            if update_op in ("revise", "set") and auto_revise:
+                auto_revise = True
+
+            result: dict[str, Any] = {
+                "identity": True,
+                "schema_id": schema.id,
+                "schema_role": schema_role,
+                "attribute_key": prop,
+                "fact_summary": fact.canonical_summary()
+                if hasattr(fact, "canonical_summary")
+                else "",
+            }
+            last = self._upsert_attribute(
+                schema=schema,
+                key=prop,
+                value=value,
+                experience_id=experience_id,
+                concept_id=concept.id,
+                weight=weight,
+                assent=assent or update_op == "revise",
+                proposal_id=proposal_id,
+                auto_revise=auto_revise or update_op == "revise",
+                negate=update_op == "negate" or kind_val == FactKind.NEGATION.value,
+                result=result,
+            )
+            applied.append(last)
+
+        if not applied:
+            # Fall back to legacy path
+            return self.integrate_encode(
+                text=text,
+                kind=kind,
+                concept=concept,
+                experience_id=experience_id,
+                weight=weight,
+                assent=assent,
+                proposal_id=proposal_id,
+                facts=None,
+            )
+        out = dict(last)
+        out["facts_applied"] = len(applied)
+        out["applied"] = applied
+        out["identity"] = True
+        return out
+
+    def _upsert_attribute(
+        self,
+        *,
+        schema: Concept,
+        key: str,
+        value: str,
+        experience_id: str,
+        concept_id: str,
+        weight: float,
+        assent: bool,
+        proposal_id: str | None,
+        auto_revise: bool,
+        result: dict[str, Any],
+        negate: bool = False,
+    ) -> dict[str, Any]:
+        if negate:
+            existing = next((a for a in schema.attributes if a.key == key and a.active), None)
+            if existing and existing.value.lower() == value.lower():
+                existing.active = False
+                self._lineage(
+                    schema.id,
+                    key,
+                    existing.value,
+                    value,
+                    "reject",
+                    concept_id=concept_id,
+                    evidence_id=experience_id,
+                    confidence=existing.confidence,
+                )
+                result["status"] = "negated"
+                return result
+            result["status"] = "negate_noop"
+            return result
+
         existing = next((a for a in schema.attributes if a.key == key and a.active), None)
         if existing is None:
             schema.attributes.append(
@@ -188,7 +397,7 @@ class IdentityOrgan:
                 None,
                 value,
                 "adopt",
-                concept_id=concept.id,
+                concept_id=concept_id,
                 evidence_id=experience_id,
                 confidence=schema.confidence,
             )
@@ -218,7 +427,7 @@ class IdentityOrgan:
                 existing.value,
                 value,
                 "strengthen",
-                concept_id=concept.id,
+                concept_id=concept_id,
                 evidence_id=experience_id,
                 confidence=existing.confidence,
             )
@@ -233,6 +442,18 @@ class IdentityOrgan:
             )
             result["status"] = "strengthened"
             return result
+
+        # Update semantics: user identity attributes revise in place (no duplicate)
+        if auto_revise or assent or (proposal_id and self._assented(proposal_id)):
+            return self._apply_supersede(
+                schema=schema,
+                existing=existing,
+                value=value,
+                experience_id=experience_id,
+                concept_id=concept_id,
+                weight=weight,
+                proposal_id=proposal_id,
+            )
 
         # High-impact flip — require assent unless explicitly granted
         if not assent and not (proposal_id and self._assented(proposal_id)):
@@ -250,7 +471,7 @@ class IdentityOrgan:
                 existing.value,
                 value,
                 "propose",
-                concept_id=concept.id,
+                concept_id=concept_id,
                 evidence_id=experience_id,
                 confidence=existing.confidence,
             )
@@ -273,7 +494,7 @@ class IdentityOrgan:
             existing=existing,
             value=value,
             experience_id=experience_id,
-            concept_id=concept.id,
+            concept_id=concept_id,
             weight=weight,
             proposal_id=proposal_id,
         )
@@ -526,7 +747,9 @@ class IdentityOrgan:
     # --- internals ----------------------------------------------------------------
 
     def _extract_identity_attribute(self, text: str, *, kind: str) -> tuple[str, str]:
-        t = text.strip()
+        from acm.semantic.strip import strip_instructional
+
+        t, _ = strip_instructional(text.strip())
         m = re.search(r"my\s+name\s+is\s+(.+?)(?:\.|$)", t, re.I)
         if m:
             return "name", m.group(1).strip().rstrip(".")

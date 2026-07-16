@@ -264,41 +264,68 @@ class CognitiveOrganHandlers:
         engine.identity.ensure_schemas()
         user = engine.identity.schema_concept("user")
         steps = ["identity.user_schema"]
+        # Structured autobiographical attributes only — never concept-token noise
+        # (e.g. mentioned=user from cue extraction colliding with the user schema).
+        speak_keys = ("name", "preferred_name", "role", "location", "capability")
         lines: list[str] = []
+        attr_confs: list[float] = []
         for attr in user.attributes:
             if not attr.active:
                 continue
+            if attr.key not in speak_keys and attr.key != "statement":
+                continue
             if attr.key == "name":
                 lines.append(f"Your name is {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "preferred_name":
+                lines.append(f"You prefer to be called {attr.value}.")
+                attr_confs.append(float(attr.confidence))
             elif attr.key == "role":
                 lines.append(f"You are {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "location":
+                lines.append(f"You live in {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "capability":
+                lines.append(f"You can {attr.value}.")
+                attr_confs.append(float(attr.confidence))
             elif attr.key == "statement":
-                lines.append(str(attr.value).rstrip(".") + ".")
-            else:
-                lines.append(f"{attr.key}: {attr.value}.")
+                # Skip instructional / perspective-contaminated statements
+                val = str(attr.value or "").strip()
+                low = val.lower()
+                if "please remember" in low or low.startswith("you are"):
+                    continue
+                lines.append(val.rstrip(".") + ".")
+                attr_confs.append(float(attr.confidence))
 
-        # Cue remembering toward the *user*, never the assistant who-am-i path.
-        steps.append("remembering.user_biography_cue")
-        bio = engine.remember("what do you know about the user")
-        mem = sanitize_cognitive_text(
-            (bio.answer or "").strip() if hasattr(bio, "answer") else None,
-            agent_id=str(engine.agent_id or ""),
-        )
         text = " ".join(lines).strip() if lines else None
-        if mem:
-            text = f"{text} {mem}".strip() if text else mem
+        if text:
+            # Structured identity facts are authoritative — do not append
+            # free-form remembering noise that can dilute or confuse speech.
+            steps.append("identity.structured_attributes")
+            conf = max(attr_confs) if attr_confs else float(user.confidence or 0.4)
+        else:
+            # Cue remembering toward the *user*, never the assistant who-am-i path.
+            steps.append("remembering.user_biography_cue")
+            bio = engine.remember("what do you know about the user")
+            mem = sanitize_cognitive_text(
+                (bio.answer or "").strip() if hasattr(bio, "answer") else None,
+                agent_id=str(engine.agent_id or ""),
+            )
+            text = mem or None
+            conf = float(user.confidence or 0.4)
+            if hasattr(bio, "confidence") and text:
+                conf = max(conf, float(bio.confidence or 0))
+
         if text and _ASSISTANT_BLEED.search(text) and "you" not in text.lower():
             text = sanitize_cognitive_text(text, agent_id=str(engine.agent_id or ""))
 
-        conf = float(user.confidence or 0.4)
-        if hasattr(bio, "confidence"):
-            conf = max(conf, float(bio.confidence or 0))
         return OrganContribution(
             organ=ORGAN_IDENTITY,
             memory=text,
             confidence=conf if text else 0.0,
             explanation_class="experience" if text else "unknown",
-            ambiguous=bool(getattr(bio, "ambiguous", False)),
+            ambiguous=False,
             cue_matched=bool(text),
             concepts=[{"id": user.id}],
             reconstruction_steps=steps,

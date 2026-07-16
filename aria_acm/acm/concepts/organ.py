@@ -360,6 +360,16 @@ class ConceptOrgan:
             )
             return concept
 
+        # Privileged identity schemas must not absorb token-nucleus noise
+        # (e.g. cue label "user" from "User name is Jeff" → mentioned=user).
+        if (
+            existing.identity
+            and existing.metadata.get("schema")
+            and not cue.identity
+            and cue.attr_key in ("mentioned", "statement", "category")
+        ):
+            return existing
+
         # Reinforce + attribute update
         self._apply_attribute(existing, cue, weight=weight, context_tags=context_tags)
         self._reinforce(existing, weight=weight * 0.8, reason="cue_match")

@@ -334,8 +334,10 @@ class CognitiveEngine:
         reflects_on_id: str | None = None,
         t_start: float | None = None,
         t_end: float | None = None,
+        speaker: str | None = None,
     ) -> dict[str, Any]:
         from acm.authority.protection import reject_speech_contamination
+        from acm.semantic import extract_semantics
 
         blocked = reject_speech_contamination(
             text=text,
@@ -352,6 +354,11 @@ class CognitiveEngine:
             self.context = ContextFrame(
                 tags=tags, activity=self.context.activity, place=self.context.place
             )
+
+        # Semantic Extraction — language → cognitive facts before any organ storage
+        extraction = extract_semantics(text, kind=kind, speaker=speaker)
+        cognitive_text = extraction.primary_summary or text.strip()
+        evidence_text = extraction.evidence or text.strip()
 
         has_goal = bool(self.store.active_goals())
         identity_boost = self.identity.attention_boost(text, kind=kind)
@@ -382,30 +389,56 @@ class CognitiveEngine:
                 attention = AttentionClass.STAKES
                 allocation.attention_class = attention.value
                 allocation.weight = max(allocation.weight, 0.85)
+        # Extracted identity/preference facts are always durable
+        if extraction.facts and attention == AttentionClass.DEFAULT:
+            attention = AttentionClass.STAKES
+            allocation.attention_class = attention.value
+            allocation.weight = max(allocation.weight, 0.85)
         weight = min(1.0, allocation.weight + identity_boost * 0.1)
 
         # Low default attention may still encode lightly — pin/preference/identity durable
-        durable = weight >= 0.5 or kind in ("preference", "identity") or bool(revises_id)
+        durable = (
+            weight >= 0.5
+            or kind in ("preference", "identity")
+            or bool(revises_id)
+            or bool(extraction.facts)
+        )
         if not durable:
             self.validation.record_lifecycle(
                 LifecycleEvent(time(), MemoryVerb.ENCODE.value, "", "skipped_low_attention")
             )
             return {"encoded": False, "reason": "low_attention", "attention": attention.value}
 
-        # M3 Concept organ — meaning emerges from encode cues, then binds Experience evidence
+        # M3 Concept organ — meaning emerges from cognitive cues (not instructional noise)
         concept, concept_ids = self.concepts.ingest_from_encode(
-            text,
+            cognitive_text,
             encode_kind=kind,
             weight=weight,
             context_tags=self.context.tags,
         )
-        self.identity.mark_concept_formation(concept, text=text, kind=kind)
+        self.identity.mark_concept_formation(concept, text=cognitive_text, kind=kind)
         identity_signal = self.identity.classify_identity_signal(text, kind=kind)
-        identity_influenced = identity_signal in ("agent", "user", "adjacent")
+        identity_influenced = identity_signal in ("agent", "user", "adjacent") or bool(
+            extraction.identity_facts()
+        )
 
         goal_ids = tuple(g.id for g in self.store.active_goals())
+        exp_metadata: dict[str, str] = {
+            "evidence": evidence_text[:2000],
+            "semantic_extraction": "1",
+        }
+        if extraction.instructional_stripped:
+            exp_metadata["instructional_stripped"] = "1"
+        if extraction.perspective is not None:
+            exp_metadata["perspective_first"] = extraction.perspective.first_person.value
+        for i, fact in enumerate(extraction.facts[:12]):
+            exp_metadata[f"fact_{i}_kind"] = fact.kind.value
+            exp_metadata[f"fact_{i}_subject"] = fact.subject.value
+            exp_metadata[f"fact_{i}_property"] = fact.property
+            exp_metadata[f"fact_{i}_value"] = fact.value[:200]
+
         exp = self.experiences.birth(
-            text.strip(),
+            cognitive_text,
             external_kind=external_kind,
             encode_kind=kind,
             attention_class=attention.value,
@@ -419,6 +452,7 @@ class CognitiveEngine:
             revises_id=revises_id,
             reflects_on_id=reflects_on_id,
             identity_influenced=identity_influenced,
+            metadata=exp_metadata,
         )
         self.concepts.bind_experience(exp, concept_ids=concept_ids)
         self.associations.absorb_experience(
@@ -440,13 +474,45 @@ class CognitiveEngine:
         for pred in recent[:3]:
             if pred.evaluated:
                 continue
-            if any(tok in (pred.cue or "").lower() for tok in text.lower().split() if len(tok) > 3):
+            if any(
+                tok in (pred.cue or "").lower()
+                for tok in cognitive_text.lower().split()
+                if len(tok) > 3
+            ):
                 self.prediction.evaluate(pred.id, concept.id)
                 break
 
         for attr in concept.attributes:
             if exp.id not in attr.evidence_ids:
                 attr.evidence_ids.append(exp.id)
+
+        # Open goals / project schema from extracted facts (additive)
+        for fact in extraction.facts:
+            if fact.kind.value == "goal" and fact.value:
+                try:
+                    self.open_goal(fact.value, importance=0.7)
+                except Exception:
+                    pass
+            if fact.kind.value == "project" and fact.value:
+                try:
+                    project = self.identity.schema_concept("project")
+                    from acm.types import Attribute as _Attr
+
+                    if not any(
+                        a.key == "title" and a.value.lower() == fact.value.lower() and a.active
+                        for a in project.attributes
+                    ):
+                        project.attributes.append(
+                            _Attr(
+                                key="title",
+                                value=fact.value,
+                                confidence=0.8,
+                                importance=0.7,
+                                evidence_ids=[exp.id],
+                            )
+                        )
+                except Exception:
+                    pass
 
         identity_result = self.identity.integrate_encode(
             text=text,
@@ -456,6 +522,7 @@ class CognitiveEngine:
             weight=weight,
             assent=assent,
             proposal_id=proposal_id,
+            facts=extraction.facts or None,
         )
 
         displaced = self.buffer.push(
@@ -512,6 +579,7 @@ class CognitiveEngine:
                     },
                     "concept_ids": concept_ids,
                     "concept_stage": concept.stage.value,
+                    "semantic_extraction": extraction.to_public(),
                 },
             )
         )
@@ -526,6 +594,7 @@ class CognitiveEngine:
             "importance": weight,
             "identity": identity_result,
             "experience": self.experiences.public_view(exp),
+            "semantic_extraction": extraction.to_public(),
         }
         from acm.provenance import ProvenanceSource, stamp_provenance
 

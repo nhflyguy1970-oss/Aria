@@ -404,35 +404,49 @@ class CognitiveRoutingEngine:
         engine = self.engine
         engine.identity.ensure_schemas()
         user = engine.identity.schema_concept("user")
+        speak_keys = ("name", "preferred_name", "role", "location", "capability")
         lines: list[str] = []
+        attr_confs: list[float] = []
         for attr in user.attributes:
             if not attr.active:
                 continue
             if attr.key == "name":
                 lines.append(f"Your name is {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "preferred_name":
+                lines.append(f"You prefer to be called {attr.value}.")
+                attr_confs.append(float(attr.confidence))
             elif attr.key == "role":
                 lines.append(f"You are {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "location":
+                lines.append(f"You live in {attr.value}.")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key == "capability":
+                lines.append(f"You can {attr.value}.")
+                attr_confs.append(float(attr.confidence))
             elif attr.key == "statement":
-                lines.append(str(attr.value).rstrip(".") + ".")
-            else:
-                lines.append(f"{attr.key}: {attr.value}.")
-        remembered = engine.remember(request)
-        mem = (remembered.answer or "").strip()
+                val = str(attr.value or "").strip()
+                low = val.lower()
+                if "please remember" in low or low.startswith("you are"):
+                    continue
+                lines.append(val.rstrip(".") + ".")
+                attr_confs.append(float(attr.confidence))
+            elif attr.key not in speak_keys:
+                continue
         if lines:
             text = " ".join(lines)
-            if mem and mem.lower() not in text.lower():
-                text = f"{text} {mem}".strip()
-            conf = max(float(user.confidence or 0.4), float(remembered.confidence or 0))
+            conf = max(attr_confs) if attr_confs else float(user.confidence or 0.4)
             return {
                 "memory": text,
                 "confidence": conf,
                 "explanation_class": "experience",
-                "ambiguous": bool(remembered.ambiguous),
+                "ambiguous": False,
                 "concepts": [{"id": user.id}],
                 "cue_matched": True,
                 "experiences": [],
                 "associations": [],
-                "raw": {"user_schema": user.id, "remember": remembered.answer},
+                "raw": {"user_schema": user.id, "structured": True},
             }
         return self._remember(request)
 
