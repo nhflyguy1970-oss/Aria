@@ -1,5 +1,12 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-16 — Cognitive Memory Reset v1 (Post-D041 baseline)
+
+Archived Pre-D041 embedded ACM autobiographical durable store (contaminated identity
+data) under `data/acm/archives/`; reset live `cognitive.db` to empty. Code and
+architecture unchanged. Official clean behavioral baseline for future teaching
+(gated on approval). See `docs/COGNITIVE_MEMORY_RESET_v1.md`.
+
 ## 2026-07-15 — Cognitive Infrastructure Conversion (ACM sole brain)
 
 Final conversion of Aria cognition onto embedded ACM (A010):

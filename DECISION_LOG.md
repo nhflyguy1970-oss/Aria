@@ -197,3 +197,22 @@ Final Aria cognitive infrastructure conversion is complete. Embedded ACM is the 
 - Legacy JSON/SQLite retained as vault + ROLLBACK only  
 - CIC-01..06 gates; docs package under `docs/`  
 - **STOP** — wait for approval before further implementation; authentic Daily Use Test 1 still gated on explicit approval
+
+---
+
+## A011 — Cognitive Memory Reset v1: clean post-D041 autobiographical baseline (2026-07-16)
+
+**Status:** Accepted  
+**Related:** A001–A010 · standalone ACM D038–D041
+
+### Decision
+
+Aria’s embedded ACM durable autobiographical store is archived as **Pre-D041 Behavioral Validation** (contaminated identity; research only) and replaced with an **empty** live `cognitive.db`. ACM architecture, organs, code, configuration, documentation, and tests are unchanged. Standalone ACM is not modified. No new autobiographical teaching until explicit approval.
+
+### Consequences
+
+- Archive: `data/acm/archives/pre_d041_behavioral_validation_20260716T125819Z/` (gitignored data)  
+- Operator: `scripts/acm_cognitive_memory_reset.py`  
+- Doc: `docs/COGNITIVE_MEMORY_RESET_v1.md`  
+- Official clean behavioral baseline for future memory formation  
+- **STOP** — wait for approval before teaching Aria any new memories

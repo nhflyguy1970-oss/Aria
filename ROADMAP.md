@@ -1,6 +1,6 @@
 # Aria / Jarvis Roadmap
 
-**Last updated:** 2026-07-15
+**Last updated:** 2026-07-16
 
 ## Active — Memory replacement (ACM)
 
@@ -16,10 +16,11 @@
 | **Phase M0B — Promote ACM v0.16.0 (Cognitive Intent)** | **Complete** | D039 · `aria-acm-v0.16.0-1` · A008 |
 | **Phase M0C — Promote ACM v0.17.0 (Cognitive Dispatch)** | **Complete** | D040 · `aria-acm-v0.17.0-1` · A009 |
 | **Cognitive Infrastructure Conversion** | **Complete** | ACM sole brain · MC/Trace ACM · A010 |
+| **Cognitive Memory Reset v1** | **Complete** | Clean post-D041 autobiographical baseline · A011 |
 
 Standalone ACM remains research/reference. Aria production copy: `aria_acm/`.
 
-See: [`docs/COGNITIVE_INFRASTRUCTURE_CONVERSION.md`](docs/COGNITIVE_INFRASTRUCTURE_CONVERSION.md) · [`docs/acm_integration/MEMORY_REPLACEMENT_BLUEPRINT.md`](docs/acm_integration/MEMORY_REPLACEMENT_BLUEPRINT.md) · [`LEGACY_RETIREMENT_FINAL.md`](docs/LEGACY_RETIREMENT_FINAL.md)
+See: [`docs/COGNITIVE_MEMORY_RESET_v1.md`](docs/COGNITIVE_MEMORY_RESET_v1.md) · [`docs/COGNITIVE_INFRASTRUCTURE_CONVERSION.md`](docs/COGNITIVE_INFRASTRUCTURE_CONVERSION.md) · [`docs/acm_integration/MEMORY_REPLACEMENT_BLUEPRINT.md`](docs/acm_integration/MEMORY_REPLACEMENT_BLUEPRINT.md) · [`LEGACY_RETIREMENT_FINAL.md`](docs/LEGACY_RETIREMENT_FINAL.md)
 
 ## Platform & product (ongoing)
 

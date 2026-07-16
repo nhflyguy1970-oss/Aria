@@ -1,5 +1,11 @@
 # Changelog — Aria / Jarvis
 
+## [Unreleased] — 2026-07-16
+
+### Changed
+
+- **Cognitive Memory Reset v1:** Archived Pre-D041 embedded ACM autobiographical store (contaminated identity) and reset durable `data/acm/cognitive.db` to empty baseline. Architecture/organs/code unchanged. Operator: `scripts/acm_cognitive_memory_reset.py`. See `docs/COGNITIVE_MEMORY_RESET_v1.md`.
+
 ## [Unreleased] — 2026-07-15
 
 ### Added
