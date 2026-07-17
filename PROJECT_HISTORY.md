@@ -1,5 +1,21 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-17 — M0I: Promote ACM v0.21.0 (Preference Behavioral Certification)
+
+Controlled promotion of certified standalone ACM v0.21.0 into `aria_acm/`
+(`aria-acm-v0.21.0-1`), completing the live Preference certification blocker.
+Live Aria had answered favorite-color recall with a stored tool wrapper
+("Your preference is Tool `memory_search` worked for: …") because v0.20.0's
+D047 classifier missed live backtick wrapper formats and D046 trusted
+declared provenance alone. v0.21.0 adds live artifact signatures,
+content-level trust rejection, interrogative preference guards, orphaned
+artifact-attribute cleanup, and render defense. Bridge D047 marker is now
+version-aware; the live production store was re-migrated exactly once
+(17 contaminated experiences removed, backup retained), legitimate teachings
+restored via the trusted path, and live answers verified (blue / Jeff /
+Jeffrey). Live Preference behavioral certification passes through the bridge
+(M0I-01..09). Full CI green.
+
 ## 2026-07-17 — MILESTONE: Memory Foundation v1.0 — Behavioral Certification
 
 First major cognitive milestone. The core autobiographical memory system is

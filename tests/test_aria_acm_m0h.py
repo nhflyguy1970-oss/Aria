@@ -72,18 +72,9 @@ def _store_blob(engine) -> str:
 
 
 @pytest.mark.m0h
-def test_m0h_01_embedded_version_pin() -> None:
-    """M0H-01: embedded ACM matches standalone v0.20.0 pin."""
-    from aria_acm.acm import __version__
-
-    assert __version__ == "0.20.0"
+def test_m0h_01_d047_promotion_lineage() -> None:
+    """M0H-01: D047 cleanup lineage retained after later promotions."""
     meta = json.loads(Path("aria_acm/VERSION.json").read_text(encoding="utf-8"))
-    assert meta["source_version"] == "0.20.0"
-    assert meta["source_tag"] == "v0.20.0"
-    assert meta["source_commit"] == "b996fe8128c8104c4f1a7a0e633f8b28087a780d"
-    assert meta["aria_acm_local_version"] == "aria-acm-v0.20.0-1"
-    assert meta["promotion"] == "M0H"
-    assert meta.get("promotion_decision") == "D047"
     for decision in (
         "D038",
         "D039",
@@ -97,6 +88,10 @@ def test_m0h_01_embedded_version_pin() -> None:
         "D047",
     ):
         assert decision in meta.get("includes", [])
+    problem = Path("docs/acm_integration/PROBLEM_REPORT_M0H.md").read_text(encoding="utf-8")
+    assert "v0.20.0" in problem
+    assert "D047" in problem
+    assert "b996fe8128c8104c4f1a7a0e633f8b28087a780d" in problem
 
 
 @pytest.mark.m0h

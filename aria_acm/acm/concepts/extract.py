@@ -60,6 +60,11 @@ _FAV = re.compile(
     r"(?:favorite|favourite)\s+(\w+(?:\s+\w+)?)\s+is\s+(.+?)(?:\.|$)",
     re.I,
 )
+_INTERROGATIVE = re.compile(
+    r"(?:\?|(?:^\s*(?:what|why|how|when|where|who|which|do|does|did|is|are|"
+    r"was|were|can|could|would|should|show|tell|explain)\b))",
+    re.I,
+)
 
 
 def extract_cues(text: str, *, encode_kind: str = "experience") -> list[ConceptCue]:
@@ -80,28 +85,31 @@ def extract_cues(text: str, *, encode_kind: str = "experience") -> list[ConceptC
         )
 
     if encode_kind == "preference" or re.search(r"\b(prefer|favorite|favourite)\b", t, re.I):
-        m = _FAV.search(t)
-        if m:
-            key = f"favorite_{m.group(1).strip().lower().replace(' ', '_')}"
-            cues.append(
-                ConceptCue(
-                    label=key.replace("_", " "),
-                    role=ConceptRole.PREFERENCE,
-                    attr_key=key,
-                    attr_value=m.group(2).strip().rstrip("."),
+        # Questions about preferences are retrieval cues — never mint preference
+        # attributes from them (live blocker: "Your preference is Tool …").
+        if not _INTERROGATIVE.search(t):
+            m = _FAV.search(t)
+            if m:
+                key = f"favorite_{m.group(1).strip().lower().replace(' ', '_')}"
+                cues.append(
+                    ConceptCue(
+                        label=key.replace("_", " "),
+                        role=ConceptRole.PREFERENCE,
+                        attr_key=key,
+                        attr_value=m.group(2).strip().rstrip("."),
+                    )
                 )
-            )
-        else:
-            m2 = re.search(r"prefer\s+(.+?)(?:\.|$)", t, re.I)
-            val = m2.group(1).strip().rstrip(".") if m2 else t
-            cues.append(
-                ConceptCue(
-                    label="preference",
-                    role=ConceptRole.PREFERENCE,
-                    attr_key="preference",
-                    attr_value=val,
-                )
-            )
+            else:
+                m2 = re.search(r"prefer\s+(.+?)(?:\.|$)", t, re.I)
+                if m2:
+                    cues.append(
+                        ConceptCue(
+                            label="preference",
+                            role=ConceptRole.PREFERENCE,
+                            attr_key="preference",
+                            attr_value=m2.group(1).strip().rstrip("."),
+                        )
+                    )
 
     for m in _IS_A.finditer(t):
         child = _clean_label(m.group(1))

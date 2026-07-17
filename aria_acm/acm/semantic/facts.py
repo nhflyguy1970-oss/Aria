@@ -39,6 +39,15 @@ _FAVORITE = re.compile(
     re.I,
 )
 
+# Interrogatives must never mint preference facts — questions about preferences
+# are retrieval cues, not teachings. Matching "favorite color is conflicting?"
+# was the live Preference certification blocker.
+_INTERROGATIVE = re.compile(
+    r"(?:\?|(?:^\s*(?:what|why|how|when|where|who|which|do|does|did|is|are|"
+    r"was|were|can|could|would|should|show|tell|explain)\b))",
+    re.I,
+)
+
 _GOAL = re.compile(
     r"\b(?:my\s+(?:long[- ]?term\s+)?goal\s+is|i\s+want\s+to|our\s+goal\s+is)\s+(.+?)(?:\.|$)",
     re.I,
@@ -264,7 +273,7 @@ def extract_fact_patterns(
         )
 
     m = _FAVORITE.search(t)
-    if m:
+    if m and not _INTERROGATIVE.search(t):
         key = f"favorite_{m.group(1).strip().lower().replace(' ', '_')}"
         facts.append(
             CognitiveFact(
@@ -275,7 +284,7 @@ def extract_fact_patterns(
                 confidence=0.85,
             )
         )
-    else:
+    elif not _INTERROGATIVE.search(t):
         m = _PREFER.search(t)
         if m:
             facts.append(

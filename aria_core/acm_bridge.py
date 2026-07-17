@@ -181,22 +181,36 @@ def legacy_cleanup_report() -> dict[str, Any] | None:
 
 
 def _maybe_run_legacy_cleanup(engine: Any, path: str) -> None:
-    """D047 upgrade path — run the legacy contamination cleanup exactly once.
+    """D047 upgrade path — run the legacy contamination cleanup once per pin.
 
-    The migration itself is idempotent and a no-op on clean graphs; the marker
-    file guarantees an already-migrated store is never processed again.
+    The migration itself is idempotent and a no-op on clean graphs. The marker
+    records which embedded ACM version performed the migration; a store
+    migrated by an older pin (e.g. v0.20.0, whose classifier missed live
+    backtick tool wrappers) is re-migrated exactly once by the newer pin.
     """
     import json
     import time as _time
 
+    from aria_acm.acm import __version__ as _acm_version
+
     marker = _legacy_cleanup_marker(path)
     if marker.is_file():
-        return
+        try:
+            recorded = json.loads(marker.read_text(encoding="utf-8"))
+        except Exception:
+            recorded = {}
+        if recorded.get("acm_version") == _acm_version:
+            return
     try:
         report = engine.cleanup_legacy_contamination()
         marker.write_text(
             json.dumps(
-                {"completed": _time.time(), "persist_path": path, "report": report},
+                {
+                    "completed": _time.time(),
+                    "acm_version": _acm_version,
+                    "persist_path": path,
+                    "report": report,
+                },
                 indent=2,
                 sort_keys=True,
             ),

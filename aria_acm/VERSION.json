@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.20.0-1",
+  "aria_acm_local_version": "aria-acm-v0.21.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.20.0",
-  "source_tag": "v0.20.0",
-  "source_commit": "b996fe8128c8104c4f1a7a0e633f8b28087a780d",
+  "source_version": "0.21.0",
+  "source_tag": "v0.21.0",
+  "source_commit": "818d89d8e4ba2efab491b5d947b03155b6303df4",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-17",
-  "tree_sha256": "aa891a71f3a8f4e59a5651d87efdad7288d42409a1598f75b2885d0dce2bbef9",
+  "tree_sha256": "e118fddaa33b67c0b33b62708cea28efdd6fc0b9586a4988c51c3864bcefa6cb",
   "license": "Apache-2.0",
-  "certification_ref": "ACM docs/ACM_CERTIFIED_v1.md",
-  "promotion": "M0H",
-  "promotion_decision": "D047",
+  "certification_ref": "ACM docs/PREFERENCE_CERTIFICATION.md",
+  "promotion": "M0I",
+  "promotion_decision": "Preference Behavioral Certification",
   "includes": ["D038", "D039", "D040", "D041", "D042", "D043", "D044", "D045", "D046", "D047"],
-  "notes": "M0H promotion of certified ACM v0.20.0 (Legacy Memory Contamination Cleanup D047). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0H.md"
+  "notes": "M0I promotion of certified ACM v0.21.0 (Preference Behavioral Certification). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0I.md"
 }

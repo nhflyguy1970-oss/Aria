@@ -331,3 +331,23 @@ Memory Foundation v1.0 is formally certified as the project's first major cognit
 - Documentation-only milestone: no implementation, no architecture changes, no refactoring, no roadmap work  
 - **STOP** — await approval before beginning the next cognitive subsystem
 
+---
+
+## A018 — M0I complete: promote ACM v0.21.0 Preference Behavioral Certification (2026-07-17)
+
+**Status:** Accepted  
+**Related:** A001–A017 · standalone ACM v0.21.0 (Preference Behavioral Certification) · tag `v0.21.0` · commit `818d89d…`
+
+### Decision
+
+M0I promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.21.0** (`aria-acm-v0.21.0-1`). The live Preference certification blocker — favorite-color recall answering with a stored tool wrapper — is corrected end-to-end: artifact signatures match live backtick tool wrappers and host autosave lines; the encode boundary applies content-level trust (tool/system/infrastructure payloads are rejected even when a host mislabels them as trusted user speech); interrogatives never mint preference facts or cues; cleanup removes orphaned artifact-valued attributes and restores superseded legitimate preferences; reconstruction refuses artifact values. Host integration: the bridge's one-time D047 marker now records the embedded ACM version, so stores migrated by v0.20.0's defective classifier were re-migrated exactly once; same-version restarts never reprocess. The live production store was migrated (17 contaminated experiences removed — tool wrappers and autosave checkpoints; backup in `data/acm/archives/pre_m0i_backup/`), the user's legitimate teachings were restored through the trusted D046 path, and live answers verified: favorite color **blue**, identity **Jeff/Jeffrey**, injection attempts rejected, cleanup idempotent. Live Preference behavioral certification passes through the bridge. D038–D047 remain intact.
+
+### Consequences
+
+- Embedded pin: tag `v0.21.0`, commit `818d89d8e4ba2efab491b5d947b03155b6303df4`  
+- Local copy: `aria-acm-v0.21.0-1`  
+- Problem report: `docs/acm_integration/PROBLEM_REPORT_M0I.md`  
+- Gates: `tests/test_aria_acm_m0i.py` (M0I-01..09)  
+- Preference behavioral certification is complete in both standalone ACM and Aria  
+- **STOP** — await approval before beginning the next cognitive subsystem
+

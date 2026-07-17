@@ -75,4 +75,17 @@ def reject_speech_contamination(
             "reason": "memory_protection",
             "detail": "self_identified_fabrication",
         }
+    # Content-level trust: tool/system/infra wrappers must never enter memory,
+    # even when a host mislabels them as trusted user speech. Provenance alone
+    # is insufficient when the payload itself is a non-user artifact.
+    from acm.provenance.legacy_cleanup import classify_untrusted_artifact
+
+    artifact = classify_untrusted_artifact(text)
+    if artifact:
+        return {
+            "encoded": False,
+            "reason": "memory_trust",
+            "detail": f"content_artifact:{artifact}",
+            "artifact": artifact,
+        }
     return None

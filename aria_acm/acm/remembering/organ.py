@@ -361,12 +361,18 @@ class RememberingOrgan:
         q = cue.lower()
         tokens = [tok for tok in q.split() if len(tok) > 2]
         best_attr = None
+        candidates: list[Any] = []
         for attr in concept.attributes:
             if not _is_semantic_attr(attr):
                 continue
             if any(tok in attr.key or tok in attr.value.lower() for tok in tokens):
-                best_attr = attr
-                break
+                candidates.append(attr)
+        if candidates:
+            # Prefer structured favorite_* attributes over a generic "preference"
+            # dump — the live blocker rendered the preference key when a tool
+            # wrapper had been stored as its value.
+            keyed = [a for a in candidates if a.key.startswith("favorite_")]
+            best_attr = keyed[0] if keyed else candidates[0]
         if best_attr is None:
             # D045: concepts whose only content is lexical support metadata must
             # not fall through to a bare-label answer ("favorite.").
@@ -565,6 +571,12 @@ def _is_semantic_attr(attr: Any) -> bool:
     if attr.key in LEXICAL_SUPPORT_KEYS:
         return False
     if _INTERROGATIVE_VALUE.search(attr.value or ""):
+        return False
+    # Non-user artifacts must never render as preferences/identity, even if a
+    # contaminated attribute somehow remains after cleanup.
+    from acm.provenance.legacy_cleanup import classify_untrusted_artifact
+
+    if classify_untrusted_artifact(str(attr.value or "")):
         return False
     return True
 

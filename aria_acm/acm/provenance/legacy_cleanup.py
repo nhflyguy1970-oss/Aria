@@ -42,11 +42,14 @@ from acm.provenance.ingestion import (
 
 # Affirmative non-user artifact signatures for legacy (pre-D046) records.
 # Conservative by design: ordinary first-person user knowledge must never match.
+# Live Aria tool wrappers use backtick-quoted tool names
+# (``Tool `memory_search` worked for:``); bare-word forms remain covered too.
 _ARTIFACT_SIGNATURES: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
         "tool_output",
         re.compile(
-            r"(?:^\s*tool\s+\w+\s+(?:worked|failed|succeeded|returned|executed|completed)\b)"
+            r"(?:^\s*tool\s+[`'\"]?\w[\w.-]*[`'\"]?\s+"
+            r"(?:worked|failed|succeeded|returned|executed|completed)\b)"
             r"|(?:^\s*\[tool\])"
             r"|(?:\btool\s+(?:output|result|execution|call)\s*[:\-])",
             re.IGNORECASE,
@@ -67,7 +70,9 @@ _ARTIFACT_SIGNATURES: tuple[tuple[str, re.Pattern[str]], ...] = (
         re.compile(
             r"(?:^\s*diagnostics?\s*[:\-])"
             r"|(?:\bdiagnostic\s+(?:output|report|probe|trace)\b)"
-            r"|(?:^\s*(?:trace|probe)\s*[:\-])",
+            # Require whitespace after the separator so preference values like
+            # "probe-yellow" are not themselves classified as diagnostic lines.
+            r"|(?:^\s*(?:trace|probe)\s*[:\-]\s)",
             re.IGNORECASE,
         ),
     ),
@@ -105,6 +110,13 @@ _ARTIFACT_SIGNATURES: tuple[tuple[str, re.Pattern[str]], ...] = (
         "implementation_metadata",
         re.compile(
             r"(?:^\s*(?:implementation\s+)?metadata\s*[:\-])|(?:^\s*\{\s*\")",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "host_autosave",
+        re.compile(
+            r"(?:^\s*auto[- ]saved\s+on\s+exit\b)",
             re.IGNORECASE,
         ),
     ),
@@ -152,17 +164,27 @@ def _rejection_reason(exp: Any) -> str | None:
         # D046-era record — re-evaluate the recorded source, fail closed.
         decision = evaluate_ingestion(_recorded_provenance(md))
         if decision.eligible:
+            # Declared provenance is trusted, but the payload itself may still
+            # be a host/tool wrapper mislabeled as user speech.
+            for text in (md.get("evidence", ""), exp.summary):
+                artifact = classify_untrusted_artifact(text)
+                if artifact:
+                    return f"content_artifact:{artifact}"
             return None
         return f"recorded_source_ineligible:{decision.reason}"
-    if "semantic_extraction" not in md:
-        # Internal cognition (Reflection organ, goal completion) — not external
-        # ingestion; never subject to this cleanup.
-        return None
-    # Legacy external encode (pre-D046): classify original evidence text.
+
+    # Content signature wins regardless of whether semantic_extraction metadata
+    # survived serialization — live stores retain tool wrappers with empty
+    # metadata lists that would otherwise be treated as internal cognition.
     for text in (md.get("evidence", ""), exp.summary):
         artifact = classify_untrusted_artifact(text)
         if artifact:
             return f"legacy_untrusted_artifact:{artifact}"
+
+    if "semantic_extraction" not in md:
+        # Internal cognition (Reflection organ, goal completion) — not external
+        # ingestion; never subject to this cleanup.
+        return None
     return None
 
 
@@ -262,6 +284,13 @@ def cleanup_legacy_contamination(engine: Any) -> dict[str, Any]:
                 payload_texts=payload_texts,
                 contaminated_ids=contaminated_ids,
             ):
+                removed_attributes += 1
+                if attr.active:
+                    deactivated_keys.add(attr.key)
+                continue
+            # Orphaned preference/identity attributes whose value itself is a
+            # non-user artifact (e.g. "Tool `memory_search` worked for: …").
+            if classify_untrusted_artifact(str(attr.value)):
                 removed_attributes += 1
                 if attr.active:
                     deactivated_keys.add(attr.key)
