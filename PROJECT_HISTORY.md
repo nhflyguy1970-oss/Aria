@@ -1,5 +1,25 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-17 — MILESTONE: Memory Foundation v1.0 — Behavioral Certification
+
+First major cognitive milestone. The core autobiographical memory system is
+formally certified: ten decisions (D038–D047) implemented and certified in
+standalone ACM, then promoted into Aria through eight controlled vendor
+promotions (M0A→M0H), each completed only after behavioral validation,
+regression, integration, performance, CI, GitHub verification, and
+promotion approval. Capabilities: autobiographical memory, user/assistant
+identity modeling, identity rendering isolation, preference memory and
+updates, conflict handling, memory authority, intent classification,
+cognitive dispatch, semantic extraction, trusted memory ingestion, durable
+provenance, legacy contamination cleanup, behavioral certification, and
+promotion governance. Architectural invariants held throughout: no organ
+redesign, no rewrites, behavior-first, reference-implementation-first,
+fail-closed trust boundaries, deterministic validation. Future cognitive
+subsystems (relationships, goals, projects, planning, explainability, …)
+are independent future work built on this foundation. Documentation-only
+milestone — no code changes.
+See `docs/MEMORY_FOUNDATION_V1_CERTIFICATION.md` (A017).
+
 ## 2026-07-17 — M0H: Promote ACM v0.20.0 (Legacy Memory Cleanup / D047)
 
 Controlled promotion of certified standalone ACM v0.20.0 into `aria_acm/`

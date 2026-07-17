@@ -20,8 +20,16 @@
 | **Phase M0F — Promote ACM v0.18.4 (Preference Reconstruction)** | **Complete** | D045 · `aria-acm-v0.18.4-1` · A014 |
 | **Phase M0G — Promote ACM v0.19.0 (Trusted Memory Ingestion)** | **Complete** | D046 · `aria-acm-v0.19.0-1` · A015 |
 | **Phase M0H — Promote ACM v0.20.0 (Legacy Memory Cleanup)** | **Complete** | D047 · `aria-acm-v0.20.0-1` · A016 |
+| **Memory Foundation v1.0 — Behavioral Certification** | **CERTIFIED** | D038–D047 · [`docs/MEMORY_FOUNDATION_V1_CERTIFICATION.md`](docs/MEMORY_FOUNDATION_V1_CERTIFICATION.md) · A017 |
 | **Cognitive Infrastructure Conversion** | **Complete** | ACM sole brain · MC/Trace ACM · A010 |
 | **Cognitive Memory Reset v1** | **Complete** | Clean post-D041 autobiographical baseline · A011 |
+
+**Memory Foundation is complete.** Future work begins as independent
+cognitive subsystems built on the certified foundation (examples, future
+only: relationships, goals, projects, planning, long-term reasoning,
+explainability, evidence, teach/query recognition, user editing). None of
+these are part of Memory Foundation v1.0; each requires its own controlled
+engineering decision and approval.
 
 Standalone ACM remains research/reference. Aria production copy: `aria_acm/`.
 

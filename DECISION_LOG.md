@@ -312,3 +312,22 @@ M0H promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Gates: `tests/test_aria_acm_m0h.py`  
 - **STOP** — wait for approval; next step is Legacy Memory Cleanup Behavioral Certification
 
+---
+
+## A017 — MILESTONE: Memory Foundation v1.0 behaviorally certified (2026-07-17)
+
+**Status:** Accepted  
+**Related:** A001–A016 · standalone ACM D038–D047 · embedded `aria-acm-v0.20.0-1`
+
+### Decision
+
+Memory Foundation v1.0 is formally certified as the project's first major cognitive milestone. The core autobiographical memory system — Memory Authority (D038), Intent Classification (D039), Cognitive Dispatch (D040), Semantic Extraction (D041), User Identity (D042), Assistant Identity (D043), Identity Rendering Isolation (D044), Preference Reconstruction (D045), Trusted Memory Ingestion (D046), and Legacy Memory Contamination Cleanup (D047) — is behaviorally certified and serves as the stable platform for all future cognitive development. Each capability was certified in the standalone ACM reference implementation first and promoted into Aria through the controlled lineage M0A→M0B→M0C→M0D→M0E→M0F→M0G→M0H, each promotion gated by behavioral validation, regression, integration, performance, CI, GitHub verification, and explicit approval. Metrics at certification: 10 certified decisions, 8 promotions, 66 promotion behavioral gates (plus 31 M0/M1–M4 and 18 phase7/phase8 gates), Aria regression 531 passed / 1 skipped, standalone ACM 325 passed, CI and GitHub Actions green, production store clean.
+
+### Consequences
+
+- Certification document: `docs/MEMORY_FOUNDATION_V1_CERTIFICATION.md`  
+- Future cognitive subsystems (relationships, goals, projects, planning, long-term reasoning, explainability, evidence, teach/query recognition, user editing) are independent future work — NOT part of Memory Foundation v1.0  
+- The certified behavior of D038–D047 is not revisited except through future controlled engineering decisions  
+- Documentation-only milestone: no implementation, no architecture changes, no refactoring, no roadmap work  
+- **STOP** — await approval before beginning the next cognitive subsystem
+
