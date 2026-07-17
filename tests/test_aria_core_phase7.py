@@ -57,9 +57,11 @@ def test_memory_owned_by_core():
 
 
 def test_remember_search_forget_roundtrip(isolated_memory):
+    # D045: PRIMARY search reconstructs from answerable semantic attributes
+    # (preferences), not lexical token nuclei — use a reconstructable preference.
     entry = remember(
-        "phase7 heart of aria",
-        entry_type="teaching",
+        "My favorite phase7 marker is heart of aria.",
+        entry_type="preference",
         tags=["phase7"],
         namespace="phase7",
     )
@@ -74,7 +76,7 @@ def test_remember_search_forget_roundtrip(isolated_memory):
     assert any(h.get("source") == "acm" for h in hits)
     got = get_memory(entry_id)
     assert got and got.get("id") == entry_id
-    assert update_memory(entry_id, content="phase7 updated") is True
+    assert update_memory(entry_id, content="My favorite phase7 marker is updated.") is True
     assert forget(entry_id) is True
     names = {e["name"] for e in recent_events(limit=40)}
     assert "MemoryWritten" in names

@@ -1,8 +1,13 @@
 # Changelog — Aria / Jarvis
 
-## [Unreleased] — 2026-07-16
+## [Unreleased] — 2026-07-17
 
 ### Added
+
+- **M0F:** Promoted certified standalone ACM **v0.18.4** (D045 Preference Reconstruction Fix) into `aria_acm/` as `aria-acm-v0.18.4-1`. Source commit `3023ed8…`. Artificial preference conflicts eliminated; true semantic conflicts preserved. Identity D038–D044 remain intact.
+- M0F gates: `tests/test_aria_acm_m0f.py` (M0F-01..10); wired into CI.
+
+### Added (prior)
 
 - **M0E:** Promoted certified standalone ACM **v0.18.3** (D044 Identity Rendering Isolation; includes D043 Assistant Identity) into `aria_acm/` as `aria-acm-v0.18.3-1`. Source commit `7a69527…`. Who am I? / Who are you? fully isolated via bridge.
 - M0E gates: `tests/test_aria_acm_m0e.py` (M0E-01..08); wired into CI.
@@ -39,8 +44,8 @@
 
 - **M2:** Operator-triggered harvest of legacy MemoryStore **INTO** vendored ACM (`aria_core/acm_harvest.py`, `scripts/acm_harvest.py`).
 - **M1:** ACM Shadow measure.
-- **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; current pin `aria-acm-v0.18.3-1` via M0E).
-- ACM Integration Blueprint; governance A001–A013.
+- **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; current pin `aria-acm-v0.18.4-1` via M0F).
+- ACM Integration Blueprint; governance A001–A014.
 
 ### Notes
 

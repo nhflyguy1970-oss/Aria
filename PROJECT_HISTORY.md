@@ -1,5 +1,12 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-17 — M0F: Promote ACM v0.18.4 (Preference Reconstruction / D045)
+
+Controlled promotion of certified standalone ACM **v0.18.4** into `aria_acm/`
+(`aria-acm-v0.18.4-1`). Lexical support concepts no longer manufacture Preference
+conflicts; true semantic conflicts preserved. Identity D038–D044 intact. No Aria
+bridge redesign. M0F-01..10 + full CI green.
+
 ## 2026-07-16 — M0E: Promote ACM v0.18.3 (Identity Rendering Isolation / D044)
 
 Controlled promotion of certified standalone ACM **v0.18.3** into `aria_acm/`

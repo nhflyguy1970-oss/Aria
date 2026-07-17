@@ -254,3 +254,23 @@ M0E promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Problem report: `docs/acm_integration/PROBLEM_REPORT_M0E.md`  
 - Gates: `tests/test_aria_acm_m0e.py`  
 - **STOP** — wait for approval; next step is final Identity Behavioral Validation
+
+---
+
+## A014 — M0F complete: promote ACM v0.18.4 Preference Reconstruction Fix (2026-07-17)
+
+**Status:** Accepted  
+**Related:** A001–A013 · standalone ACM D045 · tag `v0.18.4` · commit `3023ed8…`
+
+### Decision
+
+M0F promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.18.4** (`aria-acm-v0.18.4-1`). Preference reconstruction competitor admissibility (D045) is active. Artificial `competing_recollections` from lexical support concepts is eliminated; true semantic preference conflicts remain. Cap Bus / Core continue to use existing ACM façades without bridge redesign. D038–D044 remain intact. No future ACM backlog items were implemented.
+
+### Consequences
+
+- Embedded pin: tag `v0.18.4`, commit `3023ed85b1de5a9b19c5058509f1fda870f45555`  
+- Local copy: `aria-acm-v0.18.4-1`  
+- Problem report: `docs/acm_integration/PROBLEM_REPORT_M0F.md`  
+- Gates: `tests/test_aria_acm_m0f.py`  
+- **STOP** — wait for approval; next step is Preference Behavioral Certification
+

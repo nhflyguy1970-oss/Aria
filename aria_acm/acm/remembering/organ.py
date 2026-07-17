@@ -27,6 +27,30 @@ if TYPE_CHECKING:
 # Close competitors within this energy ratio → ambiguity (only strong rivals)
 COMPETE_RATIO = 0.88
 
+# D045: attribute keys that exist only to support cueing / indexing / emergence.
+# They carry lexical metadata (surface forms), not semantic memory content, and
+# must never be rendered as cognitive answers or admit a concept into
+# ambiguity scoring.
+LEXICAL_SUPPORT_KEYS: frozenset[str] = frozenset(
+    {
+        "mentioned",
+        "cue",
+        "token",
+        "surface",
+        "surface_form",
+        "lexeme",
+        "index",
+        "stem",
+    }
+)
+
+# Values that merely restate an interrogative cue are not independently
+# answerable semantic content (e.g. preference='What is my favorite color?').
+_INTERROGATIVE_VALUE = re.compile(
+    r"^\s*(?:what|who|when|where|why|how)\b|\?\s*$",
+    re.I,
+)
+
 
 class RememberingOrgan:
     """Cue-driven reconstruction via shared Activation Architecture."""
@@ -223,7 +247,36 @@ class RememberingOrgan:
                 working_influenced=field.working_influenced,
             )
 
-        top = ranked[0]
+        tokens = [tok for tok in cue.lower().split() if len(tok) > 2]
+        # D045: only answerable concepts may serve as the primary recollection
+        # or as competing recollections. Lexical support concepts remain in the
+        # activation field (supporting retrieval) but never answer or compete.
+        answerable_ranked = [
+            node
+            for node in ranked
+            if (c := self.store.concepts.get(node.target_id)) is not None and _answerable(c, tokens)
+        ]
+
+        if not answerable_ranked:
+            exp_nodes = sorted(field.experiences.values(), key=lambda n: -n.energy)[:6]
+            return Reconstruction(
+                cue=cue,
+                answer="I don't have anything solid about that yet.",
+                explanation_class=ExplanationClass.UNKNOWN.value,
+                confidence=0.0,
+                activated_concept_ids=[n.target_id for n in ranked],
+                association_ids=list(field.associations.keys())[:16],
+                experience_ids=[n.target_id for n in exp_nodes],
+                experience_summaries=[n.label for n in exp_nodes],
+                activation=field.to_public(),
+                cue_classes=list(field.cue_classes),
+                goal_influenced=field.goal_influenced,
+                identity_influenced=field.identity_influenced,
+                context_influenced=field.context_influenced,
+                working_influenced=field.working_influenced,
+            )
+
+        top = answerable_ranked[0]
         concept = self.store.concepts[top.target_id]
         answer, expl, conf = self._format_from_concept(cue, concept, top.energy)
 
@@ -248,17 +301,18 @@ class RememberingOrgan:
 
         competing: list[CompetingRecollection] = []
         ambiguous = False
-        tokens = [tok for tok in cue.lower().split() if len(tok) > 2]
-        for rival in ranked[1:4]:
+        for rival in answerable_ranked[1:4]:
             if rival.energy < top.energy * COMPETE_RATIO:
                 continue
             r_concept = self.store.concepts.get(rival.target_id)
             if r_concept is None:
                 continue
-            # Only count competitors that also answer the cue (not mere neighborhood bleed)
+            # Cue relevance still required among answerable rivals
             if not _cue_relevant(r_concept, tokens):
                 continue
             preview, _, rconf = self._format_from_concept(cue, r_concept, rival.energy)
+            if not preview.strip():
+                continue
             if preview.strip().lower() == answer.strip().lower():
                 continue
             competing.append(
@@ -308,12 +362,17 @@ class RememberingOrgan:
         tokens = [tok for tok in q.split() if len(tok) > 2]
         best_attr = None
         for attr in concept.attributes:
-            if not attr.active:
+            if not _is_semantic_attr(attr):
                 continue
             if any(tok in attr.key or tok in attr.value.lower() for tok in tokens):
                 best_attr = attr
                 break
         if best_attr is None:
+            # D045: concepts whose only content is lexical support metadata must
+            # not fall through to a bare-label answer ("favorite.").
+            active = [a for a in concept.attributes if a.active]
+            if active and all(not _is_semantic_attr(a) for a in active):
+                return ("", ExplanationClass.UNKNOWN, 0.0)
             # Memory Authority: do not confabulate from an unrelated first attribute
             # or bare concept label when the cue does not ground in attributes.
             label_hit = False
@@ -331,9 +390,7 @@ class RememberingOrgan:
 
         conf = min(
             1.0,
-            0.55 * best_attr.confidence
-            + 0.25 * concept.confidence
-            + 0.2 * min(1.0, energy),
+            0.55 * best_attr.confidence + 0.25 * concept.confidence + 0.2 * min(1.0, energy),
         )
         if concept.role == ConceptRole.PREFERENCE or best_attr.key.startswith("favorite_"):
             pretty = best_attr.key.replace("favorite_", "favorite ").replace("_", " ")
@@ -374,9 +431,7 @@ class RememberingOrgan:
         self.validation.record_confidence(
             ConfidenceDelta(time(), concept.id, "concept", before, concept.confidence, "recall")
         )
-        self.validation.record_reconsolidation(
-            concept_id=concept.id, kind="light", query=cue[:80]
-        )
+        self.validation.record_reconsolidation(concept_id=concept.id, kind="light", query=cue[:80])
         # Strengthen associations used in the activation path (accessibility)
         if self.associations is not None:
             for aid in reconstruction.association_ids[:5]:
@@ -469,12 +524,8 @@ class RememberingOrgan:
             ExplanationClass.PREFERENCE: (
                 "I remembered this because it is one of your preferences."
             ),
-            ExplanationClass.EXPERIENCE: (
-                "I remembered this from something you shared with me."
-            ),
-            ExplanationClass.REPEATED: (
-                "This strengthened because it has appeared repeatedly."
-            ),
+            ExplanationClass.EXPERIENCE: ("I remembered this from something you shared with me."),
+            ExplanationClass.REPEATED: ("This strengthened because it has appeared repeatedly."),
             ExplanationClass.STALE: (
                 "This information is uncertain because it has not been confirmed strongly."
             ),
@@ -501,6 +552,36 @@ def _cue_relevant(concept: Concept, tokens: list[str]) -> bool:
         return True
     for attr in concept.attributes:
         if not attr.active:
+            continue
+        if any(tok in attr.key or tok in attr.value.lower() for tok in tokens):
+            return True
+    return False
+
+
+def _is_semantic_attr(attr: Any) -> bool:
+    """True when an attribute carries independently answerable semantic content."""
+    if not getattr(attr, "active", False):
+        return False
+    if attr.key in LEXICAL_SUPPORT_KEYS:
+        return False
+    if _INTERROGATIVE_VALUE.search(attr.value or ""):
+        return False
+    return True
+
+
+def _answerable(concept: Concept, tokens: list[str]) -> bool:
+    """D045: can this concept satisfy the reconstruction request itself?
+
+    True only when the concept holds at least one active *semantic* attribute
+    (not lexical support metadata, not an interrogative restatement of the cue)
+    that grounds in the cue. Token nuclei whose only content is a surface form
+    (``mentioned='favorite'``) are not answerable and therefore never become
+    primary answers or competing recollections.
+    """
+    if not tokens:
+        return False
+    for attr in concept.attributes:
+        if not _is_semantic_attr(attr):
             continue
         if any(tok in attr.key or tok in attr.value.lower() for tok in tokens):
             return True

@@ -40,19 +40,17 @@ def _speak(q: str) -> tuple[dict, str]:
 
 
 @pytest.mark.m0e
-def test_m0e_01_embedded_version_pin() -> None:
-    """M0E-01: embedded ACM matches standalone v0.18.3 pin."""
+def test_m0e_01_d044_promotion_lineage() -> None:
+    """M0E-01: D044 Identity Rendering promotion lineage retained after later promotions."""
     import json
 
-    from aria_acm.acm import __version__
-
-    assert __version__ == "0.18.3"
     meta = json.loads(Path("aria_acm/VERSION.json").read_text(encoding="utf-8"))
-    assert meta["source_version"] == "0.18.3"
-    assert meta["source_tag"] == "v0.18.3"
-    assert meta["source_commit"] == "7a695275f6311f3c782e14721892dabfa5b42823"
-    assert meta["promotion"] == "M0E"
-    assert "D044" in meta.get("includes", []) or meta.get("promotion_decision") == "D044"
+    assert "D044" in meta.get("includes", [])
+    assert "D043" in meta.get("includes", [])
+    problem = Path("docs/acm_integration/PROBLEM_REPORT_M0E.md").read_text(encoding="utf-8")
+    assert "v0.18.3" in problem
+    assert "D044" in problem
+    assert "7a695275f6311f3c782e14721892dabfa5b42823" in problem
 
 
 @pytest.mark.m0e

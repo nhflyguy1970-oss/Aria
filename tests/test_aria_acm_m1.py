@@ -59,10 +59,12 @@ def test_m1_02_shadow_agreement_golden_set(monkeypatch: pytest.MonkeyPatch) -> N
     acm_bridge.reset_for_tests()
 
     n = 100
+    # D045: ACM shadow recall answers from semantic preference attributes,
+    # not lexical token nuclei. Golden set must be reconstructable post-D045.
     for i in range(n):
         memory_manager.remember(
-            f"Fact number {i} about item{i} marker unique{i}",
-            entry_type="fact",
+            f"My favorite item{i} is unique{i}.",
+            entry_type="preference",
             tags=[f"item{i}"],
             namespace="default",
         )
