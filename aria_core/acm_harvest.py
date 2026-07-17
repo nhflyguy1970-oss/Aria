@@ -463,6 +463,7 @@ def _process_batch(
         try:
             # Isolate ContextFrame so prior harvest tags do not bleed (literal ACM merge behavior).
             from aria_acm.acm.context.frame import ContextFrame
+            from aria_acm.acm.provenance import TRUSTED_USER_TEACHING
 
             engine.context = ContextFrame()
             result = engine.encode(
@@ -473,6 +474,9 @@ def _process_batch(
                 assent=False,
                 revises_id=revises_exp,
                 t_start=t_start,
+                # D046: harvested legacy entries are user-supplied autobiographical
+                # knowledge; legacy lineage is still stamped separately below.
+                provenance=TRUSTED_USER_TEACHING,
             )
         except Exception as exc:
             report.encode_failures += 1

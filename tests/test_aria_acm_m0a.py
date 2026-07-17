@@ -103,11 +103,16 @@ def test_m0a_03_unknown_remains_unknown() -> None:
 @pytest.mark.m0a
 def test_m0a_04_encode_rejects_llm_generated() -> None:
     """M0A-04: llm_generated / speech contamination blocked at encode."""
+    from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
+
     engine = acm_bridge.get_engine()
+    # D046: trusted source declared so the D038 contamination denylist itself
+    # remains the layer under test (defense in depth behind the trust gate).
     blocked = engine.encode(
         "I made up that the user loves pineapple pizza",
         kind="experience",
         context_tags=("llm_generated",),
+        provenance=TRUSTED_USER_STATEMENT,
     )
     assert blocked.get("encoded") is False
     assert blocked.get("reason") == "memory_protection"

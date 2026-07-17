@@ -274,3 +274,22 @@ M0F promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Gates: `tests/test_aria_acm_m0f.py`  
 - **STOP** — wait for approval; next step is Preference Behavioral Certification
 
+---
+
+## A015 — M0G complete: promote ACM v0.19.0 Trusted Memory Ingestion (2026-07-17)
+
+**Status:** Accepted  
+**Related:** A001–A014 · standalone ACM D046 · tag `v0.19.0` · commit `48938bc…`
+
+### Decision
+
+M0G promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.19.0** (`aria-acm-v0.19.0-1`). Trusted Memory Ingestion (D046) is active: every external encode carries explicit actor / host-operation / message-role provenance evaluated before Semantic Extraction. Only trusted user statements, teachings, and corrections are eligible; tool output, memory-search output, diagnostic output, reflection output, system messages, infrastructure messages, implementation metadata, and unknown provenance are rejected fail-closed with zero graph mutation. Aria's host write paths (`acm_bridge.encode_from_host`, `acm_bridge.primary_remember`, `acm_bridge.primary_correct`, `acm_harvest`) declare trusted user provenance because they carry user-supplied knowledge through Aria's memory API. Source eligibility persists in Experience/Concept provenance. D038–D045 remain intact. No future ACM backlog items were implemented.
+
+### Consequences
+
+- Embedded pin: tag `v0.19.0`, commit `48938bc3c340a427b007527feff256ede34fc61a`  
+- Local copy: `aria-acm-v0.19.0-1`  
+- Problem report: `docs/acm_integration/PROBLEM_REPORT_M0G.md`  
+- Gates: `tests/test_aria_acm_m0g.py`  
+- **STOP** — wait for approval; next step is Trusted Memory Ingestion Behavioral Certification
+

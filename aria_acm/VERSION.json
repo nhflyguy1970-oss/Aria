@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.18.4-1",
+  "aria_acm_local_version": "aria-acm-v0.19.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.18.4",
-  "source_tag": "v0.18.4",
-  "source_commit": "3023ed85b1de5a9b19c5058509f1fda870f45555",
+  "source_version": "0.19.0",
+  "source_tag": "v0.19.0",
+  "source_commit": "48938bc3c340a427b007527feff256ede34fc61a",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-17",
-  "tree_sha256": "b6601feefdce44f54245a3bd830acacd7ab1860720cebe9a1ec007631211ab07",
+  "tree_sha256": "ac2fcea4e327530e6d64b72a91b46c225f22851808381d460da91c4493ec3abc",
   "license": "Apache-2.0",
   "certification_ref": "ACM docs/ACM_CERTIFIED_v1.md",
-  "promotion": "M0F",
-  "promotion_decision": "D045",
-  "includes": ["D038", "D039", "D040", "D041", "D042", "D043", "D044", "D045"],
-  "notes": "M0F promotion of certified ACM v0.18.4 (Preference Reconstruction Fix D045). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0F.md"
+  "promotion": "M0G",
+  "promotion_decision": "D046",
+  "includes": ["D038", "D039", "D040", "D041", "D042", "D043", "D044", "D045", "D046"],
+  "notes": "M0G promotion of certified ACM v0.19.0 (Trusted Memory Ingestion D046). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0G.md"
 }

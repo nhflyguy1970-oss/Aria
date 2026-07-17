@@ -33,6 +33,10 @@ class ProvenanceRecord:
     artifact_kind: str
     artifact_id: str
     origin: ProvenanceSource = ProvenanceSource.UNKNOWN
+    source_actor: str = ""
+    host_operation: str = ""
+    message_role: str = ""
+    eligibility_reason: str = ""
     contributor_ids: list[str] = field(default_factory=list)
     experience_ids: list[str] = field(default_factory=list)
     learning_ids: list[str] = field(default_factory=list)
@@ -53,6 +57,10 @@ class ProvenanceRecord:
             "artifact_kind": self.artifact_kind,
             "artifact_id": self.artifact_id,
             "origin": self.origin.value,
+            "source_actor": self.source_actor,
+            "host_operation": self.host_operation,
+            "message_role": self.message_role,
+            "eligibility_reason": self.eligibility_reason,
             "contributor_ids": list(self.contributor_ids),
             "experience_ids": list(self.experience_ids),
             "learning_ids": list(self.learning_ids),
@@ -79,6 +87,10 @@ class ProvenanceRecord:
             artifact_kind=str(d.get("artifact_kind", "")),
             artifact_id=str(d.get("artifact_id", "")),
             origin=origin,
+            source_actor=str(d.get("source_actor", "")),
+            host_operation=str(d.get("host_operation", "")),
+            message_role=str(d.get("message_role", "")),
+            eligibility_reason=str(d.get("eligibility_reason", "")),
             contributor_ids=list(d.get("contributor_ids") or []),
             experience_ids=list(d.get("experience_ids") or []),
             learning_ids=list(d.get("learning_ids") or []),
@@ -111,6 +123,10 @@ def stamp_provenance(
     confidence_event_ids: list[str] | None = None,
     parent_provenance_ids: list[str] | None = None,
     explain: str = "",
+    source_actor: str = "",
+    host_operation: str = "",
+    message_role: str = "",
+    eligibility_reason: str = "",
 ) -> ProvenanceRecord:
     """Record only observed contributors — never invent links."""
     if isinstance(origin, str):
@@ -125,6 +141,10 @@ def stamp_provenance(
         artifact_kind=artifact_kind,
         artifact_id=artifact_id,
         origin=origin_e,
+        source_actor=source_actor,
+        host_operation=host_operation,
+        message_role=message_role,
+        eligibility_reason=eligibility_reason,
         contributor_ids=list(contributor_ids or []),
         experience_ids=list(experience_ids or []),
         learning_ids=list(learning_ids or []),
@@ -134,8 +154,7 @@ def stamp_provenance(
         analogy_ids=list(analogy_ids or []),
         confidence_event_ids=list(confidence_event_ids or []),
         parent_provenance_ids=list(parent_provenance_ids or []),
-        explain=explain
-        or f"{artifact_kind}:{artifact_id} origin={origin_e.value}",
+        explain=explain or f"{artifact_kind}:{artifact_id} origin={origin_e.value}",
         fabricated=False,
     )
     store.provenance[record.id] = record

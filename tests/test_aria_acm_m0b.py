@@ -110,11 +110,14 @@ def test_m0b_06_memory_authority_intact() -> None:
     assert unknown["result"]["is_memory_request"] is True
     assert "unicorn" not in unknown["speech"].lower()
 
+    from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
+
     engine = acm_bridge.get_engine()
     blocked = engine.encode(
         "fabricated memory from speech",
         kind="experience",
         context_tags=("llm_generated",),
+        provenance=TRUSTED_USER_STATEMENT,
     )
     assert blocked.get("encoded") is False
     assert blocked.get("reason") == "memory_protection"

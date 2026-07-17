@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from acm.provenance import IngestionProvenance
 from acm.semantic import extract_semantics
 
 
 def trace_identity_pipeline(
     engine: Any,
     *,
+    provenance: IngestionProvenance,
     utterance: str = "My name is Jeff.",
     query: str = "Who am I?",
     pin: bool = True,
@@ -60,7 +62,7 @@ def trace_identity_pipeline(
         }
     )
 
-    encoded = engine.encode(utterance, pin=pin)
+    encoded = engine.encode(utterance, pin=pin, provenance=provenance)
     identity_result = encoded.get("identity") or {}
     stages.append(
         {
@@ -127,9 +129,7 @@ def trace_identity_pipeline(
     )
 
     result = engine.cognitive_respond(query)
-    speech = (
-        engine.speak_cognitive_result(result) if result.get("is_memory_request") else ""
-    )
+    speech = engine.speak_cognitive_result(result) if result.get("is_memory_request") else ""
     stages.append(
         {
             "stage": "remembering_retrieval",

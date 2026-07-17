@@ -278,12 +278,17 @@ def encode_from_host(payload: dict[str, Any]) -> dict[str, Any]:
     context_tags.append(f"legacy_type:{entry_type}")
     t0 = time.perf_counter()
     try:
+        from aria_acm.acm.provenance import TRUSTED_USER_TEACHING
+
         engine = get_engine()
         out = engine.encode(
             content,
             kind=kind,
             pin=True,  # measurement durability; Attention may otherwise skip
             context_tags=tuple(dict.fromkeys(context_tags)) or None,
+            # D046: host memory writes carry user knowledge supplied through
+            # Aria's memory API — declare the trusted user source explicitly.
+            provenance=TRUSTED_USER_TEACHING,
         )
         ms = (time.perf_counter() - t0) * 1000.0
         _record_ms(ms)
@@ -479,6 +484,7 @@ def primary_remember(
 ) -> dict[str, Any]:
     """Authoritative ACM encode → host-shaped entry (M3). No MemoryStore write."""
     from aria_acm.acm.context.frame import ContextFrame
+    from aria_acm.acm.provenance import TRUSTED_USER_TEACHING
 
     t0 = time.perf_counter()
     engine = get_engine()
@@ -495,6 +501,8 @@ def primary_remember(
         kind=kind,
         pin=True,
         context_tags=tuple(dict.fromkeys(context_tags)) or None,
+        # D046: authoritative host remember() carries user-supplied knowledge.
+        provenance=TRUSTED_USER_TEACHING,
     )
     ms = (time.perf_counter() - t0) * 1000.0
     _record_ms(ms)
@@ -763,8 +771,10 @@ def primary_correct(
     if not eid:
         host = primary_remember(text, entry_type="fact", tags=["correction"])
         return {"ok": bool(host.get("encoded")), "entry": host, "revised": False}
+    from aria_acm.acm.provenance import TRUSTED_USER_CORRECTION
+
     t0 = time.perf_counter()
-    out = engine.revise_experience(str(eid), text)
+    out = engine.revise_experience(str(eid), text, provenance=TRUSTED_USER_CORRECTION)
     ms = (time.perf_counter() - t0) * 1000.0
     _record_ms(ms)
     _bump("primary_revise")

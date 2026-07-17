@@ -4,6 +4,11 @@
 
 ### Added
 
+- **M0G:** Promoted certified standalone ACM **v0.19.0** (D046 Trusted Memory Ingestion) into `aria_acm/` as `aria-acm-v0.19.0-1`. Source commit `48938bc…`. Every external encode declares actor / host-operation / message-role provenance; tool, diagnostic, reflection, system, infrastructure, and unknown sources are rejected before Semantic Extraction with zero graph mutation. Host write paths (`acm_bridge`, `acm_harvest`) declare trusted user provenance. Identity/Preference D038–D045 remain intact.
+- M0G gates: `tests/test_aria_acm_m0g.py` (M0G-01..11); wired into CI.
+
+### Added (prior)
+
 - **M0F:** Promoted certified standalone ACM **v0.18.4** (D045 Preference Reconstruction Fix) into `aria_acm/` as `aria-acm-v0.18.4-1`. Source commit `3023ed8…`. Artificial preference conflicts eliminated; true semantic conflicts preserved. Identity D038–D044 remain intact.
 - M0F gates: `tests/test_aria_acm_m0f.py` (M0F-01..10); wired into CI.
 
@@ -44,8 +49,8 @@
 
 - **M2:** Operator-triggered harvest of legacy MemoryStore **INTO** vendored ACM (`aria_core/acm_harvest.py`, `scripts/acm_harvest.py`).
 - **M1:** ACM Shadow measure.
-- **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; current pin `aria-acm-v0.18.4-1` via M0F).
-- ACM Integration Blueprint; governance A001–A014.
+- **M0:** Vendored certified ACM into `aria_acm/` (baseline `aria-acm-v0.14.0-1`; current pin `aria-acm-v0.19.0-1` via M0G).
+- ACM Integration Blueprint; governance A001–A015.
 
 ### Notes
 

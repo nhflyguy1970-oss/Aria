@@ -12,6 +12,7 @@ from typing import Any
 from acm import CognitiveEngine
 from acm._version import __version__
 from acm.persistence import DurableCognitiveStore
+from acm.provenance import TRUSTED_USER_STATEMENT
 
 
 @dataclass
@@ -92,13 +93,15 @@ class CertificationFramework:
             if path.exists():
                 path.unlink()
             eng = CognitiveEngine(agent_id="cert", persist_path=str(path), auto_persist=True)
-            eng.encode("Certification coffee roast.", pin=True)
+            eng.encode("Certification coffee roast.", pin=True, provenance=TRUSTED_USER_STATEMENT)
             eng.flush()
             eng2 = CognitiveEngine(agent_id="cert", persist_path=str(path))
             ok = len(eng2.store.experiences) >= 1
-            return ok, "experiences restored" if ok else "missing experiences", {
-                "experiences": len(eng2.store.experiences)
-            }
+            return (
+                ok,
+                "experiences restored" if ok else "missing experiences",
+                {"experiences": len(eng2.store.experiences)},
+            )
 
         return self._time("persistence_roundtrip", run)
 
@@ -109,7 +112,7 @@ class CertificationFramework:
                 path.unlink()
             durable = DurableCognitiveStore(path)
             eng = CognitiveEngine(agent_id="cert")
-            eng.encode("Checksum sample.", pin=True)
+            eng.encode("Checksum sample.", pin=True, provenance=TRUSTED_USER_STATEMENT)
             durable.store = eng.store
             durable.flush()
             verify = durable.verify()
@@ -129,27 +132,35 @@ class CertificationFramework:
                 bak.unlink()
             durable = DurableCognitiveStore(path)
             eng = CognitiveEngine(agent_id="cert")
-            eng.encode("Backup sample.", pin=True)
+            eng.encode("Backup sample.", pin=True, provenance=TRUSTED_USER_STATEMENT)
             durable.store = eng.store
             durable.flush()
             durable.backup(bak)
-            eng.encode("After backup.", pin=True)
+            eng.encode("After backup.", pin=True, provenance=TRUSTED_USER_STATEMENT)
             durable.flush()
             durable.restore(bak)
             ok = len(durable.store.experiences) >= 1
             durable.close()
-            return ok, "restore ok" if ok else "restore empty", {
-                "experiences": len(durable.store.experiences)
-            }
+            return (
+                ok,
+                "restore ok" if ok else "restore empty",
+                {"experiences": len(durable.store.experiences)},
+            )
 
         return self._time("backup_restore", run)
 
     def gate_provenance_stamped(self) -> GateResult:
         def run() -> tuple[bool, str, dict[str, Any]]:
             eng = CognitiveEngine(agent_id="cert")
-            payload = eng.encode("Provenance sample.", pin=True)
+            payload = eng.encode("Provenance sample.", pin=True, provenance=TRUSTED_USER_STATEMENT)
             prov = eng.provenance_of(str(payload.get("experience_id") or ""))
-            ok = len(prov) >= 1 and all(not p.get("fabricated") for p in prov)
+            ok = (
+                len(prov) >= 1
+                and all(not p.get("fabricated") for p in prov)
+                and all(p.get("source_actor") == "user" for p in prov)
+                and all(p.get("host_operation") == "conversation" for p in prov)
+                and all(p.get("message_role") == "user_statement" for p in prov)
+            )
             return ok, "provenance present" if ok else "missing provenance", {"count": len(prov)}
 
         return self._time("provenance_stamped", run)
@@ -171,9 +182,11 @@ class CertificationFramework:
             ad = AcmMemoryAdapter(legacy=Leg(), flags=FeatureFlags())
             out = ad.recall("coffee")
             ok = out["authoritative"] == "legacy" and out["user_visible_changed"] is False
-            return ok, "legacy authoritative" if ok else "shadow leaked", {
-                "authoritative": out["authoritative"]
-            }
+            return (
+                ok,
+                "legacy authoritative" if ok else "shadow leaked",
+                {"authoritative": out["authoritative"]},
+            )
 
         return self._time("shadow_legacy_authoritative", run)
 
@@ -193,7 +206,11 @@ class CertificationFramework:
             times: list[float] = []
             for i in range(20):
                 t0 = perf_counter()
-                eng.encode(f"Perf sample {i} coffee tea water.", pin=True)
+                eng.encode(
+                    f"Perf sample {i} coffee tea water.",
+                    pin=True,
+                    provenance=TRUSTED_USER_STATEMENT,
+                )
                 times.append((perf_counter() - t0) * 1000)
             times.sort()
             p95 = times[int(0.95 * (len(times) - 1))]
@@ -207,12 +224,14 @@ class CertificationFramework:
             eng = CognitiveEngine(agent_id="long")
             before = len(eng.store.experiences)
             for i in range(12):
-                eng.encode(f"Long run {i}.", pin=True)
+                eng.encode(f"Long run {i}.", pin=True, provenance=TRUSTED_USER_STATEMENT)
                 eng.how_certain_am_i(f"run {i}")
             ok = len(eng.store.experiences) == before + 12
-            return ok, "long smoke ok" if ok else "experience drift", {
-                "experiences": len(eng.store.experiences)
-            }
+            return (
+                ok,
+                "long smoke ok" if ok else "experience drift",
+                {"experiences": len(eng.store.experiences)},
+            )
 
         return self._time("long_duration_smoke", run)
 
@@ -231,8 +250,7 @@ class CertificationFramework:
             "all_gates_green": passed == total and total > 0,
             "certified": False,  # Phase 2 builds framework; does not certify
             "note": (
-                "Framework executed gates only. "
-                "Formal certification requires explicit approval."
+                "Framework executed gates only. Formal certification requires explicit approval."
             ),
         }
         out = self.workdir / "certification_report.json"

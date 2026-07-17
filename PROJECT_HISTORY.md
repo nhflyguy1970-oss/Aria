@@ -1,5 +1,14 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-17 — M0G: Promote ACM v0.19.0 (Trusted Memory Ingestion / D046)
+
+Controlled promotion of certified standalone ACM **v0.19.0** into `aria_acm/`
+(`aria-acm-v0.19.0-1`). Only trusted user knowledge may enter autobiographical
+memory; tool, diagnostic, reflection, system, infrastructure, and unknown
+sources are rejected before Semantic Extraction with zero graph mutation. Host
+write paths declare trusted user provenance. Identity/Preference D038–D045
+intact. No Aria bridge redesign. M0G-01..11 + full CI green.
+
 ## 2026-07-17 — M0F: Promote ACM v0.18.4 (Preference Reconstruction / D045)
 
 Controlled promotion of certified standalone ACM **v0.18.4** into `aria_acm/`

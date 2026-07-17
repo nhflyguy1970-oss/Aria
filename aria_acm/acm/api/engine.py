@@ -22,6 +22,7 @@ from acm.learning import LearningOrgan
 from acm.observability.trace import CognitiveTraceEvent, TraceLog
 from acm.plugins import ExtensionRegistry
 from acm.prediction import PredictionOrgan
+from acm.provenance import IngestionProvenance, evaluate_ingestion
 from acm.recombination import RecombinationOrgan
 from acm.reconciliation import ReconciliationOrgan
 from acm.reflection import ReflectionOrgan
@@ -244,6 +245,7 @@ class CognitiveEngine:
         result = self.durable.import_snapshot(src)
         self.validation.record_storage(action="import", ok=1)
         return result
+
     def backup(self, dest: str) -> dict[str, Any]:
         if self.durable is None:
             return {"ok": False, "reason": "no_persist_path"}
@@ -343,9 +345,20 @@ class CognitiveEngine:
         t_start: float | None = None,
         t_end: float | None = None,
         speaker: str | None = None,
+        provenance: IngestionProvenance | None = None,
     ) -> dict[str, Any]:
         from acm.authority.protection import reject_speech_contamination
         from acm.semantic import extract_semantics
+
+        ingestion = evaluate_ingestion(provenance)
+        if not ingestion.eligible:
+            return {
+                "encoded": False,
+                "reason": "memory_trust",
+                "detail": ingestion.reason,
+                "ingestion": ingestion.to_public(),
+            }
+        assert provenance is not None
 
         blocked = reject_speech_contamination(
             text=text,
@@ -434,6 +447,10 @@ class CognitiveEngine:
         exp_metadata: dict[str, str] = {
             "evidence": evidence_text[:2000],
             "semantic_extraction": "1",
+            "source_actor": provenance.actor.value,
+            "source_host_operation": provenance.host_operation.value,
+            "source_message_role": provenance.message_role.value,
+            "source_eligibility_reason": ingestion.reason,
         }
         if extraction.instructional_stripped:
             exp_metadata["instructional_stripped"] = "1"
@@ -476,9 +493,7 @@ class CognitiveEngine:
         )
         self.confidence.evolve_from_encode(concept.id, success=True)
         # Prediction accuracy loop — memory outcome feedback, not reward for actions
-        recent = sorted(
-            self.store.predictions.values(), key=lambda p: p.created, reverse=True
-        )
+        recent = sorted(self.store.predictions.values(), key=lambda p: p.created, reverse=True)
         for pred in recent[:3]:
             if pred.evaluated:
                 continue
@@ -588,6 +603,7 @@ class CognitiveEngine:
                     "concept_ids": concept_ids,
                     "concept_stage": concept.stage.value,
                     "semantic_extraction": extraction.to_public(),
+                    "ingestion": ingestion.to_public(),
                 },
             )
         )
@@ -603,6 +619,7 @@ class CognitiveEngine:
             "identity": identity_result,
             "experience": self.experiences.public_view(exp),
             "semantic_extraction": extraction.to_public(),
+            "ingestion": ingestion.to_public(),
         }
         from acm.provenance import ProvenanceSource, stamp_provenance
 
@@ -614,6 +631,10 @@ class CognitiveEngine:
             experience_ids=[exp.id],
             contributor_ids=list(concept_ids),
             explain="Encoded Experience with observed concept contributors.",
+            source_actor=provenance.actor.value,
+            host_operation=provenance.host_operation.value,
+            message_role=provenance.message_role.value,
+            eligibility_reason=ingestion.reason,
         )
         stamp_provenance(
             self.store,
@@ -624,6 +645,10 @@ class CognitiveEngine:
             contributor_ids=[concept.id],
             parent_provenance_ids=[prov.id],
             explain="Concept updated from encode evidence.",
+            source_actor=provenance.actor.value,
+            host_operation=provenance.host_operation.value,
+            message_role=provenance.message_role.value,
+            eligibility_reason=ingestion.reason,
         )
         payload["provenance_id"] = prov.id
         self.validation.record_provenance(action="stamp", count=2)
@@ -988,12 +1013,8 @@ class CognitiveEngine:
             "reflective_experience_id": rid,
             "adaptations": [a.to_public() for a in adaptations],
             "applied": sum(1 for a in adaptations if a.applied),
-            "proposed": sum(
-                1 for a in adaptations if a.governance.value == "proposed"
-            ),
-            "abstained": sum(
-                1 for a in adaptations if a.governance.value == "abstained"
-            ),
+            "proposed": sum(1 for a in adaptations if a.governance.value == "proposed"),
+            "abstained": sum(1 for a in adaptations if a.governance.value == "abstained"),
             "lessons": self.learning.what_have_i_learned().get("lessons", [])[:10],
         }
         self.extensions.emit("after_learn", dict(payload))
@@ -1014,16 +1035,41 @@ class CognitiveEngine:
     def timeline(self, **kwargs: Any) -> dict[str, Any]:
         return self.experiences.timeline(**kwargs)
 
-    def revise_experience(self, experience_id: str, text: str, **kwargs: Any) -> dict[str, Any]:
+    def revise_experience(
+        self,
+        experience_id: str,
+        text: str,
+        *,
+        provenance: IngestionProvenance | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Correction path — always births a new immutable Experience."""
-        return self.encode(text, revises_id=experience_id, **kwargs)
+        return self.encode(
+            text,
+            revises_id=experience_id,
+            provenance=provenance,
+            **kwargs,
+        )
 
-    def reflect_on(self, experience_id: str, text: str, **kwargs: Any) -> dict[str, Any]:
+    def reflect_on(
+        self,
+        experience_id: str,
+        text: str,
+        *,
+        provenance: IngestionProvenance | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
         """Host-supplied Reflective Experience lineage helper.
 
         Prefer `what_do_i_think` for organ evaluation.
         """
-        return self.encode(text, reflects_on_id=experience_id, pin=True, **kwargs)
+        return self.encode(
+            text,
+            reflects_on_id=experience_id,
+            pin=True,
+            provenance=provenance,
+            **kwargs,
+        )
 
     def remember(self, query: str) -> RememberResult:
         """Active Remembering — reconstructs via shared Cognitive Activation Architecture."""
@@ -1065,8 +1111,7 @@ class CognitiveEngine:
         if reconstruction.primary_concept_id:
             reconsolidation = "light"
             if any(
-                r.get("kind") == "contest_signal"
-                for r in self.validation.reconsolidations[-3:]
+                r.get("kind") == "contest_signal" for r in self.validation.reconsolidations[-3:]
             ):
                 reconsolidation = "contest"
 

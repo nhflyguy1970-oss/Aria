@@ -134,12 +134,16 @@ def test_m0c_06_memory_authority_and_intent_intact() -> None:
     assert classification["is_memory_request"] is True
     assert classification["intent"] == "assistant_identity"
 
+    from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
+
     blocked = acm_bridge.get_engine().encode(
         "fabricated",
         kind="experience",
         context_tags=("llm_generated",),
+        provenance=TRUSTED_USER_STATEMENT,
     )
     assert blocked.get("encoded") is False
+    assert blocked.get("reason") == "memory_protection"
 
 
 @pytest.mark.m0c

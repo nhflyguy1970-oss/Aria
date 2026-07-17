@@ -7,7 +7,7 @@
 | Item | Status | Notes |
 |------|--------|-------|
 | ACM Integration Blueprint | Approved / locked | `docs/acm_integration/` · A001 |
-| Phase M0 — Vendor ACM into `aria_acm/` | **Complete** | `aria-acm-v0.18.4-1` (M0F promoted) |
+| Phase M0 — Vendor ACM into `aria_acm/` | **Complete** | `aria-acm-v0.19.0-1` (M0G promoted) |
 | Phase M1 — Shadow measure | **Complete** | Measure phase ended for production |
 | Phase M2 — Harvest migrate INTO ACM | **Complete** | Operator harvest CLI |
 | Phase M3 — ACM primary cognition | **Complete** | Flag-gated authority |
@@ -18,6 +18,7 @@
 | **Phase M0D — Promote ACM v0.18.1 (Identity Pipeline)** | **Complete** | D042 (+D041) · `aria-acm-v0.18.1-1` · A012 |
 | **Phase M0E — Promote ACM v0.18.3 (Identity Rendering)** | **Complete** | D044 (+D043) · `aria-acm-v0.18.3-1` · A013 |
 | **Phase M0F — Promote ACM v0.18.4 (Preference Reconstruction)** | **Complete** | D045 · `aria-acm-v0.18.4-1` · A014 |
+| **Phase M0G — Promote ACM v0.19.0 (Trusted Memory Ingestion)** | **Complete** | D046 · `aria-acm-v0.19.0-1` · A015 |
 | **Cognitive Infrastructure Conversion** | **Complete** | ACM sole brain · MC/Trace ACM · A010 |
 | **Cognitive Memory Reset v1** | **Complete** | Clean post-D041 autobiographical baseline · A011 |
 

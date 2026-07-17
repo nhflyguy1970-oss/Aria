@@ -33,10 +33,10 @@ def test_m0_01_version_json_pin_matches_tree_hash() -> None:
     """M0-01: VERSION.json pin matches tree hash of aria_acm/acm/."""
     assert VERSION_PATH.is_file(), "aria_acm/VERSION.json missing"
     meta = json.loads(VERSION_PATH.read_text(encoding="utf-8"))
-    assert meta["source_commit"] == "3023ed85b1de5a9b19c5058509f1fda870f45555"
-    assert meta["source_tag"] == "v0.18.4"
-    assert meta["source_version"] == "0.18.4"
-    assert meta["aria_acm_local_version"] == "aria-acm-v0.18.4-1"
+    assert meta["source_commit"] == "48938bc3c340a427b007527feff256ede34fc61a"
+    assert meta["source_tag"] == "v0.19.0"
+    assert meta["source_version"] == "0.19.0"
+    assert meta["aria_acm_local_version"] == "aria-acm-v0.19.0-1"
     assert meta["license"] == "Apache-2.0"
     assert ACM_TREE.is_dir()
     assert _tree_sha256(ACM_TREE) == meta["tree_sha256"]
@@ -69,6 +69,7 @@ def test_m0_02_import_authority_vendored_path() -> None:
 def test_m0_03_cognitive_engine_encode_remember_smoke(tmp_path: Path) -> None:
     """M0-03: tmp CognitiveEngine encode/remember round-trip."""
     from aria_acm.acm.api.engine import CognitiveEngine
+    from aria_acm.acm.provenance import TRUSTED_USER_TEACHING
 
     persist = tmp_path / "cognitive.db"
     engine = CognitiveEngine(agent_id="m0-smoke", persist_path=str(persist), auto_persist=True)
@@ -77,6 +78,7 @@ def test_m0_03_cognitive_engine_encode_remember_smoke(tmp_path: Path) -> None:
         kind="preference",
         pin=True,
         context_tags=("ns:profile",),
+        provenance=TRUSTED_USER_TEACHING,
     )
     assert encoded.get("encoded") is True or encoded.get("experience_id"), encoded
 

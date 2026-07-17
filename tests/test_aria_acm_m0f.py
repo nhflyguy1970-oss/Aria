@@ -40,22 +40,17 @@ def _speak(q: str) -> tuple[dict, str]:
 
 
 @pytest.mark.m0f
-def test_m0f_01_embedded_version_pin() -> None:
-    """M0F-01: embedded ACM matches standalone v0.18.4 pin."""
+def test_m0f_01_d045_promotion_lineage() -> None:
+    """M0F-01: D045 Preference Reconstruction lineage retained after later promotions."""
     import json
 
-    from aria_acm.acm import __version__
-
-    assert __version__ == "0.18.4"
     meta = json.loads(Path("aria_acm/VERSION.json").read_text(encoding="utf-8"))
-    assert meta["source_version"] == "0.18.4"
-    assert meta["source_tag"] == "v0.18.4"
-    assert meta["source_commit"] == "3023ed85b1de5a9b19c5058509f1fda870f45555"
-    assert meta["aria_acm_local_version"] == "aria-acm-v0.18.4-1"
-    assert meta["promotion"] == "M0F"
-    assert "D045" in meta.get("includes", []) or meta.get("promotion_decision") == "D045"
     for decision in ("D038", "D039", "D040", "D041", "D042", "D043", "D044", "D045"):
         assert decision in meta.get("includes", [])
+    problem = Path("docs/acm_integration/PROBLEM_REPORT_M0F.md").read_text(encoding="utf-8")
+    assert "v0.18.4" in problem
+    assert "D045" in problem
+    assert "3023ed85b1de5a9b19c5058509f1fda870f45555" in problem
 
 
 @pytest.mark.m0f
