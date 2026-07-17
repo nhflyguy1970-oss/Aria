@@ -293,3 +293,22 @@ M0G promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Gates: `tests/test_aria_acm_m0g.py`  
 - **STOP** — wait for approval; next step is Trusted Memory Ingestion Behavioral Certification
 
+---
+
+## A016 — M0H complete: promote ACM v0.20.0 Legacy Memory Contamination Cleanup (2026-07-17)
+
+**Status:** Accepted  
+**Related:** A001–A015 · standalone ACM D047 · tag `v0.20.0` · commit `b996fe8…`
+
+### Decision
+
+M0H promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.20.0** (`aria-acm-v0.20.0-1`). Legacy Memory Contamination Cleanup (D047) is available and wired into Aria's upgrade path: `acm_bridge.get_engine` runs `cleanup_legacy_contamination()` exactly once per durable store, recording the report in a `<persist>.d047_cleanup.json` completion marker so already-migrated stores are never processed again. The migration removes pre-D046 contaminated memories — D046-era records whose recorded sources are ineligible, and pre-D046 external encodes matching non-user artifact signatures (tool, memory-search, diagnostic, reflection, system, prompt, infrastructure, metadata) — together with solely-derived concepts, contaminated attributes, orphaned associations, hierarchy edges, working-memory entries, and provenance of removed artifacts, and reactivates legitimate attributes the artifacts superseded. It is idempotent and checksum-neutral on clean graphs. Aria's production store was verified already clean (21 experiences examined, 0 removals). D046 Trusted Memory Ingestion is unchanged; D038–D045 remain intact. No future ACM backlog items were implemented.
+
+### Consequences
+
+- Embedded pin: tag `v0.20.0`, commit `b996fe8128c8104c4f1a7a0e633f8b28087a780d`  
+- Local copy: `aria-acm-v0.20.0-1`  
+- Problem report: `docs/acm_integration/PROBLEM_REPORT_M0H.md`  
+- Gates: `tests/test_aria_acm_m0h.py`  
+- **STOP** — wait for approval; next step is Legacy Memory Cleanup Behavioral Certification
+

@@ -75,6 +75,10 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "m0g: Aria ACM promotion M0G (Trusted Memory Ingestion v0.19.0 / D046)",
     )
+    config.addinivalue_line(
+        "markers",
+        "m0h: Aria ACM promotion M0H (Legacy Memory Cleanup v0.20.0 / D047)",
+    )
     config.addinivalue_line("markers", "m1: Aria ACM integration milestone M1 (shadow)")
     config.addinivalue_line("markers", "m2: Aria ACM integration milestone M2 (harvest)")
     config.addinivalue_line("markers", "m3: Aria ACM integration milestone M3 (primary)")

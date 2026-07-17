@@ -163,6 +163,51 @@ def reset_for_tests() -> None:
             _METRICS[k] = 0
 
 
+def _legacy_cleanup_marker(path: str) -> Path:
+    return Path(path).with_name(Path(path).name + ".d047_cleanup.json")
+
+
+def legacy_cleanup_report() -> dict[str, Any] | None:
+    """Report of the one-time D047 cleanup for the current store, if it ran."""
+    import json
+
+    marker = _legacy_cleanup_marker(persist_path())
+    if not marker.is_file():
+        return None
+    try:
+        return json.loads(marker.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _maybe_run_legacy_cleanup(engine: Any, path: str) -> None:
+    """D047 upgrade path — run the legacy contamination cleanup exactly once.
+
+    The migration itself is idempotent and a no-op on clean graphs; the marker
+    file guarantees an already-migrated store is never processed again.
+    """
+    import json
+    import time as _time
+
+    marker = _legacy_cleanup_marker(path)
+    if marker.is_file():
+        return
+    try:
+        report = engine.cleanup_legacy_contamination()
+        marker.write_text(
+            json.dumps(
+                {"completed": _time.time(), "persist_path": path, "report": report},
+                indent=2,
+                sort_keys=True,
+            ),
+            encoding="utf-8",
+        )
+        _bump("d047_cleanup_runs")
+    except Exception:
+        # Never block engine startup; the next start retries the migration.
+        _bump("d047_cleanup_errors")
+
+
 def get_engine() -> Any:
     """Lazy CognitiveEngine from vendored aria_acm (never site-packages preferred via path)."""
     global _ENGINE
@@ -170,11 +215,13 @@ def get_engine() -> Any:
         return _ENGINE
     from aria_acm.acm.api.engine import CognitiveEngine
 
+    path = persist_path()
     _ENGINE = CognitiveEngine(
         agent_id=os.getenv("ARIA_ACM_AGENT_ID", "aria").strip() or "aria",
-        persist_path=persist_path(),
+        persist_path=path,
         auto_persist=auto_persist_enabled(),
     )
+    _maybe_run_legacy_cleanup(_ENGINE, path)
     return _ENGINE
 
 

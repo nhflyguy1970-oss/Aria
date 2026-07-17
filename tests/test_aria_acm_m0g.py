@@ -109,20 +109,11 @@ def _untrusted_sources() -> list[tuple[str, object]]:
 
 
 @pytest.mark.m0g
-def test_m0g_01_embedded_version_pin() -> None:
-    """M0G-01: embedded ACM matches standalone v0.19.0 pin."""
+def test_m0g_01_d046_promotion_lineage() -> None:
+    """M0G-01: D046 Trusted Memory Ingestion lineage retained after later promotions."""
     import json
 
-    from aria_acm.acm import __version__
-
-    assert __version__ == "0.19.0"
     meta = json.loads(Path("aria_acm/VERSION.json").read_text(encoding="utf-8"))
-    assert meta["source_version"] == "0.19.0"
-    assert meta["source_tag"] == "v0.19.0"
-    assert meta["source_commit"] == "48938bc3c340a427b007527feff256ede34fc61a"
-    assert meta["aria_acm_local_version"] == "aria-acm-v0.19.0-1"
-    assert meta["promotion"] == "M0G"
-    assert meta.get("promotion_decision") == "D046"
     for decision in (
         "D038",
         "D039",
@@ -135,6 +126,10 @@ def test_m0g_01_embedded_version_pin() -> None:
         "D046",
     ):
         assert decision in meta.get("includes", [])
+    problem = Path("docs/acm_integration/PROBLEM_REPORT_M0G.md").read_text(encoding="utf-8")
+    assert "v0.19.0" in problem
+    assert "D046" in problem
+    assert "48938bc3c340a427b007527feff256ede34fc61a" in problem
 
 
 @pytest.mark.m0g

@@ -1,5 +1,16 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-17 — M0H: Promote ACM v0.20.0 (Legacy Memory Cleanup / D047)
+
+Controlled promotion of certified standalone ACM v0.20.0 into `aria_acm/`
+(`aria-acm-v0.20.0-1`). One-time idempotent D047 migration removes pre-D046
+contaminated memories (artifact signatures + legacy provenance evaluation),
+restores superseded legitimate attributes, and cleans orphaned concepts,
+associations, hierarchy edges, working-memory entries, and provenance.
+Exposed through Aria's upgrade path with a run-once completion marker;
+production store verified already clean (0 removals). D046 unchanged;
+D038–D045 intact. No Aria bridge redesign. M0H-01..12 + full CI green.
+
 ## 2026-07-17 — M0G: Promote ACM v0.19.0 (Trusted Memory Ingestion / D046)
 
 Controlled promotion of certified standalone ACM **v0.19.0** into `aria_acm/`

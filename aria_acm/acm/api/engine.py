@@ -274,6 +274,15 @@ class CognitiveEngine:
     def provenance_of(self, artifact_id: str) -> list[dict[str, Any]]:
         return [p.to_public() for p in self.store.provenance_for(artifact_id)]
 
+    def cleanup_legacy_contamination(self) -> dict[str, Any]:
+        """One-time D047 migration — remove pre-D046 untrusted-source memories.
+
+        Idempotent maintenance operation; see ``acm.provenance.legacy_cleanup``.
+        """
+        from acm.provenance.legacy_cleanup import cleanup_legacy_contamination
+
+        return cleanup_legacy_contamination(self)
+
     # --- public cognitive verbs -------------------------------------------------
 
     def set_context(self, *tags: str, activity: str = "", place: str = "") -> ContextFrame:

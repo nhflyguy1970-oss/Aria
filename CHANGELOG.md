@@ -4,6 +4,8 @@
 
 ### Added
 
+- **M0H:** Promoted certified standalone ACM **v0.20.0** (D047 Legacy Memory Contamination Cleanup) into `aria_acm/` as `aria-acm-v0.20.0-1`. Source commit `b996fe8…`. One-time idempotent migration removes pre-D046 contaminated memories (tool, memory-search, diagnostic, reflection, system, infrastructure, prompt, metadata artifacts) with their solely-derived concepts, attributes, associations, hierarchy edges, working-memory entries, and provenance, and restores legitimate attributes the artifacts superseded. Aria upgrade path (`acm_bridge.get_engine`) runs the migration exactly once per durable store via a completion marker; production store verified already clean (0 removals). D046 Trusted Memory Ingestion unchanged; Identity/Preference D038–D045 intact.
+- M0H gates: `tests/test_aria_acm_m0h.py` (M0H-01..12); wired into CI.
 - **M0G:** Promoted certified standalone ACM **v0.19.0** (D046 Trusted Memory Ingestion) into `aria_acm/` as `aria-acm-v0.19.0-1`. Source commit `48938bc…`. Every external encode declares actor / host-operation / message-role provenance; tool, diagnostic, reflection, system, infrastructure, and unknown sources are rejected before Semantic Extraction with zero graph mutation. Host write paths (`acm_bridge`, `acm_harvest`) declare trusted user provenance. Identity/Preference D038–D045 remain intact.
 - M0G gates: `tests/test_aria_acm_m0g.py` (M0G-01..11); wired into CI.
 
