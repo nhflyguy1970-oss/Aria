@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.22.0-1",
+  "aria_acm_local_version": "aria-acm-v0.23.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.22.0",
-  "source_tag": "v0.22.0",
-  "source_commit": "2dd3715c211f1fdc5e1147dccf9c827be5af801b",
+  "source_version": "0.23.0",
+  "source_tag": "v0.23.0",
+  "source_commit": "82a9499103314d57d9c8291e2f3886921281f49c",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-17",
-  "tree_sha256": "22e8218100c4fbc2b54c1ab95863a23cb1bafbeda84bea317398205d24ef2f64",
+  "tree_sha256": "639bd3fcc03daa93da4520415a414afcd4834b814dd08589b11aa350c41b0040",
   "license": "Apache-2.0",
   "certification_ref": "ACM docs/PREFERENCE_CERTIFICATION.md",
-  "promotion": "M0J",
-  "promotion_decision": "Teaching Recognition (valid preference teaching regression)",
+  "promotion": "M0K",
+  "promotion_decision": "Multi-domain preference isolation + evidence lineage",
   "includes": ["D038", "D039", "D040", "D041", "D042", "D043", "D044", "D045", "D046", "D047"],
-  "notes": "M0J promotion of certified ACM v0.22.0 (Teaching Recognition). Declarative preference teachings encode through cognitive_respond before dispatch. Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0J.md"
+  "notes": "M0K promotion of certified ACM v0.23.0. Preference domains (color/food/fish) independent; evidence reconstructs active/retired lineage. Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0K.md"
 }

@@ -247,6 +247,16 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         0.94,
     ),
     (
+        CognitiveIntent.REMEMBERING,
+        re.compile(
+            r"\b((?:show|tell|give|list|what(?:'s|\s+is))\s+(?:me\s+)?(?:the\s+)?evidence|"
+            r"evidence\s+for|supporting\s+evidence|what\s+supports)\b",
+            re.I,
+        ),
+        "evidence_cue",
+        0.95,
+    ),
+    (
         CognitiveIntent.PREFERENCE,
         re.compile(
             r"\b(prefer(?:ence|s)?|favorite|favourite|"

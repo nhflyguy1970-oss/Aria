@@ -371,3 +371,22 @@ M0J promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Architecture backlog: `docs/architecture-ideas.md`  
 - **STOP** — await approval before beginning the next cognitive subsystem
 
+---
+
+## A020 — M0K complete: promote ACM v0.23.0 multi-domain preference + evidence (2026-07-17)
+
+**Status:** Accepted  
+**Related:** A001–A019 · standalone ACM v0.23.0 · tag `v0.23.0` · commit `82a9499…`
+
+### Decision
+
+M0K promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.23.0** (`aria-acm-v0.23.0-1`). Live manual certification failures are corrected: distinct preference domains (favorite color / food / fish) remain independent under Memory Authority; evidence requests reconstruct active/retired attribute lineage without mutating memory; updating one domain never overwrites another. No ACM or Aria redesign — domain-aware answerability and evidence reconstruction are minimal Remembering/classification corrections promoted exactly as released.
+
+### Consequences
+
+- Embedded pin: tag `v0.23.0`, commit `82a9499103314d57d9c8291e2f3886921281f49c`  
+- Local copy: `aria-acm-v0.23.0-1`  
+- Problem report: `docs/acm_integration/PROBLEM_REPORT_M0K.md`  
+- Gates: `tests/test_aria_acm_m0k.py` (M0K-01..05)  
+- **STOP** — await approval before beginning the next cognitive subsystem
+

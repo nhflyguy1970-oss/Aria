@@ -87,6 +87,10 @@ def pytest_configure(config: pytest.Config) -> None:
         "markers",
         "m0j: Aria ACM promotion M0J (Teaching Recognition v0.22.0)",
     )
+    config.addinivalue_line(
+        "markers",
+        "m0k: Aria ACM promotion M0K (multi-domain preference + evidence v0.23.0)",
+    )
     config.addinivalue_line("markers", "m1: Aria ACM integration milestone M1 (shadow)")
     config.addinivalue_line("markers", "m2: Aria ACM integration milestone M2 (harvest)")
     config.addinivalue_line("markers", "m3: Aria ACM integration milestone M3 (primary)")

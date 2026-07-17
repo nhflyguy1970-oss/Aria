@@ -1,5 +1,14 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-17 — M0K: Promote ACM v0.23.0 (Multi-domain preference + evidence)
+
+Controlled promotion of certified standalone ACM v0.23.0 into `aria_acm/`
+(`aria-acm-v0.23.0-1`). Live M0K manual certification failures corrected:
+favorite food/fish no longer collapse into favorite color; `Show me the
+evidence.` reconstructs active/retired lineage without mutation; domains
+remain independent across updates and restart. Commit `82a9499…`. Gates
+M0K-01..05. Full CI green.
+
 ## 2026-07-17 — M0J: Promote ACM v0.22.0 (Teaching Recognition)
 
 Controlled promotion of certified standalone ACM v0.22.0 into `aria_acm/`

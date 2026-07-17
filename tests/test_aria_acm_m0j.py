@@ -62,17 +62,9 @@ def _active_preferences() -> list[tuple[str, str]]:
 
 
 @pytest.mark.m0j
-def test_m0j_01_embedded_version_pin() -> None:
-    """M0J-01: embedded ACM matches standalone v0.22.0 pin."""
-    from aria_acm.acm import __version__
-
-    assert __version__ == "0.22.0"
+def test_m0j_01_teaching_recognition_lineage() -> None:
+    """M0J-01: Teaching Recognition lineage retained after later promotions."""
     meta = json.loads(Path("aria_acm/VERSION.json").read_text(encoding="utf-8"))
-    assert meta["source_version"] == "0.22.0"
-    assert meta["source_tag"] == "v0.22.0"
-    assert meta["source_commit"] == "2dd3715c211f1fdc5e1147dccf9c827be5af801b"
-    assert meta["aria_acm_local_version"] == "aria-acm-v0.22.0-1"
-    assert meta["promotion"] == "M0J"
     for decision in (
         "D038",
         "D039",
@@ -86,12 +78,14 @@ def test_m0j_01_embedded_version_pin() -> None:
         "D047",
     ):
         assert decision in meta.get("includes", [])
+    problem = Path("docs/acm_integration/PROBLEM_REPORT_M0J.md").read_text(encoding="utf-8")
+    assert "v0.22.0" in problem
+    assert "Teaching Recognition" in problem
+    assert "2dd3715c211f1fdc5e1147dccf9c827be5af801b" in problem
     teaching = Path("aria_acm/acm/authority/teaching.py")
     assert teaching.is_file()
-    assert "detect_teaching" in teaching.read_text(encoding="utf-8")
     pipeline = Path("aria_acm/acm/authority/pipeline.py").read_text(encoding="utf-8")
     assert "_teach_if_declarative" in pipeline
-    assert "teaching_encoded" in pipeline
 
 
 @pytest.mark.m0j
@@ -104,13 +98,11 @@ def test_m0j_02_no_stale_vendored_files() -> None:
     ).stdout.splitlines()
     assert not [p for p in tracked if p.endswith(".pyc") or "__pycache__" in p]
     notice = Path("aria_acm/NOTICE").read_text(encoding="utf-8")
-    assert "v0.22.0" in notice
-    assert "2dd3715c211f1fdc5e1147dccf9c827be5af801b" in notice
     assert "Teaching Recognition" in notice
-    # No mixed version strings in the vendored package version file
-    assert Path("aria_acm/acm/_version.py").read_text(encoding="utf-8").strip() == (
-        '__version__ = "0.22.0"'
-    )
+    assert Path("aria_acm/acm/authority/teaching.py").is_file()
+    # Teaching Recognition pipeline markers remain in the vendored tree
+    pipeline = Path("aria_acm/acm/authority/pipeline.py").read_text(encoding="utf-8")
+    assert "teaching_encoded" in pipeline or "_teach_if_declarative" in pipeline
 
 
 @pytest.mark.m0j

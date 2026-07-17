@@ -2,11 +2,15 @@
 
 ## [Unreleased] — 2026-07-17
 
+### Added
+
+- **M0K:** Promoted certified standalone ACM **v0.23.0** into `aria_acm/` as `aria-acm-v0.23.0-1` (commit `82a9499…`). Fixes live multi-domain preference collapse (favorite food/fish no longer answer as favorite color) and evidence reconstruction (`Show me the evidence.` returns active/retired lineage without mutating memory). Domains remain independent across updates and restart. Gates: `tests/test_aria_acm_m0k.py`.
+
 ### Fixed
 
 - **Teaching Recognition live routing:** After M0J, declarative teachings such as "My favorite color is green." were classified by NLU as `intent=memory` but collapsed to `memory_search` with only the semantic *subject* (`favorite color`). Teaching Recognition never saw the statement, EncodeAuthority never ran, and recall stayed on the prior value. Unresolved declarative memory intents now route to Memory Authority (`memory_about_user`) with the **full** prompt so ACM Teaching Recognition → encode → supersede runs. Temporary `[TeachingRecognition]` DEBUG logging on `primary_cognitive_respond` (disable with `ARIA_TEACHING_DEBUG=0`). Gates: `tests/test_teaching_recognition_routing.py`.
 
-### Added
+### Added (prior)
 
 - **M0J:** Promoted certified standalone ACM **v0.22.0** (Teaching Recognition) into `aria_acm/` as `aria-acm-v0.22.0-1`. Source commit `2dd3715…`. Restores Preference behavioral certification for *valid* teachings spoken through Memory Authority: declarative statements such as "My favorite color is green." encode through `cognitive_respond` before dispatch (D046 trust gate and content-level artifact protection unchanged), so blue → green retires the previous preference correctly; evidence reflects teaching history; restart preserves green; artifacts and interrogatives remain non-teaching. Identity certification and prior M0I protections intact. Permanent architecture backlog started at `docs/architecture-ideas.md`.
 - M0J gates: `tests/test_aria_acm_m0j.py` (M0J-01..07); wired into CI.

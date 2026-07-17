@@ -51,6 +51,27 @@ _INTERROGATIVE_VALUE = re.compile(
     re.I,
 )
 
+# Generic preference tokens — matching these alone must not collapse distinct
+# favorite_* domains (color vs food vs fish) into one another.
+_GENERIC_PREF_TOKENS: frozenset[str] = frozenset(
+    {"favorite", "favourite", "prefer", "preference", "preferences", "like", "likes"}
+)
+
+# "favorite <domain>" in a cue (color, food, fish, …). Stop before "is"/punctuation
+# so "My favorite food is pizza." yields domain=food, not food_is.
+_FAVORITE_DOMAIN = re.compile(
+    r"(?:favorite|favourite)\s+(\w+)\b",
+    re.I,
+)
+
+# Evidence / lineage introspection — reconstruct attribute history, do not answer
+# as if the cue were a preference question.
+_EVIDENCE_REQUEST = re.compile(
+    r"\b((?:show|tell|give|list|what(?:'s|\s+is))\s+(?:me\s+)?(?:the\s+)?evidence|"
+    r"evidence\s+for|supporting\s+evidence|what\s+supports)\b",
+    re.I,
+)
+
 
 class RememberingOrgan:
     """Cue-driven reconstruction via shared Activation Architecture."""
@@ -139,7 +160,10 @@ class RememberingOrgan:
                     self.forgetting.reactivate(seed.target_id, source="strong_cue", steps=2)
         ranked = field.ranked_concepts(limit=6)
         reconstruction = self._reconstruct(cue, field, ranked)
-        self._reconsolidate(reconstruction, cue)
+        # Evidence / lineage requests are read-only introspection — never
+        # reconsolidate or otherwise mutate living memory.
+        if not _is_evidence_request(cue):
+            self._reconsolidate(reconstruction, cue)
         displaced = self._enter_working(reconstruction)
         self._observe(
             reconstruction,
@@ -247,15 +271,31 @@ class RememberingOrgan:
                 working_influenced=field.working_influenced,
             )
 
-        tokens = [tok for tok in cue.lower().split() if len(tok) > 2]
+        tokens = _cue_tokens(cue)
+        if _is_evidence_request(cue):
+            return self._reconstruct_evidence(cue, field, ranked, tokens)
+
+        domain = _preference_domain(cue)
         # D045: only answerable concepts may serve as the primary recollection
         # or as competing recollections. Lexical support concepts remain in the
         # activation field (supporting retrieval) but never answer or compete.
+        # M0K: when the cue names a favorite <domain>, only that domain's
+        # favorite_* concept may answer — never a sibling preference domain.
         answerable_ranked = [
             node
             for node in ranked
-            if (c := self.store.concepts.get(node.target_id)) is not None and _answerable(c, tokens)
+            if (c := self.store.concepts.get(node.target_id)) is not None
+            and _answerable(c, tokens, domain=domain)
         ]
+        if domain:
+            domain_only = [
+                node
+                for node in answerable_ranked
+                if _concept_matches_preference_domain(
+                    self.store.concepts[node.target_id], domain
+                )
+            ]
+            answerable_ranked = domain_only
 
         if not answerable_ranked:
             exp_nodes = sorted(field.experiences.values(), key=lambda n: -n.energy)[:6]
@@ -308,7 +348,7 @@ class RememberingOrgan:
             if r_concept is None:
                 continue
             # Cue relevance still required among answerable rivals
-            if not _cue_relevant(r_concept, tokens):
+            if not _cue_relevant(r_concept, tokens, domain=domain):
                 continue
             preview, _, rconf = self._format_from_concept(cue, r_concept, rival.energy)
             if not preview.strip():
@@ -358,20 +398,30 @@ class RememberingOrgan:
     def _format_from_concept(
         self, cue: str, concept: Concept, energy: float
     ) -> tuple[str, ExplanationClass, float]:
-        q = cue.lower()
-        tokens = [tok for tok in q.split() if len(tok) > 2]
+        tokens = _cue_tokens(cue)
+        domain = _preference_domain(cue)
         best_attr = None
         candidates: list[Any] = []
         for attr in concept.attributes:
             if not _is_semantic_attr(attr):
                 continue
-            if any(tok in attr.key or tok in attr.value.lower() for tok in tokens):
+            if _attr_grounds_in_cue(attr, tokens, domain=domain):
                 candidates.append(attr)
         if candidates:
             # Prefer structured favorite_* attributes over a generic "preference"
             # dump — the live blocker rendered the preference key when a tool
             # wrapper had been stored as its value.
             keyed = [a for a in candidates if a.key.startswith("favorite_")]
+            if domain:
+                domain_n = _normalize_domain(domain)
+                domain_keyed = [
+                    a
+                    for a in keyed
+                    if (_attr_domain(a.key) or "") == domain_n
+                    or (_attr_domain(a.key) or "").startswith(domain_n + "_")
+                ]
+                if domain_keyed:
+                    keyed = domain_keyed
             best_attr = keyed[0] if keyed else candidates[0]
         if best_attr is None:
             # D045: concepts whose only content is lexical support metadata must
@@ -383,7 +433,10 @@ class RememberingOrgan:
             # or bare concept label when the cue does not ground in attributes.
             label_hit = False
             for lab in concept.labels or ():
-                if any(tok in lab.lower() for tok in tokens):
+                if any(tok in lab.lower() for tok in tokens if tok not in _GENERIC_PREF_TOKENS):
+                    label_hit = True
+                    break
+                if domain and domain.replace("_", " ") in lab.lower():
                     label_hit = True
                     break
             if label_hit and concept.labels:
@@ -409,6 +462,144 @@ class RememberingOrgan:
         if conf < 0.55:
             cls = ExplanationClass.STALE
         return answer, cls, conf
+
+    def _reconstruct_evidence(
+        self,
+        cue: str,
+        field: ActivationField,
+        ranked: list[Any],
+        tokens: list[str],
+    ) -> Reconstruction:
+        """Lineage introspection: active/retired attribute versions + experiences.
+
+        Read-only. Does not invent values. Domains stay independent.
+        """
+        domain = _preference_domain(cue)
+        lines: list[str] = []
+        experience_ids: list[str] = []
+        experience_summaries: list[str] = []
+        concept_ids: list[str] = []
+
+        # Prefer preference concepts with favorite_* attributes (all versions).
+        pref_concepts: list[Concept] = []
+        seen: set[str] = set()
+        for node in ranked:
+            concept = self.store.concepts.get(node.target_id)
+            if concept is None or concept.id in seen:
+                continue
+            attrs = [a for a in concept.attributes if a.key.startswith("favorite_")]
+            if not attrs:
+                continue
+            if domain and not _concept_matches_preference_domain(concept, domain):
+                continue
+            seen.add(concept.id)
+            pref_concepts.append(concept)
+
+        # Also scan the full store so evidence is complete even when activation
+        # ranking missed an older domain (e.g. bare "Show me the evidence.").
+        if not domain:
+            for concept in self.store.concepts.values():
+                if concept.id in seen:
+                    continue
+                if any(a.key.startswith("favorite_") for a in concept.attributes):
+                    seen.add(concept.id)
+                    pref_concepts.append(concept)
+        elif not pref_concepts:
+            for concept in self.store.concepts.values():
+                if _concept_matches_preference_domain(concept, domain):
+                    pref_concepts.append(concept)
+
+        for concept in pref_concepts:
+            concept_ids.append(concept.id)
+            keyed: dict[str, list[Any]] = {}
+            for attr in concept.attributes:
+                if not attr.key.startswith("favorite_"):
+                    continue
+                if domain and not (
+                    (_attr_domain(attr.key) or "") == _normalize_domain(domain)
+                    or (_attr_domain(attr.key) or "").startswith(_normalize_domain(domain) + "_")
+                ):
+                    continue
+                keyed.setdefault(attr.key, []).append(attr)
+            for key, versions in keyed.items():
+                pretty = key.replace("favorite_", "favorite ").replace("_", " ")
+                lines.append(f"{pretty}:")
+                for attr in sorted(versions, key=lambda a: a.version):
+                    state = "active" if attr.active else "retired"
+                    evidence_bits: list[str] = []
+                    for eid in attr.evidence_ids:
+                        exp = self.store.experiences.get(eid)
+                        if exp is None:
+                            continue
+                        if eid not in experience_ids:
+                            experience_ids.append(eid)
+                            experience_summaries.append(exp.summary)
+                        meta = exp.metadata
+                        if isinstance(meta, dict):
+                            raw = meta.get("evidence") or exp.summary
+                        else:
+                            raw = exp.summary
+                        if raw and raw not in evidence_bits:
+                            evidence_bits.append(str(raw)[:160])
+                    teaching = f" — {evidence_bits[0]}" if evidence_bits else ""
+                    lines.append(f"  v{attr.version} {attr.value} ({state}){teaching}")
+
+        if not lines:
+            exp_nodes = sorted(field.experiences.values(), key=lambda n: -n.energy)[:8]
+            if exp_nodes:
+                lines.append("Supporting experiences:")
+                for n in exp_nodes:
+                    lines.append(f"  - {n.label}")
+                    experience_ids.append(n.target_id)
+                    experience_summaries.append(n.label)
+                answer = "\n".join(lines)
+                return Reconstruction(
+                    cue=cue,
+                    answer=answer,
+                    explanation_class=ExplanationClass.EXPERIENCE.value,
+                    confidence=0.7,
+                    activated_concept_ids=[n.target_id for n in ranked],
+                    experience_ids=experience_ids,
+                    experience_summaries=experience_summaries,
+                    activation=field.to_public(),
+                    cue_classes=list(field.cue_classes),
+                    goal_influenced=field.goal_influenced,
+                    identity_influenced=field.identity_influenced,
+                    context_influenced=field.context_influenced,
+                    working_influenced=field.working_influenced,
+                )
+            return Reconstruction(
+                cue=cue,
+                answer="I don't currently know.",
+                explanation_class=ExplanationClass.UNKNOWN.value,
+                confidence=0.0,
+                activation=field.to_public(),
+                cue_classes=list(field.cue_classes),
+            )
+
+        header = "Evidence (preference lineage):"
+        answer = header + "\n" + "\n".join(lines)
+        return Reconstruction(
+            cue=cue,
+            answer=answer,
+            explanation_class=ExplanationClass.EXPERIENCE.value,
+            confidence=0.9,
+            primary_concept_id=concept_ids[0] if concept_ids else "",
+            primary_label=(
+                self.store.concepts[concept_ids[0]].labels[0]
+                if concept_ids and self.store.concepts[concept_ids[0]].labels
+                else ""
+            ),
+            activated_concept_ids=concept_ids or [n.target_id for n in ranked],
+            experience_ids=experience_ids[:12],
+            experience_summaries=experience_summaries[:12],
+            activation=field.to_public(),
+            cue_classes=list(field.cue_classes),
+            goal_influenced=field.goal_influenced,
+            identity_influenced=field.identity_influenced,
+            context_influenced=field.context_influenced,
+            working_influenced=field.working_influenced,
+        )
 
     # --- side effects on cognition (not history) -------------------------------
 
@@ -550,17 +741,94 @@ class RememberingOrgan:
         return text
 
 
-def _cue_relevant(concept: Concept, tokens: list[str]) -> bool:
-    if not tokens:
+def _cue_tokens(cue: str) -> list[str]:
+    """Normalize cue tokens — strip punctuation so 'color?' matches 'color'."""
+    out: list[str] = []
+    for raw in (cue or "").lower().split():
+        tok = re.sub(r"[^\w]+", "", raw)
+        if len(tok) > 2:
+            out.append(tok)
+    return out
+
+
+def _normalize_domain(domain: str) -> str:
+    """Collapse spelling variants so color/colour compete as one domain."""
+    d = (domain or "").strip().lower().replace(" ", "_")
+    return d.replace("colour", "color")
+
+
+def _preference_domain(cue: str) -> str | None:
+    """Return favorite-<domain> named by the cue, or None if unspecified."""
+    m = _FAVORITE_DOMAIN.search(cue or "")
+    if not m:
+        return None
+    domain = re.sub(r"[^\w\s]+", "", m.group(1)).strip().lower()
+    if not domain or domain in _GENERIC_PREF_TOKENS or domain in {"is", "are", "was", "my"}:
+        return None
+    return _normalize_domain(domain)
+
+
+def _attr_domain(attr_key: str) -> str | None:
+    if not attr_key.startswith("favorite_"):
+        return None
+    return _normalize_domain(attr_key[len("favorite_") :])
+
+
+def _concept_matches_preference_domain(concept: Concept, domain: str) -> bool:
+    domain = _normalize_domain(domain)
+    for a in concept.attributes:
+        ad = _attr_domain(a.key)
+        if ad and (ad == domain or ad.startswith(domain + "_")):
+            return True
+    needle = domain.replace("_", " ")
+    return any(
+        needle in (lab or "").lower().replace("colour", "color")
+        for lab in (concept.labels or ())
+    )
+
+
+def _attr_grounds_in_cue(
+    attr: Any, tokens: list[str], *, domain: str | None = None
+) -> bool:
+    """Whether an attribute is a legitimate grounding for this cue."""
+    if attr.key.startswith("favorite_"):
+        attr_domain = _attr_domain(attr.key) or ""
+        if domain:
+            domain = _normalize_domain(domain)
+            return attr_domain == domain or attr_domain.startswith(domain + "_")
+        # No named domain: require a non-generic cue token in key or value so
+        # "favorite" alone cannot make every favorite_* answerable.
+        specific = [t for t in tokens if t not in _GENERIC_PREF_TOKENS]
+        if not specific:
+            return True
+        return any(t in attr.key or t in (attr.value or "").lower() for t in specific)
+    return any(tok in attr.key or tok in (attr.value or "").lower() for tok in tokens)
+
+
+def _is_evidence_request(cue: str) -> bool:
+    return bool(_EVIDENCE_REQUEST.search(cue or ""))
+
+
+def _cue_relevant(
+    concept: Concept, tokens: list[str], *, domain: str | None = None
+) -> bool:
+    if not tokens and not domain:
         return False
+    if domain and _concept_matches_preference_domain(concept, domain):
+        return True
+    specific = [t for t in tokens if t not in _GENERIC_PREF_TOKENS]
     blob = " ".join(concept.labels).lower()
-    if any(tok in blob for tok in tokens):
+    if specific and any(tok in blob for tok in specific):
         return True
     for attr in concept.attributes:
         if not attr.active:
             continue
-        if any(tok in attr.key or tok in attr.value.lower() for tok in tokens):
+        if _attr_grounds_in_cue(attr, tokens, domain=domain):
             return True
+    # Fall back to generic token label match only when no preference domain
+    # was named (avoids every 'favorite *' label matching on 'favorite').
+    if domain is None and any(tok in blob for tok in tokens):
+        return True
     return False
 
 
@@ -581,20 +849,21 @@ def _is_semantic_attr(attr: Any) -> bool:
     return True
 
 
-def _answerable(concept: Concept, tokens: list[str]) -> bool:
-    """D045: can this concept satisfy the reconstruction request itself?
+def _answerable(
+    concept: Concept, tokens: list[str], *, domain: str | None = None
+) -> bool:
+    """D045 + M0K: can this concept satisfy the reconstruction request itself?
 
     True only when the concept holds at least one active *semantic* attribute
-    (not lexical support metadata, not an interrogative restatement of the cue)
-    that grounds in the cue. Token nuclei whose only content is a surface form
-    (``mentioned='favorite'``) are not answerable and therefore never become
-    primary answers or competing recollections.
+    that grounds in the cue. When the cue names a favorite <domain>, only that
+    domain's favorite_* attributes count — sibling preference domains never
+    answer or compete.
     """
-    if not tokens:
+    if not tokens and not domain:
         return False
     for attr in concept.attributes:
         if not _is_semantic_attr(attr):
             continue
-        if any(tok in attr.key or tok in attr.value.lower() for tok in tokens):
+        if _attr_grounds_in_cue(attr, tokens, domain=domain):
             return True
     return False
