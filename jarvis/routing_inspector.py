@@ -139,7 +139,22 @@ def build_execution_flow(
     elif route == "Reference":
         lines.extend(["    ↓", "Reference Engine", "    ↓", "Local Sources", "    ↓", "Response"])
     elif route == "Memory":
-        lines.extend(["    ↓", "Memory Store", "    ↓", handler, "    ↓", "Response"])
+        # Declarative teachings / Memory Authority path (Teaching Recognition).
+        if intent in ("memory_about_user", "remember", "memory_correct"):
+            lines.extend(
+                [
+                    "    ↓",
+                    "Teaching Recognition",
+                    "    ↓",
+                    "Encode Authority",
+                    "    ↓",
+                    "Memory Store",
+                    "    ↓",
+                    "Response",
+                ]
+            )
+        else:
+            lines.extend(["    ↓", "Memory Store", "    ↓", handler, "    ↓", "Response"])
     elif route == "Coding":
         lines.extend(["    ↓", "Coding Router", "    ↓", handler, "    ↓", "Response"])
     elif route == "Vision":

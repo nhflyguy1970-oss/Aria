@@ -641,7 +641,51 @@ def _memory_request_for_search(query: str) -> str:
 
 def primary_cognitive_respond(request: str) -> dict[str, Any]:
     """classify → route → dispatch → organ terminate → CognitiveMemoryResult."""
+    import logging
+    import os
+
     t0 = time.perf_counter()
+    # Temporary DEBUG: confirm Teaching Recognition executes on live conversation.
+    _teach_log = logging.getLogger("aria.teaching_recognition")
+    _teach_debug = os.getenv("ARIA_TEACHING_DEBUG", "1").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+    )
+    teaching_meta: dict[str, Any] = {}
+    try:
+        from aria_acm.acm.authority.teaching import detect_teaching
+
+        detected = detect_teaching(request)
+        teaching_meta = {
+            "teaching": bool(detected.is_teaching),
+            "reason": detected.reason,
+            "facts": [
+                {"kind": f.kind.value, "property": f.property, "value": f.value}
+                for f in detected.facts
+            ],
+        }
+        if _teach_debug:
+            msg_in = f"[TeachingRecognition] Input: {(request or '')[:240]}"
+            msg_flag = (
+                f"[TeachingRecognition] teaching={detected.is_teaching} reason={detected.reason}"
+            )
+            _teach_log.warning(msg_in)
+            _teach_log.warning(msg_flag)
+            print(msg_in, flush=True)
+            print(msg_flag, flush=True)
+            if detected.is_teaching:
+                dispatch_msg = "[TeachingRecognition] Dispatching to EncodeAuthority"
+                _teach_log.warning(dispatch_msg)
+                print(dispatch_msg, flush=True)
+    except Exception as exc:
+        teaching_meta = {"teaching": False, "reason": f"detect_failed:{type(exc).__name__}"}
+        if _teach_debug:
+            fail = f"[TeachingRecognition] detect_failed: {type(exc).__name__}"
+            _teach_log.warning(fail)
+            print(fail, flush=True)
+
     # Explicit ownership + dispatch steps (D039 · D040). ACM owns execution.
     route = primary_route_request(request)
     ownership = (route.get("ownership") or {}) if isinstance(route, dict) else {}
@@ -653,6 +697,12 @@ def primary_cognitive_respond(request: str) -> dict[str, Any]:
     _record_ms(ms)
     _bump("primary_recall")
     diag = (result.get("diagnostics") or {}) if isinstance(result, dict) else {}
+    path = list(result.get("reasoning_path") or [])
+    teach_steps = [p for p in path if str(p).startswith("teaching_")]
+    if _teach_debug and teach_steps:
+        done = f"[TeachingRecognition] pipeline={teach_steps}"
+        _teach_log.warning(done)
+        print(done, flush=True)
     _set_last_primary(
         acm_verb="cognitive_respond",
         duration_ms=round(ms, 3),
@@ -675,6 +725,8 @@ def primary_cognitive_respond(request: str) -> dict[str, Any]:
         uncertain=bool(
             diag.get("uncertain") or (route.get("classification") or {}).get("uncertain")
         ),
+        teaching_recognition=teaching_meta,
+        teaching_pipeline=teach_steps,
     )
     return result
 

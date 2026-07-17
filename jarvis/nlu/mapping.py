@@ -356,12 +356,21 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
         params = {"query": subject or result.prompt, "subject": subject}
     elif intent == "memory":
         if not mem:
-            if result.syntax.subject == "memory" or "search" in result.prompt.lower():
-                action = "memory_search"
-                params = {"query": subject or result.prompt}
+            # Live failure (post-M0J): declarative teachings such as
+            # "My favorite color is green." classified as intent=memory with
+            # subject="favorite color", then collapsed to memory_search with
+            # ONLY the subject — Teaching Recognition never saw the statement,
+            # EncodeAuthority never ran, and recall stayed on the prior value.
+            # Unresolved memory intents must reach Memory Authority with the
+            # FULL prompt. Declaratives go through cognitive_respond (Teaching
+            # Recognition → EncodeAuthority). Interrogatives/search keep
+            # memory_search but still pass the full prompt, never a fragment.
+            if result.grammar.sentence_type == "declarative":
+                action = "memory_about_user"
+                params = {"question": result.prompt}
             else:
                 action = "memory_search"
-                params = {"query": subject or result.prompt}
+                params = {"query": result.prompt}
     elif intent == "web_search":
         action = "web_search"
         params = {"query": subject or result.prompt}

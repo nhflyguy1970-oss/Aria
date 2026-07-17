@@ -119,6 +119,7 @@ PYTEST_PATHS: tuple[str, ...] = (
     "tests/test_routing_regression.py",
     "tests/test_nlu_routing.py",
     "tests/test_nlu_routing_variants.py",
+    "tests/test_teaching_recognition_routing.py",
     "tests/test_workstation_polish.py",
     "tests/test_mission_control.py",
     "tests/test_automation_ops.py",

@@ -24,3 +24,11 @@ implementation.
 | Semantic + graph retrieval | Graphiti / Neo4j | ACM | High | Backlog | Combine relationship traversal with semantic search. |
 | Long-running workflows | LangGraph | Core | Medium | Backlog | Resume interrupted reasoning and tasks safely. |
 | Desktop action model | Open Interpreter | Aria | High | Backlog | Unified interface for terminal, browser, filesystem, and desktop actions. |
+| Skills registry | OpenJarvis | Core | Medium | Backlog | Catalog and invoke reusable assistant skills with stable contracts. |
+| Memory viewer / memory inspection tools | isair/jarvis | ACM Tools | Medium | Backlog | Operator UI to inspect, filter, and audit stored memories. |
+| Sensitive-data redaction before persistence | isair/jarvis | ACM | High | Backlog | Strip secrets and PII before autobiographical encode. |
+| Tool relevance filtering | isair/jarvis | Aria | Medium | Backlog | Expose only tools relevant to the current intent and context. |
+| Always-on daemon architecture | MARK XLIX | Core | High | Backlog | Long-lived assistant process with continuous event handling. |
+| Sidecar / multi-client architecture | MARK XLIX | Core | Medium | Backlog | Multiple clients share one assistant core via sidecars. |
+| Permission / authority boundaries | MARK XLIX | Core | High | Backlog | Explicit capability grants for tools, memory writes, and system actions. |
+| Assistant state visualization | Hermes HUD | Aria | Medium | Backlog | Live HUD of goals, memory activation, and tool authority. |

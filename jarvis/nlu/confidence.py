@@ -120,15 +120,20 @@ def resolve_clarification_choice(choice: str, pending: dict[str, Any]) -> dict[s
         action = "chat"
         params = {"knowledge_mode": True, "query": prompt}
     elif intent == "memory":
+        from jarvis.nlu.grammar import analyze_grammar
         from jarvis.nlu.mapping import resolve_memory_route
 
         mem = resolve_memory_route(prompt)
         if mem:
             action = str(mem["action"])
             params = dict(mem.get("params") or {})
+        elif analyze_grammar(prompt).sentence_type == "declarative":
+            # Same contract as nlu_to_router_intent: full prompt → Memory Authority
+            action = "memory_about_user"
+            params = {"question": prompt}
         else:
             action = "memory_search"
-            params = {"query": syntax.object or prompt}
+            params = {"query": prompt}
     elif intent == "web_search":
         action = "web_search"
         params = {"query": prompt}
