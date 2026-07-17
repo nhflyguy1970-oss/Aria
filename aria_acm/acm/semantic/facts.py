@@ -48,6 +48,11 @@ _INTERROGATIVE = re.compile(
     re.I,
 )
 
+
+def is_interrogative(text: str) -> bool:
+    """True when the text is a question / retrieval cue rather than a teaching."""
+    return bool(_INTERROGATIVE.search((text or "").strip()))
+
 _GOAL = re.compile(
     r"\b(?:my\s+(?:long[- ]?term\s+)?goal\s+is|i\s+want\s+to|our\s+goal\s+is)\s+(.+?)(?:\.|$)",
     re.I,

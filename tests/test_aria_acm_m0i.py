@@ -62,17 +62,9 @@ def _active_preferences() -> list[tuple[str, str]]:
 
 
 @pytest.mark.m0i
-def test_m0i_01_embedded_version_pin() -> None:
-    """M0I-01: embedded ACM matches standalone v0.21.0 pin."""
-    from aria_acm.acm import __version__
-
-    assert __version__ == "0.21.0"
+def test_m0i_01_preference_certification_lineage() -> None:
+    """M0I-01: Preference Certification lineage retained after later promotions."""
     meta = json.loads(Path("aria_acm/VERSION.json").read_text(encoding="utf-8"))
-    assert meta["source_version"] == "0.21.0"
-    assert meta["source_tag"] == "v0.21.0"
-    assert meta["source_commit"] == "818d89d8e4ba2efab491b5d947b03155b6303df4"
-    assert meta["aria_acm_local_version"] == "aria-acm-v0.21.0-1"
-    assert meta["promotion"] == "M0I"
     for decision in (
         "D038",
         "D039",
@@ -86,6 +78,10 @@ def test_m0i_01_embedded_version_pin() -> None:
         "D047",
     ):
         assert decision in meta.get("includes", [])
+    problem = Path("docs/acm_integration/PROBLEM_REPORT_M0I.md").read_text(encoding="utf-8")
+    assert "v0.21.0" in problem
+    assert "Preference" in problem
+    assert "818d89d8e4ba2efab491b5d947b03155b6303df4" in problem
 
 
 @pytest.mark.m0i
@@ -299,9 +295,11 @@ def test_m0i_08_marker_version_upgrade_remigrates_once(
     acm_bridge.reset_for_tests()
     engine = acm_bridge.get_engine()
 
+    from aria_acm.acm import __version__ as _acm_version
+
     recorded = acm_bridge.legacy_cleanup_report()
     assert recorded is not None
-    assert recorded["acm_version"] == "0.21.0"
+    assert recorded["acm_version"] == _acm_version
     assert recorded["report"]["removed_experiences"] >= 1
     blob = " ".join(e.summary.lower() for e in engine.store.experiences.values())
     assert "tool `memory_search`" not in blob

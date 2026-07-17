@@ -351,3 +351,23 @@ M0I promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Preference behavioral certification is complete in both standalone ACM and Aria  
 - **STOP** — await approval before beginning the next cognitive subsystem
 
+---
+
+## A019 — M0J complete: promote ACM v0.22.0 Teaching Recognition (2026-07-17)
+
+**Status:** Accepted  
+**Related:** A001–A018 · standalone ACM v0.22.0 (Teaching Recognition) · tag `v0.22.0` · commit `2dd3715…`
+
+### Decision
+
+M0J promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.22.0** (`aria-acm-v0.22.0-1`). Teaching Recognition is promoted exactly as released: declarative, non-interrogative user statements with extracted cognitive facts encode through `cognitive_respond` before dispatch (full D046 Trusted Memory Ingestion and content-level artifact protection unchanged). Live Preference certification sequence through the bridge: fresh → unknown → "My favorite color is blue." → blue → "My favorite color is green." → green with blue retired → evidence reflects history without mutation → restart preserves green. Artifacts and interrogatives remain non-teaching. Identity certification and prior M0I protections remain intact. No ACM or Aria redesign; host bridge unchanged beyond the vendored tree. Permanent architecture backlog created at `docs/architecture-ideas.md`.
+
+### Consequences
+
+- Embedded pin: tag `v0.22.0`, commit `2dd3715c211f1fdc5e1147dccf9c827be5af801b`  
+- Local copy: `aria-acm-v0.22.0-1`  
+- Problem report: `docs/acm_integration/PROBLEM_REPORT_M0J.md`  
+- Gates: `tests/test_aria_acm_m0j.py` (M0J-01..07)  
+- Architecture backlog: `docs/architecture-ideas.md`  
+- **STOP** — await approval before beginning the next cognitive subsystem
+

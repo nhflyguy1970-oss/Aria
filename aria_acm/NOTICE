@@ -4,22 +4,23 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M0I):
-  tag:    v0.21.0
-  commit: 818d89d8e4ba2efab491b5d947b03155b6303df4
-  version harvested from pin: 0.21.0
-  decision: Preference Behavioral Certification (Memory Foundation completion)
+Source pin (M0J):
+  tag:    v0.22.0
+  commit: 2dd3715c211f1fdc5e1147dccf9c827be5af801b
+  version harvested from pin: 0.22.0
+  decision: Teaching Recognition (valid preference teaching regression)
   includes: D038 Memory Authority · D039 Intent Classification · D040 Cognitive
             Dispatch · D041 Semantic Extraction · D042 User Identity Pipeline ·
             D043 Assistant Identity · D044 Identity Rendering Isolation ·
             D045 Preference Reconstruction Fix · D046 Trusted Memory Ingestion ·
             D047 Legacy Memory Contamination Cleanup · Preference Behavioral
-            Certification correction (content-level trust, live artifact
-            signatures, interrogative preference guards, render defense)
+            Certification (v0.21.0) · Teaching Recognition (v0.22.0) —
+            declarative teachings encode through Memory Authority before
+            dispatch; artifacts and interrogatives remain non-teaching
 
-Prior pin (M0H):
-  tag:    v0.20.0
-  commit: b996fe8128c8104c4f1a7a0e633f8b28087a780d
+Prior pin (M0I):
+  tag:    v0.21.0
+  commit: 818d89d8e4ba2efab491b5d947b03155b6303df4
 
 Aria-local bootstrap: `aria_acm/acm/__init__.py` registers `sys.modules["acm"]`
 so the literal package copy's absolute `acm.*` imports resolve to this tree

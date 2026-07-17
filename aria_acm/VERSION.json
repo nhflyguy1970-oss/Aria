@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.21.0-1",
+  "aria_acm_local_version": "aria-acm-v0.22.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.21.0",
-  "source_tag": "v0.21.0",
-  "source_commit": "818d89d8e4ba2efab491b5d947b03155b6303df4",
+  "source_version": "0.22.0",
+  "source_tag": "v0.22.0",
+  "source_commit": "2dd3715c211f1fdc5e1147dccf9c827be5af801b",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-17",
-  "tree_sha256": "e118fddaa33b67c0b33b62708cea28efdd6fc0b9586a4988c51c3864bcefa6cb",
+  "tree_sha256": "22e8218100c4fbc2b54c1ab95863a23cb1bafbeda84bea317398205d24ef2f64",
   "license": "Apache-2.0",
   "certification_ref": "ACM docs/PREFERENCE_CERTIFICATION.md",
-  "promotion": "M0I",
-  "promotion_decision": "Preference Behavioral Certification",
+  "promotion": "M0J",
+  "promotion_decision": "Teaching Recognition (valid preference teaching regression)",
   "includes": ["D038", "D039", "D040", "D041", "D042", "D043", "D044", "D045", "D046", "D047"],
-  "notes": "M0I promotion of certified ACM v0.21.0 (Preference Behavioral Certification). Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0I.md"
+  "notes": "M0J promotion of certified ACM v0.22.0 (Teaching Recognition). Declarative preference teachings encode through cognitive_respond before dispatch. Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0J.md"
 }

@@ -1,5 +1,17 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-17 — M0J: Promote ACM v0.22.0 (Teaching Recognition)
+
+Controlled promotion of certified standalone ACM v0.22.0 into `aria_acm/`
+(`aria-acm-v0.22.0-1`). Restores Preference behavioral certification for
+valid teachings spoken through Memory Authority: declarative statements
+encode via `cognitive_respond` before dispatch, so blue → green retires
+the previous preference; evidence reflects teaching history; restart
+preserves green; artifacts and interrogatives remain non-teaching. Tree
+matches source commit `2dd3715…` except the Aria import bootstrap. Identity
+and prior M0I certifications remain valid (M0J-01..07). Permanent
+architecture backlog started at `docs/architecture-ideas.md`. Full CI green.
+
 ## 2026-07-17 — M0I: Promote ACM v0.21.0 (Preference Behavioral Certification)
 
 Controlled promotion of certified standalone ACM v0.21.0 into `aria_acm/`

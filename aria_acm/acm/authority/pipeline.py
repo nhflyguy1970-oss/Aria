@@ -23,11 +23,19 @@ class CognitiveResponsePipeline:
         self.dispatcher = CognitiveDispatchEngine(engine)
 
     def respond(self, request: str) -> CognitiveMemoryResult:
-        """Run end-to-end Cognitive Dispatch (D038 · D039 · D040)."""
+        """Run end-to-end Cognitive Dispatch (D038 · D039 · D040).
+
+        Declarative teachings are encoded *before* dispatch (Teaching
+        Recognition), so the reconstruction that answers the request reflects
+        the updated memory. The encode passes through the full Trusted Memory
+        Ingestion gate and content-level artifact protection — Teaching
+        Recognition adds no bypass.
+        """
+        teach_path = self._teach_if_declarative(request)
         outcome = self.dispatcher.dispatch(request)
         classification = outcome.decision.classification
         organ_payload = outcome.payload
-        path = list(outcome.decision.reasoning_path)
+        path = teach_path + list(outcome.decision.reasoning_path)
 
         non_cognitive = (
             classification.is_memory_request is False
@@ -59,6 +67,30 @@ class CognitiveResponsePipeline:
             request=request,
         )
         return result
+
+    def _teach_if_declarative(self, request: str) -> list[str]:
+        """Teaching Recognition: encode declarative user statements pre-dispatch.
+
+        Hosts invoke ``cognitive_respond`` with inbound user conversation
+        messages, so the teaching is submitted as a trusted user statement.
+        ``encode`` still applies D046 ingestion policy and content-level
+        artifact rejection — tool/system/infra payloads never become memory
+        even here, and interrogatives never reach this encode at all.
+        """
+        from acm.authority.teaching import detect_teaching
+        from acm.provenance import TRUSTED_USER_STATEMENT
+
+        teaching = detect_teaching(request)
+        if not teaching.is_teaching:
+            return []
+        path = ["teaching_detected"]
+        encode_result = self.engine.encode(request, provenance=TRUSTED_USER_STATEMENT)
+        if encode_result.get("encoded"):
+            path.append("teaching_encoded")
+        else:
+            reason = str(encode_result.get("reason") or "rejected")
+            path.append(f"teaching_rejected:{reason}")
+        return path
 
     def speak(self, result: CognitiveMemoryResult) -> str:
         """Speech only after ACM reconstruction — faithful templates."""
