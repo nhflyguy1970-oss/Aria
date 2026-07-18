@@ -4,6 +4,8 @@
 
 ### Added
 
+- **M0L:** Promoted certified standalone ACM **v0.24.0** into `aria_acm/` as `aria-acm-v0.24.0-1` (commit `3c3bdbc…`). Fixes final live explanation/summary failures: Why/replaced/active questions reconstruct from certified lineage; `What do you know about me?` summarizes active memories only; Aria NLU/runtime guards keep these on Memory Authority (never Mission Control). Gates: `tests/test_aria_acm_m0l.py`.
+
 - **M0K:** Promoted certified standalone ACM **v0.23.0** into `aria_acm/` as `aria-acm-v0.23.0-1` (commit `82a9499…`). Fixes live multi-domain preference collapse (favorite food/fish no longer answer as favorite color) and evidence reconstruction (`Show me the evidence.` returns active/retired lineage without mutating memory). Domains remain independent across updates and restart. Gates: `tests/test_aria_acm_m0k.py`.
 
 ### Fixed

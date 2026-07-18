@@ -1,5 +1,13 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-17 — M0L: Promote ACM v0.24.0 (Memory explanation + personal summary)
+
+Controlled promotion of certified standalone ACM v0.24.0 into `aria_acm/`
+(`aria-acm-v0.24.0-1`). Final live M0K validation failures corrected: Why /
+replaced / active explanations reconstruct from certified lineage; personal
+summary uses active memories only; Aria routing keeps these on Memory
+Authority (never Mission Control). Commit `3c3bdbc…`. Gates M0L-01..05.
+
 ## 2026-07-17 — M0K: Promote ACM v0.23.0 (Multi-domain preference + evidence)
 
 Controlled promotion of certified standalone ACM v0.23.0 into `aria_acm/`

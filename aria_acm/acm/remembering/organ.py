@@ -72,6 +72,29 @@ _EVIDENCE_REQUEST = re.compile(
     re.I,
 )
 
+# Memory explanation — why active / why retired / what replaced.
+_WHY_FAVORITE = re.compile(
+    r"\bwhy\s+is\s+(.+?)\s+my\s+(?:favorite|favourite)\s+(\w+)\b",
+    re.I,
+)
+_WHY_NOT_ACTIVE = re.compile(
+    r"\bwhy\s+(?:isn'?t|is\s+not|isn\s+t)\s+(.+?)\s+active\b",
+    re.I,
+)
+_WHY_ACTIVE = re.compile(
+    r"\bwhy\s+is\s+(.+?)\s+active\b",
+    re.I,
+)
+_WHAT_REPLACED = re.compile(
+    r"\bwhat\s+replaced\s+(.+?)(?:\?|$)",
+    re.I,
+)
+_PERSONAL_SUMMARY = re.compile(
+    r"\b(what\s+do\s+you\s+know\s+about\s+me|tell\s+me\s+about\s+(?:me|myself)|"
+    r"about\s+myself|what\s+do\s+you\s+remember\s+about\s+me)\b",
+    re.I,
+)
+
 
 class RememberingOrgan:
     """Cue-driven reconstruction via shared Activation Architecture."""
@@ -160,9 +183,13 @@ class RememberingOrgan:
                     self.forgetting.reactivate(seed.target_id, source="strong_cue", steps=2)
         ranked = field.ranked_concepts(limit=6)
         reconstruction = self._reconstruct(cue, field, ranked)
-        # Evidence / lineage requests are read-only introspection — never
+        # Evidence / lineage / summary introspection is read-only — never
         # reconsolidate or otherwise mutate living memory.
-        if not _is_evidence_request(cue):
+        if not (
+            _is_evidence_request(cue)
+            or _is_explanation_request(cue)
+            or _is_personal_summary_request(cue)
+        ):
             self._reconsolidate(reconstruction, cue)
         displaced = self._enter_working(reconstruction)
         self._observe(
@@ -257,6 +284,16 @@ class RememberingOrgan:
         field: ActivationField,
         ranked: list[Any],
     ) -> Reconstruction:
+        tokens = _cue_tokens(cue)
+        # Lineage / summary introspection can succeed from the store even when
+        # activation ranking is empty — check before the empty-rank early exit.
+        if _is_evidence_request(cue):
+            return self._reconstruct_evidence(cue, field, ranked, tokens)
+        if _is_explanation_request(cue):
+            return self._reconstruct_explanation(cue, field, ranked)
+        if _is_personal_summary_request(cue):
+            return self._reconstruct_personal_summary(cue, field, ranked)
+
         if not ranked:
             return Reconstruction(
                 cue=cue,
@@ -270,10 +307,6 @@ class RememberingOrgan:
                 context_influenced=field.context_influenced,
                 working_influenced=field.working_influenced,
             )
-
-        tokens = _cue_tokens(cue)
-        if _is_evidence_request(cue):
-            return self._reconstruct_evidence(cue, field, ranked, tokens)
 
         domain = _preference_domain(cue)
         # D045: only answerable concepts may serve as the primary recollection
@@ -601,6 +634,296 @@ class RememberingOrgan:
             working_influenced=field.working_influenced,
         )
 
+    def _reconstruct_explanation(
+        self,
+        cue: str,
+        field: ActivationField,
+        ranked: list[Any],
+    ) -> Reconstruction:
+        """Evidence-backed lineage explanation — active/retired/replaced.
+
+        Read-only. Reconstructs only from certified attribute versions.
+        """
+        answer = self._format_explanation(cue)
+        if not (answer or "").strip():
+            return Reconstruction(
+                cue=cue,
+                answer="I don't currently know.",
+                explanation_class=ExplanationClass.UNKNOWN.value,
+                confidence=0.0,
+                activation=field.to_public(),
+                cue_classes=list(field.cue_classes),
+            )
+        concept_ids = [
+            n.target_id for n in ranked if self.store.concepts.get(n.target_id) is not None
+        ]
+        return Reconstruction(
+            cue=cue,
+            answer=answer,
+            explanation_class=ExplanationClass.EXPERIENCE.value,
+            confidence=0.9,
+            primary_concept_id=concept_ids[0] if concept_ids else "",
+            activated_concept_ids=concept_ids,
+            activation=field.to_public(),
+            cue_classes=list(field.cue_classes),
+            goal_influenced=field.goal_influenced,
+            identity_influenced=field.identity_influenced,
+            context_influenced=field.context_influenced,
+            working_influenced=field.working_influenced,
+        )
+
+    def _format_explanation(self, cue: str) -> str:
+        """Derive a lineage explanation from preference attribute versions."""
+        cue_l = (cue or "").strip()
+
+        m = _WHY_NOT_ACTIVE.search(cue_l)
+        if m:
+            value = _clean_value(m.group(1))
+            return self._explain_why_not_active(value)
+
+        m = _WHAT_REPLACED.search(cue_l)
+        if m:
+            value = _clean_value(m.group(1))
+            return self._explain_what_replaced(value)
+
+        m = _WHY_FAVORITE.search(cue_l)
+        if m:
+            value = _clean_value(m.group(1))
+            domain = _normalize_domain(m.group(2))
+            return self._explain_why_favorite(value, domain)
+
+        m = _WHY_ACTIVE.search(cue_l)
+        if m:
+            value = _clean_value(m.group(1))
+            return self._explain_why_active(value)
+
+        return ""
+
+    def _iter_preference_attrs(self) -> list[tuple[Any, Any]]:
+        """All favorite_* attributes across concepts (active and retired)."""
+        pairs: list[tuple[Any, Any]] = []
+        for concept in self.store.concepts.values():
+            for attr in concept.attributes:
+                if attr.key.startswith("favorite_"):
+                    pairs.append((concept, attr))
+        return pairs
+
+    def _find_attr_by_value(
+        self, value: str, *, active: bool | None = None
+    ) -> tuple[Any, Any] | None:
+        needle = (value or "").strip().lower()
+        if not needle:
+            return None
+        best: tuple[Any, Any] | None = None
+        for concept, attr in self._iter_preference_attrs():
+            if active is not None and bool(attr.active) != active:
+                continue
+            aval = (attr.value or "").strip().lower()
+            if aval == needle or needle in aval or aval in needle:
+                if best is None or attr.version > best[1].version:
+                    best = (concept, attr)
+        return best
+
+    def _active_successor(self, key: str, concept: Any) -> Any | None:
+        for attr in concept.attributes:
+            if attr.key == key and attr.active:
+                return attr
+        # Sibling concepts may hold the same favorite_* key after updates.
+        for other in self.store.concepts.values():
+            for attr in other.attributes:
+                if attr.key == key and attr.active:
+                    return attr
+        return None
+
+    def _explain_why_not_active(self, value: str) -> str:
+        hit = self._find_attr_by_value(value, active=False)
+        if hit is None:
+            # Value might still be active — say so from evidence.
+            active_hit = self._find_attr_by_value(value, active=True)
+            if active_hit is not None:
+                return _lead_cap(
+                    f"{active_hit[1].value} is currently active in your memory — "
+                    "it has not been retired."
+                )
+            return ""
+        concept, retired = hit
+        successor = self._active_successor(retired.key, concept)
+        pretty = retired.key.replace("favorite_", "favorite ").replace("_", " ")
+        if successor is not None:
+            return _lead_cap(
+                f"{retired.value} was replaced when you later taught that your "
+                f"{pretty} is {successor.value}. {retired.value} remains in your "
+                "evidence as a retired memory."
+            )
+        return _lead_cap(
+            f"{retired.value} is retired in your evidence for {pretty}. "
+            "No active replacement is currently recorded."
+        )
+
+    def _explain_what_replaced(self, value: str) -> str:
+        hit = self._find_attr_by_value(value, active=False)
+        if hit is None:
+            return ""
+        concept, retired = hit
+        successor = self._active_successor(retired.key, concept)
+        if successor is None:
+            return ""
+        return _lead_cap(
+            f"{successor.value} replaced {retired.value}. "
+            f"{retired.value} remains in your evidence as a retired memory."
+        )
+
+    def _explain_why_favorite(self, value: str, domain: str) -> str:
+        domain = _normalize_domain(domain)
+        # Prefer active attr matching value+domain; fall back to any matching key.
+        active_match: tuple[Any, Any] | None = None
+        for concept, attr in self._iter_preference_attrs():
+            if not attr.active:
+                continue
+            ad = _attr_domain(attr.key) or ""
+            if ad != domain and not ad.startswith(domain + "_"):
+                continue
+            aval = (attr.value or "").strip().lower()
+            if aval == value.lower() or value.lower() in aval or aval in value.lower():
+                active_match = (concept, attr)
+                break
+        if active_match is None:
+            for concept, attr in self._iter_preference_attrs():
+                if not attr.active:
+                    continue
+                ad = _attr_domain(attr.key) or ""
+                if ad == domain or ad.startswith(domain + "_"):
+                    active_match = (concept, attr)
+                    break
+        if active_match is None:
+            return ""
+        concept, active = active_match
+        pretty = active.key.replace("favorite_", "favorite ").replace("_", " ")
+        retired_prior = [
+            a
+            for a in concept.attributes
+            if a.key == active.key and not a.active and a.version < active.version
+        ]
+        if not retired_prior:
+            # Scan other concepts for earlier retired versions of same key.
+            for other in self.store.concepts.values():
+                for a in other.attributes:
+                    if a.key == active.key and not a.active and a.version < active.version:
+                        retired_prior.append(a)
+        if retired_prior:
+            prior = max(retired_prior, key=lambda a: a.version)
+            return _lead_cap(
+                f"{active.value} is your current {pretty} because you later taught "
+                f"that after {prior.value}. {prior.value} remains in your evidence "
+                "as a retired memory."
+            )
+        return _lead_cap(
+            f"{active.value} is your current {pretty} because you taught that "
+            "preference, and it is the active value in your evidence."
+        )
+
+    def _explain_why_active(self, value: str) -> str:
+        hit = self._find_attr_by_value(value, active=True)
+        if hit is None:
+            return ""
+        concept, active = hit
+        pretty = active.key.replace("favorite_", "favorite ").replace("_", " ")
+        retired_prior = [
+            a
+            for a in concept.attributes
+            if a.key == active.key and not a.active and a.version < active.version
+        ]
+        for other in self.store.concepts.values():
+            for a in other.attributes:
+                if a.key == active.key and not a.active and a.version < active.version:
+                    if a not in retired_prior:
+                        retired_prior.append(a)
+        if retired_prior:
+            prior = max(retired_prior, key=lambda a: a.version)
+            return _lead_cap(
+                f"{active.value} is active because you later taught that your "
+                f"{pretty} is {active.value}, replacing {prior.value}. "
+                f"{prior.value} remains retired in your evidence."
+            )
+        return _lead_cap(
+            f"{active.value} is active because you taught that your {pretty} "
+            "is that value, and no later teaching has superseded it."
+        )
+
+    def _reconstruct_personal_summary(
+        self,
+        cue: str,
+        field: ActivationField,
+        ranked: list[Any],
+    ) -> Reconstruction:
+        """Active-only personal summary from identity + preference memories."""
+        lines: list[str] = []
+        concept_ids: list[str] = []
+
+        # Identity (user schema) — active only.
+        if self.identity is not None:
+            try:
+                rendered = self.identity.render_user_identity()
+                text = (rendered or {}).get("answer") or ""
+                if text.strip():
+                    for part in re.split(r"(?<=\.)\s+", text.strip()):
+                        if part.strip():
+                            lines.append(part.strip())
+                    uid = ((rendered or {}).get("schemas") or {}).get("user", {}).get(
+                        "concept_id"
+                    )
+                    if uid:
+                        concept_ids.append(uid)
+            except Exception:
+                pass
+
+        # Active favorite_* across all preference concepts.
+        seen_keys: set[str] = set()
+        favorites: list[tuple[str, str, str]] = []  # (sort, pretty, value)
+        for concept in self.store.concepts.values():
+            for attr in concept.attributes:
+                if not attr.active or not attr.key.startswith("favorite_"):
+                    continue
+                if attr.key in seen_keys:
+                    continue
+                if not _is_semantic_attr(attr):
+                    continue
+                seen_keys.add(attr.key)
+                pretty = attr.key.replace("favorite_", "favorite ").replace("_", " ")
+                favorites.append((attr.key, pretty, str(attr.value)))
+                if concept.id not in concept_ids:
+                    concept_ids.append(concept.id)
+
+        for _, pretty, value in sorted(favorites, key=lambda t: t[0]):
+            lines.append(f"Your {pretty} is {value}.")
+
+        if not lines:
+            return Reconstruction(
+                cue=cue,
+                answer="I don't currently know.",
+                explanation_class=ExplanationClass.UNKNOWN.value,
+                confidence=0.0,
+                activation=field.to_public(),
+                cue_classes=list(field.cue_classes),
+            )
+
+        answer = "\n".join(lines)
+        return Reconstruction(
+            cue=cue,
+            answer=answer,
+            explanation_class=ExplanationClass.EXPERIENCE.value,
+            confidence=0.9,
+            primary_concept_id=concept_ids[0] if concept_ids else "",
+            activated_concept_ids=concept_ids
+            or [n.target_id for n in ranked],
+            activation=field.to_public(),
+            cue_classes=list(field.cue_classes),
+            goal_influenced=field.goal_influenced,
+            identity_influenced=field.identity_influenced,
+            context_influenced=field.context_influenced,
+            working_influenced=field.working_influenced,
+        )
+
     # --- side effects on cognition (not history) -------------------------------
 
     def _reconsolidate(self, reconstruction: Reconstruction, cue: str) -> None:
@@ -807,6 +1130,35 @@ def _attr_grounds_in_cue(
 
 def _is_evidence_request(cue: str) -> bool:
     return bool(_EVIDENCE_REQUEST.search(cue or ""))
+
+
+def _is_explanation_request(cue: str) -> bool:
+    cue = cue or ""
+    return bool(
+        _WHY_FAVORITE.search(cue)
+        or _WHY_NOT_ACTIVE.search(cue)
+        or _WHY_ACTIVE.search(cue)
+        or _WHAT_REPLACED.search(cue)
+    )
+
+
+def _is_personal_summary_request(cue: str) -> bool:
+    return bool(_PERSONAL_SUMMARY.search(cue or ""))
+
+
+def _clean_value(raw: str) -> str:
+    return re.sub(r"[^\w\s\-']+", "", (raw or "").strip()).strip()
+
+
+def _lead_cap(text: str) -> str:
+    """Capitalize the first alphabetic character for spoken explanations."""
+    s = (text or "").strip()
+    if not s:
+        return s
+    for i, ch in enumerate(s):
+        if ch.isalpha():
+            return s[:i] + ch.upper() + s[i + 1 :]
+    return s
 
 
 def _cue_relevant(

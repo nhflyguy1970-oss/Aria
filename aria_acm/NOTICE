@@ -4,17 +4,17 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M0K):
+Source pin (M0L):
+  tag:    v0.24.0
+  commit: 3c3bdbc0b1e7566da7922df422c72578e5550df5
+  version harvested from pin: 0.24.0
+  decision: Memory explanation + active-only personal summary
+  includes: D038–D047 · Teaching Recognition · Multi-domain preference /
+            evidence (v0.23.0) · Memory explanation + personal summary (v0.24.0)
+
+Prior pin (M0K):
   tag:    v0.23.0
   commit: 82a9499103314d57d9c8291e2f3886921281f49c
-  version harvested from pin: 0.23.0
-  decision: Multi-domain preference isolation + evidence lineage
-  includes: D038–D047 · Teaching Recognition (v0.22.0) · Multi-domain
-            preference isolation and evidence lineage reconstruction (v0.23.0)
-
-Prior pin (M0J):
-  tag:    v0.22.0
-  commit: 2dd3715c211f1fdc5e1147dccf9c827be5af801b
 
 Aria-local bootstrap: `aria_acm/acm/__init__.py` registers `sys.modules["acm"]`
 so the literal package copy's absolute `acm.*` imports resolve to this tree

@@ -7,7 +7,7 @@
 | Item | Status | Notes |
 |------|--------|-------|
 | ACM Integration Blueprint | Approved / locked | `docs/acm_integration/` · A001 |
-| Phase M0 — Vendor ACM into `aria_acm/` | **Complete** | `aria-acm-v0.23.0-1` (M0K promoted) |
+| Phase M0 — Vendor ACM into `aria_acm/` | **Complete** | `aria-acm-v0.24.0-1` (M0L promoted) |
 | Phase M1 — Shadow measure | **Complete** | Measure phase ended for production |
 | Phase M2 — Harvest migrate INTO ACM | **Complete** | Operator harvest CLI |
 | Phase M3 — ACM primary cognition | **Complete** | Flag-gated authority |
@@ -23,6 +23,7 @@
 | **Phase M0I — Promote ACM v0.21.0 (Preference Certification)** | **Complete** | `aria-acm-v0.21.0-1` · A018 |
 | **Phase M0J — Promote ACM v0.22.0 (Teaching Recognition)** | **Complete** | `aria-acm-v0.22.0-1` · A019 |
 | **Phase M0K — Promote ACM v0.23.0 (Multi-domain + Evidence)** | **Complete** | `aria-acm-v0.23.0-1` · A020 |
+| **Phase M0L — Promote ACM v0.24.0 (Explanation + Summary)** | **Complete** | `aria-acm-v0.24.0-1` · A021 |
 | **Memory Foundation v1.0 — Behavioral Certification** | **CERTIFIED** | D038–D047 · [`docs/MEMORY_FOUNDATION_V1_CERTIFICATION.md`](docs/MEMORY_FOUNDATION_V1_CERTIFICATION.md) · A017 |
 | **Cognitive Infrastructure Conversion** | **Complete** | ACM sole brain · MC/Trace ACM · A010 |
 | **Cognitive Memory Reset v1** | **Complete** | Clean post-D041 autobiographical baseline · A011 |

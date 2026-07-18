@@ -66,7 +66,12 @@ _USER_MEMORY_EXCLUDE = re.compile(
     r"what do you remember|recall|my memories|"
     r"remember (?:that|these)|don't forget|note that|keep in mind|"
     r"forget|delete memory|remove memory|"
-    r"something i like|what do i like|about me|who am i|tell me about myself"
+    r"something i like|what do i like|about me|who am i|tell me about myself|"
+    r"why\b.+\b(?:favorite|favourite)|"
+    r"why\b.+\b(?:isn'?t|is\s+not|no\s+longer)\b.+\bactive|"
+    r"why\b.+\bactive|"
+    r"what\s+replaced|"
+    r"retired|superseded|replaced"
     r")\b",
     re.I,
 )

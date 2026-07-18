@@ -257,6 +257,18 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         0.95,
     ),
     (
+        CognitiveIntent.REMEMBERING,
+        re.compile(
+            r"\bwhy\b.+\b(?:favorite|favourite)\b|"
+            r"\bwhy\b.+\b(?:isn'?t|is\s+not|no\s+longer)\b.+\bactive\b|"
+            r"\bwhy\b.+\bactive\b|"
+            r"\bwhat\s+replaced\b",
+            re.I,
+        ),
+        "memory_explanation_cue",
+        0.94,
+    ),
+    (
         CognitiveIntent.PREFERENCE,
         re.compile(
             r"\b(prefer(?:ence|s)?|favorite|favourite|"

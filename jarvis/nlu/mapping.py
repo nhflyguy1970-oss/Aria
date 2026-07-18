@@ -38,7 +38,13 @@ _USER_MEMORY = re.compile(
     r"\bwhat\s+do\s+you\s+know\s+about\s+me\b|"
     r"\b(?:please\s+)?(?:remember|don'?t\s+forget|note\s+that|keep\s+in\s+mind)\b|"
     r"\b(?:please\s+)?(?:forget|delete\s+memory|remove\s+memory)\b|"
-    r"\b(?:please\s+)?(?:update|change|correct|fix)\s+my\b",
+    r"\b(?:please\s+)?(?:update|change|correct|fix)\s+my\b|"
+    # Memory explanation / lineage (must not fall through to Mission Control)
+    r"\bwhy\b.+\b(?:favorite|favourite)\b|"
+    r"\bwhy\b.+\b(?:isn'?t|is\s+not|no\s+longer)\b.+\bactive\b|"
+    r"\bwhy\b.+\bactive\b|"
+    r"\bwhat\s+replaced\b|"
+    r"\b(?:retired|superseded|replaced)\b",
     re.I,
 )
 
@@ -170,6 +176,20 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
             "thinking": "memory summary",
         }
 
+    # Memory explanation / lineage — full prompt to Memory Authority
+    if re.search(
+        r"\bwhy\b.+\b(?:favorite|favourite)\b|"
+        r"\bwhy\b.+\b(?:isn'?t|is\s+not|no\s+longer)\b.+\bactive\b|"
+        r"\bwhy\b.+\bactive\b|"
+        r"\bwhat\s+replaced\b",
+        lower,
+    ):
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "memory explanation",
+        }
+
     if _MEMORY_RECALL_FACT.search(lower) and not _MEMORY_RECALL_RUNTIME.search(lower):
         # Targeted fact retrieval — never dump the whole store.
         return {
@@ -294,8 +314,20 @@ def apply_intent_guards(result: NLUResult) -> str:
         return "knowledge"
     if intent == "reference" and re.search(r"\bis\b.+\brunning\b", prompt, re.I):
         return "runtime"
+    # Autobiographical "my" (favorite color, my name, …) must never be forced to
+    # Mission Control merely because _LIVE_STATE matches the word "my".
     if intent in ("web_search", "knowledge") and _LIVE_STATE.search(prompt):
-        if syntax.verb in ("using", "running", "loaded", "active") or "my" in prompt.lower():
+        if re.search(
+            r"\b(favorite|favourite|prefer|name|remember|memory|retired|replaced|active)\b",
+            prompt,
+            re.I,
+        ):
+            return "memory"
+        if syntax.verb in ("using", "running", "loaded", "active") or re.search(
+            r"\b(gpu|vram|cpu|model|hardware|service|platform|mission\s+control)\b",
+            prompt,
+            re.I,
+        ):
             return "runtime"
     return intent
 

@@ -39,20 +39,19 @@ def _speak(q: str) -> tuple[dict, str]:
 
 
 @pytest.mark.m0k
-def test_m0k_01_embedded_version_pin() -> None:
-    from aria_acm.acm import __version__
-
-    assert __version__ == "0.23.0"
-    meta = json.loads(Path("aria_acm/VERSION.json").read_text(encoding="utf-8"))
-    assert meta["source_version"] == "0.23.0"
-    assert meta["source_tag"] == "v0.23.0"
-    assert meta["source_commit"] == "82a9499103314d57d9c8291e2f3886921281f49c"
-    assert meta["aria_acm_local_version"] == "aria-acm-v0.23.0-1"
-    assert meta["promotion"] == "M0K"
-    assert "favorite_" in Path("aria_acm/acm/remembering/organ.py").read_text(encoding="utf-8")
-    assert "evidence_cue" in Path("aria_acm/acm/authority/classification.py").read_text(
+def test_m0k_01_multi_domain_evidence_lineage() -> None:
+    """M0K corrections remain in the embedded tree after later promotions."""
+    organ = Path("aria_acm/acm/remembering/organ.py").read_text(encoding="utf-8")
+    classification = Path("aria_acm/acm/authority/classification.py").read_text(
         encoding="utf-8"
     )
+    assert "favorite_" in organ
+    assert "_reconstruct_evidence" in organ or "Evidence (preference lineage)" in organ
+    assert "evidence_cue" in classification
+    meta = json.loads(Path("aria_acm/VERSION.json").read_text(encoding="utf-8"))
+    # Superseded by M0L+; pin must remain at least M0K lineage.
+    assert meta["source_version"] >= "0.23.0"
+    assert "M0K" in meta.get("notes", "") or meta["promotion"] in ("M0K", "M0L")
 
 
 @pytest.mark.m0k

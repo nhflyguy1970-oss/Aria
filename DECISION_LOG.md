@@ -390,3 +390,22 @@ M0K promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Gates: `tests/test_aria_acm_m0k.py` (M0K-01..05)  
 - **STOP** — await approval before beginning the next cognitive subsystem
 
+---
+
+## A021 — M0L complete: promote ACM v0.24.0 memory explanation + personal summary (2026-07-17)
+
+**Status:** Accepted  
+**Related:** A001–A020 · standalone ACM v0.24.0 · tag `v0.24.0` · commit `3c3bdbc…`
+
+### Decision
+
+M0L promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.24.0** (`aria-acm-v0.24.0-1`). Final live M0K validation failures are corrected: Why/replaced/active explanation queries reconstruct from certified attribute lineage; personal summary reconstructs from active memories only; Aria NLU/runtime guards keep these requests on Memory Authority (never Mission Control). No ACM or Aria redesign — classification + Remembering reconstruction corrections promoted exactly as released; host routing guards only.
+
+### Consequences
+
+- Embedded pin: tag `v0.24.0`, commit `3c3bdbc0b1e7566da7922df422c72578e5550df5`  
+- Local copy: `aria-acm-v0.24.0-1`  
+- Problem report: `docs/acm_integration/PROBLEM_REPORT_M0L.md`  
+- Gates: `tests/test_aria_acm_m0l.py` (M0L-01..05)  
+- **STOP** — await approval before beginning the next cognitive subsystem
+
