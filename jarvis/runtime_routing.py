@@ -71,7 +71,10 @@ _USER_MEMORY_EXCLUDE = re.compile(
     r"why\b.+\b(?:isn'?t|is\s+not|no\s+longer)\b.+\bactive|"
     r"why\b.+\bactive|"
     r"what\s+replaced|"
-    r"retired|superseded|replaced"
+    r"retired|superseded|replaced|"
+    r"evidence|"
+    r"history behind this memory|"
+    r"why this memory changed"
     r")\b",
     re.I,
 )

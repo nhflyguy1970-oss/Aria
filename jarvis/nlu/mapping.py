@@ -44,7 +44,11 @@ _USER_MEMORY = re.compile(
     r"\bwhy\b.+\b(?:isn'?t|is\s+not|no\s+longer)\b.+\bactive\b|"
     r"\bwhy\b.+\bactive\b|"
     r"\bwhat\s+replaced\b|"
-    r"\b(?:retired|superseded|replaced)\b",
+    r"\b(?:retired|superseded|replaced)\b|"
+    # Evidence / lineage introspection (must not fall through to memory_search)
+    r"\bevidence\b|"
+    r"\bhistory\s+behind\s+this\s+memory\b|"
+    r"\bwhy\s+this\s+memory\s+changed\b",
     re.I,
 )
 
@@ -95,6 +99,19 @@ _MEMORY_RECALL_RUNTIME = re.compile(
 )
 _MEMORY_LIST = re.compile(
     r"\b(?:recall|list\s+(?:my\s+)?memor(?:y|ies)|show\s+(?:my\s+)?memor(?:y|ies))\b",
+    re.I,
+)
+# Evidence / lineage — Memory Authority speak path (never memory_search).
+_MEMORY_EVIDENCE = re.compile(
+    r"\b("
+    r"(?:show|tell|give|list)\s+(?:me\s+)?(?:the\s+)?(?:my\s+)?(?:memory\s+)?evidence|"
+    r"what(?:'s|\s+is)\s+(?:the\s+)?evidence|"
+    r"what\s+evidence\b|"
+    r"supporting\s+evidence|"
+    r"evidence\s+for|"
+    r"show\s+(?:the\s+)?history\s+behind\s+this\s+memory|"
+    r"show\s+why\s+this\s+memory\s+changed"
+    r")\b",
     re.I,
 )
 
@@ -188,6 +205,14 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
             "action": "memory_about_user",
             "params": {"question": message},
             "thinking": "memory explanation",
+        }
+
+    # Evidence reconstruction — full original prompt to Memory Authority (never search)
+    if _MEMORY_EVIDENCE.search(lower):
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "memory evidence",
         }
 
     if _MEMORY_RECALL_FACT.search(lower) and not _MEMORY_RECALL_RUNTIME.search(lower):
