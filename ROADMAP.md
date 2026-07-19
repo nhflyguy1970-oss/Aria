@@ -23,7 +23,7 @@
 | **Phase M0I — Promote ACM v0.21.0 (Preference Certification)** | **Complete** | `aria-acm-v0.21.0-1` · A018 |
 | **Phase M0J — Promote ACM v0.22.0 (Teaching Recognition)** | **Complete** | `aria-acm-v0.22.0-1` · A019 |
 | **Phase M0K — Promote ACM v0.23.0 (Multi-domain + Evidence)** | **Complete** | `aria-acm-v0.23.0-1` · A020 |
-| **Phase M0L — Promote ACM v0.24.0 (Explanation + Summary)** | **Complete** | `aria-acm-v0.24.0-1` · A021 |
+| **Phase M0L — Promote ACM v0.24.0 (Explanation + Summary)** | **Complete · CERTIFIED · FROZEN** | `aria-acm-v0.24.0-1` · A021 · A022 · [`M0L_CERTIFICATION.md`](docs/acm_integration/M0L_CERTIFICATION.md) |
 | **Memory Foundation v1.0 — Behavioral Certification** | **CERTIFIED** | D038–D047 · [`docs/MEMORY_FOUNDATION_V1_CERTIFICATION.md`](docs/MEMORY_FOUNDATION_V1_CERTIFICATION.md) · A017 |
 | **Cognitive Infrastructure Conversion** | **Complete** | ACM sole brain · MC/Trace ACM · A010 |
 | **Cognitive Memory Reset v1** | **Complete** | Clean post-D041 autobiographical baseline · A011 |

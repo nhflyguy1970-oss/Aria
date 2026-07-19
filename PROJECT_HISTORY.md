@@ -1,5 +1,12 @@
 # Project History — Aria / Jarvis
 
+## 2026-07-19 — M0L Certified & Frozen
+
+M0L released and frozen. Certification record:
+[`docs/acm_integration/M0L_CERTIFICATION.md`](docs/acm_integration/M0L_CERTIFICATION.md).
+Standalone ACM `v0.24.0` / `3c3bdbc`; Aria integration `7343faa`; tag
+`m0l-certified`. Live UI validation PASS. No further feature work on M0L.
+
 ## 2026-07-17 — M0L: Promote ACM v0.24.0 (Memory explanation + personal summary)
 
 Controlled promotion of certified standalone ACM v0.24.0 into `aria_acm/`

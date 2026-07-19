@@ -1,10 +1,34 @@
 # Changelog — Aria / Jarvis
 
+## [M0L Certified] — 2026-07-19
+
+**Frozen.** See [`docs/acm_integration/M0L_CERTIFICATION.md`](docs/acm_integration/M0L_CERTIFICATION.md).
+
+Certified against standalone ACM **v0.24.0** (`3c3bdbc`). Aria tags: `m0l-certified`.
+
+### Certified capabilities
+
+- Teaching Recognition  
+- Multi-domain memory  
+- Memory updates + lineage  
+- Evidence reconstruction  
+- Explanation (why / replaced / active)  
+- Active-only personal summary  
+- Promotion fidelity verification  
+- Aria routing validation (Memory Authority path; evidence → `memory_about_user`)
+
+### Integration pin
+
+- Aria evidence routing: `7343faa`  
+- M0L promotion: `adc722f` · `aria-acm-v0.24.0-1`
+
 ## [Unreleased] — 2026-07-17
 
 ### Added
 
 - **M0L:** Promoted certified standalone ACM **v0.24.0** into `aria_acm/` as `aria-acm-v0.24.0-1` (commit `3c3bdbc…`). Fixes final live explanation/summary failures: Why/replaced/active questions reconstruct from certified lineage; `What do you know about me?` summarizes active memories only; Aria NLU/runtime guards keep these on Memory Authority (never Mission Control). Gates: `tests/test_aria_acm_m0l.py`.
+
+- **Evidence routing:** Evidence cues (`Show me the evidence.`, etc.) route to `memory_about_user` with the full original prompt (never `memory_search`). Gates: `tests/test_evidence_routing.py`. Commit `7343faa`.
 
 - **M0K:** Promoted certified standalone ACM **v0.23.0** into `aria_acm/` as `aria-acm-v0.23.0-1` (commit `82a9499…`). Fixes live multi-domain preference collapse (favorite food/fish no longer answer as favorite color) and evidence reconstruction (`Show me the evidence.` returns active/retired lineage without mutating memory). Domains remain independent across updates and restart. Gates: `tests/test_aria_acm_m0k.py`.
 

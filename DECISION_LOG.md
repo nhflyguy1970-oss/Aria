@@ -409,3 +409,23 @@ M0L promotion is complete. Aria's vendored copy at `aria_acm/` matches certified
 - Gates: `tests/test_aria_acm_m0l.py` (M0L-01..05)  
 - **STOP** — await approval before beginning the next cognitive subsystem
 
+---
+
+## A022 — M0L certified and frozen (2026-07-19)
+
+**Status:** Accepted  
+**Related:** A021 · ACM `v0.24.0` / `3c3bdbc` · Aria integration `7343faa` · certification tip `m0l-certified`
+
+### Decision
+
+M0L is certified complete and **frozen**. Live validation, promotion fidelity,
+bridge verification, and regression suite all PASS. Evidence-oriented host
+routing (`7343faa`) is included in the certified integration surface. No further
+feature work proceeds under M0L; the next change requires a new milestone.
+
+### Consequences
+
+- Certification record: `docs/acm_integration/M0L_CERTIFICATION.md`  
+- Tags: ACM `v0.24.0` · Aria `m0l-certified`  
+- Future work starts a new milestone (ACM-first pipeline)
+
