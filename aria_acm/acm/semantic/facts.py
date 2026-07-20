@@ -34,7 +34,7 @@ _DOG_NAME = re.compile(
 _LIVE_IN = re.compile(r"\bi\s+live\s+in\s+(.+?)(?:\.|$)", re.I)
 _LOCATED = re.compile(r"\bi\s+(?:am\s+)?(?:from|based\s+in)\s+(.+?)(?:\.|$)", re.I)
 
-_PREFER = re.compile(r"\bi\s+prefer\s+(.+?)(?:\.|$)", re.I)
+_PREFER = re.compile(r"\bi\s+(?:now\s+)?prefer\s+(.+?)(?:\.|$)", re.I)
 _FAVORITE = re.compile(
     r"(?:my\s+)?(?:favorite|favourite)\s+(\w+(?:\s+\w+)?)\s+is\s+(.+?)(?:\.|$)",
     re.I,
@@ -60,9 +60,9 @@ _GOAL = re.compile(
 )
 _PROJECT = re.compile(
     r"\b(?:my\s+project\s+is|"
-    r"(?:i'?m|i\s+am)\s+working\s+on(?:\s+project)?|"
-    r"(?:i'?m|i\s+am)\s+building|"
-    r"(?:i'?m|i\s+am)\s+developing)\s+(.+?)(?:\.|$)",
+    r"(?:i'?m|i\s+am)\s+(?:now\s+)?working\s+on(?:\s+project)?|"
+    r"(?:i'?m|i\s+am)\s+(?:now\s+)?building|"
+    r"(?:i'?m|i\s+am)\s+(?:now\s+)?developing)\s+(.+?)(?:\.|$)",
     re.I,
 )
 _LIKE = re.compile(r"\bi\s+like\s+(.+?)(?:\.|$)", re.I)
@@ -70,7 +70,8 @@ _LIKE = re.compile(r"\bi\s+like\s+(.+?)(?:\.|$)", re.I)
 # Semantic autobiographical possessions / device attributes.
 _OWNED_ENTITIES = (
     r"laptop|desktop|computer|pc|workstation|machine|phone|tablet|"
-    r"server|nas|gpu|editor|keyboard|mouse|monitor"
+    r"server|nas|gpu|editor|keyboard|mouse|monitor|"
+    r"truck|vehicle|car|van|boat|kayak|printer|camera|watch|router"
 )
 _POSSESSION_RUNS = re.compile(
     rf"\bmy\s+({_OWNED_ENTITIES})\s+(?:runs|running|uses|using)\s+(.+?)(?:\.|$)",
@@ -85,7 +86,34 @@ _POSSESSION_IS = re.compile(
     rf"gpu|ram|memory|editor)\s+is\s+(.+?)(?:\.|$)",
     re.I,
 )
+_POSSESSION_MODEL = re.compile(
+    rf"\bmy\s+({_OWNED_ENTITIES})\s+is\s+(?:an?\s+)?(.+?)(?:\.|$)",
+    re.I,
+)
 _I_USE = re.compile(r"\bi\s+use\s+(.+?)(?:\.|$)", re.I)
+
+# Lifecycle verbs — update active state while preserving history.
+_PROJECT_FINISHED = re.compile(
+    r"\b([A-Za-z][\w'’.-]{1,40})\s+is\s+(?:finished|complete|completed|retired|done)\b",
+    re.I,
+)
+_NO_LONGER_USE = re.compile(
+    rf"\bi\s+no\s+longer\s+(?:use|own|have)\s+(?:my\s+)?({_OWNED_ENTITIES})\b",
+    re.I,
+)
+_SWITCHED_TO = re.compile(
+    rf"\bi\s+switched\s+(?:(?:my\s+)?({_OWNED_ENTITIES})\s+)?"
+    rf"(?:over\s+)?to\s+(.+?)(?:\.|$)",
+    re.I,
+)
+_REPLACED_WITH = re.compile(
+    r"\bi\s+replaced\s+(?:my\s+)?(.+?)\s+with\s+(?:an?\s+)?(.+?)(?:\.|$)",
+    re.I,
+)
+_USED_TO = re.compile(
+    r"\bi\s+used\s+to\s+(?:use|run|prefer|work\s+on)\s+(.+?)(?:\.|$)",
+    re.I,
+)
 
 _OS_HINTS = {
     "zorin",
@@ -116,6 +144,10 @@ def _possession_property(value: str, *, hinted: str | None = None) -> str:
             return "ram"
         if h == "editor":
             return "editor"
+        if h == "model":
+            return "model"
+        if h == "status":
+            return "status"
         return h
     low = (value or "").lower()
     if any(h in low for h in _OS_HINTS) or low.strip() in _OS_HINTS:
@@ -129,12 +161,30 @@ def _possession_property(value: str, *, hinted: str | None = None) -> str:
     return "attribute"
 
 
+_MODEL_ENTITIES = frozenset(
+    {
+        "phone",
+        "tablet",
+        "truck",
+        "vehicle",
+        "car",
+        "van",
+        "boat",
+        "kayak",
+        "printer",
+        "camera",
+        "watch",
+        "router",
+    }
+)
+
+
 def _extract_possession(
     text: str,
     *,
     subject: PerspectiveSubject,
 ) -> list[CognitiveFact]:
-    """Extract owned-entity attribute facts (OS, GPU, RAM, editor, …)."""
+    """Extract owned-entity attribute facts (OS, GPU, RAM, editor, model, …)."""
     t = (text or "").strip()
     if not t or _INTERROGATIVE.search(t):
         return []
@@ -177,7 +227,6 @@ def _extract_possession(
     m = _POSSESSION_IS.search(t)
     if m:
         entity = _clean_value(m.group(1)).lower()
-        # pattern groups: entity, then value — property inferred from wording
         value = _clean_value(m.group(2))
         prop_m = re.search(
             r"\b(os|operating\s+system|graphics\s+card|gpu|ram|memory|editor)\b",
@@ -198,6 +247,28 @@ def _extract_possession(
                 )
             )
 
+    m = _POSSESSION_MODEL.search(t)
+    if m and not out:
+        entity = _clean_value(m.group(1)).lower()
+        value = _clean_value(m.group(2))
+        # Avoid "My laptop is running …" style — already covered by RUNS.
+        if entity and value and not re.match(r"^(?:running|using)\b", value, re.I):
+            prop = "model" if entity in _MODEL_ENTITIES else _possession_property(value)
+            if prop == "attribute" and entity in _MODEL_ENTITIES:
+                prop = "model"
+            if prop in ("model", "os", "gpu", "ram", "editor", "attribute"):
+                out.append(
+                    CognitiveFact(
+                        kind=FactKind.POSSESSION,
+                        subject=subject,
+                        property=prop if prop != "attribute" else "model",
+                        value=value,
+                        relation_type=entity,
+                        confidence=0.88,
+                        labels=(entity,),
+                    )
+                )
+
     m = _I_USE.search(t)
     if m and not out:
         value = _clean_value(m.group(1))
@@ -214,6 +285,179 @@ def _extract_possession(
                     labels=("computer" if prop == "os" else "editor",),
                 )
             )
+    return out
+
+
+def _extract_lifecycle(
+    text: str,
+    *,
+    subject: PerspectiveSubject,
+) -> list[CognitiveFact]:
+    """Lifecycle verbs: finished, switched, replaced, no longer use."""
+    t = (text or "").strip()
+    if not t or _INTERROGATIVE.search(t):
+        return []
+    out: list[CognitiveFact] = []
+
+    m = _PROJECT_FINISHED.search(t)
+    if m:
+        title = _clean_value(m.group(1))
+        # Avoid false positives like "Dinner is finished"
+        if title and title.lower() not in {
+            "it",
+            "that",
+            "this",
+            "everything",
+            "dinner",
+            "lunch",
+            "work",
+            "day",
+            "night",
+        }:
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.PROJECT,
+                    subject=subject,
+                    property="status",
+                    value="finished",
+                    relation_type=title,
+                    update_op=UpdateOp.NEGATE,
+                    confidence=0.9,
+                    labels=(title.lower(),),
+                )
+            )
+
+    m = _NO_LONGER_USE.search(t)
+    if m:
+        entity = _clean_value(m.group(1)).lower()
+        if entity:
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.POSSESSION,
+                    subject=subject,
+                    property="status",
+                    value="retired",
+                    relation_type=entity,
+                    update_op=UpdateOp.NEGATE,
+                    confidence=0.92,
+                    labels=(entity,),
+                )
+            )
+
+    m = _SWITCHED_TO.search(t)
+    if m:
+        entity = _clean_value(m.group(1) or "").lower()
+        value = _clean_value(m.group(2))
+        if value:
+            prop = _possession_property(value)
+            if prop == "attribute" and any(h in value.lower() for h in _OS_HINTS):
+                prop = "os"
+            if not entity:
+                entity = "laptop" if prop == "os" else ("desktop" if prop == "gpu" else "computer")
+            if prop in ("os", "gpu", "ram", "editor", "model") or prop == "attribute":
+                if prop == "attribute":
+                    # Preference-like switch: "I switched to cloud AI"
+                    low = value.lower()
+                    if "ai" in low or "local" in low or "cloud" in low:
+                        out.append(
+                            CognitiveFact(
+                                kind=FactKind.PREFERENCE,
+                                subject=subject,
+                                property="prefer_ai",
+                                value=value,
+                                update_op=UpdateOp.REVISE,
+                                confidence=0.88,
+                                labels=("ai",),
+                            )
+                        )
+                    else:
+                        out.append(
+                            CognitiveFact(
+                                kind=FactKind.POSSESSION,
+                                subject=subject,
+                                property="os" if any(h in low for h in _OS_HINTS) else "attribute",
+                                value=value,
+                                relation_type=entity,
+                                update_op=UpdateOp.REVISE,
+                                confidence=0.86,
+                                labels=(entity,),
+                            )
+                        )
+                else:
+                    out.append(
+                        CognitiveFact(
+                            kind=FactKind.POSSESSION,
+                            subject=subject,
+                            property=prop,
+                            value=value,
+                            relation_type=entity,
+                            update_op=UpdateOp.REVISE,
+                            confidence=0.9,
+                            labels=(entity,),
+                        )
+                    )
+
+    m = _REPLACED_WITH.search(t)
+    if m:
+        old_val = _clean_value(m.group(1))
+        new_val = _clean_value(m.group(2))
+        if old_val and new_val:
+            prop = _possession_property(new_val) or _possession_property(old_val)
+            entity = "desktop" if prop == "gpu" else ("laptop" if prop == "os" else "computer")
+            # "my desktop's GPU" / "my laptop RTX" — peel entity prefix
+            ent_m = re.match(
+                rf"^(?:my\s+)?({_OWNED_ENTITIES})(?:'s)?\s+(.+)$",
+                old_val,
+                re.I,
+            )
+            if ent_m:
+                entity = ent_m.group(1).lower()
+                old_val = _clean_value(ent_m.group(2))
+                prop = _possession_property(new_val) or _possession_property(old_val)
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.POSSESSION,
+                    subject=subject,
+                    property=prop if prop != "attribute" else "gpu",
+                    value=new_val,
+                    relation_type=entity,
+                    update_op=UpdateOp.REVISE,
+                    confidence=0.9,
+                    labels=(entity, f"replaced:{old_val}"),
+                )
+            )
+
+    m = _USED_TO.search(t)
+    if m and not out:
+        value = _clean_value(m.group(1))
+        if value:
+            prop = _possession_property(value)
+            if prop == "os":
+                out.append(
+                    CognitiveFact(
+                        kind=FactKind.POSSESSION,
+                        subject=subject,
+                        property="os",
+                        value=value,
+                        relation_type="laptop",
+                        update_op=UpdateOp.SET,
+                        confidence=0.75,
+                        labels=("laptop", "historical"),
+                    )
+                )
+            elif "ai" in value.lower() or "local" in value.lower() or "cloud" in value.lower():
+                out.append(
+                    CognitiveFact(
+                        kind=FactKind.PREFERENCE,
+                        subject=subject,
+                        property="prefer_ai",
+                        value=value,
+                        update_op=UpdateOp.SET,
+                        confidence=0.75,
+                        labels=("ai", "historical"),
+                    )
+                )
+
     return out
 
 
@@ -531,6 +775,7 @@ def extract_fact_patterns(
             elif re.search(r"\bdebug", low) or "step-by-step" in low or "step by step" in low:
                 domain = "debugging"
             prop = f"prefer_{domain}" if domain else "preference"
+            op = UpdateOp.REVISE if re.search(r"\bi\s+now\s+prefer\b", t, re.I) else UpdateOp.SET
             facts.append(
                 CognitiveFact(
                     kind=FactKind.PREFERENCE,
@@ -538,6 +783,7 @@ def extract_fact_patterns(
                     property=prop,
                     value=value,
                     confidence=0.82,
+                    update_op=op,
                     labels=(domain,) if domain else (),
                 )
             )
@@ -556,17 +802,23 @@ def extract_fact_patterns(
 
     m = _PROJECT.search(t)
     if m:
+        op = UpdateOp.REVISE if re.search(r"\bnow\b", t, re.I) else UpdateOp.SET
         facts.append(
             CognitiveFact(
                 kind=FactKind.PROJECT,
                 subject=fp,
                 property="project",
                 value=_clean_value(m.group(1)),
+                update_op=op,
                 confidence=0.8,
             )
         )
 
-    # Semantic autobiographical possessions (OS / hardware / tools)
+    # Lifecycle verbs before generic possession so "no longer use" wins.
+    if not _INTERROGATIVE.search(t):
+        facts.extend(_extract_lifecycle(t, subject=fp))
+
+    # Semantic autobiographical possessions (OS / hardware / tools / models)
     if not _INTERROGATIVE.search(t):
         facts.extend(_extract_possession(t, subject=fp))
 
@@ -576,11 +828,16 @@ def extract_fact_patterns(
         if ep is not None:
             facts.append(ep)
 
-    # Deduplicate by (subject, property, value)
-    seen: set[tuple[str, str, str]] = set()
+    # Deduplicate by (subject, property, value, relation) — keep lifecycle status distinct
+    seen: set[tuple[str, str, str, str]] = set()
     unique: list[CognitiveFact] = []
     for f in facts:
-        key = (f.subject.value, f.property, f.value.casefold())
+        key = (
+            f.subject.value,
+            f.property,
+            f.value.casefold(),
+            (f.relation_type or "").casefold(),
+        )
         if key in seen:
             continue
         seen.add(key)

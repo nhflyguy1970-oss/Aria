@@ -97,8 +97,20 @@ _POSSESSION_HAS_RAM = re.compile(
     r"\b(?:user|assistant)\s+(\w+)\s+has\s+(.+?)\s+RAM(?:\.|;|$)",
     re.I,
 )
+_POSSESSION_MODEL = re.compile(
+    r"\b(?:user|assistant)\s+(\w+)\s+model\s+is\s+(.+?)(?:\.|;|$)",
+    re.I,
+)
+_POSSESSION_STATUS = re.compile(
+    r"\b(?:user|assistant)\s+(\w+)\s+status\s+is\s+(.+?)(?:\.|;|$)",
+    re.I,
+)
 _PROJECT_SUMMARY = re.compile(
     r"\bproject:\s*(.+?)(?:\.|;|$)",
+    re.I,
+)
+_PROJECT_STATUS = re.compile(
+    r"\bproject\s+(.+?)\s+status\s+is\s+(finished|complete|completed|retired|done|active)\b",
     re.I,
 )
 
@@ -211,6 +223,30 @@ def extract_cues(text: str, *, encode_kind: str = "experience") -> list[ConceptC
                     attr_value=value,
                 )
             )
+    for m in _POSSESSION_MODEL.finditer(t):
+        entity = _clean_label(m.group(1))
+        value = m.group(2).strip().rstrip(".")
+        if entity and value:
+            cues.append(
+                ConceptCue(
+                    label=entity,
+                    role=ConceptRole.ENTITY,
+                    attr_key="model",
+                    attr_value=value,
+                )
+            )
+    for m in _POSSESSION_STATUS.finditer(t):
+        entity = _clean_label(m.group(1))
+        value = m.group(2).strip().rstrip(".")
+        if entity and value:
+            cues.append(
+                ConceptCue(
+                    label=entity,
+                    role=ConceptRole.ENTITY,
+                    attr_key="status",
+                    attr_value=value,
+                )
+            )
     for m in _PROJECT_SUMMARY.finditer(t):
         title = m.group(1).strip().rstrip(".")
         if title:
@@ -220,6 +256,18 @@ def extract_cues(text: str, *, encode_kind: str = "experience") -> list[ConceptC
                     role=ConceptRole.ENTITY,
                     attr_key="project",
                     attr_value=title,
+                )
+            )
+    for m in _PROJECT_STATUS.finditer(t):
+        title = m.group(1).strip().rstrip(".")
+        status = m.group(2).strip().lower()
+        if title and status:
+            cues.append(
+                ConceptCue(
+                    label=f"project {title}",
+                    role=ConceptRole.ENTITY,
+                    attr_key="status",
+                    attr_value="finished" if status in ("complete", "completed", "done", "retired") else status,
                 )
             )
 

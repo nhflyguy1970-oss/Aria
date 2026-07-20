@@ -31,6 +31,7 @@ _SEMANTIC_PROP_KEYS = frozenset(
         "gpu",
         "ram",
         "editor",
+        "model",
         "attribute",
         "project",
         "preference",
@@ -58,20 +59,46 @@ class SemanticFact:
 
 def collect_semantic_facts(store: Any) -> list[SemanticFact]:
     """Gather active semantic autobiographical facts from experiences + concepts."""
+    from acm.remembering.evolution import (
+        active_projects_from_history,
+        collect_semantic_history,
+        finished_projects,
+        retired_entities,
+    )
+
+    history = collect_semantic_history(store)
+    retired = retired_entities(history)
+    finished = finished_projects(history)
+    active_project_titles = {
+        n.casefold() for n in active_projects_from_history(history)
+    }
+
     by_slot: dict[tuple[str, str, str], SemanticFact] = {}
     extras: list[SemanticFact] = []  # identity/skill/location without slot overwrite
 
     def _slot_key(fact: SemanticFact) -> tuple[str, str, str] | None:
         if fact.kind == "possession":
+            if fact.property == "status":
+                return None
             return (fact.kind, fact.property.lower(), (fact.entity or "").lower())
         if fact.kind == "preference":
             return (fact.kind, fact.property.lower(), "")
         if fact.kind == "project":
+            if fact.property == "status":
+                return None
             # Each project title is its own slot (do not overwrite Aria with BlackFly).
             return (fact.kind, "project", fact.value.casefold())
         return None
 
     def _add(fact: SemanticFact) -> None:
+        if fact.kind == "possession" and (fact.entity or "").lower() in retired:
+            return
+        if fact.kind == "project":
+            key = fact.value.casefold()
+            if key in finished:
+                return
+            if active_project_titles and key not in active_project_titles:
+                return
         slot = _slot_key(fact)
         if slot is not None:
             by_slot[slot] = fact  # later call wins
@@ -87,6 +114,10 @@ def collect_semantic_facts(store: Any) -> list[SemanticFact]:
     def _ingest_attr_concept() -> None:
         for concept in store.concepts.values():
             labels = " ".join(getattr(concept, "labels", []) or []).lower()
+            # Skip fully retired entity concepts for active attrs (status handled via history).
+            entity_label = labels.split()[0] if labels else ""
+            if entity_label in retired:
+                continue
             for attr in getattr(concept, "attributes", []) or []:
                 if not getattr(attr, "active", False):
                     continue
@@ -103,6 +134,7 @@ def collect_semantic_facts(store: Any) -> list[SemanticFact]:
                     "surface_form",
                     "category",
                     "instance_of",
+                    "status",
                 ):
                     continue
                 if key.startswith("favorite_") or key.startswith("prefer_") or key == "preference":
@@ -123,8 +155,8 @@ def collect_semantic_facts(store: Any) -> list[SemanticFact]:
                             entity="",
                         )
                     )
-                elif key in _SEMANTIC_PROP_KEYS or key in ("os", "gpu", "ram", "editor"):
-                    entity = labels.split()[0] if labels else ""
+                elif key in _SEMANTIC_PROP_KEYS or key in ("os", "gpu", "ram", "editor", "model"):
+                    entity = entity_label
                     # Never treat identity schema labels as owned entities.
                     if entity in ("user", "agent") or labels.startswith("agent:"):
                         continue
@@ -170,6 +202,8 @@ def collect_semantic_facts(store: Any) -> list[SemanticFact]:
                     continue
                 entity = meta.get(f"fact_{i}_relation") or ""
                 if kind == "experience":
+                    continue
+                if prop == "status":
                     continue
                 if kind in (
                     "possession",
@@ -226,10 +260,18 @@ def is_semantic_autobiography_query(cue: str) -> bool:
             r"prefer\s+local|local\s+or\s+cloud|"
             r"know\s+about\s+my\s+(?:computer|laptop|desktop|ai|setup|machines?)|"
             r"tell\s+me\s+what\s+you\s+know\s+about\s+my|"
+            r"tell\s+me\s+about\s+my\s+computers?|"
             r"summarize\s+what\s+you\s+know|"
             r"which\s+computer\b.+\b(?:better|training|ai\s+models?)|"
             r"better\s+for\s+training|"
-            r"favorite\s+editor|what\s+editor\b"
+            r"favorite\s+editor|what\s+editor\b|"
+            r"has\s+(?:my|the)\b.+\bchanged\b|"
+            r"have\s+(?:my|the)\b.+\bchanged\b|"
+            r"how\s+has\s+my\b.+\bchanged\b|"
+            r"what\s+operating\s+systems?\s+has\b|"
+            r"what\s+projects?\s+have\s+i\s+worked\b|"
+            r"what\s+(?:phone|printer|truck|vehicle|kayak|car)\s+do\s+i\b|"
+            r"what\s+vehicles?\s+do\s+i\s+own\b"
             r")\b",
             text,
             re.I,
@@ -237,12 +279,31 @@ def is_semantic_autobiography_query(cue: str) -> bool:
     )
 
 
-def answer_semantic_query(cue: str, facts: list[SemanticFact]) -> str | None:
+def answer_semantic_query(cue: str, facts: list[SemanticFact], *, store: Any = None) -> str | None:
     """Answer a semantic autobiographical cue from collected facts, or None."""
     text = (cue or "").strip()
     if not text:
         return None
     low = text.lower()
+
+    # Memory evolution / historical reasoning (needs full lineage).
+    if store is not None:
+        from acm.remembering.evolution import (
+            answer_evolution_query,
+            collect_semantic_history,
+            is_memory_evolution_query,
+        )
+
+        if is_memory_evolution_query(text) or re.search(
+            r"\b(changed|have\s+i\s+worked|operating\s+systems?\s+has|"
+            r"tell\s+me\s+about\s+my\s+computers?|what\s+phone\b|what\s+printer\b|"
+            r"what\s+vehicles?\b|how\s+has\s+my)\b",
+            low,
+        ):
+            hist = collect_semantic_history(store)
+            evo = answer_evolution_query(text, hist, active_facts=facts)
+            if evo is not None:
+                return evo
 
     if re.search(r"\bsummarize\s+what\s+you\s+know\b|\bwhat\s+do\s+you\s+know\s+about\s+me\b", low):
         return format_personal_summary(facts)
@@ -259,14 +320,35 @@ def answer_semantic_query(cue: str, facts: list[SemanticFact]) -> str | None:
     if re.search(r"\bwhat\s+do\s+i\s+prefer\b", low):
         return format_preferences(facts)
 
-    if re.search(r"\blocal\b.+\bcloud\b|\bcloud\b.+\blocal\b|\bprefer\s+local\b", low):
+    if re.search(r"\blocal\b.+\bcloud\b|\bcloud\b.+\blocal\b|\bprefer\s+local\b|\bprefer\s+cloud\b", low):
         return answer_local_vs_cloud(facts)
 
     if re.search(r"\bresponses?\b.+\bdebug|\bdebug.+\blike\b|\bkind\s+of\s+responses?\b", low):
         return answer_debugging_preference(facts)
 
     if re.search(r"\boperating\s+system\b|\bwhat\s+os\b", low):
-        return answer_os_query(facts, low)
+        ans = answer_os_query(facts, low)
+        if ans == UNKNOWN and store is not None:
+            from acm.remembering.evolution import collect_semantic_history, lineage_values
+
+            hist = collect_semantic_history(store)
+            entity = ""
+            if "laptop" in low:
+                entity = "laptop"
+            elif "desktop" in low:
+                entity = "desktop"
+            elif "phone" in low:
+                entity = "phone"
+            elif "tablet" in low:
+                entity = "tablet"
+            # Only offer historical OS when that specific entity has lineage.
+            if entity:
+                vals = lineage_values(
+                    history=hist, kind="possession", property="os", entity=entity
+                )
+                if vals:
+                    return f"Your {entity} previously ran {vals[-1]} (historical)."
+        return ans
 
     if re.search(r"\bgraphics\s+card\b|\bwhat\s+gpu\b|\bgpu\b", low):
         return answer_gpu_query(facts, low)
@@ -277,7 +359,17 @@ def answer_semantic_query(cue: str, facts: list[SemanticFact]) -> str | None:
     if re.search(r"\beditor\b", low):
         return answer_editor_query(facts)
 
+    if re.search(r"\bwhat\s+phone\b|\bphone\s+do\s+i\b", low):
+        return answer_owned_query(facts, "phone")
+
     return None
+
+
+def answer_owned_query(facts: list[SemanticFact], entity: str) -> str:
+    for f in _possessions(facts):
+        if f.entity == entity and f.property in ("model", "attribute"):
+            return f"Your {entity} is {f.value}."
+    return UNKNOWN
 
 
 def _possessions(facts: list[SemanticFact]) -> list[SemanticFact]:

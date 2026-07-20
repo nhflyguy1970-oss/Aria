@@ -405,7 +405,7 @@ class RememberingOrgan:
 
         if is_semantic_autobiography_query(cue):
             sem_facts = collect_semantic_facts(self.store)
-            sem_answer = answer_semantic_query(cue, sem_facts)
+            sem_answer = answer_semantic_query(cue, sem_facts, store=self.store)
             if sem_answer is None:
                 sem_answer = _SEM_UNKNOWN
             return Reconstruction(

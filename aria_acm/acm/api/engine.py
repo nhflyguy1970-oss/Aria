@@ -481,6 +481,7 @@ class CognitiveEngine:
             exp_metadata[f"fact_{i}_subject"] = fact.subject.value
             exp_metadata[f"fact_{i}_property"] = fact.property
             exp_metadata[f"fact_{i}_value"] = fact.value[:200]
+            exp_metadata[f"fact_{i}_update_op"] = fact.update_op.value
             if fact.relation_type:
                 # Experiences use relation_type as temporal; possessions use it as entity.
                 if fact.kind.value == "experience":
@@ -558,7 +559,7 @@ class CognitiveEngine:
                     self.open_goal(fact.value, importance=0.7)
                 except Exception:
                     pass
-            if fact.kind.value == "project" and fact.value:
+            if fact.kind.value == "project" and fact.property == "project" and fact.value:
                 try:
                     project = self.identity.schema_concept("project")
                     from acm.types import Attribute as _Attr
@@ -578,6 +579,9 @@ class CognitiveEngine:
                         )
                 except Exception:
                     pass
+
+        # Memory evolution — retire finished projects / unused entities (history preserved).
+        self._apply_lifecycle_facts(extraction.facts, experience_id=exp.id)
 
         identity_result = self.identity.integrate_encode(
             text=text,
@@ -1366,6 +1370,118 @@ class CognitiveEngine:
         }
 
     # --- internals --------------------------------------------------------------
+
+    def _apply_lifecycle_facts(self, facts: list[Any], *, experience_id: str) -> None:
+        """Retire finished projects / unused entities while preserving attribute history."""
+        for fact in facts or []:
+            kind = getattr(fact, "kind", None)
+            kind_v = kind.value if hasattr(kind, "value") else str(kind or "")
+            prop = (getattr(fact, "property", "") or "").lower()
+            value = (getattr(fact, "value", "") or "").strip().lower()
+            relation = (getattr(fact, "relation_type", "") or "").strip()
+
+            if kind_v == "project" and prop == "status" and value in (
+                "finished",
+                "complete",
+                "completed",
+                "retired",
+                "done",
+            ):
+                title = relation or getattr(fact, "value", "") or ""
+                self._retire_project(title, experience_id=experience_id)
+            elif kind_v == "possession" and prop == "status" and value == "retired":
+                self._retire_entity(relation, experience_id=experience_id)
+
+    def _retire_project(self, title: str, *, experience_id: str) -> None:
+        name = (title or "").strip()
+        if not name:
+            return
+        needle = name.casefold()
+        try:
+            project = self.identity.schema_concept("project")
+            for attr in project.attributes:
+                if not attr.active:
+                    continue
+                if attr.key in ("title", "project") and attr.value.casefold() == needle:
+                    attr.active = False
+                    if experience_id and experience_id not in attr.evidence_ids:
+                        attr.evidence_ids.append(experience_id)
+        except Exception:
+            pass
+        for concept in self.store.concepts.values():
+            labels = " ".join(getattr(concept, "labels", []) or []).lower()
+            if needle not in labels and f"project {needle}" not in labels:
+                # Also match attributes by value
+                pass
+            for attr in list(getattr(concept, "attributes", []) or []):
+                if not getattr(attr, "active", False):
+                    continue
+                if attr.key in ("title", "project") and str(attr.value).casefold() == needle:
+                    attr.active = False
+                    if experience_id and experience_id not in attr.evidence_ids:
+                        attr.evidence_ids.append(experience_id)
+                if attr.key == "status" and "project" in labels and needle in labels:
+                    # leave status updates to _apply_attribute supersede
+                    pass
+            # Ensure finished status is recorded on the project concept
+            if needle in labels or any(
+                a.key in ("title", "project") and str(a.value).casefold() == needle
+                for a in getattr(concept, "attributes", []) or []
+            ):
+                from acm.types import Attribute as _Attr
+
+                for attr in concept.attributes:
+                    if attr.key == "status" and attr.active and attr.value.lower() != "finished":
+                        attr.active = False
+                if not any(
+                    a.key == "status" and a.active and a.value.lower() == "finished"
+                    for a in concept.attributes
+                ):
+                    concept.attributes.append(
+                        _Attr(
+                            key="status",
+                            value="finished",
+                            confidence=0.9,
+                            importance=0.7,
+                            evidence_ids=[experience_id] if experience_id else [],
+                        )
+                    )
+
+    def _retire_entity(self, entity: str, *, experience_id: str) -> None:
+        name = (entity or "").strip().lower()
+        if not name:
+            return
+        for concept in self.store.concepts.values():
+            labels = " ".join(getattr(concept, "labels", []) or []).lower()
+            if name not in labels.split() and not labels.startswith(name):
+                continue
+            from acm.types import Attribute as _Attr
+
+            for attr in concept.attributes:
+                if not attr.active:
+                    continue
+                if attr.key == "status":
+                    continue
+                attr.active = False
+                if experience_id and experience_id not in attr.evidence_ids:
+                    attr.evidence_ids.append(experience_id)
+            if not any(
+                a.key == "status" and a.active and a.value.lower() == "retired"
+                for a in concept.attributes
+            ):
+                # Retire any prior status first
+                for attr in concept.attributes:
+                    if attr.key == "status" and attr.active:
+                        attr.active = False
+                concept.attributes.append(
+                    _Attr(
+                        key="status",
+                        value="retired",
+                        confidence=0.92,
+                        importance=0.8,
+                        evidence_ids=[experience_id] if experience_id else [],
+                    )
+                )
 
     def _link_episodic_neighbors(self, exp: Any) -> None:
         """Link a new episodic experience to nearest earlier/later episodic events."""

@@ -83,12 +83,17 @@ class CognitiveFact:
         if self.kind == FactKind.GOAL:
             return f"Goal: {self.value}"
         if self.kind == FactKind.PROJECT:
+            if self.property == "status":
+                title = (self.relation_type or self.value).strip()
+                return f"Project {title} status is {self.value}"
             return f"Project: {self.value}"
         if self.kind == FactKind.SKILL:
             return f"{subj} can {self.value}"
         if self.kind == FactKind.POSSESSION:
             entity = (self.relation_type or "item").replace("_", " ")
             prop = (self.property or "attribute").replace("_", " ")
+            if prop == "status":
+                return f"{subj} {entity} status is {self.value}"
             if prop == "os":
                 return f"{subj} {entity} runs {self.value}"
             if prop == "gpu":
@@ -97,6 +102,8 @@ class CognitiveFact:
                 return f"{subj} {entity} has {self.value} RAM"
             if prop == "editor":
                 return f"{subj} {entity} is {self.value}"
+            if prop == "model":
+                return f"{subj} {entity} model is {self.value}"
             return f"{subj} {entity} {prop} is {self.value}"
         if self.kind == FactKind.EXPERIENCE:
             action = (self.property or "experienced").replace("_", " ")

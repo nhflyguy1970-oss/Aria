@@ -264,7 +264,14 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
             r"do\s+i\s+prefer\s+local|"
             r"local\s+or\s+cloud|"
             r"what\s+kind\s+of\s+responses?\b.+\bdebug|"
-            r"summarize\s+what\s+you\s+know\s+about\s+me"
+            r"summarize\s+what\s+you\s+know\s+about\s+me|"
+            r"has\s+my\s+(?:desktop|laptop|computer|hardware|gpu)\b.+\bchanged\b|"
+            r"have\s+my\s+(?:ai\s+)?preferences?\s+changed\b|"
+            r"how\s+has\s+my\s+(?:ai\s+setup|computer|computers?)\s+changed\b|"
+            r"what\s+operating\s+systems?\s+has\s+my\b|"
+            r"what\s+projects?\s+have\s+i\s+worked\b|"
+            r"tell\s+me\s+about\s+my\s+computers?\b|"
+            r"what\s+(?:phone|printer|truck|vehicle|kayak)\s+do\s+i\b"
             r")\b",
             re.I,
         ),
