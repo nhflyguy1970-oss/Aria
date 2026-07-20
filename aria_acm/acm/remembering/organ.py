@@ -892,39 +892,51 @@ class RememberingOrgan:
                 best = e
         return best if best_score > 0 else None
 
+    def _format_episodic_sentence(self, event: Any) -> str:
+        """Render one episodic experience as a natural English sentence."""
+        meta = event.meta_dict()
+        action = (meta.get("event_action") or "").replace("_", " ").strip()
+        obj = (meta.get("event_object") or "").strip()
+        when = (
+            meta.get("temporal_label")
+            or (meta.get("temporal_cue") or "").replace("_", " ")
+        ).strip()
+        if obj:
+            obj = re.sub(r"^my\s+", "your ", obj, flags=re.I)
+        if action and obj and when:
+            return f"You {action} {obj} {when}."
+        if action and obj:
+            return f"You {action} {obj}."
+        if action and when:
+            return f"You {action} {when}."
+        summary = (event.summary or "").strip()
+        # Convert "User X (when)" → "You X when."
+        summary = re.sub(r"^User\s+", "You ", summary, flags=re.I)
+        summary = re.sub(r"\s*\(([^)]+)\)\s*$", r" \1.", summary)
+        if summary and not summary.endswith("."):
+            summary += "."
+        return summary
+
     def _format_episodic_list(
-        self, events: list[Any], *, header: str
+        self, events: list[Any], *, header: str = ""
     ) -> str:
+        """Natural multi-event recall — sentences only, no evidence wrappers."""
         if not events:
             return ""
-        lines = [header]
-        for e in events:
-            when = e.meta_dict().get("temporal_label") or e.meta_dict().get(
-                "temporal_cue", ""
-            ).replace("_", " ")
-            prefix = f"{when}: " if when else ""
-            lines.append(f"- {prefix}{e.summary}")
-        return "\n".join(lines)
+        sentences = [self._format_episodic_sentence(e) for e in events]
+        sentences = [s for s in sentences if s]
+        if not sentences:
+            return ""
+        if len(sentences) == 1:
+            return sentences[0]
+        return "\n".join(sentences)
 
     def _format_episodic_action(self, events: list[Any], *, action: str) -> str:
         if not events:
             return ""
         if len(events) == 1:
-            e = events[0]
-            obj = e.meta_dict().get("event_object") or ""
-            stored_action = e.meta_dict().get("event_action") or action
-            when = e.meta_dict().get("temporal_label") or e.meta_dict().get(
-                "temporal_cue", ""
-            ).replace("_", " ")
-            verb = (stored_action or action or "").replace("_", " ")
-            if obj and verb:
-                return f"You {verb} {obj}" + (
-                    f" ({when})." if when else "."
-                )
-            return e.summary
-        return self._format_episodic_list(
-            events, header=f"From your evidence ({action.replace('_', ' ')}):"
-        )
+            return self._format_episodic_sentence(events[0])
+        return self._format_episodic_list(events)
 
     def _format_where_i_went(self, events: list[Any]) -> str:
         if not events:
@@ -938,13 +950,11 @@ class RememberingOrgan:
             ).replace("_", " ")
             if action == "visited" and obj:
                 place = re.sub(r"^my\s+", "your ", obj, flags=re.I).strip()
-                return f"You visited {place}" + (f" ({when})." if when else ".")
+                return f"You visited {place}" + (f" {when}." if when else ".")
             if obj:
-                return f"You went to {obj}" + (f" ({when})." if when else ".")
-            return e.summary
-        return self._format_episodic_list(
-            events, header="From your evidence (where you went):"
-        )
+                return f"You went to {obj}" + (f" {when}." if when else ".")
+            return self._format_episodic_sentence(e)
+        return self._format_episodic_list(events)
 
     def _preference_from_experience_facts(
         self, cue: str, *, domain: str | None
@@ -988,17 +998,7 @@ class RememberingOrgan:
     def _format_episodic_explanation(self, events: list[Any]) -> str:
         if not events:
             return ""
-        lines = ["From your stored evidence:"]
-        for e in events:
-            evidence = e.meta_dict().get("evidence") or e.summary
-            when = e.meta_dict().get("temporal_label") or e.meta_dict().get(
-                "temporal_cue", ""
-            ).replace("_", " ")
-            if when:
-                lines.append(f"- ({when}) {evidence}")
-            else:
-                lines.append(f"- {evidence}")
-        return "\n".join(lines)
+        return self._format_episodic_list(events)
 
     def _episodic_unknown(
         self,

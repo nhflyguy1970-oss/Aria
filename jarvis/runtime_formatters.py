@@ -238,14 +238,73 @@ def format_memory(payload: dict[str, Any]) -> str:
 
 
 def format_storage(payload: dict[str, Any]) -> str:
+    devices = payload.get("devices") if isinstance(payload.get("devices"), list) else []
+    mounts = payload.get("mounts") if isinstance(payload.get("mounts"), list) else []
+    root = payload.get("root_filesystem") if isinstance(payload.get("root_filesystem"), dict) else {}
     hw = payload.get("hardware") if isinstance(payload.get("hardware"), dict) else {}
-    free = hw.get("disk_free_gb") or payload.get("disk_free_gb")
+    mc_free = hw.get("disk_free_gb") or payload.get("disk_free_gb")
+
     lines = ["Storage", ""]
-    if free is not None:
-        lines.append(f"Disk free: {free} GB")
-    else:
-        lines.append("Disk free: not reported by Mission Control")
-    return "\n".join(lines)
+
+    inventory = [d for d in devices if d.get("kind") == "disk"] or list(devices)
+    if inventory:
+        lines.append("Detected devices")
+        for d in inventory:
+            name = d.get("name") or d.get("path") or "?"
+            dtype = d.get("device_type") or d.get("kind") or "disk"
+            bits = [f"• {name} ({dtype})"]
+            if d.get("model"):
+                bits.append(f"model {d['model']}")
+            if d.get("total_gb") is not None:
+                bits.append(f"{d['total_gb']} GB")
+            if d.get("mount_point"):
+                bits.append(f"mounted at {d['mount_point']}")
+            if d.get("filesystem"):
+                bits.append(f"fs {d['filesystem']}")
+            lines.append(" — ".join(bits) if len(bits) > 1 else bits[0])
+        lines.append("")
+
+    # Prefer mount inventory for capacity (used/free).
+    usable = [
+        m
+        for m in mounts
+        if m.get("mount_point")
+        and not str(m.get("mount_point")).startswith(("/run", "/boot/efi", "/sys", "/proc"))
+    ]
+    if usable:
+        lines.append("Mounted filesystems")
+        for m in usable:
+            lines.append(
+                f"• {m.get('source')} → {m.get('mount_point')} "
+                f"({m.get('filesystem') or 'fs'}): "
+                f"{m.get('total_gb')} GB total, "
+                f"{m.get('used_gb')} GB used, "
+                f"{m.get('free_gb')} GB free"
+            )
+        lines.append("")
+
+    root_free = root.get("free_gb")
+    root_total = root.get("total_gb")
+    if root_free is not None:
+        lines.append("Root filesystem (/)")
+        if root_total is not None:
+            lines.append(f"• {root_total} GB total, {root_free} GB free")
+        else:
+            lines.append(f"• {root_free} GB free")
+        lines.append("")
+        lines.append(
+            "Note: root free space is for the `/` filesystem only — "
+            "not total workstation storage across all devices."
+        )
+    elif mc_free is not None:
+        lines.append(f"Reported free (Mission Control summary): {mc_free} GB")
+        lines.append(
+            "This figure is a summary value and may not enumerate every storage device."
+        )
+    elif not inventory and not usable:
+        lines.append("No storage devices reported.")
+
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def format_network(payload: dict[str, Any]) -> str:

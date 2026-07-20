@@ -560,6 +560,22 @@ def search_reference(query: str, *, subject: str = "") -> dict[str, Any]:
     """Search and answer from local documentation — documentation assistant, not a file dump."""
     t0 = time.perf_counter()
     q = (subject or query or "").strip()
+    try:
+        from jarvis.knowledge.doc_guards import is_planning_request
+
+        if is_planning_request(q):
+            return {
+                "ok": False,
+                "message": (
+                    "That looks like a planning request. Ask me to plan it directly "
+                    "(for example: “Help me plan a fly fishing trip next weekend.”) "
+                    "rather than searching documentation."
+                ),
+                "module": "reference",
+                "selected": [],
+            }
+    except Exception:
+        pass
     mode = _detect_mode(q)
     terms = _terms(q)
 

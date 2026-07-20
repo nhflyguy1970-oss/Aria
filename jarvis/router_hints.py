@@ -94,11 +94,19 @@ def try_hint_route(message: str | None) -> dict[str, Any] | None:
         return _hit("planner_today")
 
     if re.search(
-        r"\b(?:help me plan|plan my (?:day|week)|what should i do(?: today)?|"
+        r"\b(?:plan my (?:day|week)|what should i do(?: today)?|"
         r"help (?:me )?organize my (?:day|week|schedule))\b",
         lower,
     ):
         return _hit("planner_today")
+
+    # Trip / project / activity planning — generate a plan (not docs, not today's schedule).
+    if re.search(
+        r"\b(?:help me plan|help us plan|plan (?:a|an|the|my|our)\b|make (?:a|an) plan\b|"
+        r"create (?:a|an) plan\b)\b",
+        lower,
+    ):
+        return _hit("planner_plan", {"query": text})
 
     if re.search(r"\b(smart home|home assistant)\b.+\bstatus\b", lower) or lower in (
         "home status",

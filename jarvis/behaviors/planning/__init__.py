@@ -17,6 +17,7 @@ _PLANNING_ACTIONS: dict[str, tuple[Any, bool]] = {
     "planner_set_timer": (PlanningEngine.set_timer, False),
     "planner_set_alarm": (PlanningEngine.set_alarm, False),
     "planner_today": (PlanningEngine.today, True),
+    "planner_plan": (PlanningEngine.plan, True),
     "planner_add_event": (PlanningEngine.add_event, False),
     "journal_schedule": (PlanningEngine.journal_schedule, False),
     "journal_thread": (PlanningEngine.journal_thread, False),

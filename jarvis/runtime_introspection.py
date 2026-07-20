@@ -343,7 +343,157 @@ def collect_runtime_ram() -> dict[str, Any]:
 
 
 def collect_runtime_storage() -> dict[str, Any]:
-    return collect_runtime_gpu()
+    """Enumerate host storage devices (lsblk/df) plus Mission Control disk free if present."""
+    import shutil
+    import subprocess
+
+    devices: list[dict[str, Any]] = []
+    try:
+        proc = subprocess.run(
+            [
+                "lsblk",
+                "-b",
+                "-J",
+                "-o",
+                "NAME,TYPE,SIZE,FSTYPE,MOUNTPOINT,TRAN,ROTA,MODEL,HOTPLUG,RM",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        payload = {}
+        if proc.returncode == 0 and (proc.stdout or "").strip():
+            import json
+
+            payload = json.loads(proc.stdout)
+        for block in payload.get("blockdevices") or []:
+            _append_storage_device(devices, block, parent_tran="")
+    except Exception:
+        devices = []
+
+    mounts: list[dict[str, Any]] = []
+    try:
+        proc = subprocess.run(
+            ["df", "-B1", "--output=source,fstype,size,used,avail,target", "-x", "tmpfs", "-x", "devtmpfs"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+            check=False,
+        )
+        lines = (proc.stdout or "").splitlines()
+        for line in lines[1:]:
+            parts = line.split()
+            if len(parts) < 6:
+                continue
+            source, fstype, size_s, used_s, avail_s, target = parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+            if source.startswith("overlay") or target.startswith("/snap"):
+                continue
+            try:
+                size_b, used_b, avail_b = int(size_s), int(used_s), int(avail_s)
+            except ValueError:
+                continue
+            mounts.append(
+                {
+                    "source": source,
+                    "filesystem": fstype,
+                    "mount_point": target,
+                    "total_bytes": size_b,
+                    "used_bytes": used_b,
+                    "free_bytes": avail_b,
+                    "total_gb": round(size_b / (1024**3), 1),
+                    "used_gb": round(used_b / (1024**3), 1),
+                    "free_gb": round(avail_b / (1024**3), 1),
+                }
+            )
+    except Exception:
+        mounts = []
+
+    root_free_gb = None
+    root_total_gb = None
+    try:
+        usage = shutil.disk_usage("/")
+        root_free_gb = round(usage.free / (1024**3), 1)
+        root_total_gb = round(usage.total / (1024**3), 1)
+    except Exception:
+        pass
+
+    mc_hw: dict[str, Any] = {}
+    try:
+        mc = _mc_snapshot(required=False) or {}
+        mc_hw = mc.get("hardware") if isinstance(mc.get("hardware"), dict) else {}
+    except Exception:
+        mc_hw = {}
+
+    return {
+        "ok": True,
+        "source": "host_storage",
+        "devices": devices,
+        "mounts": mounts,
+        "root_filesystem": {
+            "mount_point": "/",
+            "free_gb": root_free_gb,
+            "total_gb": root_total_gb,
+            "scope": "root filesystem",
+        },
+        "disk_free_gb": root_free_gb,
+        "hardware": mc_hw,
+    }
+
+
+def _storage_device_type(block: dict[str, Any], *, parent_tran: str = "") -> str:
+    tran = str(block.get("tran") or parent_tran or "").lower()
+    rota = block.get("rota")
+    name = str(block.get("name") or "").lower()
+    hotplug = bool(block.get("hotplug") or block.get("rm"))
+    if tran == "nvme" or name.startswith("nvme"):
+        return "NVMe"
+    if tran == "usb" or hotplug:
+        return "USB"
+    if rota in (1, True, "1"):
+        return "HDD"
+    if rota in (0, False, "0"):
+        if tran in ("sata", "ata", "sas"):
+            return "SATA SSD"
+        return "SSD"
+    if tran in ("sata", "ata", "sas"):
+        return "SATA"
+    return (tran.upper() if tran else "disk")
+
+
+def _append_storage_device(
+    out: list[dict[str, Any]], block: dict[str, Any], *, parent_tran: str
+) -> None:
+    name = str(block.get("name") or "").strip()
+    if not name or name.startswith(("loop", "zram", "sr")):
+        return
+    dtype = str(block.get("type") or "")
+    tran = str(block.get("tran") or parent_tran or "")
+    size_b = block.get("size")
+    try:
+        size_b_i = int(size_b) if size_b is not None else None
+    except (TypeError, ValueError):
+        size_b_i = None
+    mount = block.get("mountpoint") or None
+    fstype = block.get("fstype") or None
+    model = (block.get("model") or "").strip() or None
+    if dtype == "disk" or (dtype in ("part", "lvm") and (mount or fstype)):
+        entry = {
+            "name": name,
+            "path": f"/dev/{name}",
+            "device_type": _storage_device_type(block, parent_tran=tran),
+            "kind": dtype,
+            "mount_point": mount,
+            "filesystem": fstype,
+            "model": model,
+            "total_bytes": size_b_i,
+            "total_gb": round(size_b_i / (1024**3), 1) if size_b_i else None,
+        }
+        # Prefer leaf mounts; disks without mount still listed for inventory.
+        if dtype == "disk" or mount or fstype:
+            out.append(entry)
+    for child in block.get("children") or []:
+        _append_storage_device(out, child, parent_tran=tran)
 
 
 def collect_runtime_network() -> dict[str, Any]:

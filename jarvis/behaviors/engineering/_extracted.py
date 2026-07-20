@@ -1260,11 +1260,17 @@ PROJECT: {context}"""
             content = fs.read_file(ctx.session.last_file, base=ctx.coding._base())
             if not content.startswith("ERROR:"):
                 parts.append(f"Last file ({ctx.session.last_file}):\n{content[:4000]}")
-        doc_ctx, doc_warnings = rag.context_for_query(query)
-        if doc_ctx:
-            parts.append(doc_ctx)
-        if doc_warnings:
-            parts.extend(doc_warnings)
+        try:
+            from jarvis import rag as _rag
+
+            doc_ctx, doc_warnings = _rag.context_for_query(query)
+            if doc_ctx:
+                parts.append(doc_ctx)
+            if doc_warnings:
+                parts.extend(doc_warnings)
+        except Exception:
+            # Coding must work even when document retrieval is unavailable.
+            pass
         context = "\n\n".join(parts)
         answer = llm.coding_chat_answer(query, context=context)
         return _ok(answer, module="coding", type="coding_chat")

@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.26.0-1",
+  "aria_acm_local_version": "aria-acm-v0.26.0-2",
   "source_project": "aria-cognitive-memory",
   "source_version": "0.26.0",
   "source_tag": "v0.26.0",
-  "source_commit": "8a4b73d64f494e5b48488d15738729d5c773446e",
+  "source_commit": "99f83f6af4c99fe76b3e47781f1582b8ac205ec8",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-20",
-  "tree_sha256": "a2bd178769623a59057d1671b2b51c1548aca48f5d46167c7d1453d911e0dbaf",
+  "tree_sha256": "ff11b269b65c18d9e6f3165a5aa387f4d495a19762d461a4a8d25ea5256d7b89",
   "license": "Apache-2.0",
-  "certification_ref": "ACM cognition repairs (episodic + preference + temporal)",
-  "promotion": "M3-ACM",
-  "promotion_decision": "Episodic teaching/recall, temporal where-go, preference concept reconstruction",
+  "certification_ref": "ACM natural episodic presentation + reconstruction",
+  "promotion": "M3-ACM-post",
+  "promotion_decision": "Natural English episodic recall; no evidence-list wrappers",
   "includes": [
     "D038",
     "D039",
@@ -23,5 +23,5 @@
     "D046",
     "D047"
   ],
-  "notes": "Promotion of ACM v0.26.0 cognition repairs into aria_acm/. Unchanged ACM package only plus Aria M0 acm import bootstrap. No Aria host cognition workarounds."
+  "notes": "Promotion of ACM commit 99f83f6 (natural episodic presentation) into aria_acm/. Unchanged ACM package cognition plus Aria M0 import bootstrap. No Aria host cognition workarounds."
 }

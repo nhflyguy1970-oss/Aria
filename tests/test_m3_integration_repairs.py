@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from jarvis.behaviors.memory.cognitive_presentation import (
     _reconstruct_fragment,
+    polish_cognitive_speech,
     polish_fragment_recall,
 )
 from jarvis.knowledge.doc_guards import is_developer_doc_request, is_internal_doc
@@ -66,6 +68,8 @@ def test_storage_devices_routes_runtime() -> None:
 
 def test_explain_intercepts_without_debug() -> None:
     assert is_routing_explain_query("Why did you choose that model?")
+    assert is_routing_explain_query("Why did you choose that answer?")
+    assert is_routing_explain_query("Why did that question go to Mission Control?")
     hit = try_routing_explain("Why did you choose that model?")
     assert hit and hit["action"] == "chat"
 
@@ -74,7 +78,27 @@ def test_explain_mission_control_not_runtime() -> None:
     from jarvis.runtime_routing import is_runtime_routing_question
 
     assert is_routing_explain_query("Why did this go to Mission Control?")
+    assert is_routing_explain_query("Why did that question go to Mission Control?")
     assert not is_runtime_routing_question("Why did this go to Mission Control?")
+    assert not is_runtime_routing_question("Why did that question go to Mission Control?")
+    assert not is_runtime_routing_question("Why did you choose that answer?")
+
+
+def test_explain_answer_is_user_facing() -> None:
+    from jarvis.routing_explain import explain_routing
+
+    text = explain_routing(
+        "Why did you choose that answer?",
+        trace={
+            "capability": "planning",
+            "provider": "planner",
+            "handler": "PlanningEngine",
+            "intent": "planning",
+        },
+    )
+    assert "planning" in text.lower()
+    assert "gateway" not in text.lower()
+    assert "execution_path" not in text.lower()
 
 
 def test_presentation_gpu_double_verb() -> None:
@@ -112,6 +136,76 @@ def test_planning_hint_routes_planner() -> None:
     hit = try_hint_route("Help me plan my day.")
     assert hit is not None
     assert hit["action"] == "planner_today"
+
+    trip = try_hint_route("Help me plan a fly fishing trip next weekend.")
+    assert trip is not None
+    assert trip["action"] == "planner_plan"
+
+
+def test_coding_chat_rag_optional() -> None:
+    from jarvis.handlers import ensure_handlers_loaded
+    from jarvis.handlers.registry import has_action
+
+    ensure_handlers_loaded()
+    assert has_action("coding_chat")
+    text = Path("jarvis/behaviors/engineering/_extracted.py").read_text(encoding="utf-8")
+    assert "from jarvis import rag as _rag" in text
+    assert "doc_ctx, doc_warnings = rag.context_for_query" not in text
+
+
+def test_natural_acm_speech_passthrough() -> None:
+    speech = (
+        "You caught three trout yesterday.\n"
+        "You upgraded your RAM yesterday.\n"
+        "You installed a second SSD yesterday."
+    )
+    out = polish_cognitive_speech(speech, prompt="What happened yesterday?")
+    assert out == speech
+    assert "from what you've shared" not in out.lower()
+
+
+def test_storage_formatter_enumerates_devices() -> None:
+    from jarvis.runtime_formatters import format_storage
+
+    text = format_storage(
+        {
+            "devices": [
+                {
+                    "name": "nvme0n1",
+                    "kind": "disk",
+                    "device_type": "NVMe",
+                    "total_gb": 931.5,
+                    "mount_point": None,
+                    "filesystem": None,
+                    "model": "Samsung SSD",
+                },
+                {
+                    "name": "nvme0n1p2",
+                    "kind": "part",
+                    "device_type": "NVMe",
+                    "total_gb": 900.0,
+                    "mount_point": "/",
+                    "filesystem": "ext4",
+                },
+            ],
+            "mounts": [
+                {
+                    "source": "/dev/nvme0n1p2",
+                    "filesystem": "ext4",
+                    "mount_point": "/",
+                    "total_gb": 900.0,
+                    "used_gb": 688.0,
+                    "free_gb": 212.0,
+                }
+            ],
+            "root_filesystem": {"mount_point": "/", "free_gb": 212.0, "total_gb": 900.0},
+        }
+    )
+    low = text.lower()
+    assert "nvme" in low
+    assert "212" in text
+    assert "root filesystem" in low or "`/`" in text or " / " in text
+    assert "not total workstation storage" in low or "filesystem only" in low
 
 
 def test_coding_chat_uses_registry_not_legacy() -> None:

@@ -141,6 +141,44 @@ class PlanningEngine:
         return ok(block, module="planner", type="planner")
 
     @classmethod
+    def plan(cls, ctx: PlanningContext, params: dict, message: str) -> dict:
+        """Generate an activity/trip/project plan (not documentation lookup)."""
+        if not planner_enabled():
+            return cls._disabled()
+        from jarvis import llm
+
+        query = str(params.get("query") or params.get("text") or message or "").strip()
+        if not query:
+            return err("What would you like me to plan?", module="planner")
+
+        context_parts, _ = cls.prepare_context(ctx, query)
+        planner_block = cls.planning_context_markdown()
+        if planner_block:
+            context_parts.append(f"Current planner context:\n{planner_block}")
+        context = "\n\n".join(context_parts)
+
+        system = (
+            "You are Aria's planning assistant. Produce a clear, practical plan for the "
+            "user's request. Use short sections and concrete next steps. "
+            "Do not quote or invent product documentation filenames. "
+            "Do not dump workstation application catalogs."
+        )
+        user = query if not context else f"Context:\n{context}\n\nPlan request: {query}"
+        try:
+            answer = llm.ask_with_system(
+                llm.general_model(),
+                system,
+                user,
+                role="planning",
+            )
+        except Exception as exc:
+            return err(f"Planning failed: {exc}", module="planner")
+        text = (answer or "").strip()
+        if not text:
+            return err("I couldn't draft a plan for that yet. Try adding a bit more detail.", module="planner")
+        return ok(text, module="planner", type="planner_plan")
+
+    @classmethod
     def add_event(cls, _ctx: PlanningContext, params: dict, message: str) -> dict:
         if not planner_enabled():
             return cls._disabled()

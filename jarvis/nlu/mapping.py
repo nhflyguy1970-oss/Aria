@@ -315,6 +315,12 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
         return "memory"
     if is_live_hardware_question(prompt):
         return "runtime"
+    if re.search(
+        r"\b(?:help me plan|help us plan|plan (?:a|an|the|my|our)\b|make (?:a|an) plan\b|"
+        r"create (?:a|an) plan\b|plan my (?:day|week))\b",
+        lower,
+    ):
+        return "planning"
     if _USER_MEMORY.search(prompt):
         return "memory"
     if _EXPLICIT_WEB.search(prompt):
@@ -362,6 +368,13 @@ def apply_intent_guards(result: NLUResult) -> str:
         return "memory"
     if is_live_hardware_question(prompt):
         return "runtime"
+    if re.search(
+        r"\b(?:help me plan|help us plan|plan (?:a|an|the|my|our)\b|make (?:a|an) plan\b|"
+        r"create (?:a|an) plan\b|plan my (?:day|week))\b",
+        prompt,
+        re.I,
+    ):
+        return "planning"
     if intent == "documentation":
         intent = "reference"
     structural = infer_intent_from_structure(result)
@@ -495,9 +508,15 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
         if re.search(r"\b(?:add|create)\s+(?:a\s+)?task\b", lower):
             action = "planner_add_task"
             params = {"text": result.prompt}
-        else:
+        elif re.search(
+            r"\b(?:plan my (?:day|week)|today(?:'s)? schedule|what should i do(?: today)?)\b",
+            lower,
+        ):
             action = "planner_today"
             params = {}
+        else:
+            action = "planner_plan"
+            params = {"query": result.prompt}
     elif intent == "chat":
         if action == "chat":
             action = "chat"

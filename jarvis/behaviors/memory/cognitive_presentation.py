@@ -69,6 +69,19 @@ def polish_cognitive_speech(speech: str, result: dict | None = None, *, prompt: 
     text = (speech or "").strip()
     if not text:
         return text
+    # Pass through natural ACM episodic prose (single or multi-sentence).
+    if (
+        "From your evidence" not in text
+        and "Episodic events:" not in text
+        and not text.startswith("Evidence (")
+        and not _RAW_MEMORY_BULLETS.search(text)
+        and re.match(r"^You\s+\w+", text)
+        and all(
+            (not ln.strip()) or ln.strip().lower().startswith("you ")
+            for ln in text.splitlines()
+        )
+    ):
+        return text
     if _RAW_MEMORY_BULLETS.search(text):
         return format_bullet_recall_conversational(text, prompt)
     if _PREFERENCE_RECALL.match(text):
@@ -389,18 +402,42 @@ def _evidence_line_to_conversational(body: str, header: str = "") -> str:
         label = m.group(1).lower()
         if label in _TEMPORAL_LABEL:
             when_prefix = _TEMPORAL_LABEL[label]
-        s = m.group(2).strip()
+            s = m.group(2).strip()
+        # Non-temporal labels (e.g. "upgrade:") are part of broken list formatting —
+        # drop the label token only; do not treat it as a time adverb.
+        elif label in (
+            "upgrade",
+            "upgraded",
+            "install",
+            "installed",
+            "bought",
+            "cleaned",
+            "visited",
+            "caught",
+            "went",
+        ):
+            s = m.group(2).strip()
     s = re.sub(r"^User\s+", "you ", s, flags=re.I)
     s = re.sub(r"\s*\([^)]*\)\s*$", "", s).strip()
     if s.lower().startswith("yesterday ") or s.lower().startswith("last "):
         s = re.sub(r"^(Yesterday|Last\s+\w+)\s+I\s+", r"\1 you ", s, flags=re.I)
     elif re.match(r"^I\s+", s, re.I):
         s = "you " + s[2:]
-    when = when_prefix or header
+    # Never use non-temporal headers like "upgrade" as when-adverbs.
+    when = when_prefix
+    if header and header.lower() in _TEMPORAL_LABEL:
+        when = when or _TEMPORAL_LABEL[header.lower()]
+    elif header and re.search(
+        r"^(yesterday|today|this\s+\w+|last\s+\w+)$", header, re.I
+    ):
+        when = when or header
     if when and not s.lower().startswith(when.lower()):
         if re.match(r"^you\s+", s, re.I):
-            return f"You told me {when} that {s[4:].rstrip('.')}."
-        return f"You told me {when} that {s.rstrip('.')}."
+            rest = s[4:].rstrip(".")
+            return f"You {rest} {when}."
+        return f"You {s.rstrip('.')} {when}."
     if not s.endswith("."):
         s += "."
+    if s.lower().startswith("you "):
+        return s[0].upper() + s[1:] if s[0].islower() else s
     return s
