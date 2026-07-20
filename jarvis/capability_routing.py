@@ -107,7 +107,15 @@ def capability_for_action_and_message(action: str, message: str = "") -> str:
         if action_key in ("memory_about_user", "remember", "recall", "memory_search"):
             if is_episodic_teaching(text):
                 return "episodic_teaching"
+            from jarvis.nlu.semantic_autobio_patterns import is_semantic_autobio_teaching
+
+            if is_semantic_autobio_teaching(text):
+                return "episodic_teaching"
             if is_episodic_memory_query(text) or is_past_event_memory_question(text):
+                return "episodic_recall"
+            from jarvis.nlu.semantic_autobio_patterns import is_semantic_autobio_query
+
+            if is_semantic_autobio_query(text):
                 return "episodic_recall"
     except Exception:
         pass

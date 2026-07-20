@@ -246,9 +246,12 @@ class CognitiveDispatchEngine:
                         conf = contrib.confidence
                         cue_matched = contrib.cue_matched
                 elif ownership.intent == CognitiveIntent.PROJECT:
-                    memory = f"{contrib.memory} {memory}".strip()
-                    conf = max(conf, contrib.confidence)
-                    cue_matched = True
+                    # Prefer natural remembering reconstruction; identity
+                    # project schema dump only fills gaps (never prepend).
+                    if not primary.memory:
+                        memory = contrib.memory
+                        conf = max(conf, contrib.confidence)
+                        cue_matched = True
 
         return {
             "memory": memory,

@@ -236,14 +236,39 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         re.compile(
             r"\b((?:what\s+)?projects?\s+(?:are\s+)?(?:we|you|i)\s+"
             r"(?:working\s+on|doing)|"
+            r"what\s+projects?\s+am\s+i\s+(?:work(?:ing)?\s+on|building)|"
+            r"what\s+ai\s+projects?\b|"
             r"what(?:'s|\s+is)\s+(?:the|our|this)\s+project|"
             r"project\s+(?:history|status|progress)|"
             r"about\s+(?:the|this|our)\s+project|"
             r"where\s+(?:did|do)\s+we\s+leave\s+off|"
-            r"what\s+are\s+we\s+building)\b",
+            r"what\s+(?:are\s+we|have\s+i\s+been)\s+building)\b",
             re.I,
         ),
         "project_cue",
+        0.94,
+    ),
+    (
+        CognitiveIntent.REMEMBERING,
+        re.compile(
+            r"\b("
+            r"what\s+operating\s+system\b|"
+            r"what\s+os\s+does\s+my\b|"
+            r"what\s+graphics\s+card\b|"
+            r"what\s+gpu\b|"
+            r"how\s+much\s+ram\b|"
+            r"know\s+about\s+my\s+(?:computer|laptop|desktop|ai|setup|machines?)|"
+            r"tell\s+me\s+what\s+you\s+know\s+about\s+my\b|"
+            r"which\s+computer\b.+\b(?:better|training)|"
+            r"better\s+for\s+training|"
+            r"do\s+i\s+prefer\s+local|"
+            r"local\s+or\s+cloud|"
+            r"what\s+kind\s+of\s+responses?\b.+\bdebug|"
+            r"summarize\s+what\s+you\s+know\s+about\s+me"
+            r")\b",
+            re.I,
+        ),
+        "semantic_autobiography_cue",
         0.94,
     ),
     (
@@ -274,8 +299,11 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
             r"\b(prefer(?:ence|s)?|favorite|favourite|"
             r"what\s+do\s+i\s+like|"
             r"what\s+kind\s+of\s+\w+\s+do\s+i\s+prefer|"
+            r"what\s+kind\s+of\s+responses?\s+do\s+i\s+like|"
             r"what\s+do\s+you\s+know\s+about\s+my\s+preferences|"
-            r"what(?:'s|\s+is)\s+my\s+favorite)\b",
+            r"what(?:'s|\s+is)\s+my\s+favorite|"
+            r"do\s+i\s+prefer\b|"
+            r"what\s+do\s+i\s+prefer)\b",
             re.I,
         ),
         "preference_cue",
@@ -287,7 +315,8 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
             r"\b(what\s+do\s+you\s+know\s+about\s+me|"
             r"tell\s+me\s+about\s+me|about\s+myself|"
             r"my\s+(?:life|background|story|profile)|"
-            r"what\s+have\s+you\s+learned\s+about\s+me)\b",
+            r"what\s+have\s+you\s+learned\s+about\s+me|"
+            r"summarize\s+what\s+you\s+know\s+about\s+me)\b",
             re.I,
         ),
         "autobiography_cue",

@@ -48,6 +48,22 @@ def format_teaching_acknowledgement(prompt: str) -> str:
         if when:
             return f"Okay, I'll remember that {core} {when}."
         return f"Okay, I'll remember that {core}."
+    if fact.kind == FactKind.POSSESSION:
+        entity = (fact.relation_type or "item").replace("_", " ")
+        prop = (fact.property or "").replace("_", " ")
+        if prop == "os":
+            return f"Okay, I'll remember that your {entity} runs {fact.value}."
+        if prop == "gpu":
+            return f"Okay, I'll remember that your {entity} has an {fact.value}." if str(
+                fact.value
+            ).lower().startswith("rtx") else f"Okay, I'll remember that your {entity} has a {fact.value}."
+        if prop == "ram":
+            return f"Okay, I'll remember that your {entity} has {fact.value} of RAM."
+        if prop == "editor":
+            return f"Okay, I'll remember that you use {fact.value}."
+        return f"Okay, I'll remember that your {entity} {prop} is {fact.value}."
+    if fact.kind == FactKind.PROJECT:
+        return f"Okay, I'll remember that you're working on {fact.value}."
     if fact.kind == FactKind.PREFERENCE and fact.property.startswith("favorite_"):
         domain = fact.property.replace("favorite_", "").replace("_", " ")
         return f"Okay, I'll remember that your favorite {domain} is {fact.value}."

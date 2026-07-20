@@ -113,7 +113,8 @@ _WHAT_REPLACED = re.compile(
 )
 _PERSONAL_SUMMARY = re.compile(
     r"\b(what\s+do\s+you\s+know\s+about\s+me|tell\s+me\s+about\s+(?:me|myself)|"
-    r"about\s+myself|what\s+do\s+you\s+remember\s+about\s+me)\b",
+    r"about\s+myself|what\s+do\s+you\s+remember\s+about\s+me|"
+    r"summarize\s+what\s+you\s+know\s+about\s+me)\b",
     re.I,
 )
 
@@ -286,6 +287,7 @@ class RememberingOrgan:
             or _is_explanation_request(cue)
             or _is_personal_summary_request(cue)
             or _is_episodic_request(cue)
+            or _is_semantic_autobio_request(cue)
         ):
             self._reconsolidate(reconstruction, cue)
         displaced = self._enter_working(reconstruction)
@@ -392,6 +394,37 @@ class RememberingOrgan:
             return self._reconstruct_personal_summary(cue, field, ranked)
         if _is_episodic_request(cue):
             return self._reconstruct_episodic(cue, field, ranked)
+
+        # Semantic autobiographical memory (possessions, projects, prefs, domain summaries).
+        from acm.remembering.semantic import (
+            UNKNOWN as _SEM_UNKNOWN,
+            answer_semantic_query,
+            collect_semantic_facts,
+            is_semantic_autobiography_query,
+        )
+
+        if is_semantic_autobiography_query(cue):
+            sem_facts = collect_semantic_facts(self.store)
+            sem_answer = answer_semantic_query(cue, sem_facts)
+            if sem_answer is None:
+                sem_answer = _SEM_UNKNOWN
+            return Reconstruction(
+                cue=cue,
+                answer=sem_answer,
+                explanation_class=(
+                    ExplanationClass.UNKNOWN.value
+                    if sem_answer == _SEM_UNKNOWN
+                    else ExplanationClass.EXPERIENCE.value
+                ),
+                confidence=0.0 if sem_answer == _SEM_UNKNOWN else 0.88,
+                activated_concept_ids=[n.target_id for n in ranked],
+                activation=field.to_public(),
+                cue_classes=list(field.cue_classes) + ["semantic_autobiography"],
+                goal_influenced=field.goal_influenced,
+                identity_influenced=field.identity_influenced,
+                context_influenced=field.context_influenced,
+                working_influenced=field.working_influenced,
+            )
 
         if not ranked:
             return Reconstruction(
@@ -1480,68 +1513,65 @@ class RememberingOrgan:
         field: ActivationField,
         ranked: list[Any],
     ) -> Reconstruction:
-        """Active-only personal summary from identity + preference memories."""
-        lines: list[str] = []
-        concept_ids: list[str] = []
+        """Active-only personal summary from semantic autobiographical memory."""
+        from acm.remembering.semantic import (
+            UNKNOWN as _SEM_UNKNOWN,
+            collect_semantic_facts,
+            format_personal_summary,
+        )
 
-        # Identity (user schema) — active only.
-        if self.identity is not None:
-            try:
-                rendered = self.identity.render_user_identity()
-                text = (rendered or {}).get("answer") or ""
-                if text.strip():
-                    for part in re.split(r"(?<=\.)\s+", text.strip()):
-                        if part.strip():
-                            lines.append(part.strip())
-                    uid = ((rendered or {}).get("schemas") or {}).get("user", {}).get(
-                        "concept_id"
-                    )
-                    if uid:
-                        concept_ids.append(uid)
-            except Exception:
-                pass
+        sem_facts = collect_semantic_facts(self.store)
+        answer = format_personal_summary(sem_facts)
 
-        # Active favorite_* across all preference concepts.
-        seen_keys: set[str] = set()
-        favorites: list[tuple[str, str, str]] = []  # (sort, pretty, value)
-        for concept in self.store.concepts.values():
-            for attr in concept.attributes:
-                if not attr.active or not attr.key.startswith("favorite_"):
-                    continue
-                if attr.key in seen_keys:
-                    continue
-                if not _is_semantic_attr(attr):
-                    continue
-                seen_keys.add(attr.key)
-                pretty = attr.key.replace("favorite_", "favorite ").replace("_", " ")
-                favorites.append((attr.key, pretty, str(attr.value)))
-                if concept.id not in concept_ids:
-                    concept_ids.append(concept.id)
+        # Preserve legacy favorite_* rendering if semantic layer found nothing
+        # but preference concepts exist (defensive).
+        if answer == _SEM_UNKNOWN:
+            lines: list[str] = []
+            if self.identity is not None:
+                try:
+                    rendered = self.identity.render_user_identity()
+                    text = (rendered or {}).get("answer") or ""
+                    if text.strip():
+                        for part in re.split(r"(?<=\.)\s+", text.strip()):
+                            if part.strip():
+                                lines.append(part.strip())
+                except Exception:
+                    pass
+            seen_keys: set[str] = set()
+            favorites: list[tuple[str, str, str]] = []
+            for concept in self.store.concepts.values():
+                for attr in concept.attributes:
+                    if not attr.active or not attr.key.startswith("favorite_"):
+                        continue
+                    if attr.key in seen_keys:
+                        continue
+                    if not _is_semantic_attr(attr):
+                        continue
+                    seen_keys.add(attr.key)
+                    pretty = attr.key.replace("favorite_", "favorite ").replace("_", " ")
+                    favorites.append((attr.key, pretty, str(attr.value)))
+            for _, pretty, value in sorted(favorites, key=lambda t: t[0]):
+                lines.append(f"Your {pretty} is {value}.")
+            answer = "\n".join(lines) if lines else _SEM_UNKNOWN
 
-        for _, pretty, value in sorted(favorites, key=lambda t: t[0]):
-            lines.append(f"Your {pretty} is {value}.")
-
-        if not lines:
+        if answer == _SEM_UNKNOWN:
             return Reconstruction(
                 cue=cue,
-                answer="I don't currently know.",
+                answer=_SEM_UNKNOWN,
                 explanation_class=ExplanationClass.UNKNOWN.value,
                 confidence=0.0,
                 activation=field.to_public(),
                 cue_classes=list(field.cue_classes),
             )
 
-        answer = "\n".join(lines)
         return Reconstruction(
             cue=cue,
             answer=answer,
             explanation_class=ExplanationClass.EXPERIENCE.value,
             confidence=0.9,
-            primary_concept_id=concept_ids[0] if concept_ids else "",
-            activated_concept_ids=concept_ids
-            or [n.target_id for n in ranked],
+            activated_concept_ids=[n.target_id for n in ranked],
             activation=field.to_public(),
-            cue_classes=list(field.cue_classes),
+            cue_classes=list(field.cue_classes) + ["semantic_autobiography"],
             goal_influenced=field.goal_influenced,
             identity_influenced=field.identity_influenced,
             context_influenced=field.context_influenced,
@@ -1787,6 +1817,15 @@ def _is_explanation_request(cue: str) -> bool:
 
 def _is_personal_summary_request(cue: str) -> bool:
     return bool(_PERSONAL_SUMMARY.search(cue or ""))
+
+
+def _is_semantic_autobio_request(cue: str) -> bool:
+    try:
+        from acm.remembering.semantic import is_semantic_autobiography_query
+
+        return is_semantic_autobiography_query(cue or "")
+    except Exception:
+        return False
 
 
 def _clean_value(raw: str) -> str:

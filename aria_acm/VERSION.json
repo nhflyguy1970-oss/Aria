@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.26.0-3",
+  "aria_acm_local_version": "aria-acm-v0.26.0-4",
   "source_project": "aria-cognitive-memory",
   "source_version": "0.26.0",
   "source_tag": "v0.26.0",
-  "source_commit": "eec7e60bfe6b5d9e6140ee0d4c2a9bb728463bff",
+  "source_commit": "931f40c386e7d828641fe50cc4545dfe207fe300",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-20",
-  "tree_sha256": "1f48ed5d1b4efc3a81f29b2d69b2b3a4be7319dffd307eb88c555795b5098630",
+  "tree_sha256": "3803e03fa36173ddb8538ca81135dd9d4320f7dc69a469a850046bb09195d691",
   "license": "Apache-2.0",
-  "certification_ref": "ACM duplicate episodic recall elimination",
-  "promotion": "M3-ACM-post",
-  "promotion_decision": "Deduplicate identical episodic experiences during reconstruction",
+  "certification_ref": "ACM semantic autobiographical memory",
+  "promotion": "M3-ACM-semantic",
+  "promotion_decision": "Promote semantic autobiographical memory and personal knowledge reconstruction",
   "includes": [
     "D038",
     "D039",
@@ -23,5 +23,5 @@
     "D046",
     "D047"
   ],
-  "notes": "Promotion of ACM commit eec7e60 (dedupe episodic recall) into aria_acm/."
+  "notes": "Promotion of ACM commit 931f40c (semantic autobiographical memory) into aria_acm/."
 }

@@ -39,6 +39,8 @@ class MemoryEngine:
             s = (speech or "").strip().rstrip(".")
             if not s or len(s.split()) <= 2:
                 return True
+            if "don't currently know" in s.lower():
+                return True
             if MemoryEngine._is_misrouted_identity_answer(question, s):
                 return True
             return bool(re.match(r"^(?:fishing|fish|my\s+\w+)$", s, re.I))

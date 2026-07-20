@@ -59,9 +59,163 @@ _GOAL = re.compile(
     re.I,
 )
 _PROJECT = re.compile(
-    r"\b(?:my\s+project\s+is|(?:i'?m|i\s+am)\s+working\s+on(?:\s+project)?)\s+(.+?)(?:\.|$)",
+    r"\b(?:my\s+project\s+is|"
+    r"(?:i'?m|i\s+am)\s+working\s+on(?:\s+project)?|"
+    r"(?:i'?m|i\s+am)\s+building|"
+    r"(?:i'?m|i\s+am)\s+developing)\s+(.+?)(?:\.|$)",
     re.I,
 )
+_LIKE = re.compile(r"\bi\s+like\s+(.+?)(?:\.|$)", re.I)
+
+# Semantic autobiographical possessions / device attributes.
+_OWNED_ENTITIES = (
+    r"laptop|desktop|computer|pc|workstation|machine|phone|tablet|"
+    r"server|nas|gpu|editor|keyboard|mouse|monitor"
+)
+_POSSESSION_RUNS = re.compile(
+    rf"\bmy\s+({_OWNED_ENTITIES})\s+(?:runs|running|uses|using)\s+(.+?)(?:\.|$)",
+    re.I,
+)
+_POSSESSION_HAS = re.compile(
+    rf"\bmy\s+({_OWNED_ENTITIES})\s+has\s+(?:an?\s+)?(.+?)(?:\.|$)",
+    re.I,
+)
+_POSSESSION_IS = re.compile(
+    rf"\bmy\s+({_OWNED_ENTITIES})(?:'s)?\s+(?:os|operating\s+system|graphics\s+card|"
+    rf"gpu|ram|memory|editor)\s+is\s+(.+?)(?:\.|$)",
+    re.I,
+)
+_I_USE = re.compile(r"\bi\s+use\s+(.+?)(?:\.|$)", re.I)
+
+_OS_HINTS = {
+    "zorin",
+    "linux",
+    "ubuntu",
+    "windows",
+    "macos",
+    "mac os",
+    "fedora",
+    "debian",
+    "arch",
+    "mint",
+    "chromeos",
+}
+_GPU_HINTS = ("rtx", "gtx", "radeon", "rx ", "nvidia", "amd", "gpu", "graphics")
+_RAM_HINTS = ("gb ram", "gb of ram", "memory")
+_EDITOR_HINTS = ("vs code", "vscode", "vim", "neovim", "emacs", "cursor", "sublime", "jetbrains")
+
+
+def _possession_property(value: str, *, hinted: str | None = None) -> str:
+    if hinted:
+        h = hinted.lower().replace(" ", "_")
+        if h in ("os", "operating_system"):
+            return "os"
+        if h in ("graphics_card", "gpu"):
+            return "gpu"
+        if h in ("ram", "memory"):
+            return "ram"
+        if h == "editor":
+            return "editor"
+        return h
+    low = (value or "").lower()
+    if any(h in low for h in _OS_HINTS) or low.strip() in _OS_HINTS:
+        return "os"
+    if any(h in low for h in _GPU_HINTS):
+        return "gpu"
+    if any(h in low for h in _RAM_HINTS) or re.search(r"\b\d+\s*gb\b", low):
+        return "ram"
+    if any(h in low for h in _EDITOR_HINTS):
+        return "editor"
+    return "attribute"
+
+
+def _extract_possession(
+    text: str,
+    *,
+    subject: PerspectiveSubject,
+) -> list[CognitiveFact]:
+    """Extract owned-entity attribute facts (OS, GPU, RAM, editor, …)."""
+    t = (text or "").strip()
+    if not t or _INTERROGATIVE.search(t):
+        return []
+    out: list[CognitiveFact] = []
+
+    m = _POSSESSION_RUNS.search(t)
+    if m:
+        entity = _clean_value(m.group(1)).lower()
+        value = _clean_value(m.group(2))
+        if entity and value:
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.POSSESSION,
+                    subject=subject,
+                    property=_possession_property(value, hinted="os"),
+                    value=value,
+                    relation_type=entity,
+                    confidence=0.9,
+                    labels=(entity,),
+                )
+            )
+
+    m = _POSSESSION_HAS.search(t)
+    if m:
+        entity = _clean_value(m.group(1)).lower()
+        value = _clean_value(m.group(2))
+        if entity and value:
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.POSSESSION,
+                    subject=subject,
+                    property=_possession_property(value),
+                    value=value,
+                    relation_type=entity,
+                    confidence=0.88,
+                    labels=(entity,),
+                )
+            )
+
+    m = _POSSESSION_IS.search(t)
+    if m:
+        entity = _clean_value(m.group(1)).lower()
+        # pattern groups: entity, then value — property inferred from wording
+        value = _clean_value(m.group(2))
+        prop_m = re.search(
+            r"\b(os|operating\s+system|graphics\s+card|gpu|ram|memory|editor)\b",
+            t,
+            re.I,
+        )
+        hinted = prop_m.group(1) if prop_m else None
+        if entity and value:
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.POSSESSION,
+                    subject=subject,
+                    property=_possession_property(value, hinted=hinted),
+                    value=value,
+                    relation_type=entity,
+                    confidence=0.9,
+                    labels=(entity,),
+                )
+            )
+
+    m = _I_USE.search(t)
+    if m and not out:
+        value = _clean_value(m.group(1))
+        prop = _possession_property(value)
+        if value and prop in ("os", "editor"):
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.POSSESSION,
+                    subject=subject,
+                    property=prop,
+                    value=value,
+                    relation_type="computer" if prop == "os" else "editor",
+                    confidence=0.8,
+                    labels=("computer" if prop == "os" else "editor",),
+                )
+            )
+    return out
+
 
 # Autobiographical episodic events — first-person past with a temporal cue.
 # "Yesterday I bought a kayak." / "I cleaned my garage yesterday."
@@ -366,10 +520,16 @@ def extract_fact_patterns(
             )
         )
     elif not _INTERROGATIVE.search(t):
-        m = _PREFER.search(t)
+        m = _PREFER.search(t) or _LIKE.search(t)
         if m:
             value = _clean_value(m.group(1))
             domain = _prefer_domain_from_value(value)
+            # Special-case common preference domains from phrasing.
+            low = value.lower()
+            if re.search(r"\b(local|cloud)\b.+\bai\b|\bai\b.+\b(local|cloud|model)", low):
+                domain = "ai"
+            elif re.search(r"\bdebug", low) or "step-by-step" in low or "step by step" in low:
+                domain = "debugging"
             prop = f"prefer_{domain}" if domain else "preference"
             facts.append(
                 CognitiveFact(
@@ -405,6 +565,10 @@ def extract_fact_patterns(
                 confidence=0.8,
             )
         )
+
+    # Semantic autobiographical possessions (OS / hardware / tools)
+    if not _INTERROGATIVE.search(t):
+        facts.extend(_extract_possession(t, subject=fp))
 
     # Episodic autobiographical events (never from interrogatives)
     if not _INTERROGATIVE.search(t):

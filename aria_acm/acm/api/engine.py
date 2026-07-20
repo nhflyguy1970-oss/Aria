@@ -482,7 +482,12 @@ class CognitiveEngine:
             exp_metadata[f"fact_{i}_property"] = fact.property
             exp_metadata[f"fact_{i}_value"] = fact.value[:200]
             if fact.relation_type:
-                exp_metadata[f"fact_{i}_temporal"] = fact.relation_type[:80]
+                # Experiences use relation_type as temporal; possessions use it as entity.
+                if fact.kind.value == "experience":
+                    exp_metadata[f"fact_{i}_temporal"] = fact.relation_type[:80]
+                else:
+                    exp_metadata[f"fact_{i}_relation"] = fact.relation_type[:80]
+                    exp_metadata[f"fact_{i}_temporal"] = fact.relation_type[:80]
 
         if episodic_facts:
             ef = episodic_facts[0]

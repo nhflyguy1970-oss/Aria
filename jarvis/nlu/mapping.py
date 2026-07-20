@@ -12,6 +12,10 @@ from jarvis.nlu.episodic_patterns import (
     is_live_hardware_question,
     is_past_event_memory_question,
 )
+from jarvis.nlu.semantic_autobio_patterns import (
+    is_semantic_autobio_query,
+    is_semantic_autobio_teaching,
+)
 from jarvis.nlu.types import NLUResult
 
 _LIVE_STATE = re.compile(
@@ -149,6 +153,21 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
             "action": "memory_about_user",
             "params": {"question": message},
             "thinking": "episodic recall",
+        }
+
+    # Semantic autobiographical facts / integrated personal knowledge — Memory Authority.
+    # Explicit "remember that…" imperatives keep the remember verb (tested write path).
+    if is_semantic_autobio_teaching(message) and not _MEMORY_WRITE.search(lower):
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "semantic autobiographical teaching",
+        }
+    if is_semantic_autobio_query(message):
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "semantic autobiographical recall",
         }
 
     # Past-event recall (including "did I tell you…") — Memory Authority, not search/runtime.

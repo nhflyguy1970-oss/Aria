@@ -341,6 +341,17 @@ class IdentityOrgan:
                 applied.append(last)
                 continue
 
+            if kind_val == FactKind.POSSESSION.value:
+                # Possessions live on entity concepts (laptop/desktop/…), not user schema.
+                last = self._link_adjacent(concept, weight=weight)
+                last["possession"] = {
+                    "entity": getattr(fact, "relation_type", None) or "",
+                    "key": prop,
+                    "value": value,
+                }
+                applied.append(last)
+                continue
+
             if kind_val in (FactKind.GOAL.value, FactKind.PROJECT.value):
                 # Goals/projects handled by engine; mark adjacent identity influence
                 last = self._link_adjacent(concept, weight=weight * 0.5)

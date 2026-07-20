@@ -86,6 +86,18 @@ class CognitiveFact:
             return f"Project: {self.value}"
         if self.kind == FactKind.SKILL:
             return f"{subj} can {self.value}"
+        if self.kind == FactKind.POSSESSION:
+            entity = (self.relation_type or "item").replace("_", " ")
+            prop = (self.property or "attribute").replace("_", " ")
+            if prop == "os":
+                return f"{subj} {entity} runs {self.value}"
+            if prop == "gpu":
+                return f"{subj} {entity} has GPU {self.value}"
+            if prop == "ram":
+                return f"{subj} {entity} has {self.value} RAM"
+            if prop == "editor":
+                return f"{subj} {entity} is {self.value}"
+            return f"{subj} {entity} {prop} is {self.value}"
         if self.kind == FactKind.EXPERIENCE:
             action = (self.property or "experienced").replace("_", " ")
             obj = (self.value or "").strip()
@@ -149,6 +161,24 @@ class ExtractionResult:
                 FactKind.NEGATION,
             )
             or f.property in ("name", "preferred_name", "role", "capability", "location")
+        ]
+
+    def autobiographical_facts(self) -> list[CognitiveFact]:
+        """Facts that constitute the user's semantic autobiographical memory."""
+        return [
+            f
+            for f in self.facts
+            if f.kind
+            in (
+                FactKind.IDENTITY,
+                FactKind.PREFERENCE,
+                FactKind.GOAL,
+                FactKind.PROJECT,
+                FactKind.RELATIONSHIP,
+                FactKind.LOCATION,
+                FactKind.POSSESSION,
+                FactKind.SKILL,
+            )
         ]
 
     def to_public(self) -> dict:

@@ -388,15 +388,11 @@ class CognitiveRoutingEngine:
             path.append("project_schema_support")
             project_bits = self._project_support()
             base = self._remember(request)
-            if project_bits.get("memory") and not base.get("memory"):
+            if base.get("memory"):
+                # Prefer natural semantic reconstruction over schema attribute dump.
+                return base
+            if project_bits.get("memory"):
                 return project_bits
-            if project_bits.get("memory") and base.get("memory"):
-                base["memory"] = f"{project_bits['memory']} {base['memory']}".strip()
-                base["confidence"] = max(
-                    float(base.get("confidence") or 0),
-                    float(project_bits.get("confidence") or 0),
-                )
-                base["cue_matched"] = True
             return base
         return self._remember(request)
 

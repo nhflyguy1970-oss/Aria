@@ -72,9 +72,33 @@ _PREFER_VERB = re.compile(
     r"\bprefer\s+(.+?)(?:\.|$)",
     re.I,
 )
+_LIKE_VERB = re.compile(
+    r"\blike\s+(.+?)(?:\.|$)",
+    re.I,
+)
 _INTERROGATIVE = re.compile(
     r"(?:\?|(?:^\s*(?:what|why|how|when|where|who|which|do|does|did|is|are|"
     r"was|were|can|could|would|should|show|tell|explain)\b))",
+    re.I,
+)
+_POSSESSION_SUMMARY = re.compile(
+    r"\b(?:user|assistant)\s+(\w+)\s+(?:runs|has(?:\s+gpu)?|os|gpu|ram|editor)\s+(.+?)(?:\.|;|$)",
+    re.I,
+)
+_POSSESSION_RUNS = re.compile(
+    r"\b(?:user|assistant)\s+(\w+)\s+runs\s+(.+?)(?:\.|;|$)",
+    re.I,
+)
+_POSSESSION_HAS_GPU = re.compile(
+    r"\b(?:user|assistant)\s+(\w+)\s+has\s+GPU\s+(.+?)(?:\.|;|$)",
+    re.I,
+)
+_POSSESSION_HAS_RAM = re.compile(
+    r"\b(?:user|assistant)\s+(\w+)\s+has\s+(.+?)\s+RAM(?:\.|;|$)",
+    re.I,
+)
+_PROJECT_SUMMARY = re.compile(
+    r"\bproject:\s*(.+?)(?:\.|;|$)",
     re.I,
 )
 
@@ -127,11 +151,16 @@ def extract_cues(text: str, *, encode_kind: str = "experience") -> list[ConceptC
                         )
                     )
                 else:
-                    m3 = _PREF_GENERIC.search(t) or _PREFER_VERB.search(t)
+                    m3 = _PREF_GENERIC.search(t) or _PREFER_VERB.search(t) or _LIKE_VERB.search(t)
                     if m3:
                         value = m3.group(1).strip().rstrip(".")
                         tokens = re.findall(r"[a-zA-Z][\w'-]*", value)
                         domain = tokens[-1].lower() if tokens else ""
+                        low = value.lower()
+                        if re.search(r"\b(local|cloud)\b.+\bai\b|\bai\b.+\b(local|cloud|model)", low):
+                            domain = "ai"
+                        elif "debug" in low or "step-by-step" in low or "step by step" in low:
+                            domain = "debugging"
                         key = f"prefer_{domain}" if domain else "preference"
                         label = (
                             f"preferred {domain}" if domain else "preference"
@@ -144,6 +173,55 @@ def extract_cues(text: str, *, encode_kind: str = "experience") -> list[ConceptC
                                 attr_value=value,
                             )
                         )
+
+    # Possession / device attributes from cognitive summaries
+    for m in _POSSESSION_RUNS.finditer(t):
+        entity = _clean_label(m.group(1))
+        value = m.group(2).strip().rstrip(".")
+        if entity and value:
+            cues.append(
+                ConceptCue(
+                    label=entity,
+                    role=ConceptRole.ENTITY,
+                    attr_key="os",
+                    attr_value=value,
+                )
+            )
+    for m in _POSSESSION_HAS_GPU.finditer(t):
+        entity = _clean_label(m.group(1))
+        value = m.group(2).strip().rstrip(".")
+        if entity and value:
+            cues.append(
+                ConceptCue(
+                    label=entity,
+                    role=ConceptRole.ENTITY,
+                    attr_key="gpu",
+                    attr_value=value,
+                )
+            )
+    for m in _POSSESSION_HAS_RAM.finditer(t):
+        entity = _clean_label(m.group(1))
+        value = m.group(2).strip().rstrip(".")
+        if entity and value:
+            cues.append(
+                ConceptCue(
+                    label=entity,
+                    role=ConceptRole.ENTITY,
+                    attr_key="ram",
+                    attr_value=value,
+                )
+            )
+    for m in _PROJECT_SUMMARY.finditer(t):
+        title = m.group(1).strip().rstrip(".")
+        if title:
+            cues.append(
+                ConceptCue(
+                    label=f"project {title}",
+                    role=ConceptRole.ENTITY,
+                    attr_key="project",
+                    attr_value=title,
+                )
+            )
 
     for m in _IS_A.finditer(t):
         child = _clean_label(m.group(1))
