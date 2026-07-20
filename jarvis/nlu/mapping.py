@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from jarvis.nlu.confidence import confidence_band
+from jarvis.nlu.episodic_patterns import is_episodic_memory_query, is_episodic_teaching
 from jarvis.nlu.types import NLUResult
 
 _LIVE_STATE = re.compile(
@@ -48,7 +49,11 @@ _USER_MEMORY = re.compile(
     # Evidence / lineage introspection (must not fall through to memory_search)
     r"\bevidence\b|"
     r"\bhistory\s+behind\s+this\s+memory\b|"
-    r"\bwhy\s+this\s+memory\s+changed\b",
+    r"\bwhy\s+this\s+memory\s+changed\b|"
+    r"\b(?:yesterday|today|this\s+morning|last\s+week|last\s+tuesday)\s+i\s+"
+    r"(?:bought|cleaned|went|installed|visited)\b|"
+    r"\bi\s+(?:bought|cleaned|went|installed|visited)\s+.+\s+"
+    r"(?:yesterday|today|this\s+morning|last\s+week)\b",
     re.I,
 )
 
@@ -125,6 +130,20 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
     if not message:
         return None
     lower = message.lower()
+
+    # Episodic autobiographical events and temporal recall — Memory Authority only.
+    if is_episodic_teaching(message):
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "episodic teaching",
+        }
+    if is_episodic_memory_query(message):
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "episodic recall",
+        }
 
     # Order matters: write before interrogative remember; search before generic recall.
     if _MEMORY_SEARCH.search(lower):
@@ -273,6 +292,8 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
     grammar = result.grammar
     lower = prompt.lower().strip()
 
+    if is_episodic_teaching(prompt) or is_episodic_memory_query(prompt):
+        return "memory"
     if _USER_MEMORY.search(prompt):
         return "memory"
     if _EXPLICIT_WEB.search(prompt):
@@ -314,6 +335,10 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
 def apply_intent_guards(result: NLUResult) -> str:
     prompt = result.prompt
     intent = result.semantic.intent
+    if is_episodic_teaching(prompt):
+        return "memory"
+    if is_episodic_memory_query(prompt):
+        return "memory"
     if intent == "documentation":
         intent = "reference"
     structural = infer_intent_from_structure(result)
@@ -342,6 +367,8 @@ def apply_intent_guards(result: NLUResult) -> str:
     # Autobiographical "my" (favorite color, my name, …) must never be forced to
     # Mission Control merely because _LIVE_STATE matches the word "my".
     if intent in ("web_search", "knowledge") and _LIVE_STATE.search(prompt):
+        if is_episodic_teaching(prompt):
+            return "memory"
         if re.search(
             r"\b(favorite|favourite|prefer|name|remember|memory|retired|replaced|active)\b",
             prompt,

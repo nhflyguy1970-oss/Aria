@@ -302,7 +302,7 @@ def synthesize_answer_stream(query: str, results: list[dict]):
     msgs, sources = _synthesis_messages(query, results)
     body: list[str] = []
     try:
-        for chunk in llm.ask_stream(llm.general_model(), msgs):
+        for chunk in llm.ask_stream(llm.web_research_model(), msgs, role="web_research"):
             body.append(chunk)
             yield chunk
         if sources and "".join(body).strip():

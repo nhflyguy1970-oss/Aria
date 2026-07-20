@@ -74,7 +74,12 @@ _USER_MEMORY_EXCLUDE = re.compile(
     r"retired|superseded|replaced|"
     r"evidence|"
     r"history behind this memory|"
-    r"why this memory changed"
+    r"why this memory changed|"
+    r"(?:yesterday|today|this\s+morning|last\s+week|last\s+tuesday)\s+i\s+"
+    r"(?:bought|cleaned|went|installed|visited)|"
+    r"i\s+(?:bought|cleaned|went|installed|visited)\s+.+\s+"
+    r"(?:yesterday|today|this\s+morning|last\s+week)|"
+    r"what\s+happened|what\s+did\s+i\s+\w+"
     r")\b",
     re.I,
 )
@@ -121,6 +126,13 @@ def is_runtime_routing_question(message: str) -> bool:
         return False
     if _USER_MEMORY_EXCLUDE.search(text):
         return False
+    try:
+        from jarvis.nlu.episodic_patterns import is_episodic_memory_utterance
+
+        if is_episodic_memory_utterance(text):
+            return False
+    except Exception:
+        pass
     return bool(_RUNTIME_KEYWORD_RE.search(text))
 
 

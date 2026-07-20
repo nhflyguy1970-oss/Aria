@@ -172,6 +172,24 @@ def chat_with_usage(
         messages=messages,
         lock_model=overlay.get("source") == "benchmark",
     )
+    try:
+        from jarvis.routing_trace import record_gateway
+
+        record_gateway(
+            decision={
+                "backend": chosen.backend,
+                "model": chosen.model,
+                "reason": chosen.reason,
+                "hardware": hardware,
+                "execution_path": "cloud"
+                if getattr(chosen, "cloud", False)
+                else ("local_gpu" if hardware != "cpu" else "cpu"),
+                "provider": "litellm" if chosen.backend == "litellm" else "ollama",
+                "policy_source": overlay.get("source"),
+            }
+        )
+    except Exception:
+        pass
     if chosen.backend == "litellm":
         try:
             text, usage = _litellm_chat_with_usage(chosen.model, messages, **kwargs)

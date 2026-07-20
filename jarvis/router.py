@@ -792,6 +792,32 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
     from jarvis.runtime_routing import is_runtime_routing_question, route_runtime_priority
     from jarvis.runtime_routing_trace import log_route_decision
 
+    try:
+        from jarvis.capability_routing import capability_for_action_and_message, role_for_capability
+        from jarvis.routing_trace import record_capability, record_handler, record_intent
+
+        action = str(intent.get("action") or "chat")
+        capability = capability_for_action_and_message(action, message)
+        role = role_for_capability(capability)
+        record_intent(
+            intent=capability,
+            action=action,
+            reason=str(intent.get("route_reason") or ""),
+            handler=str(intent.get("route_handler") or ""),
+        )
+        record_capability(
+            capability=capability,
+            role="memory" if role is None and capability.startswith("episodic") else role,
+        )
+        handler = str(intent.get("route_handler") or "")
+        if handler:
+            provider = "acm" if capability.startswith("episodic") or capability == "memory" else (
+                "mission_control" if action.startswith("runtime_") else ""
+            )
+            record_handler(handler=handler, provider=provider)
+    except Exception:
+        pass
+
     # Multi-capability compose takes precedence over single-intent XOR.
     try:
         from aria_core.cognition import plan_request
@@ -1787,6 +1813,16 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
             "thinking": "clarification resolved",
         }
 
+    try:
+        from jarvis.routing_explain import try_routing_explain
+        from jarvis.routing_trace import begin_trace
+
+        begin_trace(message)
+        if explain := try_routing_explain(message):
+            return _finalize_intent(explain, message, session)
+    except Exception:
+        pass
+
     follow = _follow_up_route(message, session)
     if follow:
         follow.setdefault("thinking", "follow-up")
@@ -1932,7 +1968,14 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
     )
 
     try:
-        raw = llm.ask(llm.general_model(), [{"role": "user", "content": prompt}])
+        from jarvis.capability_routing import apply_gateway_model
+
+        route_model = apply_gateway_model(llm.router_model(), "router")
+        raw = llm.ask(
+            route_model,
+            [{"role": "user", "content": prompt}],
+            role="router",
+        )
         raw = raw.strip()
         if raw.startswith("```"):
             raw = re.sub(r"^```\w*\n?", "", raw)

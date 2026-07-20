@@ -18,6 +18,46 @@ class MemoryEngine:
     """Isolated memory domain logic."""
 
     @staticmethod
+    def _acm_authority_speak(question: str) -> tuple[dict[str, Any], str]:
+        """Memory Authority path with teaching ack + conversational presentation."""
+        from aria_core import acm_bridge
+
+        from jarvis.behaviors.memory.cognitive_presentation import (
+            format_teaching_acknowledgement,
+            polish_cognitive_speech,
+        )
+
+        cog = acm_bridge.primary_cognitive_speak(question)
+        result = cog.get("result") if isinstance(cog.get("result"), dict) else {}
+        path = list(result.get("reasoning_path") or [])
+        raw = str(cog.get("speech") or "").strip()
+
+        if "teaching_encoded" in path:
+            ack = format_teaching_acknowledgement(question)
+            if ack:
+                MemoryEngine._trace_memory_presentation("cognitive_presentation", "teaching_ack")
+                return result, ack
+
+        if result.get("is_memory_request"):
+            if raw:
+                polished = polish_cognitive_speech(raw, result, prompt=question)
+                MemoryEngine._trace_memory_presentation("cognitive_presentation", "memory_recall")
+                return result, polished
+            if (result.get("status") or "").lower() == "unknown":
+                return result, "I don't currently know."
+
+        return result, raw
+
+    @staticmethod
+    def _trace_memory_presentation(layer: str, response_kind: str) -> None:
+        try:
+            from jarvis.routing_trace import record_presentation
+
+            record_presentation(layer=layer, response_kind=response_kind)
+        except Exception:
+            pass
+
+    @staticmethod
     def memory_citation(entry: dict) -> dict:
         return {
             "id": entry.get("id"),
@@ -314,9 +354,7 @@ class MemoryEngine:
             try:
                 query = (params.get("query") or message or "").strip()
                 request = acm_bridge._memory_request_for_search(query or "about me")
-                cog = acm_bridge.primary_cognitive_speak(request)
-                result = cog.get("result") or {}
-                speech = str(cog.get("speech") or "").strip()
+                result, speech = cls._acm_authority_speak(request)
                 if not result.get("is_memory_request") or not speech:
                     return ok(
                         "I don't have a clear memory for that yet.", module="memory", source="acm"
@@ -359,11 +397,22 @@ class MemoryEngine:
         if acm_bridge.acm_is_authoritative():
             try:
                 question = (params.get("question") or message or "").strip()
-                cog = acm_bridge.primary_cognitive_speak(question)
-                result = cog.get("result") or {}
-                speech = str(cog.get("speech") or "").strip()
-                if result.get("is_memory_request") and speech:
-                    return ok(speech, module="memory", source="acm", cognitive_status=result.get("status"))
+                result, speech = cls._acm_authority_speak(question)
+                path = list(result.get("reasoning_path") or [])
+                if speech:
+                    return ok(
+                        speech,
+                        module="memory",
+                        source="acm",
+                        cognitive_status=result.get("status"),
+                    )
+                if any(str(p).startswith("teaching_") for p in path):
+                    return ok(
+                        "I couldn't store that as memory.",
+                        module="memory",
+                        source="acm",
+                        cognitive_status=result.get("status"),
+                    )
                 return ok(
                     "I'm still learning about you. Tell me preferences or facts to remember.",
                     module="memory",
@@ -481,6 +530,12 @@ class MemoryEngine:
         if acm_bridge.acm_is_authoritative():
             try:
                 query = (params.get("query") or message or "").strip()
+                from jarvis.nlu.episodic_patterns import is_episodic_memory_query
+
+                if is_episodic_memory_query(query):
+                    return cls.memory_about_user(
+                        ctx, {"question": query}, message or query
+                    )
                 from aria_core import memory as core_memory
 
                 hits = core_memory.search_memory(
@@ -737,7 +792,11 @@ class MemoryEngine:
             f"Recent chat:\n{blob}\n\n"
             f"User note: {message or 'save checkpoint'}"
         )
-        summary = llm.ask(llm.general_model(), [{"role": "user", "content": prompt}]).strip()
+        summary = llm.ask(
+            llm.summarization_model(),
+            [{"role": "user", "content": prompt}],
+            role="summarization",
+        ).strip()
         if not summary:
             return err("Could not build a checkpoint summary.")
         note = params.get("note") or ""

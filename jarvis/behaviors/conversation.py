@@ -188,7 +188,9 @@ class ConversationEngine:
             return ""
 
     def ask_instruction_sentence(self, topic: str, n_words: int) -> str:
-        model = (self._a.session.chat_model or "").strip() or llm.general_model()
+        from jarvis.capability_routing import resolve_model_for_capability
+
+        model = resolve_model_for_capability("summarization") or llm.conversation_model()
         msgs = [
             {
                 "role": "system",
@@ -199,7 +201,7 @@ class ConversationEngine:
                 "content": f"Write exactly {n_words} words about {topic}. Output only that sentence.",
             },
         ]
-        answer, _ = llm.ask_with_usage(model, msgs, temperature=0)
+        answer, _ = llm.ask_with_usage(model, msgs, temperature=0, role="summarization")
         return answer.strip()
 
     def try_strict_instructions(self, message: str) -> str | None:
@@ -238,6 +240,11 @@ class ConversationEngine:
             )
 
         user_message = self.prepare_user_message(message, params)
+        if params.get("routing_explain"):
+            from jarvis.routing_explain import explain_routing
+
+            text = str(params.get("explain_text") or explain_routing(message))
+            return _ok(text, module=None, type="routing_explain")
         piped = self.try_strict_instructions(user_message)
         if piped:
             self._a.conversation.add_user(user_message)
@@ -262,12 +269,19 @@ class ConversationEngine:
             hint = strict_instruction_context_prefix()
             context_prefix = f"{hint}\n\n{context_prefix}" if context_prefix else hint
         self._a.conversation.add_user(user_message)
-        model = (params.get("model") or self._a.session.chat_model or "").strip() or llm.general_model()
+        from jarvis.capability_routing import resolve_conversation_model
+
+        model, chat_role = resolve_conversation_model(
+            user_message,
+            params,
+            session_chat_model=(self._a.session.chat_model or "").strip(),
+            action="chat",
+        )
         usage: dict = {}
         try:
             msgs = self.messages_for_llm(self._a.conversation.messages, context_prefix)
             t0 = time.perf_counter()
-            answer, usage = llm.ask_with_usage(model, msgs)
+            answer, usage = llm.ask_with_usage(model, msgs, role=chat_role)
             inference_ms = int((time.perf_counter() - t0) * 1000)
         except Exception as exc:
             self._a.conversation.pop_last_user()
@@ -275,7 +289,7 @@ class ConversationEngine:
             return _err(_sanitize_user_error(exc), module=None)
         if not answer.strip():
             self._a.conversation.pop_last_user()
-            detail = f"Model `{llm.general_model()}` returned empty"
+            detail = f"Model `{model}` returned empty"
             _record_backend_failure(detail)
             return _err(_sanitize_user_error(detail), module=None)
         self._a.conversation.add_assistant(answer)
@@ -340,14 +354,21 @@ class ConversationEngine:
         from jarvis.chat_cancel import finish as finish_cancel
         from jarvis.chat_cancel import is_cancelled
 
-        chat_model = (params.get("model") or self._a.session.chat_model or "").strip() or llm.general_model()
+        from jarvis.capability_routing import resolve_conversation_model
+
+        chat_model, chat_role = resolve_conversation_model(
+            user_message,
+            params,
+            session_chat_model=(self._a.session.chat_model or "").strip(),
+            action="chat",
+        )
         full: list[str] = []
         saved_user = False
         stopped = False
         usage: dict = {}
         t0 = time.perf_counter()
         try:
-            for chunk in llm.ask_stream(chat_model, msgs, cancel_key=request_id, usage=usage):
+            for chunk in llm.ask_stream(chat_model, msgs, cancel_key=request_id, usage=usage, role=chat_role):
                 if request_id and is_cancelled(request_id):
                     stopped = True
                     break
@@ -381,7 +402,7 @@ class ConversationEngine:
         if not answer.strip():
             if saved_user:
                 self._a.conversation.pop_last_user()
-            detail = f"Model `{llm.general_model()}` returned empty"
+            detail = f"Model `{model}` returned empty"
             _record_backend_failure(detail)
             yield {
                 "type": "done",

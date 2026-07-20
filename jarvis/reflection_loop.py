@@ -107,8 +107,16 @@ def _generate_strategies(context: str) -> list[str]:
     )
     try:
         from jarvis import llm
+        from jarvis.capability_routing import apply_gateway_model
 
-        raw = llm.chat(prompt, system="You output concise strategy rules only.", max_tokens=280)
+        model = apply_gateway_model(llm.reflection_model(), "reflection")
+        raw = llm.ask_with_system(
+            model,
+            "You output concise strategy rules only.",
+            prompt,
+            role="reflection",
+            options={"num_predict": 280},
+        )
         rules = [ln.strip().lstrip("-• ").strip() for ln in (raw or "").splitlines() if ln.strip()]
         return [r for r in rules if len(r) > 10][:3]
     except Exception as exc:

@@ -290,6 +290,14 @@ def record_prompt_execution(
     except Exception:
         conversation_trace = {}
 
+    unified_trace: dict[str, Any] = {}
+    try:
+        from jarvis.routing_trace import finalize_trace, last_routing_trace
+
+        unified_trace = finalize_trace(response_kind=action) or last_routing_trace() or {}
+    except Exception:
+        unified_trace = {}
+
     record = {
         "conversation_id": conversation_id,
         "request_id": request_id or "",
@@ -332,6 +340,7 @@ def record_prompt_execution(
         "uncensored": conversation_trace.get("uncensored"),
         "reflex_category": intent.get("reflex_category"),
         "conversation_trace": conversation_trace,
+        "unified_routing_trace": unified_trace,
         "debug": {
             "intent_classifier_result": action,
             "rule_matched": intent.get("route_reason") or trace.get("reason"),
@@ -478,6 +487,8 @@ ROUTING_COMMANDS = {
     "routing last": "routing_last",
     "routing history": "routing_history",
     "routing stats": "routing_stats",
+    "capability health": "capability_health",
+    "routing trace": "routing_trace_last",
 }
 
 

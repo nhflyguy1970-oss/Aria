@@ -7,57 +7,153 @@ from jarvis.ollama_health import check_ollama
 
 SETTINGS_FILE = DATA_DIR / "model_settings.json"
 
-ROLES = ("general", "coder", "review", "vision", "image", "embed")
+# Canonical roles — configuration defines models; code requests roles, not model names.
+CANONICAL_ROLES = (
+    "conversation",
+    "reasoning",
+    "planning",
+    "coding",
+    "review",
+    "fast_chat",
+    "router",
+    "tool_calling",
+    "summarization",
+    "document",
+    "web_research",
+    "reflection",
+    "learning",
+    "vision",
+    "image",
+    "embedding",
+)
+
+# Legacy GUI/API names kept in sync with canonical roles.
+LEGACY_ROLE_ALIASES = {
+    "general": "conversation",
+    "coder": "coding",
+    "embed": "embedding",
+}
+
+ROLES = CANONICAL_ROLES + tuple(LEGACY_ROLE_ALIASES.keys())
 
 # Image backends and other non-Ollama roles — never passed to `ollama pull`.
 NON_OLLAMA_BACKENDS = frozenset({"comfyui", "a1111", "automatic1111"})
 ROLE_LABELS = {
-    "general": "Chat",
-    "coder": "Code",
-    "review": "Review",
+    "conversation": "Conversation",
+    "reasoning": "Reasoning",
+    "planning": "Planning",
+    "coding": "Coding",
+    "review": "Code review",
+    "fast_chat": "Fast chat",
+    "router": "Router / NLU",
+    "tool_calling": "Tool calling",
+    "summarization": "Summarization",
+    "document": "Document analysis",
+    "web_research": "Web research",
+    "reflection": "Reflection",
+    "learning": "Learning extraction",
     "vision": "Vision",
-    "image": "Image",
-    "embed": "Memory embeddings",
+    "image": "Image generation",
+    "embedding": "Embeddings",
+    "general": "Chat (legacy)",
+    "coder": "Code (legacy)",
+    "embed": "Embeddings (legacy)",
 }
 
 # Optimized for: Ryzen 5600X, RX 7600 8GB VRAM, 62GB RAM, CPU/GPU hybrid via Ollama
 # Quality preset uses 7B models so one Ollama model fits GPU VRAM alongside ComfyUI unload.
-OPTIMIZED_STANDARD = {
-    "general": "qwen2.5:7b",
-    "coder": "qwen2.5-coder:7b",
-    "review": "qwen2.5:7b",
-    "vision": "moondream:latest",
-    "image": "comfyui",
-    "embed": "nomic-embed-text",
-}
+def _with_legacy_aliases(preset: dict[str, str]) -> dict[str, str]:
+    out = dict(preset)
+    for legacy, canonical in LEGACY_ROLE_ALIASES.items():
+        if canonical in out:
+            out.setdefault(legacy, out[canonical])
+    return out
 
-OPTIMIZED_UNCENSORED = {
-    "general": "dolphin-mistral:latest",
-    "coder": "qwen2.5-coder:7b",
-    "review": "dolphin-mistral:latest",
-    "vision": "moondream:latest",
-    "image": "comfyui",
-    "embed": "nomic-embed-text",
-}
+
+OPTIMIZED_STANDARD = _with_legacy_aliases(
+    {
+        "conversation": "qwen2.5:7b",
+        "reasoning": "deepseek-r1:7b",
+        "planning": "qwen2.5:7b",
+        "coding": "deepseek-coder:latest",
+        "review": "deepseek-r1:7b",
+        "fast_chat": "qwen3:1.7b",
+        "router": "qwen2.5-coder:1.5b-base",
+        "tool_calling": "qwen2.5-coder:1.5b-base",
+        "summarization": "qwen2.5-coder:1.5b-base",
+        "document": "qwen2.5:7b",
+        "web_research": "qwen2.5:7b",
+        "reflection": "qwen2.5:7b",
+        "learning": "qwen2.5-coder:1.5b-base",
+        "vision": "moondream:latest",
+        "image": "comfyui",
+        "embedding": "nomic-embed-text",
+    }
+)
+
+OPTIMIZED_UNCENSORED = _with_legacy_aliases(
+    {
+        "conversation": "dolphin-mistral:latest",
+        "reasoning": "deepseek-r1:7b",
+        "planning": "dolphin-mistral:latest",
+        "coding": "deepseek-coder:latest",
+        "review": "deepseek-r1:7b",
+        "fast_chat": "qwen3:1.7b",
+        "router": "qwen2.5-coder:1.5b-base",
+        "tool_calling": "qwen2.5-coder:1.5b-base",
+        "summarization": "qwen2.5-coder:1.5b-base",
+        "document": "dolphin-mistral:latest",
+        "web_research": "dolphin-mistral:latest",
+        "reflection": "dolphin-mistral:latest",
+        "learning": "qwen2.5-coder:1.5b-base",
+        "vision": "moondream:latest",
+        "image": "comfyui",
+        "embedding": "nomic-embed-text",
+    }
+)
 
 # Fast presets — 7B/light models for speed on RX 7600
-FAST_STANDARD = {
-    "general": "qwen2.5:7b",
-    "coder": "qwen2.5-coder:7b",
-    "review": "qwen2.5:7b",
-    "vision": "moondream:latest",
-    "image": "comfyui",
-    "embed": "nomic-embed-text",
-}
+FAST_STANDARD = _with_legacy_aliases(
+    {
+        "conversation": "qwen2.5:7b",
+        "reasoning": "deepseek-r1:7b",
+        "planning": "qwen2.5:7b",
+        "coding": "qwen2.5-coder:7b",
+        "review": "qwen2.5:7b",
+        "fast_chat": "qwen3:1.7b",
+        "router": "qwen2.5-coder:1.5b-base",
+        "tool_calling": "qwen2.5-coder:1.5b-base",
+        "summarization": "qwen2.5-coder:1.5b-base",
+        "document": "qwen2.5:7b",
+        "web_research": "qwen2.5:7b",
+        "reflection": "qwen2.5:7b",
+        "learning": "qwen2.5-coder:1.5b-base",
+        "vision": "moondream:latest",
+        "image": "comfyui",
+        "embedding": "nomic-embed-text",
+    }
+)
 
-FAST_UNCENSORED = {
-    "general": "dolphin-mistral:latest",
-    "coder": "qwen2.5-coder:7b",
-    "review": "dolphin-mistral:latest",
-    "vision": "moondream:latest",
-    "image": "comfyui",
-    "embed": "nomic-embed-text",
-}
+FAST_UNCENSORED = _with_legacy_aliases(
+    {
+        "conversation": "dolphin-mistral:latest",
+        "reasoning": "deepseek-r1:7b",
+        "planning": "dolphin-mistral:latest",
+        "coding": "qwen2.5-coder:7b",
+        "review": "dolphin-mistral:latest",
+        "fast_chat": "qwen3:1.7b",
+        "router": "qwen2.5-coder:1.5b-base",
+        "tool_calling": "qwen2.5-coder:1.5b-base",
+        "summarization": "qwen2.5-coder:1.5b-base",
+        "document": "dolphin-mistral:latest",
+        "web_research": "dolphin-mistral:latest",
+        "reflection": "dolphin-mistral:latest",
+        "learning": "qwen2.5-coder:1.5b-base",
+        "vision": "moondream:latest",
+        "image": "comfyui",
+        "embedding": "nomic-embed-text",
+    }
+)
 
 PRESETS = {
     "quality": {"standard": OPTIMIZED_STANDARD, "uncensored": OPTIMIZED_UNCENSORED},
@@ -66,27 +162,67 @@ PRESETS = {
 
 # Fallback priority if optimized model not installed
 FALLBACK_PRIORITY = {
-    "general": [
+    "conversation": [
         "qwen2.5:14b", "qwen2.5:7b", "llama3.1:8b", "gemma3:12b", "dolphin3:latest",
         "dolphin-mistral:latest", "mistral-nemo:latest", "qwen3:14b",
     ],
-    "coder": [
-        "qwen2.5-coder:14b", "deepseek-coder-v2:16b", "deepseek-coder-v2:latest",
-        "coder-stable:latest", "devstral:latest", "qwen2.5-coder:7b",
+    "reasoning": [
+        "deepseek-r1:14b", "deepseek-r1:7b", "deepseek-r1:1.5b", "qwen2.5:14b", "qwen2.5:7b",
+    ],
+    "planning": [
+        "qwen2.5:14b", "qwen2.5:7b", "deepseek-r1:7b",
+    ],
+    "coding": [
+        "deepseek-coder:latest", "deepseek-coder-v2:16b", "deepseek-coder-v2:latest",
+        "qwen2.5-coder:14b", "coder-stable:latest", "devstral:latest", "qwen2.5-coder:7b",
     ],
     "review": [
-        "deepseek-r1:14b", "qwen2.5:14b", "gemma3:12b", "dolphin3:latest",
+        "deepseek-r1:14b", "deepseek-r1:7b", "qwen2.5:14b", "gemma3:12b", "dolphin3:latest",
     ],
+    "fast_chat": ["qwen3:1.7b", "qwen2.5:3b", "qwen2.5:7b"],
+    "router": ["qwen2.5-coder:1.5b-base", "qwen3:1.7b"],
+    "tool_calling": ["qwen2.5-coder:1.5b-base", "qwen3:1.7b"],
+    "summarization": ["qwen2.5-coder:1.5b-base", "qwen3:1.7b", "qwen2.5:7b"],
+    "document": ["qwen2.5:14b", "qwen2.5:7b"],
+    "web_research": ["qwen2.5:14b", "qwen2.5:7b"],
+    "reflection": ["qwen2.5:14b", "qwen2.5:7b", "deepseek-r1:7b"],
+    "learning": ["qwen2.5-coder:1.5b-base", "qwen3:1.7b"],
     "vision": [
         "llava:13b", "moondream:latest", "moondream", "llama3.2-vision:11b",
     ],
     "image": [
         "comfyui",
     ],
+    "embedding": [
+        "nomic-embed-text:latest", "nomic-embed-text",
+    ],
+    "general": [
+        "qwen2.5:14b", "qwen2.5:7b", "llama3.1:8b", "gemma3:12b", "dolphin3:latest",
+        "dolphin-mistral:latest", "mistral-nemo:latest", "qwen3:14b",
+    ],
+    "coder": [
+        "deepseek-coder:latest", "qwen2.5-coder:14b", "qwen2.5-coder:7b",
+    ],
     "embed": [
         "nomic-embed-text:latest", "nomic-embed-text",
     ],
 }
+
+
+def canonical_role(role: str) -> str:
+    key = (role or "conversation").strip().lower()
+    return LEGACY_ROLE_ALIASES.get(key, key)
+
+
+def _sync_legacy_keys(models: dict[str, str]) -> dict[str, str]:
+    """Keep legacy role keys aligned with canonical registry entries."""
+    out = dict(models)
+    for legacy, canonical in LEGACY_ROLE_ALIASES.items():
+        if canonical in out:
+            out[legacy] = out[canonical]
+        elif legacy in out and canonical not in out:
+            out[canonical] = out[legacy]
+    return out
 
 
 def is_ollama_pullable(model: str) -> bool:
@@ -122,11 +258,12 @@ def _match_installed(preferred: str, installed: list[str]) -> str | None:
 
 
 def _pick_for_role(role: str, defaults: dict, installed: list[str]) -> str:
-    preferred = defaults.get(role, "")
+    canonical = canonical_role(role)
+    preferred = defaults.get(canonical, defaults.get(role, ""))
     match = _match_installed(preferred, installed)
     if match:
         return match
-    for candidate in FALLBACK_PRIORITY.get(role, []):
+    for candidate in FALLBACK_PRIORITY.get(canonical, FALLBACK_PRIORITY.get(role, [])):
         match = _match_installed(candidate, installed)
         if match:
             return match
@@ -135,9 +272,14 @@ def _pick_for_role(role: str, defaults: dict, installed: list[str]) -> str:
 
 def build_optimized_defaults(installed: list[str] | None = None) -> dict:
     installed = installed if installed is not None else _installed()
+    roles = set(CANONICAL_ROLES) | set(LEGACY_ROLE_ALIASES.keys())
     return {
-        "standard": {role: _pick_for_role(role, OPTIMIZED_STANDARD, installed) for role in ROLES},
-        "uncensored": {role: _pick_for_role(role, OPTIMIZED_UNCENSORED, installed) for role in ROLES},
+        "standard": _sync_legacy_keys(
+            {role: _pick_for_role(role, OPTIMIZED_STANDARD, installed) for role in roles}
+        ),
+        "uncensored": _sync_legacy_keys(
+            {role: _pick_for_role(role, OPTIMIZED_UNCENSORED, installed) for role in roles}
+        ),
     }
 
 
@@ -230,7 +372,7 @@ def get_models() -> dict:
                 result["vision"] = fallback
 
     result["vision"] = _vision_fallback_for_ollama(result.get("vision", ""), installed)
-    return result
+    return _sync_legacy_keys(result)
 
 
 def get_all_settings() -> dict:
@@ -296,7 +438,12 @@ def update_models(mode: str, models: dict) -> dict:
     for role in ROLES:
         if role in models and models[role]:
             current[role] = models[role].strip()
-    data[mode_key] = current
+    for legacy, canonical in LEGACY_ROLE_ALIASES.items():
+        if legacy in current and canonical not in current:
+            current[canonical] = current[legacy]
+        if canonical in current:
+            current[legacy] = current[canonical]
+    data[mode_key] = _sync_legacy_keys(current)
     data["customized"] = True
     _save_raw(data)
     return get_all_settings()
@@ -343,4 +490,6 @@ def reset_to_optimized(mode: str | None = None) -> dict:
 
 
 def model_for(role: str) -> str:
-    return get_models().get(role, OPTIMIZED_STANDARD.get(role, "qwen2.5:7b"))
+    canonical = canonical_role(role)
+    models = get_models()
+    return models.get(canonical, models.get(role, OPTIMIZED_STANDARD.get(canonical, "qwen2.5:7b")))

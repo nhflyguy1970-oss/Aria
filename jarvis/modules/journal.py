@@ -1165,7 +1165,11 @@ class BulletJournal(BujoMixin):
 Journal:
 {text}
 """
-        return llm.ask(llm.general_model(), [{"role": "user", "content": prompt}])
+        return llm.ask(
+            llm.reflection_model(),
+            [{"role": "user", "content": prompt}],
+            role="reflection",
+        )
 
 
 class JournalEngine:

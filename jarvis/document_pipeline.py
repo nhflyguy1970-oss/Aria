@@ -496,7 +496,7 @@ def summarize_document(doc: ParsedDocument) -> str:
         f"Excerpts:\n{context}\n\n"
         "Write a concise summary."
     )
-    return llm.ask_with_system(llm.general_model(), system, user)
+    return llm.ask_with_system(llm.document_model(), system, user, role="document")
 
 
 def answer_document(doc: ParsedDocument, question: str) -> str:
@@ -517,7 +517,7 @@ def answer_document(doc: ParsedDocument, question: str) -> str:
         f"Excerpts:\n{context}\n\n"
         f"Question: {question.strip()}"
     )
-    return llm.ask_with_system(llm.general_model(), system, user)
+    return llm.ask_with_system(llm.document_model(), system, user, role="document")
 
 
 def list_library_documents(limit: int = 50) -> list[dict[str, Any]]:

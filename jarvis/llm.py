@@ -75,21 +75,26 @@ def ask_with_usage(model: str, messages: list[dict], **kwargs) -> tuple[str, dic
     return chat_with_usage(model, messages, role=role, **kwargs)
 
 
-def ask_with_system(model: str, system: str, user: str, **kwargs) -> str:
+def ask_with_system(model: str, system: str, user: str, *, role: str = "conversation", **kwargs) -> str:
     """LLM call with a custom system prompt (no Jarvis chat persona)."""
+    from jarvis.capability_routing import apply_gateway_model
+    from jarvis.inference.gateway import chat_with_usage
+
+    resolved = apply_gateway_model(model, role)
     try:
-        response = chat(
-            model=model,
-            messages=[
+        text, _ = chat_with_usage(
+            resolved,
+            [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
             ],
-            **_normalize_chat_kwargs(kwargs),
+            role=role,
+            **kwargs,
         )
-        return response["message"]["content"]
+        return text
     except Exception as e:
         raise RuntimeError(
-            f"Ollama error with model '{model}': {e}. Is Ollama running? Try: ollama serve"
+            f"Ollama error with model '{resolved}': {e}. Is Ollama running? Try: ollama serve"
         ) from e
 
 
@@ -228,6 +233,12 @@ ROUTER_TOOLS = [
 
 def route_with_tools(message: str, context: str, attachment: dict | None) -> dict | None:
     """Use Ollama tool calling for routing when supported."""
+    from jarvis.capability_routing import apply_gateway_model, resolve_model_for_capability
+
+    router_model = apply_gateway_model(
+        resolve_model_for_capability("tool_calling") or tool_calling_model(),
+        "tool_calling",
+    )
     attachment_context = json.dumps(attachment) if attachment else "none"
     prompt = (
         "Route this request. Use coding_chat only for questions about the Jarvis project's "
@@ -239,7 +250,7 @@ def route_with_tools(message: str, context: str, attachment: dict | None) -> dic
     )
     try:
         response = chat(
-            model=general_model(),
+            model=router_model,
             messages=[{"role": "user", "content": prompt}],
             tools=ROUTER_TOOLS,
         )
@@ -279,7 +290,7 @@ def extract_memories(text: str) -> list[str]:
         f"Text: {text}"
     )
     try:
-        raw = ask(general_model(), [{"role": "user", "content": prompt}])
+        raw = ask(summarization_model(), [{"role": "user", "content": prompt}], role="summarization")
         raw = raw.strip()
         if raw.startswith("```"):
             raw = re.sub(r"^```\w*\n?", "", raw)
@@ -440,7 +451,7 @@ def generate_python_code(
             user += f"\n\nRuntime errors:\n{errors}"
     else:
         user = f"Write a Python script: {task}"
-    raw = ask_with_system(coder_model(), CODER_SYSTEM, user)
+    raw = ask_with_system(coder_model(), CODER_SYSTEM, user, role="coding")
     explanation, code = parse_code_response(raw)
     return explanation, sanitize_python_code(code)
 
@@ -458,7 +469,7 @@ def generate_python_fix(
         user += f"\n\nRelated context:\n{context}"
     if errors:
         user += f"\n\nErrors (must fix all):\n{errors}"
-    raw = ask_with_system(coder_model(), CODER_FIX_SYSTEM, user)
+    raw = ask_with_system(coder_model(), CODER_FIX_SYSTEM, user, role="coding")
     explanation, code = parse_code_response(raw)
     return explanation, sanitize_python_code(code)
 
@@ -484,7 +495,7 @@ def generate_patched_edit(
         user += f"\n\nRelated context:\n{context}"
     if errors:
         user += f"\n\nErrors to fix:\n{errors}"
-    raw = ask_with_system(coder_model(), CODER_PATCH_SYSTEM, user)
+    raw = ask_with_system(coder_model(), CODER_PATCH_SYSTEM, user, role="coding")
     return _parse_patch_or_code_response(raw, default_path=path)
 
 
@@ -500,7 +511,7 @@ def generate_multi_file_edit(
         user += f"\n\nProject context:\n{context}"
     if errors:
         user += f"\n\nErrors from last attempt:\n{errors}"
-    raw = ask_with_system(coder_model(), CODER_MULTI_EDIT_SYSTEM, user)
+    raw = ask_with_system(coder_model(), CODER_MULTI_EDIT_SYSTEM, user, role="coding")
     return _parse_patch_or_code_response(raw)
 
 
@@ -556,7 +567,7 @@ def diagnose_code(
         user += f"\n\nContext:\n{context}"
     if errors:
         user += f"\n\nErrors:\n{errors}"
-    return ask_with_system(coder_model(), CODER_DIAGNOSE_SYSTEM, user)
+    return ask_with_system(coder_model(), CODER_DIAGNOSE_SYSTEM, user, role="coding")
 
 
 def coding_chat_answer(message: str, *, context: str = "") -> str:
@@ -564,7 +575,7 @@ def coding_chat_answer(message: str, *, context: str = "") -> str:
     user = message
     if context:
         user = f"Project context:\n{context}\n\nQuestion: {message}"
-    return ask_with_system(coder_model(), CODING_CHAT_SYSTEM, user)
+    return ask_with_system(coder_model(), CODING_CHAT_SYSTEM, user, role="coding")
 
 
 def generate_script_with_test(task: str, script_path: str) -> tuple[str, list[dict]]:
@@ -580,7 +591,7 @@ def generate_script_with_test(task: str, script_path: str) -> tuple[str, list[di
         f"2) Pytest at FILE: {test_path}\n\n"
         f"Requirement: {task}"
     )
-    raw = ask_with_system(coder_model(), CODER_MULTI_SYSTEM, user)
+    raw = ask_with_system(coder_model(), CODER_MULTI_SYSTEM, user, role="coding")
     explanation, files = parse_multi_code_response(raw)
     cleaned: list[dict] = []
     for item in files:
@@ -624,15 +635,51 @@ def parse_multi_code_response(response_text: str) -> tuple[str, list[dict]]:
 
 
 def coder_model() -> str:
-    return model_for("coder")
+    return model_for("coding")
+
+
+def conversation_model() -> str:
+    return model_for("conversation")
 
 
 def general_model() -> str:
-    return model_for("general")
+    return conversation_model()
 
 
 def review_model() -> str:
     return model_for("review")
+
+
+def reasoning_model() -> str:
+    return model_for("reasoning")
+
+
+def router_model() -> str:
+    return model_for("router")
+
+
+def tool_calling_model() -> str:
+    return model_for("tool_calling")
+
+
+def summarization_model() -> str:
+    return model_for("summarization")
+
+
+def document_model() -> str:
+    return model_for("document")
+
+
+def web_research_model() -> str:
+    return model_for("web_research")
+
+
+def reflection_model() -> str:
+    return model_for("reflection")
+
+
+def learning_model() -> str:
+    return model_for("learning")
 
 
 def vision_model() -> str:
@@ -711,4 +758,4 @@ def image_model() -> str:
 
 
 def embed_model() -> str:
-    return model_for("embed")
+    return model_for("embedding")

@@ -55,6 +55,8 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "routing_last": lambda _params, _message: _routing_last(),
     "routing_history": lambda _params, _message: _routing_history(),
     "routing_stats": lambda _params, _message: _routing_stats(),
+    "capability_health": lambda _params, _message: _capability_health(),
+    "routing_trace_last": lambda _params, _message: _routing_trace_last(),
     "timeline_recent": lambda _params, _message: _timeline("timeline_recent"),
     "timeline_today": lambda _params, _message: _timeline("timeline_today"),
     "timeline_startup": lambda _params, _message: _timeline("timeline_startup"),
@@ -275,6 +277,37 @@ def _routing_stats() -> dict:
         "ok": True,
         "message": format_routing_stats_markdown(stats),
         "data": stats,
+        "type": "info",
+    }
+
+
+def _capability_health() -> dict:
+    from jarvis.capability_health import capability_health_report, format_capability_health_markdown
+
+    rows = capability_health_report()
+    return {
+        "ok": True,
+        "message": format_capability_health_markdown(rows),
+        "data": rows,
+        "type": "info",
+    }
+
+
+def _routing_trace_last() -> dict:
+    from jarvis.routing_trace import format_trace_text, last_routing_trace, routing_trace_enabled
+
+    trace = last_routing_trace()
+    if not trace and not routing_trace_enabled():
+        return {
+            "ok": True,
+            "message": "Routing trace is disabled. Set `JARVIS_ROUTING_TRACE=1` or `JARVIS_ROUTING_DEBUG=1`.",
+            "data": {},
+            "type": "info",
+        }
+    return {
+        "ok": True,
+        "message": format_trace_text(trace),
+        "data": trace or {},
         "type": "info",
     }
 

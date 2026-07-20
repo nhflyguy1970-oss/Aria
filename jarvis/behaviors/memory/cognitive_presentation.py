@@ -1,0 +1,252 @@
+"""Aria presentation layer for certified ACM cognitive memory results.
+
+ACM owns cognition and evidence; this module only shapes speech for conversation.
+Never invents facts — only rephrases faithful ACM output and teaching acknowledgements.
+"""
+
+from __future__ import annotations
+
+import re
+
+from aria_acm.acm.authority.teaching import detect_teaching
+from aria_acm.acm.semantic.model import FactKind
+
+_TEMPORAL_LABEL = {
+    "yesterday": "yesterday",
+    "today": "today",
+    "this_morning": "this morning",
+    "this_afternoon": "this afternoon",
+    "this_evening": "this evening",
+    "last_night": "last night",
+    "last_week": "last week",
+    "last_month": "last month",
+    "last_monday": "last Monday",
+    "last_tuesday": "last Tuesday",
+    "last_wednesday": "last Wednesday",
+    "last_thursday": "last Thursday",
+    "last_friday": "last Friday",
+    "last_saturday": "last Saturday",
+    "last_sunday": "last Sunday",
+}
+
+
+def format_teaching_acknowledgement(prompt: str) -> str:
+    """Build a conversational ack only when Teaching Recognition extracted facts."""
+    text = (prompt or "").strip()
+    if not text:
+        return ""
+    detected = detect_teaching(text)
+    if not detected.is_teaching or not detected.facts:
+        return ""
+    fact = detected.facts[0]
+    if fact.kind == FactKind.EXPERIENCE:
+        action = (fact.property or "did something").replace("_", " ")
+        obj = (fact.value or "").strip()
+        when = _TEMPORAL_LABEL.get((fact.relation_type or "").lower(), "")
+        when = when or (fact.relation_type or "").replace("_", " ")
+        core = f"you {action} {obj}".strip()
+        if when:
+            return f"Okay, I'll remember that {core} {when}."
+        return f"Okay, I'll remember that {core}."
+    if fact.kind == FactKind.PREFERENCE and fact.property.startswith("favorite_"):
+        domain = fact.property.replace("favorite_", "").replace("_", " ")
+        return f"Okay, I'll remember that your favorite {domain} is {fact.value}."
+    if fact.kind == FactKind.PREFERENCE:
+        return f"Okay, I'll remember that you prefer {fact.value}."
+    if fact.kind == FactKind.IDENTITY and fact.property in ("name", "preferred_name"):
+        label = "preferred name" if fact.property == "preferred_name" else "name"
+        return f"Okay, I'll remember that your {label} is {fact.value}."
+    if fact.kind == FactKind.LOCATION:
+        return f"Okay, I'll remember that you live in {fact.value}."
+    summary = fact.canonical_summary()
+    if summary.lower().startswith("user "):
+        summary = "you " + summary[5:]
+    return f"Okay, I'll remember that {summary.rstrip('.')}."
+
+
+def polish_cognitive_speech(speech: str, result: dict | None = None, *, prompt: str = "") -> str:
+    """Rephrase ACM speech for conversation without changing meaning."""
+    text = (speech or "").strip()
+    if not text:
+        return text
+    if _INTERNAL_REFLECTION.search(text):
+        text = _rewrite_internal_reflection(text, prompt)
+    if text.startswith("Evidence (") or "Episodic events:" in text:
+        return format_evidence_conversational(text)
+    if "From your evidence" in text or _EPISODIC_SINGLE.match(text):
+        return format_episodic_conversational(text, prompt)
+    if _EXPLANATION_MARKERS.search(text):
+        return format_explanation_conversational(text, prompt)
+    text = re.sub(r"\s*\(confidence [\d.]+\)\s*$", "", text)
+    text = re.sub(r"\s*\(competing memories; confidence [\d.]+\)\s*$", "", text)
+    return text
+
+
+_INTERNAL_REFLECTION = re.compile(
+    r"\bmy recollection appears\b|\bi evaluated my recollection\b",
+    re.I,
+)
+_EXPLANATION_MARKERS = re.compile(
+    r"\bbecause you later taught\b|\bremains in your evidence as a retired memory\b|"
+    r"\bwas replaced when you later taught\b",
+    re.I,
+)
+_EPISODIC_SINGLE = re.compile(
+    r"^You\s+\w+.+\([^)]+\)\.\s*$",
+    re.I,
+)
+
+
+def format_episodic_conversational(speech: str, prompt: str = "") -> str:
+    lines_out: list[str] = []
+    header = ""
+    for raw in speech.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("From your evidence"):
+            when = re.search(r"\(([^)]+)\)", line)
+            header = when.group(1) if when else ""
+            continue
+        if line.startswith("- "):
+            body = line[2:]
+            body = re.sub(r"^[a-z_]+:\s*", "", body, count=1)
+            conv = _evidence_line_to_conversational(body, header)
+            lines_out.append(f"• {conv}")
+            continue
+        conv = _evidence_line_to_conversational(line, header)
+        if conv:
+            lines_out.append(conv)
+    if len(lines_out) == 1 and not header:
+        return f"From what you've shared with me, {lines_out[0].lstrip('• ')}"
+    if header and lines_out:
+        intro = f"From what you've shared with me about {header}:"
+        return intro + "\n" + "\n".join(lines_out)
+    if lines_out:
+        return "From what you've shared with me:\n" + "\n".join(lines_out)
+    return _evidence_line_to_conversational(speech, header) or speech
+
+
+def format_evidence_conversational(speech: str) -> str:
+    sections: list[str] = ["Here's what I currently know."]
+    prefs: list[str] = []
+    retired: dict[str, str] = {}
+    active: dict[str, str] = {}
+    events: list[str] = []
+
+    mode = ""
+    current_key = ""
+    for raw in speech.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith("Evidence (preference"):
+            mode = "pref"
+            continue
+        if line.startswith("Episodic events:"):
+            mode = "event"
+            continue
+        if mode == "pref":
+            if line.endswith(":") and not line.startswith("v"):
+                current_key = line.rstrip(":").strip()
+                continue
+            m = re.match(r"v\d+\s+(.+?)\s+\((active|retired)\)", line, re.I)
+            if m and current_key:
+                val, state = m.group(1), m.group(2).lower()
+                if state == "active":
+                    active[current_key] = val
+                else:
+                    retired[current_key] = val
+            continue
+        if mode == "event" and line.startswith("- "):
+            body = line[2:]
+            conv = _evidence_line_to_conversational(body)
+            events.append(f"• {conv}")
+
+    if active or retired:
+        sections.append("\nPreferences")
+        for key in sorted(set(active) | set(retired)):
+            act = active.get(key)
+            ret = retired.get(key)
+            if act:
+                line = f"• {key}: {act.title() if len(act) < 24 else act}"
+                if ret:
+                    line += f"\n  (previously {ret.title() if len(ret) < 24 else ret})"
+                prefs.append(line)
+        sections.extend(prefs)
+
+    if events:
+        sections.append("\nRecent events")
+        sections.extend(events)
+
+    if len(sections) == 1:
+        return speech
+    return "\n".join(sections)
+
+
+def format_explanation_conversational(speech: str, prompt: str = "") -> str:
+    text = speech.strip()
+    low = text.lower()
+    if "because you later taught" in low and "after" in low:
+        m = re.search(
+            r"(\w+(?:\s+\w+)?)\s+is your current favorite (\w+) because you later taught that after (\w+)",
+            text,
+            re.I,
+        )
+        if m:
+            current, domain, prior = m.groups()
+            return (
+                f"Because you told me your favorite {domain} is {current}, "
+                f"replacing {prior}."
+            )
+    if "was replaced when you later taught" in low:
+        m = re.search(
+            r"(\w+)\s+was replaced when you later taught that your favorite (\w+) is (\w+)",
+            text,
+            re.I,
+        )
+        if m:
+            prior, domain, current = m.groups()
+            return (
+                f"Because you told me your favorite {domain} is {current}, "
+                f"replacing {prior}."
+            )
+    text = re.sub(
+        r"\s+remains in your evidence as a retired memory\.?",
+        ".",
+        text,
+        flags=re.I,
+    )
+    text = re.sub(r"\bblue\b", "blue", text)  # preserve values
+    if not text.lower().startswith("because"):
+        text = "I'm basing that on what you've previously told me. " + text
+    return text
+
+
+def _rewrite_internal_reflection(text: str, prompt: str) -> str:
+    if prompt:
+        return "I'm basing that on what you've previously told me."
+    return "I'm basing that on what you've previously told me."
+
+
+def _evidence_line_to_conversational(body: str, header: str = "") -> str:
+    s = (body or "").strip()
+    if not s:
+        return ""
+    when_prefix = ""
+    m = re.match(r"^([a-z_]+):\s*(.+)$", s, re.I)
+    if m:
+        when_prefix = _TEMPORAL_LABEL.get(m.group(1).lower(), m.group(1).replace("_", " "))
+        s = m.group(2).strip()
+    s = re.sub(r"^User\s+", "you ", s, flags=re.I)
+    s = re.sub(r"\s*\([^)]*\)\s*$", "", s).strip()
+    if s.lower().startswith("yesterday ") or s.lower().startswith("last "):
+        s = re.sub(r"^(Yesterday|Last\s+\w+)\s+I\s+", r"\1 you ", s, flags=re.I)
+    elif re.match(r"^I\s+", s, re.I):
+        s = "you " + s[2:]
+    when = when_prefix or header
+    if when and not s.lower().startswith(when.lower()):
+        return f"{when.capitalize()} {s}."
+    if not s.endswith("."):
+        s += "."
+    return s

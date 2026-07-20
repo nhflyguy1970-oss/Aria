@@ -74,7 +74,11 @@ def extract_journal_learnings(
         f"Source: {label}\n\n{excerpt}"
     )
     try:
-        raw = llm.ask(llm.general_model(), [{"role": "user", "content": prompt}])
+        raw = llm.ask(
+            llm.learning_model(),
+            [{"role": "user", "content": prompt}],
+            role="learning",
+        )
         raw = raw.strip()
         if raw.startswith("```"):
             raw = re.sub(r"^```\w*\n?", "", raw)

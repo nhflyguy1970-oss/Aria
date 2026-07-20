@@ -44,7 +44,11 @@ def _distill_facts(blob: str, *, max_facts: int = 6) -> list[str]:
         f"Notes:\n{blob[:6000]}"
     )
     try:
-        raw = llm.ask(llm.general_model(), [{"role": "user", "content": prompt}]).strip()
+        raw = llm.ask(
+            llm.summarization_model(),
+            [{"role": "user", "content": prompt}],
+            role="summarization",
+        ).strip()
         if raw.startswith("```"):
             raw = re.sub(r"^```\w*\n?", "", raw)
             raw = re.sub(r"\n?```$", "", raw)

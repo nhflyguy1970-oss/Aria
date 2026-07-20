@@ -82,7 +82,7 @@ def _smaller_model(model: str, role: str) -> str:
     if role == "vision":
         return model_for("vision")
     if "14b" in model or "13b" in model or "12b" in model:
-        return model_for("general")
+        return model_for("conversation")
     return model
 
 

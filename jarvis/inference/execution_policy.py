@@ -80,6 +80,14 @@ NON_LLM_PATHS: dict[str, dict[str, Any]] = {
         "execution_path": "runtime_client",
         "reason": "Runtime status from Mission Control / introspection — no chat model",
     },
+    "memory": {
+        "capability": "memory",
+        "provider": "acm",
+        "model": None,
+        "hardware": "cpu",
+        "execution_path": "acm_bridge",
+        "reason": "Cognitive memory is ACM-authoritative — no chat model",
+    },
 }
 
 
@@ -137,13 +145,17 @@ def workload_for_request_class(request_class: str) -> str:
 
 
 def _role_to_workload(role: str) -> str:
-    role = (role or "general").strip().lower()
-    if role in ("coder", "coding", "code"):
+    from jarvis.model_store import canonical_role
+
+    role = canonical_role(role or "conversation")
+    if role in ("coding",):
         return "coding"
     if role in ("vision", "image"):
         return "vision"
-    if role in ("reasoning", "review"):
+    if role in ("reasoning", "review", "planning", "reflection", "conversation", "document", "web_research"):
         return "reasoning"
+    if role in ("router", "tool_calling", "summarization", "learning", "fast_chat"):
+        return "lightweight"
     return "lightweight"
 
 
@@ -219,12 +231,12 @@ def resolve_execution(
     from jarvis.model_store import model_for
 
     role = {
-        "lightweight": "general",
-        "coding": "coder",
-        "reasoning": "general",
+        "lightweight": "router",
+        "coding": "coding",
+        "reasoning": "conversation",
         "vision": "vision",
-        "voice": "general",
-    }.get(workload, "general")
+        "voice": "conversation",
+    }.get(workload, "conversation")
     hardware = _fallback_hardware()
     return ExecutionPlan(
         request_class=key,

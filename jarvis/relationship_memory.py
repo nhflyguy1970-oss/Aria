@@ -136,7 +136,11 @@ def extract_triples_llm(content: str) -> list[tuple[str, str, str]]:
         f"Text:\n{content}"
     )
     try:
-        raw = llm.ask(llm.general_model(), [{"role": "user", "content": prompt}]).strip()
+        raw = llm.ask(
+            llm.summarization_model(),
+            [{"role": "user", "content": prompt}],
+            role="summarization",
+        ).strip()
         if raw.startswith("```"):
             raw = re.sub(r"^```\w*\n?", "", raw)
             raw = re.sub(r"\n?```$", "", raw)

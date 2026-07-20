@@ -71,7 +71,7 @@ def test_apply_policy_uses_benchmark_when_present(tmp_path, monkeypatch):
     path.write_text(__import__("json").dumps(policy), encoding="utf-8")
     monkeypatch.setattr("jarvis.inference.execution_policy._POLICY_FILE", path)
     monkeypatch.delenv("JARVIS_EXECUTION_MODEL", raising=False)
-    overlay = apply_policy_to_route(model="qwen2.5:7b", role="general")
+    overlay = apply_policy_to_route(model="qwen2.5-coder:1.5b-base", role="router")
     assert overlay["model"] == "gemma3:4b"
     assert overlay["hardware"] == "nvidia"
     assert overlay["source"] == "benchmark"
