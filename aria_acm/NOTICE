@@ -6,7 +6,7 @@ Standalone ACM remains the research and reference implementation.
 
 Source pin (M3-ACM):
   tag:    v0.26.0
-  commit: 99f83f6af4c99fe76b3e47781f1582b8ac205ec8
+  commit: eec7e60bfe6b5d9e6140ee0d4c2a9bb728463bff
   version harvested from pin: 0.26.0
   decision: Episodic teaching/recall, temporal where-go, preference concepts
   includes: D038–D047 · Teaching Recognition · Multi-domain preference /

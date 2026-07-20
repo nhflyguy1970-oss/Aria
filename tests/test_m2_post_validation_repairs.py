@@ -98,13 +98,22 @@ def test_favorite_color_routes_to_memory_authority() -> None:
 
 
 def test_duplicate_kayak_is_acm_storage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Repeated teachings create separate ACM experiences — document, do not dedupe in ACM."""
+    """Repeated teachings may create separate ACM experiences; recall emits each fact once."""
     from aria_core import acm_bridge
 
     monkeypatch.setenv("ARIA_ACM_PERSIST_PATH", str(tmp_path / "dup.db"))
     acm_bridge.reset_for_tests()
     for _ in range(2):
         acm_bridge.primary_cognitive_speak("Yesterday I bought a kayak.")
+    eng = acm_bridge.get_engine()
+    episodic = [
+        e
+        for e in eng.store.experiences.values()
+        if e.meta_dict().get("episodic") == "1"
+        and "kayak" in (e.summary or "").lower()
+    ]
+    assert len(episodic) >= 2  # storage may keep duplicates
     cog = acm_bridge.primary_cognitive_speak("What happened yesterday?")
     speech = cog.get("speech") or ""
-    assert speech.count("kayak") >= 2
+    assert "kayak" in speech.lower()
+    assert speech.lower().count("kayak") == 1  # reconstruction dedupes identical events

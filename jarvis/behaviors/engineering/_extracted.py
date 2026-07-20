@@ -11,7 +11,7 @@ from jarvis.response import err as _err, ok as _ok
 
 import logging
 
-from jarvis import fs
+from jarvis import fs, llm
 from jarvis.coding_agent import CodingAgent
 from jarvis.diff_util import make_diff
 from jarvis.response import stream_done as _stream_done
@@ -1239,7 +1239,7 @@ PROJECT: {context}"""
 
     @classmethod
     def coding_chat(cls, ctx, params: dict, message: str) -> dict:
-        from jarvis import code_index
+        from jarvis import code_index, llm
         from jarvis.trust_memory import filter_trusted_content
 
         query = params.get("query") or message
@@ -1272,8 +1272,11 @@ PROJECT: {context}"""
             # Coding must work even when document retrieval is unavailable.
             pass
         context = "\n\n".join(parts)
-        answer = llm.coding_chat_answer(query, context=context)
-        return _ok(answer, module="coding", type="coding_chat")
+        try:
+            answer = llm.coding_chat_answer(query, context=context)
+        except Exception as exc:
+            return _err(str(exc), module="coding")
+        return _ok(answer, module="coding", type="coding_chat", model=llm.coder_model())
 
     @classmethod
     def code_index(cls, ctx, params: dict, message: str) -> dict:

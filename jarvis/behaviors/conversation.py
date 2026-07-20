@@ -331,6 +331,12 @@ class ConversationEngine:
             return
 
         user_message = self.prepare_user_message(message, params)
+        if params.get("routing_explain"):
+            from jarvis.routing_explain import explain_routing
+
+            text = str(params.get("explain_text") or explain_routing(message))
+            yield _stream_done(_ok(text, module=None, type="routing_explain"))
+            return
         piped = self.try_strict_instructions(user_message)
         if piped:
             self._a.conversation.add_user(user_message)

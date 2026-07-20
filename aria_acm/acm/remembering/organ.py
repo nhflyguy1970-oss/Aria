@@ -755,6 +755,11 @@ class RememberingOrgan:
         if not matched or not (answer or "").strip():
             return self._episodic_unknown(cue, field, ranked)
 
+        matched = self._dedupe_identical_experiences(matched)
+        answer = self._format_episodic_list(matched) if matched else ""
+        if not (answer or "").strip():
+            return self._episodic_unknown(cue, field, ranked)
+
         return Reconstruction(
             cue=cue,
             answer=answer,
@@ -778,6 +783,35 @@ class RememberingOrgan:
             if e.meta_dict().get("episodic") == "1"
         ]
         return sorted(events, key=lambda e: (e.t_start, e.sequence))
+
+    @staticmethod
+    def _experience_identity_key(event: Any) -> tuple[str, str, str]:
+        """Stable identity for duplicate episodic experiences (not distinct events)."""
+        meta = event.meta_dict() if hasattr(event, "meta_dict") else {}
+        action = (meta.get("event_action") or "").strip().lower()
+        obj = (meta.get("event_object") or "").strip().lower()
+        obj = re.sub(r"^(my|your|the|a|an)\s+", "", obj)
+        when = (meta.get("temporal_cue") or meta.get("temporal_label") or "").strip().lower()
+        if action or obj:
+            return (action, obj, when)
+        summary = re.sub(r"\s+", " ", (getattr(event, "summary", None) or "").strip().lower())
+        summary = re.sub(r"\s*\([^)]*\)\s*$", "", summary)
+        return (summary, "", when)
+
+    def _dedupe_identical_experiences(self, events: list[Any]) -> list[Any]:
+        """Keep one instance per identical experience; preserve order and distinct events."""
+        seen: set[tuple[str, str, str]] = set()
+        out: list[Any] = []
+        for e in events:
+            key = self._experience_identity_key(e)
+            if key in seen:
+                continue
+            if not any(key):
+                out.append(e)
+                continue
+            seen.add(key)
+            out.append(e)
+        return out
 
     def _filter_episodic(
         self,
@@ -811,7 +845,7 @@ class RememberingOrgan:
                 if e.meta_dict().get("event_action", "").lower() == act
                 or act.replace("_", " ") in (e.summary or "").lower()
             ]
-        return out
+        return self._dedupe_identical_experiences(out)
 
     def _filter_episodic_by_cue_tokens(
         self, events: list[Any], cue: str
@@ -923,13 +957,22 @@ class RememberingOrgan:
         """Natural multi-event recall — sentences only, no evidence wrappers."""
         if not events:
             return ""
-        sentences = [self._format_episodic_sentence(e) for e in events]
+        unique = self._dedupe_identical_experiences(events)
+        sentences = [self._format_episodic_sentence(e) for e in unique]
         sentences = [s for s in sentences if s]
         if not sentences:
             return ""
-        if len(sentences) == 1:
-            return sentences[0]
-        return "\n".join(sentences)
+        deduped: list[str] = []
+        seen_s: set[str] = set()
+        for s in sentences:
+            key = s.strip().lower()
+            if key in seen_s:
+                continue
+            seen_s.add(key)
+            deduped.append(s)
+        if len(deduped) == 1:
+            return deduped[0]
+        return "\n".join(deduped)
 
     def _format_episodic_action(self, events: list[Any], *, action: str) -> str:
         if not events:

@@ -94,11 +94,55 @@ def test_explain_answer_is_user_facing() -> None:
             "provider": "planner",
             "handler": "PlanningEngine",
             "intent": "planning",
+            "user_input": "Help me plan a fly fishing trip",
         },
     )
     assert "planning" in text.lower()
     assert "gateway" not in text.lower()
     assert "execution_path" not in text.lower()
+
+
+def test_explain_mission_control_is_aria_runtime() -> None:
+    from jarvis.routing_explain import explain_routing
+
+    text = explain_routing(
+        "Why did that question go to Mission Control?",
+        trace={
+            "capability": "runtime_storage",
+            "provider": "mission_control",
+            "handler": "RuntimeClient",
+            "action": "runtime_storage",
+            "user_input": "Show my storage devices.",
+        },
+    )
+    low = text.lower()
+    assert "aria mission control" in low or "live" in low
+    assert "nintendo" not in low
+    assert "game" not in low or "not an unrelated" in low
+    assert "cognition was not used" in low or "personal memory" in low
+
+
+def test_explain_stream_path_intercepts() -> None:
+    from jarvis.behaviors.conversation import ConversationEngine
+    from jarvis.routing_explain import try_routing_explain
+
+    hit = try_routing_explain("Why did you choose that answer?")
+    assert hit and hit["params"].get("routing_explain") is True
+
+
+def test_coder_model_never_embedding() -> None:
+    from jarvis import llm
+
+    model = llm.coder_model()
+    assert model
+    assert "embed" not in model.lower()
+    assert "nomic-embed" not in model.lower()
+
+
+def test_coding_chat_imports_llm() -> None:
+    text = Path("jarvis/behaviors/engineering/_extracted.py").read_text(encoding="utf-8")
+    assert "from jarvis import fs, llm" in text or "from jarvis import llm" in text
+    assert "from jarvis import code_index, llm" in text
 
 
 def test_presentation_gpu_double_verb() -> None:

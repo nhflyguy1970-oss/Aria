@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.26.0-2",
+  "aria_acm_local_version": "aria-acm-v0.26.0-3",
   "source_project": "aria-cognitive-memory",
   "source_version": "0.26.0",
   "source_tag": "v0.26.0",
-  "source_commit": "99f83f6af4c99fe76b3e47781f1582b8ac205ec8",
+  "source_commit": "eec7e60bfe6b5d9e6140ee0d4c2a9bb728463bff",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-20",
-  "tree_sha256": "ff11b269b65c18d9e6f3165a5aa387f4d495a19762d461a4a8d25ea5256d7b89",
+  "tree_sha256": "1f48ed5d1b4efc3a81f29b2d69b2b3a4be7319dffd307eb88c555795b5098630",
   "license": "Apache-2.0",
-  "certification_ref": "ACM natural episodic presentation + reconstruction",
+  "certification_ref": "ACM duplicate episodic recall elimination",
   "promotion": "M3-ACM-post",
-  "promotion_decision": "Natural English episodic recall; no evidence-list wrappers",
+  "promotion_decision": "Deduplicate identical episodic experiences during reconstruction",
   "includes": [
     "D038",
     "D039",
@@ -23,5 +23,5 @@
     "D046",
     "D047"
   ],
-  "notes": "Promotion of ACM commit 99f83f6 (natural episodic presentation) into aria_acm/. Unchanged ACM package cognition plus Aria M0 import bootstrap. No Aria host cognition workarounds."
+  "notes": "Promotion of ACM commit eec7e60 (dedupe episodic recall) into aria_acm/."
 }

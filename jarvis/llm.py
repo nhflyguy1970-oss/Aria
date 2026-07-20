@@ -635,7 +635,41 @@ def parse_multi_code_response(response_text: str) -> tuple[str, list[dict]]:
 
 
 def coder_model() -> str:
-    return model_for("coding")
+    """Return the configured coding generation model — never an embedding model."""
+    from jarvis.model_store import FALLBACK_PRIORITY, _installed, _match_installed
+
+    chosen = model_for("coding")
+    if not _is_embedding_model(chosen):
+        return chosen
+    installed = _installed()
+    for candidate in FALLBACK_PRIORITY.get("coding", []):
+        match = _match_installed(candidate, installed)
+        if match and not _is_embedding_model(match):
+            return match
+    # Last resort: conversation model if it is a generation model.
+    fallback = model_for("conversation")
+    if fallback and not _is_embedding_model(fallback):
+        return fallback
+    raise RuntimeError(
+        "No coding generation model is available. "
+        "Configure a coding model (for example deepseek-coder or qwen2.5-coder). "
+        "Embedding models such as nomic-embed-text cannot answer coding requests."
+    )
+
+
+def _is_embedding_model(name: str) -> bool:
+    low = (name or "").strip().lower()
+    if not low:
+        return False
+    if "embed" in low or "nomic-embed" in low:
+        return True
+    try:
+        embed = (embed_model() or "").strip().lower()
+    except Exception:
+        embed = ""
+    if embed and (low == embed or low.split(":")[0] == embed.split(":")[0]):
+        return True
+    return False
 
 
 def conversation_model() -> str:

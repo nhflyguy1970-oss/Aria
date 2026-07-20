@@ -29,8 +29,8 @@ _EXPLAIN_RE = re.compile(
 )
 
 _CAPABILITY_LABELS = {
-    "runtime": "live system status (Mission Control)",
-    "mission_control": "live system status (Mission Control)",
+    "runtime": "live workstation status via Aria Mission Control",
+    "mission_control": "live workstation status via Aria Mission Control",
     "memory": "personal memory",
     "acm": "personal memory",
     "episodic": "personal memory",
@@ -53,6 +53,7 @@ def is_routing_explain_query(message: str) -> bool:
 def _friendly_capability(data: dict[str, Any]) -> str:
     raw = (
         str(data.get("capability") or "")
+        or str(data.get("action") or "")
         or str(data.get("intent") or "")
         or str(data.get("provider") or "")
         or str(data.get("handler") or "")
@@ -60,7 +61,7 @@ def _friendly_capability(data: dict[str, Any]) -> str:
     for key, label in _CAPABILITY_LABELS.items():
         if key in raw:
             return label
-    if raw.startswith("runtime") or "runtime" in raw:
+    if raw.startswith("runtime") or "runtime" in raw or "status_summary" in raw:
         return _CAPABILITY_LABELS["runtime"]
     if raw.startswith("planner") or "planning" in raw:
         return _CAPABILITY_LABELS["planning"]
@@ -71,51 +72,17 @@ def _friendly_capability(data: dict[str, Any]) -> str:
     return "general conversation"
 
 
-def _reason_for(data: dict[str, Any], message: str = "") -> str:
-    text = (message or "").lower()
+def _is_mission_control_route(data: dict[str, Any]) -> bool:
     provider = (data.get("provider") or "").lower()
-    capability = (data.get("capability") or data.get("intent") or "").lower()
-    policy = data.get("execution_policy") or {}
-    policy_reason = str(policy.get("policy_reason") or policy.get("reason") or "").strip()
-
-    if "mission control" in text:
-        if provider in ("mission_control", "runtime") or capability.startswith("runtime"):
-            return (
-                "your previous question asked about the live workstation — "
-                "hardware, services, or Mission Control status — so I used live system data"
-            )
-        return "your previous question did not go to Mission Control"
-
-    if "acm" in text or "memory" in capability or provider == "acm":
-        if provider == "acm" or capability.startswith("episodic") or "memory" in capability:
-            return (
-                "you asked about something you previously told me, "
-                "so I answered from personal memory"
-            )
-        return "personal memory was not used for that request"
-
-    if "deepseek" in text:
-        selected = (data.get("selected_model") or "").lower()
-        if "deepseek" in selected:
-            return "a DeepSeek model was selected for that request"
-        return (
-            "DeepSeek was not selected for that request"
-            + (f" ({policy_reason})" if policy_reason else "")
-        )
-
-    if "model" in text:
-        selected = data.get("selected_model") or "the default assistant model"
-        return f"the response used `{selected}` based on the request type"
-
-    if "answer" in text or "response" in text or "choose" in text or "choice" in text:
-        return (
-            f"that matched the {_friendly_capability(data)} path "
-            "for the previous request"
-        )
-
-    if policy_reason:
-        return policy_reason.replace("_", " ")
-    return f"that matched the {_friendly_capability(data)} path"
+    capability = str(data.get("capability") or data.get("action") or data.get("intent") or "").lower()
+    handler = str(data.get("handler") or "").lower()
+    if provider in ("mission_control", "runtime"):
+        return True
+    if capability.startswith("runtime") or capability == "status_summary":
+        return True
+    if "runtime" in handler or "mission" in handler:
+        return True
+    return False
 
 
 def explain_routing(message: str = "", *, trace: dict[str, Any] | None = None) -> str:
@@ -129,30 +96,47 @@ def explain_routing(message: str = "", *, trace: dict[str, Any] | None = None) -
         return "I don't have a prior request to explain yet." + hint
 
     capability = _friendly_capability(data)
-    reason = _reason_for(data, message)
+    prior = (data.get("user_input") or "").strip()
+    prior_bit = f' (your previous request was “{prior[:120]}”)' if prior else ""
 
     if "mission control" in text:
-        if (data.get("provider") or "").lower() in ("mission_control", "runtime") or str(
-            data.get("capability") or ""
-        ).startswith("runtime"):
+        if _is_mission_control_route(data):
             return (
-                f"That question went to Mission Control because {reason}. "
-                f"I selected {capability}."
+                "Aria Mission Control is the live workstation status service — "
+                "not an unrelated product or game. "
+                f"That question needed live system information{prior_bit}, "
+                "so I used Mission Control instead of personal memory or a chat model. "
+                "Cognition was not used because this was about current machine state, "
+                "not something you previously taught me."
             )
         return (
-            "That request did not go to Mission Control. "
-            f"I treated it as {capability} because {reason}."
+            "That request did not go to Aria Mission Control. "
+            f"I treated it as {capability}{prior_bit}."
         )
 
     if "acm" in text:
         if (data.get("provider") or "").lower() == "acm" or str(
             data.get("capability", "")
-        ).startswith("episodic"):
-            return f"I used personal memory because {reason}."
+        ).startswith("episodic") or "memory" in str(data.get("capability") or "").lower():
+            return (
+                "I used personal memory because you asked about something you previously "
+                f"told me{prior_bit}."
+            )
         return f"I did not use personal memory for that request. I treated it as {capability}."
 
+    if "deepseek" in text:
+        selected = (data.get("selected_model") or "").lower()
+        if "deepseek" in selected:
+            return "A DeepSeek model was selected for that request."
+        return "DeepSeek was not selected for that request."
+
+    if "model" in text and "answer" not in text and "response" not in text:
+        selected = data.get("selected_model") or "the default assistant model"
+        return f"The response used `{selected}` based on the request type."
+
     return (
-        f"I chose that answer because {reason}. "
+        f"I chose that answer because it matched the {capability} path"
+        f"{prior_bit}. "
         f"Capability used: {capability}."
     )
 

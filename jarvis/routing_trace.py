@@ -16,6 +16,8 @@ _TRACE: contextvars.ContextVar[dict[str, Any] | None] = contextvars.ContextVar(
     "routing_trace", default=None
 )
 _LAST_TRACE: dict[str, Any] | None = None
+# Always-on lightweight decision for user-facing explainability (no debug flag required).
+_LAST_DECISION: dict[str, Any] | None = None
 
 
 def routing_debug_enabled() -> bool:
@@ -199,7 +201,31 @@ def get_current_trace() -> dict[str, Any] | None:
 
 
 def last_routing_trace() -> dict[str, Any] | None:
-    return _LAST_TRACE
+    return _LAST_TRACE or _LAST_DECISION
+
+
+def record_route_decision_summary(
+    *,
+    user_input: str = "",
+    intent: str = "",
+    action: str = "",
+    capability: str = "",
+    handler: str = "",
+    provider: str = "",
+    reason: str = "",
+) -> None:
+    """Persist a lightweight last-route summary for explainability (always on)."""
+    global _LAST_DECISION
+    _LAST_DECISION = {
+        "user_input": (user_input or "")[:500],
+        "intent": intent or action or "",
+        "capability": capability or intent or action or "",
+        "handler": handler or "",
+        "provider": provider or "",
+        "action": action or "",
+        "route_reason": reason or "",
+        "execution_policy": {"policy_reason": reason} if reason else {},
+    }
 
 
 def attach_trace_to_intent(intent: dict[str, Any]) -> dict[str, Any]:

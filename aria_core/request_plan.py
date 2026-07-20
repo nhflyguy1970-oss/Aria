@@ -70,6 +70,13 @@ def detect_required_capabilities(prompt: str) -> list[str]:
     text = (prompt or "").strip()
     if not text:
         return []
+    try:
+        from jarvis.routing_explain import is_routing_explain_query
+
+        if is_routing_explain_query(text):
+            return []
+    except Exception:
+        pass
     selected: list[str] = []
     if _REFERENCE.search(text):
         selected.append("reference")
