@@ -49,9 +49,9 @@ def test_m0k_01_multi_domain_evidence_lineage() -> None:
     assert "_reconstruct_evidence" in organ or "Evidence (preference lineage)" in organ
     assert "evidence_cue" in classification
     meta = json.loads(Path("aria_acm/VERSION.json").read_text(encoding="utf-8"))
-    # Superseded by M0L+; pin must remain at least M0K lineage.
+    # Superseded by M0L/M1+; pin must remain at least M0K lineage.
     assert meta["source_version"] >= "0.23.0"
-    assert "M0K" in meta.get("notes", "") or meta["promotion"] in ("M0K", "M0L")
+    assert meta["promotion"] in ("M0K", "M0L", "M1") or "M0K" in meta.get("notes", "")
 
 
 @pytest.mark.m0k
