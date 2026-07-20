@@ -429,3 +429,22 @@ feature work proceeds under M0L; the next change requires a new milestone.
 - Tags: ACM `v0.24.0` · Aria `m0l-certified`  
 - Future work starts a new milestone (ACM-first pipeline)
 
+---
+
+## A023 — M1 complete: promote ACM v0.25.0 episodic autobiographical memory (2026-07-19)
+
+**Status:** Accepted  
+**Related:** A001–A022 · standalone ACM v0.25.0 · tag `v0.25.0` · commit `d71a6af…`
+
+### Decision
+
+M1 promotion is complete. Aria's vendored copy at `aria_acm/` matches certified standalone ACM **v0.25.0** (`aria-acm-v0.25.0-1`). Episodic event teaching, temporal reconstruction, evidence, and unknown handling are available through the promoted ACM package. **No Aria host episodic cognition** and **no integration-layer changes** — package promotion only.
+
+### Consequences
+
+- Embedded pin: tag `v0.25.0`, commit `d71a6af77dab578fd85ace14e241a72df3ce59a1`  
+- Local copy: `aria-acm-v0.25.0-1`  
+- Problem report: `docs/acm_integration/PROBLEM_REPORT_M1.md`  
+- Gates: `tests/test_aria_acm_m1_episodic.py` (M1EP-01..04)  
+- Live Aria NLU routing for episodic cues may be a follow-on integration check; cognitive authority is ACM
+

@@ -390,6 +390,17 @@ class CognitiveEngine:
         cognitive_text = extraction.primary_summary or text.strip()
         evidence_text = extraction.evidence or text.strip()
 
+        episodic_facts = [
+            f for f in extraction.facts if f.kind.value == "experience" and f.relation_type
+        ]
+        # Autobiographical events: resolve relative time into Experience.t_start
+        if t_start is None and episodic_facts:
+            from acm.semantic.temporal import resolve_temporal_window
+
+            window = resolve_temporal_window(episodic_facts[0].relation_type or "")
+            if window is not None:
+                t_start = window.midpoint
+
         has_goal = bool(self.store.active_goals())
         identity_boost = self.identity.attention_boost(text, kind=kind)
         allocation = self.attention.allocate(
@@ -470,6 +481,21 @@ class CognitiveEngine:
             exp_metadata[f"fact_{i}_subject"] = fact.subject.value
             exp_metadata[f"fact_{i}_property"] = fact.property
             exp_metadata[f"fact_{i}_value"] = fact.value[:200]
+            if fact.relation_type:
+                exp_metadata[f"fact_{i}_temporal"] = fact.relation_type[:80]
+
+        if episodic_facts:
+            ef = episodic_facts[0]
+            exp_metadata["episodic"] = "1"
+            exp_metadata["temporal_cue"] = (ef.relation_type or "")[:80]
+            exp_metadata["event_action"] = (ef.property or "")[:80]
+            exp_metadata["event_object"] = (ef.value or "")[:200]
+            if ef.relation_type:
+                from acm.semantic.temporal import resolve_temporal_window
+
+                win = resolve_temporal_window(ef.relation_type)
+                if win is not None:
+                    exp_metadata["temporal_label"] = win.label
 
         exp = self.experiences.birth(
             cognitive_text,
@@ -488,6 +514,8 @@ class CognitiveEngine:
             identity_influenced=identity_influenced,
             metadata=exp_metadata,
         )
+        if episodic_facts:
+            self._link_episodic_neighbors(exp)
         self.concepts.bind_experience(exp, concept_ids=concept_ids)
         self.associations.absorb_experience(
             exp, concept_ids, identity_influenced=identity_influenced
@@ -1333,6 +1361,30 @@ class CognitiveEngine:
         }
 
     # --- internals --------------------------------------------------------------
+
+    def _link_episodic_neighbors(self, exp: Any) -> None:
+        """Link a new episodic experience to nearest earlier/later episodic events."""
+        from acm.experiences.model import TemporalRelation
+
+        def _is_episodic(e: Any) -> bool:
+            meta = e.meta_dict() if hasattr(e, "meta_dict") else dict(getattr(e, "metadata", ()) or ())
+            return meta.get("episodic") == "1"
+
+        others = [
+            e
+            for e in self.store.experiences.values()
+            if e.id != exp.id and _is_episodic(e)
+        ]
+        earlier = [e for e in others if e.t_start < exp.t_start]
+        later = [e for e in others if e.t_start > exp.t_start]
+        if earlier:
+            prev = max(earlier, key=lambda e: (e.t_start, e.sequence))
+            self.experiences.link(prev.id, exp.id, TemporalRelation.PRECEDES, weight=0.9)
+            self.experiences.link(exp.id, prev.id, TemporalRelation.FOLLOWS, weight=0.9)
+        if later:
+            nxt = min(later, key=lambda e: (e.t_start, e.sequence))
+            self.experiences.link(exp.id, nxt.id, TemporalRelation.PRECEDES, weight=0.9)
+            self.experiences.link(nxt.id, exp.id, TemporalRelation.FOLLOWS, weight=0.9)
 
     def _note_displace(self, displaced: list[BufferItem]) -> None:
         for item in displaced:

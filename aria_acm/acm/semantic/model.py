@@ -83,6 +83,14 @@ class CognitiveFact:
             return f"Project: {self.value}"
         if self.kind == FactKind.SKILL:
             return f"{subj} can {self.value}"
+        if self.kind == FactKind.EXPERIENCE:
+            action = (self.property or "experienced").replace("_", " ")
+            obj = (self.value or "").strip()
+            phrase = f"{subj} {action} {obj}".strip()
+            when = (self.relation_type or "").replace("_", " ").strip()
+            if when:
+                return f"{phrase} ({when})"
+            return phrase
         return f"{subj} {self.property} is {self.value}"
 
     def to_public(self) -> dict:

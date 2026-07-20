@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.24.0-1",
+  "aria_acm_local_version": "aria-acm-v0.25.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.24.0",
-  "source_tag": "v0.24.0",
-  "source_commit": "3c3bdbc0b1e7566da7922df422c72578e5550df5",
+  "source_version": "0.25.0",
+  "source_tag": "v0.25.0",
+  "source_commit": "d71a6af77dab578fd85ace14e241a72df3ce59a1",
   "source_repo": "/media/jeff/AI/ACM",
-  "copy_date": "2026-07-17",
-  "tree_sha256": "988b687ab08e8afd3d1b85199a7ff4d65e1888aa8c6a5f64d2281ed286168b4f",
+  "copy_date": "2026-07-19",
+  "tree_sha256": "c523f7cd40edad0fce95de5d9a65c3a4399ba9b945b768a6e499368f69945d4b",
   "license": "Apache-2.0",
-  "certification_ref": "ACM docs/PREFERENCE_CERTIFICATION.md",
-  "promotion": "M0L",
-  "promotion_decision": "Memory explanation + active-only personal summary",
+  "certification_ref": "ACM docs/EPISODIC_MEMORY_CERTIFICATION.md",
+  "promotion": "M1",
+  "promotion_decision": "Episodic autobiographical memory (standalone certified)",
   "includes": ["D038", "D039", "D040", "D041", "D042", "D043", "D044", "D045", "D046", "D047"],
-  "notes": "M0L promotion of certified ACM v0.24.0. Why/replaced/active explanations and What do you know about me? reconstruct from certified lineage (active-only summary). Host NLU/runtime guards keep explanation queries on Memory Authority. Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M0L.md"
+  "notes": "M1 promotion of certified ACM v0.25.0. Episodic event teaching + temporal reconstruction + evidence. Unchanged ACM package only — no Aria host episodic cognition or integration-layer changes. Tree hash includes Aria M0 acm import bootstrap. See docs/acm_integration/PROBLEM_REPORT_M1.md"
 }

@@ -12,6 +12,7 @@ from acm.semantic.model import (
     UpdateOp,
 )
 from acm.semantic.perspective import subject_for_first_person, subject_for_second_person
+from acm.semantic.temporal import normalize_temporal_cue
 
 _NAME_VALUE = r"([A-Za-z][\w'’-]*(?:\s+[A-Za-z][\w'’-]*){0,3})"
 
@@ -62,6 +63,20 @@ _PROJECT = re.compile(
     re.I,
 )
 
+# Autobiographical episodic events — first-person past with a temporal cue.
+# "Yesterday I bought a kayak." / "I cleaned my garage yesterday."
+_TEMPORAL_PHRASE = (
+    r"(?:yesterday|today|this\s+morning|this\s+afternoon|this\s+evening|"
+    r"last\s+night|last\s+week|last\s+month|"
+    r"last\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))"
+)
+_EPISODIC_ACTION = (
+    r"(bought|cleaned|went|installed|visited|built|finished|started|"
+    r"drove|flew|walked|called|met|watched|read|wrote|cooked|fixed|"
+    r"moved|painted|planted|hiked|ran|swam|played|taught|learned|"
+    r"attended|joined|left|opened|closed|replaced|upgraded|"
+    r"purchased|ordered|picked\s+up|dropped\s+off)"
+)
 _NOT_NAME = re.compile(rf"\bmy\s+name\s+is\s+not\s+{_NAME_VALUE}", re.I)
 _ACTUALLY_NAME = re.compile(
     rf"\b(?:actually|rather|instead),?\s+my\s+name\s+is\s+{_NAME_VALUE}",
@@ -94,6 +109,54 @@ def _clean_value(value: str) -> str:
     v = (value or "").strip().rstrip(".,;:!")
     v = re.sub(r"\s+", " ", v)
     return v
+
+
+def _extract_episodic(
+    text: str,
+    *,
+    subject: PerspectiveSubject,
+) -> CognitiveFact | None:
+    """Extract one autobiographical episodic event fact, if present."""
+    t = (text or "").strip()
+    m = re.match(
+        rf"^\s*({_TEMPORAL_PHRASE})\s+i\s+{_EPISODIC_ACTION}\s+(.+?)(?:\.|$)",
+        t,
+        re.I,
+    )
+    if m:
+        temporal = normalize_temporal_cue(m.group(1))
+        action = re.sub(r"\s+", " ", m.group(2).strip().lower())
+        obj = _clean_value(m.group(3))
+        if obj:
+            return CognitiveFact(
+                kind=FactKind.EXPERIENCE,
+                subject=subject,
+                property=action.replace(" ", "_"),
+                value=obj,
+                relation_type=temporal,
+                confidence=0.9,
+                labels=(temporal, action),
+            )
+    m = re.match(
+        rf"^\s*i\s+{_EPISODIC_ACTION}\s+(.+?)\s+({_TEMPORAL_PHRASE})\s*[.!?]?\s*$",
+        t,
+        re.I,
+    )
+    if m:
+        action = re.sub(r"\s+", " ", m.group(1).strip().lower())
+        obj = _clean_value(m.group(2))
+        temporal = normalize_temporal_cue(m.group(3))
+        if obj:
+            return CognitiveFact(
+                kind=FactKind.EXPERIENCE,
+                subject=subject,
+                property=action.replace(" ", "_"),
+                value=obj,
+                relation_type=temporal,
+                confidence=0.9,
+                labels=(temporal, action),
+            )
+    return None
 
 
 def _looks_like_name(value: str) -> bool:
@@ -325,6 +388,12 @@ def extract_fact_patterns(
                 confidence=0.8,
             )
         )
+
+    # Episodic autobiographical events (never from interrogatives)
+    if not _INTERROGATIVE.search(t):
+        ep = _extract_episodic(t, subject=fp)
+        if ep is not None:
+            facts.append(ep)
 
     # Deduplicate by (subject, property, value)
     seen: set[tuple[str, str, str]] = set()

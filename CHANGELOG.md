@@ -1,5 +1,13 @@
 # Changelog — Aria / Jarvis
 
+## [M1] — 2026-07-19
+
+Promote certified ACM **v0.25.0** (`d71a6af`) as `aria-acm-v0.25.0-1`.
+Episodic autobiographical memory (event teaching, temporal reconstruction,
+evidence) via unchanged ACM package. No Aria host episodic cognition.
+
+See [`docs/acm_integration/PROBLEM_REPORT_M1.md`](docs/acm_integration/PROBLEM_REPORT_M1.md).
+
 ## [M0L Certified] — 2026-07-19
 
 **Frozen.** See [`docs/acm_integration/M0L_CERTIFICATION.md`](docs/acm_integration/M0L_CERTIFICATION.md).

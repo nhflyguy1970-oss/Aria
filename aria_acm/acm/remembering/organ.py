@@ -95,6 +95,60 @@ _PERSONAL_SUMMARY = re.compile(
     re.I,
 )
 
+# Episodic / autobiographical event reconstruction.
+_EPISODIC_TEMPORAL = (
+    r"(?:yesterday|today|this\s+morning|this\s+afternoon|this\s+evening|"
+    r"last\s+night|last\s+week|last\s+month|"
+    r"last\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))"
+)
+_EPISODIC_QUERY = re.compile(
+    rf"\b(what\s+happened(?:\s+{_EPISODIC_TEMPORAL})?|"
+    rf"what\s+did\s+i\s+\w+(?:\s+{_EPISODIC_TEMPORAL})?|"
+    rf"what\s+happened\s+(?:before|after)\b|"
+    rf"tell\s+me\s+about\s+(?:buying|cleaning|installing|visiting|going)|"
+    rf"explain\s+what\s+happened)\b",
+    re.I,
+)
+_WHAT_HAPPENED_WHEN = re.compile(
+    rf"\bwhat\s+happened\s+({_EPISODIC_TEMPORAL})\b",
+    re.I,
+)
+_WHAT_DID_I = re.compile(
+    rf"\bwhat\s+did\s+i\s+(\w+)\s+({_EPISODIC_TEMPORAL})\b",
+    re.I,
+)
+_BEFORE_EVENT = re.compile(
+    r"\bwhat\s+happened\s+before\s+(.+?)(?:\?|$)",
+    re.I,
+)
+_AFTER_EVENT = re.compile(
+    r"\bwhat\s+happened\s+after\s+(.+?)(?:\?|$)",
+    re.I,
+)
+_EVENT_EXPLAIN = re.compile(
+    r"\b(explain\s+what\s+happened|tell\s+me\s+about\s+"
+    r"(?:buying|cleaning|installing|visiting|going)\s+.+|"
+    r"why\s+do\s+you\s+remember\s+(?:that|buying|cleaning|the))\b",
+    re.I,
+)
+
+_ACTION_LEMMA = {
+    "buy": "bought",
+    "bought": "bought",
+    "purchase": "bought",
+    "purchased": "bought",
+    "clean": "cleaned",
+    "cleaned": "cleaned",
+    "install": "installed",
+    "installed": "installed",
+    "visit": "visited",
+    "visited": "visited",
+    "go": "went",
+    "went": "went",
+    "get": "bought",
+    "do": "",
+}
+
 
 class RememberingOrgan:
     """Cue-driven reconstruction via shared Activation Architecture."""
@@ -189,6 +243,7 @@ class RememberingOrgan:
             _is_evidence_request(cue)
             or _is_explanation_request(cue)
             or _is_personal_summary_request(cue)
+            or _is_episodic_request(cue)
         ):
             self._reconsolidate(reconstruction, cue)
         displaced = self._enter_working(reconstruction)
@@ -293,6 +348,8 @@ class RememberingOrgan:
             return self._reconstruct_explanation(cue, field, ranked)
         if _is_personal_summary_request(cue):
             return self._reconstruct_personal_summary(cue, field, ranked)
+        if _is_episodic_request(cue):
+            return self._reconstruct_episodic(cue, field, ranked)
 
         if not ranked:
             return Reconstruction(
@@ -496,6 +553,294 @@ class RememberingOrgan:
             cls = ExplanationClass.STALE
         return answer, cls, conf
 
+    def _reconstruct_episodic(
+        self,
+        cue: str,
+        field: ActivationField,
+        ranked: list[Any],
+    ) -> Reconstruction:
+        """Reconstruct autobiographical events only from stored episodic memories.
+
+        Never invents events. Returns UNKNOWN when evidence is insufficient.
+        """
+        events = self._episodic_events()
+        answer = ""
+        matched: list[Any] = []
+
+        before_m = _BEFORE_EVENT.search(cue or "")
+        after_m = _AFTER_EVENT.search(cue or "")
+        when_m = _WHAT_HAPPENED_WHEN.search(cue or "")
+        did_m = _WHAT_DID_I.search(cue or "")
+        explain_m = _EVENT_EXPLAIN.search(cue or "")
+
+        if before_m:
+            anchor = self._find_episodic_anchor(events, before_m.group(1))
+            if anchor is None:
+                return self._episodic_unknown(cue, field, ranked)
+            matched = [
+                e
+                for e in events
+                if (e.t_start, e.sequence) < (anchor.t_start, anchor.sequence)
+            ]
+            answer = self._format_episodic_list(
+                matched, header="Before that, from your evidence:"
+            )
+        elif after_m:
+            anchor = self._find_episodic_anchor(events, after_m.group(1))
+            if anchor is None:
+                return self._episodic_unknown(cue, field, ranked)
+            matched = [
+                e
+                for e in events
+                if (e.t_start, e.sequence) > (anchor.t_start, anchor.sequence)
+            ]
+            answer = self._format_episodic_list(
+                matched, header="After that, from your evidence:"
+            )
+        elif did_m:
+            action_raw = did_m.group(1).lower()
+            temporal = did_m.group(2)
+            action = _ACTION_LEMMA.get(action_raw, action_raw)
+            matched = self._filter_episodic(
+                events, temporal_cue=temporal, action=action or None
+            )
+            if action and not matched:
+                # Action-specific miss → unknown (do not fall back to all events)
+                return self._episodic_unknown(cue, field, ranked)
+            answer = self._format_episodic_action(matched, action=action or action_raw)
+        elif when_m:
+            matched = self._filter_episodic(events, temporal_cue=when_m.group(1))
+            answer = self._format_episodic_list(
+                matched, header=f"From your evidence ({when_m.group(1).strip()}):"
+            )
+        elif explain_m:
+            # Event explanation: ground in stored evidence wording.
+            matched = self._filter_episodic_by_cue_tokens(events, cue)
+            if not matched and when_m is None:
+                # Broad "explain what happened" → all episodic, temporally ordered
+                if re.search(r"explain\s+what\s+happened", cue or "", re.I):
+                    matched = list(events)
+            answer = self._format_episodic_explanation(matched)
+        else:
+            # Generic "what happened" / temporal without explicit when
+            from acm.semantic.temporal import extract_temporal_cue
+
+            cue_t = extract_temporal_cue(cue or "")
+            if cue_t:
+                matched = self._filter_episodic(events, temporal_cue=cue_t)
+            else:
+                matched = list(events)
+            answer = self._format_episodic_list(
+                matched, header="From your evidence:"
+            )
+
+        if not matched or not (answer or "").strip():
+            return self._episodic_unknown(cue, field, ranked)
+
+        return Reconstruction(
+            cue=cue,
+            answer=answer,
+            explanation_class=ExplanationClass.EXPERIENCE.value,
+            confidence=0.9 if len(matched) == 1 else 0.85,
+            experience_ids=[e.id for e in matched[:12]],
+            experience_summaries=[e.summary for e in matched[:12]],
+            activated_concept_ids=[n.target_id for n in ranked],
+            activation=field.to_public(),
+            cue_classes=list(field.cue_classes) + ["episodic"],
+            goal_influenced=field.goal_influenced,
+            identity_influenced=field.identity_influenced,
+            context_influenced=field.context_influenced,
+            working_influenced=field.working_influenced,
+        )
+
+    def _episodic_events(self) -> list[Any]:
+        events = [
+            e
+            for e in self.store.experiences.values()
+            if e.meta_dict().get("episodic") == "1"
+        ]
+        return sorted(events, key=lambda e: (e.t_start, e.sequence))
+
+    def _filter_episodic(
+        self,
+        events: list[Any],
+        *,
+        temporal_cue: str | None = None,
+        action: str | None = None,
+    ) -> list[Any]:
+        from acm.semantic.temporal import (
+            normalize_temporal_cue,
+            resolve_temporal_window,
+            window_contains,
+        )
+
+        out = list(events)
+        if temporal_cue:
+            key = normalize_temporal_cue(temporal_cue)
+            window = resolve_temporal_window(key)
+            by_meta = [e for e in out if e.meta_dict().get("temporal_cue") == key]
+            if by_meta:
+                out = by_meta
+            elif window is not None:
+                out = [e for e in out if window_contains(window, e.t_start)]
+            else:
+                out = []
+        if action:
+            act = action.lower().replace(" ", "_")
+            out = [
+                e
+                for e in out
+                if e.meta_dict().get("event_action", "").lower() == act
+                or act.replace("_", " ") in (e.summary or "").lower()
+            ]
+        return out
+
+    def _filter_episodic_by_cue_tokens(
+        self, events: list[Any], cue: str
+    ) -> list[Any]:
+        tokens = [
+            t
+            for t in re.findall(r"[a-z0-9]+", (cue or "").lower())
+            if t
+            not in {
+                "what",
+                "happened",
+                "tell",
+                "me",
+                "about",
+                "explain",
+                "why",
+                "do",
+                "you",
+                "remember",
+                "the",
+                "a",
+                "an",
+                "that",
+                "before",
+                "after",
+            }
+            and len(t) > 2
+        ]
+        if not tokens:
+            return []
+        matched = []
+        for e in events:
+            blob = " ".join(
+                [
+                    e.summary or "",
+                    e.meta_dict().get("event_action", ""),
+                    e.meta_dict().get("event_object", ""),
+                    e.meta_dict().get("evidence", ""),
+                ]
+            ).lower()
+            if any(tok in blob for tok in tokens):
+                matched.append(e)
+        return matched
+
+    def _find_episodic_anchor(self, events: list[Any], phrase: str) -> Any | None:
+        tokens = [
+            t
+            for t in re.findall(r"[a-z0-9]+", (phrase or "").lower())
+            if t
+            not in {"the", "a", "an", "my", "buying", "cleaning", "installing", "visiting", "going"}
+            and len(t) > 2
+        ]
+        # Also map gerunds in the phrase to actions
+        low = (phrase or "").lower()
+        for gerund, action in (
+            ("buying", "bought"),
+            ("cleaning", "cleaned"),
+            ("installing", "installed"),
+            ("visiting", "visited"),
+            ("going", "went"),
+        ):
+            if gerund in low:
+                tokens.append(action)
+        best = None
+        best_score = 0
+        for e in events:
+            blob = " ".join(
+                [
+                    e.summary or "",
+                    e.meta_dict().get("event_action", ""),
+                    e.meta_dict().get("event_object", ""),
+                    e.meta_dict().get("evidence", ""),
+                ]
+            ).lower()
+            score = sum(1 for tok in tokens if tok in blob)
+            if score > best_score:
+                best_score = score
+                best = e
+        return best if best_score > 0 else None
+
+    def _format_episodic_list(
+        self, events: list[Any], *, header: str
+    ) -> str:
+        if not events:
+            return ""
+        lines = [header]
+        for e in events:
+            when = e.meta_dict().get("temporal_label") or e.meta_dict().get(
+                "temporal_cue", ""
+            ).replace("_", " ")
+            prefix = f"{when}: " if when else ""
+            lines.append(f"- {prefix}{e.summary}")
+        return "\n".join(lines)
+
+    def _format_episodic_action(self, events: list[Any], *, action: str) -> str:
+        if not events:
+            return ""
+        if len(events) == 1:
+            e = events[0]
+            obj = e.meta_dict().get("event_object") or ""
+            when = e.meta_dict().get("temporal_label") or e.meta_dict().get(
+                "temporal_cue", ""
+            ).replace("_", " ")
+            if obj and action:
+                return f"You {action.replace('_', ' ')} {obj}" + (
+                    f" ({when})." if when else "."
+                )
+            return e.summary
+        return self._format_episodic_list(
+            events, header=f"From your evidence ({action.replace('_', ' ')}):"
+        )
+
+    def _format_episodic_explanation(self, events: list[Any]) -> str:
+        if not events:
+            return ""
+        lines = ["From your stored evidence:"]
+        for e in events:
+            evidence = e.meta_dict().get("evidence") or e.summary
+            when = e.meta_dict().get("temporal_label") or e.meta_dict().get(
+                "temporal_cue", ""
+            ).replace("_", " ")
+            if when:
+                lines.append(f"- ({when}) {evidence}")
+            else:
+                lines.append(f"- {evidence}")
+        return "\n".join(lines)
+
+    def _episodic_unknown(
+        self,
+        cue: str,
+        field: ActivationField,
+        ranked: list[Any],
+    ) -> Reconstruction:
+        return Reconstruction(
+            cue=cue,
+            answer="I don't currently know.",
+            explanation_class=ExplanationClass.UNKNOWN.value,
+            confidence=0.0,
+            activated_concept_ids=[n.target_id for n in ranked],
+            activation=field.to_public(),
+            cue_classes=list(field.cue_classes) + ["episodic"],
+            goal_influenced=field.goal_influenced,
+            identity_influenced=field.identity_influenced,
+            context_influenced=field.context_influenced,
+            working_influenced=field.working_influenced,
+        )
+
     def _reconstruct_evidence(
         self,
         cue: str,
@@ -578,6 +923,42 @@ class RememberingOrgan:
                     lines.append(f"  v{attr.version} {attr.value} ({state}){teaching}")
 
         if not lines:
+            # Prefer certified episodic evidence when present in the store.
+            episodic = [
+                e
+                for e in sorted(
+                    self.store.experiences.values(),
+                    key=lambda x: (x.t_start, x.sequence),
+                )
+                if e.meta_dict().get("episodic") == "1"
+            ]
+            if episodic:
+                lines.append("Episodic events:")
+                for e in episodic:
+                    evidence = e.meta_dict().get("evidence") or e.summary
+                    when = e.meta_dict().get("temporal_label") or e.meta_dict().get(
+                        "temporal_cue", ""
+                    ).replace("_", " ")
+                    prefix = f"{when}: " if when else ""
+                    lines.append(f"  - {prefix}{evidence}")
+                    experience_ids.append(e.id)
+                    experience_summaries.append(e.summary)
+                answer = "Evidence (episodic):\n" + "\n".join(lines)
+                return Reconstruction(
+                    cue=cue,
+                    answer=answer,
+                    explanation_class=ExplanationClass.EXPERIENCE.value,
+                    confidence=0.88,
+                    experience_ids=experience_ids[:12],
+                    experience_summaries=experience_summaries[:12],
+                    activated_concept_ids=[n.target_id for n in ranked],
+                    activation=field.to_public(),
+                    cue_classes=list(field.cue_classes),
+                    goal_influenced=field.goal_influenced,
+                    identity_influenced=field.identity_influenced,
+                    context_influenced=field.context_influenced,
+                    working_influenced=field.working_influenced,
+                )
             exp_nodes = sorted(field.experiences.values(), key=lambda n: -n.energy)[:8]
             if exp_nodes:
                 lines.append("Supporting experiences:")
@@ -612,6 +993,27 @@ class RememberingOrgan:
 
         header = "Evidence (preference lineage):"
         answer = header + "\n" + "\n".join(lines)
+        # Append episodic evidence when present (does not invent events).
+        episodic = [
+            e
+            for e in sorted(
+                self.store.experiences.values(),
+                key=lambda x: (x.t_start, x.sequence),
+            )
+            if e.meta_dict().get("episodic") == "1"
+        ]
+        if episodic:
+            answer += "\nEpisodic events:"
+            for e in episodic:
+                evidence = e.meta_dict().get("evidence") or e.summary
+                when = e.meta_dict().get("temporal_label") or e.meta_dict().get(
+                    "temporal_cue", ""
+                ).replace("_", " ")
+                prefix = f"{when}: " if when else ""
+                answer += f"\n  - {prefix}{evidence}"
+                if e.id not in experience_ids:
+                    experience_ids.append(e.id)
+                    experience_summaries.append(e.summary)
         return Reconstruction(
             cue=cue,
             answer=answer,
@@ -1130,6 +1532,10 @@ def _attr_grounds_in_cue(
 
 def _is_evidence_request(cue: str) -> bool:
     return bool(_EVIDENCE_REQUEST.search(cue or ""))
+
+
+def _is_episodic_request(cue: str) -> bool:
+    return bool(_EPISODIC_QUERY.search(cue or ""))
 
 
 def _is_explanation_request(cue: str) -> bool:

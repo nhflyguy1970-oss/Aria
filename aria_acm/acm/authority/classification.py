@@ -297,7 +297,16 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         re.compile(
             r"\b(what\s+happened|what\s+occurred|past\s+experience|"
             r"when\s+did\s+(?:we|i|you)|episodic|"
-            r"remember\s+when\s+(?:we|i|you))\b",
+            r"remember\s+when\s+(?:we|i|you)|"
+            r"what\s+did\s+i\s+(?:buy|clean|install|visit|do|go|get|"
+            r"build|finish|start|watch|read|write|cook|fix|"
+            r"purchase|order|attend|join)|"
+            r"what\s+happened\s+(?:before|after)|"
+            r"what\s+happened\s+(?:yesterday|today|last\s+week|"
+            r"last\s+month|this\s+morning|last\s+\w+)|"
+            r"tell\s+me\s+about\s+(?:buying|cleaning|installing|"
+            r"visiting|going|the\s+(?:kayak|garage|gpu|trip))|"
+            r"explain\s+what\s+happened)\b",
             re.I,
         ),
         "experience_cue",
