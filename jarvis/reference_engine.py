@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from jarvis.config import DATA_DIR
+from jarvis.knowledge.doc_guards import is_developer_doc_request, is_internal_doc
 
 _STOPWORDS = frozenset(
     {
@@ -195,7 +196,9 @@ def _alias_boost(path: Path, title: str, query_l: str, terms: list[str]) -> floa
             score += 2.0
 
     # Prefer docs/ and aria_core over ADRs and future/backlog noise for product Qs
-    if "/docs/" in path_l and "/adr/" not in path_l:
+    if is_internal_doc(path):
+        score -= 200.0
+    elif "/docs/" in path_l and "/adr/" not in path_l:
         score += 6.0
     if "future_product" in stem or "decision_log" in stem or "roadmap" in stem:
         score -= 8.0
@@ -305,6 +308,9 @@ def _local_reference_hits(query: str, *, limit: int = 12) -> list[dict[str, Any]
             candidates.extend(docs.rglob("*.pdf"))
 
         for path in candidates:
+            if is_internal_doc(str(path)):
+                if not is_developer_doc_request(q):
+                    continue
             text = _read_text(path)
             if not text and path.suffix.lower() != ".pdf":
                 continue

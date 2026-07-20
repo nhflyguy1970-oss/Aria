@@ -36,6 +36,11 @@ def _build_index_impl(root: Path | None = None) -> list[dict]:
     for p in root.rglob("*.md"):
         if any(s in p.parts for s in SKIP_DIRS):
             continue
+        rel = str(p.relative_to(root))
+        from jarvis.knowledge.doc_guards import is_internal_doc
+
+        if is_internal_doc(rel):
+            continue
         if p.stat().st_size > 100_000:
             continue
         try:

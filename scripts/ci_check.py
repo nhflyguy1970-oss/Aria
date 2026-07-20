@@ -163,6 +163,7 @@ PYTEST_PATHS: tuple[str, ...] = (
     "tests/test_capability_routing.py",
     "tests/test_m2_routing_architecture.py",
     "tests/test_m2_post_validation_repairs.py",
+    "tests/test_m3_integration_repairs.py",
     "tests/test_aria_acm_m2.py",
     "tests/test_aria_acm_m3.py",
     "tests/test_aria_acm_m4.py",

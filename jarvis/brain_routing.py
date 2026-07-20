@@ -9,7 +9,8 @@ from jarvis.p1_flags import brain_routing_enabled
 
 _DEEP_RE = re.compile(
     r"\b(why|explain|analyze|debug|fix|implement|refactor|prove|calculate|math|"
-    r"code|algorithm|optimize|design|architect|compare|trade-?off|step by step)\b",
+    r"code|algorithm|optimize|design|architect|compare|trade-?off|step by step|"
+    r"specs?|specifications?|cores?|threads?|clock|tdp|benchmark|ghz|ryzen|intel|amd)\b",
     re.I,
 )
 
@@ -57,6 +58,8 @@ def select_chat_model(
 ) -> str:
     """Pick conversational model: explicit override → brain routing → conversation role."""
     params = params or {}
+    if params.get("knowledge_mode"):
+        return reasoning_model()
     explicit = (params.get("model") or session_chat_model or "").strip()
     if explicit:
         return explicit

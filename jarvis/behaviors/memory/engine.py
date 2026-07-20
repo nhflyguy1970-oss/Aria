@@ -35,13 +35,22 @@ class MemoryEngine:
             raw = str(cog.get("speech") or "").strip()
             return result, raw, q
 
+        def _is_bad_recall(question: str, speech: str) -> bool:
+            s = (speech or "").strip().rstrip(".")
+            if not s or len(s.split()) <= 2:
+                return True
+            if MemoryEngine._is_misrouted_identity_answer(question, s):
+                return True
+            return bool(re.match(r"^(?:fishing|fish|my\s+\w+)$", s, re.I))
+
         result, raw, used_q = _speak(question)
         alt = reformulate_for_acm_recall(question)
         if alt and alt.lower() != (question or "").strip().lower():
-            if not raw or not result.get("is_memory_request"):
+            if not raw or not result.get("is_memory_request") or _is_bad_recall(question, raw):
                 alt_result, alt_raw, _ = _speak(alt)
                 if alt_raw and (
-                    alt_result.get("is_memory_request") or "installed" in alt_raw.lower()
+                    alt_result.get("is_memory_request")
+                    or len(alt_raw.split()) > len((raw or "").split())
                 ):
                     result, raw, used_q = alt_result, alt_raw, alt
 
@@ -75,6 +84,14 @@ class MemoryEngine:
                 return alt_result, polished
 
         return result, raw
+
+    @staticmethod
+    def _is_misrouted_identity_answer(question: str, speech: str) -> bool:
+        q = (question or "").lower()
+        s = (speech or "").strip().rstrip(".")
+        if not re.search(r"\b(prefer|favorite|favourite|kind of|hooks?|color|coffee)\b", q):
+            return False
+        return bool(re.match(r"^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?$", s))
 
     @staticmethod
     def _trace_memory_presentation(layer: str, response_kind: str) -> None:

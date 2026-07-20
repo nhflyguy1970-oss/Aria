@@ -18,6 +18,11 @@ _RUNTIME_KEYWORD_TERMS: tuple[str, ...] = (
     "gpu",
     "vram",
     "hardware",
+    "disk",
+    "storage",
+    "filesystem",
+    "drive",
+    "volume",
     "services",
     "service",
     "providers",
@@ -75,11 +80,12 @@ _USER_MEMORY_EXCLUDE = re.compile(
     r"evidence|"
     r"history behind this memory|"
     r"why this memory changed|"
-    r"(?:yesterday|today|this\s+morning|last\s+week|last\s+tuesday)\s+i\s+"
-    r"(?:bought|cleaned|went|installed|visited)|"
-    r"i\s+(?:bought|cleaned|went|installed|visited)\s+.+\s+"
-    r"(?:yesterday|today|this\s+morning|last\s+week)|"
-    r"what\s+happened|what\s+did\s+i\s+\w+"
+    r"(?:yesterday|today|this\s+morning|last\s+week|last\s+tuesday|last\s+friday)\s+i\s+"
+    r"(?:bought|cleaned|went|installed|visited|caught|fished)|"
+    r"i\s+(?:bought|cleaned|went|installed|visited|caught|fished)\s+.+\s+"
+    r"(?:yesterday|today|this\s+morning|last\s+week|last\s+friday)|"
+    r"what\s+happened|what\s+did\s+i\s+\w+|where\s+did\s+i\s+go|"
+    r"what\s+kind\s+of\s+.+\s+prefer"
     r")\b",
     re.I,
 )
@@ -96,7 +102,7 @@ _KEYWORD_ACTION_RULES: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\b(services?|grafana|prometheus|n8n)\b", re.I), "runtime_services"),
     (re.compile(r"\b(models?|ollama|litellm)\b", re.I), "runtime_models"),
     (re.compile(r"\b(how much )?ram\b|\bsystem memory\b", re.I), "runtime_ram"),
-    (re.compile(r"\b(disk|storage)\b", re.I), "runtime_storage"),
+    (re.compile(r"\b(disk|storage|filesystem|drive|volume)\b", re.I), "runtime_storage"),
     (re.compile(r"\bnetwork\b", re.I), "runtime_network"),
     (re.compile(r"\b(gpu|vram|cpu|hardware|graphics)\b", re.I), "runtime_gpu"),
     (re.compile(r"\b(jobs?|activity)\b", re.I), "runtime_jobs"),
@@ -124,6 +130,13 @@ def is_runtime_routing_question(message: str) -> bool:
         return False
     if _ENCYCLOPEDIC_EXCLUDE.search(text):
         return False
+    try:
+        from jarvis.routing_explain import is_routing_explain_query
+
+        if is_routing_explain_query(text):
+            return False
+    except Exception:
+        pass
     if _USER_MEMORY_EXCLUDE.search(text):
         return False
     try:

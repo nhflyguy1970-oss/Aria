@@ -187,11 +187,15 @@ def resolve_conversation_model(
         voice=voice,
         session_chat_model=session_chat_model,
     )
+    from jarvis.brain_routing import reasoning_model
+
     role = "reasoning"
     mode = (params.get("thinking_mode") or "").strip().lower()
-    if mode == "fast" or voice:
+    if brain_model == reasoning_model() or mode == "deep" or params.get("knowledge_mode"):
+        role = "reasoning"
+    elif mode == "fast" or voice:
         role = "fast_chat"
-    elif mode != "deep" and not _needs_reasoning_role(message, action=action):
+    elif not _needs_reasoning_role(message, action=action):
         role = "conversation"
     model = apply_gateway_model(brain_model, role)
     _record_capability_trace(action, message, role, model)

@@ -59,22 +59,23 @@ def test_capability_health_report() -> None:
     assert "coding" in caps
 
 
-def test_routing_explain_requires_debug(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_routing_explain_always_intercepts(monkeypatch: pytest.MonkeyPatch) -> None:
     from jarvis.routing_explain import is_routing_explain_query, try_routing_explain
 
     monkeypatch.delenv("JARVIS_ROUTING_DEBUG", raising=False)
     monkeypatch.delenv("JARVIS_DEBUG", raising=False)
-    assert not is_routing_explain_query("Why did you choose that model?")
-    assert try_routing_explain("Why did you choose that model?") is None
-
-
-def test_routing_explain_debug_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    from jarvis.routing_explain import try_routing_explain
-
-    monkeypatch.setenv("JARVIS_ROUTING_DEBUG", "1")
+    assert is_routing_explain_query("Why did you choose that model?")
     hit = try_routing_explain("Why did you choose that model?")
     assert hit and hit["action"] == "chat"
     assert hit["params"].get("routing_explain")
+
+
+def test_routing_explain_mission_control_go_variant() -> None:
+    from jarvis.routing_explain import is_routing_explain_query, try_routing_explain
+
+    assert is_routing_explain_query("Why did this go to Mission Control?")
+    hit = try_routing_explain("Why did this go to Mission Control?")
+    assert hit and hit["action"] == "chat"
 
 
 def test_episodic_capability_resolution() -> None:

@@ -55,10 +55,10 @@ _USER_MEMORY = re.compile(
     r"\bevidence\b|"
     r"\bhistory\s+behind\s+this\s+memory\b|"
     r"\bwhy\s+this\s+memory\s+changed\b|"
-    r"\b(?:yesterday|today|this\s+morning|last\s+week|last\s+tuesday)\s+i\s+"
-    r"(?:bought|cleaned|went|installed|visited)\b|"
-    r"\bi\s+(?:bought|cleaned|went|installed|visited)\s+.+\s+"
-    r"(?:yesterday|today|this\s+morning|last\s+week)\b",
+    r"\b(?:yesterday|today|this\s+morning|last\s+week|last\s+tuesday|last\s+friday)\s+i\s+"
+    r"(?:bought|cleaned|went|installed|visited|caught|fished)\b|"
+    r"\bi\s+(?:bought|cleaned|went|installed|visited|caught|fished)\s+.+\s+"
+    r"(?:yesterday|today|this\s+morning|last\s+week|last\s+friday)\b",
     re.I,
 )
 
@@ -99,7 +99,8 @@ _MEMORY_SUMMARY = re.compile(
 )
 _MEMORY_RECALL_FACT = re.compile(
     r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bdo\s+you\s+remember\s+my\b|"
-    r"\bwhat\s+do\s+you\s+know\s+about\s+(?!me\b)",
+    r"\bwhat\s+do\s+you\s+know\s+about\s+(?!me\b)|"
+    r"\bwhat\s+kind\s+of\s+.+\s+do\s+i\s+prefer\b",
     re.I,
 )
 _MEMORY_RECALL_RUNTIME = re.compile(
@@ -489,6 +490,14 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
         else:
             action = "coding_chat"
             params = {"query": result.prompt}
+    elif intent == "planning":
+        lower = result.prompt.lower()
+        if re.search(r"\b(?:add|create)\s+(?:a\s+)?task\b", lower):
+            action = "planner_add_task"
+            params = {"text": result.prompt}
+        else:
+            action = "planner_today"
+            params = {}
     elif intent == "chat":
         if action == "chat":
             action = "chat"
@@ -524,6 +533,7 @@ def handler_for_intent(intent: str) -> str:
         "memory": "MemoryStore",
         "web_search": "WebSearch",
         "coding": "EngineeringEngine",
+        "planning": "PlanningEngine",
         "chat": "ConversationEngine",
     }.get(intent, "ConversationEngine")
 

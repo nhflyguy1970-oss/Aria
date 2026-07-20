@@ -193,6 +193,10 @@ def _search_project_docs(query: str, limit: int) -> list[dict[str, Any]]:
                     continue
                 if not path.is_file():
                     continue
+                from jarvis.knowledge.doc_guards import is_developer_doc_request, is_internal_doc
+
+                if is_internal_doc(str(path)) and not is_developer_doc_request(query):
+                    continue
                 try:
                     if path.suffix.lower() in (".pdf", ".docx"):
                         continue

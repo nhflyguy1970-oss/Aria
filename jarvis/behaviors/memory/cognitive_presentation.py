@@ -141,7 +141,10 @@ def format_bullet_recall_conversational(text: str, prompt: str = "") -> str:
     if not lines:
         return text
     if len(lines) == 1:
-        return f"You told me {lines[0].lstrip('You ').rstrip('.')}."
+        line = lines[0].rstrip(".")
+        if line.lower().startswith("you "):
+            return f"You told me {line[4:]}."
+        return f"You told me {line}."
     intro = "From what you've shared with me:"
     return intro + "\n" + "\n".join(f"• {ln.rstrip('.')}." for ln in lines)
 
@@ -154,6 +157,9 @@ def polish_fragment_recall(speech: str, prompt: str, *, full_speech: str = "") -
     if full_speech and full_speech.strip() and full_speech.strip() != s:
         if len(s.split()) <= 4 and not re.search(r"\b(yesterday|last\s+\w+|today)\b", s, re.I):
             return polish_cognitive_speech(full_speech, prompt=prompt)
+    rebuilt = _reconstruct_fragment(s, prompt)
+    if rebuilt:
+        return rebuilt
     if re.match(r"^(?:a|an|the)\s+\w+\.?$", s, re.I):
         when = ""
         wm = re.search(
@@ -171,6 +177,43 @@ def polish_fragment_recall(speech: str, prompt: str, *, full_speech: str = "") -
             )
         return f"You told me about {noun}, but I don't have more detail than that."
     return polish_cognitive_speech(s, prompt=prompt)
+
+
+def _reconstruct_fragment(speech: str, prompt: str) -> str:
+    """Rebuild short ACM fragments into full remembered propositions."""
+    s = (speech or "").strip().rstrip(".")
+    q = (prompt or "").strip()
+    if not s or len(s.split()) > 6:
+        return ""
+    when_m = re.search(
+        r"\b(yesterday|today|this\s+morning|last\s+week|last\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))\b",
+        q,
+        re.I,
+    )
+    when = when_m.group(1) if when_m else ""
+    low = s.lower()
+    # "fishing." / "fish" for "What fish did I catch?"
+    if low in ("fishing", "fish") or re.search(r"\bwhat\s+fish\b", q, re.I):
+        if when:
+            return f"You told me {when} that you caught fish."
+        return "You told me about fish you caught."
+    # "my RAM." for "What RAM did I upgrade?"
+    if re.match(r"^my\s+\w+$", s, re.I) or re.search(r"\bwhat\s+ram\b", q, re.I):
+        obj = re.sub(r"^my\s+", "", s, flags=re.I).strip()
+        if when:
+            return f"You told me {when} that you upgraded your {obj}."
+        return f"You told me you upgraded your {obj}."
+    # Duplicate verb prefix: "installed you installed a GPU"
+    dup = re.match(r"^(\w+)\s+you\s+\1\b", s, re.I)
+    if dup:
+        s = re.sub(r"^(\w+)\s+", "", s, count=1, flags=re.I)
+    # Bare verb label + proposition
+    if re.match(r"^(installed|bought|upgraded|replaced|visited|caught)\s+you\s+", s, re.I):
+        s = re.sub(r"^[a-z]+\s+", "", s, count=1, flags=re.I)
+        if when:
+            return f"You told me {when} that {s}."
+        return f"You told me that {s}."
+    return ""
 
 
 def _dedupe_presentation_lines(lines: list[str]) -> list[str]:
@@ -343,7 +386,9 @@ def _evidence_line_to_conversational(body: str, header: str = "") -> str:
     when_prefix = ""
     m = re.match(r"^([a-z_]+):\s*(.+)$", s, re.I)
     if m:
-        when_prefix = _TEMPORAL_LABEL.get(m.group(1).lower(), m.group(1).replace("_", " "))
+        label = m.group(1).lower()
+        if label in _TEMPORAL_LABEL:
+            when_prefix = _TEMPORAL_LABEL[label]
         s = m.group(2).strip()
     s = re.sub(r"^User\s+", "you ", s, flags=re.I)
     s = re.sub(r"\s*\([^)]*\)\s*$", "", s).strip()
@@ -353,7 +398,9 @@ def _evidence_line_to_conversational(body: str, header: str = "") -> str:
         s = "you " + s[2:]
     when = when_prefix or header
     if when and not s.lower().startswith(when.lower()):
-        return f"{when.capitalize()} {s}."
+        if re.match(r"^you\s+", s, re.I):
+            return f"You told me {when} that {s[4:].rstrip('.')}."
+        return f"You told me {when} that {s.rstrip('.')}."
     if not s.endswith("."):
         s += "."
     return s

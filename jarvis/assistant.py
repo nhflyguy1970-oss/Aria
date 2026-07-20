@@ -877,7 +877,9 @@ class JarvisAssistant:
 
         if action == "coding_chat":
             yield {"type": "status", "message": "Searching codebase…"}
-            result = self._coding_chat(intent.get("params", {}), message)
+            from jarvis.handlers.registry import call_action
+
+            result = call_action(self, "coding_chat", intent.get("params", {}), message)
             yield _stream_done(result)
             return
 
