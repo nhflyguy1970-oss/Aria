@@ -6,7 +6,12 @@ import re
 from typing import Any
 
 from jarvis.nlu.confidence import confidence_band
-from jarvis.nlu.episodic_patterns import is_episodic_memory_query, is_episodic_teaching
+from jarvis.nlu.episodic_patterns import (
+    is_episodic_memory_query,
+    is_episodic_teaching,
+    is_live_hardware_question,
+    is_past_event_memory_question,
+)
 from jarvis.nlu.types import NLUResult
 
 _LIVE_STATE = re.compile(
@@ -145,6 +150,18 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
             "thinking": "episodic recall",
         }
 
+    # Past-event recall (including "did I tell you…") — Memory Authority, not search/runtime.
+    if is_past_event_memory_question(message):
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "past event recall",
+        }
+
+    # Live hardware/system questions — defer to Mission Control (no memory route).
+    if is_live_hardware_question(message):
+        return None
+
     # Order matters: write before interrogative remember; search before generic recall.
     if _MEMORY_SEARCH.search(lower):
         query = (
@@ -235,10 +252,9 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
         }
 
     if _MEMORY_RECALL_FACT.search(lower) and not _MEMORY_RECALL_RUNTIME.search(lower):
-        # Targeted fact retrieval — never dump the whole store.
         return {
-            "action": "memory_search",
-            "params": {"query": message},
+            "action": "memory_about_user",
+            "params": {"question": message},
             "thinking": "memory recall fact",
         }
 
@@ -294,6 +310,10 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
 
     if is_episodic_teaching(prompt) or is_episodic_memory_query(prompt):
         return "memory"
+    if is_past_event_memory_question(prompt):
+        return "memory"
+    if is_live_hardware_question(prompt):
+        return "runtime"
     if _USER_MEMORY.search(prompt):
         return "memory"
     if _EXPLICIT_WEB.search(prompt):
@@ -337,8 +357,10 @@ def apply_intent_guards(result: NLUResult) -> str:
     intent = result.semantic.intent
     if is_episodic_teaching(prompt):
         return "memory"
-    if is_episodic_memory_query(prompt):
+    if is_episodic_memory_query(prompt) or is_past_event_memory_question(prompt):
         return "memory"
+    if is_live_hardware_question(prompt):
+        return "runtime"
     if intent == "documentation":
         intent = "reference"
     structural = infer_intent_from_structure(result)

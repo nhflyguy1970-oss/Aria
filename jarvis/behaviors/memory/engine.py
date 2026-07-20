@@ -25,12 +25,27 @@ class MemoryEngine:
         from jarvis.behaviors.memory.cognitive_presentation import (
             format_teaching_acknowledgement,
             polish_cognitive_speech,
+            polish_fragment_recall,
         )
+        from jarvis.nlu.episodic_patterns import reformulate_for_acm_recall
 
-        cog = acm_bridge.primary_cognitive_speak(question)
-        result = cog.get("result") if isinstance(cog.get("result"), dict) else {}
+        def _speak(q: str) -> tuple[dict[str, Any], str, str]:
+            cog = acm_bridge.primary_cognitive_speak(q)
+            result = cog.get("result") if isinstance(cog.get("result"), dict) else {}
+            raw = str(cog.get("speech") or "").strip()
+            return result, raw, q
+
+        result, raw, used_q = _speak(question)
+        alt = reformulate_for_acm_recall(question)
+        if alt and alt.lower() != (question or "").strip().lower():
+            if not raw or not result.get("is_memory_request"):
+                alt_result, alt_raw, _ = _speak(alt)
+                if alt_raw and (
+                    alt_result.get("is_memory_request") or "installed" in alt_raw.lower()
+                ):
+                    result, raw, used_q = alt_result, alt_raw, alt
+
         path = list(result.get("reasoning_path") or [])
-        raw = str(cog.get("speech") or "").strip()
 
         if "teaching_encoded" in path:
             ack = format_teaching_acknowledgement(question)
@@ -40,11 +55,24 @@ class MemoryEngine:
 
         if result.get("is_memory_request"):
             if raw:
-                polished = polish_cognitive_speech(raw, result, prompt=question)
+                polished = polish_cognitive_speech(raw, result, prompt=used_q)
+                if len(polished.split()) <= 4 and alt and alt != used_q:
+                    _, alt_raw, _ = _speak(alt)
+                    if alt_raw and len(alt_raw.split()) > len(polished.split()):
+                        polished = polish_fragment_recall(polished, used_q, full_speech=alt_raw)
+                else:
+                    polished = polish_fragment_recall(polished, used_q)
                 MemoryEngine._trace_memory_presentation("cognitive_presentation", "memory_recall")
                 return result, polished
             if (result.get("status") or "").lower() == "unknown":
                 return result, "I don't currently know."
+
+        if alt and not raw:
+            alt_result, alt_raw, _ = _speak(alt)
+            if alt_raw:
+                polished = polish_cognitive_speech(alt_raw, alt_result, prompt=alt)
+                MemoryEngine._trace_memory_presentation("cognitive_presentation", "memory_recall")
+                return alt_result, polished
 
         return result, raw
 
@@ -530,21 +558,28 @@ class MemoryEngine:
         if acm_bridge.acm_is_authoritative():
             try:
                 query = (params.get("query") or message or "").strip()
-                from jarvis.nlu.episodic_patterns import is_episodic_memory_query
+                from jarvis.nlu.episodic_patterns import (
+                    is_episodic_memory_query,
+                    is_past_event_memory_question,
+                )
 
-                if is_episodic_memory_query(query):
+                if is_episodic_memory_query(query) or is_past_event_memory_question(query):
                     return cls.memory_about_user(
                         ctx, {"question": query}, message or query
                     )
-                from aria_core import memory as core_memory
-
-                hits = core_memory.search_memory(
-                    query, limit=int(params.get("limit") or 8)
-                )
-                if not hits:
-                    return ok("No matching memories.", module="memory", source="acm")
-                lines = "\n".join(f"• {h.get('content')}" for h in hits if h.get("content"))
-                return ok(lines, module="memory", source="acm", memories=hits)
+                result, speech = cls._acm_authority_speak(query or "about me")
+                if speech:
+                    hits = acm_bridge.cognitive_result_to_hits(result, speech=speech, limit=8)
+                    return ok(
+                        speech,
+                        module="memory",
+                        source="acm",
+                        memories=hits,
+                        cognitive_status=result.get("status"),
+                    )
+                if result.get("is_memory_request"):
+                    return ok("I don't currently know.", module="memory", source="acm")
+                return ok("No matching memories.", module="memory", source="acm")
             except Exception as exc:
                 return err(f"ACM search failed: {type(exc).__name__}")
 

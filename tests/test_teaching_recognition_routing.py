@@ -56,7 +56,7 @@ def test_declarative_teaching_routes_to_memory_authority_full_prompt() -> None:
     assert "Encode Authority" in flow
 
 
-def test_interrogative_memory_keeps_search_with_full_prompt() -> None:
+def test_interrogative_memory_routes_to_acm_recall() -> None:
     result = NLUResult(
         prompt="What is my favorite color?",
         grammar=GrammarAnalysis(sentence_type="interrogative", question_type="what"),
@@ -70,11 +70,11 @@ def test_interrogative_memory_keeps_search_with_full_prompt() -> None:
             model="test",
         ),
     )
-    # resolve_memory_route catches this first as memory_search with full prompt
+    # resolve_memory_route sends fact recall through ACM presentation (memory_about_user).
     intent = nlu_to_router_intent(result)
     assert intent is not None
-    assert intent["action"] == "memory_search"
-    assert intent["params"]["query"] == "What is my favorite color?"
+    assert intent["action"] == "memory_about_user"
+    assert intent["params"]["question"] == "What is my favorite color?"
 
 
 def test_live_nlu_teaching_path_updates_preference(

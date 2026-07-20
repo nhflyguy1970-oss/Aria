@@ -14,7 +14,7 @@ CASES = [
     ("Remember my dog's name is Zeus.", "remember"),
     ("Forget my coffee preference.", "memory_forget"),
     ("Update my favorite coffee.", "memory_correct"),
-    ("What is my favorite coffee?", "memory_search"),
+    ("What is my favorite coffee?", "memory_about_user"),
     ("What do you know about me?", "memory_about_user"),
     ("What do you remember about me?", "memory_about_user"),
     ("Search memory for fly tying.", "memory_search"),

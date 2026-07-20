@@ -127,10 +127,16 @@ def is_runtime_routing_question(message: str) -> bool:
     if _USER_MEMORY_EXCLUDE.search(text):
         return False
     try:
-        from jarvis.nlu.episodic_patterns import is_episodic_memory_utterance
+        from jarvis.nlu.episodic_patterns import (
+            is_episodic_memory_utterance,
+            is_live_hardware_question,
+            is_past_event_memory_question,
+        )
 
-        if is_episodic_memory_utterance(text):
+        if is_episodic_memory_utterance(text) or is_past_event_memory_question(text):
             return False
+        if is_live_hardware_question(text):
+            return True
     except Exception:
         pass
     return bool(_RUNTIME_KEYWORD_RE.search(text))

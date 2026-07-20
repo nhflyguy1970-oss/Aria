@@ -102,12 +102,12 @@ def capability_for_action_and_message(action: str, message: str = "") -> str:
     action_key = (action or "chat").strip().lower()
     text = (message or "").strip()
     try:
-        from jarvis.nlu.episodic_patterns import is_episodic_memory_query, is_episodic_teaching
+        from jarvis.nlu.episodic_patterns import is_episodic_memory_query, is_episodic_teaching, is_past_event_memory_question
 
-        if action_key in ("memory_about_user", "remember", "recall"):
+        if action_key in ("memory_about_user", "remember", "recall", "memory_search"):
             if is_episodic_teaching(text):
                 return "episodic_teaching"
-            if is_episodic_memory_query(text):
+            if is_episodic_memory_query(text) or is_past_event_memory_question(text):
                 return "episodic_recall"
     except Exception:
         pass

@@ -69,6 +69,10 @@ def polish_cognitive_speech(speech: str, result: dict | None = None, *, prompt: 
     text = (speech or "").strip()
     if not text:
         return text
+    if _RAW_MEMORY_BULLETS.search(text):
+        return format_bullet_recall_conversational(text, prompt)
+    if _PREFERENCE_RECALL.match(text):
+        return format_preference_recall_conversational(text)
     if _INTERNAL_REFLECTION.search(text):
         text = _rewrite_internal_reflection(text, prompt)
     if text.startswith("Evidence (") or "Episodic events:" in text:
@@ -77,9 +81,109 @@ def polish_cognitive_speech(speech: str, result: dict | None = None, *, prompt: 
         return format_episodic_conversational(text, prompt)
     if _EXPLANATION_MARKERS.search(text):
         return format_explanation_conversational(text, prompt)
+    if _EPISODIC_STATEMENT.match(text):
+        return format_episodic_statement_conversational(text, prompt)
     text = re.sub(r"\s*\(confidence [\d.]+\)\s*$", "", text)
     text = re.sub(r"\s*\(competing memories; confidence [\d.]+\)\s*$", "", text)
     return text
+
+
+_RAW_MEMORY_BULLETS = re.compile(r"(?:^|\n)\s*•\s+", re.M)
+_PREFERENCE_RECALL = re.compile(
+    r"^Your favorite (\w+(?:\s+\w+)?) is (.+)\.?$",
+    re.I,
+)
+_EPISODIC_STATEMENT = re.compile(
+    r"^You\s+(installed|bought|upgraded|replaced|visited|went|cleaned)\s+(.+)\([^)]+\)\.?\s*$",
+    re.I,
+)
+
+
+def format_preference_recall_conversational(text: str) -> str:
+    m = _PREFERENCE_RECALL.match(text.strip())
+    if not m:
+        return text
+    domain, value = m.group(1), m.group(2).rstrip(".")
+    return f"You told me your favorite {domain} is {value}."
+
+
+def format_episodic_statement_conversational(text: str, prompt: str = "") -> str:
+    m = _EPISODIC_STATEMENT.match(text.strip())
+    if not m:
+        return text
+    verb, obj = m.group(1), m.group(2).strip()
+    when_m = re.search(r"\(([^)]+)\)", text)
+    when = when_m.group(1) if when_m else ""
+    obj = re.sub(r"\s*\([^)]*\)\s*$", "", obj).strip()
+    if when:
+        return f"You told me {when} that you {verb} {obj}."
+    return f"You told me that you {verb} {obj}."
+
+
+def format_bullet_recall_conversational(text: str, prompt: str = "") -> str:
+    """Turn raw bullet memory lists into conversational recall."""
+    lines: list[str] = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.lower() == "memory":
+            continue
+        if line.startswith("•"):
+            line = line.lstrip("•").strip()
+        if line.lower().startswith("your favorite"):
+            lines.append(format_preference_recall_conversational(line))
+            continue
+        conv = _evidence_line_to_conversational(line)
+        if conv:
+            lines.append(conv)
+    lines = _dedupe_presentation_lines(lines)
+    if not lines:
+        return text
+    if len(lines) == 1:
+        return f"You told me {lines[0].lstrip('You ').rstrip('.')}."
+    intro = "From what you've shared with me:"
+    return intro + "\n" + "\n".join(f"• {ln.rstrip('.')}." for ln in lines)
+
+
+def polish_fragment_recall(speech: str, prompt: str, *, full_speech: str = "") -> str:
+    """Expand noun-phrase fragments using fuller recall text when available."""
+    s = (speech or "").strip()
+    if not s:
+        return full_speech or s
+    if full_speech and full_speech.strip() and full_speech.strip() != s:
+        if len(s.split()) <= 4 and not re.search(r"\b(yesterday|last\s+\w+|today)\b", s, re.I):
+            return polish_cognitive_speech(full_speech, prompt=prompt)
+    if re.match(r"^(?:a|an|the)\s+\w+\.?$", s, re.I):
+        when = ""
+        wm = re.search(
+            r"\b(yesterday|today|this\s+morning|last\s+week|last\s+\w+)\b",
+            prompt,
+            re.I,
+        )
+        if wm:
+            when = wm.group(1)
+        noun = s.rstrip(".").strip()
+        if when:
+            return (
+                f"You told me {when} that you installed {noun}, "
+                f"but you didn't specify which model."
+            )
+        return f"You told me about {noun}, but I don't have more detail than that."
+    return polish_cognitive_speech(s, prompt=prompt)
+
+
+def _dedupe_presentation_lines(lines: list[str]) -> list[str]:
+    """Collapse identical consecutive presentation lines (same fact repeated in ACM evidence)."""
+    out: list[str] = []
+    prev = ""
+    for line in lines:
+        key = line.strip().lower()
+        if key and key == prev:
+            continue
+        out.append(line)
+        prev = key
+    return out
 
 
 _INTERNAL_REFLECTION = re.compile(
@@ -123,7 +227,10 @@ def format_episodic_conversational(speech: str, prompt: str = "") -> str:
         intro = f"From what you've shared with me about {header}:"
         return intro + "\n" + "\n".join(lines_out)
     if lines_out:
-        return "From what you've shared with me:\n" + "\n".join(lines_out)
+        deduped = _dedupe_presentation_lines([ln.lstrip("• ") for ln in lines_out])
+        if len(deduped) == 1:
+            return f"From what you've shared with me, {deduped[0]}"
+        return "From what you've shared with me:\n" + "\n".join(f"• {ln}" for ln in deduped)
     return _evidence_line_to_conversational(speech, header) or speech
 
 
