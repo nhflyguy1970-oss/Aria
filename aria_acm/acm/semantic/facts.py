@@ -75,7 +75,8 @@ _EPISODIC_ACTION = (
     r"drove|flew|walked|called|met|watched|read|wrote|cooked|fixed|"
     r"moved|painted|planted|hiked|ran|swam|played|taught|learned|"
     r"attended|joined|left|opened|closed|replaced|upgraded|"
-    r"purchased|ordered|picked\s+up|dropped\s+off)"
+    r"purchased|ordered|picked\s+up|dropped\s+off|"
+    r"caught|fished|hooked|landed|harvested|observed|released|cast)"
 )
 _NOT_NAME = re.compile(rf"\bmy\s+name\s+is\s+not\s+{_NAME_VALUE}", re.I)
 _ACTUALLY_NAME = re.compile(
@@ -109,6 +110,18 @@ def _clean_value(value: str) -> str:
     v = (value or "").strip().rstrip(".,;:!")
     v = re.sub(r"\s+", " ", v)
     return v
+
+
+def _prefer_domain_from_value(value: str) -> str | None:
+    """Derive a preference domain noun from 'barbless hooks' → hooks."""
+    tokens = re.findall(r"[a-zA-Z][\w'-]*", value or "")
+    if not tokens:
+        return None
+    # Prefer the last content noun (hooks, coffee, …).
+    domain = tokens[-1].lower()
+    if domain in {"a", "an", "the", "my", "to", "for", "with", "and", "or"}:
+        return None
+    return domain
 
 
 def _extract_episodic(
@@ -355,13 +368,17 @@ def extract_fact_patterns(
     elif not _INTERROGATIVE.search(t):
         m = _PREFER.search(t)
         if m:
+            value = _clean_value(m.group(1))
+            domain = _prefer_domain_from_value(value)
+            prop = f"prefer_{domain}" if domain else "preference"
             facts.append(
                 CognitiveFact(
                     kind=FactKind.PREFERENCE,
                     subject=fp,
-                    property="preference",
-                    value=_clean_value(m.group(1)),
+                    property=prop,
+                    value=value,
                     confidence=0.82,
+                    labels=(domain,) if domain else (),
                 )
             )
 

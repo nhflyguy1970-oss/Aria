@@ -54,13 +54,35 @@ _INTERROGATIVE_VALUE = re.compile(
 # Generic preference tokens — matching these alone must not collapse distinct
 # favorite_* domains (color vs food vs fish) into one another.
 _GENERIC_PREF_TOKENS: frozenset[str] = frozenset(
-    {"favorite", "favourite", "prefer", "preference", "preferences", "like", "likes"}
+    {
+        "favorite",
+        "favourite",
+        "prefer",
+        "preference",
+        "preferences",
+        "like",
+        "likes",
+        "what",
+        "kind",
+        "which",
+        "tell",
+        "about",
+        "know",
+        "remember",
+    }
 )
 
 # "favorite <domain>" in a cue (color, food, fish, …). Stop before "is"/punctuation
 # so "My favorite food is pizza." yields domain=food, not food_is.
 _FAVORITE_DOMAIN = re.compile(
     r"(?:favorite|favourite)\s+(\w+)\b",
+    re.I,
+)
+# "what kind of hooks do I prefer" / "what hooks do I prefer"
+_PREFER_DOMAIN = re.compile(
+    r"(?:what\s+kind\s+of|what)\s+(\w+)\s+(?:do\s+i|you)\s+prefer\b|"
+    r"\bprefer(?:red)?\s+(\w+)\b|"
+    r"\bmy\s+preferred\s+(\w+)\b",
     re.I,
 )
 
@@ -104,8 +126,10 @@ _EPISODIC_TEMPORAL = (
 _EPISODIC_QUERY = re.compile(
     rf"\b(what\s+happened(?:\s+{_EPISODIC_TEMPORAL})?|"
     rf"what\s+did\s+i\s+\w+(?:\s+{_EPISODIC_TEMPORAL})?|"
+    rf"what\s+\w+\s+did\s+i\s+\w+|"
+    rf"where\s+did\s+i\s+(?:go|visit)(?:\s+{_EPISODIC_TEMPORAL})?|"
     rf"what\s+happened\s+(?:before|after)\b|"
-    rf"tell\s+me\s+about\s+(?:buying|cleaning|installing|visiting|going)|"
+    rf"tell\s+me\s+about\s+(?:buying|cleaning|installing|visiting|going|catching|fishing)|"
     rf"explain\s+what\s+happened)\b",
     re.I,
 )
@@ -114,7 +138,15 @@ _WHAT_HAPPENED_WHEN = re.compile(
     re.I,
 )
 _WHAT_DID_I = re.compile(
-    rf"\bwhat\s+did\s+i\s+(\w+)\s+({_EPISODIC_TEMPORAL})\b",
+    rf"\bwhat\s+did\s+i\s+(\w+)(?:\s+({_EPISODIC_TEMPORAL}))?\b",
+    re.I,
+)
+_WHAT_OBJECT_DID_I = re.compile(
+    rf"\bwhat\s+(\w+)\s+did\s+i\s+(\w+)(?:\s+({_EPISODIC_TEMPORAL}))?\b",
+    re.I,
+)
+_WHERE_DID_I_GO = re.compile(
+    rf"\bwhere\s+did\s+i\s+(?:go|visit)(?:\s+({_EPISODIC_TEMPORAL}))?\b",
     re.I,
 )
 _BEFORE_EVENT = re.compile(
@@ -146,6 +178,16 @@ _ACTION_LEMMA = {
     "go": "went",
     "went": "went",
     "get": "bought",
+    "catch": "caught",
+    "caught": "caught",
+    "fish": "fished",
+    "fished": "fished",
+    "land": "landed",
+    "landed": "landed",
+    "harvest": "harvested",
+    "harvested": "harvested",
+    "observe": "observed",
+    "observed": "observed",
     "do": "",
 }
 
@@ -388,6 +430,23 @@ class RememberingOrgan:
             answerable_ranked = domain_only
 
         if not answerable_ranked:
+            pref_fallback = self._preference_from_experience_facts(cue, domain=domain)
+            if pref_fallback:
+                answer, expl, conf = pref_fallback
+                return Reconstruction(
+                    cue=cue,
+                    answer=answer,
+                    explanation_class=expl.value,
+                    confidence=conf,
+                    activated_concept_ids=[n.target_id for n in ranked],
+                    association_ids=list(field.associations.keys())[:16],
+                    activation=field.to_public(),
+                    cue_classes=list(field.cue_classes),
+                    goal_influenced=field.goal_influenced,
+                    identity_influenced=field.identity_influenced,
+                    context_influenced=field.context_influenced,
+                    working_influenced=field.working_influenced,
+                )
             exp_nodes = sorted(field.experiences.values(), key=lambda n: -n.energy)[:6]
             return Reconstruction(
                 cue=cue,
@@ -498,10 +557,14 @@ class RememberingOrgan:
             if _attr_grounds_in_cue(attr, tokens, domain=domain):
                 candidates.append(attr)
         if candidates:
-            # Prefer structured favorite_* attributes over a generic "preference"
-            # dump — the live blocker rendered the preference key when a tool
-            # wrapper had been stored as its value.
-            keyed = [a for a in candidates if a.key.startswith("favorite_")]
+            # Prefer structured favorite_* / prefer_* attributes over a generic
+            # "preference" dump — the live blocker rendered the preference key
+            # when a tool wrapper had been stored as its value.
+            keyed = [
+                a
+                for a in candidates
+                if a.key.startswith("favorite_") or a.key.startswith("prefer_")
+            ]
             if domain:
                 domain_n = _normalize_domain(domain)
                 domain_keyed = [
@@ -541,7 +604,12 @@ class RememberingOrgan:
             1.0,
             0.55 * best_attr.confidence + 0.25 * concept.confidence + 0.2 * min(1.0, energy),
         )
-        if concept.role == ConceptRole.PREFERENCE or best_attr.key.startswith("favorite_"):
+        if concept.role == ConceptRole.PREFERENCE or best_attr.key.startswith(
+            ("favorite_", "prefer_")
+        ) or best_attr.key == "preference":
+            if best_attr.key.startswith("prefer_") or best_attr.key == "preference":
+                answer = f"You prefer {best_attr.value}."
+                return answer, ExplanationClass.PREFERENCE, conf
             pretty = best_attr.key.replace("favorite_", "favorite ").replace("_", " ")
             answer = f"Your {pretty} is {best_attr.value}."
             return answer, ExplanationClass.PREFERENCE, conf
@@ -570,6 +638,8 @@ class RememberingOrgan:
         before_m = _BEFORE_EVENT.search(cue or "")
         after_m = _AFTER_EVENT.search(cue or "")
         when_m = _WHAT_HAPPENED_WHEN.search(cue or "")
+        where_m = _WHERE_DID_I_GO.search(cue or "")
+        obj_did_m = _WHAT_OBJECT_DID_I.search(cue or "")
         did_m = _WHAT_DID_I.search(cue or "")
         explain_m = _EVENT_EXPLAIN.search(cue or "")
 
@@ -597,17 +667,65 @@ class RememberingOrgan:
             answer = self._format_episodic_list(
                 matched, header="After that, from your evidence:"
             )
-        elif did_m:
-            action_raw = did_m.group(1).lower()
-            temporal = did_m.group(2)
+        elif where_m:
+            temporal = where_m.group(1) or ""
+            matched = self._filter_episodic(
+                events, temporal_cue=temporal or None, action=None
+            )
+            # Prefer visit/went/location-bearing events when present.
+            loc_like = [
+                e
+                for e in matched
+                if e.meta_dict().get("event_action", "")
+                in ("visited", "went", "drove", "flew", "walked", "hiked")
+            ]
+            if loc_like:
+                matched = loc_like
+            elif temporal:
+                matched = self._filter_episodic(events, temporal_cue=temporal)
+            answer = self._format_where_i_went(matched)
+        elif obj_did_m:
+            obj_token = obj_did_m.group(1).lower()
+            action_raw = obj_did_m.group(2).lower()
+            temporal = obj_did_m.group(3) or ""
             action = _ACTION_LEMMA.get(action_raw, action_raw)
             matched = self._filter_episodic(
-                events, temporal_cue=temporal, action=action or None
+                events, temporal_cue=temporal or None, action=action or None
             )
+            if obj_token and matched:
+                narrowed = [
+                    e
+                    for e in matched
+                    if obj_token in (e.meta_dict().get("event_object") or "").lower()
+                    or obj_token in (e.summary or "").lower()
+                    or obj_token.rstrip("s")
+                    in (e.meta_dict().get("event_object") or "").lower()
+                ]
+                # Object token is advisory (e.g. "fish" vs "trout") — keep action hits.
+                if narrowed:
+                    matched = narrowed
             if action and not matched:
-                # Action-specific miss → unknown (do not fall back to all events)
                 return self._episodic_unknown(cue, field, ranked)
             answer = self._format_episodic_action(matched, action=action or action_raw)
+        elif did_m:
+            action_raw = did_m.group(1).lower()
+            temporal = did_m.group(2) or ""
+            action = _ACTION_LEMMA.get(action_raw, action_raw)
+            matched = self._filter_episodic(
+                events, temporal_cue=temporal or None, action=action or None
+            )
+            if action_raw == "do" and temporal:
+                # "What did I do last Friday?" → all events that day
+                matched = self._filter_episodic(events, temporal_cue=temporal)
+                answer = self._format_episodic_list(
+                    matched,
+                    header=f"From your evidence ({temporal.strip()}):",
+                )
+            elif action and not matched:
+                # Action-specific miss → unknown (do not fall back to all events)
+                return self._episodic_unknown(cue, field, ranked)
+            else:
+                answer = self._format_episodic_action(matched, action=action or action_raw)
         elif when_m:
             matched = self._filter_episodic(events, temporal_cue=when_m.group(1))
             answer = self._format_episodic_list(
@@ -794,17 +912,78 @@ class RememberingOrgan:
         if len(events) == 1:
             e = events[0]
             obj = e.meta_dict().get("event_object") or ""
+            stored_action = e.meta_dict().get("event_action") or action
             when = e.meta_dict().get("temporal_label") or e.meta_dict().get(
                 "temporal_cue", ""
             ).replace("_", " ")
-            if obj and action:
-                return f"You {action.replace('_', ' ')} {obj}" + (
+            verb = (stored_action or action or "").replace("_", " ")
+            if obj and verb:
+                return f"You {verb} {obj}" + (
                     f" ({when})." if when else "."
                 )
             return e.summary
         return self._format_episodic_list(
             events, header=f"From your evidence ({action.replace('_', ' ')}):"
         )
+
+    def _format_where_i_went(self, events: list[Any]) -> str:
+        if not events:
+            return ""
+        if len(events) == 1:
+            e = events[0]
+            obj = e.meta_dict().get("event_object") or ""
+            action = e.meta_dict().get("event_action") or "went"
+            when = e.meta_dict().get("temporal_label") or e.meta_dict().get(
+                "temporal_cue", ""
+            ).replace("_", " ")
+            if action == "visited" and obj:
+                place = re.sub(r"^my\s+", "your ", obj, flags=re.I).strip()
+                return f"You visited {place}" + (f" ({when})." if when else ".")
+            if obj:
+                return f"You went to {obj}" + (f" ({when})." if when else ".")
+            return e.summary
+        return self._format_episodic_list(
+            events, header="From your evidence (where you went):"
+        )
+
+    def _preference_from_experience_facts(
+        self, cue: str, *, domain: str | None
+    ) -> tuple[str, ExplanationClass, float] | None:
+        """Reconstruct preference answers from experience fact metadata when concepts missed."""
+        tokens = _cue_tokens(cue)
+        domain_n = _normalize_domain(domain) if domain else None
+        best: tuple[str, float] | None = None
+        for exp in self.store.experiences.values():
+            meta = exp.meta_dict()
+            for i in range(12):
+                kind = meta.get(f"fact_{i}_kind")
+                if kind != "preference":
+                    continue
+                prop = meta.get(f"fact_{i}_property") or ""
+                value = meta.get(f"fact_{i}_value") or ""
+                if not value:
+                    continue
+                attr_domain = _attr_domain(prop)
+                if domain_n:
+                    if attr_domain and (
+                        attr_domain == domain_n
+                        or attr_domain.startswith(domain_n + "_")
+                    ):
+                        best = (value, 0.82)
+                        break
+                    if domain_n in value.lower():
+                        best = (value, 0.8)
+                        break
+                else:
+                    specific = [t for t in tokens if t not in _GENERIC_PREF_TOKENS]
+                    if not specific or any(t in value.lower() or t in prop for t in specific):
+                        best = (value, 0.78)
+                        break
+            if best:
+                break
+        if not best:
+            return None
+        return f"You prefer {best[0]}.", ExplanationClass.PREFERENCE, best[1]
 
     def _format_episodic_explanation(self, events: list[Any]) -> str:
         if not events:
@@ -1483,20 +1662,30 @@ def _normalize_domain(domain: str) -> str:
 
 
 def _preference_domain(cue: str) -> str | None:
-    """Return favorite-<domain> named by the cue, or None if unspecified."""
+    """Return favorite-/prefer-<domain> named by the cue, or None if unspecified."""
     m = _FAVORITE_DOMAIN.search(cue or "")
-    if not m:
-        return None
-    domain = re.sub(r"[^\w\s]+", "", m.group(1)).strip().lower()
-    if not domain or domain in _GENERIC_PREF_TOKENS or domain in {"is", "are", "was", "my"}:
-        return None
-    return _normalize_domain(domain)
+    if m:
+        domain = re.sub(r"[^\w\s]+", "", m.group(1)).strip().lower()
+        if domain and domain not in _GENERIC_PREF_TOKENS and domain not in {"is", "are", "was", "my"}:
+            return _normalize_domain(domain)
+    m = _PREFER_DOMAIN.search(cue or "")
+    if m:
+        domain = next((g for g in m.groups() if g), None)
+        if domain:
+            domain = re.sub(r"[^\w\s]+", "", domain).strip().lower()
+            if domain and domain not in _GENERIC_PREF_TOKENS and domain not in {
+                "is", "are", "was", "my", "kind", "what"
+            }:
+                return _normalize_domain(domain)
+    return None
 
 
 def _attr_domain(attr_key: str) -> str | None:
-    if not attr_key.startswith("favorite_"):
-        return None
-    return _normalize_domain(attr_key[len("favorite_") :])
+    if attr_key.startswith("favorite_"):
+        return _normalize_domain(attr_key[len("favorite_") :])
+    if attr_key.startswith("prefer_"):
+        return _normalize_domain(attr_key[len("prefer_") :])
+    return None
 
 
 def _concept_matches_preference_domain(concept: Concept, domain: str) -> bool:
@@ -1516,7 +1705,7 @@ def _attr_grounds_in_cue(
     attr: Any, tokens: list[str], *, domain: str | None = None
 ) -> bool:
     """Whether an attribute is a legitimate grounding for this cue."""
-    if attr.key.startswith("favorite_"):
+    if attr.key.startswith("favorite_") or attr.key.startswith("prefer_"):
         attr_domain = _attr_domain(attr.key) or ""
         if domain:
             domain = _normalize_domain(domain)
@@ -1527,6 +1716,11 @@ def _attr_grounds_in_cue(
         if not specific:
             return True
         return any(t in attr.key or t in (attr.value or "").lower() for t in specific)
+    if attr.key == "preference":
+        specific = [t for t in tokens if t not in _GENERIC_PREF_TOKENS]
+        if not specific:
+            return True
+        return any(t in (attr.value or "").lower() for t in specific)
     return any(tok in attr.key or tok in (attr.value or "").lower() for tok in tokens)
 
 

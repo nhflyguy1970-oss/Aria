@@ -75,6 +75,9 @@ class CognitiveFact:
         if self.property == "location":
             return f"{subj} location is {self.value}"
         if self.kind == FactKind.PREFERENCE:
+            if self.property.startswith("prefer_"):
+                domain = self.property.replace("prefer_", "").replace("_", " ")
+                return f"preferred {domain} is {self.value}"
             label = self.property.replace("favorite_", "favorite ").replace("_", " ")
             return f"{label} is {self.value}"
         if self.kind == FactKind.GOAL:

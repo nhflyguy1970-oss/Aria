@@ -1,4 +1,4 @@
-"""M1 episodic — ACM v0.25.0 autobiographical memory (vendored package).
+"""M1 episodic — ACM autobiographical memory (vendored package).
 
 Gates the promoted ACM through Aria's acm_bridge. Does **not** add Aria host
 episodic NLU — cognitive authority is the unchanged ACM package only.
@@ -50,12 +50,12 @@ def _speak(q: str) -> tuple[dict, str]:
 def test_m1ep_01_version_pin() -> None:
     ver = Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json"
     data = json.loads(ver.read_text())
-    assert data["source_version"] == "0.25.0"
-    assert data["source_tag"] == "v0.25.0"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.25.0-1"
+    assert data["source_version"] == "0.26.0"
+    assert data["source_tag"] == "v0.26.0"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.26.0-1"
     from aria_acm.acm._version import __version__
 
-    assert __version__ == "0.25.0"
+    assert __version__ == "0.26.0"
 
 
 @pytest.mark.m1ep

@@ -4,14 +4,18 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M1):
-  tag:    v0.25.0
-  commit: d71a6af77dab578fd85ace14e241a72df3ce59a1
-  version harvested from pin: 0.25.0
-  decision: Episodic autobiographical memory
+Source pin (M3-ACM):
+  tag:    v0.26.0
+  commit: 8a4b73d64f494e5b48488d15738729d5c773446e
+  version harvested from pin: 0.26.0
+  decision: Episodic teaching/recall, temporal where-go, preference concepts
   includes: D038–D047 · Teaching Recognition · Multi-domain preference /
             evidence · Memory explanation + personal summary · Episodic
-            autobiographical memory (v0.25.0)
+            autobiographical memory · Cognition repairs (caught/where/prefer)
+
+Prior pin (M1):
+  tag:    v0.25.0
+  commit: d71a6af77dab578fd85ace14e241a72df3ce59a1
 
 Prior pin (M0L):
   tag:    v0.24.0

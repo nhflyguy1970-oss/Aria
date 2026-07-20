@@ -273,6 +273,7 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         re.compile(
             r"\b(prefer(?:ence|s)?|favorite|favourite|"
             r"what\s+do\s+i\s+like|"
+            r"what\s+kind\s+of\s+\w+\s+do\s+i\s+prefer|"
             r"what\s+do\s+you\s+know\s+about\s+my\s+preferences|"
             r"what(?:'s|\s+is)\s+my\s+favorite)\b",
             re.I,
@@ -298,14 +299,15 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
             r"\b(what\s+happened|what\s+occurred|past\s+experience|"
             r"when\s+did\s+(?:we|i|you)|episodic|"
             r"remember\s+when\s+(?:we|i|you)|"
-            r"what\s+did\s+i\s+(?:buy|clean|install|visit|do|go|get|"
+            r"where\s+did\s+i\s+(?:go|visit)|"
+            r"what\s+(?:\w+\s+)?did\s+i\s+(?:buy|clean|install|visit|do|go|get|"
             r"build|finish|start|watch|read|write|cook|fix|"
-            r"purchase|order|attend|join)|"
+            r"purchase|order|attend|join|catch|fish|land|harvest|observe)|"
             r"what\s+happened\s+(?:before|after)|"
             r"what\s+happened\s+(?:yesterday|today|last\s+week|"
             r"last\s+month|this\s+morning|last\s+\w+)|"
             r"tell\s+me\s+about\s+(?:buying|cleaning|installing|"
-            r"visiting|going|the\s+(?:kayak|garage|gpu|trip))|"
+            r"visiting|going|catching|fishing|the\s+(?:kayak|garage|gpu|trip))|"
             r"explain\s+what\s+happened)\b",
             re.I,
         ),

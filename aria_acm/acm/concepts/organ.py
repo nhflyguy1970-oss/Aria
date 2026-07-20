@@ -321,8 +321,12 @@ class ConceptOrgan:
         context_tags: tuple[str, ...],
     ) -> Concept:
         existing = self._find_by_label(cue.label)
-        # Only preference keys are globally unique identity keys for upsert
-        if existing is None and cue.attr_key.startswith("favorite_"):
+        # Preference keys are globally unique identity keys for upsert
+        if existing is None and (
+            cue.attr_key.startswith("favorite_")
+            or cue.attr_key.startswith("prefer_")
+            or cue.attr_key == "preference"
+        ):
             for c in self.store.concepts.values():
                 if any(a.key == cue.attr_key and a.active for a in c.attributes):
                     existing = c
