@@ -77,10 +77,33 @@ def format_teaching_acknowledgement(prompt: str) -> str:
             title = fact.relation_type or fact.value
             return f"Okay, I'll remember that {title} is finished."
         return f"Okay, I'll remember that you're working on {fact.value}."
+    if fact.kind == FactKind.GOAL:
+        return f"Okay, I'll remember that your goal is {fact.value}."
+    if fact.kind == FactKind.RELATIONSHIP:
+        source = (fact.relation_type or "that").replace("_", " ")
+        target = (fact.value or "").strip()
+        prop = (fact.property or "").lower()
+        if prop == "motivated_by":
+            if "upgrade" in source.lower():
+                return f"Okay, I'll remember that you upgraded your desktop to {target}."
+            return f"Okay, I'll remember that you prefer {source} because you value {target}."
+        if prop == "supports_goal":
+            return f"Okay, I'll remember that {source} supports your goal."
+        if prop == "part_of":
+            return f"Okay, I'll remember that {source} is part of your {target}."
+        if prop == "uses":
+            return f"Okay, I'll remember that {source} uses {target}."
+        if prop == "supports":
+            return f"Okay, I'll remember that your {source} supports {target}."
+        summary = fact.canonical_summary()
+        return f"Okay, I'll remember that {summary.rstrip('.')}."
     if fact.kind == FactKind.PREFERENCE and fact.property.startswith("favorite_"):
         domain = fact.property.replace("favorite_", "").replace("_", " ")
         return f"Okay, I'll remember that your favorite {domain} is {fact.value}."
     if fact.kind == FactKind.PREFERENCE:
+        if "__for_" in fact.property:
+            context = (fact.relation_type or "that context").replace("_", " ")
+            return f"Okay, I'll remember that for {context} you prefer {fact.value}."
         return f"Okay, I'll remember that you prefer {fact.value}."
     if fact.kind == FactKind.IDENTITY and fact.property in ("name", "preferred_name"):
         label = "preferred name" if fact.property == "preferred_name" else "name"

@@ -4,17 +4,22 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M3-ACM-evolution):
+Source pin (M3-ACM-relational):
   tag:    v0.26.0
-  commit: a4c962ea30c76e78a7bf73fb66d04f6ed27f13f2
+  commit: ed8abafb3558428738e614321555b7f141aa9919
   version harvested from pin: 0.26.0
-  decision: Memory evolution & historical reasoning
+  decision: Autobiographical relational reasoning
   includes: D038–D047 · Teaching Recognition · Multi-domain preference /
             evidence · Memory explanation + personal summary · Episodic
             autobiographical memory · Semantic autobiographical memory ·
-            Memory evolution (lifecycle verbs, active vs historical, change
-            detection, timeline reconstruction, retired entities, expanded
-            owned entities)
+            Memory evolution · Autobiographical relational reasoning
+            (goal/project/technology/preference/hardware relationships,
+            motivated preferences, contextual preferences, evidence-bounded
+            recommendations)
+
+Prior pin (M3-ACM-evolution):
+  tag:    v0.26.0
+  commit: a4c962ea30c76e78a7bf73fb66d04f6ed27f13f2
 
 Prior pin (M3-ACM-semantic):
   tag:    v0.26.0

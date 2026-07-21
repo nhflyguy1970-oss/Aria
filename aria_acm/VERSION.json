@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.26.0-5",
+  "aria_acm_local_version": "aria-acm-v0.26.0-6",
   "source_project": "aria-cognitive-memory",
   "source_version": "0.26.0",
   "source_tag": "v0.26.0",
-  "source_commit": "a4c962ea30c76e78a7bf73fb66d04f6ed27f13f2",
+  "source_commit": "ed8abafb3558428738e614321555b7f141aa9919",
   "source_repo": "/media/jeff/AI/ACM",
-  "copy_date": "2026-07-20",
-  "tree_sha256": "d6e9c149ab50feb03f246a7e4c88aa897d82748218960170dc25bb54edce5238",
+  "copy_date": "2026-07-21",
+  "tree_sha256": "3ac580db18e6cf0af349a408c09a08ebac0142cde313cd6539127347272f60cb",
   "license": "Apache-2.0",
-  "certification_ref": "ACM memory evolution and historical reasoning",
-  "promotion": "M3-ACM-evolution",
-  "promotion_decision": "Promote memory evolution and historical reasoning",
+  "certification_ref": "ACM autobiographical relational reasoning",
+  "promotion": "M3-ACM-relational",
+  "promotion_decision": "Promote autobiographical relational reasoning",
   "includes": [
     "D038",
     "D039",
@@ -23,5 +23,5 @@
     "D046",
     "D047"
   ],
-  "notes": "Promotion of ACM commit a4c962e (memory evolution & historical reasoning) into aria_acm/."
+  "notes": "Promotion of ACM commit ed8abaf (autobiographical relational reasoning) into aria_acm/."
 }

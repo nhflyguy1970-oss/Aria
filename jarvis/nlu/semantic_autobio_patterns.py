@@ -20,6 +20,7 @@ _SEMANTIC_TEACHING_KINDS = frozenset(
         FactKind.LOCATION,
         FactKind.SKILL,
         FactKind.GOAL,
+        FactKind.RELATIONSHIP,
     }
 )
 
@@ -46,7 +47,18 @@ SEMANTIC_AUTOBIO_QUERY = re.compile(
     r"which\s+computer\b.+\b(?:better|training|ai\s+models?)\b|"
     r"which\s+(?:machine|computer|laptop|desktop)\b.+\bbetter\b|"
     r"what\s+(?:phone|printer|truck|vehicle|kayak|car)\s+do\s+i\s+(?:own|have)\b|"
-    r"what\s+vehicles?\s+do\s+i\s+own\b"
+    r"what\s+vehicles?\s+do\s+i\s+own\b|"
+    # Autobiographical relational reasoning
+    r"why\s+(?:did|do|am)\s+i\b|"
+    r"why\s+is\s+my\b.+\bbetter\b|"
+    r"how\s+are\s+.+\s+and\s+.+\s+related\b|"
+    r"how\s+does\s+.+\s+relate\s+to\s+my\s+goal\b|"
+    r"how\s+does\s+.+\s+fit\s+into\s+my\s+projects?\b|"
+    r"would\s+.+\s+fit\s+my\s+preferences?\b|"
+    r"what\s+(?:programming\s+)?language\s+do\s+i\s+prefer\b|"
+    r"what\s+is\s+my\s+(?:long[- ]?term\s+)?goal\b|"
+    r"which\s+(?:of\s+my\s+)?computers?\s+should\s+i\s+use\b|"
+    r"which\s+should\s+i\s+use\s+for\b"
     r")\b",
     re.I,
 )

@@ -63,7 +63,11 @@ class CognitiveFact:
             PerspectiveSubject.UNKNOWN: "Entity",
         }[self.subject]
         if self.kind == FactKind.RELATIONSHIP and self.relation_type:
-            return f"{subj}'s {self.relation_type} name is {self.value}"
+            if self.property == "name":
+                return f"{subj}'s {self.relation_type} name is {self.value}"
+            source = self.relation_type.replace("_", " ")
+            relation = self.property.replace("_", " ")
+            return f"{source} {relation} {self.value}"
         if self.kind == FactKind.NEGATION:
             return f"{subj} {self.property} is not {self.value}"
         if self.property == "preferred_name":
@@ -76,7 +80,14 @@ class CognitiveFact:
             return f"{subj} location is {self.value}"
         if self.kind == FactKind.PREFERENCE:
             if self.property.startswith("prefer_"):
-                domain = self.property.replace("prefer_", "").replace("_", " ")
+                raw_domain = self.property.replace("prefer_", "")
+                if "__for_" in raw_domain:
+                    domain, context = raw_domain.split("__for_", 1)
+                    return (
+                        f"preferred {domain.replace('_', ' ')} for "
+                        f"{context.replace('_', ' ')} is {self.value}"
+                    )
+                domain = raw_domain.replace("_", " ")
                 return f"preferred {domain} is {self.value}"
             label = self.property.replace("favorite_", "favorite ").replace("_", " ")
             return f"{label} is {self.value}"

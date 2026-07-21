@@ -115,6 +115,34 @@ _USED_TO = re.compile(
     re.I,
 )
 
+# Explicit autobiographical relationships. For relationship facts,
+# relation_type is the source entity, property is the typed relation, and
+# value is the target entity/motivation.
+_UPGRADED_FOR = re.compile(
+    r"\bi\s+upgraded\s+my\s+([A-Za-z][\w-]*)\s+to\s+(.+?)(?:\.|$)",
+    re.I,
+)
+_PROJECT_FOR_GOAL = re.compile(
+    r"\b(?:i'?m|i\s+am)\s+building\s+(.+?)\s+to\s+achieve\s+(?:that|my|the)\s+goal\b",
+    re.I,
+)
+_PART_OF_MY = re.compile(
+    r"\b([A-Za-z][\w'’.-]*(?:\s+[A-Za-z][\w'’.-]*){0,3})\s+is\s+part\s+of\s+my\s+(.+?)(?:\.|$)",
+    re.I,
+)
+_ENTITY_USES = re.compile(
+    r"\b([A-Za-z][\w'’.-]*(?:\s+[A-Za-z][\w'’.-]*){0,2})\s+uses\s+(.+?)(?:\.|$)",
+    re.I,
+)
+_MOTIVATED_PREFERENCE = re.compile(
+    r"\bi\s+prefer\s+(.+?)\s+because\s+i\s+value\s+(.+?)(?:\.|$)",
+    re.I,
+)
+_CONTEXTUAL_PREFERENCE = re.compile(
+    r"^\s*for\s+(.+?)\s+i\s+prefer\s+(.+?)(?:\.|$)",
+    re.I,
+)
+
 _OS_HINTS = {
     "zorin",
     "linux",
@@ -522,6 +550,140 @@ def _prefer_domain_from_value(value: str) -> str | None:
     return domain
 
 
+def _preference_domain(value: str) -> str:
+    """Stable semantic preference domain for contextual coexistence."""
+    low = (value or "").lower()
+    if re.search(r"\b(local|cloud)\b.+\bai\b|\bai\b.+\b(local|cloud|model)", low):
+        return "ai"
+    if re.search(r"\bdebug", low) or "step-by-step" in low or "step by step" in low:
+        return "debugging"
+    if low.strip() in {
+        "python",
+        "rust",
+        "go",
+        "golang",
+        "java",
+        "javascript",
+        "typescript",
+        "c",
+        "c++",
+        "c#",
+        "swift",
+        "kotlin",
+    }:
+        return "programming_language"
+    return _prefer_domain_from_value(value) or "preference"
+
+
+def _extract_autobiographical_relationships(
+    text: str,
+    *,
+    subject: PerspectiveSubject,
+) -> list[CognitiveFact]:
+    """Extract explicit entity relationships and remembered motivations."""
+    t = (text or "").strip()
+    if not t or _INTERROGATIVE.search(t):
+        return []
+    out: list[CognitiveFact] = []
+
+    m = _UPGRADED_FOR.search(t)
+    if m:
+        entity = _clean_value(m.group(1)).lower()
+        motivation = _clean_value(m.group(2))
+        if entity and motivation:
+            source = f"{entity} upgrade"
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.RELATIONSHIP,
+                    subject=subject,
+                    property="motivated_by",
+                    value=motivation,
+                    relation_type=source,
+                    confidence=0.92,
+                    labels=(entity, "upgrade", "motivation"),
+                )
+            )
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.RELATIONSHIP,
+                    subject=subject,
+                    property="supports",
+                    value=motivation,
+                    relation_type=entity,
+                    confidence=0.88,
+                    labels=(entity, "capability"),
+                )
+            )
+
+    m = _PROJECT_FOR_GOAL.search(t)
+    if m:
+        project = _clean_value(m.group(1))
+        if project:
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.RELATIONSHIP,
+                    subject=subject,
+                    property="supports_goal",
+                    value="current_goal",
+                    relation_type=project,
+                    confidence=0.92,
+                    labels=(project.lower(), "goal"),
+                )
+            )
+
+    m = _PART_OF_MY.search(t)
+    if m:
+        source = _clean_value(m.group(1))
+        target = _clean_value(m.group(2))
+        if source and target:
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.RELATIONSHIP,
+                    subject=subject,
+                    property="part_of",
+                    value=target,
+                    relation_type=source,
+                    confidence=0.9,
+                    labels=(source.lower(), target.lower()),
+                )
+            )
+
+    m = _ENTITY_USES.search(t)
+    if m and not re.match(r"^(?:my|your|the)\b", m.group(1), re.I):
+        source = _clean_value(m.group(1))
+        target = _clean_value(m.group(2))
+        if source and target:
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.RELATIONSHIP,
+                    subject=subject,
+                    property="uses",
+                    value=target,
+                    relation_type=source,
+                    confidence=0.9,
+                    labels=(source.lower(), target.lower()),
+                )
+            )
+
+    m = _MOTIVATED_PREFERENCE.search(t)
+    if m:
+        preference = _clean_value(m.group(1))
+        motivation = _clean_value(m.group(2))
+        if preference and motivation:
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.RELATIONSHIP,
+                    subject=subject,
+                    property="motivated_by",
+                    value=motivation,
+                    relation_type=preference,
+                    confidence=0.92,
+                    labels=("preference", motivation.lower()),
+                )
+            )
+    return out
+
+
 def _extract_episodic(
     text: str,
     *,
@@ -751,6 +913,8 @@ def extract_fact_patterns(
             )
         )
 
+    context_pref = _CONTEXTUAL_PREFERENCE.search(t)
+    motivated_pref = _MOTIVATED_PREFERENCE.search(t)
     m = _FAVORITE.search(t)
     if m and not _INTERROGATIVE.search(t):
         key = f"favorite_{m.group(1).strip().lower().replace(' ', '_')}"
@@ -763,17 +927,26 @@ def extract_fact_patterns(
                 confidence=0.85,
             )
         )
+    elif context_pref and not _INTERROGATIVE.search(t):
+        context = _clean_value(context_pref.group(1)).lower().replace(" ", "_")
+        value = _clean_value(context_pref.group(2))
+        domain = _preference_domain(value)
+        facts.append(
+            CognitiveFact(
+                kind=FactKind.PREFERENCE,
+                subject=fp,
+                property=f"prefer_{domain}__for_{context}",
+                value=value,
+                relation_type=context.replace("_", " "),
+                confidence=0.88,
+                labels=(domain, context),
+            )
+        )
     elif not _INTERROGATIVE.search(t):
-        m = _PREFER.search(t) or _LIKE.search(t)
+        m = motivated_pref or _PREFER.search(t) or _LIKE.search(t)
         if m:
             value = _clean_value(m.group(1))
-            domain = _prefer_domain_from_value(value)
-            # Special-case common preference domains from phrasing.
-            low = value.lower()
-            if re.search(r"\b(local|cloud)\b.+\bai\b|\bai\b.+\b(local|cloud|model)", low):
-                domain = "ai"
-            elif re.search(r"\bdebug", low) or "step-by-step" in low or "step by step" in low:
-                domain = "debugging"
+            domain = _preference_domain(value)
             prop = f"prefer_{domain}" if domain else "preference"
             op = UpdateOp.REVISE if re.search(r"\bi\s+now\s+prefer\b", t, re.I) else UpdateOp.SET
             facts.append(
@@ -803,16 +976,25 @@ def extract_fact_patterns(
     m = _PROJECT.search(t)
     if m:
         op = UpdateOp.REVISE if re.search(r"\bnow\b", t, re.I) else UpdateOp.SET
+        project_value = re.sub(
+            r"\s+to\s+achieve\s+(?:that|my|the)\s+goal\s*$",
+            "",
+            _clean_value(m.group(1)),
+            flags=re.I,
+        ).strip()
         facts.append(
             CognitiveFact(
                 kind=FactKind.PROJECT,
                 subject=fp,
                 property="project",
-                value=_clean_value(m.group(1)),
+                value=project_value,
                 update_op=op,
                 confidence=0.8,
             )
         )
+
+    if not _INTERROGATIVE.search(t):
+        facts.extend(_extract_autobiographical_relationships(t, subject=fp))
 
     # Lifecycle verbs before generic possession so "no longer use" wins.
     if not _INTERROGATIVE.search(t):

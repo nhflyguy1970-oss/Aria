@@ -271,7 +271,15 @@ def is_semantic_autobiography_query(cue: str) -> bool:
             r"what\s+operating\s+systems?\s+has\b|"
             r"what\s+projects?\s+have\s+i\s+worked\b|"
             r"what\s+(?:phone|printer|truck|vehicle|kayak|car)\s+do\s+i\b|"
-            r"what\s+vehicles?\s+do\s+i\s+own\b"
+            r"what\s+vehicles?\s+do\s+i\s+own\b|"
+            r"why\s+(?:did|do|am)\s+i\b|"
+            r"why\s+is\s+my\b.+\bbetter\b|"
+            r"how\s+(?:are|is)\s+.+\s+(?:and|to)\s+.+\s+related\b|"
+            r"how\s+does\s+.+\s+(?:relate|fit)\b|"
+            r"would\s+.+\s+fit\s+my\s+preferences?\b|"
+            r"what\s+(?:programming\s+)?language\s+do\s+i\s+prefer\b|"
+            r"which\s+(?:of\s+my\s+)?computers?\s+should\s+i\s+use\b|"
+            r"which\s+should\s+i\s+use\s+for\b"
             r")\b",
             text,
             re.I,
@@ -285,6 +293,22 @@ def answer_semantic_query(cue: str, facts: list[SemanticFact], *, store: Any = N
     if not text:
         return None
     low = text.lower()
+
+    # Explicit autobiographical relationships and bounded recommendations.
+    if store is not None:
+        from acm.remembering.relations import (
+            answer_relational_query,
+            is_relational_autobiography_query,
+        )
+
+        if is_relational_autobiography_query(text):
+            relational = answer_relational_query(
+                text,
+                store=store,
+                active_facts=facts,
+            )
+            if relational is not None:
+                return relational
 
     # Memory evolution / historical reasoning (needs full lineage).
     if store is not None:

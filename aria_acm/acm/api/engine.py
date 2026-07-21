@@ -582,6 +582,9 @@ class CognitiveEngine:
 
         # Memory evolution — retire finished projects / unused entities (history preserved).
         self._apply_lifecycle_facts(extraction.facts, experience_id=exp.id)
+        # Autobiographical relational reasoning — explicit, evidence-linked
+        # Concept relationships only (never inferred from world knowledge).
+        self._apply_relational_facts(extraction.facts, experience_id=exp.id)
 
         identity_result = self.identity.integrate_encode(
             text=text,
@@ -1370,6 +1373,90 @@ class CognitiveEngine:
         }
 
     # --- internals --------------------------------------------------------------
+
+    def _apply_relational_facts(self, facts: list[Any], *, experience_id: str) -> None:
+        """Birth first-class typed associations from explicit relational teachings."""
+        from acm.associations.model import RelationKind
+
+        relation_map = {
+            "motivated_by": RelationKind.CAUSED_BY,
+            "supports_goal": RelationKind.SUPPORTS,
+            "part_of": RelationKind.PART_OF,
+            "uses": RelationKind.DEPENDS_ON,
+            "supports": RelationKind.SUPPORTS,
+        }
+        for fact in facts or []:
+            kind = getattr(fact, "kind", None)
+            kind_v = kind.value if hasattr(kind, "value") else str(kind or "")
+            if kind_v != "relationship":
+                continue
+            relation_name = (getattr(fact, "property", "") or "").lower()
+            if relation_name not in relation_map:
+                continue
+            source_label = (getattr(fact, "relation_type", "") or "").strip()
+            target_label = (getattr(fact, "value", "") or "").strip()
+            if target_label == "current_goal":
+                goals = sorted(
+                    self.store.active_goals(),
+                    key=lambda g: getattr(g, "created", 0.0),
+                )
+                target_label = goals[-1].title if goals else ""
+            if not source_label or not target_label:
+                continue
+            source = self._ensure_relational_concept(
+                source_label, evidence_id=experience_id
+            )
+            target = self._ensure_relational_concept(
+                target_label, evidence_id=experience_id
+            )
+            assoc = self.associations.relate(
+                source.id,
+                target.id,
+                relation_map[relation_name],
+                strength_forward=0.72,
+                strength_backward=0.42,
+                confidence=float(getattr(fact, "confidence", 0.85) or 0.85),
+                evidence_id=experience_id,
+                context_tags=self.context.tags,
+                goal_influenced=relation_name == "supports_goal",
+                identity_influenced=True,
+            )
+            if assoc is not None:
+                assoc.metadata["autobiographical"] = True
+                assoc.metadata["learned_relation"] = relation_name
+
+    def _ensure_relational_concept(self, label: str, *, evidence_id: str) -> Any:
+        """Resolve or create one Concept endpoint for an explicit learned entity."""
+        clean = " ".join((label or "").strip().split())
+        candidates = self.store.find_concepts_by_label(clean)
+        for concept in candidates:
+            if any(lab.casefold() == clean.casefold() for lab in concept.labels):
+                if evidence_id and evidence_id not in concept.evidence_ids:
+                    concept.evidence_ids.append(evidence_id)
+                concept.metadata["autobiographical_entity"] = True
+                return concept
+            if any(
+                attr.active and str(attr.value).casefold() == clean.casefold()
+                for attr in concept.attributes
+            ):
+                if clean.casefold() not in {lab.casefold() for lab in concept.labels}:
+                    concept.labels.append(clean)
+                if evidence_id and evidence_id not in concept.evidence_ids:
+                    concept.evidence_ids.append(evidence_id)
+                concept.metadata["autobiographical_entity"] = True
+                return concept
+        from acm.types import ConceptRole
+
+        concept = self.store.add_concept(
+            clean,
+            role=ConceptRole.ENTITY,
+            confidence=0.78,
+            importance=0.7,
+            provisional=False,
+            evidence_ids=[evidence_id] if evidence_id else [],
+            metadata={"autobiographical_entity": True},
+        )
+        return concept
 
     def _apply_lifecycle_facts(self, facts: list[Any], *, experience_id: str) -> None:
         """Retire finished projects / unused entities while preserving attribute history."""

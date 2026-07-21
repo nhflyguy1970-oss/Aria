@@ -207,6 +207,25 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         0.93,
     ),
     (
+        CognitiveIntent.REMEMBERING,
+        re.compile(
+            r"\b(?:"
+            r"why\s+(?:did|do|am)\s+i\b|"
+            r"why\s+is\s+my\b.+\bbetter\b|"
+            r"how\s+are\s+aria\s+and\s+acm\s+related\b|"
+            r"how\s+does\s+.+\s+relate\s+to\s+my\s+goal\b|"
+            r"how\s+does\s+.+\s+fit\s+into\s+my\s+projects?\b|"
+            r"would\s+.+\s+fit\s+my\s+preferences?\b|"
+            r"what\s+(?:programming\s+)?language\s+do\s+i\s+prefer\b|"
+            r"which\s+(?:of\s+my\s+)?computers?\s+should\s+i\s+use\b|"
+            r"which\s+should\s+i\s+use\s+for\b"
+            r")",
+            re.I,
+        ),
+        "autobiographical_relational_reasoning_cue",
+        0.96,
+    ),
+    (
         CognitiveIntent.ASSOCIATION,
         re.compile(
             r"\b(how\s+(?:are|is).{0,40}related|associat(?:e|ion)|"
