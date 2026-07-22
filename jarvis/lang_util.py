@@ -31,9 +31,49 @@ def detect_text_language(text: str) -> str | None:
     return None
 
 
+def conversation_language(user_text: str, *, prior_user_texts: list[str] | None = None) -> str:
+    """Active conversation language. Defaults to English unless user writes otherwise."""
+    for blob in [user_text, *(prior_user_texts or [])]:
+        code = detect_text_language(blob or "")
+        if code and code not in ("und",):
+            return code
+    return "en"
+
+
+def is_language_mismatch(user_text: str, reply_text: str) -> bool:
+    """True when reply script diverges from the active conversation language."""
+    active = conversation_language(user_text)
+    reply = reply_text or ""
+    # English conversations: any CJK/Cyrillic in the reply is a hard mismatch,
+    # even for short strings (detect_text_language has an 8-char floor).
+    if active == "en":
+        if _CJK.search(reply) or _CYRILLIC.search(reply):
+            return True
+        reply_code = detect_text_language(reply)
+        return bool(reply_code in ("zh", "ru"))
+    if active == "zh":
+        reply_code = detect_text_language(reply)
+        return bool(reply_code and reply_code != "zh" and _CJK.search(user_text or ""))
+    return False
+
+
+def enforce_reply_language(user_text: str, reply_text: str, *, fallback: str = "") -> str:
+    """Keep reply in the conversation language; drop mismatched host/LLM output."""
+    text = (reply_text or "").strip()
+    if not text:
+        return fallback or text
+    if is_language_mismatch(user_text, text):
+        return (fallback or "").strip() or text
+    return text
+
+
 def language_reply_hint(code: str | None) -> str:
     if not code or code in ("en", "und"):
-        return ""
+        # Explicit English lock stops unconstrained models from switching languages.
+        return (
+            "The active conversation language is English. "
+            "Reply in English unless the user explicitly asks to switch languages."
+        )
     names = {
         "zh": "Chinese",
         "ru": "Russian",

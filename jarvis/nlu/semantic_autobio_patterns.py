@@ -69,17 +69,45 @@ SEMANTIC_AUTOBIO_QUERY = re.compile(
     r"why\s+do\s+you\s+think\s+that\s+is\s+likely\b|"
     r"why\s+(?:is|was)\s+that\s+likely\b|"
     r"based\s+upon\s+memory,?\s+what\s+is\s+likely\b|"
+    r"how\s+did\s+you\s+(?:make|form|arrive\s+at)\s+(?:that\s+)?prediction\b|"
+    r"how\s+did\s+you\s+predict\b|"
+    r"explain\s+(?:that\s+|your\s+)?prediction\b|"
+    r"how\s+confident\s+are\s+you\s+that\b|"
+    r"how\s+sure\s+are\s+you\s+that\b|"
+    r"how\s+certain\s+are\s+you\s+that\b|"
+    r"when\s+should\s+i\s+(?:work|fish|hike|go)\b|"
+    r"what\s+should\s+i\s+(?:do|work)\b|"
+    r"will\s+i\s+(?:definitely|certainly|probably|likely)\b|"
+    r"am\s+i\s+(?:definitely|certainly|probably)\s+going\s+to\b|"
     r"what\s+will\s+happen\b|"
-    r"will\s+it\s+(?:rain|snow)\b|"
+    r"will\s+(?:it|i|we)\b|"
     r"am\s+i\s+(?:going\s+to|likely\s+to)\b"
-    r")\b",
+    r")",
+    re.I,
+)
+
+# Habit / predictive teachings that must never fall through to host LLM.
+_PREDICTIVE_TEACHING_SURFACE = re.compile(
+    r"\b(?:"
+    r"every\s+time\s+i\b|"
+    r"whenever\s+i\b|"
+    r"every\s+(?:saturday|sunday|monday|tuesday|wednesday|thursday|friday|weekend)\b|"
+    r"i\s+usually\b|"
+    r"it\s+has\s+rained\s+every\s+day\b|"
+    r"sometimes\s+\w+\s+helps?\s+me\b|"
+    r"\w+\s+sometimes\s+helps?\s+me\b|"
+    r"(?:coffee|tea|alcohol)\s+causes?\b"
+    r")",
     re.I,
 )
 
 
 def is_semantic_autobio_teaching(text: str) -> bool:
     """Declarative personal facts ACM Teaching Recognition will encode."""
-    detected = detect_teaching(text or "")
+    blob = text or ""
+    if _PREDICTIVE_TEACHING_SURFACE.search(blob):
+        return True
+    detected = detect_teaching(blob)
     if not detected.is_teaching or not detected.facts:
         return False
     if any(f.kind in _SEMANTIC_TEACHING_KINDS for f in detected.facts):

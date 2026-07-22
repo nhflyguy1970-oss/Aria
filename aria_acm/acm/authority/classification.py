@@ -172,17 +172,6 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         0.94,
     ),
     (
-        CognitiveIntent.CONFIDENCE,
-        re.compile(
-            r"\b(how\s+certain|how\s+confident|how\s+sure|"
-            r"confidence\s+(?:in|about)|(?:your|the)\s+uncertainty|"
-            r"are\s+you\s+(?:sure|confident)\b)",
-            re.I,
-        ),
-        "confidence_cue",
-        0.93,
-    ),
-    (
         CognitiveIntent.PREDICTION,
         re.compile(
             r"\b(?:"
@@ -194,6 +183,16 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
             r"why\s+do\s+you\s+think\s+that\s+is\s+likely\b|"
             r"why\s+(?:is|was)\s+that\s+likely\b|"
             r"based\s+upon\s+memory,?\s+what\s+is\s+likely\b|"
+            r"how\s+did\s+you\s+(?:make|form|arrive\s+at)\s+(?:that\s+)?prediction\b|"
+            r"how\s+did\s+you\s+predict\b|"
+            r"explain\s+(?:that\s+|your\s+)?prediction\b|"
+            r"how\s+confident\s+are\s+you\s+that\b|"
+            r"how\s+sure\s+are\s+you\s+that\b|"
+            r"how\s+certain\s+are\s+you\s+that\b|"
+            r"when\s+should\s+i\s+(?:work|fish|hike|go)\b|"
+            r"what\s+should\s+i\s+(?:do|work)\b|"
+            r"will\s+i\s+(?:definitely|certainly|probably|likely)\b|"
+            r"am\s+i\s+(?:definitely|certainly|probably)\s+going\s+to\b|"
             r"what\s+will\s+happen\b|"
             r"will\s+(?:it|i|we)\b|"
             r"am\s+i\s+(?:going\s+to|likely\s+to)\b"
@@ -201,7 +200,18 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
             re.I,
         ),
         "prediction_cue",
-        0.95,
+        0.96,
+    ),
+    (
+        CognitiveIntent.CONFIDENCE,
+        re.compile(
+            r"\b(how\s+certain|how\s+confident|how\s+sure|"
+            r"confidence\s+(?:in|about)|(?:your|the)\s+uncertainty|"
+            r"are\s+you\s+(?:sure|confident)\b)",
+            re.I,
+        ),
+        "confidence_cue",
+        0.93,
     ),
     (
         CognitiveIntent.REFLECTION,
@@ -446,6 +456,7 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
             r"every\s+(?:saturday|sunday|monday|tuesday|wednesday|thursday|friday|weekend)\b|"
             r"i\s+usually\b|"
             r"it\s+has\s+rained\s+every\s+day\b|"
+            r"sometimes\s+\w+\s+helps?\s+me\b|"
             r"\w+\s+sometimes\s+helps?\s+me\b|"
             r"(?:coffee|tea|alcohol)\s+causes?\b"
             r")",

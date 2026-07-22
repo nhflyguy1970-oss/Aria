@@ -73,6 +73,9 @@ class MemoryEngine:
                         polished = polish_fragment_recall(polished, used_q, full_speech=alt_raw)
                 else:
                     polished = polish_fragment_recall(polished, used_q)
+                from jarvis.lang_util import enforce_reply_language
+
+                polished = enforce_reply_language(question, polished, fallback=raw)
                 MemoryEngine._trace_memory_presentation("cognitive_presentation", "memory_recall")
                 return result, polished
             if (result.get("status") or "").lower() == "unknown":

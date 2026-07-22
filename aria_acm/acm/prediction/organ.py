@@ -19,8 +19,47 @@ if TYPE_CHECKING:
 
 _EXPLAIN_LIKELY = re.compile(
     r"\bwhy\s+do\s+you\s+think\s+that\s+is\s+likely\b|"
-    r"\bwhy\s+(?:is|was)\s+that\s+likely\b",
+    r"\bwhy\s+(?:is|was)\s+that\s+likely\b|"
+    r"\bhow\s+did\s+you\s+(?:make|form|arrive\s+at)\s+(?:that\s+)?prediction\b|"
+    r"\bhow\s+did\s+you\s+predict\b|"
+    r"\bexplain\s+(?:that\s+|your\s+)?prediction\b",
     re.I,
+)
+_CONFIDENCE_ABOUT = re.compile(
+    r"\bhow\s+(?:confident|sure|certain)\s+are\s+you\s+that\b",
+    re.I,
+)
+_CERTAINTY_CLAIM = re.compile(
+    r"\b(?:definitely|certainly|must|for\s+sure|guaranteed)\b",
+    re.I,
+)
+_OPEN_FUTURE = re.compile(
+    r"\b(?:birthday|next\s+year|in\s+a\s+year|someday)\b",
+    re.I,
+)
+_GENERIC_TOMORROW = re.compile(
+    r"\bwhat\s+is\s+likely\s+to\s+happen(?:\s+tomorrow)?\b|"
+    r"\bwhat(?:'s|\s+is)\s+likely\s+tomorrow\b|"
+    r"\bwhat\s+will\s+happen\s+tomorrow\b",
+    re.I,
+)
+_JUNK_LABELS = frozenset(
+    {
+        "when",
+        "pattern",
+        "user",
+        "goal",
+        "agent",
+        "more",
+        "weekend",
+        "morning",
+        "saturday",
+        "usually",
+        "prediction",
+        "memory",
+        "aria",
+        "acm",
+    }
 )
 _WORLD_WITHOUT_SELF = re.compile(
     r"\b(stock\s+market|nasdaq|s&p|crypto|bitcoin|weather\s+forecast|"
@@ -96,10 +135,43 @@ class PredictionOrgan:
             )
             return public
 
-        bits = [
-            f"{o.label} (~{o.probability:.0%})" for o in top if o.probability > 0.05
-        ]
-        public["answer"] = "Likely from memory: " + "; ".join(bits)
+        label = top[0].label
+        conf = prediction.confidence
+        if _CONFIDENCE_ABOUT.search(cue or ""):
+            support_n = sum(len(o.support) for o in top)
+            public["answer"] = (
+                f"From remembered evidence, confidence is about {conf:.0%} that "
+                f"{label} is likely"
+                + (f" (supported by {support_n} remembered experience(s))" if support_n else "")
+                + "."
+            )
+            return public
+
+        if _CERTAINTY_CLAIM.search(cue or ""):
+            if conf >= 0.75:
+                level = "likely, but not certain"
+            elif conf >= 0.5:
+                level = "possible / likely from habit, not definite"
+            else:
+                level = "only weakly suggested by memory — not definite"
+            public["answer"] = (
+                f"From memory, {label} is {level} "
+                f"(confidence about {conf:.0%}). Memory does not support certainty."
+            )
+            return public
+
+        bits = [f"{o.label}" for o in top if o.probability > 0.05][:3]
+        if len(bits) == 1:
+            public["answer"] = (
+                f"Likely from memory: {bits[0]} "
+                f"(confidence about {conf:.0%})."
+            )
+        else:
+            public["answer"] = (
+                "Likely from memory: "
+                + "; ".join(bits)
+                + f" (confidence about {conf:.0%})."
+            )
         return public
 
     def predict(
@@ -250,6 +322,40 @@ class PredictionOrgan:
                     scores[target_key] = scores.get(target_key, 0.0) + 0.2 * edge.strength_forward
                     support.setdefault(target_key, []).append(edge.id)
                     why.setdefault(target_key, []).append("autobiographical_predicts")
+        else:
+            # No autobiographical pattern match: keep only autobiographical PREDICTS
+            # edges with real consequent labels — never activation/debug tokens.
+            filtered_scores: dict[str, float] = {}
+            filtered_support: dict[str, list[str]] = {}
+            filtered_why: dict[str, list[str]] = {}
+            filtered_labels: dict[str, str] = {}
+            for cid, raw in scores.items():
+                tags = why.get(cid, [])
+                if "autobiographical_predicts" not in tags and "predicts" not in tags:
+                    continue
+                label = labels.get(cid, "")
+                concept = self.store.concepts.get(cid)
+                if not label and concept is not None and concept.labels:
+                    label = concept.labels[0]
+                if not label or label.casefold() in _JUNK_LABELS:
+                    continue
+                if len(label) < 3:
+                    continue
+                filtered_scores[cid] = raw
+                filtered_support[cid] = list(support.get(cid, []))
+                filtered_why[cid] = list(tags)
+                filtered_labels[cid] = label
+            scores, support, why, labels = (
+                filtered_scores,
+                filtered_support,
+                filtered_why,
+                filtered_labels,
+            )
+            # Open-ended futures without autobiographical habit evidence → unknown.
+            if _OPEN_FUTURE.search(cue or "") or (
+                _GENERIC_TOMORROW.search(cue or "") and not scores
+            ):
+                scores = {}
 
         total = sum(max(0.0, v) for v in scores.values()) or 1.0
         outcomes: list[PredictedOutcome] = []
@@ -260,7 +366,10 @@ class PredictionOrgan:
                 label = concept.labels[0]
             if not label and cid.startswith("pattern:"):
                 label = cid.split(":", 1)[-1]
-            if not label:
+            if not label or label.casefold() in _JUNK_LABELS:
+                continue
+            # Suppress internal/debug-looking single-token schema labels.
+            if re.fullmatch(r"(when|pattern|user|goal|agent|more)", label, re.I):
                 continue
             prob = max(0.0, raw) / total
             prob = min(0.85, prob)
@@ -430,7 +539,7 @@ class PredictionOrgan:
             ):
                 # Do not treat weekend habits as Saturday predictions.
                 continue
-            if re.search(r"\bproductive|work\s+done\b", cue_l) and (
+            if re.search(r"\bproductive|work\s+done|should\s+i\s+work\b", cue_l) and (
                 "morning" in ante_l or "work" in cons_l
             ):
                 overlap.add("productive")
@@ -444,8 +553,24 @@ class PredictionOrgan:
             if "rain" in cue_l and ("rain" in ante_l or "rain" in cons_l):
                 overlap.add("rain")
                 strength = min(0.98, strength + 0.15)
+            # Generic "what is likely tomorrow / what will happen tomorrow"
+            # reconstructs recent rain-streak teachings.
+            if _GENERIC_TOMORROW.search(cue) and (
+                "rain" in ante_l or "rain" in cons_l
+            ):
+                overlap.add("tomorrow_rain")
+                strength = min(0.98, strength + 0.2)
             if "sleep" in cue_l and ("sleep" in cons_l or "insomni" in cons_l):
                 overlap.add("sleep")
+            if "hiking" in cue_l and ("hiking" in cons_l or "weekend" in ante_l):
+                overlap.add("hiking")
+            if "fishing" in cue_l and ("fishing" in cons_l or "saturday" in ante_l):
+                overlap.add("fishing")
+            # Birthday / far-future cues do not inherit unrelated habits.
+            if _OPEN_FUTURE.search(cue) and not (
+                "birthday" in ante_l or "birthday" in cons_l
+            ):
+                continue
 
             if not overlap:
                 continue

@@ -825,6 +825,13 @@ def _extract_predictive_patterns(
             ),
             "sometimes_helps",
         ),
+        (
+            re.compile(
+                r"\bsometimes\s+([A-Za-z][\w\s-]{1,40}?)\s+helps?\s+me\s+(.+?)(?:\.|$)",
+                re.I,
+            ),
+            "sometimes_helps",
+        ),
     ]
 
     for pattern, kind in patterns:

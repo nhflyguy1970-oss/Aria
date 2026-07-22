@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.26.0-8",
+  "aria_acm_local_version": "aria-acm-v0.26.0-9",
   "source_project": "aria-cognitive-memory",
   "source_version": "0.26.0",
   "source_tag": "v0.26.0",
-  "source_commit": "ce52bcc1d499dd5d17e9405042cf41f2cca9787f",
+  "source_commit": "22636a8da431088f8996d13b5807a972c20302b7",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-22",
-  "tree_sha256": "96b842f2dbb514efe990d29db86240d47db2631e9db3eaa31d8f78c1a085a87a",
+  "tree_sha256": "7ddd3a961e448b3b595e73e508cac07bec7a9e92337468f3336903717303607f",
   "license": "Apache-2.0",
-  "certification_ref": "ACM Prediction manual acceptance repair",
-  "promotion": "M3-ACM-prediction-repair",
-  "promotion_decision": "Promote Prediction repair: habit teaching encode, classify/route, conflict/unknown/explainability",
+  "certification_ref": "ACM Prediction stabilization after post-acceptance review",
+  "promotion": "M3-ACM-prediction-stab",
+  "promotion_decision": "Promote Prediction stabilization: rain/tomorrow, certainty/confidence/explain/recommendation routing, unknown without leakage, habit teaching coverage",
   "includes": [
     "D038",
     "D039",
@@ -23,5 +23,5 @@
     "D046",
     "D047"
   ],
-  "notes": "Promotion of ACM commit ce52bcc (Prediction repair) into aria_acm/. Habit teachings encode as predictive evidence; Prediction organ scores autobiographical patterns with conflict/unknown boundaries; authority routes PREDICTION intent; dispatch does not let supports fill Prediction unknowns."
+  "notes": "Promotion of ACM commit 22636a8 (Prediction stabilization) into aria_acm/. Rain/tomorrow reconstruction; certainty/confidence/explain/recommendation stay in Prediction; unknown futures without activation-score leakage; broader habit teaching extraction."
 }

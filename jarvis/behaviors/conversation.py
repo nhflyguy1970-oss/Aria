@@ -136,6 +136,7 @@ class ConversationEngine:
         from jarvis.lang_util import detect_text_language, language_reply_hint
 
         lang = detect_text_language(message)
+        # Always attach a language lock: English by default, matching script otherwise.
         lang_hint = language_reply_hint(lang)
         if lang_hint:
             parts.append(lang_hint)
