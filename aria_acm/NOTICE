@@ -4,18 +4,21 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M3-ACM-relational):
+Source pin (M3-ACM-relational-stab):
   tag:    v0.26.0
-  commit: ed8abafb3558428738e614321555b7f141aa9919
+  commit: 74532ac60ebd448dc66de0cf7be752edac92449d
   version harvested from pin: 0.26.0
-  decision: Autobiographical relational reasoning
+  decision: Autobiographical relational reasoning stabilization
   includes: D038–D047 · Teaching Recognition · Multi-domain preference /
             evidence · Memory explanation + personal summary · Episodic
             autobiographical memory · Semantic autobiographical memory ·
-            Memory evolution · Autobiographical relational reasoning
-            (goal/project/technology/preference/hardware relationships,
-            motivated preferences, contextual preferences, evidence-bounded
-            recommendations)
+            Memory evolution · Autobiographical relational reasoning ·
+            Stabilization (contextual preference selection, repeated-goal
+            dedupe, answer-provenance explainability)
+
+Prior pin (M3-ACM-relational):
+  tag:    v0.26.0
+  commit: ed8abafb3558428738e614321555b7f141aa9919
 
 Prior pin (M3-ACM-evolution):
   tag:    v0.26.0
@@ -38,5 +41,4 @@ Prior pin (M0L):
   commit: 3c3bdbc0b1e7566da7922df422c72578e5550df5
 
 Aria-local bootstrap: `aria_acm/acm/__init__.py` registers `sys.modules["acm"]`
-so the literal package copy's absolute `acm.*` imports resolve to this tree
-without depending on site-packages or the standalone repository.
+so absolute `acm.*` imports resolve inside the nested package. Do not remove.

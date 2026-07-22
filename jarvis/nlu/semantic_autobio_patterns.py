@@ -57,6 +57,7 @@ SEMANTIC_AUTOBIO_QUERY = re.compile(
     r"would\s+.+\s+fit\s+my\s+preferences?\b|"
     r"what\s+(?:programming\s+)?language\s+do\s+i\s+prefer\b|"
     r"what\s+is\s+my\s+(?:long[- ]?term\s+)?goal\b|"
+    r"how\s+(?:did|do)\s+you\s+know\b|"
     r"which\s+(?:of\s+my\s+)?computers?\s+should\s+i\s+use\b|"
     r"which\s+should\s+i\s+use\s+for\b"
     r")\b",

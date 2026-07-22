@@ -290,6 +290,12 @@ class CognitiveEngine:
         return self.context
 
     def open_goal(self, title: str, *, importance: float = 0.6) -> str:
+        normalized = _normalize_goal_title(title)
+        for existing in self.store.active_goals():
+            if _normalize_goal_title(existing.title) == normalized:
+                existing.importance = max(float(existing.importance or 0.0), importance)
+                return existing.id
+
         goal = self.store.add_goal(title, importance=importance)
         displaced = self.buffer.push(
             BufferItem(
@@ -1599,3 +1605,11 @@ class CognitiveEngine:
             self.validation.record_working(
                 WorkingTransition(time(), "displace", item.ref_id, item.label)
             )
+
+
+def _normalize_goal_title(title: str) -> str:
+    """Canonicalize goal titles so repeated identical teachings reuse one active goal."""
+    text = " ".join((title or "").strip().lower().split())
+    if text.startswith("to "):
+        text = text[3:].strip()
+    return text

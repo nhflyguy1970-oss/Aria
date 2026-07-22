@@ -71,9 +71,9 @@ def _rel_isolation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 def test_rel_01_version_pin() -> None:
     ver = Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json"
     data = json.loads(ver.read_text())
-    assert data["source_commit"] == "ed8abafb3558428738e614321555b7f141aa9919"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.26.0-6"
-    assert data["promotion"] == "M3-ACM-relational"
+    assert data["source_commit"] == "74532ac60ebd448dc66de0cf7be752edac92449d"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.26.0-7"
+    assert data["promotion"] == "M3-ACM-relational-stab"
     assert Path("aria_acm/acm/remembering/relations.py").is_file()
 
 
@@ -124,6 +124,10 @@ def test_rel_03_teach_and_relational_recall() -> None:
         ("Would cloud AI usually fit my preferences?", ("would not", "local ai", "privacy")),
         ("What programming language do I prefer?", ("python",)),
         ("What language do I prefer for systems programming?", ("rust", "systems programming")),
+        (
+            "What programming language do I prefer for systems programming?",
+            ("rust", "systems programming"),
+        ),
         ("Why is my desktop better for AI than my laptop?", ("desktop", "train larger ai models")),
         (
             "Which of my computers should I use for training AI?",
@@ -138,7 +142,7 @@ def test_rel_03_teach_and_relational_recall() -> None:
             assert n in low, (q, speech, n)
         if q == "What programming language do I prefer?":
             assert "rust" not in low
-        if q == "What language do I prefer for systems programming?":
+        if "for systems programming" in q:
             assert "python" not in low
 
 

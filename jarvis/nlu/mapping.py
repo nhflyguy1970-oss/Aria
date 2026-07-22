@@ -254,7 +254,8 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
         r"\bwhy\b.+\b(?:favorite|favourite)\b|"
         r"\bwhy\b.+\b(?:isn'?t|is\s+not|no\s+longer)\b.+\bactive\b|"
         r"\bwhy\b.+\bactive\b|"
-        r"\bwhat\s+replaced\b",
+        r"\bwhat\s+replaced\b|"
+        r"\bhow\s+(?:did|do)\s+you\s+know\b",
         lower,
     ):
         return {

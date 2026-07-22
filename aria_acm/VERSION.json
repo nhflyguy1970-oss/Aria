@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.26.0-6",
+  "aria_acm_local_version": "aria-acm-v0.26.0-7",
   "source_project": "aria-cognitive-memory",
   "source_version": "0.26.0",
   "source_tag": "v0.26.0",
-  "source_commit": "ed8abafb3558428738e614321555b7f141aa9919",
+  "source_commit": "74532ac60ebd448dc66de0cf7be752edac92449d",
   "source_repo": "/media/jeff/AI/ACM",
-  "copy_date": "2026-07-21",
-  "tree_sha256": "3ac580db18e6cf0af349a408c09a08ebac0142cde313cd6539127347272f60cb",
+  "copy_date": "2026-07-22",
+  "tree_sha256": "5679a71a17c7bd61c7fd189e64492c712b79c1c225f91b088457af49cf8eb5e3",
   "license": "Apache-2.0",
-  "certification_ref": "ACM autobiographical relational reasoning",
-  "promotion": "M3-ACM-relational",
-  "promotion_decision": "Promote autobiographical relational reasoning",
+  "certification_ref": "ACM autobiographical relational reasoning stabilization",
+  "promotion": "M3-ACM-relational-stab",
+  "promotion_decision": "Promote autobiographical relational reasoning stabilization",
   "includes": [
     "D038",
     "D039",
@@ -23,5 +23,5 @@
     "D046",
     "D047"
   ],
-  "notes": "Promotion of ACM commit ed8abaf (autobiographical relational reasoning) into aria_acm/."
+  "notes": "Promotion of ACM commit 74532ac (relational reasoning stabilization: contextual preferences, goal dedupe, answer provenance explainability) into aria_acm/."
 }

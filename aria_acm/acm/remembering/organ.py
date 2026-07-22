@@ -285,6 +285,7 @@ class RememberingOrgan:
         if not (
             _is_evidence_request(cue)
             or _is_explanation_request(cue)
+            or _is_answer_provenance_request(cue)
             or _is_personal_summary_request(cue)
             or _is_episodic_request(cue)
             or _is_semantic_autobio_request(cue)
@@ -386,6 +387,8 @@ class RememberingOrgan:
         tokens = _cue_tokens(cue)
         # Lineage / summary introspection can succeed from the store even when
         # activation ranking is empty — check before the empty-rank early exit.
+        if _is_answer_provenance_request(cue):
+            return self._reconstruct_answer_provenance(cue, field, ranked)
         if _is_evidence_request(cue):
             return self._reconstruct_evidence(cue, field, ranked, tokens)
         if _is_explanation_request(cue):
@@ -1291,6 +1294,62 @@ class RememberingOrgan:
             working_influenced=field.working_influenced,
         )
 
+    def _reconstruct_answer_provenance(
+        self,
+        cue: str,
+        field: ActivationField,
+        ranked: list[Any],
+    ) -> Reconstruction:
+        """Cite the autobiographical evidence that supported a prior answer.
+
+        Read-only. Prefers exact supporting facts/relationships over loosely
+        related hardware memories that share a verb.
+        """
+        from acm.remembering.relations import (
+            collect_learned_relations,
+            explain_answer_provenance,
+        )
+        from acm.remembering.semantic import UNKNOWN as _SEM_UNKNOWN
+
+        answer = explain_answer_provenance(cue, store=self.store)
+        if answer is None:
+            answer = _SEM_UNKNOWN
+        experience_ids: list[str] = []
+        experience_summaries: list[str] = []
+        low = (cue or "").lower()
+        if re.search(r"\bupgrad(?:ed|e)\s+(?:my\s+)?desktop\b", low):
+            for rel in collect_learned_relations(self.store):
+                if (
+                    "desktop upgrade" in rel.source.casefold()
+                    and rel.learned_relation == "motivated_by"
+                ):
+                    for eid in rel.evidence_ids:
+                        exp = self.store.experiences.get(eid)
+                        if exp is None:
+                            continue
+                        experience_ids.append(eid)
+                        experience_summaries.append(exp.summary)
+                    break
+        return Reconstruction(
+            cue=cue,
+            answer=answer,
+            explanation_class=(
+                ExplanationClass.UNKNOWN.value
+                if answer == _SEM_UNKNOWN
+                else ExplanationClass.EXPERIENCE.value
+            ),
+            confidence=0.0 if answer == _SEM_UNKNOWN else 0.9,
+            activated_concept_ids=[n.target_id for n in ranked],
+            experience_ids=experience_ids[:8],
+            experience_summaries=experience_summaries[:8],
+            activation=field.to_public(),
+            cue_classes=list(field.cue_classes) + ["answer_provenance"],
+            goal_influenced=field.goal_influenced,
+            identity_influenced=field.identity_influenced,
+            context_influenced=field.context_influenced,
+            working_influenced=field.working_influenced,
+        )
+
     def _reconstruct_explanation(
         self,
         cue: str,
@@ -1799,6 +1858,15 @@ def _attr_grounds_in_cue(
 
 def _is_evidence_request(cue: str) -> bool:
     return bool(_EVIDENCE_REQUEST.search(cue or ""))
+
+
+def _is_answer_provenance_request(cue: str) -> bool:
+    try:
+        from acm.remembering.relations import is_answer_provenance_query
+
+        return is_answer_provenance_query(cue or "")
+    except Exception:
+        return bool(re.search(r"\bhow\s+(?:did|do)\s+you\s+know\b", cue or "", re.I))
 
 
 def _is_episodic_request(cue: str) -> bool:

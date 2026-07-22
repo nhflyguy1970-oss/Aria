@@ -50,9 +50,9 @@ def _sem_isolation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 def test_sem_01_version_pin() -> None:
     ver = Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json"
     data = json.loads(ver.read_text())
-    assert data["source_commit"] == "ed8abafb3558428738e614321555b7f141aa9919"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.26.0-6"
-    assert data["promotion"] == "M3-ACM-relational"
+    assert data["source_commit"] == "74532ac60ebd448dc66de0cf7be752edac92449d"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.26.0-7"
+    assert data["promotion"] == "M3-ACM-relational-stab"
     assert (Path("aria_acm/acm/remembering/semantic.py")).is_file()
     assert (Path("aria_acm/acm/remembering/evolution.py")).is_file()
     assert (Path("aria_acm/acm/remembering/relations.py")).is_file()
