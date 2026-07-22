@@ -397,7 +397,16 @@ class CognitiveEngine:
         evidence_text = extraction.evidence or text.strip()
 
         episodic_facts = [
-            f for f in extraction.facts if f.kind.value == "experience" and f.relation_type
+            f
+            for f in extraction.facts
+            if f.kind.value == "experience"
+            and f.relation_type
+            and f.property != "predictive_pattern"
+        ]
+        predictive_facts = [
+            f
+            for f in extraction.facts
+            if f.kind.value == "experience" and f.property == "predictive_pattern"
         ]
         # Autobiographical events: resolve relative time into Experience.t_start
         if t_start is None and episodic_facts:
@@ -509,6 +518,13 @@ class CognitiveEngine:
                 if win is not None:
                     exp_metadata["temporal_label"] = win.label
 
+        if predictive_facts:
+            pf = predictive_facts[0]
+            exp_metadata["predictive"] = "1"
+            exp_metadata["pattern_antecedent"] = (pf.relation_type or "")[:120]
+            exp_metadata["pattern_consequent"] = (pf.value or "")[:200]
+            exp_metadata["pattern_strength"] = str(float(pf.confidence or 0.65))
+
         exp = self.experiences.birth(
             cognitive_text,
             external_kind=external_kind,
@@ -528,6 +544,8 @@ class CognitiveEngine:
         )
         if episodic_facts:
             self._link_episodic_neighbors(exp)
+        if predictive_facts:
+            self._apply_predictive_facts(predictive_facts, experience_id=exp.id)
         self.concepts.bind_experience(exp, concept_ids=concept_ids)
         self.associations.absorb_experience(
             exp, concept_ids, identity_influenced=identity_influenced
@@ -1430,6 +1448,38 @@ class CognitiveEngine:
             if assoc is not None:
                 assoc.metadata["autobiographical"] = True
                 assoc.metadata["learned_relation"] = relation_name
+
+    def _apply_predictive_facts(self, facts: list[Any], *, experience_id: str) -> None:
+        """Mint PREDICTS associations from recurring autobiographical patterns."""
+        from acm.associations.model import RelationKind
+
+        for fact in facts or []:
+            antecedent = (getattr(fact, "relation_type", "") or "").strip()
+            consequent = (getattr(fact, "value", "") or "").strip()
+            if not antecedent or not consequent:
+                continue
+            source = self._ensure_relational_concept(
+                antecedent, evidence_id=experience_id
+            )
+            target = self._ensure_relational_concept(
+                consequent, evidence_id=experience_id
+            )
+            strength = float(getattr(fact, "confidence", 0.65) or 0.65)
+            assoc = self.associations.relate(
+                source.id,
+                target.id,
+                RelationKind.PREDICTS,
+                strength_forward=min(0.92, 0.35 + strength * 0.55),
+                strength_backward=0.25,
+                confidence=strength,
+                evidence_id=experience_id,
+                context_tags=self.context.tags,
+                identity_influenced=True,
+            )
+            if assoc is not None:
+                assoc.metadata["autobiographical"] = True
+                assoc.metadata["learned_relation"] = "predicts"
+                assoc.metadata["predictive_pattern"] = "1"
 
     def _ensure_relational_concept(self, label: str, *, evidence_id: str) -> Any:
         """Resolve or create one Concept endpoint for an explicit learned entity."""

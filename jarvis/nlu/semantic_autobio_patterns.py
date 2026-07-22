@@ -59,7 +59,19 @@ SEMANTIC_AUTOBIO_QUERY = re.compile(
     r"what\s+is\s+my\s+(?:long[- ]?term\s+)?goal\b|"
     r"how\s+(?:did|do)\s+you\s+know\b|"
     r"which\s+(?:of\s+my\s+)?computers?\s+should\s+i\s+use\b|"
-    r"which\s+should\s+i\s+use\s+for\b"
+    r"which\s+should\s+i\s+use\s+for\b|"
+    # Autobiographical prediction (Memory Authority → Prediction organ)
+    r"what\s+am\s+i\s+likely\b|"
+    r"when\s+am\s+i\s+likely\b|"
+    r"what\s+is\s+likely\b|"
+    r"what(?:'s|\s+is)\s+likely\s+to\s+happen\b|"
+    r"if\s+i\b.+\bwhat\s+is\s+likely\b|"
+    r"why\s+do\s+you\s+think\s+that\s+is\s+likely\b|"
+    r"why\s+(?:is|was)\s+that\s+likely\b|"
+    r"based\s+upon\s+memory,?\s+what\s+is\s+likely\b|"
+    r"what\s+will\s+happen\b|"
+    r"will\s+it\s+(?:rain|snow)\b|"
+    r"am\s+i\s+(?:going\s+to|likely\s+to)\b"
     r")\b",
     re.I,
 )
@@ -70,7 +82,13 @@ def is_semantic_autobio_teaching(text: str) -> bool:
     detected = detect_teaching(text or "")
     if not detected.is_teaching or not detected.facts:
         return False
-    return any(f.kind in _SEMANTIC_TEACHING_KINDS for f in detected.facts)
+    if any(f.kind in _SEMANTIC_TEACHING_KINDS for f in detected.facts):
+        return True
+    # Recurring-experience / habit patterns used by Prediction.
+    return any(
+        f.kind == FactKind.EXPERIENCE and f.property == "predictive_pattern"
+        for f in detected.facts
+    )
 
 
 def is_semantic_autobio_query(text: str) -> bool:

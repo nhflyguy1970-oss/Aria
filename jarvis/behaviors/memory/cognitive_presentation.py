@@ -39,6 +39,15 @@ def format_teaching_acknowledgement(prompt: str) -> str:
     if not detected.is_teaching or not detected.facts:
         return ""
     fact = detected.facts[0]
+    if fact.kind == FactKind.EXPERIENCE and fact.property == "predictive_pattern":
+        ante = (fact.relation_type or "that cue").replace("_", " ").strip()
+        cons = (fact.value or "").strip()
+        if ante and cons:
+            return f"Okay, I'll remember that when {ante}, {cons}."
+        summary = fact.canonical_summary()
+        if summary.lower().startswith("user "):
+            summary = "you " + summary[5:]
+        return f"Okay, I'll remember that {summary.rstrip('.')}."
     if fact.kind == FactKind.EXPERIENCE:
         action = (fact.property or "did something").replace("_", " ")
         obj = (fact.value or "").strip()

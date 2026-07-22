@@ -51,6 +51,9 @@ class CognitiveIntent(StrEnum):
     PREFERENCE = "preference"
     GOAL = "goal"
 
+    # --- Prospective memory (M11) -----------------------------------------------
+    PREDICTION = "prediction"
+
     # --- Metacognition ----------------------------------------------------------
     REFLECTION = "reflection"
     LEARNING = "learning"
@@ -91,6 +94,7 @@ COGNITIVE_INTENTS: frozenset[CognitiveIntent] = frozenset(
         CognitiveIntent.ASSOCIATION,
         CognitiveIntent.PREFERENCE,
         CognitiveIntent.GOAL,
+        CognitiveIntent.PREDICTION,
         CognitiveIntent.REFLECTION,
         CognitiveIntent.LEARNING,
         CognitiveIntent.CONFIDENCE,
@@ -125,12 +129,12 @@ ORGAN_EXPERIENCES = "experiences"
 ORGAN_WORKING = "working_memory"
 ORGAN_CONTEXT = "context"
 ORGAN_GOALS = "goals"
+ORGAN_PREDICTION = "prediction"
 ORGAN_NONE = "none"  # non-cognitive — host owns execution
 
 # Research-evaluated but deferred for this correction (documented only).
 DEFERRED_INTENTS: tuple[str, ...] = (
     "simulation",
-    "prediction",
     "analogy",
     "creativity",
     "emotion",

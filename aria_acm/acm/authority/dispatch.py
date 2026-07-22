@@ -218,6 +218,10 @@ class CognitiveDispatchEngine:
                 continue
             if ownership.intent == CognitiveIntent.ASSISTANT_IDENTITY:
                 continue
+            # Prediction owns unknown/insufficient boundaries — supporting organs
+            # must not invent autobiographical likelihood from unrelated recall.
+            if ownership.intent == CognitiveIntent.PREDICTION:
+                continue
             if not memory and contrib.memory:
                 memory = contrib.memory
                 conf = max(conf, contrib.confidence)

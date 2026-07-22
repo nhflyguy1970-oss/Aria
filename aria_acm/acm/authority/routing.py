@@ -21,6 +21,7 @@ from acm.authority.taxonomy import (
     ORGAN_IDENTITY,
     ORGAN_LEARNING,
     ORGAN_NONE,
+    ORGAN_PREDICTION,
     ORGAN_RECONCILIATION,
     ORGAN_REFLECTION,
     ORGAN_REMEMBERING,
@@ -145,6 +146,11 @@ _OWNERSHIP_TABLE: dict[CognitiveIntent, tuple[str, tuple[str, ...], str]] = {
         ORGAN_GOALS,
         (ORGAN_REMEMBERING, ORGAN_IDENTITY, ORGAN_EXPERIENCES),
         "active goals + goal-biased remembering",
+    ),
+    CognitiveIntent.PREDICTION: (
+        ORGAN_PREDICTION,
+        (ORGAN_REMEMBERING, ORGAN_EXPERIENCES, ORGAN_ASSOCIATIONS),
+        "memory-grounded likelihood from Prediction Organ",
     ),
     CognitiveIntent.REFLECTION: (
         ORGAN_REFLECTION,
@@ -373,6 +379,10 @@ class CognitiveRoutingEngine:
             path.append("active_goals")
             return self._goals(request)
 
+        if organ == ORGAN_PREDICTION:
+            path.append("what_is_likely")
+            return self._prediction(request)
+
         if organ in (ORGAN_WORKING, ORGAN_CONTEXT):
             path.append("working_or_context")
             return self._working_context(request)
@@ -446,6 +456,44 @@ class CognitiveRoutingEngine:
             }
         # No open goals — try remembering for goal-related experiences.
         return self._remember(request)
+
+    def _prediction(self, request: str) -> dict[str, Any]:
+        engine = self.engine
+        result = engine.what_is_likely(request)
+        answer = (result.get("answer") or "").strip()
+        outcomes = list(result.get("outcomes") or [])
+        experiences: list[dict[str, Any]] = []
+        for outcome in outcomes[:4]:
+            for sid in list(outcome.get("support") or [])[:3]:
+                exp = engine.store.experiences.get(sid)
+                if exp is not None:
+                    experiences.append({"id": exp.id, "summary": exp.summary})
+                assoc = engine.store.associations.get(sid)
+                if assoc is not None:
+                    for eid in list(getattr(assoc, "evidence_ids", []) or [])[:2]:
+                        exp = engine.store.experiences.get(eid)
+                        if exp is not None:
+                            experiences.append({"id": exp.id, "summary": exp.summary})
+        conf = float(result.get("confidence") or 0.0)
+        cue_matched = bool(outcomes) or bool(answer)
+        expl = "experience" if outcomes else "unknown"
+        ambiguous = bool(result.get("ambiguous"))
+        if not answer or answer.lower().startswith("memory does not yet support"):
+            answer = ""
+            expl = "unknown"
+            conf = 0.0
+            cue_matched = False
+        return {
+            "memory": answer or None,
+            "confidence": conf,
+            "explanation_class": expl,
+            "ambiguous": ambiguous,
+            "concepts": [{"id": cid} for cid in (result.get("source_concept_ids") or [])[:8]],
+            "cue_matched": cue_matched,
+            "experiences": experiences[:8],
+            "associations": [],
+            "raw": result,
+        }
 
     def _project_support(self) -> dict[str, Any]:
         engine = self.engine

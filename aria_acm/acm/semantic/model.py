@@ -117,6 +117,10 @@ class CognitiveFact:
                 return f"{subj} {entity} model is {self.value}"
             return f"{subj} {entity} {prop} is {self.value}"
         if self.kind == FactKind.EXPERIENCE:
+            if self.property == "predictive_pattern":
+                ante = (self.relation_type or "cue").replace("_", " ").strip()
+                cons = (self.value or "").strip()
+                return f"Pattern: when {ante}, {cons}"
             action = (self.property or "experienced").replace("_", " ")
             obj = (self.value or "").strip()
             phrase = f"{subj} {action} {obj}".strip()

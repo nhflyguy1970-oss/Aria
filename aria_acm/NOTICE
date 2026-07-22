@@ -4,17 +4,21 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M3-ACM-relational-stab):
+Source pin (M3-ACM-prediction-repair):
   tag:    v0.26.0
-  commit: 74532ac60ebd448dc66de0cf7be752edac92449d
+  commit: ce52bcc1d499dd5d17e9405042cf41f2cca9787f
   version harvested from pin: 0.26.0
-  decision: Autobiographical relational reasoning stabilization
+  decision: Prediction manual-acceptance repair
   includes: D038–D047 · Teaching Recognition · Multi-domain preference /
             evidence · Memory explanation + personal summary · Episodic
             autobiographical memory · Semantic autobiographical memory ·
             Memory evolution · Autobiographical relational reasoning ·
-            Stabilization (contextual preference selection, repeated-goal
-            dedupe, answer-provenance explainability)
+            Stabilization · Prediction (habit teaching encode, Memory
+            Authority routing, conflict/unknown/explainability)
+
+Prior pin (M3-ACM-relational-stab):
+  tag:    v0.26.0
+  commit: 74532ac60ebd448dc66de0cf7be752edac92449d
 
 Prior pin (M3-ACM-relational):
   tag:    v0.26.0

@@ -183,10 +183,31 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         0.93,
     ),
     (
+        CognitiveIntent.PREDICTION,
+        re.compile(
+            r"\b(?:"
+            r"what\s+am\s+i\s+likely\b|"
+            r"when\s+am\s+i\s+likely\b|"
+            r"what\s+is\s+likely\b|"
+            r"what(?:'s|\s+is)\s+likely\s+to\s+happen\b|"
+            r"if\s+i\b.+\bwhat\s+is\s+likely\b|"
+            r"why\s+do\s+you\s+think\s+that\s+is\s+likely\b|"
+            r"why\s+(?:is|was)\s+that\s+likely\b|"
+            r"based\s+upon\s+memory,?\s+what\s+is\s+likely\b|"
+            r"what\s+will\s+happen\b|"
+            r"will\s+(?:it|i|we)\b|"
+            r"am\s+i\s+(?:going\s+to|likely\s+to)\b"
+            r")",
+            re.I,
+        ),
+        "prediction_cue",
+        0.95,
+    ),
+    (
         CognitiveIntent.REFLECTION,
         re.compile(
             r"\b(what\s+do\s+you\s+think\s+about|reflect(?:ion|ing)?\s+on|"
-            r"why\s+do\s+you\s+(?:believe|think)|"
+            r"why\s+do\s+you\s+(?:believe|think)(?!\s+that\s+is\s+likely)|"
             r"how\s+do\s+you\s+(?:see|view|interpret)|"
             r"your\s+(?:opinion|reflection)\s+on|"
             r"how\s+has\s+your\s+(?:understanding|knowledge)\s+changed)\b",
@@ -415,13 +436,23 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
     (
         CognitiveIntent.PATTERN,
         re.compile(
-            r"\b(what\s+(?:patterns?|habits?)\s+(?:do\s+)?(?:you|i|we)|"
+            r"\b(?:"
+            r"what\s+(?:patterns?|habits?)\s+(?:do\s+)?(?:you|i|we)|"
             r"what\s+do\s+you\s+usually|tend\s+to|"
-            r"in\s+general\s+(?:i|you)\s+)\b",
+            r"in\s+general\s+(?:i|you)\s+|"
+            # Declarative recurring-experience teachings (Prediction evidence)
+            r"every\s+time\s+i\b|"
+            r"whenever\s+i\b|"
+            r"every\s+(?:saturday|sunday|monday|tuesday|wednesday|thursday|friday|weekend)\b|"
+            r"i\s+usually\b|"
+            r"it\s+has\s+rained\s+every\s+day\b|"
+            r"\w+\s+sometimes\s+helps?\s+me\b|"
+            r"(?:coffee|tea|alcohol)\s+causes?\b"
+            r")",
             re.I,
         ),
         "pattern_cue",
-        0.86,
+        0.88,
     ),
     (
         CognitiveIntent.CONCEPT,
@@ -628,6 +659,7 @@ _OWNERSHIP_HINTS: dict[CognitiveIntent, str] = {
     CognitiveIntent.ASSOCIATION: "associations",
     CognitiveIntent.PREFERENCE: "remembering",
     CognitiveIntent.GOAL: "goals",
+    CognitiveIntent.PREDICTION: "prediction",
     CognitiveIntent.REFLECTION: "reflection",
     CognitiveIntent.LEARNING: "learning",
     CognitiveIntent.CONFIDENCE: "confidence",

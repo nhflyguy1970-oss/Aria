@@ -29,6 +29,12 @@ def speak_cognitive_result(result: CognitiveMemoryResult) -> str:
         return ""
 
     if result.status in _UNKNOWN_PHRASES:
+        # Prefer organ-authored conflict / insufficiency text when present
+        # (Prediction conflict explanations, contested reconstructions).
+        if result.status == MemoryStatus.CONFLICTING:
+            text = (result.memory or "").strip()
+            if text and not text.startswith("{") and not text.startswith("["):
+                return text
         base = _UNKNOWN_PHRASES[result.status]
         if result.uncertainty:
             return f"{base} ({result.uncertainty})"

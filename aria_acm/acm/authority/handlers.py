@@ -19,6 +19,7 @@ from acm.authority.taxonomy import (
     ORGAN_GOALS,
     ORGAN_IDENTITY,
     ORGAN_LEARNING,
+    ORGAN_PREDICTION,
     ORGAN_RECONCILIATION,
     ORGAN_REFLECTION,
     ORGAN_REMEMBERING,
@@ -69,6 +70,7 @@ COGNITIVE_TERMINALS: frozenset[str] = frozenset(
         ORGAN_GOALS,
         ORGAN_WORKING,
         ORGAN_CONTEXT,
+        ORGAN_PREDICTION,
     }
 )
 
@@ -229,6 +231,8 @@ class CognitiveOrganHandlers:
             return self._associations(request)
         if organ == ORGAN_GOALS:
             return self._goals(request)
+        if organ == ORGAN_PREDICTION:
+            return self._prediction(request)
         if organ in (ORGAN_WORKING, ORGAN_CONTEXT):
             return self._working_context(request, organ=organ)
         if organ == ORGAN_CONCEPTS:
@@ -433,6 +437,61 @@ class CognitiveOrganHandlers:
             explanation_class="unknown",
             cue_matched=False,
             reconstruction_steps=steps + ["goals.empty"],
+            substrate_touched=("cognitive_store",),
+        )
+
+    def _prediction(self, request: str) -> OrganContribution:
+        result = self.engine.what_is_likely(request)
+        answer = (result.get("answer") or "").strip()
+        outcomes = list(result.get("outcomes") or [])
+        experiences: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for outcome in outcomes[:6]:
+            for sid in list(outcome.get("support") or [])[:4]:
+                if sid in seen:
+                    continue
+                exp = self.engine.store.experiences.get(sid)
+                if exp is not None:
+                    seen.add(sid)
+                    experiences.append({"id": exp.id, "summary": exp.summary})
+                    continue
+                assoc = self.engine.store.associations.get(sid)
+                if assoc is None:
+                    continue
+                for eid in list(getattr(assoc, "evidence_ids", []) or [])[:3]:
+                    if eid in seen:
+                        continue
+                    exp = self.engine.store.experiences.get(eid)
+                    if exp is None:
+                        continue
+                    seen.add(eid)
+                    experiences.append({"id": exp.id, "summary": exp.summary})
+        conf = float(result.get("confidence") or 0.0)
+        ambiguous = bool(result.get("ambiguous"))
+        if not outcomes or not answer or answer.lower().startswith(
+            "memory does not yet support"
+        ):
+            return OrganContribution(
+                organ=ORGAN_PREDICTION,
+                memory=None,
+                confidence=0.0,
+                explanation_class="unknown",
+                cue_matched=False,
+                ambiguous=False,
+                reconstruction_steps=["prediction.what_is_likely", "prediction.insufficient"],
+                substrate_touched=("cognitive_store",),
+            )
+        expl = "contested" if ambiguous else "experience"
+        return OrganContribution(
+            organ=ORGAN_PREDICTION,
+            memory=answer,
+            confidence=conf,
+            explanation_class=expl,
+            ambiguous=ambiguous,
+            cue_matched=True,
+            concepts=[{"id": cid} for cid in (result.get("source_concept_ids") or [])[:8]],
+            experiences=experiences[:8],
+            reconstruction_steps=["prediction.what_is_likely"],
             substrate_touched=("cognitive_store",),
         )
 

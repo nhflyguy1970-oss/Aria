@@ -732,6 +732,161 @@ def _extract_episodic(
     return None
 
 
+def _strength_from_text(text: str) -> float:
+    low = (text or "").lower()
+    if re.search(r"\b(always|every\s+time|whenever|every\s+day|every\s+weekend)\b", low):
+        return 0.9
+    if re.search(r"\b(usually|often|typically|tend(?:s)?\s+to)\b", low):
+        return 0.75
+    if re.search(r"\b(sometimes|occasionally|rarely)\b", low):
+        return 0.45
+    if re.search(r"\bcauses?\b", low):
+        return 0.8
+    return 0.65
+
+
+def _extract_predictive_patterns(
+    text: str,
+    *,
+    subject: PerspectiveSubject,
+) -> list[CognitiveFact]:
+    """Extract recurring/habit/causal patterns usable by Prediction."""
+    t = (text or "").strip()
+    if not t or _INTERROGATIVE.search(t):
+        return []
+    out: list[CognitiveFact] = []
+    strength = _strength_from_text(t)
+
+    patterns: list[tuple[re.Pattern[str], str]] = [
+        (
+            re.compile(
+                r"\bevery\s+time\s+i\s+(.+?),\s*i\s+(.+?)(?:\.|$)",
+                re.I,
+            ),
+            "every_time",
+        ),
+        (
+            re.compile(
+                r"\bwhenever\s+i\s+(.+?),\s*i\s+(.+?)(?:\.|$)",
+                re.I,
+            ),
+            "whenever",
+        ),
+        (
+            re.compile(
+                r"\bevery\s+(saturday|sunday|monday|tuesday|wednesday|thursday|friday|"
+                r"weekend|morning|evening|night)\s+i\s+(?:usually\s+)?(.+?)(?:\.|$)",
+                re.I,
+            ),
+            "every_period",
+        ),
+        (
+            re.compile(
+                r"\bi\s+usually\s+(.+?)\s+in\s+the\s+(morning|afternoon|evening|night)"
+                r"(?:\.|$)",
+                re.I,
+            ),
+            "usually_in_period",
+        ),
+        (
+            re.compile(
+                r"\bi\s+usually\s+(.+?)(?:\.|$)",
+                re.I,
+            ),
+            "usually",
+        ),
+        (
+            re.compile(
+                r"\bevery\s+weekend(?:\s+for\s+.+?)?\s+i\s+(?:have\s+)?(?:gone|go)\s+(.+?)"
+                r"(?:\.|$)",
+                re.I,
+            ),
+            "every_weekend",
+        ),
+        (
+            re.compile(
+                r"\bit\s+has\s+rained\s+every\s+day\s+(?:this\s+week|lately|recently)"
+                r"(?:\.|$)",
+                re.I,
+            ),
+            "rain_streak",
+        ),
+        (
+            re.compile(
+                r"\b([A-Za-z][\w\s-]{1,40}?)\s+causes?\s+(.+?)(?:\.|$)",
+                re.I,
+            ),
+            "causes",
+        ),
+        (
+            re.compile(
+                r"\b([A-Za-z][\w\s-]{1,40}?)\s+sometimes\s+helps?\s+me\s+(.+?)(?:\.|$)",
+                re.I,
+            ),
+            "sometimes_helps",
+        ),
+    ]
+
+    for pattern, kind in patterns:
+        m = pattern.search(t)
+        if not m:
+            continue
+        if kind == "rain_streak":
+            antecedent, consequent = "rain this week", "rain"
+        elif kind == "usually_in_period":
+            consequent = _clean_value(m.group(1))
+            antecedent = _clean_value(m.group(2))
+        elif kind == "usually":
+            consequent = _clean_value(m.group(1))
+            antecedent = "usually"
+            if not consequent or consequent.lower().startswith("get more"):
+                # Prefer the period form when both could match.
+                if re.search(r"\bin\s+the\s+(morning|afternoon|evening)", t, re.I):
+                    continue
+        elif kind in ("causes", "sometimes_helps"):
+            antecedent = _clean_value(m.group(1))
+            consequent = _clean_value(m.group(2))
+            if kind == "sometimes_helps" and consequent:
+                # Keep helpful polarity visible for Prediction conflict handling.
+                low = consequent.casefold()
+                if not low.startswith("help"):
+                    consequent = f"helps me {consequent}"
+        elif kind == "every_weekend":
+            antecedent, consequent = "weekend", _clean_value(m.group(1))
+        elif kind == "every_period":
+            antecedent = _clean_value(m.group(1))
+            consequent = _clean_value(m.group(2))
+        else:
+            antecedent = _clean_value(m.group(1))
+            consequent = _clean_value(m.group(2))
+        if not antecedent or not consequent:
+            continue
+        # Avoid minting world-knowledge "X causes Y" without personal framing
+        # except short first-taught cause/effect used in acceptance (coffee…).
+        if kind == "causes" and not re.search(
+            r"\b(i|me|my|coffee|tea|alcohol|breakfast|lunch|dinner|sleep)\b",
+            t,
+            re.I,
+        ):
+            continue
+        local_strength = strength
+        if kind == "sometimes_helps":
+            local_strength = min(local_strength, 0.45)
+        out.append(
+            CognitiveFact(
+                kind=FactKind.EXPERIENCE,
+                subject=subject,
+                property="predictive_pattern",
+                value=consequent,
+                relation_type=antecedent,
+                confidence=local_strength,
+                labels=("predictive", "recurring", kind),
+            )
+        )
+        break
+    return out
+
+
 def _looks_like_name(value: str) -> bool:
     v = _clean_value(value)
     if not v or " " in v and len(v.split()) > 4:
@@ -1009,6 +1164,7 @@ def extract_fact_patterns(
         ep = _extract_episodic(t, subject=fp)
         if ep is not None:
             facts.append(ep)
+        facts.extend(_extract_predictive_patterns(t, subject=fp))
 
     # Deduplicate by (subject, property, value, relation) — keep lifecycle status distinct
     seen: set[tuple[str, str, str, str]] = set()
