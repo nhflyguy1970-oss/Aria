@@ -5,8 +5,8 @@ unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
 Source pin (M3-ACM-backlog-cycle):
-  tag:    v0.26.0
-  commit: 675594d75bf428d77432250e33bf8f8e7368952d
+  tag:    v0.27.0
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
   version harvested from pin: 0.26.0
   decision: Engineering backlog cycle — diagnostics, inspect APIs, explainability
   includes: D038–D047 · Teaching Recognition · Read-only diagnostics (B07) ·
@@ -16,8 +16,8 @@ Source pin (M3-ACM-backlog-cycle):
 
 Prior pin (M3-ACM-cert-relations):
 Prior pin (M3-ACM-cert-relations):
-  tag:    v0.26.0
-  commit: 051a506a8f34fc3efb8136c7ce11278b9b5607fc
+  tag:    v0.27.0
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
   version harvested from pin: 0.26.0
   decision: Full behavioral certification — relational entity label repair
   includes: D038–D047 · Teaching Recognition · Multi-domain preference /
@@ -29,44 +29,44 @@ Prior pin (M3-ACM-cert-relations):
             repair (entity over generic role; exclude predictive edges)
 
 Prior pin (M3-ACM-prediction-final):
-  tag:    v0.26.0
-  commit: 15f5e77d27a3fae8f1eeeb6931eeb80116780883
+  tag:    v0.27.0
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
 
 Prior pin (M3-ACM-prediction-stab):
-  tag:    v0.26.0
-  commit: 22636a8da431088f8996d13b5807a972c20302b7
+  tag:    v0.27.0
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
 
 Prior pin (M3-ACM-prediction-repair):
-  tag:    v0.26.0
-  commit: ce52bcc1d499dd5d17e9405042cf41f2cca9787f
+  tag:    v0.27.0
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
 
 Prior pin (M3-ACM-relational-stab):
-  tag:    v0.26.0
-  commit: 74532ac60ebd448dc66de0cf7be752edac92449d
+  tag:    v0.27.0
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
 
 Prior pin (M3-ACM-relational):
-  tag:    v0.26.0
-  commit: ed8abafb3558428738e614321555b7f141aa9919
+  tag:    v0.27.0
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
 
 Prior pin (M3-ACM-evolution):
-  tag:    v0.26.0
-  commit: a4c962ea30c76e78a7bf73fb66d04f6ed27f13f2
+  tag:    v0.27.0
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
 
 Prior pin (M3-ACM-semantic):
-  tag:    v0.26.0
-  commit: 931f40c386e7d828641fe50cc4545dfe207fe300
+  tag:    v0.27.0
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
 
 Prior pin (M3-ACM):
-  tag:    v0.26.0
-  commit: eec7e60bfe6b5d9e6140ee0d4c2a9bb728463bff
+  tag:    v0.27.0
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
 
 Prior pin (M1):
   tag:    v0.25.0
-  commit: d71a6af77dab578fd85ace14e241a72df3ce59a1
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
 
 Prior pin (M0L):
   tag:    v0.24.0
-  commit: 3c3bdbc0b1e7566da7922df422c72578e5550df5
+  commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
 
 Aria-local bootstrap: `aria_acm/acm/__init__.py` registers `sys.modules["acm"]`
 so absolute `acm.*` imports resolve inside the nested package. Do not remove.

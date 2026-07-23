@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-# Aria M0: nested vendored package must resolve absolute `acm.*` imports.
+# Aria nested-vendor shim: allow `import acm` to resolve to this package.
 import sys as _acm_sys
 
 _acm_sys.modules.setdefault("acm", _acm_sys.modules[__name__])
@@ -40,15 +40,15 @@ __all__ = [
     "ValidationHarness",
     "BaseExtension",
     "ExtensionRegistry",
+    "classify_memory_request",
+    "speak_cognitive_result",
+    "TRUSTED_USER_CORRECTION",
+    "TRUSTED_USER_STATEMENT",
+    "TRUSTED_USER_TEACHING",
     "HostOperation",
     "IngestionActor",
     "IngestionDecision",
     "IngestionProvenance",
     "MessageRole",
-    "TRUSTED_USER_CORRECTION",
-    "TRUSTED_USER_STATEMENT",
-    "TRUSTED_USER_TEACHING",
-    "classify_memory_request",
-    "speak_cognitive_result",
     "__version__",
 ]

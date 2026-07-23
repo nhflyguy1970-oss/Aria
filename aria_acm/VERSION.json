@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.26.0-12",
+  "aria_acm_local_version": "aria-acm-v0.27.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.26.0",
-  "source_tag": "v0.26.0",
-  "source_commit": "675594d75bf428d77432250e33bf8f8e7368952d",
+  "source_version": "0.27.0",
+  "source_tag": "v0.27.0",
+  "source_commit": "1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9",
   "source_repo": "/media/jeff/AI/ACM",
-  "copy_date": "2026-07-22",
-  "tree_sha256": "a4236db49d39a378dab389212c95e0bf6907d7fd2d80c0b0781543647e54f4a9",
+  "copy_date": "2026-07-23",
+  "tree_sha256": "50093cf411682b6708f9e11eb3231688fbc84bc4878722d4fdee6ca4e06612cb",
   "license": "Apache-2.0",
-  "certification_ref": "ACM engineering backlog cycle \u2014 diagnostics/inspect/explainability",
-  "promotion": "M3-ACM-backlog-cycle",
-  "promotion_decision": "Promote certified ACM backlog cycle: B07/B08 diagnostics, B27 views, B43-B45 identity tooling, B01/B02/B41 teach/evidence, B04-B06/B14/B16/B17/B19 explainability, B28 profiling. Two consecutive clean ACM+behavioral certifications.",
+  "certification_ref": "M4 Adaptive Memory & Learning \u2014 privacy/assent/adoption/learning certification",
+  "promotion": "M4-ACM-AML",
+  "promotion_decision": "Promote certified M4 AML: B29 privacy, assent apply, goal/lifecycle learning, B03/B18 explainability, daily summary, adopt_knowledge MVP, learning certification. Two consecutive clean ACM certifications.",
   "includes": [
     "D038",
     "D039",
@@ -23,5 +23,5 @@
     "D046",
     "D047"
   ],
-  "notes": "Promotion of ACM commit 675594d. Standalone and Aria behavioral certification required after vendor."
+  "notes": "Promotion of ACM commit 1850ad7. Standalone and Aria certification required after vendor."
 }

@@ -70,11 +70,18 @@ class CognitiveEngine:
         persist_path: str | None = None,
         auto_persist: bool = False,
         assistant_identity: dict[str, Any] | None = None,
+        redaction_policy: Any | None = None,
     ) -> None:
         from acm.identity.assistant_profile import AssistantIdentityProfile
+        from acm.authority.redaction import DEFAULT_REDACTION_POLICY, RedactionPolicy
 
         self.agent_id = agent_id
         self.auto_persist = auto_persist
+        self.redaction_policy: RedactionPolicy = (
+            redaction_policy
+            if isinstance(redaction_policy, RedactionPolicy)
+            else DEFAULT_REDACTION_POLICY
+        )
         self.durable = None
         if persist_path:
             from acm.persistence import DurableCognitiveStore
@@ -787,6 +794,99 @@ class CognitiveEngine:
         """Cognitive question M7: What have I learned?"""
         return self.learning.what_have_i_learned(cue)
 
+    def daily_learning_summary(self, since_ts: float = 0.0) -> dict[str, Any]:
+        """Host-callable learning rollup (no internal timer). Read-only aggregation."""
+        return self.learning.daily_learning_summary(since_ts=since_ts)
+
+    def adopt_knowledge(
+        self,
+        text: str,
+        *,
+        source_label: str = "",
+        assent: bool = False,
+        kind: str = "reference",
+    ) -> dict[str, Any]:
+        """Bounded knowledge adoption MVP (B35 subset).
+
+        External references become sourced Experiences only through this governed
+        path. Never auto-converts to autobiographical identity. Learning may later
+        reinforce adopted concepts via reflection but never invents Experiences here.
+        """
+        from acm.authority.mode import is_read_only
+        from acm.provenance import (
+            TRUSTED_USER_TEACHING,
+            ProvenanceSource,
+        )
+
+        if is_read_only():
+            return {"adopted": False, "reason": "read_only_blocked"}
+        body = (text or "").strip()
+        if not body:
+            return {"adopted": False, "reason": "empty"}
+        # Bulk corpus rejection — hosts must adopt discrete references
+        if len(body) > 4000 or body.count("\n") > 40:
+            return {"adopted": False, "reason": "bulk_rejected"}
+
+        encode_kind = "experience"
+        low = body.lower()
+        if kind in {"preference", "identity"}:
+            encode_kind = kind
+        elif "prefer" in low or "favorite" in low:
+            encode_kind = "preference"
+
+        # Autobiographical identity conversion requires explicit assent
+        if encode_kind == "identity" and not assent:
+            return {
+                "adopted": False,
+                "reason": "assent_required",
+                "detail": "Identity-like adoption requires assent=True",
+            }
+
+        tags = ["adopted_knowledge"]
+        if source_label:
+            tags.append(f"source:{source_label[:80]}")
+        result = self.encode(
+            body,
+            kind=encode_kind,
+            pin=True,
+            context_tags=tuple(tags),
+            assent=assent,
+            provenance=TRUSTED_USER_TEACHING,
+        )
+        if not result.get("encoded"):
+            return {"adopted": False, "reason": result.get("reason") or "encode_failed", "encode": result}
+
+        eid = str(result.get("experience_id") or "")
+        cid = str(result.get("concept_id") or "")
+        for record in self.store.provenance.values():
+            if record.artifact_id in {eid, cid}:
+                record.origin = ProvenanceSource.ADOPTED_KNOWLEDGE
+                record.explain = (
+                    f"Adopted knowledge from {source_label or 'external reference'}"
+                )
+        if eid and eid in self.store.experiences:
+            exp = self.store.experiences[eid]
+            meta = dict(exp.meta_dict())
+            meta["adopted_knowledge"] = "1"
+            meta["adoption_source"] = (source_label or "")[:120]
+            meta["autobiographical"] = "0"
+            object.__setattr__(
+                exp,
+                "metadata",
+                tuple(sorted((str(k), str(v)) for k, v in meta.items())),
+            )
+
+        return {
+            "adopted": True,
+            "experience_id": eid,
+            "concept_id": cid,
+            "source_label": source_label,
+            "kind": encode_kind,
+            "autobiographical": False,
+            "reversible": True,
+            "encode": result,
+        }
+
     def what_deserves_attention(self, cue: str = "") -> dict[str, Any]:
         """M9: What deserves cognitive attention and continued memory investment?"""
         return self.attention.what_deserves_attention(cue)
@@ -1065,15 +1165,20 @@ class CognitiveEngine:
         if not is_read_only():
             for a in adaptations:
                 if a.applied and a.target_kind.value == "concept" and a.target_id:
-                    self.attention.invest(
-                        a.target_id,
-                        delta=0.03,
-                        source="learning",
-                        factors=["learning"],
-                        summary="Learning invested priority.",
-                    )
-                    self.forgetting.reactivate(a.target_id, source="learning", steps=1)
-                    self.confidence.evolve_from_learning(a.target_id, reinforce=True)
+                    if a.kind.value == "weaken":
+                        # Learning requests cool; Forgetting owns accessibility stage.
+                        self.forgetting.cool(a.target_id, source="learning", steps=1)
+                        self.confidence.evolve_from_learning(a.target_id, reinforce=False)
+                    else:
+                        self.attention.invest(
+                            a.target_id,
+                            delta=0.03,
+                            source="learning",
+                            factors=["learning"],
+                            summary="Learning invested priority.",
+                        )
+                        self.forgetting.reactivate(a.target_id, source="learning", steps=1)
+                        self.confidence.evolve_from_learning(a.target_id, reinforce=True)
         self.validation.record_lifecycle(
             LifecycleEvent(time(), MemoryVerb.LEARN.value, rid, f"adaptations:{len(adaptations)}")
         )
@@ -1240,9 +1345,17 @@ class CognitiveEngine:
         return result
 
     def sleep(self, *, apply_low_impact: bool = True) -> dict[str, Any]:
-        """M8 Offline Cognition — functional consolidation (replay + stabilize)."""
+        """M8 Offline Cognition — host-callable consolidation (no internal timer)."""
         payload = self.offline.consolidate(apply_low_impact=apply_low_impact)
         self._sleep_count += 1
+        summary = self.learning.daily_learning_summary(since_ts=0.0)
+        payload = dict(payload)
+        payload["learning_summary"] = {
+            "adaptation_count": summary.get("adaptation_count"),
+            "applied": summary.get("applied"),
+            "proposed": summary.get("proposed"),
+            "by_kind": summary.get("by_kind"),
+        }
         self.trace.append(
             CognitiveTraceEvent(
                 verb=MemoryVerb.SLEEP.value,

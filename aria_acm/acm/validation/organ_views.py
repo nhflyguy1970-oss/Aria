@@ -1,12 +1,18 @@
 """Organ-scoped observability views (B27) over the singular ValidationHarness.
 
 Does not split the harness. Projects stable per-organ report slices for hosts.
-Full privacy redaction remains B29.
+B29 diagnostic redaction applies at this projection boundary.
 """
 
 from __future__ import annotations
 
 from typing import Any, Callable, TYPE_CHECKING
+
+from acm.authority.redaction import (
+    build_redaction_context,
+    policy_for_engine,
+    redact_organ_view,
+)
 
 if TYPE_CHECKING:
     from acm.api.engine import CognitiveEngine
@@ -78,15 +84,17 @@ def organ_view(engine: CognitiveEngine, organ: str) -> dict[str, Any]:
             organ_obs = getter() or {}
         except Exception as exc:  # noqa: BLE001 — view must not crash hosts
             organ_obs = {"error": type(exc).__name__}
-    return {
+    view = {
         "schema": SCHEMA,
         "organ": name,
         "empty": not harness_slice and not organ_obs,
         "harness": harness_slice,
         "observables": organ_obs,
-        "redaction": "none",  # B29 will apply policy here
-        "note": "Privacy redaction deferred to B29; views are structural only.",
     }
+    policy = policy_for_engine(engine)
+    # Structural views: forbid both user and assistant identity bleed into cues.
+    ctx = build_redaction_context(engine, cue="", intent="", who="user")
+    return redact_organ_view(view, policy=policy, ctx=ctx)
 
 
 def organ_views(engine: CognitiveEngine, organs: list[str] | None = None) -> dict[str, Any]:

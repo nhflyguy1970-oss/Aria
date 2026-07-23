@@ -110,6 +110,17 @@ _MEMORY_SUMMARY = re.compile(
     r")\b",
     re.I,
 )
+# Assistant identity — Memory Authority (never NLU→chat / LLM).
+_ASSISTANT_IDENTITY = re.compile(
+    r"^\s*(?:"
+    r"who\s+are\s+you\b|"
+    r"what(?:'s|\s+is)\s+your\s+name\b|"
+    r"what\s+are\s+you\s+called\b|"
+    r"tell\s+me\s+your\s+name\b|"
+    r"what\s+is\s+your\s+identity\b"
+    r")\s*[?.!]?\s*$",
+    re.I,
+)
 _MEMORY_RECALL_FACT = re.compile(
     r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bdo\s+you\s+remember\s+my\b|"
     r"\bwhat\s+do\s+you\s+know\s+about\s+(?!me\b)|"
@@ -154,6 +165,14 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
     # never Memory Authority / preference reconstruction.
     if _CONVERSATION_LANGUAGE_QUERY.search(message):
         return None
+
+    # Assistant identity — ACM Memory Authority (D043/D044), never LLM chat.
+    if _ASSISTANT_IDENTITY.search(message):
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "assistant identity",
+        }
 
     # Episodic autobiographical events and temporal recall — Memory Authority only.
     if is_episodic_teaching(message):

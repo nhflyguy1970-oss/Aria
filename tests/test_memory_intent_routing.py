@@ -17,6 +17,8 @@ CASES = [
     ("What is my favorite coffee?", "memory_about_user"),
     ("What do you know about me?", "memory_about_user"),
     ("What do you remember about me?", "memory_about_user"),
+    ("Who are you?", "memory_about_user"),
+    ("What's your name?", "memory_about_user"),
     ("Search memory for fly tying.", "memory_search"),
 ]
 

@@ -1,5 +1,14 @@
 # Changelog — Aria / Jarvis
 
+## [M4-ACM-AML] — 2026-07-23
+
+Promote certified ACM **v0.27.0** (`1850ad7`) as `aria-acm-v0.27.0-1`.
+Adaptive Memory & Learning: B29 diagnostic privacy/redaction, assent apply,
+goal/lifecycle learning, B03/B18 explainability, daily learning summary,
+`adopt_knowledge()` MVP, host-callable `sleep()`/`consolidate()`, learning
+certification. Host fix: assistant-identity cues (`Who are you?`) route to
+Memory Authority before NLU/chat.
+
 ## [M1] — 2026-07-19
 
 Promote certified ACM **v0.25.0** (`d71a6af`) as `aria-acm-v0.25.0-1`.

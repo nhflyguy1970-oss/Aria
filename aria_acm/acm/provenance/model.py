@@ -22,6 +22,7 @@ class ProvenanceSource(StrEnum):
     SIMULATED = "simulated"  # contributor only — never historical
     ANALOGICAL = "analogical"
     ENCODE = "encode"
+    ADOPTED_KNOWLEDGE = "adopted_knowledge"
     UNKNOWN = "unknown"
 
 

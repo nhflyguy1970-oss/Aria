@@ -203,6 +203,15 @@ class LearningOrgan:
                     )
                     if ad:
                         created.append(ad)
+            # Goal importance nudge when reflective cue overlaps an active goal
+            for ad in self._adapt_goals_from_reflection(
+                exp,
+                reinforce=True,
+                reflective_ids=[exp.id],
+                evidence_ids=evidence,
+                sleep_batch_id=sleep_batch_id,
+            ):
+                created.append(ad)
 
         if weaken:
             for cid in concept_ids[:4]:
@@ -271,21 +280,31 @@ class LearningOrgan:
         }
 
     def assent_adaptation(self, adaptation_id: str) -> dict[str, Any]:
+        """Gate B: apply a proposed high-impact adaptation after host/user assent.
+
+        Mutates living structure only (strengths/confidence). Never invents or
+        rewrites Experiences. Reversible via ``rollback_adaptation``.
+        """
+        if is_read_only():
+            return {"status": "read_only_blocked"}
         ad = self.store.adaptations.get(adaptation_id)
         if ad is None:
             return {"status": "missing"}
         if ad.governance != GovernanceClass.PROPOSED:
             return {"status": "not_proposed", "adaptation": ad.to_public()}
-        # High-impact assent does not auto-mutate identity/concepts beyond recording assent
+        if not self._apply_proposed(ad):
+            return {"status": "apply_failed", "adaptation": ad.to_public()}
         ad.governance = GovernanceClass.ASSENTED
         ad.applied = True
         ad.metadata["assented_at"] = time()
+        self._applied += 1
         self.validation.record_learning(
             action="assent",
             adaptation_id=ad.id,
             target_kind=ad.target_kind.value,
             governance=ad.governance.value,
             assent=1,
+            apply=1,
         )
         return {"status": "assented", "adaptation": ad.to_public()}
 
@@ -340,6 +359,35 @@ class LearningOrgan:
             "rollbacks": self._rollbacks,
         }
 
+    def daily_learning_summary(self, since_ts: float = 0.0) -> dict[str, Any]:
+        """Read-only aggregation of Adaptation Records since ``since_ts``.
+
+        Hosts call this after ``sleep()``/``learn()``; no timer lives in ACM core.
+        Never invents memories — reports existing adaptations only.
+        """
+        items = [
+            a
+            for a in self.store.adaptations.values()
+            if float(a.created or 0.0) >= float(since_ts or 0.0)
+        ]
+        by_kind: dict[str, int] = {}
+        by_gov: dict[str, int] = {}
+        for a in items:
+            by_kind[a.kind.value] = by_kind.get(a.kind.value, 0) + 1
+            by_gov[a.governance.value] = by_gov.get(a.governance.value, 0) + 1
+        return {
+            "schema": "acm.daily_learning_summary.v1",
+            "since_ts": float(since_ts or 0.0),
+            "adaptation_count": len(items),
+            "applied": sum(1 for a in items if a.applied),
+            "proposed": sum(1 for a in items if a.governance == GovernanceClass.PROPOSED),
+            "abstained": sum(1 for a in items if a.governance == GovernanceClass.ABSTAINED),
+            "by_kind": by_kind,
+            "by_governance": by_gov,
+            "adaptation_ids": [a.id for a in sorted(items, key=lambda x: x.created)[:50]],
+            "read_only": True,
+        }
+
     # --- internals ------------------------------------------------------------
 
     def _record_abstain(self, exp: Experience, *, sleep_batch_id: str) -> Adaptation:
@@ -375,16 +423,26 @@ class LearningOrgan:
         reflective_ids: list[str],
         summary: str,
         sleep_batch_id: str = "",
+        attribute_key: str = "",
     ) -> Adaptation:
+        before, after = self._plan_proposal_delta(
+            target_kind=target_kind,
+            target_id=target_id,
+            kind=kind,
+            attribute_key=attribute_key,
+        )
         ad = Adaptation(
             id=new_id("adp"),
             kind=kind,
             target_kind=target_kind,
             target_id=target_id,
             governance=GovernanceClass.PROPOSED,
+            before=before,
+            after=after,
             reflective_experience_ids=list(reflective_ids),
             sleep_batch_id=sleep_batch_id,
             summary=summary,
+            attribute_key=attribute_key,
             created=time(),
             applied=False,
         )
@@ -396,6 +454,244 @@ class LearningOrgan:
             target_kind=target_kind.value,
             propose=1,
             governance="proposed",
+        )
+        return ad
+
+    def _plan_proposal_delta(
+        self,
+        *,
+        target_kind: AdaptationTarget,
+        target_id: str,
+        kind: AdaptationKind,
+        attribute_key: str = "",
+    ) -> tuple[dict[str, float], dict[str, float]]:
+        """Snapshot before + planned after for a high-impact proposal (no mutation)."""
+        sign = -1.0 if kind in {AdaptationKind.WEAKEN} else 1.0
+        if target_kind == AdaptationTarget.CONCEPT:
+            c = self.store.concepts.get(target_id)
+            if c is None:
+                return {}, {}
+            before = {"strength": float(c.strength), "confidence": float(c.confidence)}
+            after = {
+                "strength": max(0.0, min(1.0, c.strength + sign * CAP_CONCEPT_STRENGTH)),
+                "confidence": max(0.05, min(1.0, c.confidence + sign * CAP_CONCEPT_CONFIDENCE)),
+            }
+            return before, after
+        if target_kind == AdaptationTarget.ASSOCIATION:
+            a = self.store.associations.get(target_id)
+            if a is None:
+                return {}, {}
+            before = {
+                "strength_forward": float(a.strength_forward),
+                "strength_backward": float(a.strength_backward),
+            }
+            after = {
+                "strength_forward": max(
+                    0.0, min(1.0, a.strength_forward + sign * CAP_ASSOC_STRENGTH)
+                ),
+                "strength_backward": max(
+                    0.0, min(1.0, a.strength_backward + sign * CAP_ASSOC_STRENGTH * 0.8)
+                ),
+            }
+            return before, after
+        if target_kind == AdaptationTarget.PREFERENCE_ATTRIBUTE:
+            c = self.store.concepts.get(target_id)
+            if c is None:
+                return {}, {}
+            attr = next((x for x in c.attributes if x.key == attribute_key and x.active), None)
+            if attr is None:
+                return {}, {}
+            before = {"confidence": float(attr.confidence)}
+            after = {
+                "confidence": max(
+                    0.05, min(1.0, attr.confidence + sign * CAP_PREF_CONFIDENCE)
+                )
+            }
+            return before, after
+        if target_kind == AdaptationTarget.IDENTITY_CONCEPT:
+            c = self.store.concepts.get(target_id)
+            if c is None:
+                return {}, {}
+            before = {"confidence": float(c.confidence)}
+            after = {
+                "confidence": max(
+                    0.05, min(1.0, c.confidence + sign * CAP_IDENTITY_CONFIDENCE)
+                )
+            }
+            return before, after
+        if target_kind == AdaptationTarget.GOAL:
+            goal = self.store.goals.get(target_id) if hasattr(self.store, "goals") else None
+            if goal is None:
+                return {}, {}
+            importance = float(getattr(goal, "importance", 0.5) or 0.5)
+            before = {"importance": importance}
+            after = {
+                "importance": max(0.0, min(1.0, importance + sign * CAP_GOAL_IMPORTANCE))
+            }
+            return before, after
+        return {}, {}
+
+    def _apply_proposed(self, ad: Adaptation) -> bool:
+        """Apply planned ``after`` snapshot to the living target. Never births Experiences."""
+        if not ad.after:
+            before, after = self._plan_proposal_delta(
+                target_kind=ad.target_kind,
+                target_id=ad.target_id,
+                kind=ad.kind,
+                attribute_key=ad.attribute_key,
+            )
+            if not after:
+                return False
+            if not ad.before:
+                ad.before = before
+            ad.after = after
+
+        if ad.target_kind == AdaptationTarget.CONCEPT:
+            c = self.store.concepts.get(ad.target_id)
+            if c is None or not c.active:
+                return False
+            if not ad.before:
+                ad.before = {"strength": float(c.strength), "confidence": float(c.confidence)}
+            c.strength = float(ad.after.get("strength", c.strength))
+            c.confidence = float(ad.after.get("confidence", c.confidence))
+            return True
+        if ad.target_kind == AdaptationTarget.ASSOCIATION:
+            a = self.store.associations.get(ad.target_id)
+            if a is None or not a.active:
+                return False
+            if not ad.before:
+                ad.before = {
+                    "strength_forward": float(a.strength_forward),
+                    "strength_backward": float(a.strength_backward),
+                }
+            a.strength_forward = float(ad.after.get("strength_forward", a.strength_forward))
+            a.strength_backward = float(ad.after.get("strength_backward", a.strength_backward))
+            return True
+        if ad.target_kind == AdaptationTarget.PREFERENCE_ATTRIBUTE:
+            c = self.store.concepts.get(ad.target_id)
+            if c is None:
+                return False
+            attr = next((x for x in c.attributes if x.key == ad.attribute_key), None)
+            if attr is None:
+                return False
+            if not ad.before:
+                ad.before = {"confidence": float(attr.confidence)}
+            attr.confidence = float(ad.after.get("confidence", attr.confidence))
+            return True
+        if ad.target_kind == AdaptationTarget.IDENTITY_CONCEPT:
+            c = self.store.concepts.get(ad.target_id)
+            if c is None:
+                return False
+            if not ad.before:
+                ad.before = {"confidence": float(c.confidence)}
+            c.confidence = float(ad.after.get("confidence", c.confidence))
+            self.validation.record_confidence(
+                ConfidenceDelta(
+                    time(),
+                    ad.target_id,
+                    "identity_concept",
+                    ad.before.get("confidence", c.confidence),
+                    c.confidence,
+                    "learning_assent",
+                )
+            )
+            return True
+        if ad.target_kind == AdaptationTarget.GOAL:
+            goal = self.store.goals.get(ad.target_id) if hasattr(self.store, "goals") else None
+            if goal is None:
+                return False
+            if not ad.before:
+                ad.before = {"importance": float(getattr(goal, "importance", 0.5) or 0.5)}
+            goal.importance = float(ad.after.get("importance", getattr(goal, "importance", 0.5)))
+            return True
+        return False
+
+    def _adapt_goals_from_reflection(
+        self,
+        exp: Experience,
+        *,
+        reinforce: bool,
+        reflective_ids: list[str],
+        evidence_ids: list[str],
+        sleep_batch_id: str,
+    ) -> list[Adaptation]:
+        """Nudge active goal importance when reflection text overlaps the goal title.
+
+        Low-impact automatic (Gate A). Never invents goals or Experiences.
+        """
+        if not reinforce:
+            return []
+        meta = exp.metadata
+        if isinstance(meta, dict):
+            meta_blob = " ".join(str(v) for v in meta.values())
+        else:
+            meta_blob = str(meta or "")
+        blob = f"{exp.summary or ''} {meta_blob}".lower()
+        out: list[Adaptation] = []
+        for goal in list(self.store.active_goals())[:8]:
+            title = (goal.title or "").strip()
+            if len(title) < 3:
+                continue
+            tokens = [t for t in title.lower().split() if len(t) >= 3]
+            if not tokens:
+                continue
+            if not any(t in blob for t in tokens):
+                continue
+            ad = self._adapt_goal(
+                goal.id,
+                delta=CAP_GOAL_IMPORTANCE * 0.75,
+                reflective_ids=reflective_ids,
+                evidence_ids=evidence_ids,
+                sleep_batch_id=sleep_batch_id,
+                summary=f"Increased importance of goal '{title}' from reflection.",
+            )
+            if ad:
+                out.append(ad)
+                break
+        return out
+
+    def _adapt_goal(
+        self,
+        goal_id: str,
+        *,
+        delta: float,
+        reflective_ids: list[str],
+        evidence_ids: list[str],
+        sleep_batch_id: str,
+        summary: str,
+    ) -> Adaptation | None:
+        goal = self.store.goals.get(goal_id)
+        if goal is None or getattr(goal, "status", "active") != "active":
+            return None
+        delta = max(-CAP_GOAL_IMPORTANCE, min(CAP_GOAL_IMPORTANCE, delta))
+        before = {"importance": float(goal.importance)}
+        goal.importance = max(0.0, min(1.0, float(goal.importance) + delta))
+        after = {"importance": float(goal.importance)}
+        ad = Adaptation(
+            id=new_id("adp"),
+            kind=AdaptationKind.REINFORCE if delta >= 0 else AdaptationKind.WEAKEN,
+            target_kind=AdaptationTarget.GOAL,
+            target_id=goal_id,
+            governance=GovernanceClass.AUTOMATIC,
+            before=before,
+            after=after,
+            reflective_experience_ids=list(reflective_ids),
+            evidence_experience_ids=list(evidence_ids),
+            sleep_batch_id=sleep_batch_id,
+            summary=summary,
+            created=time(),
+            applied=True,
+        )
+        self.store.adaptations[ad.id] = ad
+        self._applied += 1
+        self.validation.record_learning(
+            action="apply",
+            adaptation_id=ad.id,
+            target_kind="goal",
+            target_id=goal_id,
+            apply=1,
+            goal_evolution=1,
+            sleep_batch_id=sleep_batch_id or "",
         )
         return ad
 
@@ -655,6 +951,12 @@ class LearningOrgan:
                 return None
             cur = {"confidence": c.confidence}
             c.confidence = before.get("confidence", c.confidence)
+        elif ad.target_kind == AdaptationTarget.GOAL:
+            goal = self.store.goals.get(ad.target_id)
+            if goal is None:
+                return None
+            cur = {"importance": float(goal.importance)}
+            goal.importance = before.get("importance", goal.importance)
         else:
             return None
         rb = Adaptation(

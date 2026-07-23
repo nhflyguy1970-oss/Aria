@@ -2,22 +2,39 @@
 
 These APIs never become a second cognitive authority. They invoke the same
 Memory Authority path under ``ExecutionMode.READ_ONLY`` and project structured
-read models for hosts and diagnostics.
+read models for hosts and diagnostics. B29 redaction applies at this boundary.
 """
 
 from __future__ import annotations
 
 from typing import Any, TYPE_CHECKING
 
+from acm.authority.redaction import (
+    build_redaction_context,
+    policy_for_engine,
+    redact_inspect_view,
+)
+
 if TYPE_CHECKING:
     from acm.api.engine import CognitiveEngine
+
+
+def _finalize(engine: CognitiveEngine, view: dict[str, Any], *, cue: str = "", who: str | None = None) -> dict[str, Any]:
+    policy = policy_for_engine(engine)
+    ctx = build_redaction_context(
+        engine,
+        cue=cue or str(view.get("cue") or ""),
+        intent=str(view.get("intent") or ""),
+        who=who,
+    )
+    return redact_inspect_view(view, policy=policy, ctx=ctx)
 
 
 def inspect_reconstruction(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
     """Reconstruction read-model without reconsolidation."""
     result = engine.inspect(cue)
     payload = result.get("organ_payload") or {}
-    return {
+    view = {
         "schema": "acm.inspect.reconstruction.v1",
         "cue": cue,
         "intent": result.get("intent"),
@@ -34,12 +51,15 @@ def inspect_reconstruction(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
         "execution_mode": (result.get("diagnostics") or {}).get("execution_mode"),
         "fingerprint": engine.store_fingerprint(),
     }
+    return _finalize(engine, view, cue=cue)
 
 
 def inspect_evidence(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
     """Evidence / provenance read-model without store mutation."""
+    from acm.authority.evidence_present import present_memory_evidence
+
     result = engine.inspect(cue)
-    return {
+    view = {
         "schema": "acm.inspect.evidence.v1",
         "cue": cue,
         "intent": result.get("intent"),
@@ -54,6 +74,9 @@ def inspect_evidence(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
         "execution_mode": (result.get("diagnostics") or {}).get("execution_mode"),
         "fingerprint": engine.store_fingerprint(),
     }
+    finalized = _finalize(engine, view, cue=cue)
+    finalized["presentation"] = present_memory_evidence(finalized, engine=engine)
+    return finalized
 
 
 def inspect_confidence(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
@@ -63,7 +86,7 @@ def inspect_confidence(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
     with read_only():
         certain = engine.how_certain_am_i(cue)
         result = engine.inspect(cue)
-    return {
+    view = {
         "schema": "acm.inspect.confidence.v1",
         "cue": cue,
         "intent": result.get("intent"),
@@ -76,6 +99,7 @@ def inspect_confidence(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
         "execution_mode": "read_only",
         "fingerprint": engine.store_fingerprint(),
     }
+    return _finalize(engine, view, cue=cue)
 
 
 def inspect_identity(engine: CognitiveEngine, *, who: str = "user") -> dict[str, Any]:
@@ -83,7 +107,7 @@ def inspect_identity(engine: CognitiveEngine, *, who: str = "user") -> dict[str,
     cue = "Who am I?" if who == "user" else "Who are you?"
     result = engine.inspect(cue)
     snap = engine.identity_snapshot()
-    return {
+    view = {
         "schema": "acm.inspect.identity.v1",
         "who": who,
         "cue": cue,
@@ -99,6 +123,7 @@ def inspect_identity(engine: CognitiveEngine, *, who: str = "user") -> dict[str,
         "execution_mode": (result.get("diagnostics") or {}).get("execution_mode"),
         "fingerprint": engine.store_fingerprint(),
     }
+    return _finalize(engine, view, cue=cue, who=who)
 
 
 def inspect_conflict(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
@@ -117,7 +142,7 @@ def inspect_conflict(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
     recon = remembered.reconstruction or {}
     if not competing:
         competing = list(recon.get("competing") or [])[:8]
-    return {
+    view = {
         "schema": "acm.inspect.conflict.v1",
         "cue": cue,
         "intent": result.get("intent"),
@@ -131,3 +156,4 @@ def inspect_conflict(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
         "execution_mode": (result.get("diagnostics") or {}).get("execution_mode"),
         "fingerprint": engine.store_fingerprint(),
     }
+    return _finalize(engine, view, cue=cue)

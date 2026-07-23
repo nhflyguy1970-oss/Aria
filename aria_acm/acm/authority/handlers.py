@@ -358,9 +358,14 @@ class CognitiveOrganHandlers:
         )
 
     def _reflection(self, request: str) -> OrganContribution:
+        from acm.reflection.explain import explain_reflection
+
         thought = self.engine.what_do_i_think(request)
-        raw_answer = thought.get("summary") or thought.get("answer")
-        text = sanitize_cognitive_text(raw_answer if isinstance(raw_answer, str) else None)
+        explanation = explain_reflection(thought if isinstance(thought, dict) else {})
+        raw_answer = thought.get("summary") or thought.get("answer") or explanation
+        text = sanitize_cognitive_text(
+            explanation if explanation else (raw_answer if isinstance(raw_answer, str) else None)
+        )
         return OrganContribution(
             organ=ORGAN_REFLECTION,
             memory=text,
@@ -371,7 +376,7 @@ class CognitiveOrganHandlers:
             ambiguous=bool(thought.get("hypotheses")),
             cue_matched=not bool(thought.get("insufficient_evidence")),
             reflective=list(thought.get("outcomes") or []),
-            reconstruction_steps=["reflection.what_do_i_think"],
+            reconstruction_steps=["reflection.what_do_i_think", "reflection.explain"],
             substrate_touched=("cognitive_store",),
         )
 
