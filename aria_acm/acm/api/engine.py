@@ -756,7 +756,10 @@ class CognitiveEngine:
 
     def what_do_i_think(self, cue: str) -> dict[str, Any]:
         """Cognitive question M6: What do I think about what I remember?"""
-        self.context = infer_context(cue, self.context)
+        from acm.authority.mode import is_read_only
+
+        if not is_read_only():
+            self.context = infer_context(cue, self.context)
         has_goal = bool(self.store.active_goals())
         allocation = self.attention.allocate(
             cue, has_open_goal=has_goal, context_tags=self.context.tags
@@ -769,14 +772,15 @@ class CognitiveEngine:
             attention_class=allocation.attention_class,
         )
         self._reflect_count += 1
-        for cid in evaluation.activated_concept_ids[:4]:
-            self.attention.invest(
-                cid,
-                delta=0.02,
-                source="reflection",
-                factors=["reflection"],
-                summary="Reflection invested priority.",
-            )
+        if not is_read_only():
+            for cid in evaluation.activated_concept_ids[:4]:
+                self.attention.invest(
+                    cid,
+                    delta=0.02,
+                    source="reflection",
+                    factors=["reflection"],
+                    summary="Reflection invested priority.",
+                )
         return evaluation.to_public()
 
     def what_have_i_learned(self, cue: str = "") -> dict[str, Any]:
@@ -1044,6 +1048,8 @@ class CognitiveEngine:
         cue: str = "",
     ) -> dict[str, Any]:
         """Apply Learning from a Reflective Experience (explicit online adaptation)."""
+        from acm.authority.mode import is_read_only
+
         rid = reflective_experience_id
         if not rid and cue:
             thought = self.what_do_i_think(cue)
@@ -1056,17 +1062,18 @@ class CognitiveEngine:
             }
         adaptations = self.learning.learn_from_reflection(rid)
         self._learn_count += 1
-        for a in adaptations:
-            if a.applied and a.target_kind.value == "concept" and a.target_id:
-                self.attention.invest(
-                    a.target_id,
-                    delta=0.03,
-                    source="learning",
-                    factors=["learning"],
-                    summary="Learning invested priority.",
-                )
-                self.forgetting.reactivate(a.target_id, source="learning", steps=1)
-                self.confidence.evolve_from_learning(a.target_id, reinforce=True)
+        if not is_read_only():
+            for a in adaptations:
+                if a.applied and a.target_kind.value == "concept" and a.target_id:
+                    self.attention.invest(
+                        a.target_id,
+                        delta=0.03,
+                        source="learning",
+                        factors=["learning"],
+                        summary="Learning invested priority.",
+                    )
+                    self.forgetting.reactivate(a.target_id, source="learning", steps=1)
+                    self.confidence.evolve_from_learning(a.target_id, reinforce=True)
         self.validation.record_lifecycle(
             LifecycleEvent(time(), MemoryVerb.LEARN.value, rid, f"adaptations:{len(adaptations)}")
         )
@@ -1146,8 +1153,11 @@ class CognitiveEngine:
 
     def remember(self, query: str) -> RememberResult:
         """Active Remembering — reconstructs via shared Cognitive Activation Architecture."""
+        from acm.authority.mode import is_read_only
+
         t0 = perf_counter()
-        self.context = infer_context(query, self.context)
+        if not is_read_only():
+            self.context = infer_context(query, self.context)
         has_goal = bool(self.store.active_goals())
         allocation = self.attention.allocate(
             query, has_open_goal=has_goal, context_tags=self.context.tags
@@ -1280,10 +1290,101 @@ class CognitiveEngine:
         The language model never chooses which organ answers. Infrastructure never
         terminates a cognitive request (D040).
         """
+        from acm.authority.mode import current_execution_mode
         from acm.authority.pipeline import CognitiveResponsePipeline
 
         result = CognitiveResponsePipeline(self).respond(request)
-        return result.to_public()
+        public = result.to_public()
+        diagnostics = dict(public.get("diagnostics") or {})
+        diagnostics["execution_mode"] = current_execution_mode().value
+        public["diagnostics"] = diagnostics
+        return public
+
+    def inspect(self, cue: str) -> dict[str, Any]:
+        """Read-only diagnostic reconstruction (B07).
+
+        Same classify→route→dispatch→speak path as ``cognitive_respond``, but
+        under ``ExecutionMode.READ_ONLY``: no reconsolidation, reflective birth,
+        learning adaptations, working-buffer writes, teach encode, or prediction/
+        reconciliation/simulation store inserts.
+        """
+        from acm.authority.mode import read_only
+
+        with read_only():
+            return self.cognitive_respond(cue)
+
+    def inspect_reconstruction(self, cue: str) -> dict[str, Any]:
+        """B08 façade: reconstruction read-model (read-only)."""
+        from acm.authority.inspect_api import inspect_reconstruction
+
+        return inspect_reconstruction(self, cue)
+
+    def inspect_evidence(self, cue: str) -> dict[str, Any]:
+        """B08 façade: evidence/provenance read-model (read-only)."""
+        from acm.authority.inspect_api import inspect_evidence
+
+        return inspect_evidence(self, cue)
+
+    def inspect_confidence(self, cue: str) -> dict[str, Any]:
+        """B08 façade: confidence/uncertainty read-model (read-only)."""
+        from acm.authority.inspect_api import inspect_confidence
+
+        return inspect_confidence(self, cue)
+
+    def inspect_identity(self, *, who: str = "user") -> dict[str, Any]:
+        """B08 façade: identity read-model (read-only)."""
+        from acm.authority.inspect_api import inspect_identity
+
+        return inspect_identity(self, who=who)
+
+    def inspect_conflict(self, cue: str) -> dict[str, Any]:
+        """B08 façade: conflict/ambiguity read-model (read-only)."""
+        from acm.authority.inspect_api import inspect_conflict
+
+        return inspect_conflict(self, cue)
+
+    def store_fingerprint(self) -> dict[str, Any]:
+        """Integrity fingerprint for diagnostic zero-write assertions (B07)."""
+        import hashlib
+        import json
+
+        from acm.persistence.codec import export_store
+
+        payload = export_store(self.store)
+        buffer_items = [
+            {
+                "kind": getattr(i, "kind", ""),
+                "ref_id": getattr(i, "ref_id", ""),
+                "label": getattr(i, "label", ""),
+            }
+            for i in self.buffer.items()
+        ]
+        buffer_digest = hashlib.sha256(
+            json.dumps(buffer_items, sort_keys=True, default=str).encode()
+        ).hexdigest()
+        context_digest = hashlib.sha256(
+            json.dumps(
+                {
+                    "tags": list(getattr(self.context, "tags", ()) or ()),
+                    "activity": getattr(self.context, "activity", "") or "",
+                    "place": getattr(self.context, "place", "") or "",
+                },
+                sort_keys=True,
+                default=str,
+            ).encode()
+        ).hexdigest()
+        return {
+            "store_checksum": payload.get("checksum"),
+            "buffer_digest": buffer_digest,
+            "context_digest": context_digest,
+            "concept_count": len(self.store.concepts),
+            "experience_count": len(self.store.experiences),
+            "association_count": len(self.store.associations),
+            "prediction_count": len(self.store.predictions),
+            "reconciliation_count": len(self.store.reconciliations),
+            "adaptation_count": len(self.store.adaptations),
+            "simulation_count": len(getattr(self.store, "simulations", {}) or {}),
+        }
 
     def speak_cognitive_result(self, result: dict[str, Any] | Any) -> str:
         """Faithful speech for a Cognitive Memory Result — never invents memory."""
@@ -1331,6 +1432,18 @@ class CognitiveEngine:
 
     def reject_identity(self, proposal_id: str) -> dict[str, Any]:
         return self.identity.reject(proposal_id)
+
+    def organ_view(self, organ: str) -> dict[str, Any]:
+        """B27: stable per-organ observability slice (singular harness preserved)."""
+        from acm.validation.organ_views import organ_view
+
+        return organ_view(self, organ)
+
+    def organ_views(self, organs: list[str] | None = None) -> dict[str, Any]:
+        """B27: multi-organ observability report."""
+        from acm.validation.organ_views import organ_views
+
+        return organ_views(self, organs)
 
     def metacognitive_sketch(self) -> dict[str, Any]:
         """Foundations for self-modeling — not consciousness."""

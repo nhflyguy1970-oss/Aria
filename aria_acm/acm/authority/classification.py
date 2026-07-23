@@ -346,6 +346,26 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
     (
         CognitiveIntent.REMEMBERING,
         re.compile(
+            r"\b(how\s+old|how\s+long\s+ago|when\s+did\s+(?:i|you)\s+(?:tell|teach|say)|"
+            r"age\s+of\s+(?:this|the|my)\s+memory|memory\s+age)\b",
+            re.I,
+        ),
+        "memory_age_cue",
+        0.94,
+    ),
+    (
+        CognitiveIntent.REMEMBERING,
+        re.compile(
+            r"\b(how\s+(?:accessible|strong)|why\s+(?:hard|difficult)\s+to\s+remember|"
+            r"memory\s+strength|less\s+accessible|harder\s+to\s+remember)\b",
+            re.I,
+        ),
+        "accessibility_cue",
+        0.94,
+    ),
+    (
+        CognitiveIntent.REMEMBERING,
+        re.compile(
             r"\bwhy\b.+\b(?:favorite|favourite)\b|"
             r"\bwhy\b.+\b(?:isn'?t|is\s+not|no\s+longer)\b.+\bactive\b|"
             r"\bwhy\b.+\bactive\b|"

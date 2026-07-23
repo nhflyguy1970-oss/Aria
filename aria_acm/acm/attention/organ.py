@@ -125,6 +125,10 @@ class AttentionOrgan:
         factors: list[str] | tuple[str, ...] = (),
         summary: str = "",
     ) -> PriorityEvent | None:
+        from acm.authority.mode import is_read_only
+
+        if is_read_only():
+            return None
         concept = self.store.concepts.get(concept_id)
         if concept is None:
             return None

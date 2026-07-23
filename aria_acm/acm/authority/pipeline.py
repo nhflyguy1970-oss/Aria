@@ -76,13 +76,18 @@ class CognitiveResponsePipeline:
         ``encode`` still applies D046 ingestion policy and content-level
         artifact rejection — tool/system/infra payloads never become memory
         even here, and interrogatives never reach this encode at all.
+
+        Read-only diagnostic mode (B07) never encodes teachings.
         """
+        from acm.authority.mode import is_read_only
         from acm.authority.teaching import detect_teaching
         from acm.provenance import TRUSTED_USER_STATEMENT
 
         teaching = detect_teaching(request)
         if not teaching.is_teaching:
             return []
+        if is_read_only():
+            return ["teaching_detected", "teaching_skipped_read_only"]
         path = ["teaching_detected"]
         encode_result = self.engine.encode(request, provenance=TRUSTED_USER_STATEMENT)
         if encode_result.get("encoded"):

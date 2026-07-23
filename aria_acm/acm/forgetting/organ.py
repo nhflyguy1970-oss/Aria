@@ -95,7 +95,12 @@ class ForgettingOrgan:
             level = AccessibilityLevel.HIGHLY_ACCESSIBLE
         else:
             level = AccessibilityLevel.ACCESSIBLE
-        self.store.accessibility[concept_id] = level.value
+        from acm.authority.mode import is_read_only
+
+        # Diagnostic mode may compute accessibility for activation without
+        # materializing new accessibility map entries (B07).
+        if not is_read_only():
+            self.store.accessibility[concept_id] = level.value
         return level
 
     def factor(self, concept_id: str) -> float:
@@ -154,6 +159,10 @@ class ForgettingOrgan:
         source: str = "cue",
         steps: int = 1,
     ) -> AccessibilityEvent | None:
+        from acm.authority.mode import is_read_only
+
+        if is_read_only():
+            return None
         concept = self.store.concepts.get(concept_id)
         if concept is None:
             return None

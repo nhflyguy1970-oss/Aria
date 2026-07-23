@@ -13,6 +13,16 @@ _UNKNOWN_PHRASES = {
     ),
 }
 
+_UNCERTAINTY_SPEECH = {
+    "competing_recollections": "Multiple remembered interpretations remain plausible.",
+    "known_unknown": "This looks familiar, but I cannot reconstruct a supported answer.",
+    "evidence": "Supporting experiences are sparse or incomplete.",
+    "prediction": "I cannot form a reliable likelihood from autobiographical evidence.",
+    "simulation": "Hypothetical futures are underdetermined by memory.",
+    "learning": "Learning adaptations have not settled this yet.",
+    "reflection": "Reflective evaluation remains uncertain.",
+}
+
 
 def speak_cognitive_result(result: CognitiveMemoryResult) -> str:
     """Render speech that *only* expresses the ACM Cognitive Memory Result.
@@ -37,6 +47,10 @@ def speak_cognitive_result(result: CognitiveMemoryResult) -> str:
                 return text
         base = _UNKNOWN_PHRASES[result.status]
         if result.uncertainty:
+            # B06: prefer kind-specific uncertainty speech when available.
+            kind_speech = _UNCERTAINTY_SPEECH.get(str(result.uncertainty))
+            if kind_speech and result.status != MemoryStatus.CONFLICTING:
+                return f"{base} {kind_speech}"
             return f"{base} ({result.uncertainty})"
         return base
 

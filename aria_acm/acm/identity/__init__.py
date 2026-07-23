@@ -2,7 +2,10 @@
 
 from acm.identity.assistant_profile import AssistantIdentityProfile
 from acm.identity.organ import IdentityOrgan, IdentitySnapshot, LineageEntry
-from acm.identity.pipeline_trace import trace_identity_pipeline
+from acm.identity.pipeline_trace import (
+    trace_assistant_identity_pipeline,
+    trace_identity_pipeline,
+)
 from acm.identity.policy import IdentityPolicyGate, IdentityProposal
 from acm.identity.rendering import (
     IdentityRenderTarget,
@@ -20,5 +23,6 @@ __all__ = [
     "LineageEntry",
     "isolate_identity_text",
     "is_relationship_identity_request",
+    "trace_assistant_identity_pipeline",
     "trace_identity_pipeline",
 ]

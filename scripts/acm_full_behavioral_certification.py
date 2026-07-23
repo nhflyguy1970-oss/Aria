@@ -344,6 +344,14 @@ def run_suite(base: str) -> list[dict]:
     for t in PRED_TEACH:
         check("Habit-teach", t, any_of=("remember", "Okay"), action_in=MEM)
 
+    # Re-anchor Saturday → fishing so prior Habit-update runs cannot poison Prediction.
+    check(
+        "Pred-anchor-teach",
+        "Every Saturday I usually go fishing.",
+        any_of=("remember", "Okay"),
+        action_in=MEM,
+    )
+
     # --- Prediction ---
     check(
         "Prediction",
@@ -560,16 +568,18 @@ def run_suite(base: str) -> list[dict]:
     )
 
     # --- Habit / recommendation updates ---
+    # Use Sunday (not Saturday) so this update cannot poison the Saturday→fishing
+    # prediction gate used earlier in this suite and on the next certification run.
     check(
         "Habit-update-teach",
-        "Every Saturday I usually go hiking instead of fishing.",
+        "Every Sunday I usually go hiking.",
         any_of=("remember", "Okay"),
         action_in=MEM,
     )
     check(
         "Habit-update",
-        "What am I likely to do next Saturday?",
-        any_of=("hiking", "fishing"),
+        "What am I likely to do next Sunday?",
+        any_of=("hiking", "Sunday", "sunday"),
         action_in=MEM,
         english=True,
     )

@@ -5,6 +5,7 @@ from __future__ import annotations
 from time import time
 from typing import TYPE_CHECKING, Any
 
+from acm.authority.mode import is_read_only
 from acm.experiences.kinds import CognitiveKind
 from acm.reflection.model import ReflectionEvaluation, ReflectionOutcome
 from acm.working.buffer import BufferItem
@@ -260,6 +261,8 @@ class ReflectionOrgan:
     def _birth_reflective_experience(
         self, evaluation: ReflectionEvaluation, reconstruction: Reconstruction
     ):
+        if is_read_only():
+            return None
         reflects_on = ""
         if reconstruction.experience_ids:
             reflects_on = reconstruction.experience_ids[0]
@@ -299,6 +302,8 @@ class ReflectionOrgan:
         )
 
     def _enter_working(self, evaluation: ReflectionEvaluation) -> None:
+        if is_read_only():
+            return
         if self.buffer is None or not evaluation.activated_concept_ids:
             return
         cid = evaluation.activated_concept_ids[0]

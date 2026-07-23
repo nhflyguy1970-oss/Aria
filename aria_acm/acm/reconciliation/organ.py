@@ -6,6 +6,7 @@ from time import time
 from typing import TYPE_CHECKING, Any
 
 from acm.associations.model import RelationKind
+from acm.authority.mode import is_read_only
 from acm.experiences.kinds import CognitiveKind
 from acm.reconciliation.model import ReconciliationRecord, ReconciliationStatus
 from acm.types import new_id
@@ -199,11 +200,13 @@ class ReconciliationOrgan:
             context_tags=context_tags,
             factors=factors,
         )
-        self.store.reconciliations[record.id] = record
-        self._reconciliations += 1
-
-        if self.confidence is not None:
-            self.confidence.apply_reconciliation(record)
+        if not is_read_only():
+            self.store.reconciliations[record.id] = record
+            self._reconciliations += 1
+            if self.confidence is not None:
+                self.confidence.apply_reconciliation(record)
+        else:
+            self._reconciliations += 1
 
         self.validation.record_reconciliation(
             action="reconcile",

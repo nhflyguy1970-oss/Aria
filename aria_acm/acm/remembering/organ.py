@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from acm.activation.engine import ActivationEngine
 from acm.activation.model import ActivationField
+from acm.authority.mode import is_read_only
 from acm.remembering.model import CompetingRecollection, Reconstruction
 from acm.types import ConceptRole, ExplanationClass
 from acm.validation.harness import ConfidenceDelta
@@ -91,6 +92,16 @@ _PREFER_DOMAIN = re.compile(
 _EVIDENCE_REQUEST = re.compile(
     r"\b((?:show|tell|give|list|what(?:'s|\s+is))\s+(?:me\s+)?(?:the\s+)?evidence|"
     r"evidence\s+for|supporting\s+evidence|what\s+supports)\b",
+    re.I,
+)
+_AGE_REQUEST = re.compile(
+    r"\b(how\s+old|how\s+long\s+ago|when\s+did\s+(?:i|you)\s+(?:tell|teach|say)|"
+    r"age\s+of\s+(?:this|the|my)\s+memory|memory\s+age)\b",
+    re.I,
+)
+_ACCESSIBILITY_REQUEST = re.compile(
+    r"\b(how\s+(?:accessible|strong)|why\s+(?:hard|difficult)\s+to\s+remember|"
+    r"memory\s+strength|less\s+accessible|harder\s+to\s+remember)\b",
     re.I,
 )
 
@@ -273,7 +284,7 @@ class RememberingOrgan:
             identity_query=False,
         )
         # Reactivate dormant seeds that made it into the field (strong-cue recovery)
-        if self.forgetting is not None:
+        if self.forgetting is not None and not is_read_only():
             for seed in field.seeds:
                 concept = self.store.concepts.get(seed.target_id)
                 if concept is not None and not concept.active:
@@ -281,14 +292,17 @@ class RememberingOrgan:
         ranked = field.ranked_concepts(limit=6)
         reconstruction = self._reconstruct(cue, field, ranked)
         # Evidence / lineage / summary introspection is read-only — never
-        # reconsolidate or otherwise mutate living memory.
-        if not (
+        # reconsolidate or otherwise mutate living memory. B07 execution mode
+        # also suppresses reconsolidation for arbitrary diagnostic cues.
+        if not is_read_only() and not (
             _is_evidence_request(cue)
             or _is_explanation_request(cue)
             or _is_answer_provenance_request(cue)
             or _is_personal_summary_request(cue)
             or _is_episodic_request(cue)
             or _is_semantic_autobio_request(cue)
+            or _is_age_request(cue)
+            or _is_accessibility_request(cue)
         ):
             self._reconsolidate(reconstruction, cue)
         displaced = self._enter_working(reconstruction)
@@ -391,6 +405,10 @@ class RememberingOrgan:
             return self._reconstruct_answer_provenance(cue, field, ranked)
         if _is_evidence_request(cue):
             return self._reconstruct_evidence(cue, field, ranked, tokens)
+        if _is_age_request(cue):
+            return self._reconstruct_age(cue, field, ranked, tokens)
+        if _is_accessibility_request(cue):
+            return self._reconstruct_accessibility(cue, field, ranked, tokens)
         if _is_explanation_request(cue):
             return self._reconstruct_explanation(cue, field, ranked)
         if _is_personal_summary_request(cue):
@@ -1099,6 +1117,127 @@ class RememberingOrgan:
             working_influenced=field.working_influenced,
         )
 
+    def _reconstruct_age(
+        self,
+        cue: str,
+        field: ActivationField,
+        ranked: list[Any],
+        tokens: list[str],
+    ) -> Reconstruction:
+        """B16: explain how old the relevant memory evidence is."""
+        now = time()
+        best_age = None
+        best_label = ""
+        for node in ranked[:6]:
+            concept = self.store.concepts.get(node.target_id)
+            if concept is None:
+                continue
+            for eid in list(concept.evidence_ids)[-5:]:
+                exp = self.store.experiences.get(eid)
+                if exp is None:
+                    continue
+                created = float(
+                    getattr(exp, "t_encoded", 0) or getattr(exp, "timestamp", 0) or 0
+                )
+                if created <= 0:
+                    continue
+                age_s = max(0.0, now - created)
+                label = concept.labels[0] if concept.labels else concept.id
+                if best_age is None or age_s < best_age:
+                    best_age = age_s
+                    best_label = label
+        if best_age is None:
+            answer = "I don't currently know how old that memory is."
+            conf = 0.0
+            expl = ExplanationClass.UNKNOWN.value
+        else:
+            if best_age < 3600:
+                age_txt = f"{int(best_age // 60) or 1} minutes"
+            elif best_age < 86400:
+                age_txt = f"{int(best_age // 3600) or 1} hours"
+            else:
+                age_txt = f"{int(best_age // 86400) or 1} days"
+            answer = (
+                f"The most recent supporting experience for {best_label} "
+                f"is about {age_txt} old."
+            )
+            conf = 0.82
+            expl = ExplanationClass.EXPERIENCE.value
+        return Reconstruction(
+            cue=cue,
+            answer=answer,
+            explanation_class=expl,
+            confidence=conf,
+            primary_concept_id=ranked[0].target_id if ranked else "",
+            primary_label=best_label,
+            activated_concept_ids=[n.target_id for n in ranked],
+            activation=field.to_public(),
+            cue_classes=list(field.cue_classes) + ["memory_age"],
+            goal_influenced=field.goal_influenced,
+            identity_influenced=field.identity_influenced,
+            context_influenced=field.context_influenced,
+            working_influenced=field.working_influenced,
+        )
+
+    def _reconstruct_accessibility(
+        self,
+        cue: str,
+        field: ActivationField,
+        ranked: list[Any],
+        tokens: list[str],
+    ) -> Reconstruction:
+        """B17: explain strength / accessibility for the activated memory."""
+        if not ranked:
+            return Reconstruction(
+                cue=cue,
+                answer="I don't currently know how accessible that memory is.",
+                explanation_class=ExplanationClass.UNKNOWN.value,
+                confidence=0.0,
+                activation=field.to_public(),
+                cue_classes=list(field.cue_classes) + ["accessibility"],
+            )
+        concept = self.store.concepts.get(ranked[0].target_id)
+        if concept is None:
+            return Reconstruction(
+                cue=cue,
+                answer="I don't currently know how accessible that memory is.",
+                explanation_class=ExplanationClass.UNKNOWN.value,
+                confidence=0.0,
+                activation=field.to_public(),
+                cue_classes=list(field.cue_classes) + ["accessibility"],
+            )
+        access = "accessible"
+        if self.forgetting is not None:
+            access = self.forgetting.ensure(concept.id).value
+        elif concept.id in self.store.accessibility:
+            access = str(self.store.accessibility[concept.id])
+        label = concept.labels[0] if concept.labels else concept.id
+        strength = float(concept.strength or 0.0)
+        conf_stored = float(concept.confidence or 0.0)
+        answer = (
+            f"{label} has strength {strength:.2f} and accessibility '{access}' "
+            f"(stored confidence {conf_stored:.2f})."
+        )
+        if access in ("dormant", "rarely_activated", "archived") and conf_stored >= 0.6:
+            answer += " It is supported but currently less accessible."
+        elif strength >= 0.7 and access in ("accessible", "highly_accessible"):
+            answer += " It is both strong and readily accessible."
+        return Reconstruction(
+            cue=cue,
+            answer=answer,
+            explanation_class=ExplanationClass.EXPERIENCE.value,
+            confidence=0.85,
+            primary_concept_id=concept.id,
+            primary_label=label,
+            activated_concept_ids=[n.target_id for n in ranked],
+            activation=field.to_public(),
+            cue_classes=list(field.cue_classes) + ["accessibility"],
+            goal_influenced=field.goal_influenced,
+            identity_influenced=field.identity_influenced,
+            context_influenced=field.context_influenced,
+            working_influenced=field.working_influenced,
+        )
+
     def _reconstruct_evidence(
         self,
         cue: str,
@@ -1640,6 +1779,8 @@ class RememberingOrgan:
     # --- side effects on cognition (not history) -------------------------------
 
     def _reconsolidate(self, reconstruction: Reconstruction, cue: str) -> None:
+        if is_read_only():
+            return
         cid = reconstruction.primary_concept_id
         if not cid:
             return
@@ -1682,6 +1823,8 @@ class RememberingOrgan:
             )
 
     def _enter_working(self, reconstruction: Reconstruction) -> list[BufferItem]:
+        if is_read_only():
+            return []
         if self.buffer is None or not reconstruction.primary_concept_id:
             return []
         concept = self.store.concepts.get(reconstruction.primary_concept_id)
@@ -1858,6 +2001,14 @@ def _attr_grounds_in_cue(
 
 def _is_evidence_request(cue: str) -> bool:
     return bool(_EVIDENCE_REQUEST.search(cue or ""))
+
+
+def _is_age_request(cue: str) -> bool:
+    return bool(_AGE_REQUEST.search(cue or ""))
+
+
+def _is_accessibility_request(cue: str) -> bool:
+    return bool(_ACCESSIBILITY_REQUEST.search(cue or ""))
 
 
 def _is_answer_provenance_request(cue: str) -> bool:

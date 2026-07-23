@@ -64,13 +64,13 @@ _OWNERSHIP_TABLE: dict[CognitiveIntent, tuple[str, tuple[str, ...], str]] = {
     ),
     CognitiveIntent.USER_IDENTITY: (
         ORGAN_IDENTITY,
-        (ORGAN_REMEMBERING, ORGAN_EXPERIENCES),
-        "user identity schema; remembering supplements biography",
+        (),
+        "user identity schema; Identity Organ sole speech authority (D043)",
     ),
     CognitiveIntent.IDENTITY: (
         ORGAN_IDENTITY,
-        (ORGAN_REMEMBERING,),
-        "generic identity — Identity Organ primary",
+        (),
+        "generic identity — Identity Organ sole speech authority",
     ),
     CognitiveIntent.AUTOBIOGRAPHY: (
         ORGAN_REMEMBERING,

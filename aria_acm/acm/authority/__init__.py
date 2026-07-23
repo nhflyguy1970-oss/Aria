@@ -18,6 +18,7 @@ from acm.authority.classification import (
     classify_request,
 )
 from acm.authority.dispatch import CognitiveDispatchEngine, DispatchOutcome, DispatchRecord
+from acm.authority.mode import ExecutionMode, current_execution_mode, is_read_only, read_only
 from acm.authority.pipeline import CognitiveResponsePipeline
 from acm.authority.protection import (
     MEMORY_PROTECTION_TAGS,
@@ -42,6 +43,7 @@ __all__ = [
     "CognitiveRoutingEngine",
     "DispatchOutcome",
     "DispatchRecord",
+    "ExecutionMode",
     "MEMORY_PROTECTION_TAGS",
     "MemoryIntent",
     "MemoryRequestClassification",
@@ -49,7 +51,10 @@ __all__ = [
     "RoutingDecision",
     "classify_memory_request",
     "classify_request",
+    "current_execution_mode",
+    "is_read_only",
     "ownership_for_intent",
+    "read_only",
     "reject_speech_contamination",
     "speak_cognitive_result",
 ]

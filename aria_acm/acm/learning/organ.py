@@ -5,6 +5,7 @@ from __future__ import annotations
 from time import time
 from typing import TYPE_CHECKING, Any
 
+from acm.authority.mode import is_read_only
 from acm.experiences.kinds import CognitiveKind
 from acm.learning.model import (
     Adaptation,
@@ -112,6 +113,8 @@ class LearningOrgan:
         *,
         sleep_batch_id: str = "",
     ) -> list[Adaptation]:
+        if is_read_only():
+            return []
         exp = self.store.experiences.get(reflective_experience_id)
         if exp is None:
             return []

@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.26.0-11",
+  "aria_acm_local_version": "aria-acm-v0.26.0-12",
   "source_project": "aria-cognitive-memory",
   "source_version": "0.26.0",
   "source_tag": "v0.26.0",
-  "source_commit": "051a506a8f34fc3efb8136c7ce11278b9b5607fc",
+  "source_commit": "675594d75bf428d77432250e33bf8f8e7368952d",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-22",
-  "tree_sha256": "74cf31f0126485dd5116aa69d99d6ca0188a1979b12abc2087a6a9eef2df94b8",
+  "tree_sha256": "a4236db49d39a378dab389212c95e0bf6907d7fd2d80c0b0781543647e54f4a9",
   "license": "Apache-2.0",
-  "certification_ref": "ACM full behavioral certification — relational entity label repair",
-  "promotion": "M3-ACM-cert-relations",
-  "promotion_decision": "Promote certified relational label repair: entity labels over generic role nouns; exclude predictive edges from relational autobiography; host presentation/routing repairs from same certification",
+  "certification_ref": "ACM engineering backlog cycle \u2014 diagnostics/inspect/explainability",
+  "promotion": "M3-ACM-backlog-cycle",
+  "promotion_decision": "Promote certified ACM backlog cycle: B07/B08 diagnostics, B27 views, B43-B45 identity tooling, B01/B02/B41 teach/evidence, B04-B06/B14/B16/B17/B19 explainability, B28 profiling. Two consecutive clean ACM+behavioral certifications.",
   "includes": [
     "D038",
     "D039",
@@ -23,5 +23,5 @@
     "D046",
     "D047"
   ],
-  "notes": "Promotion of ACM commit 051a506 (Repair relational entity labels for certification). BlackFly part_of survives prior project teaching. Aria host: fish presentation fragment guard; What have I caught routing; permanent full behavioral certification suite."
+  "notes": "Promotion of ACM commit 675594d. Standalone and Aria behavioral certification required after vendor."
 }

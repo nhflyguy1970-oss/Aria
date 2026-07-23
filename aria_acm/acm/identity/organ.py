@@ -938,11 +938,14 @@ class IdentityOrgan:
             target=IdentityRenderTarget.ASSISTANT,
             forbidden_values=forbidden,
         )
-        # Isolation must never erase operational name — re-seed if over-filtered
+        reseeded = False
+        # Isolation must never erase operational name — re-seed only if empty
+        # after true collisions (B45: operational claims are no longer over-filtered).
         if not text:
             name = self.profile.resolved_name(self.agent_id)
             text = f"My name is {name}."
             attr_confs = [0.95]
+            reseeded = True
 
         conf = max(attr_confs) if attr_confs else 0.95
         agent_body = {
@@ -968,6 +971,7 @@ class IdentityOrgan:
             "central_concepts": [],
             "source": "assistant_identity",
             "isolated": True,
+            "reseeded_operational_name": reseeded,
         }
 
     def _scrub_assistant_user_name_collision(self, user_name: str) -> None:

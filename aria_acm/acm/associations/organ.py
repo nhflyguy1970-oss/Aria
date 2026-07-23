@@ -134,6 +134,10 @@ class AssociationOrgan:
         identity_influenced: bool = False,
         temporal_weight: float = 0.0,
     ) -> Association | None:
+        from acm.authority.mode import is_read_only
+
+        if is_read_only():
+            return None
         assoc = self.store.associations.get(association_id)
         if assoc is None:
             return None

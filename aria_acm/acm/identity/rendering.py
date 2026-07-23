@@ -40,6 +40,8 @@ _ASSISTANT_SELF_CLAIM = re.compile(
 )
 
 _I_AM_KNOWN_AS = re.compile(r"\bi\s+am\s+known\s+as\s+([^.]+)\.?", re.I)
+_ASSISTANT_NAME_CLAIM = re.compile(r"^my\s+name\s+is\s+(.+?)\.?$", re.I)
+_ASSISTANT_ROLE_CLAIM = re.compile(r"^my\s+role\s+is\s+(.+?)\.?$", re.I)
 
 
 def is_relationship_identity_request(request: str) -> bool:
@@ -92,6 +94,24 @@ def isolate_identity_text(
             m = _I_AM_KNOWN_AS.search(part)
             if m:
                 # Legacy blend form — drop entirely from assistant identity speech
+                continue
+            # B45: operational name/role claims are protected from substring
+            # over-filtering. Drop only when the claimed value exactly matches a
+            # forbidden user identity value (true collision), not when a short
+            # forbidden token appears elsewhere in the sentence.
+            name_claim = _ASSISTANT_NAME_CLAIM.match(part.strip())
+            if name_claim:
+                claimed = name_claim.group(1).strip().rstrip(".").casefold()
+                if claimed and claimed in forbidden:
+                    continue
+                kept.append(part if part.endswith((".", "!", "?")) else part + ".")
+                continue
+            role_claim = _ASSISTANT_ROLE_CLAIM.match(part.strip())
+            if role_claim:
+                claimed = role_claim.group(1).strip().rstrip(".").casefold()
+                if claimed and claimed in forbidden:
+                    continue
+                kept.append(part if part.endswith((".", "!", "?")) else part + ".")
                 continue
         if target == IdentityRenderTarget.USER:
             # First-person assistant autobiography on the user path is bleed

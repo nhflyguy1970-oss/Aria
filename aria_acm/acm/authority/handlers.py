@@ -551,6 +551,35 @@ class CognitiveOrganHandlers:
             )
         ]
         associations = [{"id": aid} for aid in (recon.get("association_ids") or [])[:8]]
+        competing = list(recon.get("competing") or [])
+        # B04: when reconstruction is ambiguous, speak names semantic competitors
+        # instead of silently presenting only the leading candidate.
+        if remembered.ambiguous and competing:
+            previews: list[str] = []
+            for item in competing[:4]:
+                if isinstance(item, dict):
+                    bit = str(
+                        item.get("answer_preview")
+                        or item.get("label")
+                        or ""
+                    ).strip()
+                else:
+                    bit = str(item).strip()
+                if bit and bit not in previews:
+                    previews.append(bit)
+            if memory_text and memory_text not in previews:
+                previews.insert(0, memory_text)
+            if len(previews) >= 2:
+                joined = " and ".join(previews[:3])
+                memory_text = (
+                    f"Remembered evidence conflicts: {joined}. "
+                    f"Confidence is reduced ({int(round(float(remembered.confidence) * 100))}%)."
+                )
+            elif previews:
+                memory_text = (
+                    f"Remembered evidence conflicts around {previews[0]}. "
+                    f"Confidence is reduced ({int(round(float(remembered.confidence) * 100))}%)."
+                )
         return OrganContribution(
             organ=organ,
             memory=memory_text,

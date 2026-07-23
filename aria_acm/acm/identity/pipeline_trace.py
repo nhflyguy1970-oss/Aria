@@ -198,3 +198,103 @@ def trace_identity_pipeline(
         "stages": stages,
         "success_criterion": "Who am I? → Your name is Jeff. (known, no mentioned pollution)",
     }
+
+
+def trace_assistant_identity_pipeline(
+    engine: Any,
+    *,
+    query: str = "Who are you?",
+) -> dict[str, Any]:
+    """Observe the Assistant Identity recall path (D043 / B44).
+
+    Does not teach or mutate user identity. Asserts operational agent speech with
+    no user-name bleed.
+    """
+    stages: list[dict[str, Any]] = []
+    stages.append({"stage": "natural_language_received", "arrived": True, "value": query})
+
+    classification = engine.classify_request(query)
+    stages.append(
+        {
+            "stage": "intent_classification",
+            "arrived": True,
+            "value": classification if isinstance(classification, dict) else str(classification),
+        }
+    )
+
+    route = engine.route_request(query)
+    ownership = (route or {}).get("ownership") or {}
+    stages.append(
+        {
+            "stage": "ownership",
+            "arrived": ownership.get("primary_organ") == "identity",
+            "value": ownership,
+            "no_remembering_support": "remembering"
+            not in (ownership.get("supporting_organs") or ()),
+        }
+    )
+
+    rendered = engine.identity.render_assistant_identity()
+    stages.append(
+        {
+            "stage": "identity_organ_render",
+            "arrived": bool(rendered.get("answer")),
+            "value": {
+                "answer": rendered.get("answer"),
+                "confidence": rendered.get("confidence"),
+                "source": rendered.get("source"),
+                "reseeded_operational_name": rendered.get("reseeded_operational_name"),
+                "schemas": rendered.get("schemas"),
+            },
+        }
+    )
+
+    result = engine.cognitive_respond(query)
+    speech = engine.speak_cognitive_result(result) if result.get("is_memory_request") else ""
+    stages.append(
+        {
+            "stage": "cognitive_memory_result",
+            "arrived": True,
+            "value": {
+                "intent": result.get("intent"),
+                "status": result.get("status"),
+                "memory": result.get("memory"),
+                "confidence": result.get("confidence"),
+                "diagnostics": result.get("diagnostics"),
+            },
+        }
+    )
+    stages.append(
+        {
+            "stage": "faithful_language_rendering",
+            "arrived": bool(speech),
+            "value": speech,
+        }
+    )
+
+    user = engine.identity.schema_concept("user")
+    user_names = {
+        a.value.casefold()
+        for a in user.attributes
+        if a.key == "name" and a.active and a.value
+    }
+    agent_name = engine.identity.profile.resolved_name(engine.agent_id)
+    memory = (result.get("memory") or speech or "").lower()
+    bleed = any(n and n in memory for n in user_names if n != agent_name.casefold())
+    ok = (
+        result.get("intent") in ("assistant_identity", "identity")
+        and bool(result.get("memory") or speech)
+        and agent_name.lower() in memory
+        and not bleed
+        and "your name is" not in memory
+    )
+    return {
+        "ok": ok,
+        "query": query,
+        "stages": stages,
+        "user_bleed": bleed,
+        "operational_name": agent_name,
+        "success_criterion": (
+            f"Who are you? → operational name {agent_name!r}; no user identity bleed"
+        ),
+    }

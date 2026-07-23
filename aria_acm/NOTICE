@@ -4,7 +4,18 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M3-ACM-cert-relations):
+Source pin (M3-ACM-backlog-cycle):
+  tag:    v0.26.0
+  commit: 675594d75bf428d77432250e33bf8f8e7368952d
+  version harvested from pin: 0.26.0
+  decision: Engineering backlog cycle — diagnostics, inspect APIs, explainability
+  includes: D038–D047 · Teaching Recognition · Read-only diagnostics (B07) ·
+            Inspect façades (B08) · Organ views (B27) · Identity docs/tooling
+            (B43–B45) · Teach/query + evidence (B01/B02/B41) · Explainability
+            (B04–B06, B14, B16, B17, B19) · Memory profiling (B28)
+
+Prior pin (M3-ACM-cert-relations):
+Prior pin (M3-ACM-cert-relations):
   tag:    v0.26.0
   commit: 051a506a8f34fc3efb8136c7ce11278b9b5607fc
   version harvested from pin: 0.26.0

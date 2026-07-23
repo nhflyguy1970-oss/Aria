@@ -7,6 +7,7 @@ from time import time
 from typing import TYPE_CHECKING, Any
 
 from acm.associations.model import RelationKind
+from acm.authority.mode import is_read_only
 from acm.prediction.model import PredictedOutcome, Prediction
 from acm.types import new_id
 
@@ -245,7 +246,8 @@ class PredictionOrgan:
                 created=time(),
                 metadata={"insufficient_autobiographical_evidence": True},
             )
-            self.store.predictions[pred.id] = pred
+            if not is_read_only():
+                self.store.predictions[pred.id] = pred
             self._last_prediction_id = pred.id
             self._predictions += 1
             self.validation.record_prediction(
@@ -506,7 +508,8 @@ class PredictionOrgan:
                 "conflict_labels": conflict_labels,
             },
         )
-        self.store.predictions[pred.id] = pred
+        if not is_read_only():
+            self.store.predictions[pred.id] = pred
         self._last_prediction_id = pred.id
         self._predictions += 1
         self.validation.record_prediction(

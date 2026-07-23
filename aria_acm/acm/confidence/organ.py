@@ -54,7 +54,20 @@ class ConfidenceOrgan:
             bits = [
                 f"{self._label(s.target_id)}={s.value:.2f}" for s in snaps[:4]
             ]
+            # B05: include factor narrative from the strongest snapshot.
+            top = max(snaps, key=lambda s: s.value)
+            factor_bits = []
+            for k, v in list((top.factors or {}).items())[:5]:
+                if k == "stored":
+                    continue
+                sign = "+" if v >= 0 else ""
+                factor_bits.append(f"{k}:{sign}{v:.2f}")
+            explain = (top.explain or "").strip()
             answer = f"Memory confidence (~{overall:.0%}): " + "; ".join(bits)
+            if factor_bits:
+                answer += ". Factors: " + ", ".join(factor_bits)
+            if explain:
+                answer += f". {explain}"
         return {
             "question": "How certain am I that this memory is accurate?",
             "answer": answer,

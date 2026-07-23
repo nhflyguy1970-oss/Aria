@@ -5,6 +5,7 @@ from __future__ import annotations
 from time import time
 from typing import TYPE_CHECKING, Any
 
+from acm.authority.mode import is_read_only
 from acm.simulation.model import HypotheticalStep, Simulation
 from acm.types import new_id
 
@@ -180,7 +181,8 @@ class SimulationOrgan:
                 hypothetical=True,
                 metadata={"counterfactual": b > 0},
             )
-            self.store.simulations[sim.id] = sim
+            if not is_read_only():
+                self.store.simulations[sim.id] = sim
             sims.append(sim)
             self._simulations += 1
             self.validation.record_simulation(
