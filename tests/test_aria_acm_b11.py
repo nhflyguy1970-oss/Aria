@@ -1,4 +1,4 @@
-"""Aria promotion gates — ACM v0.37.0 B09 Diagnostic Safety Policy."""
+"""Aria promotion gates — ACM v0.37.0 B11 Preference Editing UX."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 
-def test_b09_pin() -> None:
+def test_b11_pin() -> None:
     data = json.loads(
         (Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json").read_text()
     )
@@ -15,15 +15,14 @@ def test_b09_pin() -> None:
     assert data["promotion"] == "B11-PREFERENCE-EDIT"
 
 
-def test_b09_diagnostic_safety_parity() -> None:
+def test_b11_preference_edit_parity() -> None:
     from aria_acm.acm._version import __version__
     from aria_acm.acm.api.engine import CognitiveEngine
     from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
 
     assert __version__ == "0.37.0"
-    eng = CognitiveEngine(agent_id="aria-b09")
+    eng = CognitiveEngine(agent_id="aria-b11")
     eng.encode("My favorite color is blue.", pin=True, provenance=TRUSTED_USER_STATEMENT)
-    view = eng.inspect("What is my favorite color?")
-    assert view["safety_policy_applied"] is True
-    assert view["redaction_applied"] is True
-    assert "memory_store" not in str(view).lower()
+    out = eng.apply_preference_change(key="color", value="red")
+    assert out["status"] == "applied"
+    assert eng.inspect_preference("color")["active"]["value"] == "red"

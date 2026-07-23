@@ -50,12 +50,12 @@ def _speak(q: str) -> tuple[dict, str]:
 def test_m1ep_01_version_pin() -> None:
     ver = Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json"
     data = json.loads(ver.read_text())
-    assert data["source_version"] == "0.36.0"
-    assert data["source_tag"] == "v0.36.0"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.36.0-1"
+    assert data["source_version"] == "0.37.0"
+    assert data["source_tag"] == "v0.37.0"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.37.0-1"
     from aria_acm.acm._version import __version__
 
-    assert __version__ == "0.36.0"
+    assert __version__ == "0.37.0"
 
 
 @pytest.mark.m1ep

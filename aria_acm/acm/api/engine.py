@@ -112,6 +112,9 @@ class CognitiveEngine:
         self._debug_captures = DebugCaptureBuffer(
             max_captures=int(getattr(self.conversation_debug_policy, "max_captures", 64))
         )
+        from acm.authority.preference_edit import PreferencePolicyGate
+
+        self._preference_gate = PreferencePolicyGate()
         self.durable = None
         if persist_path:
             from acm.persistence import DurableCognitiveStore
@@ -1601,6 +1604,64 @@ class CognitiveEngine:
     def debug_captures_recent(self, limit: int = 20) -> list[dict[str, Any]]:
         """B10 — recent side-channel captures (not Experiences)."""
         return list(self._debug_captures.recent(limit=limit))
+
+    def inspect_preferences(self, *, key_prefix: str = "") -> dict[str, Any]:
+        """B11 — list active preferences (read-only)."""
+        from acm.authority.preference_edit import inspect_preferences
+
+        return inspect_preferences(self, key_prefix=key_prefix)
+
+    def inspect_preference(self, key: str) -> dict[str, Any]:
+        """B11 — single preference + version lineage (read-only)."""
+        from acm.authority.preference_edit import inspect_preference
+
+        return inspect_preference(self, key)
+
+    def preview_preference_change(
+        self, *, key: str, value: str = "", op: str = "set"
+    ) -> dict[str, Any]:
+        """B11 — preview preference edit without writing."""
+        from acm.authority.preference_edit import preview_preference_change
+
+        return preview_preference_change(self, key=key, value=value, op=op)  # type: ignore[arg-type]
+
+    def propose_preference_change(
+        self, *, key: str, value: str = "", op: str = "set", reason: str = "preference_edit"
+    ) -> dict[str, Any]:
+        """B11 — propose preference edit pending assent."""
+        from acm.authority.preference_edit import propose_preference_change
+
+        return propose_preference_change(
+            self, key=key, value=value, op=op, reason=reason  # type: ignore[arg-type]
+        )
+
+    def assent_preference_change(self, proposal_id: str) -> dict[str, Any]:
+        """B11 — assent pending preference proposal (encode + apply)."""
+        from acm.authority.preference_edit import assent_preference_change
+
+        return assent_preference_change(self, proposal_id)
+
+    def reject_preference_change(self, proposal_id: str) -> dict[str, Any]:
+        """B11 — reject pending preference proposal."""
+        from acm.authority.preference_edit import reject_preference_change
+
+        return reject_preference_change(self, proposal_id)
+
+    def cancel_preference_change(self, proposal_id: str) -> dict[str, Any]:
+        """B11 — cancel pending preference proposal."""
+        from acm.authority.preference_edit import cancel_preference_change
+
+        return cancel_preference_change(self, proposal_id)
+
+    def apply_preference_change(
+        self, *, key: str, value: str = "", op: str = "set", assent: bool = True
+    ) -> dict[str, Any]:
+        """B11 — trusted-host preference commit (or propose if assent=False)."""
+        from acm.authority.preference_edit import apply_preference_change
+
+        return apply_preference_change(
+            self, key=key, value=value, op=op, assent=assent  # type: ignore[arg-type]
+        )
 
     def inspect_reconstruction(self, cue: str) -> dict[str, Any]:
         """B08 façade: reconstruction read-model (read-only)."""
