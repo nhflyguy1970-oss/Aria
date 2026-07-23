@@ -125,8 +125,12 @@ def validate_ics_url(url: str) -> dict[str, Any]:
     u = (url or "").strip()
     if not u:
         return {"ok": False, "message": "URL required"}
-    if not u.startswith("http"):
-        return {"ok": False, "message": "URL must start with http(s)"}
+    from jarvis.security.url_guard import UnsafeURLError, assert_safe_fetch_url
+
+    try:
+        u = assert_safe_fetch_url(u)
+    except UnsafeURLError as exc:
+        return {"ok": False, "message": str(exc)}
     try:
         import urllib.request
         from datetime import date
@@ -135,6 +139,11 @@ def validate_ics_url(url: str) -> dict[str, Any]:
 
         req = urllib.request.Request(u, headers={"User-Agent": "Jarvis/3.2 Calendar"})
         with urllib.request.urlopen(req, timeout=15) as resp:
+            final = getattr(resp, "geturl", lambda: u)()
+            try:
+                assert_safe_fetch_url(final)
+            except UnsafeURLError as exc:
+                return {"ok": False, "message": str(exc)}
             body = resp.read().decode("utf-8", errors="ignore")
         if "BEGIN:VCALENDAR" not in body:
             return {"ok": False, "message": "Response is not a valid ICS calendar"}
@@ -171,7 +180,9 @@ def export_chat_with_memory(
     if memory_hits:
         lines.append("## Memories referenced\n")
         for h in memory_hits[:12]:
-            lines.append(f"- **{h.get('type', 'fact')}** ({(h.get('date') or '')[:10]}): {h.get('content', '')[:200]}")
+            lines.append(
+                f"- **{h.get('type', 'fact')}** ({(h.get('date') or '')[:10]}): {h.get('content', '')[:200]}"
+            )
         lines.append("")
     for m in messages:
         role = m.get("role", "?")
@@ -191,7 +202,9 @@ def memory_citations_from_context(context_block: str) -> list[dict[str, str]]:
             continue
         m = re.match(r"-\s*\*\*(\w+)\*\*\s*(?:\(([^)]+)\))?\s*:\s*(.+)", line)
         if m:
-            cites.append({"type": m.group(1), "date": m.group(2) or "", "content": m.group(3).strip()})
+            cites.append(
+                {"type": m.group(1), "date": m.group(2) or "", "content": m.group(3).strip()}
+            )
     return cites[:8]
 
 
@@ -205,17 +218,29 @@ def service_restart(name: str) -> dict[str, Any]:
         from jarvis.services import ensure_ollama
 
         ok = ensure_ollama(timeout=45)
-        return {"ok": ok, "service": svc, "message": "Ollama restarted" if ok else "Ollama failed to start"}
+        return {
+            "ok": ok,
+            "service": svc,
+            "message": "Ollama restarted" if ok else "Ollama failed to start",
+        }
     if svc == "comfyui":
         from jarvis.services import ensure_comfyui_nvidia
 
         ok = ensure_comfyui_nvidia(block=True, timeout=120)
-        return {"ok": ok, "service": svc, "message": "ComfyUI restarted" if ok else "ComfyUI failed — check logs"}
+        return {
+            "ok": ok,
+            "service": svc,
+            "message": "ComfyUI restarted" if ok else "ComfyUI failed — check logs",
+        }
     if svc in ("homeassistant", "ha"):
         from jarvis.ha_docker import ensure_homeassistant
 
         ok = ensure_homeassistant(block=True, timeout=90)
-        return {"ok": ok, "service": "homeassistant", "message": "Home Assistant restarted" if ok else "HA failed"}
+        return {
+            "ok": ok,
+            "service": "homeassistant",
+            "message": "Home Assistant restarted" if ok else "HA failed",
+        }
     return {"ok": False, "message": f"Unknown service: {name}"}
 
 

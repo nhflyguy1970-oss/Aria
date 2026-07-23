@@ -1,7 +1,7 @@
 # Aria Complete Platform Production Audit
 
 **Status:** Production-ready for single-operator workstation (with documented follow-ons)  
-**Checkpoint:** Post-audit validation & release (2026-07-23)  
+**Checkpoint:** Security Hardening RC-S1 complete (2026-07-23)  
 **ACM pin:** v0.45.1 / `aria-acm-v0.45.1-1` @ `b720cbb`  
 **Aria:** jarvis host + `aria_core`  
 **Aria Platform:** AI-Platform 0.1.0 (Alpha / RC1 Daily Use)
@@ -9,7 +9,7 @@
 ACM remains complete — this program did not add ACM cognitive capabilities.
 Fixes that touched ACM were **fail-closed durable load** only (data-loss bug).
 
-Companion reports: [`ARIA_ECOSYSTEM_ZERO_TRUST_CERTIFICATION.md`](ARIA_ECOSYSTEM_ZERO_TRUST_CERTIFICATION.md) · ACM `docs/PRODUCTION_READINESS_AUDIT.md`
+Companion reports: [`ARIA_ECOSYSTEM_ZERO_TRUST_CERTIFICATION.md`](ARIA_ECOSYSTEM_ZERO_TRUST_CERTIFICATION.md) · [`ARIA_SECURITY_HARDENING_RC_S1.md`](ARIA_SECURITY_HARDENING_RC_S1.md) · ACM `docs/PRODUCTION_READINESS_AUDIT.md`
 
 ---
 
@@ -59,8 +59,11 @@ Under `ARIA_ACM_PRIMARY`, legacy JSON/SQLite stores are forensic vaults, not SoT
 | `/api/tools/execute` arbitrary `cwd` | CRITICAL | **Fixed** — PROJECT_ROOT / DATA_DIR only |
 | Full B20/B36 Cap Bus assent UX | HIGH | **Deferred** (large host program) |
 | Multi-user session isolation | MEDIUM | **Deferred** — single-operator product |
-| Audio/VST/document path + ICS/URL SSRF hardening | HIGH | **Deferred** — next Security Hardening RC |
-| Browser `allow_risky` / trusted-device PIN timing | HIGH | **Deferred** — next Security Hardening RC |
+| Audio/VST/document path + ICS/URL SSRF hardening | HIGH | **Fixed** (RC-S1) |
+| Browser `allow_risky` / trusted-device / PIN timing | HIGH | **Fixed** (RC-S1) |
+| Uncensored reset auth + password policy | CRITICAL/HIGH | **Fixed** (RC-S1) |
+| PIN setup race | CRITICAL | **Fixed** (RC-S1) |
+| Journal wipe without confirm | HIGH | **Fixed** (RC-S1) |
 
 ### Security rationale
 
@@ -98,15 +101,16 @@ Media APIs that `resolve()` any readable path are arbitrary file read/process wh
 
 | Suite | ×2 | Result |
 |-------|----|--------|
-| Aria Core + host security gates | ×2 | **73 passed** |
+| Aria Core + host security gates | ×2 | **79 passed** |
 | Aria ACM promotion (`tests/test_aria_acm_*.py`) | ×2 | **198 passed** |
-| Aria shipped CI (`scripts/ci_check.py all`) | ×2 | **675 passed**, 1 skipped |
-| Host security regression (`test_aria_host_production_audit`) | ×2 | **12 passed** |
+| Aria shipped CI (`scripts/ci_check.py all`) | ×2 | **681 passed**, 1 skipped |
+| Host security regression (`test_aria_host_production_audit`) | ×2 | **18 passed** |
 | ACM full (`tests/`) | ×2 | **596 passed** |
 | ACM learning certification script | ×2 | **PASS** (exit 0) |
 | ACM cognitive + behavioral + performance | — | **PASS** |
 | AI-Platform (`tests/`) | ×2 | **798 passed** |
 | Vendor pin / no ACM drift | — | **VERIFIED** (`b720cbb` / `aria-acm-v0.45.1-1`) |
+| Security Hardening RC-S1 | — | **COMPLETE** — see `ARIA_SECURITY_HARDENING_RC_S1.md` |
 
 ### Full-tree inventory note
 
@@ -147,9 +151,11 @@ A naïve `pytest tests/` over the entire Aria tree reports **~78 failed / 9 erro
 6. **Fill empty AI-Platform compose/** — or delete scaffolding (product decision)  
 7. **Cache `system_prompt_from_acm`** — measured perf follow-on  
 8. **Full RC1 soak checklist** — process gate, not code defect  
-9. **Audio/VST/document path confinement + ICS/document SSRF** — Security Hardening RC  
-10. **Browser `allow_risky` / trusted-device / PIN compare_digest** — Security Hardening RC  
-11. **Recover stale full-tree pytest backlog** — separate test-hygiene program (not a production SoT blocker)
+9. **Audio/VST/document path confinement + ICS/document SSRF** — **Done (RC-S1)**  
+10. **Browser `allow_risky` / trusted-device / PIN compare_digest** — **Done (RC-S1)**  
+11. **Recover stale full-tree pytest backlog** — separate test-hygiene program (not a production SoT blocker)  
+12. **Coding-tool `$HOME` via `fs.resolve_path`** — intentional single-operator workflow; HTTP isolated  
+13. **Signed trusted-device tokens** — IP-bound registration sufficient for certified scope  
 
 ## Bugs permanently prevented
 
@@ -167,6 +173,12 @@ A naïve `pytest tests/` over the entire Aria tree reports **~78 failed / 9 erro
 | Unconfined video/storyboard paths | `test_video_paths_are_confined` |
 | Automation query-string secret | `test_automation_secret_rejects_query_only` |
 | Tools arbitrary cwd | `test_tools_cwd_must_be_under_project_or_data` |
+| SSRF private/metadata | `test_ssrf_guard_blocks_private_and_metadata` |
+| Audio/doc/image path escape | `test_audio_document_image_paths_confined` |
+| Browser file/private schemes | `test_browser_blocks_file_and_private_even_with_allow_risky` |
+| PIN timing compare | `test_pin_verify_uses_compare_digest` |
+| Weak uncensored password | `test_uncensored_password_min_length_12` |
+| Trusted-device IP spoof | `test_trusted_device_requires_ip_binding` |
 | Corrupt snapshot wipe | ACM `test_corrupt_snapshot_fail_closed` |
 | Boundary test always green | AI-Platform `test_workstation_boundary` |
 
@@ -184,4 +196,4 @@ A naïve `pytest tests/` over the entire Aria tree reports **~78 failed / 9 erro
 
 ### Combined verdict
 
-**Yes — Aria Core + Aria Platform remain production-ready for the certified single-operator workstation scope.** This post-audit validation checkpoint confirms prior CRITICAL/HIGH fixes remain intact, new media/automation/tool confinement is certified, CI includes host security gates, and repositories are ready for the dedicated **Security Hardening Release Candidate** (deferred HIGH items only — do not reopen architecture).
+**Yes — Aria Core + Aria Platform remain production-ready for the certified single-operator workstation scope.** Security Hardening RC-S1 closed deferred CRITICAL/HIGH host surfaces (path confinement, SSRF, browser, auth). Remaining deferred items are explicitly justified (coding-tool HOME, signed device tokens, packaging, Cap Bus UX) and do not block the certified deployment scope.

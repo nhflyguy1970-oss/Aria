@@ -92,31 +92,41 @@ def list_chains() -> list[dict]:
     """All chains: built-in software + user-defined."""
     out = []
     for chain_id, meta in SOFTWARE_CHAINS.items():
-        out.append({
-            "id": chain_id,
-            "label": meta["label"],
-            "description": meta.get("description", ""),
-            "engine": "ffmpeg",
-        })
+        out.append(
+            {
+                "id": chain_id,
+                "label": meta["label"],
+                "description": meta.get("description", ""),
+                "engine": "ffmpeg",
+            }
+        )
     cfg = _load_user_config()
     for chain_id, meta in (cfg.get("chains") or {}).items():
         if chain_id in SOFTWARE_CHAINS:
             continue
-        out.append({
-            "id": chain_id,
-            "label": meta.get("label", chain_id),
-            "description": meta.get("description", ""),
-            "engine": meta.get("engine", "vst"),
-            "plugin": meta.get("plugin", ""),
-        })
+        out.append(
+            {
+                "id": chain_id,
+                "label": meta.get("label", chain_id),
+                "description": meta.get("description", ""),
+                "engine": meta.get("engine", "vst"),
+                "plugin": meta.get("plugin", ""),
+            }
+        )
     return out
 
 
 def register_vst_plugin(name: str, path: str) -> dict:
-    """Register a VST3 plugin path for custom chains."""
+    """Register a VST3 plugin path for custom chains (DATA_DIR plugins only)."""
+    plugins_root = (DATA_DIR / "audio" / "vst_plugins").resolve()
+    plugins_root.mkdir(parents=True, exist_ok=True)
     plugin_path = Path(path).expanduser().resolve()
     if not plugin_path.is_file():
         raise FileNotFoundError(f"VST plugin not found: {plugin_path}")
+    try:
+        plugin_path.relative_to(plugins_root)
+    except ValueError as exc:
+        raise FileNotFoundError(f"VST plugin must be under {plugins_root}") from exc
     if not pedalboard_available():
         raise RuntimeError("pedalboard not installed — run ./scripts/install-ae5-vst-bridge.sh")
 
@@ -138,7 +148,9 @@ def status() -> dict:
         "ffmpeg": bool(ffmpeg),
         "pedalboard": pedalboard_available(),
         "chains": list_chains(),
-        "playback_chain": saved_vst_playback_chain() or os.getenv("JARVIS_VST_CHAIN", "").strip() or "flat",
+        "playback_chain": saved_vst_playback_chain()
+        or os.getenv("JARVIS_VST_CHAIN", "").strip()
+        or "flat",
         "live_chain": saved_vst_live_chain() or "off",
         "plugin_path": os.getenv("JARVIS_VST_PLUGIN_PATH", "").strip(),
         "user_plugins": _load_user_config().get("plugins", []),
@@ -156,9 +168,15 @@ def _process_ffmpeg(src: Path, filters: str, dest: Path) -> str:
 
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     cmd = [
-        ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
-        "-i", str(src),
-        "-af", filters,
+        ffmpeg,
+        "-y",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        str(src),
+        "-af",
+        filters,
         str(dest),
     ]
     try:
@@ -209,10 +227,12 @@ def process_file(
     output_path: str | Path | None = None,
 ) -> str:
     """Apply an EQ/VST chain to an audio file. Returns output path or ERROR: string."""
+    from jarvis.security.path_confine import resolve_audio_library_path
+
     chain_id = (chain_id or "flat").strip().lower()
-    src = Path(path).expanduser().resolve()
-    if not src.is_file():
-        return f"ERROR: File not found: {src}"
+    src = resolve_audio_library_path(path)
+    if src is None:
+        return "ERROR: File not found or path not allowed"
 
     if chain_id == "flat":
         return str(src)
@@ -220,15 +240,19 @@ def process_file(
     cfg = _load_user_config()
     user_chain = (cfg.get("chains") or {}).get(chain_id)
     if user_chain and user_chain.get("plugin"):
-        dest = Path(output_path) if output_path else (
-            PROCESSED_DIR / f"vst_{chain_id}_{src.stem}_{int(time.time())}.wav"
+        dest = (
+            Path(output_path)
+            if output_path
+            else (PROCESSED_DIR / f"vst_{chain_id}_{src.stem}_{int(time.time())}.wav")
         )
         return _process_pedalboard(src, user_chain["plugin"], dest)
 
     env_plugin = os.getenv("JARVIS_VST_PLUGIN_PATH", "").strip()
     if chain_id == "custom" and env_plugin:
-        dest = Path(output_path) if output_path else (
-            PROCESSED_DIR / f"vst_custom_{src.stem}_{int(time.time())}.wav"
+        dest = (
+            Path(output_path)
+            if output_path
+            else (PROCESSED_DIR / f"vst_custom_{src.stem}_{int(time.time())}.wav")
         )
         return _process_pedalboard(src, env_plugin, dest)
 
@@ -236,7 +260,9 @@ def process_file(
     if not meta or not meta.get("filters"):
         return f"ERROR: Unknown VST chain '{chain_id}'"
 
-    dest = Path(output_path) if output_path else (
-        PROCESSED_DIR / f"vst_{chain_id}_{src.stem}_{int(time.time())}.wav"
+    dest = (
+        Path(output_path)
+        if output_path
+        else (PROCESSED_DIR / f"vst_{chain_id}_{src.stem}_{int(time.time())}.wav")
     )
     return _process_ffmpeg(src, meta["filters"], dest)

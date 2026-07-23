@@ -51,6 +51,7 @@ def _week_key(d: date | None = None) -> str:
 def _week_range(week: str) -> tuple[str, str]:
     y, w = week.split("-W")
     from datetime import timedelta
+
     start = date.fromisocalendar(int(y), int(w), 1)
     end = start + timedelta(days=6)
     return start.isoformat(), end.isoformat()
@@ -103,7 +104,8 @@ def _format_bullet(b: dict, symbols: dict | None = None) -> str:
 
     prefix = _sym(b)
     sigs = "".join(
-        sym_map.get(s, s) for s in b.get("signifiers", [])
+        sym_map.get(s, s)
+        for s in b.get("signifiers", [])
         if s in ("important", "inspiration", "explore")
     )
     time_prefix = f"{b['time']} " if b.get("time") else ""
@@ -185,10 +187,12 @@ class BulletJournal(BujoMixin):
                 prev_clean = {k: v for k, v in prev.items() if k != "history"}
                 if prev_clean != current_clean:
                     hist = self._data.setdefault("history", [])
-                    hist.append({
-                        "ts": datetime.now(timezone.utc).isoformat(),
-                        "data": copy.deepcopy(prev_clean),
-                    })
+                    hist.append(
+                        {
+                            "ts": datetime.now(timezone.utc).isoformat(),
+                            "data": copy.deepcopy(prev_clean),
+                        }
+                    )
                     self._data["history"] = hist[-self.HISTORY_LIMIT :]
             except (json.JSONDecodeError, OSError):
                 pass
@@ -230,7 +234,9 @@ class BulletJournal(BujoMixin):
     def index_list(self) -> list[dict]:
         return self._data.get("index", [])
 
-    def index_update(self, entry_id: str, topic: str | None = None, pages: list[str] | None = None) -> dict | None:
+    def index_update(
+        self, entry_id: str, topic: str | None = None, pages: list[str] | None = None
+    ) -> dict | None:
         for e in self._data.get("index", []):
             if e.get("id") == entry_id:
                 if topic is not None:
@@ -408,7 +414,13 @@ class BulletJournal(BujoMixin):
         return None
 
     # --- Future Log ---
-    def future_add(self, month: str, content: str, bullet_type: str = "task", signifiers: list[str] | None = None) -> dict:
+    def future_add(
+        self,
+        month: str,
+        content: str,
+        bullet_type: str = "task",
+        signifiers: list[str] | None = None,
+    ) -> dict:
         fl = self._data.setdefault("future_log", {})
         fl.setdefault(month, [])
         b = _new_bullet(content, bullet_type, signifiers=signifiers, location=f"future:{month}")
@@ -440,7 +452,13 @@ class BulletJournal(BujoMixin):
             ml[month] = page
         return ml[month]
 
-    def monthly_add(self, content: str, bullet_type: str = "task", signifiers: list[str] | None = None, month: str | None = None) -> dict:
+    def monthly_add(
+        self,
+        content: str,
+        bullet_type: str = "task",
+        signifiers: list[str] | None = None,
+        month: str | None = None,
+    ) -> dict:
         mk = month or _month_key()
         page = self._ensure_monthly(mk)
         b = _new_bullet(content, bullet_type, signifiers=signifiers, location=f"monthly:{mk}")
@@ -475,8 +493,7 @@ class BulletJournal(BujoMixin):
                 "title": day_page.get("title", day_str),
                 "count": len(bullets),
                 "open_tasks": sum(
-                    1 for b in bullets
-                    if b.get("type") == "task" and b.get("status") == "open"
+                    1 for b in bullets if b.get("type") == "task" and b.get("status") == "open"
                 ),
             }
         notes = page.get("calendar_notes", {})
@@ -529,11 +546,15 @@ class BulletJournal(BujoMixin):
     ) -> dict:
         d = day or _today()
         page = self._ensure_daily(d)
-        parsed_time, body, _ = _parse_event_time(content) if bullet_type == "event" else (time, content, None)
+        parsed_time, body, _ = (
+            _parse_event_time(content) if bullet_type == "event" else (time, content, None)
+        )
         if bullet_type == "event" and not time:
             time = parsed_time
             content = body
-        b = _new_bullet(content, bullet_type, signifiers=signifiers, location=f"daily:{d}", time=time)
+        b = _new_bullet(
+            content, bullet_type, signifiers=signifiers, location=f"daily:{d}", time=time
+        )
         page["bullets"].append(b)
         self._auto_index_daily_page(d)
         self._auto_index_bullet(b)
@@ -636,8 +657,9 @@ class BulletJournal(BujoMixin):
         return False
 
     def photo_path(self, filename: str) -> Path | None:
-        fp = JOURNAL_PHOTOS_DIR / filename
-        return fp if fp.is_file() else None
+        from jarvis.security.path_confine import resolve_named_under
+
+        return resolve_named_under(JOURNAL_PHOTOS_DIR, filename)
 
     def daily_list_dates(self, limit: int = 30) -> list[str]:
         dates = sorted(self._data.get("daily_log", {}).keys(), reverse=True)
@@ -659,10 +681,14 @@ class BulletJournal(BujoMixin):
             wl[week] = page
         return wl[week]
 
-    def weekly_add(self, content: str, bullet_type: str = "task", week: str | None = None, **kw) -> dict:
+    def weekly_add(
+        self, content: str, bullet_type: str = "task", week: str | None = None, **kw
+    ) -> dict:
         wk = week or _week_key()
         page = self._ensure_weekly(wk)
-        b = _new_bullet(content, bullet_type, signifiers=kw.get("signifiers"), location=f"weekly:{wk}")
+        b = _new_bullet(
+            content, bullet_type, signifiers=kw.get("signifiers"), location=f"weekly:{wk}"
+        )
         page["bullets"].append(b)
         self._auto_index_weekly_page(wk)
         self._auto_index_bullet(b)
@@ -715,17 +741,20 @@ class BulletJournal(BujoMixin):
         mk = month or _month_key()
         y, m = map(int, mk.split("-"))
         import calendar as cal_mod
+
         days_in = cal_mod.monthrange(y, m)[1]
         days = [f"{mk}-{d:02d}" for d in range(1, days_in + 1)]
         habits = self.habit_list()
         rows = []
         for h in habits:
             track = h.get("track", {})
-            rows.append({
-                **h,
-                "days": {d: bool(track.get(d)) for d in days},
-                "done_count": sum(1 for d in days if track.get(d)),
-            })
+            rows.append(
+                {
+                    **h,
+                    "days": {d: bool(track.get(d)) for d in days},
+                    "done_count": sum(1 for d in days if track.get(d)),
+                }
+            )
         return {"month": mk, "days": days, "habits": rows}
 
     def bullet_remember_text(self, bullet_id: str) -> str | None:
@@ -760,7 +789,13 @@ class BulletJournal(BujoMixin):
             [f"collection:{name}", self.page_ref(col)],
         )
 
-    def collection_add(self, name: str, content: str, bullet_type: str = "task", signifiers: list[str] | None = None) -> dict:
+    def collection_add(
+        self,
+        name: str,
+        content: str,
+        bullet_type: str = "task",
+        signifiers: list[str] | None = None,
+    ) -> dict:
         col = self.collection_create(name)
         b = _new_bullet(content, bullet_type, signifiers=signifiers, location=f"collection:{name}")
         col["bullets"].append(b)
@@ -885,7 +920,11 @@ class BulletJournal(BujoMixin):
         if dest == "monthly":
             self._auto_index_monthly_page(to_month)
         self._save()
-        open_left = sum(1 for b in page.get("bullets", []) if b.get("type") == "task" and b.get("status") == "open")
+        open_left = sum(
+            1
+            for b in page.get("bullets", [])
+            if b.get("type") == "task" and b.get("status") == "open"
+        )
         return {"migrated": len(moved), "remaining": open_left, "dest": dest, "to_month": to_month}
 
     def migrate_daily_open(self, from_day: str, to_day: str) -> dict:
@@ -900,7 +939,9 @@ class BulletJournal(BujoMixin):
         self._save()
         return {"migrated": moved, "to_day": to_day}
 
-    def open_tasks(self, *, day: str | None = None, month: str | None = None, limit: int = 25) -> list[dict]:
+    def open_tasks(
+        self, *, day: str | None = None, month: str | None = None, limit: int = 25
+    ) -> list[dict]:
         """Open tasks from today's daily log, current monthly log, and future log."""
         d = day or _today()
         mk = month or _month_key()
@@ -1063,7 +1104,9 @@ class BulletJournal(BujoMixin):
                     lines.append(_format_bullet(b))
         return "\n".join(lines)
 
-    def parse_rapid_log(self, text: str, day: str | None = None, *, default_type: str = "task") -> list[dict]:
+    def parse_rapid_log(
+        self, text: str, day: str | None = None, *, default_type: str = "task"
+    ) -> list[dict]:
         """Parse symbol-prefixed lines; indent with 2 spaces to nest under previous bullet."""
         if default_type not in BULLET_TYPES:
             default_type = "task"
@@ -1125,7 +1168,11 @@ class BulletJournal(BujoMixin):
             else:
                 parent = parents[min(level - 1, len(parents) - 1)]
                 child = self.bullet_add_child(
-                    parent["id"], content, bullet_type, signifiers=signifiers, time=event_time,
+                    parent["id"],
+                    content,
+                    bullet_type,
+                    signifiers=signifiers,
+                    time=event_time,
                 )
                 if child is None:
                     b = self.daily_add(content, bullet_type, signifiers, day=day, time=event_time)
@@ -1210,7 +1257,7 @@ class JournalEngine:
             else:
                 mk = _month_key()
                 y, m = map(int, mk.split("-"))
-                nm = f"{y:04d}-{m+1:02d}" if m < 12 else f"{y+1:04d}-01"
+                nm = f"{y:04d}-{m + 1:02d}" if m < 12 else f"{y + 1:04d}-01"
                 r = j.migrate_month(mk, nm)
             print(f"\nMigration complete: {r}\n")
             return True
@@ -1224,7 +1271,9 @@ class JournalEngine:
             print()
             return True
 
-        print("\nBuJo commands: log, today, index, future, month, collection <name>, migrate, reflect, search\n")
+        print(
+            "\nBuJo commands: log, today, index, future, month, collection <name>, migrate, reflect, search\n"
+        )
         return True
 
 

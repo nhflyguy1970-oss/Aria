@@ -186,3 +186,62 @@ def test_upsert_checkpoint_primary_does_not_delete_legacy(primary_env, tmp_path)
     ]
     store.upsert_checkpoint("new checkpoint state")
     assert any(e["id"] == "legacy-cp" for e in store._data["entries"])
+
+
+def test_ssrf_guard_blocks_private_and_metadata():
+    from jarvis.security.url_guard import is_safe_fetch_url
+
+    assert is_safe_fetch_url("http://127.0.0.1/secret")[0] is False
+    assert is_safe_fetch_url("http://10.0.0.1/")[0] is False
+    assert is_safe_fetch_url("http://169.254.169.254/latest/meta-data")[0] is False
+    assert is_safe_fetch_url("file:///etc/passwd")[0] is False
+    assert is_safe_fetch_url("https://example.com/feed.ics")[0] is True
+
+
+def test_audio_document_image_paths_confined():
+    from jarvis.security.path_confine import (
+        resolve_audio_library_path,
+        resolve_document_library_path,
+        resolve_image_library_path,
+    )
+
+    assert resolve_audio_library_path("/etc/passwd") is None
+    assert resolve_document_library_path("/etc/passwd") is None
+    assert resolve_image_library_path("/etc/passwd") is None
+
+
+def test_browser_blocks_file_and_private_even_with_allow_risky():
+    from jarvis.browser_agent import _check_url_safe
+
+    assert _check_url_safe("file:///etc/passwd", allow_risky=True)[0] is False
+    assert _check_url_safe("http://192.168.0.1/", allow_risky=False)[0] is False
+    assert _check_url_safe("javascript:alert(1)", allow_risky=True)[0] is False
+
+
+def test_pin_verify_uses_compare_digest():
+    src = (Path(__file__).resolve().parents[1] / "jarvis" / "security" / "pin_lock.py").read_text(
+        encoding="utf-8"
+    )
+    assert "compare_digest" in src
+
+
+def test_uncensored_password_min_length_12():
+    from jarvis.uncensored_auth import set_password
+
+    try:
+        set_password("short")
+        raise AssertionError("expected ValueError")
+    except ValueError as exc:
+        assert "12" in str(exc)
+
+
+def test_trusted_device_requires_ip_binding(tmp_path, monkeypatch):
+    monkeypatch.setenv("JARVIS_TRUSTED_LAN", "1")
+    from jarvis.security import trusted_devices as td
+
+    monkeypatch.setattr(td, "STORE", tmp_path / "trusted.json")
+    td.trust_device("dev-1", client_ip="192.168.1.50", label="laptop")
+    assert td.is_trusted("dev-1", client_ip="192.168.1.50") is True
+    assert td.is_trusted("dev-1", client_ip="10.0.0.2") is False
+    assert td.is_trusted("dev-1", client_ip=None) is False
+    assert td.is_trusted("spoofed", client_ip="192.168.1.50") is False

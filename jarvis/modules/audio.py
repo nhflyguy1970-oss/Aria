@@ -67,10 +67,12 @@ def delete_audio_file(path: str, *, category: str | None = None) -> str:
     if data_root not in target.parents and target != data_root:
         return "ERROR: Path must stay under data directory"
 
-    roots = [allowed[category].resolve()] if category in allowed else [
-        d.resolve() for d in (*AUDIO_LIBRARY_DIRS.values(), MUSIC_DIR, SONGS_DIR)
-    ]
-    if not any(str(target).startswith(str(root)) for root in roots):
+    roots = (
+        [allowed[category].resolve()]
+        if category in allowed
+        else [d.resolve() for d in (*AUDIO_LIBRARY_DIRS.values(), MUSIC_DIR, SONGS_DIR)]
+    )
+    if not any((lambda r: target == r or r in target.parents)(root) for root in roots):
         return "ERROR: File is not in an audio library folder"
 
     deleted: list[str] = []
@@ -92,6 +94,7 @@ def delete_audio_file(path: str, *, category: str | None = None) -> str:
     if not deleted:
         return f"ERROR: File not found: {target}"
     return deleted[0]
+
 
 SUPPORTED_AUDIO = {".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm", ".mp4"}
 
@@ -143,9 +146,13 @@ class AudioEngine:
         try:
             result = subprocess.run(
                 [
-                    ffprobe, "-v", "error",
-                    "-show_entries", "format=duration",
-                    "-of", "default=noprint_wrappers=1:nokey=1",
+                    ffprobe,
+                    "-v",
+                    "error",
+                    "-show_entries",
+                    "format=duration",
+                    "-of",
+                    "default=noprint_wrappers=1:nokey=1",
                     str(src),
                 ],
                 capture_output=True,
@@ -174,7 +181,9 @@ class AudioEngine:
             "piper_speed": saved_piper_speed(),
             "melody_model": melody_available(),
             "diarize": diarize_status(),
-            "torch_device": __import__("jarvis.torch_device", fromlist=["torch_device"]).torch_device(),
+            "torch_device": __import__(
+                "jarvis.torch_device", fromlist=["torch_device"]
+            ).torch_device(),
             "ffmpeg": bool(self._ffmpeg_path()),
             "ffprobe": bool(self._ffprobe_path()),
             "piper": piper_ready(),
@@ -187,13 +196,17 @@ class AudioEngine:
             "mic_routing": mic_routing_status(),
             "mic_profiles": MIC_PROFILES,
             "whisper_models": list(WHISPER_MODELS),
-            "last_transcript_preview": (self.last_transcript[:240] + "…") if len(self.last_transcript) > 240 else self.last_transcript,
+            "last_transcript_preview": (self.last_transcript[:240] + "…")
+            if len(self.last_transcript) > 240
+            else self.last_transcript,
             "last_output": self.last_output,
             "supported_formats": sorted(SUPPORTED_AUDIO),
             "vst": __import__("jarvis.audio_vst", fromlist=["status"]).status(),
         }
 
-    def record(self, duration_sec: float = 5.0, output: str | None = None, source: str | None = None) -> str:
+    def record(
+        self, duration_sec: float = 5.0, output: str | None = None, source: str | None = None
+    ) -> str:
         """Record from configured microphone to WAV."""
         RECORDINGS_DIR.mkdir(parents=True, exist_ok=True)
         if output:
@@ -234,11 +247,13 @@ class AudioEngine:
         return str(found) if found else None
 
     def _resolve_audio(self, path: str, base: Path | None = None) -> Path:
-        resolved = fs.resolve_path(path, base=base or PROJECT_ROOT)
+        from jarvis.security.path_confine import resolve_audio_library_path
+
+        resolved = resolve_audio_library_path(path)
+        if resolved is None:
+            raise FileNotFoundError(f"Audio file not found or path not allowed: {path}")
         if resolved.suffix.lower() not in SUPPORTED_AUDIO:
             raise ValueError(f"Unsupported audio format: {resolved.suffix}")
-        if not resolved.exists():
-            raise FileNotFoundError(f"Audio file not found: {resolved}")
         return resolved
 
     def transcribe(self, path: str, model: str | None = None, language: str | None = None) -> str:
@@ -258,7 +273,9 @@ class AudioEngine:
         except Exception as e:
             return f"ERROR: {e}"
 
-    def batch_transcribe(self, paths: list[str], model: str | None = None, language: str | None = None) -> list[dict]:
+    def batch_transcribe(
+        self, paths: list[str], model: str | None = None, language: str | None = None
+    ) -> list[dict]:
         out = []
         for p in paths:
             text = self.transcribe(p, model=model, language=language)
@@ -302,7 +319,15 @@ class AudioEngine:
 
                 length_scale = 1.0 / max(0.5, saved_piper_speed())
                 proc = subprocess.run(
-                    [piper, "--model", model_path, "--output_file", str(wav_path), "--length_scale", f"{length_scale:.3f}"],
+                    [
+                        piper,
+                        "--model",
+                        model_path,
+                        "--output_file",
+                        str(wav_path),
+                        "--length_scale",
+                        f"{length_scale:.3f}",
+                    ],
                     input=text,
                     capture_output=True,
                     text=True,
@@ -321,10 +346,14 @@ class AudioEngine:
 
             cmd = [
                 espeak,
-                "-w", str(wav_path),
-                "-s", str(max(80, min(450, speed))),
-                "-p", str(max(0, min(99, pitch))),
-                "-a", str(max(0, min(200, amplitude))),
+                "-w",
+                str(wav_path),
+                "-s",
+                str(max(80, min(450, speed))),
+                "-p",
+                str(max(0, min(99, pitch))),
+                "-a",
+                str(max(0, min(200, amplitude))),
             ]
             if voice:
                 cmd.extend(["-v", voice])
@@ -459,7 +488,16 @@ Respond with ONLY valid JSON."""
 
             if instruction and not any(
                 v is not None and v != 0 and v is not False
-                for v in (start_sec, end_sec, duration_sec, volume_db, speed, fade_in_sec, fade_out_sec, normalize)
+                for v in (
+                    start_sec,
+                    end_sec,
+                    duration_sec,
+                    volume_db,
+                    speed,
+                    fade_in_sec,
+                    fade_out_sec,
+                    normalize,
+                )
             ):
                 parsed = self._parse_edit_instruction(instruction)
                 start_sec = parsed.get("start_sec", start_sec)
@@ -492,7 +530,9 @@ Respond with ONLY valid JSON."""
                 normalize=normalize,
                 src_duration=src_duration,
             )
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600, env=ffmpeg_env())
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, timeout=600, env=ffmpeg_env()
+            )
             if result.returncode != 0:
                 return f"ERROR: {result.stderr or result.stdout}"
 
@@ -532,7 +572,18 @@ TRANSCRIPT:
             os.close(fd)
             tmp = Path(tmp_name)
             subprocess.run(
-                [ffmpeg, "-y", "-hide_banner", "-loglevel", "error", "-i", str(src), "-ac", "1", str(tmp)],
+                [
+                    ffmpeg,
+                    "-y",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-i",
+                    str(src),
+                    "-ac",
+                    "1",
+                    str(tmp),
+                ],
                 capture_output=True,
                 timeout=120,
                 check=True,
@@ -576,7 +627,13 @@ TRANSCRIPT:
             src = self._resolve_audio(path)
             duration = self._probe_duration(src)
             peaks = self._extract_waveform_peaks(src, samples=samples)
-            return {"ok": True, "path": str(src), "duration": duration, "samples": len(peaks), "peaks": peaks}
+            return {
+                "ok": True,
+                "path": str(src),
+                "duration": duration,
+                "samples": len(peaks),
+                "peaks": peaks,
+            }
         except Exception as e:
             return {"ok": False, "error": str(e)}
 
@@ -601,7 +658,8 @@ TRANSCRIPT:
         if result.startswith("ERROR:"):
             return result
         trimmed = trim_silence_vad(
-            raw_path, out_path,
+            raw_path,
+            out_path,
             threshold_db=threshold_db,
             min_silence_sec=min_silence_sec,
         )
@@ -631,30 +689,54 @@ TRANSCRIPT:
         return result
 
     def transform_genre(
-        self, path: str, genre_prompt: str, duration: int = 30, job_id: str | None = None,
+        self,
+        path: str,
+        genre_prompt: str,
+        duration: int = 30,
+        job_id: str | None = None,
     ) -> str:
         from jarvis.song_studio import transform_genre
+
         return transform_genre(path, genre_prompt, duration=duration, job_id=job_id)
 
     def generate_full_song(
-        self, topic: str, genre: str = "pop", mood: str = "uplifting",
-        duration: int = 30, job_id: str | None = None,
+        self,
+        topic: str,
+        genre: str = "pop",
+        mood: str = "uplifting",
+        duration: int = 30,
+        job_id: str | None = None,
     ) -> dict:
         from jarvis.song_studio import generate_full_song
+
         return generate_full_song(topic, genre=genre, mood=mood, duration=duration, job_id=job_id)
 
     def voice_to_song(
-        self, voice_path: str, *, lyrics: str = "", title: str = "", style: str = "pop ballad",
-        genre: str = "pop", duration: int = 30, job_id: str | None = None,
+        self,
+        voice_path: str,
+        *,
+        lyrics: str = "",
+        title: str = "",
+        style: str = "pop ballad",
+        genre: str = "pop",
+        duration: int = 30,
+        job_id: str | None = None,
     ) -> dict:
         from jarvis.song_studio import voice_to_song
+
         return voice_to_song(
-            voice_path, lyrics=lyrics, title=title, style=style,
-            genre=genre, duration=duration, job_id=job_id,
+            voice_path,
+            lyrics=lyrics,
+            title=title,
+            style=style,
+            genre=genre,
+            duration=duration,
+            job_id=job_id,
         )
 
     def diarize(self, path: str, num_speakers: int | None = None) -> dict:
         from jarvis.audio_diarize import diarize
+
         try:
             resolved = str(self._resolve_audio(path))
             return diarize(resolved, num_speakers=num_speakers)

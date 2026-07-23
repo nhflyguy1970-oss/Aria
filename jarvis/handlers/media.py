@@ -64,12 +64,15 @@ class MediaHandler:
     def generate_video(self, params: dict, message: str) -> dict:
         raise_if_cancelled()
         prompt = params.get("prompt") or message
-        prompt = re.sub(
-            r"^(please\s+)?(create|generate|make)\s+(an?\s+)?(video|clip|animation|movie)\s+(of\s+)?",
-            "",
-            prompt,
-            flags=re.I,
-        ).strip() or prompt
+        prompt = (
+            re.sub(
+                r"^(please\s+)?(create|generate|make)\s+(an?\s+)?(video|clip|animation|movie)\s+(of\s+)?",
+                "",
+                prompt,
+                flags=re.I,
+            ).strip()
+            or prompt
+        )
 
         result = self.a.video.generate(prompt)
         if result.startswith("ERROR:"):
@@ -129,12 +132,15 @@ class MediaHandler:
         top = (params.get("top") or "").strip()
         bottom = (params.get("bottom") or "").strip()
         if not idea and not top and not bottom:
-            idea = re.sub(
-                r"^(please\s+)?(make|create|generate)\s+(an?\s+)?meme\s+(about\s+)?",
-                "",
-                message,
-                flags=re.I,
-            ).strip() or message
+            idea = (
+                re.sub(
+                    r"^(please\s+)?(make|create|generate)\s+(an?\s+)?meme\s+(about\s+)?",
+                    "",
+                    message,
+                    flags=re.I,
+                ).strip()
+                or message
+            )
 
         use_ai = params.get("use_ai_image", True)
         if isinstance(use_ai, str):
@@ -170,6 +176,12 @@ class MediaHandler:
         path = params.get("path") or self.a.session.last_image or self.a.image.last_image
         if not path:
             return err("Which image? Generate one first or give a path.", module="image")
+        from jarvis.security.path_confine import resolve_image_library_path
+
+        allowed = resolve_image_library_path(str(path))
+        if allowed is None:
+            return err("Image path not allowed or not found", module="image")
+        path = str(allowed)
         try:
             scale = int(params.get("scale") or 2)
         except (TypeError, ValueError):

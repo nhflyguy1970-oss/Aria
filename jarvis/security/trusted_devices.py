@@ -33,23 +33,34 @@ def list_trusted() -> list[dict[str, Any]]:
 
 
 def is_trusted(device_id: str | None, *, client_ip: str | None) -> bool:
+    import hmac
+
     if not trusted_lan_enabled():
         return False
     did = (device_id or "").strip()
     ip = (client_ip or "").strip()
-    if not did:
+    if not did or not ip:
         return False
     for row in list_trusted():
-        if row.get("id") != did:
-            continue
+        stored_id = str(row.get("id") or "").strip()
         stored_ip = (row.get("ip") or "").strip()
-        if stored_ip and ip and stored_ip != ip:
+        if not stored_id or not stored_ip:
+            continue
+        try:
+            id_ok = hmac.compare_digest(stored_id, did)
+        except (TypeError, ValueError):
+            id_ok = False
+        if not id_ok:
+            continue
+        if stored_ip != ip:
             continue
         return True
     return False
 
 
-def trust_device(device_id: str | None, *, label: str = "", client_ip: str | None) -> dict[str, Any]:
+def trust_device(
+    device_id: str | None, *, label: str = "", client_ip: str | None
+) -> dict[str, Any]:
     did = (device_id or "").strip()
     ip = (client_ip or "").strip()
     if not did:
@@ -63,7 +74,13 @@ def trust_device(device_id: str | None, *, label: str = "", client_ip: str | Non
             row.update({"ip": ip, "label": label or row.get("label", ""), "last_seen": time.time()})
             _save(data)
             return row
-    row = {"id": did, "ip": ip, "label": label or did, "trusted_at": time.time(), "last_seen": time.time()}
+    row = {
+        "id": did,
+        "ip": ip,
+        "label": label or did,
+        "trusted_at": time.time(),
+        "last_seen": time.time(),
+    }
     devices.append(row)
     _save(data)
     return row

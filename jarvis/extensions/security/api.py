@@ -26,22 +26,44 @@ def register_routes(app, assistant) -> None:
 
     @app.post("/api/security/unlock")
     async def security_unlock(request: Request):
+        from jarvis.auth import client_ip
         from jarvis.security.pin_lock import create_session, verify_pin
+        from jarvis.security.trusted_devices import trust_device
 
         body = await request.json()
         pin = str(body.get("pin") or "").strip()
         if not verify_pin(pin):
             return JSONResponse(status_code=403, content={"ok": False, "message": "Invalid PIN"})
-        token = create_session(device_id=str(body.get("device_id") or ""))
+        device_id = str(body.get("device_id") or "").strip()
+        token = create_session(device_id=device_id)
+        if body.get("trust_device") and device_id:
+            trust_device(
+                device_id, client_ip=client_ip(request), label=str(body.get("label") or "")
+            )
         return {"ok": True, "session_token": token}
 
     @app.post("/api/security/pin/setup")
     async def security_pin_setup(request: Request):
-        from jarvis.security.pin_lock import set_pin
+        from jarvis.auth import api_key_enabled, check_key
+        from jarvis.security.pin_lock import pin_configured, set_pin, verify_pin
 
+        if api_key_enabled() and not check_key(request):
+            return JSONResponse(
+                status_code=401, content={"ok": False, "message": "API key required"}
+            )
         body = await request.json()
+        pin = str(body.get("pin") or "")
+        # First-time setup: require API key when LAN key is configured (checked above).
+        # Re-setup / overwrite: require current PIN.
+        if pin_configured():
+            current = str(body.get("current_pin") or body.get("old_pin") or "")
+            if not verify_pin(current):
+                return JSONResponse(
+                    status_code=403,
+                    content={"ok": False, "message": "current_pin required to change PIN"},
+                )
         try:
-            return set_pin(str(body.get("pin") or ""))
+            return set_pin(pin)
         except ValueError as exc:
             return JSONResponse(status_code=400, content={"ok": False, "message": str(exc)})
 

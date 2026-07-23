@@ -56,8 +56,8 @@ def is_configured() -> bool:
 
 def set_password(password: str) -> None:
     password = (password or "").strip()
-    if len(password) < 4:
-        raise ValueError("Password must be at least 4 characters")
+    if len(password) < 12:
+        raise ValueError("Password must be at least 12 characters")
     salt = os.urandom(16)
     payload = {"salt": salt.hex(), "hash": _hash_password(password, salt)}
     DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -192,8 +192,8 @@ def try_enable(
     confirm = (confirm or "").strip()
 
     if not is_configured():
-        if len(password) < 4:
-            return None, "Choose a password (at least 4 characters)"
+        if len(password) < 12:
+            return None, "Choose a password (at least 12 characters)"
         if not confirm:
             return None, "Confirm password required"
         if password != confirm:

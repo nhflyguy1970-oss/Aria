@@ -48,9 +48,18 @@ def status() -> dict[str, Any]:
 
 
 def _check_url_safe(url: str, *, allow_risky: bool = False) -> tuple[bool, str]:
+    from jarvis.security.url_guard import is_safe_fetch_url
+
+    # Scheme / private-network blocks always apply — allow_risky only skips checkout heuristics.
+    ok, err = is_safe_fetch_url(url, allow_http=True)
+    if not ok:
+        return False, err or "Blocked URL"
+    parsed = urlparse(url)
+    scheme = (parsed.scheme or "").lower()
+    if scheme in ("file", "javascript", "data", "vbscript"):
+        return False, f"Blocked URL scheme: {scheme}"
     if allow_risky:
         return True, ""
-    parsed = urlparse(url)
     host_path = f"{parsed.netloc}{parsed.path}"
     if _BLOCKED_PATH.search(host_path):
         return False, "Blocked URL (checkout/payment) — confirm required for web_agent."

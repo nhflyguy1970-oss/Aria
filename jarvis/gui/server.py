@@ -1372,8 +1372,15 @@ def audio_status():
 @app.post("/api/audio/detect-language")
 async def audio_detect_language(path: str = Form(...), model: str = Form("")):
     from jarvis.audio_whisper import detect_language
+    from jarvis.security.path_confine import resolve_audio_library_path
 
-    out = detect_language(path, model=model or None)
+    resolved = resolve_audio_library_path(path)
+    if resolved is None:
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "error": "File not found or path not allowed"},
+        )
+    out = detect_language(str(resolved), model=model or None)
     if not out.get("ok"):
         return JSONResponse(status_code=400, content={"ok": False, **out})
     return {"ok": True, **out}
@@ -1583,14 +1590,9 @@ async def meme_generate(payload: dict = Body(...)):
 
 
 def _resolve_image_path(path: str) -> Path | None:
-    from jarvis.config import DATA_DIR
+    from jarvis.security.path_confine import resolve_image_library_path
 
-    for sub in ("generated", "uploads", "inpaint_masks"):
-        root = (DATA_DIR / sub).resolve()
-        candidate = Path(path).expanduser().resolve()
-        if root in candidate.parents and candidate.is_file():
-            return candidate
-    return None
+    return resolve_image_library_path(path)
 
 
 @app.post("/api/image/inpaint")
@@ -2687,7 +2689,7 @@ def uncensored_auth_status(request: Request, session_token: str = ""):
 
 
 @app.post("/api/uncensored/reset")
-def uncensored_reset_password():
+async def uncensored_reset_password(request: Request):
     """Clear uncensored password so a new one can be set (standard mode only)."""
     if is_uncensored():
         return JSONResponse(
@@ -2697,6 +2699,35 @@ def uncensored_reset_password():
                 "message": "Turn off uncensored mode before resetting the password.",
             },
         )
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    if str(body.get("confirm", "")).lower() not in ("1", "true", "yes"):
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "message": "Set confirm=true to reset the uncensored password."},
+        )
+    # Require API key when configured, or a valid PIN session when PIN lock is on.
+    from jarvis.auth import api_key_enabled, check_key
+    from jarvis.p4_flags import pin_lock_enabled
+    from jarvis.security.pin_lock import lock_status, pin_configured
+
+    if api_key_enabled() and not check_key(request):
+        return JSONResponse(status_code=401, content={"ok": False, "message": "API key required"})
+    if pin_lock_enabled() and pin_configured():
+        token = (request.headers.get("X-Jarvis-Session") or "").strip()
+        st = lock_status(session_token=token or None)
+        if st.get("locked"):
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "ok": False,
+                    "message": "Unlock with PIN before resetting uncensored password.",
+                },
+            )
     from jarvis.uncensored_auth import clear_password
 
     clear_password()

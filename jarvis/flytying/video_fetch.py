@@ -78,14 +78,29 @@ def embedded_video_urls_from_html(html: str, page_url: str = "") -> list[dict[st
                 item["id"] = vm.group(1)
         out.append(item)
     for vid in youtube_ids_from_html(html):
-        out.append({"provider": "youtube", "id": vid, "url": f"https://www.youtube.com/watch?v={vid}"})
+        out.append(
+            {"provider": "youtube", "id": vid, "url": f"https://www.youtube.com/watch?v={vid}"}
+        )
     return out
 
 
 def fetch_page_html(url: str) -> str:
+    from jarvis.security.url_guard import UnsafeURLError, assert_safe_fetch_url
+
+    try:
+        url = assert_safe_fetch_url(url)
+    except UnsafeURLError as exc:
+        log.debug("video fetch blocked for %s: %s", url, exc)
+        return ""
     req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     try:
         with urllib.request.urlopen(req, timeout=_FETCH_TIMEOUT) as resp:
+            final = getattr(resp, "geturl", lambda: url)()
+            try:
+                assert_safe_fetch_url(final)
+            except UnsafeURLError as exc:
+                log.debug("video fetch redirect blocked: %s", exc)
+                return ""
             return resp.read().decode("utf-8", errors="replace")
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         log.debug("video fetch failed for %s: %s", url, exc)

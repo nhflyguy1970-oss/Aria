@@ -90,7 +90,7 @@ def _utc_now() -> str:
 def _slugify(text: str) -> str:
     s = re.sub(r"[^\w\s-]", "", (text or "").lower())
     s = re.sub(r"[\s_]+", "-", s).strip("-")
-    return (s[:60] or "document")
+    return s[:60] or "document"
 
 
 def _load_registry() -> dict[str, Any]:
@@ -164,26 +164,16 @@ def learning_stats() -> dict[str, Any]:
 
 
 def resolve_document_path(raw: str) -> str:
-    """Resolve a document path against project, data, uploads, and library."""
-    upload_dir = DATA_DIR / "uploads"
+    """Resolve a document path against document library / uploads only."""
+    from jarvis.security.path_confine import resolve_document_library_path
 
-    text = (raw or "").strip()
-    if not text:
-        return ""
-    p = Path(text)
-    if p.is_absolute() and p.exists():
-        return str(p)
-    for base in (PROJECT_ROOT, DATA_DIR, upload_dir, documents_dir()):
-        candidate = (base / text).resolve()
-        if candidate.exists():
-            return str(candidate)
-    resolved = p.expanduser()
-    return str(resolved) if resolved.exists() else ""
+    found = resolve_document_library_path(raw)
+    return str(found) if found else ""
 
 
 def parse_url_from_message(message: str) -> str:
     m = _URL_RE.search((message or "").strip())
-    return (m.group(0).rstrip(".,);]") if m else "")
+    return m.group(0).rstrip(".,);]") if m else ""
 
 
 def is_learn_from_document(message: str) -> bool:
@@ -259,8 +249,15 @@ def _source_type_for_path(path: Path) -> str:
 
 
 def ingest_file(path: str | Path, *, copy_to_library: bool = True) -> IngestResult:
-    raw = Path(path).expanduser()
-    resolved = resolve_document_path(str(raw)) or str(raw)
+    resolved = resolve_document_path(str(path))
+    if not resolved:
+        return IngestResult(
+            False,
+            Path(str(path)).name,
+            str(path),
+            "file",
+            message="File not found or path not allowed",
+        )
     p = Path(resolved)
     if not p.exists():
         return IngestResult(False, p.name, str(p), "file", message=f"File not found: {p}")
@@ -296,12 +293,24 @@ def ingest_file(path: str | Path, *, copy_to_library: bool = True) -> IngestResu
 
 def fetch_web_page(url: str) -> tuple[str, str]:
     """Return (title, plain text) from a URL."""
+    from jarvis.security.url_guard import UnsafeURLError, assert_safe_fetch_url
+
+    try:
+        url = assert_safe_fetch_url(url)
+    except UnsafeURLError as exc:
+        raise ValueError(str(exc)) from exc
     req = urllib.request.Request(
         url,
         headers={"User-Agent": "Jarvis/1.0 (+document-learning)"},
     )
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
+            # Re-validate after redirects (final URL may differ).
+            final = getattr(resp, "geturl", lambda: url)()
+            try:
+                assert_safe_fetch_url(final)
+            except UnsafeURLError as exc:
+                raise ValueError(str(exc)) from exc
             raw = resp.read()
             ctype = (resp.headers.get("Content-Type") or "").lower()
     except urllib.error.URLError as exc:
@@ -329,7 +338,9 @@ def ingest_url(url: str) -> IngestResult:
     except ValueError as exc:
         return IngestResult(False, "", "", "web", url=url, message=str(exc))
     if not text.strip():
-        return IngestResult(False, title, "", "web", url=url, message="No text extracted from page.")
+        return IngestResult(
+            False, title, "", "web", url=url, message="No text extracted from page."
+        )
 
     dest = _save_text_to_library(text, title=title, subdir="web")
     doc = parse_document(dest)
@@ -353,7 +364,9 @@ def ingest_url(url: str) -> IngestResult:
     )
 
 
-def ingest_text(text: str, *, title: str = "OCR document", source_type: str = "ocr") -> IngestResult:
+def ingest_text(
+    text: str, *, title: str = "OCR document", source_type: str = "ocr"
+) -> IngestResult:
     cleaned = (text or "").strip()
     if not cleaned:
         return IngestResult(False, title, "", source_type, message="No text to ingest.")
@@ -378,7 +391,9 @@ def ingest_text(text: str, *, title: str = "OCR document", source_type: str = "o
     )
 
 
-def extract_document_learnings(text: str, *, title: str = "", max_facts: int | None = None) -> list[str]:
+def extract_document_learnings(
+    text: str, *, title: str = "", max_facts: int | None = None
+) -> list[str]:
     """Use LLM to pull durable facts/procedures from document text."""
     excerpt = (text or "").strip()
     if not excerpt:
@@ -401,7 +416,9 @@ def extract_document_learnings(text: str, *, title: str = "", max_facts: int | N
             raw = re.sub(r"^```\w*\n?", "", raw)
             raw = re.sub(r"\n?```$", "", raw)
         data = json.loads(raw)
-        facts = [f.strip() for f in data.get("facts", []) if isinstance(f, str) and len(f.strip()) > 8]
+        facts = [
+            f.strip() for f in data.get("facts", []) if isinstance(f, str) and len(f.strip()) > 8
+        ]
         return facts[:limit]
     except Exception as exc:
         log.warning("Document learning extract failed: %s", exc)
@@ -537,11 +554,26 @@ def document_learning_context_for_chat(memory, message: str, *, limit: int = 4) 
     hits = list_document_learnings(memory, query=q, limit=limit)
     if not hits:
         words = [w for w in re.findall(r"[a-z]{4,}", q.lower())]
-        stop = {"what", "when", "where", "should", "would", "could", "about", "there", "this", "that", "with", "from"}
+        stop = {
+            "what",
+            "when",
+            "where",
+            "should",
+            "would",
+            "could",
+            "about",
+            "there",
+            "this",
+            "that",
+            "with",
+            "from",
+        }
         words = [w for w in words if w not in stop][:6]
         if words:
             pool = list_document_learnings(memory, limit=40)
-            hits = [e for e in pool if any(w in e.get("content", "").lower() for w in words)][:limit]
+            hits = [e for e in pool if any(w in e.get("content", "").lower() for w in words)][
+                :limit
+            ]
     if not hits:
         return ""
     lines = []

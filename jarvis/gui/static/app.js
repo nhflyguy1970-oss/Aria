@@ -4168,9 +4168,9 @@ function showUncensoredPasswordModal(needsSetup, authConfigured = false) {
     const onSubmit = () => {
       const password = passInput.value.trim();
       const confirm = (confirmInput?.value || "").trim();
-      if (needsSetup && password.length < 4) {
+      if (needsSetup && password.length < 12) {
         if (errEl) {
-          errEl.textContent = "Password must be at least 4 characters";
+          errEl.textContent = "Password must be at least 12 characters";
           errEl.classList.remove("hidden");
         }
         return;

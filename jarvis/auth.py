@@ -81,17 +81,31 @@ def _media_gallery_file_get(request: Request) -> bool:
 
 
 def check_key(request: Request) -> bool:
+    import hmac
+
     key = get_api_key()
     if not key:
         return True
     auth = request.headers.get("Authorization", "")
-    if auth.lower().startswith("bearer ") and _normalize_incoming_key(auth[7:]) == key:
-        return True
-    if _normalize_incoming_key(request.headers.get("X-API-Key")) == key:
-        return True
+    if auth.lower().startswith("bearer "):
+        incoming = _normalize_incoming_key(auth[7:])
+        try:
+            if hmac.compare_digest(incoming, key):
+                return True
+        except (TypeError, ValueError):
+            pass
+    header_key = _normalize_incoming_key(request.headers.get("X-API-Key"))
+    try:
+        if header_key and hmac.compare_digest(header_key, key):
+            return True
+    except (TypeError, ValueError):
+        pass
     if allow_query_api_key() or _media_gallery_file_get(request):
         q = _normalize_incoming_key(request.query_params.get("api_key"))
-        return q == key
+        try:
+            return bool(q) and hmac.compare_digest(q, key)
+        except (TypeError, ValueError):
+            return False
     return False
 
 
@@ -104,10 +118,17 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         if path.startswith("/static") or path in self.EXEMPT:
             return await call_next(request)
-        if path.startswith("/api/") and path in ("/api/health", "/api/live", "/api/lan", "/api/automation/inbound"):
+        if path.startswith("/api/") and path in (
+            "/api/health",
+            "/api/live",
+            "/api/lan",
+            "/api/automation/inbound",
+        ):
             return await call_next(request)
         if path.startswith("/api/") and not api_key_required_for(request):
             return await call_next(request)
         if path.startswith("/api/") and not check_key(request):
-            return JSONResponse(status_code=401, content={"ok": False, "message": "Invalid or missing API key"})
+            return JSONResponse(
+                status_code=401, content={"ok": False, "message": "Invalid or missing API key"}
+            )
         return await call_next(request)

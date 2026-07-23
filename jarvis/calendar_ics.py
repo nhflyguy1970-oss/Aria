@@ -28,7 +28,9 @@ def _parse_dt(value: str, *, day: date) -> datetime | None:
         "%Y%m%d",
     ):
         try:
-            dt = datetime.strptime(raw[:15] if "T" in raw else raw[:8], fmt.split("T")[0] if "T" not in raw else fmt)
+            dt = datetime.strptime(
+                raw[:15] if "T" in raw else raw[:8], fmt.split("T")[0] if "T" not in raw else fmt
+            )
             if dt.tzinfo:
                 dt = dt.replace(tzinfo=None)
             if "T" not in value and len(value.strip()) == 8:
@@ -92,8 +94,21 @@ def fetch_events_for_month(month: str) -> dict[str, list[dict[str, Any]]]:
     except (TypeError, ValueError):
         return {}
     try:
+        from jarvis.security.url_guard import UnsafeURLError, assert_safe_fetch_url
+
+        try:
+            url = assert_safe_fetch_url(url)
+        except UnsafeURLError as exc:
+            log.debug("ICS URL blocked: %s", exc)
+            return {}
         req = urllib.request.Request(url, headers={"User-Agent": "Jarvis/3.2 Calendar"})
         with urllib.request.urlopen(req, timeout=8) as resp:
+            final = getattr(resp, "geturl", lambda: url)()
+            try:
+                assert_safe_fetch_url(final)
+            except UnsafeURLError as exc:
+                log.debug("ICS redirect blocked: %s", exc)
+                return {}
             text = resp.read().decode("utf-8", errors="replace")
     except Exception as exc:
         log.debug("ICS fetch failed: %s", exc)
@@ -114,8 +129,21 @@ def fetch_events_for_day(day: date | None = None) -> list[dict[str, Any]]:
         return []
     day = day or date.today()
     try:
+        from jarvis.security.url_guard import UnsafeURLError, assert_safe_fetch_url
+
+        try:
+            url = assert_safe_fetch_url(url)
+        except UnsafeURLError as exc:
+            log.debug("ICS URL blocked: %s", exc)
+            return []
         req = urllib.request.Request(url, headers={"User-Agent": "Jarvis/3.2 Calendar"})
         with urllib.request.urlopen(req, timeout=8) as resp:
+            final = getattr(resp, "geturl", lambda: url)()
+            try:
+                assert_safe_fetch_url(final)
+            except UnsafeURLError as exc:
+                log.debug("ICS redirect blocked: %s", exc)
+                return []
             text = resp.read().decode("utf-8", errors="replace")
         return _parse_ics_events(text, day)
     except Exception as exc:

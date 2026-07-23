@@ -881,6 +881,14 @@ def register_routes(app, assistant):
         body = await request.json()
         password = str(body.get("password", ""))
         merge = body.get("merge", True) is not False
+        if not merge and str(body.get("confirm_wipe", "")).lower() not in ("1", "true", "yes"):
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "ok": False,
+                    "message": "Non-merge import wipes journal data. Set confirm_wipe=true to proceed.",
+                },
+            )
         try:
             payload = decrypt_import(body.get("export") or body, password)
         except ValueError as e:
@@ -910,7 +918,15 @@ def register_routes(app, assistant):
     async def journal_import(request: Request):
         body = await request.json()
         merge = body.get("merge", True) is not False
-        payload = {k: v for k, v in body.items() if k != "merge" and k != "password"}
+        if not merge and str(body.get("confirm_wipe", "")).lower() not in ("1", "true", "yes"):
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "ok": False,
+                    "message": "Non-merge import wipes journal data. Set confirm_wipe=true to proceed.",
+                },
+            )
+        payload = {k: v for k, v in body.items() if k not in ("merge", "password", "confirm_wipe")}
         if not merge:
             journal.import_all(payload)
             return {"ok": True, "merged": False}
@@ -1172,8 +1188,13 @@ def register_routes(app, assistant):
 
     @app.get("/api/gallery/{name}")
     def gallery_file(name: str, max: int = 0):
-        path = (DATA_DIR / "generated" / Path(name).name).resolve()
-        if not path.exists() or path.suffix.lower() not in _IMAGE_EXTS:
+        generated = (DATA_DIR / "generated").resolve()
+        path = (generated / Path(name).name).resolve()
+        if (
+            generated not in path.parents
+            or not path.exists()
+            or path.suffix.lower() not in _IMAGE_EXTS
+        ):
             return JSONResponse(status_code=404, content={"detail": "not found"})
         if max and max > 0:
             try:
@@ -1340,7 +1361,7 @@ def register_routes(app, assistant):
             return JSONResponse(status_code=404, content={"detail": "not found"})
         if not p.is_file():
             return JSONResponse(status_code=404, content={"detail": "not found"})
-        if not any(str(p).startswith(str(root)) for root in allowed_roots):
+        if not any((p == root or root in p.parents) for root in allowed_roots):
             return JSONResponse(status_code=404, content={"detail": "not found"})
         media = {
             ".wav": "audio/wav",

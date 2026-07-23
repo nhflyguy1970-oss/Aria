@@ -41,12 +41,16 @@ def set_pin(pin: str) -> dict[str, Any]:
 
 
 def verify_pin(pin: str) -> bool:
+    import hmac
+
     if not PIN_FILE.is_file():
         return False
     try:
         data = json.loads(PIN_FILE.read_text(encoding="utf-8"))
-        return _hash_pin((pin or "").strip(), data["salt"]) == data["hash"]
-    except (json.JSONDecodeError, OSError, KeyError):
+        got = _hash_pin((pin or "").strip(), data["salt"])
+        expected = data["hash"]
+        return hmac.compare_digest(got, expected)
+    except (json.JSONDecodeError, OSError, KeyError, TypeError):
         return False
 
 
