@@ -77,6 +77,7 @@ Pulls git, refreshes pip/uv deps, restarts server if running.
 - Server: `data/logs/serve.log` (when tray-managed)
 - Automation: `data/automation/last_maintenance.json`
 - Platform cutover: `data/platform/cutover.json`
+- Operational improvement evidence (quiet): [OPERATIONS_IMPROVEMENT_LOG.md](OPERATIONS_IMPROVEMENT_LOG.md)
 
 ## Recovery drill
 
