@@ -78,6 +78,7 @@ Pulls git, refreshes pip/uv deps, restarts server if running.
 - Automation: `data/automation/last_maintenance.json`
 - Platform cutover: `data/platform/cutover.json`
 - Operational improvement evidence (quiet): [OPERATIONS_IMPROVEMENT_LOG.md](OPERATIONS_IMPROVEMENT_LOG.md)
+- Operational charter (binding): [ARIA_OPERATIONAL_CHARTER.md](ARIA_OPERATIONAL_CHARTER.md)
 
 ## Recovery drill
 
