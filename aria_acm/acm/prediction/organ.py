@@ -8,14 +8,23 @@ from typing import TYPE_CHECKING, Any
 
 from acm.associations.model import RelationKind
 from acm.authority.mode import is_read_only
-from acm.prediction.model import PredictedOutcome, Prediction
+from acm.prediction.model import (
+    ComparisonKind,
+    Hypothesis,
+    HypothesisStatus,
+    PredictedOutcome,
+    Prediction,
+    PredictionAudit,
+)
 from acm.types import new_id
 
 if TYPE_CHECKING:
     from acm.activation.engine import ActivationEngine
     from acm.attention.organ import AttentionOrgan
+    from acm.confidence.organ import ConfidenceOrgan
     from acm.core.store import CognitiveStore
     from acm.forgetting.organ import ForgettingOrgan
+    from acm.learning.organ import LearningOrgan
     from acm.validation.harness import ValidationHarness
 
 _EXPLAIN_LIKELY = re.compile(
@@ -95,15 +104,22 @@ class PredictionOrgan:
         activation: ActivationEngine | None = None,
         attention: AttentionOrgan | None = None,
         forgetting: ForgettingOrgan | None = None,
+        confidence: ConfidenceOrgan | None = None,
+        learning: LearningOrgan | None = None,
     ) -> None:
         self.store = store
         self.validation = validation
         self.activation = activation
         self.attention = attention
         self.forgetting = forgetting
+        self.confidence = confidence
+        self.learning = learning
         self._predictions = 0
         self._evaluations = 0
+        self._audits = 0
+        self._hypotheses = 0
         self._last_prediction_id = ""
+        self._last_audit_id = ""
 
     def bind(
         self,
@@ -111,6 +127,8 @@ class PredictionOrgan:
         activation: ActivationEngine | None = None,
         attention: AttentionOrgan | None = None,
         forgetting: ForgettingOrgan | None = None,
+        confidence: ConfidenceOrgan | None = None,
+        learning: LearningOrgan | None = None,
     ) -> None:
         if activation is not None:
             self.activation = activation
@@ -118,6 +136,10 @@ class PredictionOrgan:
             self.attention = attention
         if forgetting is not None:
             self.forgetting = forgetting
+        if confidence is not None:
+            self.confidence = confidence
+        if learning is not None:
+            self.learning = learning
 
     def what_is_likely(
         self,
@@ -510,6 +532,9 @@ class PredictionOrgan:
         )
         if not is_read_only():
             self.store.predictions[pred.id] = pred
+            hyp_ids = self.form_hypotheses_from_prediction(pred)
+            if hyp_ids:
+                pred.metadata["hypothesis_ids"] = hyp_ids
         self._last_prediction_id = pred.id
         self._predictions += 1
         self.validation.record_prediction(
@@ -660,6 +685,30 @@ class PredictionOrgan:
             if len(entry["support"]) > 1:
                 entry["score"] = float(entry["score"]) + 0.15
 
+        # M5 Cap5 — active TemporalPatterns boost matching predictive outcomes.
+        for pat in self.store.temporal_patterns.values():
+            if pat.status.value not in {"active", "weakening"}:
+                continue
+            ante_l = pat.antecedent.casefold()
+            cons_l = pat.consequent.casefold()
+            if not any(tok in cue_l for tok in ante_l.split() if len(tok) > 2):
+                if pat.period_hint and pat.period_hint not in cue_l:
+                    continue
+            key = f"pattern:{cons_l}"
+            entry = grouped.setdefault(
+                key,
+                {
+                    "score": 0.0,
+                    "support": [],
+                    "why": ["temporal_pattern"],
+                    "label": pat.consequent,
+                    "polarities": set(),
+                },
+            )
+            entry["score"] = float(entry["score"]) + pat.confidence * pat.strength
+            entry["why"].append("temporal_pattern")
+            entry["support"].extend(pat.supporting_experience_ids[-3:])
+
         polarities = {
             pol
             for payload in grouped.values()
@@ -747,48 +796,483 @@ class PredictionOrgan:
         public["ambiguous"] = bool(pred.metadata.get("ambiguous"))
         return public
 
+    def form_hypotheses_from_prediction(self, pred: Prediction) -> list[str]:
+        """Materialize competing outcomes as Hypothesis records (no new Experiences)."""
+        if is_read_only():
+            return []
+        ids: list[str] = []
+        conflicting = [o.label for o in pred.outcomes[1:4]]
+        now = time()
+        for i, outcome in enumerate(pred.outcomes[:6]):
+            hyp = Hypothesis(
+                id=new_id("hyp"),
+                claim=outcome.label,
+                confidence=min(0.95, max(0.05, outcome.probability * 0.7 + pred.confidence * 0.3)),
+                status=HypothesisStatus.ACTIVE,
+                supporting_ids=list(outcome.support)[:8],
+                conflicting_ids=[
+                    c
+                    for c in conflicting
+                    if c.casefold() != outcome.label.casefold()
+                ][:6],
+                prediction_id=pred.id,
+                concept_id=outcome.concept_id,
+                created=now,
+                metadata={
+                    "rank": i,
+                    "probability": outcome.probability,
+                    "why": list(outcome.why),
+                    "cue": pred.cue,
+                },
+            )
+            self.store.hypotheses[hyp.id] = hyp
+            ids.append(hyp.id)
+            self._hypotheses += 1
+        if ids:
+            self.validation.record_prediction(
+                action="form_hypotheses",
+                prediction_id=pred.id,
+                hypothesis_count=len(ids),
+                hypothesize=1,
+            )
+        return ids
+
+    def update_hypothesis(
+        self,
+        hypothesis_id: str,
+        *,
+        status: HypothesisStatus | str,
+        evidence_ids: list[str] | tuple[str, ...] = (),
+        superseded_by: str = "",
+        withdrawn_reason: str = "",
+    ) -> dict[str, Any]:
+        """Lifecycle transition only — never invents or rewrites Experiences."""
+        if is_read_only():
+            return {"status": "read_only"}
+        hyp = self.store.hypotheses.get(hypothesis_id)
+        if hyp is None:
+            return {"status": "missing"}
+        if hyp.status != HypothesisStatus.ACTIVE and status != HypothesisStatus.ACTIVE:
+            # Allow transitions from active only (history preserved via closed_at).
+            if hyp.status.value == str(status):
+                return {"status": hyp.status.value, "hypothesis": hyp.to_public()}
+        new_status = (
+            status if isinstance(status, HypothesisStatus) else HypothesisStatus(str(status))
+        )
+        before = hyp.status.value
+        hyp.status = new_status
+        if evidence_ids:
+            if new_status == HypothesisStatus.DISPROVED:
+                hyp.conflicting_ids = list(
+                    dict.fromkeys([*hyp.conflicting_ids, *[e for e in evidence_ids if e]])
+                )[:12]
+            else:
+                hyp.supporting_ids = list(
+                    dict.fromkeys([*hyp.supporting_ids, *[e for e in evidence_ids if e]])
+                )[:12]
+        if new_status == HypothesisStatus.SUPERSEDED:
+            hyp.superseded_by = superseded_by or hyp.superseded_by
+            hyp.closed_at = time()
+        elif new_status == HypothesisStatus.WITHDRAWN:
+            hyp.withdrawn_reason = withdrawn_reason or hyp.withdrawn_reason or "withdrawn"
+            hyp.closed_at = time()
+        elif new_status == HypothesisStatus.DISPROVED:
+            hyp.closed_at = time()
+        self.validation.record_prediction(
+            action="hypothesis_lifecycle",
+            hypothesis_id=hyp.id,
+            status_before=before,
+            status_after=hyp.status.value,
+            lifecycle=1,
+        )
+        return {"status": hyp.status.value, "hypothesis": hyp.to_public()}
+
     def evaluate(self, prediction_id: str, realized_concept_id: str) -> dict[str, Any]:
-        """Update prediction accuracy from a later memory outcome (not a plan reward)."""
+        """Backward-compatible wrapper → full prediction audit pipeline."""
+        return self.audit_outcome(
+            prediction_id,
+            observed_concept_id=realized_concept_id,
+            apply_learning=True,
+        )
+
+    def audit_outcome(
+        self,
+        prediction_id: str,
+        *,
+        observed_concept_id: str = "",
+        observed_experience_id: str = "",
+        apply_learning: bool = True,
+    ) -> dict[str, Any]:
+        """Prediction → Observed → Comparison → Calibration → Confidence → Learning.
+
+        Append-only audit. Never invents Experiences. Never modifies provenance.
+        """
+        if is_read_only():
+            return {"status": "read_only"}
         pred = self.store.predictions.get(prediction_id)
         if pred is None:
             return {"status": "missing"}
+        exp_before = len(self.store.experiences)
+        prov_before = len(self.store.provenance)
+
+        realized_id = observed_concept_id
+        realized_label = ""
+        if realized_id and realized_id in self.store.concepts:
+            c = self.store.concepts[realized_id]
+            realized_label = c.labels[0] if c.labels else realized_id
+        elif observed_experience_id and observed_experience_id in self.store.experiences:
+            exp = self.store.experiences[observed_experience_id]
+            for cid in exp.concept_ids:
+                concept = self.store.concepts.get(cid)
+                if concept and concept.labels:
+                    realized_id = cid
+                    realized_label = concept.labels[0]
+                    break
+            if not realized_label:
+                realized_label = (exp.summary or "")[:80]
+
         ranked = [o.concept_id for o in pred.outcomes]
-        if realized_concept_id in ranked:
-            idx = ranked.index(realized_concept_id)
-            # higher if closer to top
-            accuracy = max(0.1, 1.0 - idx * 0.12)
-        else:
+        ranked_labels = [o.label.casefold() for o in pred.outcomes]
+        hit_rank: int | None = None
+        if realized_id and realized_id in ranked:
+            hit_rank = ranked.index(realized_id)
+        elif realized_label and realized_label.casefold() in ranked_labels:
+            hit_rank = ranked_labels.index(realized_label.casefold())
+            realized_id = pred.outcomes[hit_rank].concept_id
+
+        if hit_rank is None:
+            comparison = ComparisonKind.MISS
             accuracy = 0.05
+        elif hit_rank == 0:
+            comparison = ComparisonKind.HIT
+            accuracy = 1.0
+        else:
+            comparison = ComparisonKind.PARTIAL
+            accuracy = max(0.1, 1.0 - hit_rank * 0.12)
+
+        expected_top = pred.outcomes[0].label if pred.outcomes else ""
+        before = pred.confidence
+        # Calibration blend (living prediction summary; audit keeps history).
+        after = before * 0.7 + accuracy * 0.3
         pred.evaluated = True
         pred.accuracy = accuracy
-        # Confidence evolution toward observed accuracy
-        before = pred.confidence
-        pred.confidence = pred.confidence * 0.7 + accuracy * 0.3
-        self._evaluations += 1
-        self.validation.record_prediction(
-            action="evaluate",
+        pred.confidence = after
+
+        explanation = self._audit_explanation(
+            pred,
+            comparison=comparison,
+            expected_top=expected_top,
+            realized_label=realized_label or realized_id,
+            accuracy=accuracy,
+            before=before,
+            after=after,
+        )
+
+        hyp_updates = self._apply_hypothesis_lifecycle(
+            pred,
+            realized_id=realized_id,
+            comparison=comparison,
+            evidence_id=observed_experience_id,
+        )
+
+        conf_event_ids: list[str] = []
+        if self.confidence is not None and realized_id:
+            conf_before_len = len(self.store.confidence_events)
+            self.confidence.evolve_from_learning(
+                realized_id, reinforce=(comparison != ComparisonKind.MISS)
+            )
+            # Mark supporting evidence refreshed on hits; leave miss without inventing ids.
+            concept = self.store.concepts.get(realized_id)
+            if concept and comparison == ComparisonKind.HIT:
+                self.confidence.mark_reinforced(
+                    "concept", realized_id, concept.evidence_ids[-3:]
+                )
+            for ev in self.store.confidence_events[conf_before_len:]:
+                conf_event_ids.append(
+                    f"{ev.timestamp}:{ev.target_id}:{ev.source}"
+                )
+
+        adaptation_ids: list[str] = []
+        audit = PredictionAudit(
+            id=new_id("aud"),
             prediction_id=pred.id,
+            observed_concept_id=realized_id or "",
+            observed_experience_id=observed_experience_id or "",
+            comparison=comparison,
+            hit_rank=hit_rank,
+            expected_top_label=expected_top,
+            realized_label=realized_label or realized_id or "",
             accuracy=accuracy,
             confidence_before=before,
-            confidence_after=pred.confidence,
+            confidence_after=after,
+            calibration_delta=after - before,
+            confidence_event_ids=conf_event_ids,
+            hypothesis_updates=hyp_updates,
+            explanation=explanation,
+            created=time(),
+        )
+        self.store.prediction_audits[audit.id] = audit
+        pred.metadata["last_audit_id"] = audit.id
+        self._last_audit_id = audit.id
+        self._audits += 1
+        self._evaluations += 1
+
+        if apply_learning and self.learning is not None:
+            ads = self.learning.learn_from_prediction_audit(audit.id)
+            adaptation_ids = [a.id for a in ads]
+            audit.adaptation_ids = adaptation_ids
+
+        assert len(self.store.experiences) == exp_before
+        assert len(self.store.provenance) == prov_before
+
+        self.validation.record_prediction(
+            action="audit",
+            prediction_id=pred.id,
+            audit_id=audit.id,
+            accuracy=accuracy,
+            confidence_before=before,
+            confidence_after=after,
+            comparison=comparison.value,
             evaluate=1,
-            realized_concept_id=realized_concept_id,
+            audit=1,
+            realized_concept_id=realized_id,
         )
         return {
             "status": "evaluated",
             "accuracy": accuracy,
             "confidence": pred.confidence,
+            "comparison": comparison.value,
+            "audit": audit.to_public(),
             "prediction": pred.to_public(),
+            "hypothesis_updates": hyp_updates,
+            "adaptation_ids": adaptation_ids,
+            "experiences_unchanged": True,
+            "provenance_unchanged": True,
         }
+
+    def explain_belief_change(
+        self, *, audit_id: str = "", hypothesis_id: str = "", prediction_id: str = ""
+    ) -> dict[str, Any]:
+        """Why belief/confidence changed — read-only explanation over preserved history."""
+        audit: PredictionAudit | None = None
+        if audit_id:
+            audit = self.store.prediction_audits.get(audit_id)
+        elif prediction_id:
+            pred = self.store.predictions.get(prediction_id)
+            last = (pred.metadata.get("last_audit_id") if pred else "") or ""
+            audit = self.store.prediction_audits.get(last) if last else None
+            if audit is None:
+                audits = [
+                    a
+                    for a in self.store.prediction_audits.values()
+                    if a.prediction_id == prediction_id
+                ]
+                audits.sort(key=lambda a: a.created, reverse=True)
+                audit = audits[0] if audits else None
+        hyp = self.store.hypotheses.get(hypothesis_id) if hypothesis_id else None
+
+        if audit is None and hyp is None:
+            return {
+                "question": "What changed your mind?",
+                "answer": "I don't have a preserved belief-change record for that yet.",
+                "known": False,
+            }
+
+        alternatives = []
+        if audit:
+            pred = self.store.predictions.get(audit.prediction_id)
+            if pred:
+                alternatives = [
+                    {
+                        "claim": o.label,
+                        "probability": o.probability,
+                        "supporting": list(o.support)[:4],
+                    }
+                    for o in pred.outcomes[:5]
+                ]
+            hyps = [
+                self.store.hypotheses[hid].to_public()
+                for hid in (pred.metadata.get("hypothesis_ids") if pred else []) or []
+                if hid in self.store.hypotheses
+            ]
+            rejected = [
+                h
+                for h in hyps
+                if h["status"] in ("disproved", "superseded", "withdrawn")
+            ]
+            answer = audit.explanation
+            return {
+                "question": "What changed your mind?",
+                "answer": answer,
+                "known": True,
+                "why_believe": (
+                    f"Top expectation was '{audit.expected_top_label}' "
+                    f"(confidence {audit.confidence_before:.0%})."
+                ),
+                "supporting_evidence": list(
+                    (pred.outcomes[0].support if pred and pred.outcomes else [])[:6]
+                ),
+                "conflicting_evidence": (
+                    [audit.observed_experience_id]
+                    if audit.comparison == ComparisonKind.MISS and audit.observed_experience_id
+                    else []
+                ),
+                "what_changed": (
+                    f"Observed '{audit.realized_label}' → {audit.comparison.value}; "
+                    f"confidence {audit.confidence_before:.0%}→{audit.confidence_after:.0%}."
+                ),
+                "when_confidence_changed": audit.created,
+                "alternative_explanations": alternatives,
+                "rejected_hypotheses": rejected,
+                "would_increase_confidence": [
+                    "Additional consistent Experiences matching the top outcome",
+                    "Reinforcement of supporting associations",
+                ],
+                "would_decrease_confidence": [
+                    "Contradictory observed outcomes",
+                    "Stale unreinformed evidence (Cap2 aging)",
+                ],
+                "audit": audit.to_public(),
+                "reversible": True,
+                "plans": False,
+                "decides": False,
+            }
+
+        assert hyp is not None
+        return {
+            "question": "What changed your mind?",
+            "answer": (
+                f"Hypothesis '{hyp.claim}' is {hyp.status.value}"
+                + (f" (superseded by {hyp.superseded_by})" if hyp.superseded_by else "")
+                + (f": {hyp.withdrawn_reason}" if hyp.withdrawn_reason else "")
+                + "."
+            ),
+            "known": True,
+            "hypothesis": hyp.to_public(),
+            "supporting_evidence": list(hyp.supporting_ids),
+            "conflicting_evidence": list(hyp.conflicting_ids),
+            "when_confidence_changed": hyp.closed_at or hyp.created,
+            "reversible": hyp.status == HypothesisStatus.ACTIVE,
+        }
+
+    def competing_hypotheses(self, cue_or_prediction_id: str = "") -> dict[str, Any]:
+        """List active competing hypotheses for a cue or prediction."""
+        pred = self.store.predictions.get(cue_or_prediction_id)
+        hyps: list[Hypothesis] = []
+        if pred is not None:
+            for hid in pred.metadata.get("hypothesis_ids") or []:
+                h = self.store.hypotheses.get(hid)
+                if h:
+                    hyps.append(h)
+        else:
+            q = (cue_or_prediction_id or "").casefold()
+            for h in self.store.hypotheses.values():
+                if not q or q in h.claim.casefold() or q in (h.metadata.get("cue") or "").casefold():
+                    hyps.append(h)
+            hyps.sort(key=lambda h: h.created, reverse=True)
+            hyps = hyps[:12]
+        active = [h for h in hyps if h.status == HypothesisStatus.ACTIVE]
+        closed = [h for h in hyps if h.status != HypothesisStatus.ACTIVE]
+        return {
+            "question": "What alternative explanations exist?",
+            "active": [h.to_public() for h in active],
+            "historical": [h.to_public() for h in closed],
+            "answer": (
+                f"{len(active)} active hypothesis(es); {len(closed)} preserved closed."
+                if hyps
+                else "No competing hypotheses recorded yet."
+            ),
+            "plans": False,
+            "decides": False,
+        }
+
+    def _apply_hypothesis_lifecycle(
+        self,
+        pred: Prediction,
+        *,
+        realized_id: str,
+        comparison: ComparisonKind,
+        evidence_id: str,
+    ) -> list[str]:
+        updates: list[str] = []
+        hyp_ids = list(pred.metadata.get("hypothesis_ids") or [])
+        winner: Hypothesis | None = None
+        for hid in hyp_ids:
+            hyp = self.store.hypotheses.get(hid)
+            if hyp is None or hyp.status != HypothesisStatus.ACTIVE:
+                continue
+            if realized_id and hyp.concept_id == realized_id:
+                winner = hyp
+                continue
+            if comparison == ComparisonKind.MISS:
+                out = self.update_hypothesis(
+                    hid,
+                    status=HypothesisStatus.DISPROVED,
+                    evidence_ids=[evidence_id] if evidence_id else (),
+                )
+            else:
+                out = self.update_hypothesis(
+                    hid,
+                    status=HypothesisStatus.SUPERSEDED,
+                    superseded_by="",
+                    evidence_ids=[evidence_id] if evidence_id else (),
+                )
+            updates.append(f"{hid}:{out.get('status')}")
+        if winner is not None:
+            # Winner stays active; mark others superseded by winner.
+            for hid in hyp_ids:
+                hyp = self.store.hypotheses.get(hid)
+                if hyp is None or hyp.id == winner.id:
+                    continue
+                if hyp.status == HypothesisStatus.SUPERSEDED and not hyp.superseded_by:
+                    hyp.superseded_by = winner.id
+            updates.append(f"{winner.id}:active_confirmed")
+        return updates
+
+    def _audit_explanation(
+        self,
+        pred: Prediction,
+        *,
+        comparison: ComparisonKind,
+        expected_top: str,
+        realized_label: str,
+        accuracy: float,
+        before: float,
+        after: float,
+    ) -> str:
+        if comparison == ComparisonKind.HIT:
+            return (
+                f"Prediction matched: expected '{expected_top}' and observed "
+                f"'{realized_label}'. Confidence calibrated {before:.0%}→{after:.0%} "
+                f"(accuracy {accuracy:.0%})."
+            )
+        if comparison == ComparisonKind.PARTIAL:
+            return (
+                f"Partial match: expected top '{expected_top}' but observed "
+                f"'{realized_label}' among alternatives. Confidence {before:.0%}→{after:.0%}."
+            )
+        return (
+            f"Prediction missed: expected '{expected_top or 'unknown'}' but observed "
+            f"'{realized_label or 'unmatched outcome'}'. Confidence reduced "
+            f"{before:.0%}→{after:.0%}. Competing hypotheses preserved for history."
+        )
 
     def observables(self) -> dict[str, Any]:
         evaluated = [p for p in self.store.predictions.values() if p.evaluated]
         avg_acc = (
             sum(p.accuracy or 0 for p in evaluated) / len(evaluated) if evaluated else 0.0
         )
+        by_status: dict[str, int] = {}
+        for h in self.store.hypotheses.values():
+            by_status[h.status.value] = by_status.get(h.status.value, 0) + 1
         return {
             "predictions": self._predictions,
             "evaluations": self._evaluations,
+            "audits": self._audits,
+            "hypotheses_formed": self._hypotheses,
             "stored": len(self.store.predictions),
+            "stored_audits": len(self.store.prediction_audits),
+            "stored_hypotheses": len(self.store.hypotheses),
+            "hypotheses_by_status": by_status,
             "avg_accuracy": avg_acc,
         }

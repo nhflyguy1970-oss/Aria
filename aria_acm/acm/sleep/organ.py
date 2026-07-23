@@ -10,6 +10,7 @@ from acm.types import new_id
 if TYPE_CHECKING:
     from acm.activation.engine import ActivationEngine
     from acm.attention.organ import AttentionOrgan
+    from acm.confidence.organ import ConfidenceOrgan
     from acm.core.store import CognitiveStore
     from acm.forgetting.organ import ForgettingOrgan
     from acm.learning.organ import LearningOrgan
@@ -32,6 +33,7 @@ class OfflineCognitionOrgan:
         activation: ActivationEngine | None = None,
         attention: AttentionOrgan | None = None,
         forgetting: ForgettingOrgan | None = None,
+        confidence: ConfidenceOrgan | None = None,
     ) -> None:
         self.store = store
         self.validation = validation
@@ -39,6 +41,7 @@ class OfflineCognitionOrgan:
         self.activation = activation
         self.attention = attention
         self.forgetting = forgetting
+        self.confidence = confidence
         self._batches = 0
         self._replays = 0
         self._stabilizations = 0
@@ -49,6 +52,7 @@ class OfflineCognitionOrgan:
         activation: ActivationEngine | None = None,
         attention: AttentionOrgan | None = None,
         forgetting: ForgettingOrgan | None = None,
+        confidence: ConfidenceOrgan | None = None,
     ) -> None:
         if activation is not None:
             self.activation = activation
@@ -56,6 +60,8 @@ class OfflineCognitionOrgan:
             self.attention = attention
         if forgetting is not None:
             self.forgetting = forgetting
+        if confidence is not None:
+            self.confidence = confidence
 
     def consolidate(self, *, apply_low_impact: bool = True) -> dict[str, Any]:
         """Cognitive question M8: What should become long-term memory?"""
@@ -173,6 +179,34 @@ class OfflineCognitionOrgan:
                     f"identity_merge_requires_assent:{label}:{','.join(identity_ids)}"
                 )
 
+        # Hierarchy proposals from clustering (Concept organ owns taxonomy; never auto-invent).
+        concepts = getattr(self.learning, "concepts", None)
+        if concepts is not None:
+            for prop in concepts.propose_hierarchy_from_clusters(
+                min_cluster=2, max_proposals=6
+            ):
+                parent = (prop.metadata or {}).get("parent_id", "")
+                kids = (prop.metadata or {}).get("child_ids") or []
+                proposals.append(
+                    f"hierarchy_candidate:{parent}:{','.join(kids[:6])}:{prop.id}"
+                )
+                self.validation.record_offline(
+                    action="hierarchy_proposal",
+                    proposal=1,
+                    sleep_batch_id=batch_id,
+                    proposal_id=prop.id,
+                )
+            # Cap4: derive evidenced multi-level abstractions (no invented Experiences).
+            derived = concepts.derive_abstractions_from_hierarchy()
+            if derived:
+                proposals.append(f"abstraction_derived:{len(derived)}")
+                self.validation.record_offline(
+                    action="abstraction_derive",
+                    proposal=1,
+                    sleep_batch_id=batch_id,
+                    derived_count=len(derived),
+                )
+
         # Identity stabilization: slight confidence toward mean of evidence mass
         for c in self.store.concepts.values():
             if not c.identity or not c.active:
@@ -194,6 +228,17 @@ class OfflineCognitionOrgan:
                         confidence_after=c.confidence,
                     )
 
+        # M5 Cap2 — evidence aging / stale detection (never deletes provenance).
+        aging: dict[str, Any] = {}
+        if self.confidence is not None:
+            aging = self.confidence.age_evidence_pass()
+            for c in list(self.store.concepts.values())[:40]:
+                if c.active and not c.identity and len(c.evidence_ids) >= 2:
+                    self.confidence.stabilize_confidence(c.id)
+
+        # M5 Cap5 — temporal patterns weaken when unobserved.
+        pattern_aging = self.learning.age_temporal_patterns()
+
         payload = {
             "question": "What should become long-term memory?",
             "sleep_batch_id": batch_id,
@@ -202,6 +247,8 @@ class OfflineCognitionOrgan:
             "adaptations_applied": adaptations_applied,
             "cooled_associations": cooled,
             "stabilizations": stabilized,
+            "evidence_aging": aging,
+            "temporal_pattern_aging": pattern_aging,
             "proposals": proposals,
             "applied_low_impact": apply_low_impact,
             # backward compatible keys for older sleep tests

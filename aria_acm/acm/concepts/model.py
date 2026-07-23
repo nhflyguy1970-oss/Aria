@@ -96,17 +96,149 @@ class Concept:
 
 @dataclass(frozen=True)
 class HierarchyEdge:
+    """Taxonomic link owned by the Concept organ (D016). Evidence-stamped; never invents Experiences."""
+
     id: str
     child_id: str
     parent_id: str
     kind: HierarchyKind = HierarchyKind.IS_A
     weight: float = 0.5
+    evidence_ids: tuple[str, ...] = ()
+    created: float = 0.0
+    last_reinforced: float = 0.0
+
+    def to_public(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "child_id": self.child_id,
+            "parent_id": self.parent_id,
+            "kind": self.kind.value,
+            "weight": self.weight,
+            "evidence_ids": list(self.evidence_ids),
+            "evidence_count": len(self.evidence_ids),
+            "created": self.created,
+            "last_reinforced": self.last_reinforced,
+        }
 
 
 @dataclass
 class ConceptProposal:
     id: str
-    kind: str  # merge | split
+    kind: str  # merge | split | hierarchy_link | specialize | generalize | inherit
     concept_ids: tuple[str, ...]
     reason: str
     status: str = "pending"  # pending | accepted | rejected
+    evidence_ids: tuple[str, ...] = ()
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+class AbstractionLevel(StrEnum):
+    """Progressive multi-level abstraction (M5 Cap4)."""
+
+    L1_OBSERVATION = "l1_observation"
+    L2_CONCEPT = "l2_concept"
+    L3_GENERALIZED = "l3_generalized"
+    L4_PRINCIPLE = "l4_principle"
+    L5_STRUCTURE = "l5_structure"
+
+
+class AbstractionStatus(StrEnum):
+    CANDIDATE = "candidate"
+    ACTIVE = "active"
+    REFINED = "refined"
+    SPLIT = "split"
+    MERGED = "merged"
+    RETIRED = "retired"
+
+
+class PrincipleModality(StrEnum):
+    """Probabilistic modality — never absolute truth."""
+
+    USUALLY = "usually"
+    TENDS = "tends"
+    COMMONLY = "commonly"
+    RARELY = "rarely"
+
+
+@dataclass
+class AbstractionRecord:
+    """Evidence-based multi-level abstraction. Never invents Experiences."""
+
+    id: str
+    label: str
+    level: AbstractionLevel
+    status: AbstractionStatus = AbstractionStatus.CANDIDATE
+    confidence: float = 0.35
+    supporting_concept_ids: list[str] = field(default_factory=list)
+    supporting_experience_ids: list[str] = field(default_factory=list)
+    conflicting_experience_ids: list[str] = field(default_factory=list)
+    hierarchy_edge_ids: list[str] = field(default_factory=list)
+    parent_abstraction_id: str = ""
+    child_abstraction_ids: list[str] = field(default_factory=list)
+    merged_into: str = ""
+    split_from: str = ""
+    prediction_audit_ids: list[str] = field(default_factory=list)
+    created: float = 0.0
+    last_reinforced: float = 0.0
+    retired_at: float = 0.0
+    retirement_reason: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_public(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "label": self.label,
+            "level": self.level.value,
+            "status": self.status.value,
+            "confidence": round(self.confidence, 4),
+            "supporting_concept_ids": list(self.supporting_concept_ids),
+            "supporting_experience_ids": list(self.supporting_experience_ids),
+            "conflicting_experience_ids": list(self.conflicting_experience_ids),
+            "hierarchy_edge_ids": list(self.hierarchy_edge_ids),
+            "parent_abstraction_id": self.parent_abstraction_id,
+            "child_abstraction_ids": list(self.child_abstraction_ids),
+            "merged_into": self.merged_into,
+            "split_from": self.split_from,
+            "prediction_audit_ids": list(self.prediction_audit_ids),
+            "created": self.created,
+            "last_reinforced": self.last_reinforced,
+            "retired_at": self.retired_at,
+            "retirement_reason": self.retirement_reason,
+            "evidence_count": len(self.supporting_experience_ids),
+            "invents_experiences": False,
+        }
+
+
+@dataclass
+class GeneralPrinciple:
+    """Probabilistic general principle — never an absolute truth."""
+
+    id: str
+    statement: str
+    modality: PrincipleModality
+    confidence: float = 0.4
+    abstraction_id: str = ""
+    supporting_concept_ids: list[str] = field(default_factory=list)
+    supporting_experience_ids: list[str] = field(default_factory=list)
+    conflicting_experience_ids: list[str] = field(default_factory=list)
+    active: bool = True
+    created: float = 0.0
+    last_reinforced: float = 0.0
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_public(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "statement": self.statement,
+            "modality": self.modality.value,
+            "confidence": round(self.confidence, 4),
+            "abstraction_id": self.abstraction_id,
+            "supporting_concept_ids": list(self.supporting_concept_ids),
+            "supporting_experience_ids": list(self.supporting_experience_ids),
+            "conflicting_experience_ids": list(self.conflicting_experience_ids),
+            "active": self.active,
+            "created": self.created,
+            "last_reinforced": self.last_reinforced,
+            "absolute": False,
+            "invents_experiences": False,
+        }

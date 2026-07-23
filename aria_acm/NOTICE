@@ -4,15 +4,24 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M3-ACM-backlog-cycle):
+Source pin (M5-ACM-CAP5-TEMPORAL):
+  tag:    v0.32.0
+  commit: 2ce664b1d7faa78a435ea399859760e9e3d9ddce
+  version: 0.32.0
+  local:  aria-acm-v0.32.0-1
+  decision: Promote M5 Cap1–Cap5 (hierarchies, evidence, counterfactual,
+            abstraction, temporal patterns) after standalone Gates 1–4.
+  includes: M4 AML · M5 Cap1–Cap5 · D038–D047
+
+Aria-local bootstrap: `aria_acm/acm/__init__.py` registers `sys.modules["acm"]`
+to the nested package so absolute `from acm.*` imports resolve without
+site-packages.
+
+Prior pin (M4-ACM-AML / M3-ACM-backlog-cycle):
   tag:    v0.27.0
   commit: 1850ad7dc85b3ba948eb0e8b77bf33b3fdb6eae9
-  version harvested from pin: 0.26.0
-  decision: Engineering backlog cycle — diagnostics, inspect APIs, explainability
-  includes: D038–D047 · Teaching Recognition · Read-only diagnostics (B07) ·
-            Inspect façades (B08) · Organ views (B27) · Identity docs/tooling
-            (B43–B45) · Teach/query + evidence (B01/B02/B41) · Explainability
-            (B04–B06, B14, B16, B17, B19) · Memory profiling (B28)
+  version harvested from pin: 0.27.0
+  decision: M4 Adaptive Memory & Learning (superseded by M5 Cap5 pin above)
 
 Prior pin (M3-ACM-cert-relations):
 Prior pin (M3-ACM-cert-relations):

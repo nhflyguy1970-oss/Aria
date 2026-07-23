@@ -245,7 +245,7 @@ class AssociationOrgan:
         return created
 
     def absorb_hierarchy_edge(
-        self, child_id: str, parent_id: str, *, weight: float = 0.5
+        self, child_id: str, parent_id: str, *, weight: float = 0.5, evidence_id: str = ""
     ) -> Association | None:
         """Mirror Concept is_a as directional traffic (specific → general stronger)."""
         return self.relate(
@@ -255,9 +255,12 @@ class AssociationOrgan:
             strength_forward=min(0.95, 0.55 + weight * 0.35),
             strength_backward=min(0.5, 0.2 + weight * 0.15),  # Animal → Dog weaker
             confidence=0.6,
+            evidence_id=evidence_id,
         )
 
-    def absorb_siblings(self, parent_id: str) -> list[Association]:
+    def absorb_siblings(
+        self, parent_id: str, *, evidence_id: str = ""
+    ) -> list[Association]:
         """Resemblance among children sharing a parent Concept."""
         parent = self.store.concepts.get(parent_id)
         if parent is None:
@@ -274,6 +277,7 @@ class AssociationOrgan:
                     strength_backward=0.35,
                     confidence=0.4,
                     unexpected=False,
+                    evidence_id=evidence_id,
                 )
                 if assoc:
                     out.append(assoc)

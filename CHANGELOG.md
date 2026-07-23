@@ -1,5 +1,12 @@
 # Changelog — Aria / Jarvis
 
+## [M5-ACM-CAP5-TEMPORAL] — 2026-07-23
+
+Promote certified ACM **v0.32.0** (`2ce664b`) as `aria-acm-v0.32.0-1`.
+Includes M5 Cap1–Cap5 (concept hierarchies, evidence weighting, counterfactual
+prediction audit, multi-level abstraction, temporal pattern recognition) plus
+prior M4 AML. Gates: `tests/test_aria_acm_m5_cap5.py` and updated pin asserts.
+
 ## [M4-ACM-AML] — 2026-07-23
 
 Promote certified ACM **v0.27.0** (`1850ad7`) as `aria-acm-v0.27.0-1`.

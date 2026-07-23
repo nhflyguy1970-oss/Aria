@@ -13,6 +13,7 @@ from acm.learning.model import (
     AdaptationTarget,
     GovernanceClass,
 )
+from acm.learning.temporal_pattern import PatternKind, PatternStatus, TemporalPattern
 from acm.types import ConceptRole, new_id
 from acm.validation.harness import ConfidenceDelta
 
@@ -55,6 +56,8 @@ class LearningOrgan:
         self._proposed = 0
         self._abstained = 0
         self._rollbacks = 0
+        self._temporal_patterns = 0
+        self._min_pattern_observations = 2
 
     def bind(
         self,
@@ -203,6 +206,14 @@ class LearningOrgan:
                     )
                     if ad:
                         created.append(ad)
+                # Evidence-based hierarchy deepening (Concept organ owns taxonomy).
+                for ad in self._adapt_hierarchy_from_reflection(
+                    concept_ids,
+                    reflective_ids=[exp.id],
+                    evidence_ids=evidence,
+                    sleep_batch_id=sleep_batch_id,
+                ):
+                    created.append(ad)
             # Goal importance nudge when reflective cue overlaps an active goal
             for ad in self._adapt_goals_from_reflection(
                 exp,
@@ -350,6 +361,371 @@ class LearningOrgan:
             summary="Stabilized association.",
         )
 
+    def learn_from_prediction_audit(self, audit_id: str) -> list[Adaptation]:
+        """Reversible living-structure updates from a PredictionAudit (Cap3).
+
+        Never invents Experiences. Cites audit + observed evidence only.
+        """
+        if is_read_only():
+            return []
+        from acm.prediction.model import ComparisonKind
+
+        audit = self.store.prediction_audits.get(audit_id)
+        if audit is None:
+            return []
+        created: list[Adaptation] = []
+        reinforce = audit.comparison in (ComparisonKind.HIT, ComparisonKind.PARTIAL)
+        evidence = [e for e in (audit.observed_experience_id,) if e]
+        cid = audit.observed_concept_id
+        if cid and cid in self.store.concepts:
+            ad = self._adapt_concept(
+                cid,
+                strength_delta=CAP_CONCEPT_STRENGTH * (0.7 if reinforce else -0.6),
+                confidence_delta=CAP_CONCEPT_CONFIDENCE * (0.6 if reinforce else -0.7),
+                kind=AdaptationKind.REINFORCE if reinforce else AdaptationKind.WEAKEN,
+                reflective_ids=[],
+                evidence_ids=evidence,
+                sleep_batch_id="",
+                summary=(
+                    f"Prediction audit {audit.comparison.value}: "
+                    f"calibrated living confidence from observed outcome."
+                ),
+            )
+            if ad:
+                ad.metadata["prediction_audit_id"] = audit_id
+                created.append(ad)
+            # Soft association nudge among prediction source neighborhood
+            pred = self.store.predictions.get(audit.prediction_id)
+            if pred and reinforce:
+                for aid in self._assoc_among([cid, *pred.source_concept_ids[:3]])[:3]:
+                    a2 = self._adapt_association(
+                        aid,
+                        delta=CAP_ASSOC_STRENGTH * 0.5,
+                        kind=AdaptationKind.REINFORCE,
+                        reflective_ids=[],
+                        evidence_ids=evidence,
+                        sleep_batch_id="",
+                        summary="Reinforced association after prediction hit.",
+                    )
+                    if a2:
+                        a2.metadata["prediction_audit_id"] = audit_id
+                        created.append(a2)
+            # Cap4: prediction outcomes strengthen/weaken supporting abstractions
+            if self.concepts is not None:
+                for abs_rec in list(self.store.abstractions.values()):
+                    if cid not in abs_rec.supporting_concept_ids:
+                        continue
+                    if abs_rec.status.value in {"retired", "merged", "split"}:
+                        continue
+                    before_conf = abs_rec.confidence
+                    self.concepts.reinforce_abstraction(
+                        abs_rec.id,
+                        evidence_ids=evidence,
+                        audit_id=audit_id,
+                        strengthen=reinforce,
+                    )
+                    ad_abs = self._adapt_concept(
+                        cid,
+                        strength_delta=CAP_CONCEPT_STRENGTH * (0.3 if reinforce else -0.25),
+                        confidence_delta=0.0,
+                        kind=AdaptationKind.GENERALIZE if reinforce else AdaptationKind.WEAKEN,
+                        reflective_ids=[],
+                        evidence_ids=evidence,
+                        sleep_batch_id="",
+                        summary=(
+                            f"Abstraction '{abs_rec.label}' "
+                            f"{'reinforced' if reinforce else 'weakened'} "
+                            f"by prediction audit ({before_conf:.2f}→"
+                            f"{self.store.abstractions[abs_rec.id].confidence:.2f})."
+                        ),
+                    )
+                    if ad_abs:
+                        ad_abs.metadata["prediction_audit_id"] = audit_id
+                        ad_abs.metadata["abstraction_id"] = abs_rec.id
+                        created.append(ad_abs)
+        self.validation.record_learning(
+            action="prediction_audit_learn",
+            audit_id=audit_id,
+            adaptation_count=len(created),
+            comparison=audit.comparison.value,
+            learn=1,
+        )
+        return created
+
+    # --- M5 Cap5: Temporal Pattern Recognition --------------------------------
+
+    def observe_temporal_pattern(
+        self,
+        *,
+        antecedent: str,
+        consequent: str,
+        experience_id: str = "",
+        concept_ids: list[str] | tuple[str, ...] = (),
+        period_hint: str = "",
+        kind: PatternKind | str = PatternKind.HABIT,
+        label: str = "",
+        now: float | None = None,
+    ) -> dict[str, Any]:
+        """Upsert an evidence-based temporal pattern. Never invents Experiences."""
+        if is_read_only():
+            return {"status": "read_only"}
+        ante = " ".join((antecedent or "").strip().split())
+        cons = " ".join((consequent or "").strip().split())
+        if not ante or not cons:
+            return {"status": "rejected", "reason": "missing_endpoints"}
+        if experience_id and experience_id not in self.store.experiences:
+            return {"status": "rejected", "reason": "unknown_experience"}
+        now = time() if now is None else float(now)
+        period = (period_hint or self._infer_period_hint(f"{ante} {cons}")).lower()
+        kind_v = kind if isinstance(kind, PatternKind) else PatternKind(str(kind))
+        key = f"{ante.casefold()}=>{cons.casefold()}|{period}"
+        existing = None
+        for p in self.store.temporal_patterns.values():
+            pk = f"{p.antecedent.casefold()}=>{p.consequent.casefold()}|{p.period_hint}"
+            if pk == key:
+                existing = p
+                break
+        if existing is None:
+            pat = TemporalPattern(
+                id=new_id("tpat"),
+                label=label or f"{ante} → {cons}",
+                kind=kind_v,
+                status=PatternStatus.ACTIVE,
+                antecedent=ante,
+                consequent=cons,
+                period_hint=period,
+                confidence=0.35,
+                strength=0.35,
+                observation_count=1,
+                supporting_experience_ids=[experience_id] if experience_id else [],
+                supporting_concept_ids=[c for c in concept_ids if c in self.store.concepts][:8],
+                first_observed=now,
+                last_observed=now,
+                metadata={"key": key},
+            )
+            self.store.temporal_patterns[pat.id] = pat
+            self._temporal_patterns += 1
+            self.validation.record_learning(
+                action="temporal_pattern_observe",
+                pattern_id=pat.id,
+                observation_count=1,
+                learn=1,
+            )
+            return {"status": "formed", "pattern": pat.to_public()}
+        # Reinforce existing
+        before = existing.confidence
+        if experience_id and experience_id not in existing.supporting_experience_ids:
+            existing.supporting_experience_ids.append(experience_id)
+        for cid in concept_ids:
+            if cid in self.store.concepts and cid not in existing.supporting_concept_ids:
+                existing.supporting_concept_ids.append(cid)
+        existing.observation_count += 1
+        existing.last_observed = now
+        existing.strength = min(0.95, existing.strength + 0.08)
+        existing.confidence = min(0.92, existing.confidence + 0.06)
+        if existing.status in {PatternStatus.WEAKENING, PatternStatus.DORMANT}:
+            existing.status = PatternStatus.ACTIVE
+        if (
+            existing.observation_count >= self._min_pattern_observations
+            and len(existing.supporting_experience_ids) >= 1
+        ):
+            existing.kind = kind_v if existing.kind == PatternKind.HABIT else existing.kind
+        self.validation.record_learning(
+            action="temporal_pattern_reinforce",
+            pattern_id=existing.id,
+            confidence_before=before,
+            confidence_after=existing.confidence,
+            learn=1,
+        )
+        return {
+            "status": "reinforced",
+            "pattern": existing.to_public(),
+            "confidence_before": before,
+            "confidence_after": existing.confidence,
+        }
+
+    def age_temporal_patterns(
+        self,
+        *,
+        now: float | None = None,
+        weaken_idle_s: float = 14 * 86400,
+        dormant_idle_s: float = 45 * 86400,
+        retire_idle_s: float = 120 * 86400,
+    ) -> dict[str, Any]:
+        """Weaken patterns no longer observed. Never deletes Experiences/provenance."""
+        if is_read_only():
+            return {"status": "read_only", "weakened": 0}
+        now = time() if now is None else float(now)
+        exp_before = len(self.store.experiences)
+        prov_before = len(self.store.provenance)
+        weakened = dormant = retired = 0
+        for pat in self.store.temporal_patterns.values():
+            if pat.status == PatternStatus.RETIRED:
+                continue
+            idle = now - float(pat.last_observed or pat.first_observed or now)
+            if idle < weaken_idle_s:
+                continue
+            before = pat.confidence
+            # Soft exponential-ish decay of strength/confidence
+            steps = max(1, int(idle / max(weaken_idle_s, 1.0)))
+            decay = min(0.5, 0.08 * steps)
+            pat.strength = max(0.05, pat.strength - decay)
+            pat.confidence = max(0.05, pat.confidence - decay * 0.9)
+            pat.last_weakened = now
+            if idle >= retire_idle_s and pat.confidence <= 0.15:
+                pat.status = PatternStatus.RETIRED
+                pat.retired_at = now
+                retired += 1
+            elif idle >= dormant_idle_s:
+                pat.status = PatternStatus.DORMANT
+                dormant += 1
+            else:
+                pat.status = PatternStatus.WEAKENING
+                weakened += 1
+            self.validation.record_learning(
+                action="temporal_pattern_age",
+                pattern_id=pat.id,
+                confidence_before=before,
+                confidence_after=pat.confidence,
+                status=pat.status.value,
+                learn=1,
+            )
+        assert len(self.store.experiences) == exp_before
+        assert len(self.store.provenance) == prov_before
+        return {
+            "status": "aged",
+            "weakened": weakened,
+            "dormant": dormant,
+            "retired": retired,
+            "experiences_unchanged": True,
+            "provenance_unchanged": True,
+        }
+
+    def explain_temporal_pattern(self, cue_or_id: str = "") -> dict[str, Any]:
+        """Why does this routine/habit exist? Evidence and confidence trajectory."""
+        pat = self.store.temporal_patterns.get(cue_or_id)
+        if pat is None:
+            q = (cue_or_id or "").casefold()
+            matches = [
+                p
+                for p in self.store.temporal_patterns.values()
+                if not q
+                or q in p.label.casefold()
+                or q in p.antecedent.casefold()
+                or q in p.consequent.casefold()
+                or q in p.period_hint
+            ]
+            matches.sort(key=lambda p: p.confidence, reverse=True)
+            pat = matches[0] if matches else None
+        if pat is None:
+            return {
+                "question": "What temporal pattern is this?",
+                "known": False,
+                "answer": "I don't have an evidence-based temporal pattern for that yet.",
+                "invents_experiences": False,
+            }
+        return {
+            "question": "What temporal pattern is this?",
+            "known": True,
+            "answer": (
+                f"Pattern '{pat.label}' ({pat.kind.value}/{pat.status.value}): "
+                f"when '{pat.antecedent}' then '{pat.consequent}'"
+                + (f" ({pat.period_hint})" if pat.period_hint else "")
+                + f" — confidence {pat.confidence:.0%} from "
+                f"{pat.observation_count} observation(s)."
+            ),
+            "supporting_experiences": list(pat.supporting_experience_ids),
+            "confidence": pat.confidence,
+            "last_observed": pat.last_observed,
+            "last_weakened": pat.last_weakened,
+            "status": pat.status.value,
+            "weakens_when_unobserved": True,
+            "pattern": pat.to_public(),
+            "invents_experiences": False,
+        }
+
+    def list_temporal_patterns(
+        self, *, include_dormant: bool = False, cue: str = ""
+    ) -> dict[str, Any]:
+        items = list(self.store.temporal_patterns.values())
+        if not include_dormant:
+            items = [
+                p
+                for p in items
+                if p.status in {PatternStatus.ACTIVE, PatternStatus.WEAKENING}
+            ]
+        if cue:
+            q = cue.casefold()
+            items = [
+                p
+                for p in items
+                if q in p.label.casefold()
+                or q in p.antecedent.casefold()
+                or q in p.consequent.casefold()
+                or q in p.period_hint
+            ]
+        items.sort(key=lambda p: (p.confidence, p.observation_count), reverse=True)
+        return {
+            "question": "What routines or temporal patterns do I have?",
+            "patterns": [p.to_public() for p in items[:24]],
+            "count": len(items),
+            "answer": (
+                "; ".join(p.label for p in items[:5])
+                if items
+                else "No active temporal patterns learned yet."
+            ),
+            "invents_experiences": False,
+        }
+
+    def discover_patterns_from_predictive_experiences(self) -> list[dict[str, Any]]:
+        """Materialize TemporalPatterns from existing predictive Experiences (no invention)."""
+        created: list[dict[str, Any]] = []
+        for exp in self.store.experiences.values():
+            meta = exp.meta_dict() if hasattr(exp, "meta_dict") else {}
+            if not isinstance(meta, dict) or meta.get("predictive") != "1":
+                continue
+            ante = str(meta.get("pattern_antecedent") or "").strip()
+            cons = str(meta.get("pattern_consequent") or "").strip()
+            if not ante or not cons:
+                continue
+            out = self.observe_temporal_pattern(
+                antecedent=ante,
+                consequent=cons,
+                experience_id=exp.id,
+                period_hint=self._infer_period_hint(f"{ante} {cons} {exp.summary or ''}"),
+                kind=PatternKind.RECURRING,
+                now=float(exp.t_start or exp.created or time()),
+            )
+            if out.get("status") in {"formed", "reinforced"}:
+                created.append(out["pattern"])
+        return created
+
+    def _infer_period_hint(self, text: str) -> str:
+        t = (text or "").casefold()
+        for token, hint in (
+            ("saturday", "saturday"),
+            ("sunday", "sunday"),
+            ("weekend", "weekend"),
+            ("weekday", "weekday"),
+            ("morning", "morning"),
+            ("afternoon", "afternoon"),
+            ("evening", "evening"),
+            ("night", "night"),
+            ("winter", "seasonal"),
+            ("summer", "seasonal"),
+            ("spring", "seasonal"),
+            ("autumn", "seasonal"),
+            ("fall", "seasonal"),
+            ("every week", "weekly"),
+            ("weekly", "weekly"),
+            ("daily", "daily"),
+            ("every day", "daily"),
+            ("monthly", "monthly"),
+        ):
+            if token in t:
+                return hint
+        return "recurring"
+
     def observables(self) -> dict[str, Any]:
         return {
             "adaptation_count": len(self.store.adaptations),
@@ -357,6 +733,8 @@ class LearningOrgan:
             "proposed": self._proposed,
             "abstained": self._abstained,
             "rollbacks": self._rollbacks,
+            "temporal_patterns": len(self.store.temporal_patterns),
+            "temporal_pattern_ops": self._temporal_patterns,
         }
 
     def daily_learning_summary(self, since_ts: float = 0.0) -> dict[str, Any]:
@@ -694,6 +1072,145 @@ class LearningOrgan:
             sleep_batch_id=sleep_batch_id or "",
         )
         return ad
+
+    def _adapt_hierarchy_from_reflection(
+        self,
+        concept_ids: list[str],
+        *,
+        reflective_ids: list[str],
+        evidence_ids: list[str],
+        sleep_batch_id: str,
+    ) -> list[Adaptation]:
+        """Deepen taxonomy via ConceptOrgan when siblings share an evidenced parent.
+
+        Learning coordinates only — never invents Concepts or Experiences.
+        """
+        if self.concepts is None:
+            return []
+        created: list[Adaptation] = []
+        # Group by existing parents among the reflective neighborhood.
+        by_parent: dict[str, list[str]] = {}
+        orphans: list[str] = []
+        for cid in concept_ids:
+            concept = self.store.concepts.get(cid)
+            if concept is None or not concept.active:
+                continue
+            if concept.parent_ids:
+                for pid in concept.parent_ids[:2]:
+                    by_parent.setdefault(pid, []).append(cid)
+            else:
+                orphans.append(cid)
+        # Reinforce existing parent links with reflective evidence.
+        for pid, kids in by_parent.items():
+            if pid not in self.store.concepts:
+                continue
+            for kid in kids[:4]:
+                before_edge = None
+                for e in self.concepts.hierarchy.values():
+                    if e.child_id == kid and e.parent_id == pid:
+                        before_edge = e
+                        break
+                before_w = before_edge.weight if before_edge else 0.0
+                edge = self.concepts.link_is_a(
+                    kid,
+                    pid,
+                    weight=0.5,
+                    evidence_ids=tuple(evidence_ids[-4:]),
+                )
+                if edge is None:
+                    continue
+                ad = Adaptation(
+                    id=new_id("adp"),
+                    kind=AdaptationKind.GENERALIZE,
+                    target_kind=AdaptationTarget.CONCEPT,
+                    target_id=kid,
+                    governance=GovernanceClass.AUTOMATIC,
+                    before={"hierarchy_weight": before_w},
+                    after={"hierarchy_weight": edge.weight},
+                    reflective_experience_ids=list(reflective_ids),
+                    evidence_experience_ids=list(evidence_ids),
+                    sleep_batch_id=sleep_batch_id,
+                    summary=f"Reinforced is_a link under parent from reflective evidence.",
+                    applied=True,
+                    created=time(),
+                    metadata={
+                        "hierarchy_edge_id": edge.id,
+                        "parent_id": pid,
+                        "child_id": kid,
+                    },
+                )
+                self.store.adaptations[ad.id] = ad
+                self._applied += 1
+                created.append(ad)
+                self.validation.record_learning(
+                    action="hierarchy_reinforce",
+                    adaptation_id=ad.id,
+                    target_id=kid,
+                    parent_id=pid,
+                    generalize=1,
+                    apply=1,
+                    sleep_batch_id=sleep_batch_id,
+                )
+            # Soft attribute inheritance for specialized children (evidence-gated).
+            for kid in kids[:2]:
+                inherited = self.concepts.inherit_attributes(
+                    kid, pid, evidence_ids=tuple(evidence_ids[-3:])
+                )
+                if inherited:
+                    ad = Adaptation(
+                        id=new_id("adp"),
+                        kind=AdaptationKind.GENERALIZE,
+                        target_kind=AdaptationTarget.CONCEPT,
+                        target_id=kid,
+                        governance=GovernanceClass.AUTOMATIC,
+                        before={"inherited_attrs": 0},
+                        after={"inherited_attrs": float(len(inherited))},
+                        reflective_experience_ids=list(reflective_ids),
+                        evidence_experience_ids=list(evidence_ids),
+                        sleep_batch_id=sleep_batch_id,
+                        summary="Inherited parent attributes onto specialized child (evidence-gated).",
+                        applied=True,
+                        created=time(),
+                        metadata={"inherited": inherited, "parent_id": pid},
+                    )
+                    self.store.adaptations[ad.id] = ad
+                    self._applied += 1
+                    created.append(ad)
+        # Orphans that share a common parent already used by siblings — specialize under it.
+        if orphans and by_parent:
+            dominant_parent = max(by_parent, key=lambda p: len(by_parent[p]))
+            for kid in orphans[:2]:
+                edge = self.concepts.specialize(
+                    kid,
+                    dominant_parent,
+                    evidence_ids=tuple(evidence_ids[-4:]),
+                )
+                if edge is None:
+                    continue
+                ad = Adaptation(
+                    id=new_id("adp"),
+                    kind=AdaptationKind.GENERALIZE,
+                    target_kind=AdaptationTarget.CONCEPT,
+                    target_id=kid,
+                    governance=GovernanceClass.AUTOMATIC,
+                    before={"hierarchy_weight": 0.0},
+                    after={"hierarchy_weight": edge.weight},
+                    reflective_experience_ids=list(reflective_ids),
+                    evidence_experience_ids=list(evidence_ids),
+                    sleep_batch_id=sleep_batch_id,
+                    summary="Specialized orphan concept under evidenced shared parent.",
+                    applied=True,
+                    created=time(),
+                    metadata={
+                        "hierarchy_edge_id": edge.id,
+                        "parent_id": dominant_parent,
+                        "child_id": kid,
+                    },
+                )
+                self.store.adaptations[ad.id] = ad
+                self._applied += 1
+                created.append(ad)
+        return created
 
     def _adapt_concept(
         self,

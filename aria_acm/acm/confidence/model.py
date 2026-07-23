@@ -14,6 +14,42 @@ class UncertaintyKind(StrEnum):
     SIMULATION = "simulation"
     LEARNING = "learning"
     REFLECTION = "reflection"
+    STALE = "stale"
+    OBSOLETE = "obsolete"
+
+
+class EvidenceStatus(StrEnum):
+    ACTIVE = "active"
+    STALE = "stale"
+    OBSOLETE = "obsolete"
+
+
+@dataclass
+class EvidenceInfluence:
+    """Per-evidence influence on a living target — never deletes provenance or Experiences."""
+
+    target_kind: str
+    target_id: str
+    experience_id: str
+    weight: float = 1.0
+    last_reinforced: float = 0.0
+    created: float = 0.0
+    status: EvidenceStatus = EvidenceStatus.ACTIVE
+
+    @property
+    def key(self) -> str:
+        return f"{self.target_kind}:{self.target_id}:{self.experience_id}"
+
+    def to_public(self) -> dict[str, Any]:
+        return {
+            "target_kind": self.target_kind,
+            "target_id": self.target_id,
+            "experience_id": self.experience_id,
+            "weight": round(self.weight, 4),
+            "last_reinforced": self.last_reinforced,
+            "created": self.created,
+            "status": self.status.value,
+        }
 
 
 @dataclass

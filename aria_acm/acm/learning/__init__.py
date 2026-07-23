@@ -7,6 +7,7 @@ from acm.learning.model import (
     GovernanceClass,
 )
 from acm.learning.organ import LearningOrgan
+from acm.learning.temporal_pattern import PatternKind, PatternStatus, TemporalPattern
 
 __all__ = [
     "Adaptation",
@@ -14,4 +15,7 @@ __all__ = [
     "AdaptationTarget",
     "GovernanceClass",
     "LearningOrgan",
+    "PatternKind",
+    "PatternStatus",
+    "TemporalPattern",
 ]

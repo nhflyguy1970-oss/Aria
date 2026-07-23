@@ -184,6 +184,8 @@ class CognitiveEngine:
             forgetting=self.forgetting,
         )
         self.confidence = ConfidenceOrgan(store=self.store, validation=self.validation)
+        self.offline.bind(confidence=self.confidence)
+        self.prediction.bind(confidence=self.confidence, learning=self.learning)
         self.reconciliation = ReconciliationOrgan(
             store=self.store,
             validation=self.validation,
@@ -247,9 +249,11 @@ class CognitiveEngine:
 
             payload = json.loads(Path(src).read_text(encoding="utf-8"))
             import_store(payload, store=self.store)
+            self.concepts.rebuild_hierarchy_index()
             self.validation.record_storage(action="import", ok=1)
             return {"ok": True, "experiences": len(self.store.experiences)}
         result = self.durable.import_snapshot(src)
+        self.concepts.rebuild_hierarchy_index()
         self.validation.record_storage(action="import", ok=1)
         return result
 
@@ -745,6 +749,49 @@ class CognitiveEngine:
         """Cognitive question M3: What is this?"""
         return self.concepts.what_is_this(cue)
 
+    def concept_hierarchy(self, cue: str) -> dict[str, Any]:
+        """M5 Cap1 — explain taxonomic placement (parents/children/siblings/evidence)."""
+        return self.concepts.explain_hierarchy(cue)
+
+    def abstraction_levels(self, cue: str) -> dict[str, Any]:
+        """M5 Cap4 — multi-level abstraction view for a concept cue."""
+        return self.concepts.abstraction_levels(cue)
+
+    def explain_abstraction(self, cue: str) -> dict[str, Any]:
+        """M5 Cap4 — why an abstraction exists; evidence and revisability."""
+        return self.concepts.explain_abstraction(cue)
+
+    def propose_abstraction(
+        self,
+        concept_ids: list[str] | tuple[str, ...],
+        *,
+        label: str = "",
+        evidence_ids: list[str] | tuple[str, ...] = (),
+        level: str = "l3_generalized",
+    ) -> dict[str, Any]:
+        """M5 Cap4 — evidence-gated abstraction candidate."""
+        return self.concepts.propose_abstraction(
+            concept_ids, label=label, evidence_ids=evidence_ids, level=level
+        )
+
+    def form_general_principle(
+        self,
+        abstraction_id: str = "",
+        *,
+        concept_ids: list[str] | tuple[str, ...] = (),
+        modality: str = "usually",
+        statement: str = "",
+        evidence_ids: list[str] | tuple[str, ...] = (),
+    ) -> dict[str, Any]:
+        """M5 Cap4 — probabilistic general principle (never absolute)."""
+        return self.concepts.form_general_principle(
+            abstraction_id,
+            concept_ids=concept_ids,
+            modality=modality,
+            statement=statement,
+            evidence_ids=evidence_ids,
+        )
+
     def how_related(self, left: str, right: str) -> dict[str, Any]:
         """Cognitive question M4: How is this related?"""
         return self.associations.how_related(left, right)
@@ -793,6 +840,22 @@ class CognitiveEngine:
     def what_have_i_learned(self, cue: str = "") -> dict[str, Any]:
         """Cognitive question M7: What have I learned?"""
         return self.learning.what_have_i_learned(cue)
+
+    def list_temporal_patterns(
+        self, *, include_dormant: bool = False, cue: str = ""
+    ) -> dict[str, Any]:
+        """M5 Cap5 — routines / schedules / habits learned from Experiences."""
+        return self.learning.list_temporal_patterns(
+            include_dormant=include_dormant, cue=cue
+        )
+
+    def explain_temporal_pattern(self, cue: str = "") -> dict[str, Any]:
+        """M5 Cap5 — explain an evidence-based temporal pattern."""
+        return self.learning.explain_temporal_pattern(cue)
+
+    def age_temporal_patterns(self, **kwargs: Any) -> dict[str, Any]:
+        """M5 Cap5 — weaken patterns no longer observed."""
+        return self.learning.age_temporal_patterns(**kwargs)
 
     def daily_learning_summary(self, since_ts: float = 0.0) -> dict[str, Any]:
         """Host-callable learning rollup (no internal timer). Read-only aggregation."""
@@ -1118,6 +1181,54 @@ class CognitiveEngine:
 
     def evaluate_prediction(self, prediction_id: str, realized_concept_id: str) -> dict[str, Any]:
         return self.prediction.evaluate(prediction_id, realized_concept_id)
+
+    def audit_prediction(
+        self,
+        prediction_id: str,
+        *,
+        observed_concept_id: str = "",
+        observed_experience_id: str = "",
+        apply_learning: bool = True,
+    ) -> dict[str, Any]:
+        """M5 Cap3 — full prediction audit pipeline."""
+        return self.prediction.audit_outcome(
+            prediction_id,
+            observed_concept_id=observed_concept_id,
+            observed_experience_id=observed_experience_id,
+            apply_learning=apply_learning,
+        )
+
+    def explain_belief_change(
+        self, *, audit_id: str = "", hypothesis_id: str = "", prediction_id: str = ""
+    ) -> dict[str, Any]:
+        """M5 Cap3 — explain why belief/confidence changed (history preserved)."""
+        return self.prediction.explain_belief_change(
+            audit_id=audit_id,
+            hypothesis_id=hypothesis_id,
+            prediction_id=prediction_id,
+        )
+
+    def competing_hypotheses(self, cue_or_prediction_id: str = "") -> dict[str, Any]:
+        """M5 Cap3 — active + historical competing hypotheses."""
+        return self.prediction.competing_hypotheses(cue_or_prediction_id)
+
+    def update_hypothesis(
+        self,
+        hypothesis_id: str,
+        *,
+        status: str,
+        evidence_ids: list[str] | tuple[str, ...] = (),
+        superseded_by: str = "",
+        withdrawn_reason: str = "",
+    ) -> dict[str, Any]:
+        """M5 Cap3 — hypothesis lifecycle (disproved/superseded/withdrawn)."""
+        return self.prediction.update_hypothesis(
+            hypothesis_id,
+            status=status,
+            evidence_ids=evidence_ids,
+            superseded_by=superseded_by,
+            withdrawn_reason=withdrawn_reason,
+        )
 
     def cool_memory(self, concept_id: str, *, steps: int = 1) -> dict[str, Any]:
         """Soft forget — accessibility down; never deletes Experiences."""
@@ -1706,6 +1817,17 @@ class CognitiveEngine:
                 assoc.metadata["autobiographical"] = True
                 assoc.metadata["learned_relation"] = "predicts"
                 assoc.metadata["predictive_pattern"] = "1"
+            # M5 Cap5 — durable temporal pattern (evidence-based habit/routine).
+            self.learning.observe_temporal_pattern(
+                antecedent=antecedent,
+                consequent=consequent,
+                experience_id=experience_id,
+                concept_ids=(source.id, target.id),
+                period_hint=self.learning._infer_period_hint(
+                    f"{antecedent} {consequent}"
+                ),
+                kind="habit",
+            )
 
     def _ensure_relational_concept(self, label: str, *, evidence_id: str) -> Any:
         """Resolve or create one Concept endpoint for an explicit learned entity."""

@@ -9,12 +9,19 @@ from typing import Any
 from acm.analogy.model import AnalogyMapping
 from acm.associations.model import Association, RelationKind
 from acm.attention.model import PriorityEvent
-from acm.concepts.model import Concept, ConceptStage
-from acm.confidence.model import ConfidenceEvent
+from acm.concepts.model import (
+    AbstractionRecord,
+    Concept,
+    ConceptStage,
+    GeneralPrinciple,
+    HierarchyEdge,
+)
+from acm.confidence.model import ConfidenceEvent, EvidenceInfluence
 from acm.experiences.model import Experience
 from acm.forgetting.model import AccessibilityEvent
 from acm.learning.model import Adaptation
-from acm.prediction.model import Prediction
+from acm.learning.temporal_pattern import TemporalPattern
+from acm.prediction.model import Hypothesis, Prediction, PredictionAudit
 from acm.provenance.model import ProvenanceRecord
 from acm.recombination.model import RecombinedMemory
 from acm.reconciliation.model import ReconciliationRecord
@@ -54,13 +61,20 @@ class CognitiveStore:
         self.experiences: dict[str, Experience] = {}
         self.concepts: dict[str, Concept] = {}
         self.associations: dict[str, Association] = {}
+        self.hierarchy_edges: dict[str, HierarchyEdge] = {}
+        self.abstractions: dict[str, AbstractionRecord] = {}
+        self.general_principles: dict[str, GeneralPrinciple] = {}
+        self.evidence_influences: dict[str, EvidenceInfluence] = {}
         self.goals: dict[str, Goal] = {}
         self.envelopes: dict[str, EnvelopeRef] = {}
         self.adaptations: dict[str, Adaptation] = {}
+        self.temporal_patterns: dict[str, TemporalPattern] = {}
         self.accessibility: dict[str, str] = {}
         self.priority_events: list[PriorityEvent] = []
         self.accessibility_events: list[AccessibilityEvent] = []
         self.predictions: dict[str, Prediction] = {}
+        self.hypotheses: dict[str, Hypothesis] = {}
+        self.prediction_audits: dict[str, PredictionAudit] = {}
         self.simulations: dict[str, Simulation] = {}
         self.recombinations: dict[str, RecombinedMemory] = {}
         self.analogies: dict[str, AnalogyMapping] = {}
