@@ -338,14 +338,36 @@ def run_skill_step(
         }
 
     try:
-        proc = subprocess.run(
-            cmd,
-            shell=True,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=str(PROJECT_ROOT),
+        # Prefer argv list — avoid shell metacharacters. Opt into shell with JARVIS_SKILL_SHELL=1.
+        import shlex
+
+        use_shell = os.getenv("JARVIS_SKILL_SHELL", "0").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
         )
+        if use_shell:
+            proc = subprocess.run(
+                cmd,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=str(PROJECT_ROOT),
+            )
+        else:
+            argv = shlex.split(cmd)
+            if not argv:
+                return {"ok": False, "type": stype, "title": title, "error": "Empty command"}
+            proc = subprocess.run(
+                argv,
+                shell=False,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                cwd=str(PROJECT_ROOT),
+            )
         out = ((proc.stdout or "") + (proc.stderr or "")).strip()[:4000]
         ok = proc.returncode == 0 or stype == "check"
         return {
@@ -356,7 +378,7 @@ def run_skill_step(
             "exit_code": proc.returncode,
             "output": out,
         }
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    except (OSError, subprocess.TimeoutExpired, ValueError) as exc:
         return {"ok": False, "type": stype, "title": title, "error": str(exc)}
 
 

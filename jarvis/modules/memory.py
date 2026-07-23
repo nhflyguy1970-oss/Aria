@@ -296,18 +296,34 @@ class JsonMemoryStore:
         namespace: str | None = None,
     ) -> bool:
         try:
+            from aria_core.acm_bridge import acm_is_authoritative, note_legacy_write_while_primary
             from aria_core.acm_store_facade import acm_update
 
-            diverted = acm_update(
-                entry_id,
-                content=content,
-                entry_type=entry_type,
-                tags=tags,
-                namespace=namespace,
-            )
+            try:
+                diverted = acm_update(
+                    entry_id,
+                    content=content,
+                    entry_type=entry_type,
+                    tags=tags,
+                    namespace=namespace,
+                )
+            except Exception as exc:
+                if acm_is_authoritative():
+                    note_legacy_write_while_primary()
+                    raise RuntimeError(
+                        f"ACM authoritative: legacy MemoryStore update refused "
+                        f"({type(exc).__name__})"
+                    ) from exc
+                diverted = None
             if diverted is not None:
                 return diverted
-        except Exception:
+            if acm_is_authoritative():
+                note_legacy_write_while_primary()
+                raise RuntimeError(
+                    "ACM authoritative: legacy MemoryStore update refused "
+                    "(facade returned no result)"
+                )
+        except ImportError:
             pass
         for e in self._data["entries"]:
             if e.get("id") != entry_id:
@@ -376,12 +392,28 @@ class JsonMemoryStore:
 
     def delete_id(self, entry_id: str) -> bool:
         try:
+            from aria_core.acm_bridge import acm_is_authoritative, note_legacy_write_while_primary
             from aria_core.acm_store_facade import acm_delete_id
 
-            diverted = acm_delete_id(entry_id)
+            try:
+                diverted = acm_delete_id(entry_id)
+            except Exception as exc:
+                if acm_is_authoritative():
+                    note_legacy_write_while_primary()
+                    raise RuntimeError(
+                        f"ACM authoritative: legacy MemoryStore delete refused "
+                        f"({type(exc).__name__})"
+                    ) from exc
+                diverted = None
             if diverted is not None:
                 return diverted
-        except Exception:
+            if acm_is_authoritative():
+                note_legacy_write_while_primary()
+                raise RuntimeError(
+                    "ACM authoritative: legacy MemoryStore delete refused "
+                    "(facade returned no result)"
+                )
+        except ImportError:
             pass
         idx = self.find_index(entry_id)
         if idx is None:
@@ -392,6 +424,13 @@ class JsonMemoryStore:
         return True
 
     def clear(self, entry_type: str | None = None, namespace: str | None = None) -> int:
+        try:
+            from aria_core.acm_bridge import acm_is_authoritative
+
+            if acm_is_authoritative():
+                return 0
+        except ImportError:
+            pass
         before = len(self._data["entries"])
         if not entry_type and not namespace:
             ids = [e["id"] for e in self._data["entries"]]
@@ -427,6 +466,14 @@ class JsonMemoryStore:
         min_score: float = 0.35,
         types: tuple[str, ...] = ("auto",),
     ) -> int:
+        try:
+            from aria_core.acm_bridge import acm_is_authoritative
+
+            if acm_is_authoritative():
+                # Legacy prune must not mutate forensic vault under PRIMARY.
+                return 0
+        except ImportError:
+            pass
         now = datetime.now(UTC)
         kept = []
         removed_ids: list[str] = []
@@ -518,7 +565,7 @@ class JsonMemoryStore:
                     entry_type = raw.get("type") if raw.get("type") in MEMORY_TYPES else "fact"
                     tags = raw.get("tags") if isinstance(raw.get("tags"), list) else []
                     namespace = str(raw.get("namespace") or DEFAULT_NAMESPACE)
-                    self.add(content, entry_type=entry_type, tags=tags, namespace=namespace)
+                    self.add(entry_type, content, tags=tags, namespace=namespace)
                     added += 1
                 return added
         except ImportError:

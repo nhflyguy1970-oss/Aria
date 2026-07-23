@@ -325,18 +325,34 @@ class SqliteMemoryStore:
         namespace: str | None = None,
     ) -> bool:
         try:
+            from aria_core.acm_bridge import acm_is_authoritative, note_legacy_write_while_primary
             from aria_core.acm_store_facade import acm_update
 
-            diverted = acm_update(
-                entry_id,
-                content=content,
-                entry_type=entry_type,
-                tags=tags,
-                namespace=namespace,
-            )
+            try:
+                diverted = acm_update(
+                    entry_id,
+                    content=content,
+                    entry_type=entry_type,
+                    tags=tags,
+                    namespace=namespace,
+                )
+            except Exception as exc:
+                if acm_is_authoritative():
+                    note_legacy_write_while_primary()
+                    raise RuntimeError(
+                        f"ACM authoritative: legacy MemoryStore update refused "
+                        f"({type(exc).__name__})"
+                    ) from exc
+                diverted = None
             if diverted is not None:
                 return diverted
-        except Exception:
+            if acm_is_authoritative():
+                note_legacy_write_while_primary()
+                raise RuntimeError(
+                    "ACM authoritative: legacy MemoryStore update refused "
+                    "(facade returned no result)"
+                )
+        except ImportError:
             pass
         row = self._conn.execute("SELECT * FROM memories WHERE id = ?", (entry_id,)).fetchone()
         if not row:
@@ -407,12 +423,28 @@ class SqliteMemoryStore:
 
     def delete_id(self, entry_id: str) -> bool:
         try:
+            from aria_core.acm_bridge import acm_is_authoritative, note_legacy_write_while_primary
             from aria_core.acm_store_facade import acm_delete_id
 
-            diverted = acm_delete_id(entry_id)
+            try:
+                diverted = acm_delete_id(entry_id)
+            except Exception as exc:
+                if acm_is_authoritative():
+                    note_legacy_write_while_primary()
+                    raise RuntimeError(
+                        f"ACM authoritative: legacy MemoryStore delete refused "
+                        f"({type(exc).__name__})"
+                    ) from exc
+                diverted = None
             if diverted is not None:
                 return diverted
-        except Exception:
+            if acm_is_authoritative():
+                note_legacy_write_while_primary()
+                raise RuntimeError(
+                    "ACM authoritative: legacy MemoryStore delete refused "
+                    "(facade returned no result)"
+                )
+        except ImportError:
             pass
         cur = self._conn.execute("DELETE FROM memories WHERE id = ?", (entry_id,))
         self._conn.commit()
@@ -422,6 +454,13 @@ class SqliteMemoryStore:
         return False
 
     def clear(self, entry_type: str | None = None, namespace: str | None = None) -> int:
+        try:
+            from aria_core.acm_bridge import acm_is_authoritative
+
+            if acm_is_authoritative():
+                return 0
+        except ImportError:
+            pass
         if not entry_type and not namespace:
             ids = [r["id"] for r in self._all_rows()]
             self._conn.execute("DELETE FROM memories")
@@ -452,6 +491,13 @@ class SqliteMemoryStore:
         min_score: float = 0.35,
         types: tuple[str, ...] = ("auto",),
     ) -> int:
+        try:
+            from aria_core.acm_bridge import acm_is_authoritative
+
+            if acm_is_authoritative():
+                return 0
+        except ImportError:
+            pass
         now = datetime.now(UTC)
         remove_ids: list[str] = []
         for r in self._all_rows():
@@ -536,6 +582,25 @@ class SqliteMemoryStore:
         incoming = payload.get("entries") if isinstance(payload, dict) else None
         if not isinstance(incoming, list):
             raise ValueError("Invalid memory import — expected {entries: [...]}")
+        try:
+            from aria_core.acm_bridge import acm_is_authoritative
+
+            if acm_is_authoritative():
+                added = 0
+                for raw in incoming:
+                    if not isinstance(raw, dict):
+                        continue
+                    content = str(raw.get("content", "")).strip()
+                    if not content:
+                        continue
+                    entry_type = raw.get("type") if raw.get("type") in MEMORY_TYPES else "fact"
+                    tags = raw.get("tags") if isinstance(raw.get("tags"), list) else []
+                    namespace = str(raw.get("namespace") or DEFAULT_NAMESPACE)
+                    self.add(entry_type, content, tags=tags, namespace=namespace)
+                    added += 1
+                return added
+        except ImportError:
+            pass
         if not merge:
             self.clear()
         existing_ids = {r["id"] for r in self._all_rows()}

@@ -1,5 +1,11 @@
 # Changelog — Aria / Jarvis
 
+## [ZERO-TRUST-CERTIFICATION] — 2026-07-23
+
+Independent zero-trust audit: close PRIMARY import/update/delete/prune/clear
+holes, default skill argv (no shell), gate Claude dangerous tools, redact
+teaching-debug utterance text. Report: `docs/ARIA_ECOSYSTEM_ZERO_TRUST_CERTIFICATION.md`.
+
 ## [ARIA-HOST-PRODUCTION-AUDIT] — 2026-07-23
 
 Host + Platform production audit: fail-closed PRIMARY memory writes, ACM

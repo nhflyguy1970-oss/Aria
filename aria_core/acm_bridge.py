@@ -671,7 +671,8 @@ def primary_cognitive_respond(request: str) -> dict[str, Any]:
             ],
         }
         if _teach_debug:
-            msg_in = f"[TeachingRecognition] Input: {(request or '')[:240]}"
+            # Never log raw utterance text — length/ids only.
+            msg_in = f"[TeachingRecognition] Input chars={len(request or '')}"
             msg_flag = (
                 f"[TeachingRecognition] teaching={detected.is_teaching} reason={detected.reason}"
             )

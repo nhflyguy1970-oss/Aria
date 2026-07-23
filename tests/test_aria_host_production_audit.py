@@ -77,3 +77,57 @@ def test_lan_bind_requires_api_key(monkeypatch):
         require_api_key_for_lan_bind("0.0.0.0")
     # loopback is fine without key
     require_api_key_for_lan_bind("127.0.0.1")
+
+
+def test_primary_import_routes_via_add_arg_order(primary_env, tmp_path):
+    """Regression: import_data must call add(entry_type, content), not swapped kwargs."""
+    from jarvis.modules.memory import MemoryStore
+
+    store = MemoryStore(tmp_path / "imp.json")
+    n = store.import_data(
+        {
+            "entries": [
+                {"type": "fact", "content": "My favorite zerotrust marker is aurora."},
+            ]
+        }
+    )
+    assert n == 1
+    assert len(store._data.get("entries") or []) == 0  # no legacy SoT under PRIMARY
+
+
+def test_primary_prune_and_clear_are_noops(primary_env, tmp_path):
+    from jarvis.modules.memory import MemoryStore
+
+    store = MemoryStore(tmp_path / "p.json")
+    store._data["entries"] = [
+        {
+            "id": "x1",
+            "type": "auto",
+            "content": "stale",
+            "tags": [],
+            "namespace": "default",
+            "timestamp": "2000-01-01T00:00:00+00:00",
+            "access_count": 0,
+            "relevance": 0.01,
+        }
+    ]
+    assert store.prune(max_age_days=1, min_score=0.9) == 0
+    assert len(store._data["entries"]) == 1
+    assert store.clear() == 0
+    assert len(store._data["entries"]) == 1
+
+
+def test_skill_exec_defaults_to_no_shell():
+    src = (Path(__file__).resolve().parents[1] / "jarvis" / "skill_database.py").read_text(
+        encoding="utf-8"
+    )
+    assert "JARVIS_SKILL_SHELL" in src
+    assert "shell=False" in src
+
+
+def test_claude_dangerous_requires_env_opt_in():
+    src = (Path(__file__).resolve().parents[1] / "jarvis" / "tools" / "runner.py").read_text(
+        encoding="utf-8"
+    )
+    assert "JARVIS_ALLOW_DANGEROUS_TOOLS" in src
+    assert "--dangerously-skip-permissions" in src

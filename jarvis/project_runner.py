@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shlex
 import shutil
 import subprocess
 import sys
@@ -73,8 +74,13 @@ def run_pytest(
     cmd = [py, "-m", "pytest", rel, *args]
 
     if docker_available():
-        script = f"pip install -q pytest && python -m pytest {rel} -q --tb=short"
-        return _docker_run([script], cwd=base, timeout=timeout, shell=True)
+        # Avoid shell=True: install pytest then run argv list inside container.
+        return _docker_run(
+            ["bash", "-lc", f"pip install -q pytest && python -m pytest {shlex.quote(rel)} -q --tb=short"],
+            cwd=base,
+            timeout=timeout,
+            shell=False,
+        )
 
     use_sandbox = sandbox
     if use_sandbox is None:

@@ -98,7 +98,14 @@ def build_command(tool_id: str, params: dict[str, Any]) -> tuple[list[str], str]
 
     if tool_id == "claude_code":
         args = [binary, "-p", task, "--output-format", "text"]
-        if params.get("dangerous"):
+        # Dangerous flag requires BOTH explicit param and env opt-in.
+        allow_danger = os.getenv("JARVIS_ALLOW_DANGEROUS_TOOLS", "0").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+            "on",
+        )
+        if params.get("dangerous") and allow_danger:
             args.insert(1, "--dangerously-skip-permissions")
         return args, cwd
 
