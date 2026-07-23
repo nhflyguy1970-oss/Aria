@@ -1,4 +1,4 @@
-"""Aria promotion gates — Cap6 explainability retained under ACM v0.38.0 pin."""
+"""Aria promotion gates — Cap6 explainability retained under ACM v0.39.0 pin."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ def test_m5_cap6_pin() -> None:
     data = json.loads(
         (Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json").read_text()
     )
-    assert data["source_version"] == "0.38.0"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.38.0-1"
-    assert data["promotion"] == "B12-PREFERENCE-CORRECTION"
+    assert data["source_version"] == "0.39.0"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.39.0-1"
+    assert data["promotion"] == "B13-CONFLICT-RESOLUTION"
 
 
 def test_m5_cap6_explain_learning_parity() -> None:
@@ -20,7 +20,7 @@ def test_m5_cap6_explain_learning_parity() -> None:
     from aria_acm.acm.api.engine import CognitiveEngine
     from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
 
-    assert __version__ == "0.38.0"
+    assert __version__ == "0.39.0"
     eng = CognitiveEngine(agent_id="aria-m5-c6")
     eng.encode("I prefer local AI models.", pin=True, provenance=TRUSTED_USER_STATEMENT)
     concept = max(

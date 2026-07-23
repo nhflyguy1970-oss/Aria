@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.38.0-1",
+  "aria_acm_local_version": "aria-acm-v0.39.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.38.0",
-  "source_tag": "v0.38.0",
-  "source_commit": "540b563f4c59e96fc7c8a62f08474e39cf5f51c3",
+  "source_version": "0.39.0",
+  "source_tag": "v0.39.0",
+  "source_commit": "4e794e51dcc71a603c5038b7d0d2c3d2e02b353f",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-23",
-  "tree_sha256": "9433e1c1c593edd48f12178b5b52ccdf06dab18571d203cf170f3ffda12ab1bb",
+  "tree_sha256": "3461eb96001b574e41d076921b35414987526399703fd42f760a23f8a8454733",
   "license": "Apache-2.0",
-  "certification_ref": "B12 Preference Correction UX",
-  "promotion": "B12-PREFERENCE-CORRECTION",
-  "promotion_decision": "Promote certified ACM v0.38.0 B12 after Gates 1-4.",
+  "certification_ref": "B13 User-Assisted Conflict Resolution",
+  "promotion": "B13-CONFLICT-RESOLUTION",
+  "promotion_decision": "Promote certified ACM v0.39.0 B13 after Gates 1-4.",
   "includes": [
     "D038",
     "D039",
@@ -35,7 +35,8 @@
     "B10",
     "B11",
     "RC-E",
-    "B12"
+    "B12",
+    "B13"
   ],
-  "notes": "Promotion of ACM commit 540b563f4c59e96fc7c8a62f08474e39cf5f51c3."
+  "notes": "Promotion of ACM commit 4e794e51dcc71a603c5038b7d0d2c3d2e02b353f."
 }

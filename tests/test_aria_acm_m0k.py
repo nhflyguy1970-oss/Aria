@@ -71,8 +71,10 @@ def test_m0k_01_multi_domain_evidence_lineage() -> None:
         "B10-CONVERSATION-DEBUG",
         "B11-PREFERENCE-EDIT",
         "B12-PREFERENCE-CORRECTION",
+        "B13-CONFLICT-RESOLUTION",
         "B11-PREFERENCE-EDIT",
         "B12-PREFERENCE-CORRECTION",
+        "B13-CONFLICT-RESOLUTION",
     ) or "M0K" in meta.get("notes", "")
 
 

@@ -116,6 +116,9 @@ class CognitiveEngine:
 
         self._preference_gate = PreferencePolicyGate()
         self._preference_corrections: dict[str, dict[str, Any]] = {}
+        from acm.authority.conflict_resolution import ConflictResolutionGate
+
+        self._conflict_gate = ConflictResolutionGate()
         self.durable = None
         if persist_path:
             from acm.persistence import DurableCognitiveStore
@@ -1681,6 +1684,30 @@ class CognitiveEngine:
         return apply_preference_correction(
             self, text, default_key=default_key, assent=assent
         )
+
+    def open_conflict_resolution(self, cue: str, *, key: str = "") -> dict[str, Any]:
+        """B13 — open user-assisted conflict resolution session."""
+        from acm.authority.conflict_resolution import open_conflict_resolution
+
+        return open_conflict_resolution(self, cue, key=key)
+
+    def confirm_conflict_resolution(self, session_id: str, chosen: str) -> dict[str, Any]:
+        """B13 — confirm which competing value is current."""
+        from acm.authority.conflict_resolution import confirm_conflict_resolution
+
+        return confirm_conflict_resolution(self, session_id, chosen)
+
+    def reject_conflict_resolution(self, session_id: str) -> dict[str, Any]:
+        """B13 — reject conflict resolution without changes."""
+        from acm.authority.conflict_resolution import reject_conflict_resolution
+
+        return reject_conflict_resolution(self, session_id)
+
+    def abstain_conflict_resolution(self, session_id: str) -> dict[str, Any]:
+        """B13 — abstain; leave competing recollections unchanged."""
+        from acm.authority.conflict_resolution import abstain_conflict_resolution
+
+        return abstain_conflict_resolution(self, session_id)
 
     def inspect_reconstruction(self, cue: str) -> dict[str, Any]:
         """B08 façade: reconstruction read-model (read-only)."""
