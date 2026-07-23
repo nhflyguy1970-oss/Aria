@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.35.0-1",
+  "aria_acm_local_version": "aria-acm-v0.36.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.35.0",
-  "source_tag": "v0.35.0",
-  "source_commit": "32446e88913c26645819d04d3e7785ea6ddf438c",
+  "source_version": "0.36.0",
+  "source_tag": "v0.36.0",
+  "source_commit": "b289fe5ddb80ffc9453d110d0ee911ab86ce905c",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-23",
-  "tree_sha256": "f3020ba24b5e98490cb6afb6fc362312ef98bbf3bb1e8c13c475dfd93b01035e",
+  "tree_sha256": "2de19f8da436af5198b2dfe83bcc51f3d606fa83356c9c6d867ffc4a06d89797",
   "license": "Apache-2.0",
-  "certification_ref": "B09 Diagnostic Safety Policy",
-  "promotion": "B09-DIAGNOSTIC-SAFETY",
-  "promotion_decision": "Promote certified ACM v0.35.0 B09 after Gates 1-4.",
+  "certification_ref": "B10 Conversation-Safe Debugging",
+  "promotion": "B10-CONVERSATION-DEBUG",
+  "promotion_decision": "Promote certified ACM v0.36.0 B10 (incl. duck-typed policy fix) after Gates 1-4.",
   "includes": [
     "D038",
     "D039",
@@ -31,7 +31,8 @@
     "M5-Cap6",
     "M5-Cap7",
     "B09",
-    "RC-A"
+    "RC-A",
+    "B10"
   ],
-  "notes": "Promotion of ACM commit 32446e88913c26645819d04d3e7785ea6ddf438c."
+  "notes": "Promotion of ACM commit b289fe5ddb80ffc9453d110d0ee911ab86ce905c."
 }

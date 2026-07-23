@@ -285,8 +285,17 @@ def redact_organ_view(
 def policy_for_engine(engine: CognitiveEngine) -> RedactionPolicy:
     """Resolve the engine's diagnostic redaction policy (default STRICT)."""
     policy = getattr(engine, "redaction_policy", None)
-    if isinstance(policy, RedactionPolicy):
-        return policy
+    if policy is not None and hasattr(policy, "level"):
+        if isinstance(policy, RedactionPolicy):
+            return policy
+        try:
+            level = policy.level if isinstance(policy.level, RedactionLevel) else RedactionLevel(str(policy.level))
+        except Exception:  # noqa: BLE001
+            level = RedactionLevel.STRICT
+        return RedactionPolicy(
+            level=level,
+            max_snippet=int(getattr(policy, "max_snippet", _MAX_SNIPPET)),
+        )
     return DEFAULT_REDACTION_POLICY
 
 

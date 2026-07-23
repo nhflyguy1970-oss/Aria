@@ -72,6 +72,7 @@ class CognitiveEngine:
         assistant_identity: dict[str, Any] | None = None,
         redaction_policy: Any | None = None,
         diagnostic_safety_policy: Any | None = None,
+        conversation_debug_policy: Any | None = None,
     ) -> None:
         from acm.identity.assistant_profile import AssistantIdentityProfile
         from acm.authority.redaction import DEFAULT_REDACTION_POLICY, RedactionPolicy
@@ -79,18 +80,37 @@ class CognitiveEngine:
             DEFAULT_DIAGNOSTIC_SAFETY_POLICY,
             DiagnosticSafetyPolicy,
         )
+        from acm.authority.debug_capture import (
+            DEFAULT_CONVERSATION_DEBUG_POLICY,
+            ConversationDebugPolicy,
+            DebugCaptureBuffer,
+        )
 
         self.agent_id = agent_id
         self.auto_persist = auto_persist
-        self.redaction_policy: RedactionPolicy = (
+        # Duck-type policies: Aria nested `aria_acm.acm` vs shim `acm` can yield
+        # distinct class objects for the same source file under dual imports.
+        self.redaction_policy = (
             redaction_policy
-            if isinstance(redaction_policy, RedactionPolicy)
+            if redaction_policy is not None and hasattr(redaction_policy, "level")
             else DEFAULT_REDACTION_POLICY
         )
-        self.diagnostic_safety_policy: DiagnosticSafetyPolicy = (
+        self.diagnostic_safety_policy = (
             diagnostic_safety_policy
-            if isinstance(diagnostic_safety_policy, DiagnosticSafetyPolicy)
+            if diagnostic_safety_policy is not None
+            and hasattr(diagnostic_safety_policy, "enabled")
+            and hasattr(diagnostic_safety_policy, "redaction")
             else DEFAULT_DIAGNOSTIC_SAFETY_POLICY
+        )
+        self.conversation_debug_policy = (
+            conversation_debug_policy
+            if conversation_debug_policy is not None
+            and hasattr(conversation_debug_policy, "enabled")
+            and hasattr(conversation_debug_policy, "max_captures")
+            else DEFAULT_CONVERSATION_DEBUG_POLICY
+        )
+        self._debug_captures = DebugCaptureBuffer(
+            max_captures=int(getattr(self.conversation_debug_policy, "max_captures", 64))
         )
         self.durable = None
         if persist_path:
@@ -1565,6 +1585,22 @@ class CognitiveEngine:
         with read_only():
             raw = self.cognitive_respond(cue)
         return apply_diagnostic_policy(raw, engine=self, cue=cue)
+
+    def debug_capture(self, cue: str, *, force: bool = False) -> dict[str, Any]:
+        """B10 — conversation-safe cognitive trace (opt-in; never contaminates store)."""
+        from acm.authority.debug_capture import capture_cognitive_debug
+
+        return capture_cognitive_debug(self, cue, force=force)
+
+    def debug_capture_replay(self, cue: str, *, force: bool = False) -> dict[str, Any]:
+        """B10 — capture twice and verify store/answer equivalence."""
+        from acm.authority.debug_capture import capture_replay_equivalent
+
+        return capture_replay_equivalent(self, cue, force=force)
+
+    def debug_captures_recent(self, limit: int = 20) -> list[dict[str, Any]]:
+        """B10 — recent side-channel captures (not Experiences)."""
+        return list(self._debug_captures.recent(limit=limit))
 
     def inspect_reconstruction(self, cue: str) -> dict[str, Any]:
         """B08 façade: reconstruction read-model (read-only)."""

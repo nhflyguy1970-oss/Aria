@@ -113,13 +113,23 @@ DEFAULT_DIAGNOSTIC_SAFETY_POLICY = DiagnosticSafetyPolicy()
 def policy_for_engine_safety(engine: CognitiveEngine) -> DiagnosticSafetyPolicy:
     """Resolve engine diagnostic safety policy (default enabled + B29 STRICT)."""
     policy = getattr(engine, "diagnostic_safety_policy", None)
-    if isinstance(policy, DiagnosticSafetyPolicy):
-        # Keep redaction aligned with engine.redaction_policy when present.
-        redaction = policy_for_engine(engine)
-        if policy.redaction != redaction:
-            return replace(policy, redaction=redaction)
-        return policy
-    return replace(DEFAULT_DIAGNOSTIC_SAFETY_POLICY, redaction=policy_for_engine(engine))
+    redaction = policy_for_engine(engine)
+    if policy is not None and hasattr(policy, "enabled") and hasattr(policy, "redaction"):
+        if isinstance(policy, DiagnosticSafetyPolicy):
+            if policy.redaction != redaction:
+                return replace(policy, redaction=redaction)
+            return policy
+        return DiagnosticSafetyPolicy(
+            enabled=bool(getattr(policy, "enabled", True)),
+            redaction=redaction,
+            max_list_items=int(getattr(policy, "max_list_items", 20)),
+            strip_organ_raw=bool(getattr(policy, "strip_organ_raw", True)),
+            strip_reconstruction_steps=bool(
+                getattr(policy, "strip_reconstruction_steps", True)
+            ),
+            sanitize_substrate=bool(getattr(policy, "sanitize_substrate", True)),
+        )
+    return replace(DEFAULT_DIAGNOSTIC_SAFETY_POLICY, redaction=redaction)
 
 
 def _cap_list(value: Any, limit: int) -> Any:

@@ -52,9 +52,9 @@ def _evo_isolation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 def test_evo_01_version_pin() -> None:
     ver = Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json"
     data = json.loads(ver.read_text())
-    assert data["source_commit"] == "32446e88913c26645819d04d3e7785ea6ddf438c"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.35.0-1"
-    assert data["promotion"] == "B09-DIAGNOSTIC-SAFETY"
+    assert data["source_commit"] == "b289fe5ddb80ffc9453d110d0ee911ab86ce905c"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.36.0-1"
+    assert data["promotion"] == "B10-CONVERSATION-DEBUG"
     assert Path("aria_acm/acm/remembering/evolution.py").is_file()
     assert Path("aria_acm/acm/remembering/relations.py").is_file()
 
