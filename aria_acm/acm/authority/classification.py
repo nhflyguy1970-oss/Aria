@@ -165,9 +165,29 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         0.85,
     ),
     (
+        # B21 — explicit user↔assistant relationship presentation (before LEARNING).
+        CognitiveIntent.REMEMBERING,
+        re.compile(
+            r"\b(?:"
+            r"how\s+do\s+we\s+know|"
+            r"what\s+have\s+we\s+worked|"
+            r"worked\s+on\s+together|"
+            r"what\s+have\s+you\s+learned\s+about\s+me|"
+            r"describe\s+our\s+relationship|"
+            r"our\s+relationship|"
+            r"between\s+us|"
+            r"you\s+and\s+i\b|"
+            r"you\s+and\s+me\b"
+            r")",
+            re.I,
+        ),
+        "relationship_identity_presentation_cue",
+        0.97,
+    ),
+    (
         CognitiveIntent.LEARNING,
         re.compile(
-            r"\b(what\s+have\s+you\s+learned|what\s+did\s+you\s+learn|"
+            r"\b(what\s+have\s+you\s+learned(?!\s+about\s+me)|what\s+did\s+you\s+learn|"
             r"what\s+changed\s+in\s+your\s+(?:understanding|beliefs?)|"
             r"what\s+did\s+you\s+(?:pick\s+up|take\s+away)|"
             r"lessons?\s+learned)\b",

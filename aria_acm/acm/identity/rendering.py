@@ -52,7 +52,6 @@ def is_relationship_identity_request(request: str) -> bool:
         "what have we worked",
         "worked on together",
         "learned about me",
-        "know about me",
         "our relationship",
         "describe our relationship",
         "between us",

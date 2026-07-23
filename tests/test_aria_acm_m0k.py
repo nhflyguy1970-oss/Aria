@@ -72,12 +72,13 @@ def test_m0k_01_multi_domain_evidence_lineage() -> None:
         "B11-PREFERENCE-EDIT",
         "B12-PREFERENCE-CORRECTION",
         "B13-CONFLICT-RESOLUTION",
+        "B13-CONFLICT-RESOLUTION",
         "B20-IDENTITY-CORRECTION",
-        "B20-IDENTITY-CORRECTION",
+        "B21-RELATIONSHIP-PRESENTATION",
         "B11-PREFERENCE-EDIT",
         "B12-PREFERENCE-CORRECTION",
-        "B20-IDENTITY-CORRECTION",
-        "B20-IDENTITY-CORRECTION",
+        "B21-RELATIONSHIP-PRESENTATION",
+        "B21-RELATIONSHIP-PRESENTATION",
     ) or "M0K" in meta.get("notes", "")
 
 

@@ -1888,6 +1888,17 @@ class CognitiveEngine:
 
         return pending_identity_changes(self)
 
+    def present_relationship_memory(self, request: str) -> dict[str, Any]:
+        """B21 — explicit relationship-memory presentation (D044; read-only)."""
+        from acm.identity.relationship_presentation import present_relationship_memory
+
+        return present_relationship_memory(
+            store=self.store,
+            identity=self.identity,
+            request=request,
+            agent_id=str(self.agent_id or ""),
+        )
+
     def organ_view(self, organ: str) -> dict[str, Any]:
         """B27: stable per-organ observability slice (singular harness preserved)."""
         from acm.validation.organ_views import organ_view

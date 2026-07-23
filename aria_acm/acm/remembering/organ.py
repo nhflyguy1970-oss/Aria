@@ -399,6 +399,49 @@ class RememberingOrgan:
         ranked: list[Any],
     ) -> Reconstruction:
         tokens = _cue_tokens(cue)
+        # B21 — explicit relationship-memory presentation (D044).
+        from acm.identity.rendering import is_relationship_identity_request
+
+        if is_relationship_identity_request(cue):
+            from acm.identity.relationship_presentation import present_relationship_memory
+
+            presented = present_relationship_memory(
+                store=self.store,
+                identity=self.identity,
+                request=cue,
+                agent_id="",
+            )
+            if presented.get("status") == "known" and presented.get("memory"):
+                return Reconstruction(
+                    cue=cue,
+                    answer=str(presented["memory"]),
+                    explanation_class=str(
+                        presented.get("explanation_class")
+                        or ExplanationClass.EXPERIENCE.value
+                    ),
+                    confidence=float(presented.get("confidence") or 0.86),
+                    activated_concept_ids=[n.target_id for n in ranked],
+                    activation=field.to_public(),
+                    cue_classes=list(field.cue_classes)
+                    + ["relationship_identity_presentation"],
+                    goal_influenced=field.goal_influenced,
+                    identity_influenced=True,
+                    context_influenced=field.context_influenced,
+                    working_influenced=field.working_influenced,
+                )
+            return Reconstruction(
+                cue=cue,
+                answer="I don't currently have enough shared relationship evidence.",
+                explanation_class=ExplanationClass.UNKNOWN.value,
+                confidence=0.0,
+                activation=field.to_public(),
+                cue_classes=list(field.cue_classes)
+                + ["relationship_identity_presentation"],
+                goal_influenced=field.goal_influenced,
+                identity_influenced=True,
+                context_influenced=field.context_influenced,
+                working_influenced=field.working_influenced,
+            )
         # Lineage / summary introspection can succeed from the store even when
         # activation ranking is empty — check before the empty-rank early exit.
         if _is_answer_provenance_request(cue):

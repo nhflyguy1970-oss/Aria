@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.40.0-1",
+  "aria_acm_local_version": "aria-acm-v0.41.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.40.0",
-  "source_tag": "v0.40.0",
-  "source_commit": "5c90f634e930d622e986f004486fbdfcd3814dd9",
+  "source_version": "0.41.0",
+  "source_tag": "v0.41.0",
+  "source_commit": "dfd9734d77f33cbdfdd18c2f24a5df90a9586d74",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-23",
-  "tree_sha256": "1ba4794b262cee2f81ddcc29a939d87cf2ef11b29d3919ac58056ee8bc4eab49",
+  "tree_sha256": "f474179b40d3505b564b980ca60f4f49139ab94b2b274d317be2204b42b6fa39",
   "license": "Apache-2.0",
-  "certification_ref": "B20 Identity Correction & Assent UX",
-  "promotion": "B20-IDENTITY-CORRECTION",
-  "promotion_decision": "Promote certified ACM v0.40.0 B20 after Gates 1-4.",
+  "certification_ref": "B21 Explicit Relationship-Memory Presentation",
+  "promotion": "B21-RELATIONSHIP-PRESENTATION",
+  "promotion_decision": "Promote certified ACM v0.41.0 B21 after Gates 1-4.",
   "includes": [
     "D038",
     "D039",
@@ -37,7 +37,8 @@
     "RC-E",
     "B12",
     "B13",
-    "B20"
+    "B20",
+    "B21"
   ],
-  "notes": "Promotion of ACM commit 5c90f634e930d622e986f004486fbdfcd3814dd9."
+  "notes": "Promotion of ACM commit dfd9734d77f33cbdfdd18c2f24a5df90a9586d74."
 }

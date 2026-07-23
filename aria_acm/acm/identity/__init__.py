@@ -12,6 +12,7 @@ from acm.identity.rendering import (
     is_relationship_identity_request,
     isolate_identity_text,
 )
+from acm.identity.relationship_presentation import present_relationship_memory
 
 __all__ = [
     "AssistantIdentityProfile",
@@ -23,6 +24,7 @@ __all__ = [
     "LineageEntry",
     "isolate_identity_text",
     "is_relationship_identity_request",
+    "present_relationship_memory",
     "trace_assistant_identity_pipeline",
     "trace_identity_pipeline",
 ]

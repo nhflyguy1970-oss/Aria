@@ -1,4 +1,4 @@
-"""Aria promotion gates — ACM v0.40.0 B09 Diagnostic Safety Policy."""
+"""Aria promotion gates — ACM v0.41.0 B09 Diagnostic Safety Policy."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ def test_b09_pin() -> None:
     data = json.loads(
         (Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json").read_text()
     )
-    assert data["source_version"] == "0.40.0"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.40.0-1"
-    assert data["promotion"] == "B20-IDENTITY-CORRECTION"
+    assert data["source_version"] == "0.41.0"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.41.0-1"
+    assert data["promotion"] == "B21-RELATIONSHIP-PRESENTATION"
 
 
 def test_b09_diagnostic_safety_parity() -> None:
@@ -20,7 +20,7 @@ def test_b09_diagnostic_safety_parity() -> None:
     from aria_acm.acm.api.engine import CognitiveEngine
     from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
 
-    assert __version__ == "0.40.0"
+    assert __version__ == "0.41.0"
     eng = CognitiveEngine(agent_id="aria-b09")
     eng.encode("My favorite color is blue.", pin=True, provenance=TRUSTED_USER_STATEMENT)
     view = eng.inspect("What is my favorite color?")
