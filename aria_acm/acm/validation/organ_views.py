@@ -1,18 +1,14 @@
 """Organ-scoped observability views (B27) over the singular ValidationHarness.
 
 Does not split the harness. Projects stable per-organ report slices for hosts.
-B29 diagnostic redaction applies at this projection boundary.
+B29 diagnostic redaction and B09 diagnostic safety apply at this projection boundary.
 """
 
 from __future__ import annotations
 
 from typing import Any, Callable, TYPE_CHECKING
 
-from acm.authority.redaction import (
-    build_redaction_context,
-    policy_for_engine,
-    redact_organ_view,
-)
+from acm.authority.diagnostic_policy import apply_diagnostic_policy
 
 if TYPE_CHECKING:
     from acm.api.engine import CognitiveEngine
@@ -91,10 +87,7 @@ def organ_view(engine: CognitiveEngine, organ: str) -> dict[str, Any]:
         "harness": harness_slice,
         "observables": organ_obs,
     }
-    policy = policy_for_engine(engine)
-    # Structural views: forbid both user and assistant identity bleed into cues.
-    ctx = build_redaction_context(engine, cue="", intent="", who="user")
-    return redact_organ_view(view, policy=policy, ctx=ctx)
+    return apply_diagnostic_policy(view, engine=engine, cue="", who="user", as_organ_view=True)
 
 
 def organ_views(engine: CognitiveEngine, organs: list[str] | None = None) -> dict[str, Any]:

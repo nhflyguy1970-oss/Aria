@@ -71,9 +71,14 @@ class CognitiveEngine:
         auto_persist: bool = False,
         assistant_identity: dict[str, Any] | None = None,
         redaction_policy: Any | None = None,
+        diagnostic_safety_policy: Any | None = None,
     ) -> None:
         from acm.identity.assistant_profile import AssistantIdentityProfile
         from acm.authority.redaction import DEFAULT_REDACTION_POLICY, RedactionPolicy
+        from acm.authority.diagnostic_policy import (
+            DEFAULT_DIAGNOSTIC_SAFETY_POLICY,
+            DiagnosticSafetyPolicy,
+        )
 
         self.agent_id = agent_id
         self.auto_persist = auto_persist
@@ -81,6 +86,11 @@ class CognitiveEngine:
             redaction_policy
             if isinstance(redaction_policy, RedactionPolicy)
             else DEFAULT_REDACTION_POLICY
+        )
+        self.diagnostic_safety_policy: DiagnosticSafetyPolicy = (
+            diagnostic_safety_policy
+            if isinstance(diagnostic_safety_policy, DiagnosticSafetyPolicy)
+            else DEFAULT_DIAGNOSTIC_SAFETY_POLICY
         )
         self.durable = None
         if persist_path:
@@ -1541,17 +1551,20 @@ class CognitiveEngine:
         return public
 
     def inspect(self, cue: str) -> dict[str, Any]:
-        """Read-only diagnostic reconstruction (B07).
+        """Read-only diagnostic reconstruction (B07) under B09 safety policy.
 
         Same classify→route→dispatch→speak path as ``cognitive_respond``, but
         under ``ExecutionMode.READ_ONLY``: no reconsolidation, reflective birth,
         learning adaptations, working-buffer writes, teach encode, or prediction/
-        reconciliation/simulation store inserts.
+        reconciliation/simulation store inserts. B09 applies at the projection
+        boundary (composes B29 redaction).
         """
         from acm.authority.mode import read_only
+        from acm.authority.diagnostic_policy import apply_diagnostic_policy
 
         with read_only():
-            return self.cognitive_respond(cue)
+            raw = self.cognitive_respond(cue)
+        return apply_diagnostic_policy(raw, engine=self, cue=cue)
 
     def inspect_reconstruction(self, cue: str) -> dict[str, Any]:
         """B08 façade: reconstruction read-model (read-only)."""

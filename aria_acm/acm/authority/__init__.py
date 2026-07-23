@@ -18,6 +18,11 @@ from acm.authority.classification import (
     classify_request,
 )
 from acm.authority.dispatch import CognitiveDispatchEngine, DispatchOutcome, DispatchRecord
+from acm.authority.diagnostic_policy import (
+    DEFAULT_DIAGNOSTIC_SAFETY_POLICY,
+    DiagnosticSafetyPolicy,
+    apply_diagnostic_policy,
+)
 from acm.authority.mode import ExecutionMode, current_execution_mode, is_read_only, read_only
 from acm.authority.pipeline import CognitiveResponsePipeline
 from acm.authority.protection import (
@@ -41,6 +46,8 @@ __all__ = [
     "CognitiveOwnership",
     "CognitiveResponsePipeline",
     "CognitiveRoutingEngine",
+    "DEFAULT_DIAGNOSTIC_SAFETY_POLICY",
+    "DiagnosticSafetyPolicy",
     "DispatchOutcome",
     "DispatchRecord",
     "ExecutionMode",
@@ -49,6 +56,7 @@ __all__ = [
     "MemoryRequestClassification",
     "MemoryStatus",
     "RoutingDecision",
+    "apply_diagnostic_policy",
     "classify_memory_request",
     "classify_request",
     "current_execution_mode",

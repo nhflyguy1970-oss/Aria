@@ -67,6 +67,7 @@ def test_m0k_01_multi_domain_evidence_lineage() -> None:
         "M5-ACM-CAP5-TEMPORAL",
         "M5-ACM-CAP6-EXPLAIN",
         "M5-ACM-CAP7-STABILITY",
+        "B09-DIAGNOSTIC-SAFETY",
     ) or "M0K" in meta.get("notes", "")
 
 

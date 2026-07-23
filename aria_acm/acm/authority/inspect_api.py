@@ -9,25 +9,15 @@ from __future__ import annotations
 
 from typing import Any, TYPE_CHECKING
 
-from acm.authority.redaction import (
-    build_redaction_context,
-    policy_for_engine,
-    redact_inspect_view,
-)
+from acm.authority.diagnostic_policy import apply_diagnostic_policy
 
 if TYPE_CHECKING:
     from acm.api.engine import CognitiveEngine
 
 
 def _finalize(engine: CognitiveEngine, view: dict[str, Any], *, cue: str = "", who: str | None = None) -> dict[str, Any]:
-    policy = policy_for_engine(engine)
-    ctx = build_redaction_context(
-        engine,
-        cue=cue or str(view.get("cue") or ""),
-        intent=str(view.get("intent") or ""),
-        who=who,
-    )
-    return redact_inspect_view(view, policy=policy, ctx=ctx)
+    """B08 finalize: B29 redaction + B09 diagnostic safety policy."""
+    return apply_diagnostic_policy(view, engine=engine, cue=cue, who=who)
 
 
 def inspect_reconstruction(engine: CognitiveEngine, cue: str) -> dict[str, Any]:
