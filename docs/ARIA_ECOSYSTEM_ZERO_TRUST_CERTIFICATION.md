@@ -145,15 +145,19 @@ Those defects are fixed and permanently certified. Remaining gaps are intentiona
 ## Final verdicts
 
 ### ACM
+
 **Production-ready.**
 
 ### Aria Core
+
 **Production-ready** as Memory Authority façade over ACM PRIMARY.
 
 ### Aria Platform
+
 **Production-ready** for single-user local Mission Control / workstation Daily Use (not multi-tenant SaaS).
 
 ### Overall Aria Ecosystem
+
 **Production-ready for intended deployment scope: single-operator Linux workstation with ACM PRIMARY, optional AI-Platform Mission Control, optional LAN only with API key.**
 
 Zero-trust assumption **disproved for that scope** after independent re-audit, repair of newly found CRITICAL/HIGH defects, and full re-certification.
