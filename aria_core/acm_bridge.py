@@ -545,7 +545,7 @@ def primary_remember(
 ) -> dict[str, Any]:
     """Authoritative ACM encode → host-shaped entry (M3). No MemoryStore write."""
     from aria_acm.acm.context.frame import ContextFrame
-    from aria_acm.acm.provenance import TRUSTED_USER_TEACHING
+    from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT, TRUSTED_USER_TEACHING
 
     t0 = time.perf_counter()
     engine = get_engine()
@@ -557,13 +557,16 @@ def primary_remember(
     if namespace:
         context_tags.append(f"ns:{namespace}")
     context_tags.append(f"legacy_type:{entry_type}")
+    # Auto-extracted host facts are statements, not explicit user teachings.
+    tag_set = {str(t).lower() for t in (tags or [])}
+    auto = entry_type == "auto" or bool(tag_set & {"auto", "auto-extracted"})
+    provenance = TRUSTED_USER_STATEMENT if auto else TRUSTED_USER_TEACHING
     out = engine.encode(
         content,
         kind=kind,
         pin=True,
         context_tags=tuple(dict.fromkeys(context_tags)) or None,
-        # D046: authoritative host remember() carries user-supplied knowledge.
-        provenance=TRUSTED_USER_TEACHING,
+        provenance=provenance,
     )
     ms = (time.perf_counter() - t0) * 1000.0
     _record_ms(ms)

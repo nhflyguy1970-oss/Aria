@@ -23,11 +23,18 @@ class DurableCognitiveStore:
     ) -> None:
         self.backend = SqliteDurableStore(path, max_snapshots=max_snapshots)
         self.store = store or CognitiveStore()
+        self.load_ok = True
+        self.load_error: str | None = None
         try:
             self.backend.load_latest(self.store)
-        except ValueError:
-            # empty or first open
-            pass
+        except ValueError as exc:
+            # Empty DB returns without raising. ValueError means corrupt snapshot —
+            # never treat as first-open empty store (would auto_persist wipe SoT).
+            self.load_ok = False
+            self.load_error = str(exc)
+            raise RuntimeError(
+                f"ACM durable load failed (refusing empty overwrite): {exc}"
+            ) from exc
 
     def flush(self, *, kind: str = "checkpoint") -> dict[str, Any]:
         return self.backend.save(self.store, kind=kind)

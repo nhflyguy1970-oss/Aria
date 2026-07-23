@@ -1,4 +1,4 @@
-"""Aria promotion gates — ACM v0.45.0 B21 Relationship Presentation."""
+"""Aria promotion gates — ACM v0.45.1 B21 Relationship Presentation."""
 from __future__ import annotations
 
 import json
@@ -9,8 +9,8 @@ def test_b21_pin() -> None:
     data = json.loads(
         (Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json").read_text()
     )
-    assert data["source_version"] == "0.45.0"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.45.0-1"
+    assert data["source_version"] == "0.45.1"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.45.1-1"
     assert data["promotion"] == "PLATFORM-PRACTICAL-COMPLETE"
     assert "B21" in data["includes"]
 
@@ -20,7 +20,7 @@ def test_b21_relationship_parity() -> None:
     from aria_acm.acm.api.engine import CognitiveEngine
     from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
 
-    assert __version__ == "0.45.0"
+    assert __version__ == "0.45.1"
     eng = CognitiveEngine(
         agent_id="aria-b21",
         assistant_identity={"name": "Aria", "role": "assistant"},

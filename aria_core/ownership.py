@@ -59,8 +59,11 @@ OWNERSHIP: dict[str, dict[str, Any]] = {
         "consumers": ["capability_bus", "cognitive_orchestrator", "learning", "interfaces"],
         "allowed_writers": ["aria_core.memory", "aria_core.memory_manager"],
         "allowed_readers": ["*"],
-        "source_of_truth": "aria_core.memory_manager",
-        "implementation": "aria_core.memory_manager → jarvis.modules.memory (storage unchanged)",
+        "source_of_truth": "aria_acm CognitiveEngine via aria_core.acm_bridge (PRIMARY)",
+        "implementation": (
+            "aria_core.memory_manager → acm_bridge.primary_* → CognitiveEngine; "
+            "legacy jarvis.modules.memory is façade/ROLLBACK only"
+        ),
         "future_owner": "aria_core.memory",
     },
     "knowledge": {

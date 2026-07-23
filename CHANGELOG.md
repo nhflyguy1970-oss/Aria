@@ -1,5 +1,12 @@
 # Changelog — Aria / Jarvis
 
+## [ARIA-HOST-PRODUCTION-AUDIT] — 2026-07-23
+
+Host + Platform production audit: fail-closed PRIMARY memory writes, ACM
+corrupt-load pin `aria-acm-v0.45.1-1`, PinLock registration, LAN API-key
+gate, tool-permission wiring, MC mutation auth (platform), secrets chmod.
+Report: `docs/ARIA_PLATFORM_PRODUCTION_AUDIT.md`.
+
 ## [PRODUCTION-READINESS-AUDIT] — 2026-07-23
 
 Promote certified ACM **v0.45.0** (`e6a71fb`) as `aria-acm-v0.45.0-1`.

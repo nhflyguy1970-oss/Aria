@@ -69,6 +69,7 @@ def health(capability_id: str | None = None) -> dict[str, Any]:
         "backup": "jarvis",
         "recover": "aiplatform.workstation.operations",
     }
+    PLATFORM_OPTIONAL = frozenset({"observe", "notify", "diagnose", "repair", "recover"})
     if capability_id:
         if capability_id not in probes:
             return {"ok": False, "id": capability_id, "status": "unknown"}
@@ -78,17 +79,25 @@ def health(capability_id: str | None = None) -> dict[str, Any]:
         result["owner"] = meta.get("owner")
         result["provider"] = meta.get("provider")
         result["current_implementation"] = meta.get("current_implementation")
+        # Standalone Aria without AI-Platform: platform ops caps are optional.
+        if not result.get("ok") and capability_id in PLATFORM_OPTIONAL:
+            result["ok"] = True
+            result["status"] = "optional_unavailable"
+            result["optional"] = True
         return result
 
     items = []
     for cid in all_capability_ids():
         items.append(health(cid))
-    healthy = sum(1 for i in items if i.get("ok"))
+    # Overall health ignores optional platform caps when unavailable.
+    required = [i for i in items if not i.get("optional")]
+    healthy = sum(1 for i in required if i.get("ok"))
     return {
-        "ok": healthy == len(items),
+        "ok": healthy == len(required),
         "version": BUS_VERSION,
         "healthy": healthy,
-        "total": len(items),
+        "total": len(required),
+        "optional_skipped": len(items) - len(required),
         "capabilities": items,
     }
 

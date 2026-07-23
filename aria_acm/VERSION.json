@@ -1,14 +1,14 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.45.0-1",
+  "aria_acm_local_version": "aria-acm-v0.45.1-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.45.0",
-  "source_tag": "v0.45.0",
-  "source_commit": "e6a71fb9d947a0b34402ec835e6a1e0665c8f9f8",
+  "source_version": "0.45.1",
+  "source_tag": "v0.45.1",
+  "source_commit": "b720cbb32d36f61af5287adef1aac0a4d5d5b7f2",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-23",
-  "tree_sha256": "fe5c1bb205fea2c5d2b8989e38ec1ae0dd57a4ea3399faf44ac87a9664a38ce6",
+  "tree_sha256": "50759153c39cce73241e046f21b7e6567c6d740769bec1c77b54b5718b06be6e",
   "license": "Apache-2.0",
-  "certification_ref": "Production Readiness Audit (v0.45.0) atop PLATFORM-PRACTICAL-COMPLETE",
+  "certification_ref": "Aria host production audit + ACM corrupt-load fail-closed (v0.45.1)",
   "promotion": "PLATFORM-PRACTICAL-COMPLETE",
   "promotion_decision": "Promote certified ACM v0.45.0 production-readiness audit on top of practical platform completion.",
   "includes": [
@@ -44,7 +44,8 @@
     "B46",
     "B51",
     "PLATFORM-PRACTICAL-COMPLETE",
-    "PRODUCTION-READINESS-AUDIT"
+    "PRODUCTION-READINESS-AUDIT",
+    "ARIA-HOST-PRODUCTION-AUDIT"
   ],
-  "notes": "Promotion of ACM commit e6a71fb9d947a0b34402ec835e6a1e0665c8f9f8 \u2014 production readiness audit (read_only write spine, identity assent lineage, snapshot prune, dual-import identity)."
+  "notes": "Promotion of ACM commit b720cbb32d36f61af5287adef1aac0a4d5d5b7f2 \u2014 corrupt durable load fail-closed + Aria host governance hardening."
 }

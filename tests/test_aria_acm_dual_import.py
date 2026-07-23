@@ -11,8 +11,8 @@ VERSION_PATH = ROOT / "aria_acm" / "VERSION.json"
 
 def test_aria_acm_pin_is_045() -> None:
     data = json.loads(VERSION_PATH.read_text(encoding="utf-8"))
-    assert data["source_version"] == "0.45.0"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.45.0-1"
+    assert data["source_version"] == "0.45.1"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.45.1-1"
 
 
 def test_dual_import_class_identity() -> None:

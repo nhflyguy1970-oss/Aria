@@ -145,14 +145,33 @@ class JsonMemoryStore:
             raise ValueError("Refusing to store test-artifact content in live memory")
         entry_type = entry_type if entry_type in MEMORY_TYPES else "fact"
         try:
-            from aria_core.acm_bridge import redirect_legacy_write_to_acm
-
-            redirected = redirect_legacy_write_to_acm(
-                content, entry_type=entry_type, tags=tags, namespace=namespace
+            from aria_core.acm_bridge import (
+                acm_is_authoritative,
+                note_legacy_write_while_primary,
+                redirect_legacy_write_to_acm,
             )
+
+            try:
+                redirected = redirect_legacy_write_to_acm(
+                    content, entry_type=entry_type, tags=tags, namespace=namespace
+                )
+            except Exception as exc:
+                if acm_is_authoritative():
+                    note_legacy_write_while_primary()
+                    raise RuntimeError(
+                        f"ACM authoritative: legacy MemoryStore write refused "
+                        f"({type(exc).__name__})"
+                    ) from exc
+                redirected = None
             if redirected is not None:
                 return redirected
-        except Exception:
+            if acm_is_authoritative():
+                note_legacy_write_while_primary()
+                raise RuntimeError(
+                    "ACM authoritative: legacy MemoryStore write refused "
+                    "(redirect returned no entry)"
+                )
+        except ImportError:
             pass
         embedding = llm.embed_text(content)
         entry = {
@@ -484,6 +503,26 @@ class JsonMemoryStore:
         incoming = payload.get("entries") if isinstance(payload, dict) else None
         if not isinstance(incoming, list):
             raise ValueError("Invalid memory import — expected {entries: [...]}")
+        try:
+            from aria_core.acm_bridge import acm_is_authoritative
+
+            if acm_is_authoritative():
+                # Route through add() so each entry hits ACM; never mutate legacy SoT.
+                added = 0
+                for raw in incoming:
+                    if not isinstance(raw, dict):
+                        continue
+                    content = str(raw.get("content", "")).strip()
+                    if not content:
+                        continue
+                    entry_type = raw.get("type") if raw.get("type") in MEMORY_TYPES else "fact"
+                    tags = raw.get("tags") if isinstance(raw.get("tags"), list) else []
+                    namespace = str(raw.get("namespace") or DEFAULT_NAMESPACE)
+                    self.add(content, entry_type=entry_type, tags=tags, namespace=namespace)
+                    added += 1
+                return added
+        except ImportError:
+            pass
         added = 0
         if not merge:
             old_ids = [e["id"] for e in self._data["entries"]]

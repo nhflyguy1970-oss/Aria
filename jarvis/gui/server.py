@@ -83,6 +83,15 @@ async def lifespan(app: FastAPI):
         assistant.auto_checkpoint(reason="shutdown")
     except Exception:
         pass
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            eng = acm_bridge.get_engine()
+            if getattr(eng, "durable", None) is not None:
+                eng.flush(kind="shutdown")
+    except Exception:
+        pass
 
 
 from jarvis.branding import assistant_name
@@ -101,10 +110,12 @@ except Exception:
 from jarvis.auth import APIKeyMiddleware
 from jarvis.network_guard import NetworkGuardMiddleware
 from jarvis.rate_limit import RateLimitMiddleware
+from jarvis.security.middleware import PinLockMiddleware
 
 app.add_middleware(NetworkGuardMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(APIKeyMiddleware)
+app.add_middleware(PinLockMiddleware)
 
 from jarvis.gui.extra_routes import register_routes
 
@@ -2738,10 +2749,11 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 def serve(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True):
     """Run server only (used by daemon/tray)."""
-    from jarvis.lan import client_base_url, is_lan_bind, lan_status
+    from jarvis.lan import client_base_url, is_lan_bind, lan_status, require_api_key_for_lan_bind
 
     host = os.getenv("JARVIS_HOST", host)
     port = int(os.getenv("JARVIS_PORT", port))
+    require_api_key_for_lan_bind(host)
     ollama = check_ollama()
     gpu = detect_gpu()
     mode = "UNCENSORED" if is_uncensored() else "Standard"

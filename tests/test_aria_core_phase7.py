@@ -51,8 +51,8 @@ def isolated_memory(tmp_path, monkeypatch):
 
 
 def test_memory_owned_by_core():
-    assert OWNERSHIP["memory"]["source_of_truth"] == "aria_core.memory_manager"
-    assert "jarvis.modules.memory" in OWNERSHIP["memory"]["implementation"]
+    assert "CognitiveEngine" in OWNERSHIP["memory"]["source_of_truth"]
+    assert "acm_bridge" in OWNERSHIP["memory"]["implementation"]
     assert "aria_core.memory" in OWNERSHIP["memory"]["allowed_writers"]
 
 

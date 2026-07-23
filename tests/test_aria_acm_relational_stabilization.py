@@ -32,8 +32,8 @@ def _stab_isolation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 def test_stab_00_version_pin() -> None:
     ver = Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json"
     data = json.loads(ver.read_text())
-    assert data["source_commit"] == "e6a71fb9d947a0b34402ec835e6a1e0665c8f9f8"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.45.0-1"
+    assert data["source_commit"] == "b720cbb32d36f61af5287adef1aac0a4d5d5b7f2"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.45.1-1"
     assert data["promotion"] == "PLATFORM-PRACTICAL-COMPLETE"
 
 

@@ -47,9 +47,24 @@ class SmartHomeEngine:
     @classmethod
     def ha_control(cls, ctx: SmartHomeContext, params: dict, message: str) -> dict:
         from jarvis.home_assistant import control_entity, ha_enabled, parse_control
+        from jarvis.tool_permissions import create_pending, permission_for
 
         if not ha_enabled():
             return cls._not_configured()
+        perm = permission_for("ha_control")
+        if perm == "never":
+            return err("Home Assistant control is blocked by tool permissions.", module="automation")
+        confirmed = str(params.get("confirmed", "")).lower() in ("1", "true", "yes")
+        if perm == "ask" and not confirmed:
+            confirm_id = create_pending("ha_control", "ha_control", dict(params or {}), message)
+            return {
+                "ok": False,
+                "confirm_required": True,
+                "confirm_id": confirm_id,
+                "message": "Confirm Home Assistant control?",
+                "module": "automation",
+                "type": "confirm_required",
+            }
         spec = parse_control(message) or params
         target = (spec.get("target") or "").strip()
         action = (spec.get("action") or "on").strip().lower()

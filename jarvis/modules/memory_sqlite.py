@@ -149,14 +149,33 @@ class SqliteMemoryStore:
             raise ValueError("Refusing to store test-artifact content in live memory")
         entry_type = entry_type if entry_type in MEMORY_TYPES else "fact"
         try:
-            from aria_core.acm_bridge import redirect_legacy_write_to_acm
-
-            redirected = redirect_legacy_write_to_acm(
-                content, entry_type=entry_type, tags=tags, namespace=namespace
+            from aria_core.acm_bridge import (
+                acm_is_authoritative,
+                note_legacy_write_while_primary,
+                redirect_legacy_write_to_acm,
             )
+
+            try:
+                redirected = redirect_legacy_write_to_acm(
+                    content, entry_type=entry_type, tags=tags, namespace=namespace
+                )
+            except Exception as exc:
+                if acm_is_authoritative():
+                    note_legacy_write_while_primary()
+                    raise RuntimeError(
+                        f"ACM authoritative: legacy MemoryStore write refused "
+                        f"({type(exc).__name__})"
+                    ) from exc
+                redirected = None
             if redirected is not None:
                 return redirected
-        except Exception:
+            if acm_is_authoritative():
+                note_legacy_write_while_primary()
+                raise RuntimeError(
+                    "ACM authoritative: legacy MemoryStore write refused "
+                    "(redirect returned no entry)"
+                )
+        except ImportError:
             pass
         eid = self._next_id()
         embedding = llm.embed_text(content)

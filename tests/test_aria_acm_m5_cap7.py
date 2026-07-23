@@ -1,4 +1,4 @@
-"""Aria promotion gates — ACM v0.45.0 M5 Cap7 Learning Stability."""
+"""Aria promotion gates — ACM v0.45.1 M5 Cap7 Learning Stability."""
 
 from __future__ import annotations
 
@@ -10,8 +10,8 @@ def test_m5_cap7_pin() -> None:
     data = json.loads(
         (Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json").read_text()
     )
-    assert data["source_version"] == "0.45.0"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.45.0-1"
+    assert data["source_version"] == "0.45.1"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.45.1-1"
     assert data["promotion"] == "PLATFORM-PRACTICAL-COMPLETE"
     assert "M5-Cap7" in data["includes"]
 
@@ -21,7 +21,7 @@ def test_m5_cap7_stability_parity() -> None:
     from aria_acm.acm.api.engine import CognitiveEngine
     from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
 
-    assert __version__ == "0.45.0"
+    assert __version__ == "0.45.1"
     eng = CognitiveEngine(agent_id="aria-m5-c7")
     eng.encode("Bounded learning matters.", pin=True, provenance=TRUSTED_USER_STATEMENT)
     report = eng.check_learning_stability()

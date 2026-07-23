@@ -120,3 +120,24 @@ def lan_status() -> dict:
         "ollama_localhost": True,
         "hints": hints,
     }
+
+
+def require_api_key_for_lan_bind(host: str | None = None) -> None:
+    """Refuse non-loopback binds without JARVIS_API_KEY unless explicitly overridden."""
+    if not is_lan_bind(host):
+        return
+    if os.getenv("JARVIS_API_KEY", "").strip():
+        return
+    allow = os.getenv("JARVIS_ALLOW_INSECURE_LAN", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    if allow:
+        return
+    raise SystemExit(
+        "Refusing LAN bind without JARVIS_API_KEY. "
+        "Set a key in data/jarvis.env, or set JARVIS_ALLOW_INSECURE_LAN=1 "
+        "to override (not recommended)."
+    )

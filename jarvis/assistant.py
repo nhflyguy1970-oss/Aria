@@ -1435,6 +1435,7 @@ class JarvisAssistant:
         )
 
     def _upgrade_apply(self, params: dict, message: str) -> dict:
+        from jarvis.tool_permissions import create_pending, permission_for
         from jarvis.upgrade_wizard import create_snapshot, get_session, save_session
 
         proposal = self._upgrade_proposal(params.get("proposal_id"))
@@ -1447,6 +1448,27 @@ class JarvisAssistant:
             pid = session.get("proposal_id") or ""
 
         force = str(params.get("force", "")).lower() in ("1", "true", "yes")
+        confirmed = str(params.get("confirmed", "")).lower() in ("1", "true", "yes")
+        perm = permission_for("upgrade_apply")
+        if perm == "never":
+            return _err("Upgrade apply is blocked by tool permissions.", module="coding")
+        if perm == "ask" and not confirmed and not force:
+            confirm_id = create_pending(
+                "upgrade_apply",
+                "upgrade_apply",
+                {"proposal_id": pid, **dict(params or {})},
+                message,
+            )
+            return {
+                "ok": False,
+                "confirm_required": True,
+                "confirm_id": confirm_id,
+                "message": "Confirm upgrade apply?",
+                "module": "coding",
+                "type": "confirm_required",
+                "proposal_id": pid,
+            }
+
         if not proposal.get("verified") and not force:
             verify_result = self._upgrade_verify({"proposal_id": pid}, message)
             if not verify_result.get("ok"):

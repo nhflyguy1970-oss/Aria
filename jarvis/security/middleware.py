@@ -38,10 +38,7 @@ class PinLockMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
         if path in self.EXEMPT_PATHS:
             return await call_next(request)
-        if request.method == "GET" and path == "/api/memory/settings":
-            return await call_next(request)
-        if request.method == "POST" and path == "/api/memory/settings":
-            return await call_next(request)
+        # Memory settings mutate preferences — require unlock when PIN lock is on.
         if any(path.startswith(p) for p in self.EXEMPT_PREFIXES):
             return await call_next(request)
         token = (request.headers.get("X-Jarvis-Session") or "").strip()
