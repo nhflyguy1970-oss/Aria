@@ -3,7 +3,7 @@
   "source_project": "aria-cognitive-memory",
   "source_version": "0.44.0",
   "source_tag": "v0.44.0",
-  "source_commit": "f5405932523f02fb4a4aa6eff646175d6b365c78",
+  "source_commit": "38c21443a92ce617bf5a5a2456136c0d993a9e12",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-23",
   "tree_sha256": "032fdc7cd7e07aaf3072fa5196f007af8195df82ad1938e26aa9250e9b842a8d",
@@ -45,5 +45,5 @@
     "B51",
     "PLATFORM-PRACTICAL-COMPLETE"
   ],
-  "notes": "Promotion of ACM commit f5405932523f02fb4a4aa6eff646175d6b365c78 \u2014 practical ACM platform complete."
+  "notes": "Promotion of ACM commit 38c21443a92ce617bf5a5a2456136c0d993a9e12 \u2014 practical ACM platform complete."
 }
