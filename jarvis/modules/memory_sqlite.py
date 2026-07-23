@@ -554,6 +554,18 @@ class SqliteMemoryStore:
 
     def upsert_checkpoint(self, content: str, namespace: str = "default") -> dict:
         ns = (namespace or DEFAULT_NAMESPACE).strip() or DEFAULT_NAMESPACE
+        try:
+            from aria_core.acm_bridge import acm_is_authoritative
+
+            if acm_is_authoritative():
+                return self.add(
+                    "project",
+                    content,
+                    tags=["checkpoint", "project-state"],
+                    namespace=ns,
+                )
+        except ImportError:
+            pass
         rows = self._conn.execute(
             "SELECT id FROM memories WHERE namespace = ? AND tags LIKE '%checkpoint%'",
             (ns,),

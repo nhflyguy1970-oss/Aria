@@ -74,7 +74,9 @@ def register_routes(app, assistant):
         return {"ok": True, **journal.weekly_review_set_notes(notes, week or _week_key())}
 
     @app.post("/api/journal/reflect/review")
-    async def journal_reflect_review(scope: str = Form("month"), month: str = Form(""), week: str = Form("")):
+    async def journal_reflect_review(
+        scope: str = Form("month"), month: str = Form(""), week: str = Form("")
+    ):
         text = journal.ai_reflect_review(scope, month or None, week or None)
         return {"ok": True, "reflection": text}
 
@@ -149,7 +151,10 @@ def register_routes(app, assistant):
     async def journal_future_transfer(future_month: str = Form(...), monthly_month: str = Form("")):
         from jarvis.modules.journal import _month_key
 
-        return {"ok": True, **journal.transfer_future_to_month(future_month, monthly_month or _month_key())}
+        return {
+            "ok": True,
+            **journal.transfer_future_to_month(future_month, monthly_month or _month_key()),
+        }
 
     @app.get("/api/journal/wellness")
     def journal_wellness(month: str = ""):
@@ -245,7 +250,9 @@ def register_routes(app, assistant):
         return journal.future_list()
 
     @app.post("/api/journal/future")
-    async def journal_future_add(month: str = Form(...), content: str = Form(...), bullet_type: str = Form("task")):
+    async def journal_future_add(
+        month: str = Form(...), content: str = Form(...), bullet_type: str = Form("task")
+    ):
         return {"ok": True, "bullet": journal.future_add(month, content, bullet_type)}
 
     @app.get("/api/journal/monthly/calendar")
@@ -257,21 +264,28 @@ def register_routes(app, assistant):
     @app.get("/api/journal/monthly")
     def journal_monthly(month: str = ""):
         from jarvis.modules.journal import _month_key
+
         return journal.monthly_get(month or _month_key())
 
     @app.post("/api/journal/monthly")
-    async def journal_monthly_add(content: str = Form(...), bullet_type: str = Form("task"), month: str = Form("")):
+    async def journal_monthly_add(
+        content: str = Form(...), bullet_type: str = Form("task"), month: str = Form("")
+    ):
         from jarvis.modules.journal import _month_key
+
         mk = month or _month_key()
         return {"ok": True, "bullet": journal.monthly_add(content, bullet_type, month=mk or None)}
 
     @app.get("/api/journal/daily")
     def journal_daily(day: str = ""):
         from jarvis.modules.journal import _today
+
         return journal.daily_get(day or _today())
 
     @app.post("/api/journal/daily")
-    async def journal_daily_add(content: str = Form(...), bullet_type: str = Form("task"), day: str = Form("")):
+    async def journal_daily_add(
+        content: str = Form(...), bullet_type: str = Form("task"), day: str = Form("")
+    ):
         return {"ok": True, "bullet": journal.daily_add(content, bullet_type, day=day or None)}
 
     @app.get("/api/briefing")
@@ -331,7 +345,9 @@ def register_routes(app, assistant):
         except Exception:
             body = {}
         if not isinstance(body, dict):
-            return JSONResponse(status_code=400, content={"ok": False, "message": "JSON body required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "JSON body required"}
+            )
         return save_secrets(body)
 
     @app.get("/api/knowledge")
@@ -388,7 +404,9 @@ def register_routes(app, assistant):
         safe = re.sub(r"[^\w-]", "", (slug or "").strip())
         path = RESEARCH_DIR / f"{safe}.md"
         if not path.is_file():
-            return JSONResponse(status_code=404, content={"ok": False, "message": "Brief not found"})
+            return JSONResponse(
+                status_code=404, content={"ok": False, "message": "Brief not found"}
+            )
         return {"ok": True, "slug": safe, "markdown": path.read_text(encoding="utf-8")[:120_000]}
 
     @app.post("/api/knowledge/research/daily")
@@ -417,7 +435,9 @@ def register_routes(app, assistant):
             results = run_nightly_research(memory=assistant.memory, force=force)
             if any(r.get("remembered") for r in results if isinstance(r, dict)):
                 assistant.refresh_system_prompt()
-            updated = [r for r in results if isinstance(r, dict) and r.get("ok") and not r.get("skipped")]
+            updated = [
+                r for r in results if isinstance(r, dict) and r.get("ok") and not r.get("skipped")
+            ]
             if updated:
                 titles = ", ".join(r.get("title") or r.get("slug") or "topic" for r in updated[:5])
                 message = f"Research complete — {len(updated)} topic(s): {titles}."
@@ -481,7 +501,9 @@ def register_routes(app, assistant):
             enabled=enabled,
             ensure_automation_secret=body.get("ensure_automation_secret", True),
         )
-        status = 200 if result.get("connection", {}).get("ok") or not result.get("token_set") else 200
+        status = (
+            200 if result.get("connection", {}).get("ok") or not result.get("token_set") else 200
+        )
         return JSONResponse(status_code=status, content={"ok": True, **result})
 
     @app.post("/api/homeassistant/test")
@@ -562,7 +584,11 @@ def register_routes(app, assistant):
 
     @app.post("/api/automation/inbound")
     async def automation_inbound(request: Request):
-        from jarvis.home_assistant import activate_scene, automation_secret, verify_automation_secret
+        from jarvis.home_assistant import (
+            activate_scene,
+            automation_secret,
+            verify_automation_secret,
+        )
 
         secret_hdr = request.headers.get("X-Jarvis-Automation-Secret")
         secret_q = request.query_params.get("secret")
@@ -573,6 +599,14 @@ def register_routes(app, assistant):
                 content={
                     "ok": False,
                     "message": "Set JARVIS_AUTOMATION_SECRET in data/jarvis.env to enable inbound webhooks.",
+                },
+            )
+        if secret_q and not secret_hdr:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "ok": False,
+                    "message": "Pass secret via X-Jarvis-Automation-Secret header only (query param rejected).",
                 },
             )
         if not verify_automation_secret(secret_hdr, secret_q):
@@ -592,6 +626,23 @@ def register_routes(app, assistant):
         message = (body.get("message") or body.get("text") or "").strip()
 
         if action == "chat":
+            import os
+
+            allow_chat = os.getenv("JARVIS_AUTOMATION_ALLOW_CHAT", "0").strip().lower() in (
+                "1",
+                "true",
+                "yes",
+                "on",
+            )
+            if not allow_chat:
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "ok": False,
+                        "message": "Automation chat disabled. Set JARVIS_AUTOMATION_ALLOW_CHAT=1 to enable, "
+                        "or use action journal_log|ha_scene|briefing|run_script|wake|resources.",
+                    },
+                )
             if not message:
                 return JSONResponse(
                     status_code=400,
@@ -599,7 +650,6 @@ def register_routes(app, assistant):
                 )
             result = assistant.process(message)
             return result
-
         if action == "journal_log":
             text = message or (body.get("entry") or "").strip()
             if not text:
@@ -712,7 +762,9 @@ def register_routes(app, assistant):
         return JSONResponse(status_code=status, content=result)
 
     @app.post("/api/journal/rapid")
-    async def journal_rapid(text: str = Form(...), day: str = Form(""), bullet_type: str = Form("task")):
+    async def journal_rapid(
+        text: str = Form(...), day: str = Form(""), bullet_type: str = Form("task")
+    ):
         bullets = journal.parse_rapid_log(text, day=day or None, default_type=bullet_type or "task")
         return {"ok": True, "bullets": bullets}
 
@@ -747,7 +799,9 @@ def register_routes(app, assistant):
         return {"ok": True, "collection": journal.collection_create(name, description)}
 
     @app.post("/api/journal/collections/{name}/add")
-    async def journal_collection_add(name: str, content: str = Form(...), bullet_type: str = Form("task")):
+    async def journal_collection_add(
+        name: str, content: str = Form(...), bullet_type: str = Form("task")
+    ):
         return {"ok": True, "bullet": journal.collection_add(name, content, bullet_type)}
 
     @app.patch("/api/journal/bullet/{bullet_id}")
@@ -837,7 +891,16 @@ def register_routes(app, assistant):
             journal.import_all(payload)
             return {"ok": True, "merged": False}
         current = journal.export_all()
-        for key in ("index", "future_log", "monthly_log", "daily_log", "weekly_log", "collections", "habits", "page_counter"):
+        for key in (
+            "index",
+            "future_log",
+            "monthly_log",
+            "daily_log",
+            "weekly_log",
+            "collections",
+            "habits",
+            "page_counter",
+        ):
             if key in payload:
                 current[key] = payload[key]
         journal.import_all(current)
@@ -852,7 +915,16 @@ def register_routes(app, assistant):
             journal.import_all(payload)
             return {"ok": True, "merged": False}
         current = journal.export_all()
-        for key in ("index", "future_log", "monthly_log", "daily_log", "weekly_log", "collections", "habits", "page_counter"):
+        for key in (
+            "index",
+            "future_log",
+            "monthly_log",
+            "daily_log",
+            "weekly_log",
+            "collections",
+            "habits",
+            "page_counter",
+        ):
             if key in payload:
                 current[key] = payload[key]
         journal.import_all(current)
@@ -981,13 +1053,17 @@ def register_routes(app, assistant):
         from jarvis.config import build_system_prompt, load_personality_preset
         from jarvis.movie_tiers import export_chat_with_memory
 
-        conv = assistant.branches.get_conversation(bid, build_system_prompt(load_personality_preset(), assistant.memory))
+        conv = assistant.branches.get_conversation(
+            bid, build_system_prompt(load_personality_preset(), assistant.memory)
+        )
         name = assistant.branches.branch_name(bid)
         safe = re.sub(r"[^\w\-]+", "-", name).strip("-") or bid
         msgs = [m for m in conv.messages if m.get("role") != "system"]
         memory_hits = None
         if memory:
-            memory_hits = assistant.memory.search("", limit=8) if hasattr(assistant.memory, "search") else []
+            memory_hits = (
+                assistant.memory.search("", limit=8) if hasattr(assistant.memory, "search") else []
+            )
         if memory:
             body = export_chat_with_memory(msgs, branch_name=name, memory_hits=memory_hits)
         else:
@@ -1027,7 +1103,9 @@ def register_routes(app, assistant):
     async def branches_switch(branch_id: str = Form(...)):
         ok = assistant.switch_branch(branch_id)
         if not ok:
-            return JSONResponse(status_code=404, content={"ok": False, "message": "Branch not found"})
+            return JSONResponse(
+                status_code=404, content={"ok": False, "message": "Branch not found"}
+            )
         return {"ok": True, "active": branch_id}
 
     @app.post("/api/branches/delete")
@@ -1060,7 +1138,10 @@ def register_routes(app, assistant):
     def branch_messages(branch_id: str):
         from jarvis.assistant import display_chat_user_content
         from jarvis.config import build_system_prompt, load_personality_preset
-        conv = assistant.branches.get_conversation(branch_id, build_system_prompt(load_personality_preset(), assistant.memory))
+
+        conv = assistant.branches.get_conversation(
+            branch_id, build_system_prompt(load_personality_preset(), assistant.memory)
+        )
         out = []
         for m in conv.messages:
             if m.get("role") not in ("user", "assistant"):
@@ -1153,7 +1234,11 @@ def register_routes(app, assistant):
         safe = Path(name).name
         for root in (VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR):
             path = (root / safe).resolve()
-            if root.resolve() in path.parents and path.is_file() and path.suffix.lower() in _VIDEO_EXTS:
+            if (
+                root.resolve() in path.parents
+                and path.is_file()
+                and path.suffix.lower() in _VIDEO_EXTS
+            ):
                 media = _VIDEO_MEDIA.get(path.suffix.lower(), "video/mp4")
                 return FileResponse(path, media_type=media)
             if safe.lower().endswith(".webm"):
@@ -1270,11 +1355,13 @@ def register_routes(app, assistant):
     @app.get("/api/personality")
     def get_personality():
         from jarvis.config import load_personality_preset
+
         return {"ok": True, "personality": load_personality_preset()}
 
     @app.post("/api/personality")
     async def set_personality(preset: str = Form("default")):
         from jarvis.config import PERSONALITIES, save_personality_preset
+
         preset = preset if preset in PERSONALITIES else "default"
         save_personality_preset(preset)
         assistant.refresh_system_prompt()
@@ -1284,16 +1371,19 @@ def register_routes(app, assistant):
     @app.get("/api/git/status")
     def git_status():
         from jarvis import git_util
+
         return {"status": git_util.status()}
 
     @app.get("/api/git/diff")
     def git_diff(file: str = ""):
         from jarvis import git_util
+
         return {"diff": git_util.diff(file=file or None)}
 
     @app.post("/api/undo-apply")
     def undo_apply():
         from jarvis.assistant import perform_undo_apply
+
         result = perform_undo_apply(assistant)
         status = 400 if not result.get("ok") else 200
         return JSONResponse(status_code=status, content=result)
@@ -1301,6 +1391,7 @@ def register_routes(app, assistant):
     @app.post("/api/rag/reindex")
     def rag_reindex():
         from jarvis import rag
+
         chunks = rag.build_index()
         return {"ok": True, "chunks": len(chunks)}
 
@@ -1346,32 +1437,39 @@ def register_routes(app, assistant):
     @app.get("/api/coding/syntax")
     def coding_syntax(path: str, deep: str = "true"):
         from jarvis.cursor_bridge import check_syntax
+
         return check_syntax(path, assistant.coding._base())
 
     @app.get("/api/coding/context")
     def coding_context(path: str, task: str = ""):
         from jarvis.cursor_bridge import get_file_context
+
         return get_file_context(path, assistant.coding._base(), task=task)
 
     @app.get("/api/coding/search")
     def coding_semantic_search(q: str = "", limit: int = 8):
         from jarvis.cursor_bridge import search_codebase
+
         return {"results": search_codebase(q, limit=limit)}
 
     @app.get("/api/coding/runner")
     def coding_runner_info():
         from jarvis.project_runner import runner_info
+
         return runner_info(assistant.coding._base())
 
     @app.post("/api/editor/context")
     async def editor_context_post(request: Request):
         from jarvis.editor_context import save_context
+
         try:
             payload = await request.json()
         except Exception:
             return JSONResponse(status_code=400, content={"ok": False, "message": "Invalid JSON"})
         if not isinstance(payload, dict):
-            return JSONResponse(status_code=400, content={"ok": False, "message": "Expected object"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "Expected object"}
+            )
         ctx = save_context(payload)
         if ctx.relative_file:
             assistant.session.note_file(ctx.relative_file)
@@ -1380,6 +1478,7 @@ def register_routes(app, assistant):
     @app.get("/api/editor/context")
     def editor_context_get():
         from jarvis.editor_context import get_context, load_context
+
         ctx = load_context()
         fresh = get_context()
         sel_lines = ctx.selection_line_count() if ctx.has_selection() else 0
@@ -1457,6 +1556,7 @@ def register_routes(app, assistant):
     @app.post("/api/code/reindex")
     def code_reindex():
         from jarvis.code_index import build_index, invalidate_cache
+
         invalidate_cache()
         chunks = build_index(assistant.coding._base())
         return {"ok": True, "chunks": len(chunks)}
@@ -1464,11 +1564,13 @@ def register_routes(app, assistant):
     @app.get("/api/profiles")
     def profiles_list():
         from jarvis.profiles import list_profiles
+
         return {"profiles": list_profiles()}
 
     @app.post("/api/profiles/switch")
     async def profiles_switch(request: Request):
         from jarvis.profiles import apply_profile
+
         body = await request.json()
         pid = (body.get("profile") or body.get("id") or "").strip()
         try:
@@ -1481,11 +1583,13 @@ def register_routes(app, assistant):
     @app.get("/api/prompts")
     def prompts_list(favorites: bool = False, limit: int = 50):
         from jarvis.prompt_history import list_entries
+
         return {"prompts": list_entries(favorites_only=favorites, limit=limit)}
 
     @app.post("/api/prompts/{entry_id}/favorite")
     def prompts_favorite(entry_id: str):
         from jarvis.prompt_history import toggle_favorite
+
         entry = toggle_favorite(entry_id)
         if not entry:
             return JSONResponse(status_code=404, content={"ok": False, "message": "Not found"})
@@ -1502,17 +1606,23 @@ def register_routes(app, assistant):
     @app.get("/api/git/log")
     def git_log(limit: int = 10):
         from jarvis import git_util
+
         return {"log": git_util.log_oneline(limit=limit)}
 
     @app.post("/api/admin/backup")
     def admin_backup():
         import subprocess
+
         script = Path(__file__).resolve().parent.parent.parent / "scripts" / "backup-data.sh"
         if not script.exists():
-            return JSONResponse(status_code=500, content={"ok": False, "message": "backup script missing"})
+            return JSONResponse(
+                status_code=500, content={"ok": False, "message": "backup script missing"}
+            )
         proc = subprocess.run([str(script)], capture_output=True, text=True, timeout=120)
         if proc.returncode != 0:
-            return JSONResponse(status_code=500, content={"ok": False, "message": proc.stderr or proc.stdout})
+            return JSONResponse(
+                status_code=500, content={"ok": False, "message": proc.stderr or proc.stdout}
+            )
         return {"ok": True, "message": (proc.stdout or "").strip()}
 
     @app.get("/api/chat/export/pdf")
@@ -1520,10 +1630,16 @@ def register_routes(app, assistant):
         bid = branch_id.strip() or assistant.branches.active_id
         from jarvis.assistant import display_chat_user_content
         from jarvis.config import build_system_prompt, load_personality_preset
-        conv = assistant.branches.get_conversation(bid, build_system_prompt(load_personality_preset(), assistant.memory))
+
+        conv = assistant.branches.get_conversation(
+            bid, build_system_prompt(load_personality_preset(), assistant.memory)
+        )
         name = assistant.branches.branch_name(bid)
         safe = re.sub(r"[^\w\-]+", "-", name).strip("-") or bid
-        parts = [f"<h1>Jarvis Chat — {html.escape(name)}</h1>", f"<p><em>Branch {html.escape(bid)}</em></p>"]
+        parts = [
+            f"<h1>Jarvis Chat — {html.escape(name)}</h1>",
+            f"<p><em>Branch {html.escape(bid)}</em></p>",
+        ]
         for m in conv.messages:
             role = m.get("role", "?")
             if role == "system":
@@ -1537,7 +1653,10 @@ def register_routes(app, assistant):
         try:
             from weasyprint import HTML
         except ImportError:
-            return JSONResponse(status_code=501, content={"ok": False, "message": "Install weasyprint for PDF export"})
+            return JSONResponse(
+                status_code=501,
+                content={"ok": False, "message": "Install weasyprint for PDF export"},
+            )
         pdf_bytes = HTML(string=html_doc).write_pdf()
         return Response(
             content=pdf_bytes,
@@ -1617,7 +1736,9 @@ def register_routes(app, assistant):
         from jarvis.home_assistant import ha_enabled, list_states
 
         if not ha_enabled():
-            return JSONResponse(status_code=400, content={"ok": False, "message": "Home Assistant disabled"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "Home Assistant disabled"}
+            )
         states = list_states(refresh=True)
         dom = (domain or "").strip().lower()
         if dom:
@@ -1627,6 +1748,7 @@ def register_routes(app, assistant):
     @app.post("/api/homeassistant/toggle")
     async def ha_toggle_entity(request: Request):
         from jarvis.home_assistant import call_service, ha_enabled
+        from jarvis.tool_permissions import create_pending, permission_for
 
         if not ha_enabled():
             return JSONResponse(status_code=400, content={"ok": False, "message": "HA disabled"})
@@ -1637,7 +1759,32 @@ def register_routes(app, assistant):
         eid = (body.get("entity_id") or "").strip()
         action = (body.get("action") or "toggle").strip().lower()
         if not eid:
-            return JSONResponse(status_code=400, content={"ok": False, "message": "entity_id required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "entity_id required"}
+            )
+        perm = permission_for("ha_control")
+        if perm == "never":
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "ok": False,
+                    "message": "Home Assistant control is blocked by tool permissions.",
+                },
+            )
+        confirmed = str(body.get("confirmed", "")).lower() in ("1", "true", "yes")
+        if perm == "ask" and not confirmed:
+            confirm_id = create_pending(
+                "ha_control",
+                "ha_control",
+                {"target": eid, "action": action, "entity_id": eid},
+                f"toggle {eid}",
+            )
+            return {
+                "ok": False,
+                "confirm_required": True,
+                "confirm_id": confirm_id,
+                "message": "Confirm Home Assistant control?",
+            }
         domain = eid.split(".")[0]
         svc = "turn_on" if action == "on" else "turn_off" if action == "off" else "toggle"
         call_service(domain, svc, {"entity_id": eid})
@@ -1646,6 +1793,7 @@ def register_routes(app, assistant):
     @app.post("/api/homeassistant/scene")
     async def ha_activate_scene(request: Request):
         from jarvis.home_assistant import activate_scene, ha_enabled
+        from jarvis.tool_permissions import create_pending, permission_for
 
         if not ha_enabled():
             return JSONResponse(status_code=400, content={"ok": False, "message": "HA disabled"})
@@ -1655,8 +1803,33 @@ def register_routes(app, assistant):
             body = {}
         scene = (body.get("entity_id") or body.get("scene") or "").strip()
         if not scene:
-            return JSONResponse(status_code=400, content={"ok": False, "message": "entity_id required"})
-        ok = activate_scene(scene)
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "entity_id required"}
+            )
+        perm = permission_for("ha_control")
+        if perm == "never":
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "ok": False,
+                    "message": "Home Assistant control is blocked by tool permissions.",
+                },
+            )
+        confirmed = str(body.get("confirmed", "")).lower() in ("1", "true", "yes")
+        if perm == "ask" and not confirmed:
+            confirm_id = create_pending(
+                "ha_control",
+                "ha_scene",
+                {"scene": scene, "entity_id": scene},
+                f"activate scene {scene}",
+            )
+            return {
+                "ok": False,
+                "confirm_required": True,
+                "confirm_id": confirm_id,
+                "message": "Confirm Home Assistant scene?",
+            }
+        ok, _msg = activate_scene(scene)
         return {"ok": ok, "scene": scene}
 
     @app.post("/api/video/storyboard")
@@ -1664,17 +1837,22 @@ def register_routes(app, assistant):
         from jarvis.coding_jobs import submit
         from jarvis.config import DATA_DIR
 
+        from jarvis.video_ops import resolve_storyboard_image
+
         raw = [p.strip() for p in paths.split(",") if p.strip()]
         resolved: list[str] = []
         for p in raw:
             path = Path(p)
             if not path.is_absolute():
-                path = (DATA_DIR / "generated" / path.name).resolve()
-            if path.is_file():
-                resolved.append(str(path))
+                path = (DATA_DIR / "generated" / Path(p).name).resolve()
+            allowed = resolve_storyboard_image(path)
+            if allowed is not None:
+                resolved.append(str(allowed))
 
         if not resolved:
-            return JSONResponse(status_code=400, content={"ok": False, "message": "No valid image paths"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "No valid image paths"}
+            )
 
         def _run() -> dict:
             from jarvis.video_ops import storyboard_ken_burns
@@ -1741,7 +1919,9 @@ def register_routes(app, assistant):
             result = run_install_script(key)
             if result.get("ok"):
                 clear_audit_cache()
-                result["message"] = (result.get("message") or "Install finished") + " — run audit to refresh"
+                result["message"] = (
+                    result.get("message") or "Install finished"
+                ) + " — run audit to refresh"
             return JSONResponse(result)
         except Exception as exc:
             return JSONResponse({"ok": False, "error": str(exc), "message": str(exc)})

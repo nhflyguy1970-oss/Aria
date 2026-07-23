@@ -375,7 +375,15 @@ def collect_runtime_storage() -> dict[str, Any]:
     mounts: list[dict[str, Any]] = []
     try:
         proc = subprocess.run(
-            ["df", "-B1", "--output=source,fstype,size,used,avail,target", "-x", "tmpfs", "-x", "devtmpfs"],
+            [
+                "df",
+                "-B1",
+                "--output=source,fstype,size,used,avail,target",
+                "-x",
+                "tmpfs",
+                "-x",
+                "devtmpfs",
+            ],
             capture_output=True,
             text=True,
             timeout=8,
@@ -386,7 +394,14 @@ def collect_runtime_storage() -> dict[str, Any]:
             parts = line.split()
             if len(parts) < 6:
                 continue
-            source, fstype, size_s, used_s, avail_s, target = parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]
+            source, fstype, size_s, used_s, avail_s, target = (
+                parts[0],
+                parts[1],
+                parts[2],
+                parts[3],
+                parts[4],
+                parts[5],
+            )
             if source.startswith("overlay") or target.startswith("/snap"):
                 continue
             try:
@@ -458,7 +473,7 @@ def _storage_device_type(block: dict[str, Any], *, parent_tran: str = "") -> str
         return "SSD"
     if tran in ("sata", "ata", "sas"):
         return "SATA"
-    return (tran.upper() if tran else "disk")
+    return tran.upper() if tran else "disk"
 
 
 def _append_storage_device(

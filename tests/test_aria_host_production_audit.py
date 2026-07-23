@@ -131,3 +131,58 @@ def test_claude_dangerous_requires_env_opt_in():
     )
     assert "JARVIS_ALLOW_DANGEROUS_TOOLS" in src
     assert "--dangerously-skip-permissions" in src
+
+
+def test_video_paths_are_confined():
+    from jarvis.video_ops import resolve_storyboard_image, resolve_video_path
+
+    assert resolve_video_path("/etc/passwd") is None
+    assert resolve_storyboard_image("/etc/passwd") is None
+
+
+def test_automation_secret_rejects_query_only(monkeypatch):
+    monkeypatch.setenv("JARVIS_AUTOMATION_SECRET", "test-secret-value-xyz")
+    from jarvis.home_assistant import verify_automation_secret
+
+    assert verify_automation_secret(None, "test-secret-value-xyz") is False
+    assert verify_automation_secret("test-secret-value-xyz", None) is True
+    assert verify_automation_secret("wrong", None) is False
+
+
+def test_tools_cwd_must_be_under_project_or_data(tmp_path, monkeypatch):
+    from jarvis.config import PROJECT_ROOT
+    from jarvis.tools.runner import build_command
+
+    monkeypatch.setattr("shutil.which", lambda _n: "/usr/bin/claude")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    built = build_command(
+        "claude_code",
+        {"task": "hi", "cwd": str(outside)},
+    )
+    assert built is None
+    built_ok = build_command(
+        "claude_code",
+        {"task": "hi", "cwd": str(PROJECT_ROOT)},
+    )
+    assert built_ok is not None
+
+
+def test_upsert_checkpoint_primary_does_not_delete_legacy(primary_env, tmp_path):
+    from jarvis.modules.memory import MemoryStore
+
+    store = MemoryStore(tmp_path / "cp.json")
+    store._data["entries"] = [
+        {
+            "id": "legacy-cp",
+            "type": "project",
+            "content": "old checkpoint",
+            "tags": ["checkpoint", "project-state"],
+            "namespace": "default",
+            "timestamp": "2000-01-01T00:00:00+00:00",
+            "access_count": 0,
+            "relevance": 1.0,
+        }
+    ]
+    store.upsert_checkpoint("new checkpoint state")
+    assert any(e["id"] == "legacy-cp" for e in store._data["entries"])

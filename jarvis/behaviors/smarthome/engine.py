@@ -53,7 +53,9 @@ class SmartHomeEngine:
             return cls._not_configured()
         perm = permission_for("ha_control")
         if perm == "never":
-            return err("Home Assistant control is blocked by tool permissions.", module="automation")
+            return err(
+                "Home Assistant control is blocked by tool permissions.", module="automation"
+            )
         confirmed = str(params.get("confirmed", "")).lower() in ("1", "true", "yes")
         if perm == "ask" and not confirmed:
             confirm_id = create_pending("ha_control", "ha_control", dict(params or {}), message)
@@ -77,9 +79,26 @@ class SmartHomeEngine:
     @classmethod
     def ha_scene(cls, ctx: SmartHomeContext, params: dict, message: str) -> dict:
         from jarvis.home_assistant import activate_scene, ha_enabled, parse_scene
+        from jarvis.tool_permissions import create_pending, permission_for
 
         if not ha_enabled():
             return cls._not_configured()
+        perm = permission_for("ha_control")
+        if perm == "never":
+            return err(
+                "Home Assistant control is blocked by tool permissions.", module="automation"
+            )
+        confirmed = str(params.get("confirmed", "")).lower() in ("1", "true", "yes")
+        if perm == "ask" and not confirmed:
+            confirm_id = create_pending("ha_scene", "ha_scene", dict(params or {}), message)
+            return {
+                "ok": False,
+                "confirm_required": True,
+                "confirm_id": confirm_id,
+                "message": "Confirm Home Assistant scene?",
+                "module": "automation",
+                "type": "confirm_required",
+            }
         scene = (params.get("scene") or parse_scene(message) or "").strip()
         success, msg = activate_scene(scene)
         ctx.session.note_module("automation")
@@ -115,7 +134,9 @@ class SmartHomeEngine:
         conn = result.get("connection") or {}
         if not conn.get("ok"):
             return err(
-                conn.get("message", "Token saved but connection failed — check URL in Smart home panel."),
+                conn.get(
+                    "message", "Token saved but connection failed — check URL in Smart home panel."
+                ),
                 module="automation",
             )
         ctx.session.note_module("automation")

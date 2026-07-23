@@ -77,9 +77,28 @@ def list_runs(*, tool_id: str = "", limit: int = 20) -> list[ToolRun]:
 def build_command(tool_id: str, params: dict[str, Any]) -> tuple[list[str], str] | None:
     """Return argv and cwd for a tool invocation."""
     import shutil
+    from pathlib import Path
+
+    from jarvis.config import DATA_DIR, PROJECT_ROOT
 
     task = str(params.get("task") or params.get("prompt") or "").strip()
-    cwd = str(params.get("cwd") or os.getcwd())
+    raw_cwd = str(params.get("cwd") or os.getcwd())
+    try:
+        cwd_path = Path(raw_cwd).expanduser().resolve()
+    except (OSError, RuntimeError):
+        return None
+    allowed_roots = (PROJECT_ROOT.resolve(), DATA_DIR.resolve())
+    under = False
+    for root in allowed_roots:
+        try:
+            cwd_path.relative_to(root)
+            under = True
+            break
+        except ValueError:
+            continue
+    if not under or not cwd_path.is_dir():
+        return None
+    cwd = str(cwd_path)
     if not task:
         return None
 

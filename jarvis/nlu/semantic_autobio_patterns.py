@@ -114,8 +114,7 @@ def is_semantic_autobio_teaching(text: str) -> bool:
         return True
     # Recurring-experience / habit patterns used by Prediction.
     return any(
-        f.kind == FactKind.EXPERIENCE and f.property == "predictive_pattern"
-        for f in detected.facts
+        f.kind == FactKind.EXPERIENCE and f.property == "predictive_pattern" for f in detected.facts
     )
 
 

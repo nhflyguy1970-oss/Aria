@@ -240,7 +240,9 @@ def format_memory(payload: dict[str, Any]) -> str:
 def format_storage(payload: dict[str, Any]) -> str:
     devices = payload.get("devices") if isinstance(payload.get("devices"), list) else []
     mounts = payload.get("mounts") if isinstance(payload.get("mounts"), list) else []
-    root = payload.get("root_filesystem") if isinstance(payload.get("root_filesystem"), dict) else {}
+    root = (
+        payload.get("root_filesystem") if isinstance(payload.get("root_filesystem"), dict) else {}
+    )
     hw = payload.get("hardware") if isinstance(payload.get("hardware"), dict) else {}
     mc_free = hw.get("disk_free_gb") or payload.get("disk_free_gb")
 
@@ -298,9 +300,7 @@ def format_storage(payload: dict[str, Any]) -> str:
         )
     elif mc_free is not None:
         lines.append(f"Reported free (Mission Control summary): {mc_free} GB")
-        lines.append(
-            "This figure is a summary value and may not enumerate every storage device."
-        )
+        lines.append("This figure is a summary value and may not enumerate every storage device.")
     elif not inventory and not usable:
         lines.append("No storage devices reported.")
 

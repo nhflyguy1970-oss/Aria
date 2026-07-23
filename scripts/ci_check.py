@@ -141,6 +141,8 @@ PYTEST_PATHS: tuple[str, ...] = (
     "tests/test_memory_retrieval_consistency.py",
     "tests/test_aria_core_phase7.py",
     "tests/test_aria_core_phase8.py",
+    "tests/test_aria_host_production_audit.py",
+    "tests/test_aria_acm_dual_import.py",
     "tests/test_greeting_latency.py",
     "tests/test_conversation_trace.py",
     "tests/test_uncensored_auth.py",

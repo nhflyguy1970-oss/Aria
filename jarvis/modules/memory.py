@@ -384,10 +384,7 @@ class JsonMemoryStore:
         entries = self._data["entries"]
         if 0 <= index < len(entries):
             eid = entries[index]["id"]
-            del entries[index]
-            self._embeddings.delete(eid)
-            self._save()
-            return True
+            return self.delete_id(eid)
         return False
 
     def delete_id(self, entry_id: str) -> bool:
@@ -519,6 +516,19 @@ class JsonMemoryStore:
 
     def upsert_checkpoint(self, content: str, namespace: str = "default") -> dict:
         ns = (namespace or DEFAULT_NAMESPACE).strip() or DEFAULT_NAMESPACE
+        try:
+            from aria_core.acm_bridge import acm_is_authoritative
+
+            if acm_is_authoritative():
+                # Under PRIMARY, do not mutate/delete legacy vault rows; add routes to ACM.
+                return self.add(
+                    "project",
+                    content,
+                    tags=["checkpoint", "project-state"],
+                    namespace=ns,
+                )
+        except ImportError:
+            pass
         remove_ids = [
             e["id"]
             for e in self._data["entries"]

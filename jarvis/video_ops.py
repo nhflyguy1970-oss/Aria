@@ -21,26 +21,81 @@ def ensure_dirs() -> None:
     VIDEO_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _under_allowed_roots(candidate: Path, roots: tuple[Path, ...]) -> bool:
+    for root in roots:
+        try:
+            candidate.relative_to(root)
+            return True
+        except ValueError:
+            continue
+    return False
+
+
+def resolve_video_path(path: str | Path) -> Path | None:
+    """Allow only files under video upload/output (and generated) trees."""
+    try:
+        candidate = Path(path).expanduser().resolve()
+    except (OSError, RuntimeError):
+        return None
+    if not candidate.is_file():
+        return None
+    roots = (
+        VIDEO_OUTPUT_DIR.resolve(),
+        VIDEO_UPLOAD_DIR.resolve(),
+        (DATA_DIR / "generated").resolve(),
+        (DATA_DIR / "uploads").resolve(),
+    )
+    if _under_allowed_roots(candidate, roots):
+        return candidate
+    return None
+
+
+def resolve_storyboard_image(path: str | Path) -> Path | None:
+    """Allow only stills under generated/uploads for storyboard ingest."""
+    try:
+        candidate = Path(path).expanduser().resolve()
+    except (OSError, RuntimeError):
+        return None
+    if not candidate.is_file():
+        return None
+    roots = (
+        (DATA_DIR / "generated").resolve(),
+        (DATA_DIR / "uploads").resolve(),
+    )
+    if _under_allowed_roots(candidate, roots):
+        return candidate
+    return None
+
+
 def _ffmpeg() -> str | None:
     import shutil
+
     return shutil.which("ffmpeg")
 
 
 def _ffprobe() -> str | None:
     import shutil
+
     return shutil.which("ffprobe")
 
 
 def probe(path: str | Path) -> dict:
     """Return duration, width, height, fps for a video file."""
-    p = Path(path).expanduser().resolve()
-    if not p.is_file():
-        return {"ok": False, "error": f"Not found: {p}"}
+    p = resolve_video_path(path)
+    if p is None:
+        return {"ok": False, "error": "Not found or path not allowed"}
     ffprobe = _ffprobe()
     if not ffprobe:
         return {"ok": False, "error": "ffprobe not installed"}
     cmd = [
-        ffprobe, "-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", str(p),
+        ffprobe,
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
+        "-show_format",
+        "-show_streams",
+        str(p),
     ]
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
@@ -75,11 +130,13 @@ def probe(path: str | Path) -> dict:
     }
 
 
-def trim(path: str | Path, start: float, end: float | None = None, duration: float | None = None) -> str:
+def trim(
+    path: str | Path, start: float, end: float | None = None, duration: float | None = None
+) -> str:
     """Trim video to [start, end) or start+duration. Returns output path or ERROR:."""
-    src = Path(path).expanduser().resolve()
-    if not src.is_file():
-        return f"ERROR: Not found: {src}"
+    src = resolve_video_path(path)
+    if src is None:
+        return "ERROR: Not found or path not allowed"
     ffmpeg = _ffmpeg()
     if not ffmpeg:
         return "ERROR: ffmpeg not installed"
@@ -94,10 +151,28 @@ def trim(path: str | Path, start: float, end: float | None = None, duration: flo
     stamp = time.strftime("%Y%m%d_%H%M%S")
     out = VIDEO_OUTPUT_DIR / f"trim_{src.stem}_{stamp}.mp4"
     cmd = [
-        ffmpeg, "-y", "-loglevel", "error",
-        "-ss", str(start), "-i", str(src), "-t", str(length),
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart",
+        ffmpeg,
+        "-y",
+        "-loglevel",
+        "error",
+        "-ss",
+        str(start),
+        "-i",
+        str(src),
+        "-t",
+        str(length),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-crf",
+        "23",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-movflags",
+        "+faststart",
         str(out),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
@@ -112,17 +187,31 @@ def _remux_mp4_web(src: Path, out: Path) -> bool:
     ffmpeg = _ffmpeg()
     if not ffmpeg:
         import shutil
+
         try:
             shutil.copy2(src, out)
             return out.is_file()
         except OSError:
             return False
     cmd = [
-        ffmpeg, "-y", "-loglevel", "error",
-        "-i", str(src),
-        "-c:v", "libx264", "-profile:v", "main", "-pix_fmt", "yuv420p",
-        "-preset", "fast", "-crf", "20",
-        "-movflags", "+faststart",
+        ffmpeg,
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        str(src),
+        "-c:v",
+        "libx264",
+        "-profile:v",
+        "main",
+        "-pix_fmt",
+        "yuv420p",
+        "-preset",
+        "fast",
+        "-crf",
+        "20",
+        "-movflags",
+        "+faststart",
         "-an",
         str(out),
     ]
@@ -132,9 +221,9 @@ def _remux_mp4_web(src: Path, out: Path) -> bool:
 
 def ensure_mp4(path: str | Path) -> str:
     """Return an MP4 path, converting GIF/WebP via ffmpeg when needed."""
-    src = Path(path).expanduser().resolve()
-    if not src.is_file():
-        return f"ERROR: Not found: {src}"
+    src = resolve_video_path(path) or resolve_storyboard_image(path)
+    if src is None:
+        return "ERROR: Not found or path not allowed"
     if src.suffix.lower() == ".mp4":
         stamp = time.strftime("%Y%m%d_%H%M%S")
         if "generated_videos" in str(src.parent):
@@ -153,10 +242,24 @@ def ensure_mp4(path: str | Path) -> str:
     stamp = time.strftime("%Y%m%d_%H%M%S")
     out = VIDEO_OUTPUT_DIR / f"motion_{src.stem}_{stamp}.mp4"
     cmd = [
-        ffmpeg, "-y", "-loglevel", "error",
-        "-i", str(src),
-        "-pix_fmt", "yuv420p", "-c:v", "libx264", "-profile:v", "main",
-        "-preset", "fast", "-crf", "20", "-movflags", "+faststart",
+        ffmpeg,
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        str(src),
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        "-profile:v",
+        "main",
+        "-preset",
+        "fast",
+        "-crf",
+        "20",
+        "-movflags",
+        "+faststart",
         str(out),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -176,9 +279,9 @@ def image_to_motion_video(
     height: int = 768,
 ) -> str:
     """Ken-burns style motion clip from a still image (low VRAM)."""
-    src = Path(image_path).expanduser().resolve()
-    if not src.is_file():
-        return f"ERROR: Not found: {src}"
+    src = resolve_storyboard_image(image_path)
+    if src is None:
+        return "ERROR: Not found or path not allowed"
     ffmpeg = _ffmpeg()
     if not ffmpeg:
         return "ERROR: ffmpeg not installed"
@@ -195,10 +298,30 @@ def image_to_motion_video(
         f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={width}x{height},fps={fps}"
     )
     cmd = [
-        ffmpeg, "-y", "-loglevel", "error",
-        "-loop", "1", "-i", str(src), "-vf", vf,
-        "-t", str(duration), "-pix_fmt", "yuv420p", "-c:v", "libx264", "-profile:v", "main",
-        "-preset", "fast", "-crf", "20", "-movflags", "+faststart",
+        ffmpeg,
+        "-y",
+        "-loglevel",
+        "error",
+        "-loop",
+        "1",
+        "-i",
+        str(src),
+        "-vf",
+        vf,
+        "-t",
+        str(duration),
+        "-pix_fmt",
+        "yuv420p",
+        "-c:v",
+        "libx264",
+        "-profile:v",
+        "main",
+        "-preset",
+        "fast",
+        "-crf",
+        "20",
+        "-movflags",
+        "+faststart",
         str(out),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -217,8 +340,8 @@ def storyboard_ken_burns(
     height: int = 768,
 ) -> str:
     """Concatenate Ken Burns clips from multiple stills (8GB-safe storyboard)."""
-    paths = [Path(p).expanduser().resolve() for p in image_paths if str(p).strip()]
-    paths = [p for p in paths if p.is_file()]
+    paths = [resolve_storyboard_image(p) for p in image_paths if str(p).strip()]
+    paths = [p for p in paths if p is not None]
     if not paths:
         return "ERROR: No valid image paths for storyboard"
     if len(paths) > 12:
@@ -252,9 +375,19 @@ def storyboard_ken_burns(
         lines = [f"file '{c}'" for c in clips]
         list_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
         cmd = [
-            ffmpeg, "-y", "-loglevel", "error",
-            "-f", "concat", "-safe", "0", "-i", str(list_file),
-            "-c", "copy", str(out),
+            ffmpeg,
+            "-y",
+            "-loglevel",
+            "error",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(list_file),
+            "-c",
+            "copy",
+            str(out),
         ]
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         if proc.returncode != 0 or not out.is_file():
@@ -282,10 +415,21 @@ def ensure_webm(mp4_path: str | Path) -> str:
     if not ffmpeg:
         return f"ERROR: ffmpeg not installed (needed for WebM playback)"
     cmd = [
-        ffmpeg, "-y", "-loglevel", "error",
-        "-i", str(src),
-        "-c:v", "libvpx-vp9", "-crf", "32", "-b:v", "0",
-        "-row-mt", "1", "-an",
+        ffmpeg,
+        "-y",
+        "-loglevel",
+        "error",
+        "-i",
+        str(src),
+        "-c:v",
+        "libvpx-vp9",
+        "-crf",
+        "32",
+        "-b:v",
+        "0",
+        "-row-mt",
+        "1",
+        "-an",
         str(out),
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
@@ -300,7 +444,9 @@ def list_videos(limit: int = 50) -> list[dict]:
     files: list[Path] = []
     for root in (VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR):
         if root.exists():
-            files.extend(p for p in root.iterdir() if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS)
+            files.extend(
+                p for p in root.iterdir() if p.is_file() and p.suffix.lower() in VIDEO_EXTENSIONS
+            )
     files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     names = {p.name for p in files}
     shown: list[Path] = []

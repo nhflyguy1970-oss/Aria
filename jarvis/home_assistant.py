@@ -37,7 +37,9 @@ def ha_enabled() -> bool:
 
 
 def ha_url() -> str:
-    return (os.getenv("JARVIS_HA_URL", "") or os.getenv("HOME_ASSISTANT_URL", "")).strip().rstrip("/")
+    return (
+        (os.getenv("JARVIS_HA_URL", "") or os.getenv("HOME_ASSISTANT_URL", "")).strip().rstrip("/")
+    )
 
 
 def ha_token() -> str:
@@ -53,7 +55,9 @@ def normalize_ha_token(raw: str | None) -> str:
         return ""
     if token.lower().startswith("bearer "):
         token = token[7:].strip()
-    if (token.startswith('"') and token.endswith('"')) or (token.startswith("'") and token.endswith("'")):
+    if (token.startswith('"') and token.endswith('"')) or (
+        token.startswith("'") and token.endswith("'")
+    ):
         token = token[1:-1].strip()
     return token.replace("\r", "").replace("\n", "").replace(" ", "")
 
@@ -270,7 +274,9 @@ def control_entity(target: str, action: str) -> tuple[bool, str]:
 def query_entity(question: str) -> tuple[bool, str]:
     q = (question or "").strip()
     matches = find_entities(q, limit=5)
-    if not matches and re.search(r"^(sensor|light|switch|climate|binary_sensor)\.", q.replace(" ", "_")):
+    if not matches and re.search(
+        r"^(sensor|light|switch|climate|binary_sensor)\.", q.replace(" ", "_")
+    ):
         st = get_state(q.replace(" ", "_"))
         if st:
             matches = [st]
@@ -293,7 +299,11 @@ def home_summary(*, limit: int = 10) -> tuple[bool, str]:
         eid = st.get("entity_id") or ""
         state = (st.get("state") or "").lower()
         domain = eid.split(".")[0] if "." in eid else ""
-        if domain in ("person", "device_tracker") and state not in ("home", "unknown", "unavailable"):
+        if domain in ("person", "device_tracker") and state not in (
+            "home",
+            "unknown",
+            "unavailable",
+        ):
             interesting.append(_entity_line(st))
         elif domain == "climate" and state not in ("off", "unavailable", "unknown"):
             interesting.append(_entity_line(st))
@@ -305,7 +315,8 @@ def home_summary(*, limit: int = 10) -> tuple[bool, str]:
             break
 
     people = [
-        _entity_line(st) for st in states
+        _entity_line(st)
+        for st in states
         if (st.get("entity_id") or "").startswith("person.")
         and (st.get("state") or "") not in ("unavailable", "unknown")
     ][:4]
@@ -382,7 +393,9 @@ def is_ha_status_query(message: str) -> bool:
     if re.search(
         r"\b(check|show|get|tell me|what(?:'?s| is| are)|which|status of|state of)\b",
         lower,
-    ) and re.search(r"\b(lights?|switches?|thermostat|doors?|garage|living room|bedroom|kitchen)\b", lower):
+    ) and re.search(
+        r"\b(lights?|switches?|thermostat|doors?|garage|living room|bedroom|kitchen)\b", lower
+    ):
         return True
     if re.search(r"\b(which|what) lights? (?:are )?(?:on|off)\b", lower):
         return True
@@ -400,7 +413,9 @@ def is_ha_state_query(message: str) -> bool:
             r"state of (?:the )?.+)\b",
             lower,
         )
-        and re.search(r"\b(light|switch|sensor|thermostat|door|garage|room|living|bedroom|office)\b", lower)
+        and re.search(
+            r"\b(light|switch|sensor|thermostat|door|garage|room|living|bedroom|office)\b", lower
+        )
     )
 
 
@@ -531,8 +546,19 @@ def parse_ha_token_message(message: str) -> str | None:
 
 
 def verify_automation_secret(header_value: str | None, query_value: str | None = None) -> bool:
+    """Validate inbound automation secret from header only (query ignored)."""
+    import hmac
+
     secret = automation_secret()
     if not secret:
         return False
-    supplied = (header_value or query_value or "").strip()
-    return supplied == secret
+    # Query-string secrets leak via logs/Referer/HA history — never accept them.
+    if query_value and not header_value:
+        return False
+    supplied = (header_value or "").strip()
+    if not supplied:
+        return False
+    try:
+        return hmac.compare_digest(supplied, secret)
+    except (TypeError, ValueError):
+        return False

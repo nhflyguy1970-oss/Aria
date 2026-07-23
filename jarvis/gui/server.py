@@ -222,7 +222,10 @@ def _build_health_payload() -> dict:
     gpu["low_vram"] = vram_status()["low_vram"]
     gpu["vram_guard"] = vram_status()
     gpu["tips"] = recommendations()
-    from jarvis.resource_router import snapshot as resource_snapshot, status_line as resource_status_line
+    from jarvis.resource_router import (
+        snapshot as resource_snapshot,
+        status_line as resource_status_line,
+    )
 
     resources = resource_snapshot()
     audio = detect_devices()
@@ -240,8 +243,12 @@ def _build_health_payload() -> dict:
         "resource_status_line": resource_status_line(),
         "audio": audio,
         "integrations": {
-            "comfyui": next((s["running"] for s in svc.get("services", []) if s["name"] == "comfyui"), False),
-            "web_search": next((s["running"] for s in svc.get("services", []) if s["name"] == "web_search"), True),
+            "comfyui": next(
+                (s["running"] for s in svc.get("services", []) if s["name"] == "comfyui"), False
+            ),
+            "web_search": next(
+                (s["running"] for s in svc.get("services", []) if s["name"] == "web_search"), True
+            ),
             "firejail": firejail_available() if sandbox_enabled() else False,
             "api_key_required": api_key_enabled(),
         },
@@ -893,6 +900,7 @@ def agents_chain(body: dict):
 @app.post("/api/services/ensure")
 def services_ensure():
     from jarvis.services import ensure_services
+
     return ensure_services(pull_models=False)
 
 
@@ -1040,7 +1048,11 @@ async def comfyui_settings_set(
 
     def apply_settings() -> dict:
         from jarvis.comfyui_settings import get_settings_dict, save_workflow_file
-        from jarvis.services import set_comfyui_checkpoint, set_comfyui_checkpoint_file, set_comfyui_mode
+        from jarvis.services import (
+            set_comfyui_checkpoint,
+            set_comfyui_checkpoint_file,
+            set_comfyui_mode,
+        )
 
         result = {}
         try:
@@ -1066,7 +1078,12 @@ async def comfyui_settings_set(
             return JSONResponse(status_code=400, content={"ok": False, "message": str(e)})
 
     job_id = submit("ComfyUI settings", apply_settings)
-    return {"ok": True, "pending": True, "job_id": job_id, "message": "Applying ComfyUI settings in background…"}
+    return {
+        "ok": True,
+        "pending": True,
+        "job_id": job_id,
+        "message": "Applying ComfyUI settings in background…",
+    }
 
 
 @app.get("/api/comfyui/settings/job/{job_id}")
@@ -1108,7 +1125,9 @@ def comfyui_install_nsfw():
         return {"ok": True, "message": "Install already running", "running": True}
     script = PROJECT_ROOT / "scripts" / "install-nsfw-checkpoints.sh"
     if not script.is_file():
-        return JSONResponse(status_code=404, content={"ok": False, "message": "install script not found"})
+        return JSONResponse(
+            status_code=404, content={"ok": False, "message": "install script not found"}
+        )
     log_dir = DATA_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / "nsfw-checkpoints-install.log"
@@ -1154,7 +1173,9 @@ def comfyui_install_animatediff():
         return {"ok": True, "message": "Install already running", "running": True}
     script = PROJECT_ROOT / "scripts" / "install-animatediff.sh"
     if not script.is_file():
-        return JSONResponse(status_code=404, content={"ok": False, "message": "install script not found"})
+        return JSONResponse(
+            status_code=404, content={"ok": False, "message": "install script not found"}
+        )
     log_dir = DATA_DIR / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / "animatediff-install.log"
@@ -1179,7 +1200,11 @@ def comfyui_install_animatediff():
             env=env,
             start_new_session=True,
         )
-    return {"ok": True, "message": "AnimateDiff install started (~2 GB motion module + custom nodes)", "running": True}
+    return {
+        "ok": True,
+        "message": "AnimateDiff install started (~2 GB motion module + custom nodes)",
+        "running": True,
+    }
 
 
 @app.get("/api/video/settings")
@@ -1282,11 +1307,19 @@ async def video_analyze_frame(
     second: str = Form("0"),
     question: str = Form("Describe this video frame."),
 ):
-    from jarvis.vision_media import build_vision_prompt, extract_video_frame, vision_task_for_question
+    from jarvis.video_ops import resolve_video_path
+    from jarvis.vision_media import (
+        build_vision_prompt,
+        extract_video_frame,
+        vision_task_for_question,
+    )
 
-    p = Path(path).expanduser().resolve()
-    if not p.is_file():
-        return JSONResponse(status_code=404, content={"ok": False, "message": "File not found"})
+    p = resolve_video_path(path)
+    if p is None:
+        return JSONResponse(
+            status_code=404,
+            content={"ok": False, "message": "File not found or path not allowed"},
+        )
     try:
         frame_bytes, frame_name = extract_video_frame(p.read_bytes(), p.name, float(second or 0))
     except ValueError as e:
@@ -1304,7 +1337,10 @@ async def video_analyze_frame(
 
 @app.get("/api/gpu")
 def gpu_status():
-    from jarvis.resource_router import snapshot as resource_snapshot, status_line as resource_status_line
+    from jarvis.resource_router import (
+        snapshot as resource_snapshot,
+        status_line as resource_status_line,
+    )
     from jarvis.vram_guard import recommendations, status as vram_status
 
     gpu = detect_gpu()
@@ -1349,7 +1385,9 @@ async def audio_creative_eq(preset: str = Form("status")):
 
     script = PROJECT_ROOT / "scripts" / "apply-creative-eq.sh"
     if not script.is_file():
-        return JSONResponse(status_code=404, content={"ok": False, "message": "EQ script not found"})
+        return JSONResponse(
+            status_code=404, content={"ok": False, "message": "EQ script not found"}
+        )
     try:
         proc = subprocess.run(
             [str(script), preset.strip() or "status"],
@@ -1381,7 +1419,9 @@ async def audio_vst_playback_chain(chain: str = Form("flat")):
 
     chain_id = (chain or "flat").strip().lower()
     if chain_id not in VST_PLAYBACK_CHAINS:
-        return JSONResponse(status_code=400, content={"ok": False, "message": f"Unknown chain: {chain_id}"})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": f"Unknown chain: {chain_id}"}
+        )
     save_settings({"vst_playback_chain": chain_id})
     return {"ok": True, "playback_chain": chain_id}
 
@@ -1568,14 +1608,18 @@ async def image_inpaint(
 
     src = _resolve_image_path(path)
     if not src:
-        return JSONResponse(status_code=400, content={"ok": False, "message": "Image path not allowed or not found"})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": "Image path not allowed or not found"}
+        )
 
     region_dict = None
     if region.strip():
         try:
             region_dict = _json.loads(region)
         except _json.JSONDecodeError:
-            return JSONResponse(status_code=400, content={"ok": False, "message": "Invalid region JSON"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "Invalid region JSON"}
+            )
 
     mask_path = None
     if mask and mask.filename:
@@ -1607,7 +1651,9 @@ async def image_edit(
 ):
     src = _resolve_image_path(path)
     if not src:
-        return JSONResponse(status_code=400, content={"ok": False, "message": "Image path not allowed or not found"})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": "Image path not allowed or not found"}
+        )
 
     queued = assistant._enqueue_media(
         "edit_image",
@@ -1630,20 +1676,28 @@ async def audio_record(duration: float = Form(5.0), source: str = Form("")):
         return JSONResponse(status_code=400, content={"ok": False, "message": result})
     assistant.session.note_audio(result)
     from jarvis.audio_device import measure_peak_db
+
     peak = measure_peak_db(Path(result))
     return {"ok": True, "audio_path": result, "peak_db": peak, "message": "Recording saved"}
 
 
 @app.post("/api/audio/record-transcribe")
 async def audio_record_transcribe(
-    duration: float = Form(5.0), model: str = Form(""), source: str = Form(""), language: str = Form(""),
+    duration: float = Form(5.0),
+    model: str = Form(""),
+    source: str = Form(""),
+    language: str = Form(""),
 ):
     path, text = assistant.audio.record_and_transcribe(
-        duration, model=model or None, source=source or None, language=language or None,
+        duration,
+        model=model or None,
+        source=source or None,
+        language=language or None,
     )
     if path.startswith("ERROR:"):
         return JSONResponse(status_code=400, content={"ok": False, "message": path})
     from jarvis.audio_device import measure_peak_db
+
     peak = measure_peak_db(Path(path)) if not path.startswith("ERROR:") else None
     if text.startswith("ERROR:"):
         return JSONResponse(
@@ -1668,12 +1722,16 @@ async def audio_set_mic_profile(profile: str = Form("rear")):
 
     key = profile.strip().lower()
     if key not in MIC_PROFILES:
-        return JSONResponse(status_code=400, content={"ok": False, "message": f"Unknown profile: {profile}"})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": f"Unknown profile: {profile}"}
+        )
     info = mic_profile_info(key)
-    save_settings({
-        "mic_profile": key,
-        "creative_capture_volume": info.get("default_capture_volume", "100%"),
-    })
+    save_settings(
+        {
+            "mic_profile": key,
+            "creative_capture_volume": info.get("default_capture_volume", "100%"),
+        }
+    )
     assistant.audio.get_devices()
     routing = mic_routing_status()
     return {
@@ -1703,6 +1761,7 @@ async def audio_set_capture_volume(volume: str = Form(""), source: str = Form(""
 
 def _is_creative_input_api(source: str) -> bool:
     from jarvis.audio_device import _is_creative_input
+
     return _is_creative_input(source)
 
 
@@ -1771,7 +1830,12 @@ def audio_recent():
         if not folder.exists():
             return []
         files = sorted(
-            (f for f in folder.iterdir() if f.is_file() and f.suffix.lower() in {".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm"}),
+            (
+                f
+                for f in folder.iterdir()
+                if f.is_file()
+                and f.suffix.lower() in {".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm"}
+            ),
             key=lambda p: p.stat().st_mtime,
             reverse=True,
         )
@@ -1820,7 +1884,9 @@ async def audio_speak(text: str = Form(...)):
 async def audio_play(path: str = Form("")):
     target = path.strip() or assistant.audio.last_output
     if not target:
-        return JSONResponse(status_code=400, content={"ok": False, "message": "No audio file specified"})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": "No audio file specified"}
+        )
     result = assistant.audio.play(target)
     if result.startswith("ERROR:"):
         return JSONResponse(status_code=400, content={"ok": False, "message": result})
@@ -1833,7 +1899,9 @@ async def audio_set_whisper_model(model: str = Form("base")):
 
     key = model.strip().lower()
     if key not in WHISPER_MODELS:
-        return JSONResponse(status_code=400, content={"ok": False, "message": f"Unknown model: {model}"})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": f"Unknown model: {model}"}
+        )
     save_settings({"whisper_model": key})
     return {"ok": True, "whisper_model": key}
 
@@ -1863,7 +1931,9 @@ async def audio_edit(
 async def audio_analyze(path: str = Form(...), model: str = Form("")):
     result = assistant.audio.analyze(path, model=model or None)
     if not result.get("ok"):
-        return JSONResponse(status_code=400, content={"ok": False, "message": result.get("error", "Analyze failed")})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": result.get("error", "Analyze failed")}
+        )
     return {"ok": True, **result}
 
 
@@ -1880,7 +1950,10 @@ async def audio_convert(path: str = Form(...), output: str = Form(...)):
 def audio_waveform(path: str, samples: int = 200):
     result = assistant.audio.waveform(path, samples=samples)
     if not result.get("ok"):
-        return JSONResponse(status_code=400, content={"ok": False, "message": result.get("error", "Waveform failed")})
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "message": result.get("error", "Waveform failed")},
+        )
     return result
 
 
@@ -1902,6 +1975,7 @@ async def audio_record_vad(
     if result.startswith("ERROR:"):
         return JSONResponse(status_code=400, content={"ok": False, "message": result})
     from jarvis.audio_device import measure_peak_db
+
     peak = measure_peak_db(Path(result))
     assistant.session.note_audio(result)
     payload = {"ok": True, "audio_path": result, "peak_db": peak, "message": "VAD recording saved"}
@@ -1923,14 +1997,22 @@ async def audio_ptt_start(source: str = Form("")):
 
 
 @app.post("/api/audio/record/ptt/stop")
-async def audio_ptt_stop(session_id: str = Form(...), transcribe: str = Form("0"), model: str = Form("")):
+async def audio_ptt_stop(
+    session_id: str = Form(...), transcribe: str = Form("0"), model: str = Form("")
+):
     result = assistant.audio.record_ptt_stop(session_id.strip())
     if result.startswith("ERROR:"):
         return JSONResponse(status_code=400, content={"ok": False, "message": result})
     from jarvis.audio_device import measure_peak_db
+
     peak = measure_peak_db(Path(result))
     assistant.session.note_audio(result)
-    payload = {"ok": True, "audio_path": result, "peak_db": peak, "message": "Push-to-talk recording saved"}
+    payload = {
+        "ok": True,
+        "audio_path": result,
+        "peak_db": peak,
+        "message": "Push-to-talk recording saved",
+    }
     if transcribe.lower() in ("1", "true", "yes"):
         text = assistant.audio.transcribe(result, model=model or None)
         if text.startswith("ERROR:"):
@@ -1975,9 +2057,12 @@ async def audio_music(prompt: str = Form(...), duration: int = Form(10)):
 @app.post("/api/audio/whisper-language")
 async def audio_set_whisper_language(language: str = Form("en")):
     from jarvis.audio_settings import WHISPER_LANGUAGES, save_settings
+
     key = language.strip().lower()
     if key not in WHISPER_LANGUAGES:
-        return JSONResponse(status_code=400, content={"ok": False, "message": f"Unknown language: {language}"})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": f"Unknown language: {language}"}
+        )
     save_settings({"whisper_language": key})
     return {"ok": True, "whisper_language": key}
 
@@ -1985,6 +2070,7 @@ async def audio_set_whisper_language(language: str = Form("en")):
 @app.post("/api/audio/piper-speed")
 async def audio_set_piper_speed(speed: float = Form(1.0)):
     from jarvis.audio_settings import save_settings
+
     speed = max(0.5, min(2.0, float(speed)))
     save_settings({"piper_speed": speed})
     return {"ok": True, "piper_speed": speed}
@@ -1993,6 +2079,7 @@ async def audio_set_piper_speed(speed: float = Form(1.0)):
 @app.get("/api/audio/session")
 def audio_get_session():
     from jarvis.audio_session import load_session
+
     return {"ok": True, "session": load_session()}
 
 
@@ -2003,6 +2090,7 @@ async def audio_save_session(
     summary: str = Form(""),
 ):
     from jarvis.audio_session import save_session
+
     patch = {}
     if audio_path:
         patch["audio_path"] = audio_path
@@ -2016,21 +2104,27 @@ async def audio_save_session(
 @app.get("/api/audio/search")
 def audio_search(q: str = "", limit: int = 20):
     from jarvis.audio_search import search
+
     return {"ok": True, "results": search(q, limit=limit)}
 
 
 @app.post("/api/audio/batch-transcribe")
-async def audio_batch_transcribe(paths: str = Form(...), model: str = Form(""), language: str = Form("")):
+async def audio_batch_transcribe(
+    paths: str = Form(...), model: str = Form(""), language: str = Form("")
+):
     path_list = [p.strip() for p in paths.splitlines() if p.strip()]
     if not path_list:
         return JSONResponse(status_code=400, content={"ok": False, "message": "No paths provided"})
-    results = assistant.audio.batch_transcribe(path_list, model=model or None, language=language or None)
+    results = assistant.audio.batch_transcribe(
+        path_list, model=model or None, language=language or None
+    )
     return {"ok": True, "results": results}
 
 
 @app.get("/api/audio/job/{job_id}")
 def audio_job_status(job_id: str):
     from jarvis.audio_progress import get_job
+
     job = get_job(job_id)
     if not job:
         return JSONResponse(status_code=404, content={"ok": False, "message": "Unknown job"})
@@ -2042,13 +2136,16 @@ def audio_job_cancel(job_id: str):
     from jarvis.audio_progress import cancel_job, finish_job
 
     if not cancel_job(job_id):
-        return JSONResponse(status_code=404, content={"ok": False, "message": "Job not found or already finished"})
+        return JSONResponse(
+            status_code=404, content={"ok": False, "message": "Job not found or already finished"}
+        )
     finish_job(job_id, error="Cancelled by user")
     return {"ok": True, "cancelled": True}
 
 
 def _run_audio_job(fn):
     from jarvis.concurrent_pool import background_executor
+
     background_executor().submit(fn)
 
 
@@ -2063,9 +2160,12 @@ async def audio_song_genre(
 
     if async_job.lower() in ("1", "true", "yes"):
         job_id = start_job("Genre transform")
+
         def run():
             try:
-                result = assistant.audio.transform_genre(path, genre, duration=duration, job_id=job_id)
+                result = assistant.audio.transform_genre(
+                    path, genre, duration=duration, job_id=job_id
+                )
                 if result.startswith("ERROR:"):
                     finish_job(job_id, error=result)
                 else:
@@ -2073,7 +2173,11 @@ async def audio_song_genre(
                     finish_job(job_id, result={"audio_path": result})
             except Exception as e:
                 from jarvis.audio_progress import JobCancelled
-                finish_job(job_id, error="Cancelled by user" if isinstance(e, JobCancelled) else str(e))
+
+                finish_job(
+                    job_id, error="Cancelled by user" if isinstance(e, JobCancelled) else str(e)
+                )
+
         _run_audio_job(run)
         return {"ok": True, "job_id": job_id, "message": "Genre transform started"}
     result = assistant.audio.transform_genre(path, genre, duration=duration)
@@ -2102,11 +2206,17 @@ async def audio_song_full(
 
     if async_job.lower() in ("1", "true", "yes"):
         job_id = start_job("Full song")
+
         def run():
             from jarvis.audio_progress import finish_job
+
             try:
                 result = assistant.audio.generate_full_song(
-                    topic.strip(), genre=genre, mood=mood, duration=duration, job_id=job_id,
+                    topic.strip(),
+                    genre=genre,
+                    mood=mood,
+                    duration=duration,
+                    job_id=job_id,
                 )
                 if result.get("ok") and result.get("audio_path"):
                     assistant.session.note_audio(result["audio_path"])
@@ -2114,12 +2224,20 @@ async def audio_song_full(
                     finish_job(job_id, error=result.get("error", "Song generation failed"))
             except Exception as e:
                 from jarvis.audio_progress import JobCancelled
-                finish_job(job_id, error="Cancelled by user" if isinstance(e, JobCancelled) else str(e))
+
+                finish_job(
+                    job_id, error="Cancelled by user" if isinstance(e, JobCancelled) else str(e)
+                )
+
         _run_audio_job(run)
         return {"ok": True, "job_id": job_id, "message": "Song generation started"}
-    result = assistant.audio.generate_full_song(topic.strip(), genre=genre, mood=mood, duration=duration)
+    result = assistant.audio.generate_full_song(
+        topic.strip(), genre=genre, mood=mood, duration=duration
+    )
     if not result.get("ok"):
-        return JSONResponse(status_code=400, content={"ok": False, "message": result.get("error", "Failed")})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": result.get("error", "Failed")}
+        )
     assistant.session.note_audio(result.get("audio_path", ""))
     return {"ok": True, **result}
 
@@ -2135,7 +2253,10 @@ async def audio_podcast_mix(
 
     vocal = vocal_path.strip() or assistant.session.last_audio or assistant.audio.last_output
     if not vocal:
-        return JSONResponse(status_code=400, content={"ok": False, "message": "No vocal track — record audio or pass vocal_path"})
+        return JSONResponse(
+            status_code=400,
+            content={"ok": False, "message": "No vocal track — record audio or pass vocal_path"},
+        )
     result = mix_podcast_tracks(backing_path, vocal, vocal_gain_db=vocal_gain_db, title=title)
     if result.startswith("ERROR:"):
         return JSONResponse(status_code=400, content={"ok": False, "message": result})
@@ -2157,14 +2278,22 @@ async def audio_song_voice(
 
     voice_path = path.strip() or assistant.audio.last_output
     if not voice_path:
-        return JSONResponse(status_code=400, content={"ok": False, "message": "No voice recording specified"})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": "No voice recording specified"}
+        )
     if async_job.lower() in ("1", "true", "yes"):
         job_id = start_job("Voice to song")
+
         def run():
             try:
                 result = assistant.audio.voice_to_song(
-                    voice_path, lyrics=lyrics, title=title, style=style,
-                    genre=genre, duration=duration, job_id=job_id,
+                    voice_path,
+                    lyrics=lyrics,
+                    title=title,
+                    style=style,
+                    genre=genre,
+                    duration=duration,
+                    job_id=job_id,
                 )
                 if result.get("ok") and result.get("audio_path"):
                     assistant.session.note_audio(result["audio_path"])
@@ -2172,14 +2301,25 @@ async def audio_song_voice(
                     finish_job(job_id, error=result.get("error", "Failed"))
             except Exception as e:
                 from jarvis.audio_progress import JobCancelled
-                finish_job(job_id, error="Cancelled by user" if isinstance(e, JobCancelled) else str(e))
+
+                finish_job(
+                    job_id, error="Cancelled by user" if isinstance(e, JobCancelled) else str(e)
+                )
+
         _run_audio_job(run)
         return {"ok": True, "job_id": job_id, "message": "Voice-to-song started"}
     result = assistant.audio.voice_to_song(
-        voice_path, lyrics=lyrics, title=title, style=style, genre=genre, duration=duration,
+        voice_path,
+        lyrics=lyrics,
+        title=title,
+        style=style,
+        genre=genre,
+        duration=duration,
     )
     if not result.get("ok"):
-        return JSONResponse(status_code=400, content={"ok": False, "message": result.get("error", "Failed")})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": result.get("error", "Failed")}
+        )
     assistant.session.note_audio(result.get("audio_path", ""))
     return {"ok": True, **result}
 
@@ -2200,12 +2340,14 @@ async def audio_journal_with_audio(
 @app.get("/api/audio/torch-device")
 def audio_torch_device():
     from jarvis.torch_device import device_info
+
     return {"ok": True, **device_info()}
 
 
 @app.get("/api/audio/vocals/status")
 def audio_vocals_status():
     from jarvis.audio_vocals import bark_available, install_hint, xtts_available
+
     return {
         "ok": True,
         "bark": bark_available(),
@@ -2227,7 +2369,10 @@ async def audio_vocals_generate(
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out = VOCALS_DIR / f"vocal_{stamp}.wav"
     result = generate_vocals_for_song(
-        text, out, engine=engine, speaker_wav=speaker_wav or None,
+        text,
+        out,
+        engine=engine,
+        speaker_wav=speaker_wav or None,
     )
     if result.startswith("ERROR:"):
         return JSONResponse(status_code=400, content={"ok": False, "message": result})
@@ -2238,6 +2383,7 @@ async def audio_vocals_generate(
 @app.get("/api/audio/diarize/status")
 def audio_diarize_status():
     from jarvis.audio_diarize import diarize_status
+
     return {"ok": True, **diarize_status()}
 
 
@@ -2245,7 +2391,9 @@ def audio_diarize_status():
 async def audio_diarize(path: str = Form(...), num_speakers: int = Form(0)):
     result = assistant.audio.diarize(path, num_speakers=num_speakers or None)
     if not result.get("ok"):
-        return JSONResponse(status_code=400, content={"ok": False, "message": result.get("error", "Failed")})
+        return JSONResponse(
+            status_code=400, content={"ok": False, "message": result.get("error", "Failed")}
+        )
     return {"ok": True, **result}
 
 
@@ -2265,6 +2413,7 @@ def audio_transcribe_stream(path: str, model: str = "", language: str = ""):
 @app.post("/api/audio/record/live/start")
 async def audio_live_start(source: str = Form("")):
     from jarvis.audio_live import start_live_record
+
     sid, path_or_err = start_live_record(source=source or None)
     if not sid:
         return JSONResponse(status_code=400, content={"ok": False, "message": path_or_err})
@@ -2274,6 +2423,7 @@ async def audio_live_start(source: str = Form("")):
 @app.get("/api/audio/record/live/level")
 def audio_live_level(session_id: str):
     from jarvis.audio_live import live_level
+
     return live_level(session_id)
 
 
@@ -2306,6 +2456,7 @@ async def audio_live_stop(
 @app.get("/api/audio/wakeword/status")
 def audio_wakeword_status():
     from jarvis.audio_wakeword import status as ww_status
+
     return {"ok": True, **ww_status()}
 
 
@@ -2322,6 +2473,7 @@ async def audio_wakeword_start():
 @app.post("/api/audio/wakeword/stop")
 async def audio_wakeword_stop():
     from jarvis.audio_wakeword import stop_listener
+
     stop_listener()
     return {"ok": True}
 
@@ -2390,6 +2542,7 @@ def suggestions():
 def vision_settings_get():
     from jarvis.config import load_vision_quality
     from jarvis.gpu import detect_gpu, is_low_vram
+
     gpu = detect_gpu()
     return {
         "ok": True,
@@ -2403,14 +2556,20 @@ def vision_settings_get():
 @app.post("/api/vision/settings")
 async def vision_settings_post(quality_mode: str = Form("fast")):
     from jarvis.config import save_vision_quality
+
     save_vision_quality(quality_mode)
-    return {"ok": True, "quality_mode": quality_mode, "model": assistant.get_status().get("models", {}).get("vision")}
+    return {
+        "ok": True,
+        "quality_mode": quality_mode,
+        "model": assistant.get_status().get("models", {}).get("vision"),
+    }
 
 
 @app.get("/api/models")
 def models_info():
     from jarvis.capabilities import models_guide
     from jarvis.model_store import get_all_settings
+
     status = assistant.get_status()
     return {
         "guide": models_guide(),
@@ -2424,6 +2583,7 @@ def models_info():
 @app.get("/api/models/settings")
 def get_model_settings():
     from jarvis.model_store import get_all_settings
+
     return get_all_settings()
 
 
@@ -2438,12 +2598,22 @@ async def save_model_settings(
     embed: str = Form(""),
 ):
     from jarvis.model_store import update_models
-    models = {k: v for k, v in {
-        "general": general, "coder": coder, "review": review,
-        "vision": vision, "image": image, "embed": embed,
-    }.items() if v}
+
+    models = {
+        k: v
+        for k, v in {
+            "general": general,
+            "coder": coder,
+            "review": review,
+            "vision": vision,
+            "image": image,
+            "embed": embed,
+        }.items()
+        if v
+    }
     if vision.strip():
         from jarvis.config import save_vision_quality
+
         save_vision_quality("custom")
     return {"ok": True, "settings": update_models(mode, models)}
 
@@ -2451,6 +2621,7 @@ async def save_model_settings(
 @app.post("/api/models/preset")
 async def apply_preset_endpoint(preset: str = Form(...), mode: str = Form("")):
     from jarvis.model_store import apply_preset
+
     m = mode if mode in ("standard", "uncensored") else None
     return {"ok": True, "settings": apply_preset(preset, m)}
 
@@ -2458,6 +2629,7 @@ async def apply_preset_endpoint(preset: str = Form(...), mode: str = Form("")):
 @app.post("/api/models/reset")
 async def reset_models(mode: str = Form("")):
     from jarvis.model_store import reset_to_optimized
+
     m = mode if mode in ("standard", "uncensored") else None
     return {"ok": True, "settings": reset_to_optimized(m)}
 
@@ -2465,6 +2637,7 @@ async def reset_models(mode: str = Form("")):
 @app.post("/api/models/refresh")
 def refresh_models():
     from jarvis.model_store import get_all_settings
+
     return {"ok": True, "settings": get_all_settings()}
 
 
@@ -2474,7 +2647,9 @@ async def pull_model_endpoint(model: str = Form(...)):
     from jarvis.model_pull import pull_model
 
     async def event_stream():
-        async for event in stream_sync_iter(lambda: pull_model(model), thread_name="jarvis-model-pull"):
+        async for event in stream_sync_iter(
+            lambda: pull_model(model), thread_name="jarvis-model-pull"
+        ):
             yield f"data: {json.dumps(event)}\n\n"
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
@@ -2517,12 +2692,18 @@ def uncensored_reset_password():
     if is_uncensored():
         return JSONResponse(
             status_code=400,
-            content={"ok": False, "message": "Turn off uncensored mode before resetting the password."},
+            content={
+                "ok": False,
+                "message": "Turn off uncensored mode before resetting the password.",
+            },
         )
     from jarvis.uncensored_auth import clear_password
 
     clear_password()
-    return {"ok": True, "message": "Uncensored password cleared. Toggle uncensored to set a new one."}
+    return {
+        "ok": True,
+        "message": "Uncensored password cleared. Toggle uncensored to set a new one.",
+    }
 
 
 @app.post("/api/mode")
@@ -2577,6 +2758,7 @@ def _form_bool(value: str, *, default: bool = False) -> bool:
 @app.get("/api/chat/model")
 def chat_model_get():
     from jarvis import llm
+
     return {
         "chat_model": assistant.session.chat_model or "",
         "default": llm.general_model(),
@@ -2589,6 +2771,7 @@ async def chat_model_set(model: str = Form("")):
     assistant.session.note_chat_model(name)
     assistant.branches.save_session(assistant.branches.active_id, assistant.session)
     from jarvis import llm
+
     return {
         "ok": True,
         "chat_model": name,
@@ -2644,16 +2827,23 @@ async def chat(
     if file and file.filename:
         content = await file.read()
         attachment = assistant.save_upload(
-            file.filename, content, crop=crop_dict,
-            video_second=vsec, pdf_page=ppage, message=message,
+            file.filename,
+            content,
+            crop=crop_dict,
+            video_second=vsec,
+            pdf_page=ppage,
+            message=message,
         )
         if attachment and ppage and attachment.get("kind") == "document":
             attachment["pdf_page"] = ppage
     if file2 and file2.filename:
         content2 = await file2.read()
         attachment2 = assistant.save_upload(
-            file2.filename, content2, message=message,
-            video_second=vsec, pdf_page=ppage,
+            file2.filename,
+            content2,
+            message=message,
+            video_second=vsec,
+            pdf_page=ppage,
         )
 
     use_stream = _form_bool(stream)
@@ -2668,11 +2858,13 @@ async def chat(
             try:
                 return _json.dumps(event, default=str)
             except Exception as exc:
-                return _json.dumps({
-                    "type": "done",
-                    "ok": False,
-                    "message": f"Could not encode response: {exc}",
-                })
+                return _json.dumps(
+                    {
+                        "type": "done",
+                        "ok": False,
+                        "message": f"Could not encode response: {exc}",
+                    }
+                )
 
         async def event_stream():
             from jarvis.chat_cancel import begin
@@ -2704,7 +2896,11 @@ async def chat(
 
     try:
         return await asyncio.to_thread(
-            assistant.process, message, attachment, bid, attachment2,
+            assistant.process,
+            message,
+            attachment,
+            bid,
+            attachment2,
         )
     except Exception as e:
         return JSONResponse(status_code=500, content={"ok": False, "message": str(e)})
@@ -2781,7 +2977,11 @@ def serve(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True):
     elif gpu.get("vendor") == "amd":
         print(f"  GPU: {gpu.get('name', 'AMD')} — {gpu.get('recommendation', '')}")
 
-    if open_browser and os.getenv("JARVIS_NO_BROWSER") != "1" and client_base_url(host, port).startswith("http://127.0.0.1"):
+    if (
+        open_browser
+        and os.getenv("JARVIS_NO_BROWSER") != "1"
+        and client_base_url(host, port).startswith("http://127.0.0.1")
+    ):
         from jarvis.gui_launcher import open_gui
 
         open_gui(url)

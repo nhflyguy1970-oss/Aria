@@ -33,8 +33,8 @@ Those defects are fixed and permanently certified. Remaining gaps are intentiona
 | Dashboard / GUI FastAPI | **READY*** | PinLock + LAN key; *surface still large |
 | Memory APIs | **READY** | PRIMARY fail-closed |
 | Tool permissions (HA / upgrade) | **READY** | Wired |
-| Skills / project runner / coding tools | **READY*** | No default shell; dangerous tools env-gated |
-| Voice / Audio / Media / Gallery | **ACCEPTABLE** | No new CRITICAL found this pass; optional stacks |
+| Skills / project runner / coding tools | **READY*** | No default shell; dangerous tools env-gated; cwd confined |
+| Voice / Audio / Media / Gallery | **READY*** | Video/storyboard paths confined to DATA_DIR media trees |
 | Fly Tying / Journal / Calendar / Planner | **ACCEPTABLE** | Domain modules; no CRITICAL write-spine issues found |
 | DualWrite / ROLLBACK | **CONTAINED** | Forensic only; not PRIMARY SoT |
 | Packaging / installers | **ACCEPTABLE*** | *pyproject deps still dual-path — deferred |
@@ -65,9 +65,16 @@ Those defects are fixed and permanently certified. Remaining gaps are intentiona
 | skill `shell=True` default | HIGH | **Fixed** (`JARVIS_SKILL_SHELL` opt-in) |
 | Claude `--dangerously-skip-permissions` | HIGH | **Fixed** (`JARVIS_ALLOW_DANGEROUS_TOOLS`) |
 | Teaching debug raw utterance | MEDIUM | **Fixed** (length only) |
+| Arbitrary video/storyboard path read | CRITICAL | **Fixed** (`resolve_video_path` / `resolve_storyboard_image`) |
+| Automation inbound query-secret + unrestricted chat | CRITICAL | **Fixed** (header-only + `compare_digest`; chat requires `JARVIS_AUTOMATION_ALLOW_CHAT`) |
+| `/api/tools/execute` arbitrary cwd | CRITICAL | **Fixed** (PROJECT_ROOT / DATA_DIR only) |
+| HA REST toggle/scene bypass tool permissions | HIGH | **Fixed** |
+| Upgrade `force` skipped ask permission | HIGH | **Fixed** |
+| PRIMARY `upsert_checkpoint` legacy delete | HIGH | **Fixed** |
 | Full B20/B36 Cap Bus assent | HIGH | Deferred |
 | Multi-user session isolation | MEDIUM | Deferred (single-operator) |
-| Automation inbound chat | MEDIUM | Deferred allowlist program |
+| Audio/VST/document/ICS SSRF hardening | HIGH | Deferred (next pass) |
+| Automation inbound chat | MEDIUM | **Gated** (`JARVIS_AUTOMATION_ALLOW_CHAT`) |
 
 ## Performance findings
 

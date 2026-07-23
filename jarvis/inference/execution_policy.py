@@ -152,7 +152,15 @@ def _role_to_workload(role: str) -> str:
         return "coding"
     if role in ("vision", "image"):
         return "vision"
-    if role in ("reasoning", "review", "planning", "reflection", "conversation", "document", "web_research"):
+    if role in (
+        "reasoning",
+        "review",
+        "planning",
+        "reflection",
+        "conversation",
+        "document",
+        "web_research",
+    ):
         return "reasoning"
     if role in ("router", "tool_calling", "summarization", "learning", "fast_chat"):
         return "lightweight"
