@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.37.0-1",
+  "aria_acm_local_version": "aria-acm-v0.38.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.37.0",
-  "source_tag": "v0.37.0",
-  "source_commit": "4ff1850ae0b2a4b5c0af718e3827281eb301a06e",
+  "source_version": "0.38.0",
+  "source_tag": "v0.38.0",
+  "source_commit": "540b563f4c59e96fc7c8a62f08474e39cf5f51c3",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-23",
-  "tree_sha256": "0a42cb4726aa0d098f648bfcd290f41ce4c7ef9754336eed26fa5a0950d5fc62",
+  "tree_sha256": "9433e1c1c593edd48f12178b5b52ccdf06dab18571d203cf170f3ffda12ab1bb",
   "license": "Apache-2.0",
-  "certification_ref": "B11 Preference Editing UX",
-  "promotion": "B11-PREFERENCE-EDIT",
-  "promotion_decision": "Promote certified ACM v0.37.0 B11 after Gates 1-4.",
+  "certification_ref": "B12 Preference Correction UX",
+  "promotion": "B12-PREFERENCE-CORRECTION",
+  "promotion_decision": "Promote certified ACM v0.38.0 B12 after Gates 1-4.",
   "includes": [
     "D038",
     "D039",
@@ -34,7 +34,8 @@
     "RC-A",
     "B10",
     "B11",
-    "RC-E"
+    "RC-E",
+    "B12"
   ],
-  "notes": "Promotion of ACM commit 4ff1850ae0b2a4b5c0af718e3827281eb301a06e."
+  "notes": "Promotion of ACM commit 540b563f4c59e96fc7c8a62f08474e39cf5f51c3."
 }

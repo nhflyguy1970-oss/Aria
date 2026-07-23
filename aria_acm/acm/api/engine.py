@@ -115,6 +115,7 @@ class CognitiveEngine:
         from acm.authority.preference_edit import PreferencePolicyGate
 
         self._preference_gate = PreferencePolicyGate()
+        self._preference_corrections: dict[str, dict[str, Any]] = {}
         self.durable = None
         if persist_path:
             from acm.persistence import DurableCognitiveStore
@@ -1661,6 +1662,24 @@ class CognitiveEngine:
 
         return apply_preference_change(
             self, key=key, value=value, op=op, assent=assent  # type: ignore[arg-type]
+        )
+
+    def preview_preference_correction(
+        self, text: str, *, default_key: str = "favorite_color"
+    ) -> dict[str, Any]:
+        """B12 — preview preference correction utterance."""
+        from acm.authority.preference_correction import preview_preference_correction
+
+        return preview_preference_correction(self, text, default_key=default_key)
+
+    def apply_preference_correction(
+        self, text: str, *, default_key: str = "favorite_color", assent: bool = True
+    ) -> dict[str, Any]:
+        """B12 — apply preference correction with explicit lineage."""
+        from acm.authority.preference_correction import apply_preference_correction
+
+        return apply_preference_correction(
+            self, text, default_key=default_key, assent=assent
         )
 
     def inspect_reconstruction(self, cue: str) -> dict[str, Any]:
