@@ -47,7 +47,7 @@ Under `ARIA_ACM_PRIMARY`, legacy JSON/SQLite stores are forensic vaults, not SoT
 | Secrets file world-readable risk | HIGH | **Fixed** — `chmod 0600` |
 | Default Postgres password `postgres` | HIGH | **Fixed** — empty default; random on generate |
 | Tool permissions dead for HA / upgrade_apply | HIGH | **Fixed** — gates wired |
-| HA REST `/api/homeassistant/toggle|scene` bypassed tool permissions | HIGH | **Fixed** — `ha_control` ask/never |
+| HA REST homeassistant toggle/scene bypassed tool permissions | HIGH | **Fixed** — `ha_control` ask/never |
 | `ha_scene` behavior ungated | HIGH | **Fixed** |
 | Upgrade `force` skipped ask permission | HIGH | **Fixed** — confirm still required |
 | Auto-memory stamped as TEACHING | HIGH | **Fixed** — STATEMENT for auto tags |
