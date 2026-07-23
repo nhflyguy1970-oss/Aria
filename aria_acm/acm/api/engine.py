@@ -119,6 +119,7 @@ class CognitiveEngine:
         from acm.authority.conflict_resolution import ConflictResolutionGate
 
         self._conflict_gate = ConflictResolutionGate()
+        self._identity_corrections: dict[str, dict[str, Any]] = {}
         self.durable = None
         if persist_path:
             from acm.persistence import DurableCognitiveStore
@@ -1828,6 +1829,64 @@ class CognitiveEngine:
 
     def reject_identity(self, proposal_id: str) -> dict[str, Any]:
         return self.identity.reject(proposal_id)
+
+    def cancel_identity(self, proposal_id: str) -> dict[str, Any]:
+        """B20 — cancel a pending identity proposal without applying it."""
+        from acm.authority.identity_edit import cancel_identity_change
+
+        return cancel_identity_change(self, proposal_id)
+
+    def preview_identity_change(
+        self, *, key: str, value: str, who: str = "user"
+    ) -> dict[str, Any]:
+        """B20 — preview identity attribute change without writing."""
+        from acm.authority.identity_edit import preview_identity_change
+
+        return preview_identity_change(self, key=key, value=value, who=who)  # type: ignore[arg-type]
+
+    def propose_identity_change(
+        self, *, key: str, value: str, who: str = "user", reason: str = "identity_correction"
+    ) -> dict[str, Any]:
+        """B20 — propose identity change pending assent."""
+        from acm.authority.identity_edit import propose_identity_change
+
+        return propose_identity_change(
+            self, key=key, value=value, who=who, reason=reason  # type: ignore[arg-type]
+        )
+
+    def apply_identity_change(
+        self, *, key: str, value: str, who: str = "user", assent: bool = True
+    ) -> dict[str, Any]:
+        """B20 — trusted-host identity commit (or propose if assent=False)."""
+        from acm.authority.identity_edit import apply_identity_change
+
+        return apply_identity_change(
+            self, key=key, value=value, who=who, assent=assent  # type: ignore[arg-type]
+        )
+
+    def preview_identity_correction(
+        self, text: str, *, who: str = "user"
+    ) -> dict[str, Any]:
+        """B20 — preview conversational identity correction."""
+        from acm.authority.identity_edit import preview_identity_correction
+
+        return preview_identity_correction(self, text, who=who)  # type: ignore[arg-type]
+
+    def apply_identity_correction(
+        self, text: str, *, who: str = "user", assent: bool = True
+    ) -> dict[str, Any]:
+        """B20 — apply conversational identity correction with lineage."""
+        from acm.authority.identity_edit import apply_identity_correction
+
+        return apply_identity_correction(
+            self, text, who=who, assent=assent  # type: ignore[arg-type]
+        )
+
+    def pending_identity_changes(self) -> dict[str, Any]:
+        """B20 — list pending identity proposals (read-only)."""
+        from acm.authority.identity_edit import pending_identity_changes
+
+        return pending_identity_changes(self)
 
     def organ_view(self, organ: str) -> dict[str, Any]:
         """B27: stable per-organ observability slice (singular harness preserved)."""

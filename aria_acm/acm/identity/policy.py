@@ -61,5 +61,12 @@ class IdentityPolicyGate:
         prop.status = "rejected"
         return prop
 
+    def cancel(self, proposal_id: str) -> IdentityProposal | None:
+        prop = self.proposals.get(proposal_id)
+        if not prop or prop.status != "pending":
+            return None
+        prop.status = "cancelled"
+        return prop
+
     def pending(self) -> list[IdentityProposal]:
         return [p for p in self.proposals.values() if p.status == "pending"]

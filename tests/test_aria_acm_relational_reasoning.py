@@ -71,9 +71,9 @@ def _rel_isolation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 def test_rel_01_version_pin() -> None:
     ver = Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json"
     data = json.loads(ver.read_text())
-    assert data["source_commit"] == "4e794e51dcc71a603c5038b7d0d2c3d2e02b353f"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.39.0-1"
-    assert data["promotion"] == "B13-CONFLICT-RESOLUTION"
+    assert data["source_commit"] == "5c90f634e930d622e986f004486fbdfcd3814dd9"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.40.0-1"
+    assert data["promotion"] == "B20-IDENTITY-CORRECTION"
     assert Path("aria_acm/acm/remembering/relations.py").is_file()
 
 
