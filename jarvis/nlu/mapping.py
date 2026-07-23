@@ -66,6 +66,15 @@ _USER_MEMORY = re.compile(
     re.I,
 )
 
+_CONVERSATION_LANGUAGE_QUERY = re.compile(
+    r"\bwhat\s+language\s+(?:have\s+we|are\s+we|did\s+we)\s+(?:been\s+)?"
+    r"(?:speaking|using|talking)\b|"
+    r"\bwhat\s+language\s+is\s+(?:this|our)\s+conversation\b|"
+    r"\bin\s+what\s+language\s+(?:are|have)\s+we\s+(?:been\s+)?"
+    r"(?:speaking|talking)\b",
+    re.I,
+)
+
 # Imperative write — "remember that …" but not "what do you remember" / "do you remember …?"
 _MEMORY_WRITE = re.compile(
     r"\b(?:please\s+)?(?:remember|don'?t\s+forget|note\s+that|keep\s+in\s+mind)\b",
@@ -140,6 +149,11 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
     if not message:
         return None
     lower = message.lower()
+
+    # Conversation-language introspection is owned by the language subsystem —
+    # never Memory Authority / preference reconstruction.
+    if _CONVERSATION_LANGUAGE_QUERY.search(message):
+        return None
 
     # Episodic autobiographical events and temporal recall — Memory Authority only.
     if is_episodic_teaching(message):
@@ -467,6 +481,24 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
 
     params: dict[str, Any] = {}
     action = "chat"
+
+    # Active conversation language — language subsystem, never memory/preferences.
+    if _CONVERSATION_LANGUAGE_QUERY.search(result.prompt or ""):
+        return {
+            "action": "conversation_language",
+            "params": {"question": result.prompt},
+            "thinking": "active conversation language",
+            "route_reason": "conversation_language",
+            "route_confidence": max(confidence, 0.95),
+            "route_handler": "ConversationEngine",
+            "nlu": result.to_debug(),
+            "semantic_report": result.to_debug(),
+            "router": "nlu",
+            "router_stage": "nlu_pipeline",
+            "rule_matched": "conversation_language",
+            "confidence_band": "high",
+            "flag_for_review": False,
+        }
 
     # Distinct memory verbs (write/forget/update/search/summary) never collapse to dump.
     mem = resolve_memory_route(result.prompt)

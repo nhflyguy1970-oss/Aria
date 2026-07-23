@@ -128,6 +128,51 @@ def test_language_stability_english_conversation() -> None:
     assert not _CJK.search(fixed)
 
 
+def test_irrelevant_evidence_excluded_from_conflicts() -> None:
+    MemoryEngine._acm_authority_speak("It has rained every day this week.")
+    MemoryEngine._acm_authority_speak(
+        "Every time I drink coffee after 8 PM, I have trouble sleeping."
+    )
+    MemoryEngine._acm_authority_speak("Coffee sometimes helps me sleep.")
+    MemoryEngine._acm_authority_speak(
+        "Whenever I skip breakfast, I get hungry before lunch."
+    )
+
+    coffee = MemoryEngine._acm_authority_speak(
+        "If I drink coffee after 8 PM, what is likely to happen?"
+    )
+    assert coffee[0].get("status") == "conflicting"
+    assert "sleep" in coffee[1].lower() or "insomni" in coffee[1].lower()
+    assert "rain" not in coffee[1].lower()
+
+    breakfast = MemoryEngine._acm_authority_speak(
+        "If I skip breakfast, what is likely to happen?"
+    )
+    assert breakfast[0].get("status") == "known"
+    assert "hungry" in breakfast[1].lower()
+    assert "rain" not in breakfast[1].lower()
+
+
+def test_recommendation_vs_prediction_speech() -> None:
+    MemoryEngine._acm_authority_speak("I usually get more work done in the morning.")
+    pred = MemoryEngine._acm_authority_speak("When am I likely to be most productive?")
+    assert "likely from memory" in pred[1].lower()
+
+    rec = MemoryEngine._acm_authority_speak("When SHOULD I work?")
+    assert rec[0].get("intent") == "prediction"
+    assert "recommend" in rec[1].lower()
+    assert "likely from memory" not in rec[1].lower()
+    assert "morning" in rec[1].lower()
+
+
+def test_conversation_language_not_memory_route() -> None:
+    q = "What language have we been speaking in during this conversation?"
+    assert resolve_memory_route(q) is None
+    from jarvis.nlu.mapping import _CONVERSATION_LANGUAGE_QUERY
+
+    assert _CONVERSATION_LANGUAGE_QUERY.search(q)
+
+
 def test_no_internal_score_leakage_in_prediction_speech() -> None:
     MemoryEngine._acm_authority_speak("Every Saturday I usually go fishing.")
     _, speech = MemoryEngine._acm_authority_speak(

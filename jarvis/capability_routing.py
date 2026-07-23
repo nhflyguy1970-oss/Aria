@@ -28,6 +28,7 @@ NON_LLM_CAPABILITIES = frozenset(
         "reference",
         "embeddings",
         "image_generation",
+        "conversation_language",
     }
 )
 
@@ -66,6 +67,7 @@ CAPABILITY_TO_ROLE: dict[str, str | None] = {
     "embeddings": None,
     "greeting": None,
     "reference": None,
+    "conversation_language": None,
     "knowledge": "conversation",
     "search": "web_research",
 }
@@ -89,6 +91,7 @@ ACTION_TO_CAPABILITY: dict[str, str] = {
     "memory_correct": "memory",
     "memory_forget": "memory",
     "recall": "memory",
+    "conversation_language": "conversation_language",
 }
 
 

@@ -7,7 +7,6 @@ import sys as _acm_sys
 
 _acm_sys.modules.setdefault("acm", _acm_sys.modules[__name__])
 
-
 from acm._version import __version__
 from acm.api.engine import CognitiveEngine, RememberResult
 from acm.authority import (

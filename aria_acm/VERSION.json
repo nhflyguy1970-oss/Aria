@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.26.0-9",
+  "aria_acm_local_version": "aria-acm-v0.26.0-10",
   "source_project": "aria-cognitive-memory",
   "source_version": "0.26.0",
   "source_tag": "v0.26.0",
-  "source_commit": "22636a8da431088f8996d13b5807a972c20302b7",
+  "source_commit": "15f5e77d27a3fae8f1eeeb6931eeb80116780883",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-22",
-  "tree_sha256": "7ddd3a961e448b3b595e73e508cac07bec7a9e92337468f3336903717303607f",
+  "tree_sha256": "a8b1f77f9d8a11a2726c64e067186cf57783ee5cfda296d45ea87585e35c3ebc",
   "license": "Apache-2.0",
-  "certification_ref": "ACM Prediction stabilization after post-acceptance review",
-  "promotion": "M3-ACM-prediction-stab",
-  "promotion_decision": "Promote Prediction stabilization: rain/tomorrow, certainty/confidence/explain/recommendation routing, unknown without leakage, habit teaching coverage",
+  "certification_ref": "ACM Prediction final acceptance polish",
+  "promotion": "M3-ACM-prediction-final",
+  "promotion_decision": "Promote Prediction final acceptance polish: topic-family evidence filter, recommendation vs prediction speech, conversation-language non-memory classification",
   "includes": [
     "D038",
     "D039",
@@ -23,5 +23,5 @@
     "D046",
     "D047"
   ],
-  "notes": "Promotion of ACM commit 22636a8 (Prediction stabilization) into aria_acm/. Rain/tomorrow reconstruction; certainty/confidence/explain/recommendation stay in Prediction; unknown futures without activation-score leakage; broader habit teaching extraction."
+  "notes": "Promotion of ACM commit 15f5e77 (Prediction final acceptance polish) into aria_acm/. Evidence topic-family filter; recommendation speech distinct from prediction; conversation-language classified as CONVERSATION_MANAGEMENT (non-memory). Aria host routes conversation-language queries to language subsystem."
 }

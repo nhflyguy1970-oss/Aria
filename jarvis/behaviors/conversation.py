@@ -503,6 +503,7 @@ def get_conversation_behavior() -> ConversationBehavior | None:
 
 _CONVERSATION_ACTIONS = [
     "chat",
+    "conversation_language",
     "branch_create",
     "branch_switch",
     "branch_list",
@@ -533,6 +534,12 @@ class ConversationBehavior(ApplicationBehavior):
         register_action("chat", module="conversation", description="General chat")(
             self._chat_entry
         )
+        register_action(
+            "conversation_language",
+            info=True,
+            module="conversation",
+            description="Report active conversation language",
+        )(self._conversation_language_entry)
         register_action("branch_create", module="general", description="Create chat branch")(
             self._branch_entry("branch_create")
         )
@@ -572,6 +579,8 @@ class ConversationBehavior(ApplicationBehavior):
     ) -> dict | None:
         if action not in _CONVERSATION_ACTIONS:
             return None
+        if action == "conversation_language":
+            return self._conversation_language_entry(assistant, params, message)
         self.initialize(assistant)
         if not self._engine:
             return None
@@ -591,6 +600,38 @@ class ConversationBehavior(ApplicationBehavior):
 
     def _chat_entry(self, assistant: JarvisAssistant, params: dict, message: str) -> dict:
         return ensure_conversation_engine(assistant).execute(params, message)
+
+    def _conversation_language_entry(
+        self, assistant: JarvisAssistant, params: dict, message: str
+    ) -> dict:
+        from jarvis.lang_util import conversation_language
+
+        prior: list[str] = []
+        try:
+            msgs = list(getattr(getattr(assistant, "conversation", None), "messages", []) or [])
+            prior = [
+                str(m.get("content") or "")
+                for m in msgs
+                if isinstance(m, dict) and m.get("role") == "user"
+            ][-8:]
+        except Exception:
+            prior = []
+        code = conversation_language(message or params.get("question") or "", prior_user_texts=prior)
+        names = {
+            "en": "English",
+            "zh": "Chinese",
+            "ru": "Russian",
+            "es": "Spanish",
+            "fr": "French",
+            "de": "German",
+        }
+        label = names.get(code, code)
+        return _ok(
+            f"We've been speaking in {label}.",
+            module="conversation",
+            language=code,
+            source="language_subsystem",
+        )
 
     def _branch_entry(self, action: str):
         def _entry(assistant: JarvisAssistant, params: dict, message: str) -> dict:

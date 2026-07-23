@@ -62,6 +62,7 @@ def test_m0k_01_multi_domain_evidence_lineage() -> None:
         "M3-ACM-relational",
         "M3-ACM-relational-stab",
         "M3-ACM-prediction-stab",
+        "M3-ACM-prediction-final",
     ) or "M0K" in meta.get("notes", "")
 
 

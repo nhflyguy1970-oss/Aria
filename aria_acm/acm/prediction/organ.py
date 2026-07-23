@@ -38,10 +38,25 @@ _OPEN_FUTURE = re.compile(
     re.I,
 )
 _GENERIC_TOMORROW = re.compile(
-    r"\bwhat\s+is\s+likely\s+to\s+happen(?:\s+tomorrow)?\b|"
+    r"\bwhat\s+is\s+likely\s+to\s+happen\s+tomorrow\b|"
     r"\bwhat(?:'s|\s+is)\s+likely\s+tomorrow\b|"
-    r"\bwhat\s+will\s+happen\s+tomorrow\b",
+    r"\bwhat\s+will\s+happen\s+tomorrow\b|"
+    r"\bwill\s+it\s+(?:rain|snow)\s+tomorrow\b",
     re.I,
+)
+_RECOMMENDATION = re.compile(
+    r"\bwhen\s+should\s+i\b|"
+    r"\bwhat\s+should\s+i\b|"
+    r"\bshould\s+i\s+(?:work|go|fish|hike)\b",
+    re.I,
+)
+_TOPIC_HINTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("coffee", ("coffee", "caffeine", "insomni", "sleep")),
+    ("breakfast", ("breakfast", "hungry", "lunch", "skip")),
+    ("rain", ("rain", "weather", "storm")),
+    ("fishing", ("fish", "fishing", "saturday")),
+    ("hiking", ("hik", "weekend")),
+    ("work", ("work", "productive", "morning")),
 )
 _JUNK_LABELS = frozenset(
     {
@@ -161,6 +176,38 @@ class PredictionOrgan:
             return public
 
         bits = [f"{o.label}" for o in top if o.probability > 0.05][:3]
+        if _RECOMMENDATION.search(cue or ""):
+            primary = bits[0] if bits else label
+            # Advice grounded in remembered habits — not a likelihood claim.
+            why_bits: list[str] = []
+            for outcome in top[:2]:
+                for sid in outcome.support[:2]:
+                    exp = self.store.experiences.get(sid)
+                    if exp is None:
+                        continue
+                    meta = exp.meta_dict() if hasattr(exp, "meta_dict") else {}
+                    evidence = ""
+                    if isinstance(meta, dict):
+                        evidence = str(meta.get("evidence") or "").strip()
+                    why_bits.append(evidence or (exp.summary or "").strip())
+            why_bits = [b for b in dict.fromkeys(why_bits) if b][:2]
+            if "morning" in primary.lower() or any(
+                "morning" in (b or "").lower() for b in why_bits
+            ):
+                public["answer"] = (
+                    "I'd recommend working in the morning because you've consistently "
+                    "been most productive then."
+                )
+            else:
+                public["answer"] = (
+                    f"I'd recommend focusing on {primary} based on your remembered habits."
+                )
+            if why_bits:
+                public["answer"] += " Supporting memory: " + "; ".join(why_bits)
+            public["answer"] += f" (confidence about {conf:.0%})."
+            public["recommendation"] = True
+            return public
+
         if len(bits) == 1:
             public["answer"] = (
                 f"Likely from memory: {bits[0]} "
@@ -499,8 +546,12 @@ class PredictionOrgan:
                 "memory",
                 "based",
                 "upon",
+                "should",
+                "drink",
+                "skip",
             }
         }
+        cue_topics = self._topics_in_text(cue_l)
         grouped: dict[str, dict[str, Any]] = {}
         for exp in self.store.experiences.values():
             meta = exp.meta_dict() if hasattr(exp, "meta_dict") else {}
@@ -516,6 +567,12 @@ class PredictionOrgan:
                 strength = 0.65
             ante_l = ante.lower()
             cons_l = cons.lower()
+            pattern_topics = self._topics_in_text(f"{ante_l} {cons_l}")
+            # Competing evidence must share the cue's subject/action family.
+            if cue_topics and pattern_topics and not (cue_topics & pattern_topics):
+                continue
+            if cue_topics and not pattern_topics:
+                continue
             ante_tokens = {
                 tok for tok in re.findall(r"[a-z0-9]+", ante_l) if len(tok) > 2
             }
@@ -553,8 +610,8 @@ class PredictionOrgan:
             if "rain" in cue_l and ("rain" in ante_l or "rain" in cons_l):
                 overlap.add("rain")
                 strength = min(0.98, strength + 0.15)
-            # Generic "what is likely tomorrow / what will happen tomorrow"
-            # reconstructs recent rain-streak teachings.
+            # Rain-streak teachings only for explicit tomorrow/weather cues —
+            # never for unrelated "what is likely to happen" habit questions.
             if _GENERIC_TOMORROW.search(cue) and (
                 "rain" in ante_l or "rain" in cons_l
             ):
@@ -613,6 +670,15 @@ class PredictionOrgan:
         for payload in grouped.values():
             payload.pop("polarities", None)
         return grouped
+
+    @staticmethod
+    def _topics_in_text(text: str) -> set[str]:
+        low = (text or "").lower()
+        topics: set[str] = set()
+        for topic, hints in _TOPIC_HINTS:
+            if any(h in low for h in hints):
+                topics.add(topic)
+        return topics
 
     def _explain_last_prediction(self, cue: str) -> dict[str, Any]:
         pred = None

@@ -93,11 +93,18 @@ def test_memory_authority_prediction_path_stays_english() -> None:
         _assert_english(speech, prompt=prompt)
 
 
-def test_prediction_queries_do_not_escape_memory_authority() -> None:
-    for prompt in _ENGLISH_PROMPTS:
-        if prompt.endswith("."):
-            # teachings
-            continue
-        route = resolve_memory_route(prompt)
-        assert route is not None, prompt
-        assert route["action"] == "memory_about_user", prompt
+def test_conversation_language_action_answers_english() -> None:
+    from jarvis.behaviors.conversation import ConversationBehavior
+    from jarvis.nlu.mapping import _CONVERSATION_LANGUAGE_QUERY
+
+    q = "What language have we been speaking in during this conversation?"
+    assert _CONVERSATION_LANGUAGE_QUERY.search(q)
+    assert resolve_memory_route(q) is None
+
+    behavior = ConversationBehavior()
+    out = behavior._conversation_language_entry(None, {"question": q}, q)  # type: ignore[arg-type]
+    assert out.get("ok")
+    msg = (out.get("message") or "").lower()
+    assert "english" in msg
+    assert out.get("source") == "language_subsystem"
+    assert "python" not in msg

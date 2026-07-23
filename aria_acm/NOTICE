@@ -4,18 +4,23 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M3-ACM-prediction-stab):
+Source pin (M3-ACM-prediction-final):
   tag:    v0.26.0
-  commit: 22636a8da431088f8996d13b5807a972c20302b7
+  commit: 15f5e77d27a3fae8f1eeeb6931eeb80116780883
   version harvested from pin: 0.26.0
-  decision: Prediction stabilization after post-acceptance review
+  decision: Prediction final acceptance polish
   includes: D038–D047 · Teaching Recognition · Multi-domain preference /
             evidence · Memory explanation + personal summary · Episodic
             autobiographical memory · Semantic autobiographical memory ·
             Memory evolution · Autobiographical relational reasoning ·
-            Stabilization · Prediction repair · Prediction stabilization
-            (rain/tomorrow, certainty/confidence/explain/recommendation,
-            unknown without score leakage, habit teaching coverage)
+            Stabilization · Prediction repair · Prediction stabilization ·
+            Prediction final polish (topic-family evidence filter,
+            recommendation vs prediction speech, conversation-language
+            non-memory)
+
+Prior pin (M3-ACM-prediction-stab):
+  tag:    v0.26.0
+  commit: 22636a8da431088f8996d13b5807a972c20302b7
 
 Prior pin (M3-ACM-prediction-repair):
   tag:    v0.26.0

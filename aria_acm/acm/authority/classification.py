@@ -86,11 +86,16 @@ _NON_COGNITIVE: list[_Pattern] = [
         CognitiveIntent.CONVERSATION_MANAGEMENT,
         re.compile(
             r"^\s*(hi|hello|hey|thanks|thank\s+you|ok(?:ay)?|goodbye|bye)\s*[!.]?\s*$|"
-            r"\b(stop\s+talking|be\s+quiet|never\s+mind|nevermind)\b",
+            r"\b(stop\s+talking|be\s+quiet|never\s+mind|nevermind)\b|"
+            r"\bwhat\s+language\s+(?:have\s+we|are\s+we|did\s+we)\s+(?:been\s+)?"
+            r"(?:speaking|using|talking)\b|"
+            r"\bwhat\s+language\s+is\s+(?:this|our)\s+conversation\b|"
+            r"\bin\s+what\s+language\s+(?:are|have)\s+we\s+(?:been\s+)?"
+            r"(?:speaking|talking)\b",
             re.I,
         ),
         "conversation_management",
-        0.88,
+        0.94,
     ),
     (
         CognitiveIntent.GENERAL_KNOWLEDGE,
