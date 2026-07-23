@@ -32,6 +32,11 @@ def collect_learned_relations(store: Any) -> list[LearnedRelation]:
         evidence = tuple(getattr(assoc, "evidence_ids", []) or ())
         if not metadata.get("autobiographical") or not evidence:
             continue
+        # Predictive habit edges are not relational autobiography.
+        if metadata.get("predictive_pattern") == "1":
+            continue
+        if str(metadata.get("learned_relation") or "").lower() == "predicts":
+            continue
         source = store.concepts.get(assoc.source_id)
         target = store.concepts.get(assoc.target_id)
         if source is None or target is None:
@@ -367,12 +372,47 @@ def _evidence_has_relationship(store: Any, cue: str) -> bool:
     return False
 
 
+# Schema/role nouns that must not hide the real entity name when both exist
+# (e.g. labels ["project", "BlackFly"] → BlackFly, not "project").
+_GENERIC_ROLE_LABELS = frozenset(
+    {
+        "project",
+        "goal",
+        "preference",
+        "user",
+        "assistant",
+        "entity",
+        "person",
+        "place",
+        "thing",
+        "event",
+        "pattern",
+        "habit",
+        "computer",
+        "device",
+    }
+)
+
+
 def _best_label(concept: Any) -> str:
-    labels = list(getattr(concept, "labels", []) or [])
+    labels = [
+        str(value).strip()
+        for value in (getattr(concept, "labels", []) or [])
+        if str(value).strip()
+    ]
     if not labels:
         return ""
-    # Prefer the shortest explicit entity label over generated phrase labels.
-    return min(labels, key=lambda value: (len(value.split()), len(value)))
+    specific = [lab for lab in labels if lab.casefold() not in _GENERIC_ROLE_LABELS]
+    pool = specific or labels
+    # Prefer concrete entity names over generic role nouns; then shortest phrase.
+    return min(
+        pool,
+        key=lambda value: (
+            0 if any(ch.isupper() for ch in value) else 1,
+            len(value.split()),
+            len(value),
+        ),
+    )
 
 
 def _find(

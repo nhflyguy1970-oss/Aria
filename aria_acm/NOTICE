@@ -4,19 +4,22 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M3-ACM-prediction-final):
+Source pin (M3-ACM-cert-relations):
   tag:    v0.26.0
-  commit: 15f5e77d27a3fae8f1eeeb6931eeb80116780883
+  commit: 051a506a8f34fc3efb8136c7ce11278b9b5607fc
   version harvested from pin: 0.26.0
-  decision: Prediction final acceptance polish
+  decision: Full behavioral certification — relational entity label repair
   includes: D038–D047 · Teaching Recognition · Multi-domain preference /
             evidence · Memory explanation + personal summary · Episodic
             autobiographical memory · Semantic autobiographical memory ·
             Memory evolution · Autobiographical relational reasoning ·
             Stabilization · Prediction repair · Prediction stabilization ·
-            Prediction final polish (topic-family evidence filter,
-            recommendation vs prediction speech, conversation-language
-            non-memory)
+            Prediction final polish · Relational entity-label certification
+            repair (entity over generic role; exclude predictive edges)
+
+Prior pin (M3-ACM-prediction-final):
+  tag:    v0.26.0
+  commit: 15f5e77d27a3fae8f1eeeb6931eeb80116780883
 
 Prior pin (M3-ACM-prediction-stab):
   tag:    v0.26.0

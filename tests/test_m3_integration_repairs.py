@@ -160,6 +160,17 @@ def test_presentation_fishing_fragment() -> None:
     assert "fish" in out.lower() or "caught" in out.lower()
 
 
+def test_presentation_fish_query_keeps_full_trout_answer() -> None:
+    """Do not replace a complete catch recall with a generic fish paraphrase."""
+    from jarvis.behaviors.memory.cognitive_presentation import polish_fragment_recall
+
+    full = "You caught three trout yesterday."
+    out = polish_fragment_recall(full, "What fish did I catch?")
+    assert "trout" in out.lower()
+    assert "three" in out.lower()
+    assert "about fish you caught" not in out.lower()
+
+
 def test_presentation_ram_fragment() -> None:
     out = _reconstruct_fragment("my RAM.", "What RAM did I upgrade?")
     assert out

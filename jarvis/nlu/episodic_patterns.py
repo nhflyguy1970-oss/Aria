@@ -32,6 +32,7 @@ EPISODIC_MEMORY_QUERY = re.compile(
     rf"\b(?:"
     rf"what\s+happened(?:\s+{_TEMPORAL})?|"
     rf"what\s+did\s+i\s+\w+(?:\s+{_TEMPORAL})?|"
+    rf"what\s+have\s+i\s+(?:caught|installed|bought|upgraded|visited|done|built)\b|"
     rf"where\s+did\s+i\s+go(?:\s+{_TEMPORAL})?|"
     rf"what\s+happened\s+(?:before|after)|"
     rf"explain\s+what\s+happened|"

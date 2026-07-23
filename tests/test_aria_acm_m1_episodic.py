@@ -52,7 +52,7 @@ def test_m1ep_01_version_pin() -> None:
     data = json.loads(ver.read_text())
     assert data["source_version"] == "0.26.0"
     assert data["source_tag"] == "v0.26.0"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.26.0-10"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.26.0-11"
     from aria_acm.acm._version import __version__
 
     assert __version__ == "0.26.0"

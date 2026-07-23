@@ -266,13 +266,14 @@ def _reconstruct_fragment(speech: str, prompt: str) -> str:
     )
     when = when_m.group(1) if when_m else ""
     low = s.lower()
-    # "fishing." / "fish" for "What fish did I catch?"
-    if low in ("fishing", "fish") or re.search(r"\bwhat\s+fish\b", q, re.I):
+    # Bare fragments only — never replace a full recalled proposition just because
+    # the user asked "What fish did I catch?"
+    if low in ("fishing", "fish"):
         if when:
             return f"You told me {when} that you caught fish."
         return "You told me about fish you caught."
-    # "my RAM." for "What RAM did I upgrade?"
-    if re.match(r"^my\s+\w+$", s, re.I) or re.search(r"\bwhat\s+ram\b", q, re.I):
+    # "my RAM." for "What RAM did I upgrade?" — only for short noun fragments.
+    if re.match(r"^my\s+\w+$", s, re.I):
         obj = re.sub(r"^my\s+", "", s, flags=re.I).strip()
         if when:
             return f"You told me {when} that you upgraded your {obj}."

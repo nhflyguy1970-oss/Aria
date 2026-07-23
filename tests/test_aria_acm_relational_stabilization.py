@@ -32,9 +32,9 @@ def _stab_isolation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 def test_stab_00_version_pin() -> None:
     ver = Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json"
     data = json.loads(ver.read_text())
-    assert data["source_commit"] == "15f5e77d27a3fae8f1eeeb6931eeb80116780883"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.26.0-10"
-    assert data["promotion"] == "M3-ACM-prediction-final"
+    assert data["source_commit"] == "051a506a8f34fc3efb8136c7ce11278b9b5607fc"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.26.0-11"
+    assert data["promotion"] == "M3-ACM-cert-relations"
 
 
 @pytest.mark.m3
@@ -103,3 +103,25 @@ def test_stab_03_explainability_cites_supporting_upgrade_memory_not_ram() -> Non
     assert "train larger ai models" in low
     assert "ram" not in low
     assert "previously taught" in low or "remembered autobiographical" in low
+
+
+@pytest.mark.m3
+def test_stab_04_blackfly_after_building_project_label() -> None:
+    """Prior 'I'm building BlackFly' must not hide part_of entity label."""
+    MemoryEngine._acm_authority_speak("I'm building BlackFly.")
+    MemoryEngine._acm_authority_speak("BlackFly is part of my AI ecosystem.")
+    result, speech = MemoryEngine._acm_authority_speak(
+        "How does BlackFly fit into my projects?"
+    )
+    assert result.get("status") == "known", speech
+    low = speech.lower()
+    assert "blackfly" in low
+    assert "ecosystem" in low
+
+
+@pytest.mark.m3
+def test_stab_05_what_have_i_caught_routes_to_memory_authority() -> None:
+    q = "What have I caught?"
+    route = resolve_memory_route(q)
+    assert route is not None
+    assert route["action"] == "memory_about_user"
