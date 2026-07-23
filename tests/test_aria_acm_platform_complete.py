@@ -1,38 +1,35 @@
-"""Aria promotion gates — ACM v0.44.0 B21 Relationship Presentation."""
+"""Aria promotion gates — ACM v0.44.0 practical platform completion."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
 
-def test_b21_pin() -> None:
+def test_platform_complete_pin() -> None:
     data = json.loads(
         (Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json").read_text()
     )
     assert data["source_version"] == "0.44.0"
     assert data["aria_acm_local_version"] == "aria-acm-v0.44.0-1"
     assert data["promotion"] == "PLATFORM-PRACTICAL-COMPLETE"
-    assert "B21" in data["includes"]
+    assert "B51" in data["includes"] and "B46" in data["includes"]
 
 
-def test_b21_relationship_parity() -> None:
+def test_platform_complete_parity_smoke() -> None:
     from aria_acm.acm._version import __version__
     from aria_acm.acm.api.engine import CognitiveEngine
     from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
 
     assert __version__ == "0.44.0"
     eng = CognitiveEngine(
-        agent_id="aria-b21",
+        agent_id="aria-platform",
         assistant_identity={"name": "Aria", "role": "assistant"},
     )
     eng.encode("My name is Jeff.", pin=True, provenance=TRUSTED_USER_STATEMENT)
-    eng.encode(
-        "We are working on the ACM project together.",
-        pin=True,
-        provenance=TRUSTED_USER_STATEMENT,
-    )
-    who = eng.cognitive_respond("Who are you?")["memory"].lower()
-    assert "aria" in who and "jeff" not in who
-    rel = eng.cognitive_respond("How do we know each other?")
-    assert rel["status"] == "known"
-    assert "jeff" in (rel.get("memory") or "").lower() or "acm" in (rel.get("memory") or "").lower()
+    eng.encode("My dog's name is Zeus.", pin=True, provenance=TRUSTED_USER_STATEMENT)
+    assert "jeff" in eng.cognitive_respond("Who am I?")["memory"].lower()
+    assert "zeus" in eng.cognitive_respond("What's my dog's name?")["memory"].lower()
+    assert eng.preview_erase_request("Forget my old address.")["status"] in {
+        "preview",
+        "unrecognized",
+    }

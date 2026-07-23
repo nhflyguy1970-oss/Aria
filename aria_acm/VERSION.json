@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.43.0-1",
+  "aria_acm_local_version": "aria-acm-v0.44.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.43.0",
-  "source_tag": "v0.43.0",
-  "source_commit": "2be4617d31e4700298d7ff37c96f954bb9152b93",
+  "source_version": "0.44.0",
+  "source_tag": "v0.44.0",
+  "source_commit": "f5405932523f02fb4a4aa6eff646175d6b365c78",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-23",
-  "tree_sha256": "f67babb32c5c40208ccc6e370cd2c429124897c470380f4e99280e886f053a88",
+  "tree_sha256": "032fdc7cd7e07aaf3072fa5196f007af8195df82ad1938e26aa9250e9b842a8d",
   "license": "Apache-2.0",
-  "certification_ref": "B47 Adjacent Possession Relationship Recall",
-  "promotion": "B47-POSSESSION-RECALL",
-  "promotion_decision": "Promote certified ACM v0.43.0 B47 after Gates 1-4.",
+  "certification_ref": "Practical Platform Completion (B46/B51 closures)",
+  "promotion": "PLATFORM-PRACTICAL-COMPLETE",
+  "promotion_decision": "Promote certified ACM v0.44.0 practical platform completion after final audit.",
   "includes": [
     "D038",
     "D039",
@@ -40,7 +40,10 @@
     "B20",
     "B21",
     "B36",
-    "B47"
+    "B47",
+    "B46",
+    "B51",
+    "PLATFORM-PRACTICAL-COMPLETE"
   ],
-  "notes": "Promotion of ACM commit 2be4617d31e4700298d7ff37c96f954bb9152b93."
+  "notes": "Promotion of ACM commit f5405932523f02fb4a4aa6eff646175d6b365c78 \u2014 practical ACM platform complete."
 }

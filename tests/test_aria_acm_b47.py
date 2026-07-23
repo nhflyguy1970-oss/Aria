@@ -1,4 +1,4 @@
-"""Aria promotion gates — ACM v0.43.0 B47 Possession Recall."""
+"""Aria promotion gates — ACM v0.44.0 B47 Possession Recall."""
 from __future__ import annotations
 
 import json
@@ -9,9 +9,9 @@ def test_b47_pin() -> None:
     data = json.loads(
         (Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json").read_text()
     )
-    assert data["source_version"] == "0.43.0"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.43.0-1"
-    assert data["promotion"] == "B47-POSSESSION-RECALL"
+    assert data["source_version"] == "0.44.0"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.44.0-1"
+    assert data["promotion"] == "PLATFORM-PRACTICAL-COMPLETE"
     assert "B47" in data["includes"]
 
 
@@ -20,7 +20,7 @@ def test_b47_possession_parity() -> None:
     from aria_acm.acm.api.engine import CognitiveEngine
     from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
 
-    assert __version__ == "0.43.0"
+    assert __version__ == "0.44.0"
     eng = CognitiveEngine(
         agent_id="aria-b47",
         assistant_identity={"name": "Aria", "role": "assistant"},
