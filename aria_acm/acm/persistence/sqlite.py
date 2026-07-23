@@ -17,9 +17,15 @@ from acm.persistence.schema import SCHEMA_VERSION
 class SqliteDurableStore:
     """Transactional snapshot persistence for CognitiveStore."""
 
-    def __init__(self, path: str | Path) -> None:
+    # Keep recent snapshots only — unbounded growth was a production risk (audit H7).
+    DEFAULT_MAX_SNAPSHOTS = 32
+
+    def __init__(self, path: str | Path, *, max_snapshots: int | None = None) -> None:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.max_snapshots = (
+            self.DEFAULT_MAX_SNAPSHOTS if max_snapshots is None else max(1, int(max_snapshots))
+        )
         self._lock = threading.RLock()
         self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
@@ -79,9 +85,10 @@ class SqliteDurableStore:
                     json.dumps(payload),
                 ),
             )
+            pruned = self._prune_snapshots_locked()
             self._conn.execute(
                 "INSERT INTO ops(created, op, detail) VALUES(?,?,?)",
-                (time(), "save", kind),
+                (time(), "save", kind if not pruned else f"{kind};pruned={pruned}"),
             )
             self._conn.commit()
         return {
@@ -90,7 +97,24 @@ class SqliteDurableStore:
             "checksum": payload["checksum"],
             "schema_version": payload["schema_version"],
             "path": str(self.path),
+            "pruned_snapshots": pruned,
+            "max_snapshots": self.max_snapshots,
         }
+
+    def _prune_snapshots_locked(self) -> int:
+        """Delete oldest snapshots beyond ``max_snapshots``. Caller holds lock."""
+        cur = self._conn.execute("SELECT COUNT(*) FROM snapshots")
+        count = int(cur.fetchone()[0] or 0)
+        overflow = count - self.max_snapshots
+        if overflow <= 0:
+            return 0
+        self._conn.execute(
+            "DELETE FROM snapshots WHERE id IN ("
+            "SELECT id FROM snapshots ORDER BY id ASC LIMIT ?"
+            ")",
+            (overflow,),
+        )
+        return overflow
 
     def load_latest(self, store: CognitiveStore | None = None) -> CognitiveStore:
         with self._lock:

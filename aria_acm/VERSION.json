@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.44.0-1",
+  "aria_acm_local_version": "aria-acm-v0.45.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.44.0",
-  "source_tag": "v0.44.0",
-  "source_commit": "38c21443a92ce617bf5a5a2456136c0d993a9e12",
+  "source_version": "0.45.0",
+  "source_tag": "v0.45.0",
+  "source_commit": "e6a71fb9d947a0b34402ec835e6a1e0665c8f9f8",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-23",
-  "tree_sha256": "032fdc7cd7e07aaf3072fa5196f007af8195df82ad1938e26aa9250e9b842a8d",
+  "tree_sha256": "fe5c1bb205fea2c5d2b8989e38ec1ae0dd57a4ea3399faf44ac87a9664a38ce6",
   "license": "Apache-2.0",
-  "certification_ref": "Practical Platform Completion (B46/B51 closures)",
+  "certification_ref": "Production Readiness Audit (v0.45.0) atop PLATFORM-PRACTICAL-COMPLETE",
   "promotion": "PLATFORM-PRACTICAL-COMPLETE",
-  "promotion_decision": "Promote certified ACM v0.44.0 practical platform completion after final audit.",
+  "promotion_decision": "Promote certified ACM v0.45.0 production-readiness audit on top of practical platform completion.",
   "includes": [
     "D038",
     "D039",
@@ -43,7 +43,8 @@
     "B47",
     "B46",
     "B51",
-    "PLATFORM-PRACTICAL-COMPLETE"
+    "PLATFORM-PRACTICAL-COMPLETE",
+    "PRODUCTION-READINESS-AUDIT"
   ],
-  "notes": "Promotion of ACM commit 38c21443a92ce617bf5a5a2456136c0d993a9e12 \u2014 practical ACM platform complete."
+  "notes": "Promotion of ACM commit e6a71fb9d947a0b34402ec835e6a1e0665c8f9f8 \u2014 production readiness audit (read_only write spine, identity assent lineage, snapshot prune, dual-import identity)."
 }

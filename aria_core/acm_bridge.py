@@ -647,7 +647,8 @@ def primary_cognitive_respond(request: str) -> dict[str, Any]:
     t0 = time.perf_counter()
     # Temporary DEBUG: confirm Teaching Recognition executes on live conversation.
     _teach_log = logging.getLogger("aria.teaching_recognition")
-    _teach_debug = os.getenv("ARIA_TEACHING_DEBUG", "1").strip().lower() not in (
+    # Default OFF — production audit: avoid leaking utterance prefixes to stdout.
+    _teach_debug = os.getenv("ARIA_TEACHING_DEBUG", "0").strip().lower() not in (
         "0",
         "false",
         "no",

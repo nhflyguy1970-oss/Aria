@@ -1,5 +1,13 @@
 # Changelog — Aria / Jarvis
 
+## [PRODUCTION-READINESS-AUDIT] — 2026-07-23
+
+Promote certified ACM **v0.45.0** (`e6a71fb`) as `aria-acm-v0.45.0-1`.
+Production-readiness audit: read_only write spine, identity assent Experience
+lineage, SQLite snapshot prune, dual-import class identity fix, teaching-debug
+default off. Gates: `tests/test_aria_acm_dual_import.py` + pin asserts.
+Report: ACM `docs/PRODUCTION_READINESS_AUDIT.md`.
+
 ## [M5-ACM-CAP6-EXPLAIN] — 2026-07-23
 
 Promote certified ACM **v0.33.0** (`6185854`) as `aria-acm-v0.33.0-1`.

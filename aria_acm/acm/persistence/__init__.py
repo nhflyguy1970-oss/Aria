@@ -14,8 +14,14 @@ from acm.persistence.sqlite import SqliteDurableStore
 class DurableCognitiveStore:
     """ACM-owned durable persistence. Hosts never own ACM storage files."""
 
-    def __init__(self, path: str | Path, store: CognitiveStore | None = None) -> None:
-        self.backend = SqliteDurableStore(path)
+    def __init__(
+        self,
+        path: str | Path,
+        store: CognitiveStore | None = None,
+        *,
+        max_snapshots: int | None = None,
+    ) -> None:
+        self.backend = SqliteDurableStore(path, max_snapshots=max_snapshots)
         self.store = store or CognitiveStore()
         try:
             self.backend.load_latest(self.store)

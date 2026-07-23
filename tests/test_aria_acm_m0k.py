@@ -88,6 +88,7 @@ def test_m0k_01_multi_domain_evidence_lineage() -> None:
         "B36-ERASE-GOVERNANCE",
         "B47-POSSESSION-RECALL",
         "PLATFORM-PRACTICAL-COMPLETE",
+        "PRODUCTION-READINESS-AUDIT",
     ) or "M0K" in meta.get("notes", "")
 
 

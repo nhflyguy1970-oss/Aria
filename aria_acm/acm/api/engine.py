@@ -69,6 +69,7 @@ class CognitiveEngine:
         buffer_capacity: int = 7,
         persist_path: str | None = None,
         auto_persist: bool = False,
+        max_snapshots: int | None = None,
         assistant_identity: dict[str, Any] | None = None,
         redaction_policy: Any | None = None,
         diagnostic_safety_policy: Any | None = None,
@@ -126,7 +127,9 @@ class CognitiveEngine:
         if persist_path:
             from acm.persistence import DurableCognitiveStore
 
-            self.durable = DurableCognitiveStore(persist_path)
+            self.durable = DurableCognitiveStore(
+                persist_path, max_snapshots=max_snapshots
+            )
             self.store = self.durable.store
         else:
             self.store = CognitiveStore()
@@ -413,8 +416,16 @@ class CognitiveEngine:
         speaker: str | None = None,
         provenance: IngestionProvenance | None = None,
     ) -> dict[str, Any]:
+        from acm.authority.mode import is_read_only
         from acm.authority.protection import reject_speech_contamination
         from acm.semantic import extract_semantics
+
+        if is_read_only():
+            return {
+                "encoded": False,
+                "reason": "read_only_blocked",
+                "detail": "encode blocked under read_only diagnostic mode",
+            }
 
         ingestion = evaluate_ingestion(provenance)
         if not ingestion.eligible:
@@ -1288,6 +1299,15 @@ class CognitiveEngine:
 
     def cool_memory(self, concept_id: str, *, steps: int = 1) -> dict[str, Any]:
         """Soft forget — accessibility down; never deletes Experiences."""
+        from acm.authority.mode import is_read_only
+
+        if is_read_only():
+            return {
+                "cooled": False,
+                "reason": "read_only_blocked",
+                "experiences_unchanged": True,
+                "deleted": False,
+            }
         before_count = len(self.store.experiences)
         # Host-requested cool is intentional (not silent); still never deletes.
         event = self.forgetting.cool(concept_id, source="host", steps=steps, force=True)
@@ -1302,6 +1322,10 @@ class CognitiveEngine:
         }
 
     def reactivate_memory(self, concept_id: str, *, steps: int = 1) -> dict[str, Any]:
+        from acm.authority.mode import is_read_only
+
+        if is_read_only():
+            return {"reactivated": False, "reason": "read_only_blocked"}
         event = self.forgetting.reactivate(concept_id, source="host", steps=steps)
         return {
             "reactivated": event is not None,
@@ -1827,7 +1851,109 @@ class CognitiveEngine:
         }
 
     def assent_identity(self, proposal_id: str) -> dict[str, Any]:
-        return self.identity.assent(proposal_id)
+        """Assent a pending identity proposal via encode (Experience + provenance).
+
+        Audit fix: never mutate living attributes without birthing an Experience.
+        Handles both B20 ``propose_identity_change`` proposals and organ-native
+        encode proposals (e.g. assistant role flips).
+        """
+        from acm.authority.identity_edit import _canonical_text
+        from acm.authority.mode import is_read_only
+        from acm.provenance import TRUSTED_USER_STATEMENT
+
+        if is_read_only():
+            return {"assented": False, "reason": "read_only_blocked"}
+        prop = self.identity.policy.proposals.get(proposal_id)
+        if prop is None or prop.status != "pending":
+            return {"assented": False, "reason": "missing_or_not_pending"}
+
+        meta = prop.metadata or {}
+        who = str(meta.get("who") or "")
+        if not who:
+            schema = self.store.concepts.get(prop.schema_id)
+            role = (schema.metadata or {}).get("identity_role") if schema else ""
+            who = "assistant" if role in {"agent", "assistant"} else "user"
+        speaker = "assistant" if who == "assistant" else "user"
+        canonical = str(meta.get("canonical_text") or "").strip()
+        if not canonical:
+            canonical = _canonical_text(who, prop.attribute_key, str(prop.proposed))  # type: ignore[arg-type]
+
+        marked = self.identity.policy.assent(proposal_id)
+        if marked is None:
+            return {"assented": False, "reason": "missing_or_not_pending"}
+
+        before = len(self.store.experiences)
+        encoded = self.encode(
+            canonical,
+            kind="identity",
+            pin=True,
+            assent=True,
+            proposal_id=proposal_id,
+            speaker=speaker,
+            provenance=TRUSTED_USER_STATEMENT,
+        )
+        if not encoded.get("encoded"):
+            prop.status = "pending"
+            return {
+                "assented": False,
+                "reason": "encode_failed",
+                "detail": encoded,
+            }
+
+        # Ensure living attribute matches proposal even if encode path proposed again.
+        organ_out = self.identity.assent(proposal_id)
+        # policy already assented — organ.assent may return missing; apply supersede directly
+        if not organ_out.get("assented"):
+            # Force living attribute update with experience linkage
+            schema = self.store.concepts.get(prop.schema_id)
+            if schema is not None:
+                existing = next(
+                    (a for a in schema.attributes if a.key == prop.attribute_key and a.active),
+                    None,
+                )
+                if existing is not None and existing.value != prop.proposed:
+                    self.identity._apply_supersede(
+                        schema=schema,
+                        existing=existing,
+                        value=str(prop.proposed),
+                        experience_id=str(encoded.get("experience_id") or ""),
+                        concept_id="",
+                        weight=0.85,
+                        proposal_id=proposal_id,
+                    )
+                elif existing is None:
+                    from acm.types import Attribute
+
+                    schema.attributes.append(
+                        Attribute(
+                            key=prop.attribute_key,
+                            value=str(prop.proposed),
+                            confidence=0.75,
+                            importance=0.85,
+                            evidence_ids=[str(encoded.get("experience_id") or "")],
+                        )
+                    )
+
+        self.validation.record_identity(
+            action="assent",
+            proposal_id=proposal_id,
+            schema_id=prop.schema_id,
+            attribute_key=prop.attribute_key,
+            previous=prop.previous,
+            current=prop.proposed,
+            change=1,
+            lineage=True,
+            experience_id=encoded.get("experience_id"),
+        )
+        return {
+            "assented": True,
+            "proposal_id": proposal_id,
+            "attribute_key": prop.attribute_key,
+            "value": prop.proposed,
+            "experience_id": encoded.get("experience_id"),
+            "experiences_added": len(self.store.experiences) - before,
+            "lineage_preserved": True,
+        }
 
     def reject_identity(self, proposal_id: str) -> dict[str, Any]:
         return self.identity.reject(proposal_id)
