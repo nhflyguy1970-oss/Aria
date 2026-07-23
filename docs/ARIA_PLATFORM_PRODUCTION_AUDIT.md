@@ -103,10 +103,13 @@ Fixes that touched ACM were **fail-closed durable load** only (data-loss bug).
 ## Final assessment
 
 ### Aria Core
+
 **Production-ready** as the sovereign Cap Bus / memory façade over ACM PRIMARY, with fail-closed governance on the critical write spine.
 
 ### Aria Platform (AI-Platform)
+
 **Production-ready for single-user local workstation / Mission Control Daily Use**, not multi-tenant SaaS. Control-plane mutations gated; secrets hardened; test boundary truthful. Empty compose and DualWrite/ACM product alignment remain documented follow-ons.
 
 ### Combined verdict
+
 **Yes — Aria Core + Aria Platform are production-ready to the ACM standard for the certified single-operator workstation scope**, with the deferred host UX and packaging items listed above.
