@@ -14,6 +14,7 @@ from acm.learning.model import (
     GovernanceClass,
 )
 from acm.learning.temporal_pattern import PatternKind, PatternStatus, TemporalPattern
+from acm.learning.stability import LearningStabilityLimits
 from acm.types import ConceptRole, new_id
 from acm.validation.harness import ConfidenceDelta
 
@@ -58,6 +59,8 @@ class LearningOrgan:
         self._rollbacks = 0
         self._temporal_patterns = 0
         self._min_pattern_observations = 2
+        self.stability_limits = LearningStabilityLimits()
+        self._stability_interventions = 0
 
     def bind(
         self,
@@ -122,6 +125,17 @@ class LearningOrgan:
         if exp is None:
             return []
         if exp.cognitive_kind != CognitiveKind.REFLECTION:
+            return []
+        # Cap7 — no recursive re-learning from the same Reflective Experience.
+        if any(
+            reflective_experience_id in a.reflective_experience_ids and a.applied
+            for a in self.store.adaptations.values()
+        ):
+            self.validation.record_learning(
+                action="skip_recursive_reflection",
+                reflective_experience_id=reflective_experience_id,
+                learn=0,
+            )
             return []
         outcomes = _outcomes_from_meta(exp)
         if not outcomes:
@@ -485,7 +499,19 @@ class LearningOrgan:
             if pk == key:
                 existing = p
                 break
+        lim = self.stability_limits
         if existing is None:
+            active_n = sum(
+                1
+                for p in self.store.temporal_patterns.values()
+                if p.status != PatternStatus.RETIRED
+            )
+            if active_n >= lim.max_temporal_patterns:
+                return {
+                    "status": "rejected",
+                    "reason": "temporal_pattern_cap",
+                    "invents_experiences": False,
+                }
             pat = TemporalPattern(
                 id=new_id("tpat"),
                 label=label or f"{ante} → {cons}",
@@ -521,8 +547,10 @@ class LearningOrgan:
                 existing.supporting_concept_ids.append(cid)
         existing.observation_count += 1
         existing.last_observed = now
-        existing.strength = min(0.95, existing.strength + 0.08)
-        existing.confidence = min(0.92, existing.confidence + 0.06)
+        # Pattern confidence stays slightly below hard stability max (calibration).
+        existing.strength = min(0.95, min(lim.max_confidence, existing.strength + 0.08))
+        existing.confidence = min(0.92, min(lim.max_confidence, existing.confidence + 0.06))
+
         if existing.status in {PatternStatus.WEAKENING, PatternStatus.DORMANT}:
             existing.status = PatternStatus.ACTIVE
         if (
@@ -981,6 +1009,136 @@ class LearningOrgan:
             "rollbacks": self._rollbacks,
             "temporal_patterns": len(self.store.temporal_patterns),
             "temporal_pattern_ops": self._temporal_patterns,
+            "stability_interventions": self._stability_interventions,
+        }
+
+    # --- M5 Cap7: Learning Stability ------------------------------------------
+
+    def check_learning_stability(self) -> dict[str, Any]:
+        """Read-only stability report — bounded confidence, growth, oscillation."""
+        lim = self.stability_limits
+        confidences = [
+            c.confidence for c in self.store.concepts.values() if c.active
+        ]
+        over = sum(1 for v in confidences if v > lim.max_confidence + 1e-9)
+        under = sum(1 for v in confidences if v < lim.min_confidence - 1e-9)
+        flips: dict[str, int] = {}
+        last_dir: dict[str, int] = {}
+        for e in self.store.confidence_events[-400:]:
+            delta = e.after - e.before
+            if abs(delta) < lim.oscillation_epsilon:
+                continue
+            direction = 1 if delta > 0 else -1
+            prev = last_dir.get(e.target_id)
+            if prev is not None and prev != direction:
+                flips[e.target_id] = flips.get(e.target_id, 0) + 1
+            last_dir[e.target_id] = direction
+        oscillating = {
+            tid: n for tid, n in flips.items() if n >= lim.max_oscillation_flips
+        }
+        growth = {
+            "concepts": len(self.store.concepts),
+            "adaptations": len(self.store.adaptations),
+            "abstractions": len(self.store.abstractions),
+            "hypotheses": len(self.store.hypotheses),
+            "temporal_patterns": len(self.store.temporal_patterns),
+            "prediction_audits": len(self.store.prediction_audits),
+        }
+        breaches: list[str] = []
+        if growth["concepts"] > lim.max_concepts:
+            breaches.append("concepts")
+        if growth["adaptations"] > lim.max_adaptations_total:
+            breaches.append("adaptations")
+        if growth["abstractions"] > lim.max_abstractions:
+            breaches.append("abstractions")
+        if growth["hypotheses"] > lim.max_hypotheses:
+            breaches.append("hypotheses")
+        if growth["temporal_patterns"] > lim.max_temporal_patterns:
+            breaches.append("temporal_patterns")
+        if growth["prediction_audits"] > lim.max_prediction_audits:
+            breaches.append("prediction_audits")
+        if over or under:
+            breaches.append("confidence_bounds")
+        if oscillating:
+            breaches.append("oscillation")
+        return {
+            "question": "Is learning stable?",
+            "stable": not breaches,
+            "breaches": breaches,
+            "growth": growth,
+            "confidence_over_max": over,
+            "confidence_under_min": under,
+            "oscillating_targets": list(oscillating.keys())[:12],
+            "limits": {
+                "min_confidence": lim.min_confidence,
+                "max_confidence": lim.max_confidence,
+                "max_concepts": lim.max_concepts,
+                "max_abstractions": lim.max_abstractions,
+                "max_hypotheses": lim.max_hypotheses,
+                "max_temporal_patterns": lim.max_temporal_patterns,
+            },
+            "invents_experiences": False,
+            "experiences": len(self.store.experiences),
+            "provenance": len(self.store.provenance),
+            "exposes_internals": False,
+        }
+
+    def enforce_learning_stability(self) -> dict[str, Any]:
+        """Clamp confidence and cool runaway living structure. Never invents Experiences."""
+        if is_read_only():
+            return {"status": "read_only"}
+        lim = self.stability_limits
+        exp_before = len(self.store.experiences)
+        prov_before = len(self.store.provenance)
+        clamped = 0
+        cooled = 0
+        for c in self.store.concepts.values():
+            if not c.active:
+                continue
+            before = c.confidence
+            c.confidence = max(lim.min_confidence, min(lim.max_confidence, c.confidence))
+            if abs(c.confidence - before) > 1e-12:
+                clamped += 1
+        by_target: dict[str, list] = {}
+        for a in self.store.adaptations.values():
+            by_target.setdefault(a.target_id, []).append(a)
+        for _tid, ads in by_target.items():
+            if len(ads) <= lim.max_adaptations_per_target:
+                continue
+            ads.sort(key=lambda a: a.created)
+            for a in ads[: -lim.max_adaptations_per_target]:
+                a.metadata["stability_cooled"] = True
+                cooled += 1
+        pats = sorted(
+            self.store.temporal_patterns.values(),
+            key=lambda p: p.last_observed,
+        )
+        if len(pats) > lim.max_temporal_patterns:
+            for p in pats[: len(pats) - lim.max_temporal_patterns]:
+                if p.status != PatternStatus.RETIRED:
+                    p.status = PatternStatus.RETIRED
+                    p.retired_at = time()
+                    cooled += 1
+        hyps = list(self.store.hypotheses.values())
+        if len(hyps) > lim.max_hypotheses:
+            closed = [h for h in hyps if h.status.value != "active"]
+            closed.sort(key=lambda h: h.created)
+            for h in closed[: max(0, len(hyps) - lim.max_hypotheses)]:
+                h.metadata["stability_cooled"] = True
+                cooled += 1
+        self._stability_interventions += 1
+        assert len(self.store.experiences) == exp_before
+        assert len(self.store.provenance) == prov_before
+        report = self.check_learning_stability()
+        return {
+            "status": "enforced",
+            "clamped_confidence": clamped,
+            "cooled": cooled,
+            "report": report,
+            "experiences_unchanged": True,
+            "provenance_unchanged": True,
+            "invents_experiences": False,
+            "exposes_internals": False,
         }
 
     def daily_learning_summary(self, since_ts: float = 0.0) -> dict[str, Any]:
@@ -1477,9 +1635,13 @@ class LearningOrgan:
         confidence_delta = max(
             -CAP_CONCEPT_CONFIDENCE, min(CAP_CONCEPT_CONFIDENCE, confidence_delta)
         )
+        lim = self.stability_limits
         before = {"strength": concept.strength, "confidence": concept.confidence}
         concept.strength = max(0.0, min(1.0, concept.strength + strength_delta))
-        concept.confidence = max(0.05, min(1.0, concept.confidence + confidence_delta))
+        concept.confidence = max(
+            lim.min_confidence,
+            min(lim.max_confidence, concept.confidence + confidence_delta),
+        )
         after = {"strength": concept.strength, "confidence": concept.confidence}
         ad = Adaptation(
             id=new_id("adp"),
@@ -1596,6 +1758,7 @@ class LearningOrgan:
             a.key.startswith("favorite_") for a in concept.attributes if a.active
         ):
             return []
+        lim = self.stability_limits
         out: list[Adaptation] = []
         delta = max(-CAP_PREF_CONFIDENCE, min(CAP_PREF_CONFIDENCE, delta))
         for attr in concept.attributes:
@@ -1606,7 +1769,9 @@ class LearningOrgan:
             ):
                 continue
             before = {"confidence": attr.confidence}
-            attr.confidence = max(0.05, min(1.0, attr.confidence + delta))
+            attr.confidence = max(
+                lim.min_confidence, min(lim.max_confidence, attr.confidence + delta)
+            )
             after = {"confidence": attr.confidence}
             ad = Adaptation(
                 id=new_id("adp"),
@@ -1650,8 +1815,11 @@ class LearningOrgan:
         if concept is None or not concept.identity:
             return None
         delta = max(-CAP_IDENTITY_CONFIDENCE, min(CAP_IDENTITY_CONFIDENCE, delta))
+        lim = self.stability_limits
         before = {"confidence": concept.confidence}
-        concept.confidence = max(0.05, min(1.0, concept.confidence + delta))
+        concept.confidence = max(
+            lim.min_confidence, min(lim.max_confidence, concept.confidence + delta)
+        )
         after = {"confidence": concept.confidence}
         ad = Adaptation(
             id=new_id("adp"),

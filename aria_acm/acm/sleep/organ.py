@@ -239,6 +239,9 @@ class OfflineCognitionOrgan:
         # M5 Cap5 — temporal patterns weaken when unobserved.
         pattern_aging = self.learning.age_temporal_patterns()
 
+        # M5 Cap7 — enforce bounded confidence and cool runaway growth.
+        stability = self.learning.enforce_learning_stability()
+
         payload = {
             "question": "What should become long-term memory?",
             "sleep_batch_id": batch_id,
@@ -249,6 +252,7 @@ class OfflineCognitionOrgan:
             "stabilizations": stabilized,
             "evidence_aging": aging,
             "temporal_pattern_aging": pattern_aging,
+            "learning_stability": stability,
             "proposals": proposals,
             "applied_low_impact": apply_low_impact,
             # backward compatible keys for older sleep tests

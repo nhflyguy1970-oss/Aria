@@ -849,6 +849,14 @@ class CognitiveEngine:
         """M5 Cap6 — why a learned object exists / how confidence evolved."""
         return self.learning.why_was_this_learned(cue)
 
+    def check_learning_stability(self) -> dict[str, Any]:
+        """M5 Cap7 — read-only learning stability report."""
+        return self.learning.check_learning_stability()
+
+    def enforce_learning_stability(self) -> dict[str, Any]:
+        """M5 Cap7 — clamp confidence and cool runaway learning growth."""
+        return self.learning.enforce_learning_stability()
+
     def list_temporal_patterns(
         self, *, include_dormant: bool = False, cue: str = ""
     ) -> dict[str, Any]:
