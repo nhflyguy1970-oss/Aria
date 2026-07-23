@@ -164,4 +164,4 @@ Negligible: path `relative_to` checks and URL DNS resolution on outbound fetches
 
 ## Final security verdict
 
-**PRODUCTION READY FOR THE CERTIFIED DEPLOYMENT SCOPE**
+PRODUCTION READY FOR THE CERTIFIED DEPLOYMENT SCOPE
