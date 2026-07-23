@@ -76,12 +76,15 @@ def test_m0k_01_multi_domain_evidence_lineage() -> None:
         "B20-IDENTITY-CORRECTION",
         "B21-RELATIONSHIP-PRESENTATION",
         "B36-ERASE-GOVERNANCE",
+        "B47-POSSESSION-RECALL",
         "B11-PREFERENCE-EDIT",
         "B12-PREFERENCE-CORRECTION",
         "B21-RELATIONSHIP-PRESENTATION",
         "B36-ERASE-GOVERNANCE",
+        "B47-POSSESSION-RECALL",
         "B21-RELATIONSHIP-PRESENTATION",
         "B36-ERASE-GOVERNANCE",
+        "B47-POSSESSION-RECALL",
     ) or "M0K" in meta.get("notes", "")
 
 

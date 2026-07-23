@@ -1,16 +1,16 @@
 {
-  "aria_acm_local_version": "aria-acm-v0.42.0-1",
+  "aria_acm_local_version": "aria-acm-v0.43.0-1",
   "source_project": "aria-cognitive-memory",
-  "source_version": "0.42.0",
-  "source_tag": "v0.42.0",
-  "source_commit": "b51870c69a86eaf8b3ccfbbda7eb8c8ac7030e5c",
+  "source_version": "0.43.0",
+  "source_tag": "v0.43.0",
+  "source_commit": "2be4617d31e4700298d7ff37c96f954bb9152b93",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-23",
-  "tree_sha256": "65500d1b04dc861b2defabec1893655143c5a2606762ea24707159676f5a3ca7",
+  "tree_sha256": "f67babb32c5c40208ccc6e370cd2c429124897c470380f4e99280e886f053a88",
   "license": "Apache-2.0",
-  "certification_ref": "B36 Prune Forget Erase Assent UX",
-  "promotion": "B36-ERASE-GOVERNANCE",
-  "promotion_decision": "Promote certified ACM v0.42.0 B36 after Gates 1-4.",
+  "certification_ref": "B47 Adjacent Possession Relationship Recall",
+  "promotion": "B47-POSSESSION-RECALL",
+  "promotion_decision": "Promote certified ACM v0.43.0 B47 after Gates 1-4.",
   "includes": [
     "D038",
     "D039",
@@ -39,7 +39,8 @@
     "B13",
     "B20",
     "B21",
-    "B36"
+    "B36",
+    "B47"
   ],
-  "notes": "Promotion of ACM commit b51870c69a86eaf8b3ccfbbda7eb8c8ac7030e5c."
+  "notes": "Promotion of ACM commit 2be4617d31e4700298d7ff37c96f954bb9152b93."
 }

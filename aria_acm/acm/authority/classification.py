@@ -165,6 +165,23 @@ _COGNITIVE_SPECIALIZED: list[_Pattern] = [
         0.85,
     ),
     (
+        # B47 — possession / relationship name recall (before generic remembering).
+        CognitiveIntent.REMEMBERING,
+        re.compile(
+            r"\b(?:"
+            r"what(?:'s|\s+is)\s+my\s+"
+            r"(?:dog|cat|pet|wife|husband|partner|friend|son|daughter|mom|dad|"
+            r"mother|father|brother|sister|child)(?:'s)?\s+name\b|"
+            r"who\s+is\s+my\s+(?:dog|cat|pet|wife|husband|partner|friend|son|daughter)\b|"
+            r"what(?:'s|\s+is)\s+the\s+name\s+of\s+my\s+"
+            r"(?:dog|cat|pet|wife|husband|partner|friend|son|daughter)\b"
+            r")",
+            re.I,
+        ),
+        "possession_relationship_recall_cue",
+        0.97,
+    ),
+    (
         # B21 — explicit user↔assistant relationship presentation (before LEARNING).
         CognitiveIntent.REMEMBERING,
         re.compile(

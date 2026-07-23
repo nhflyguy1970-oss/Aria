@@ -1932,6 +1932,12 @@ class CognitiveEngine:
 
         return pending_erase_requests(self)
 
+    def present_possession_recall(self, request: str) -> dict[str, Any]:
+        """B47 — adjacent possession/relationship name recall (read-only)."""
+        from acm.remembering.possession_recall import present_possession_recall
+
+        return present_possession_recall(self, request)
+
     def present_relationship_memory(self, request: str) -> dict[str, Any]:
         """B21 — explicit relationship-memory presentation (D044; read-only)."""
         from acm.identity.relationship_presentation import present_relationship_memory

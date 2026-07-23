@@ -442,6 +442,40 @@ class RememberingOrgan:
                 context_influenced=field.context_influenced,
                 working_influenced=field.working_influenced,
             )
+        # B47 — adjacent possession / relationship name recall (before name bleed).
+        from acm.remembering.possession_recall import (
+            answer_possession_relationship_query,
+            is_possession_relationship_query,
+        )
+
+        if is_possession_relationship_query(cue):
+            answered = answer_possession_relationship_query(cue, store=self.store)
+            if answered:
+                return Reconstruction(
+                    cue=cue,
+                    answer=answered,
+                    explanation_class=ExplanationClass.EXPERIENCE.value,
+                    confidence=0.9,
+                    activated_concept_ids=[n.target_id for n in ranked],
+                    activation=field.to_public(),
+                    cue_classes=list(field.cue_classes) + ["possession_relationship_recall"],
+                    goal_influenced=field.goal_influenced,
+                    identity_influenced=False,
+                    context_influenced=field.context_influenced,
+                    working_influenced=field.working_influenced,
+                )
+            return Reconstruction(
+                cue=cue,
+                answer="I don't currently know that.",
+                explanation_class=ExplanationClass.UNKNOWN.value,
+                confidence=0.0,
+                activation=field.to_public(),
+                cue_classes=list(field.cue_classes) + ["possession_relationship_recall"],
+                goal_influenced=field.goal_influenced,
+                identity_influenced=False,
+                context_influenced=field.context_influenced,
+                working_influenced=field.working_influenced,
+            )
         # Lineage / summary introspection can succeed from the store even when
         # activation ranking is empty — check before the empty-rank early exit.
         if _is_answer_provenance_request(cue):
