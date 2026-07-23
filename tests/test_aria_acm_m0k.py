@@ -65,6 +65,7 @@ def test_m0k_01_multi_domain_evidence_lineage() -> None:
         "M3-ACM-prediction-final",
         "M4-ACM-AML",
         "M5-ACM-CAP5-TEMPORAL",
+        "M5-ACM-CAP6-EXPLAIN",
     ) or "M0K" in meta.get("notes", "")
 
 

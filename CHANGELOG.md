@@ -1,5 +1,10 @@
 # Changelog — Aria / Jarvis
 
+## [M5-ACM-CAP6-EXPLAIN] — 2026-07-23
+
+Promote certified ACM **v0.33.0** (`6185854`) as `aria-acm-v0.33.0-1`.
+M5 Cap6 Learning Explainability. Gates: `tests/test_aria_acm_m5_cap6.py`.
+
 ## [M5-ACM-CAP5-TEMPORAL] — 2026-07-23
 
 Promote certified ACM **v0.32.0** (`2ce664b`) as `aria-acm-v0.32.0-1`.

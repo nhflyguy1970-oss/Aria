@@ -841,6 +841,14 @@ class CognitiveEngine:
         """Cognitive question M7: What have I learned?"""
         return self.learning.what_have_i_learned(cue)
 
+    def explain_learning(self, cue: str = "") -> dict[str, Any]:
+        """M5 Cap6 — unified learning explainability (public language only)."""
+        return self.learning.explain_learning(cue)
+
+    def why_was_this_learned(self, cue: str = "") -> dict[str, Any]:
+        """M5 Cap6 — why a learned object exists / how confidence evolved."""
+        return self.learning.why_was_this_learned(cue)
+
     def list_temporal_patterns(
         self, *, include_dormant: bool = False, cue: str = ""
     ) -> dict[str, Any]:

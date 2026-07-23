@@ -4,14 +4,12 @@ Memory engine), derived from the certified standalone ACM repository
 unless explicitly contributed upstream. Automatic synchronization is forbidden.
 Standalone ACM remains the research and reference implementation.
 
-Source pin (M5-ACM-CAP5-TEMPORAL):
-  tag:    v0.32.0
-  commit: 2ce664b1d7faa78a435ea399859760e9e3d9ddce
-  version: 0.32.0
-  local:  aria-acm-v0.32.0-1
-  decision: Promote M5 Cap1–Cap5 (hierarchies, evidence, counterfactual,
-            abstraction, temporal patterns) after standalone Gates 1–4.
-  includes: M4 AML · M5 Cap1–Cap5 · D038–D047
+Source pin (M5-ACM-CAP6-EXPLAIN):
+  tag:    v0.33.0
+  commit: 6185854e2adf56aabc13d26f6a51d9fce660a01a
+  version: 0.33.0
+  local:  aria-acm-v0.33.0-1
+  decision: Promote M5 Cap6 Learning Explainability after standalone Gates 1–4.
 
 Aria-local bootstrap: `aria_acm/acm/__init__.py` registers `sys.modules["acm"]`
 to the nested package so absolute `from acm.*` imports resolve without

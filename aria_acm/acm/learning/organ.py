@@ -726,6 +726,252 @@ class LearningOrgan:
                 return hint
         return "recurring"
 
+    # --- M5 Cap6: Learning Explainability -------------------------------------
+
+    def explain_learning(self, cue_or_id: str = "") -> dict[str, Any]:
+        """Unified learning explainability — public language only, provenance preserved.
+
+        Answers why a learned object exists using adaptations, evidence, confidence
+        history, abstractions, predictions/hypotheses, temporal patterns, reflection,
+        consolidation, and adoption — without exposing implementation internals.
+        """
+        concept = self._resolve_explain_concept(cue_or_id)
+        if concept is None and cue_or_id:
+            # Try abstraction / pattern / hypothesis / prediction ids directly
+            direct = self._explain_by_artifact_id(cue_or_id)
+            if direct is not None:
+                return direct
+        if concept is None:
+            return {
+                "question": "Why was this learned?",
+                "known": False,
+                "answer": "I don't have a learned object matching that yet.",
+                "invents_experiences": False,
+                "exposes_internals": False,
+            }
+
+        cid = concept.id
+        label = concept.labels[0] if concept.labels else cid
+        adaptations = [
+            a
+            for a in self.store.adaptations.values()
+            if a.target_id == cid
+            or cid in (a.metadata or {}).values()
+            or any(
+                cid == str(v)
+                for v in (a.metadata or {}).values()
+                if isinstance(v, str)
+            )
+        ]
+        adaptations.sort(key=lambda a: a.created)
+        conf_hist = [
+            {
+                "when": e.timestamp,
+                "before": round(e.before, 4),
+                "after": round(e.after, 4),
+                "source": e.source,
+                "summary": e.summary,
+                "increased": e.after > e.before,
+                "decreased": e.after < e.before,
+            }
+            for e in self.store.confidence_events
+            if e.target_id == cid
+        ][-24:]
+        supporting_experiences = list(concept.evidence_ids)[-16:]
+        conflicting: list[str] = []
+        for a in adaptations:
+            if a.kind.value == "weaken":
+                conflicting.extend(a.evidence_experience_ids[-4:])
+        conflicting = list(dict.fromkeys(conflicting))
+
+        related_abs = [
+            abs_rec.to_public()
+            for abs_rec in self.store.abstractions.values()
+            if cid in abs_rec.supporting_concept_ids
+        ][:8]
+        related_patterns = [
+            p.to_public()
+            for p in self.store.temporal_patterns.values()
+            if cid in p.supporting_concept_ids
+            or label.casefold() in p.consequent.casefold()
+            or label.casefold() in p.antecedent.casefold()
+        ][:8]
+        related_hyps = [
+            h.to_public()
+            for h in self.store.hypotheses.values()
+            if h.concept_id == cid
+            or label.casefold() in h.claim.casefold()
+        ][:8]
+        related_audits = []
+        for aud in self.store.prediction_audits.values():
+            if aud.observed_concept_id == cid:
+                related_audits.append(aud.to_public())
+        related_audits = related_audits[-8:]
+        related_preds = [
+            p.to_public()
+            for p in self.store.predictions.values()
+            if cid in p.source_concept_ids
+            or any(o.concept_id == cid for o in p.outcomes)
+        ][-6:]
+
+        reflective = []
+        for a in adaptations:
+            reflective.extend(a.reflective_experience_ids)
+        reflective = list(dict.fromkeys(reflective))[:12]
+        sleep_batches = list(
+            dict.fromkeys(
+                a.sleep_batch_id for a in adaptations if a.sleep_batch_id
+            )
+        )[:8]
+        adopted = [
+            a.to_public()
+            for a in adaptations
+            if (a.metadata or {}).get("adopted")
+            or "adopt" in (a.summary or "").casefold()
+            or (a.metadata or {}).get("knowledge_adoption")
+        ][:6]
+        # Provenance for supporting experiences
+        provenance_ids = []
+        for eid in supporting_experiences[:8]:
+            for p in self.store.provenance_for(eid):
+                provenance_ids.append(p.id)
+
+        why = (
+            f"'{label}' was learned from {len(supporting_experiences)} supporting "
+            f"Experience(s)"
+            + (
+                f" and {len(adaptations)} learning adaptation(s)"
+                if adaptations
+                else ""
+            )
+            + f"; current confidence about {concept.confidence:.0%}."
+        )
+        if conf_hist:
+            last = conf_hist[-1]
+            why += (
+                f" Confidence last changed {last['before']:.0%}→{last['after']:.0%}"
+                f" ({last['source']})."
+            )
+
+        reversible = any(
+            a.applied and a.kind.value != "abstain" for a in adaptations
+        )
+        return {
+            "question": "Why was this learned?",
+            "known": True,
+            "answer": why,
+            "why_exists": why,
+            "label": label,
+            "concept_id": cid,
+            "supporting_evidence": supporting_experiences,
+            "conflicting_evidence": conflicting,
+            "supporting_experiences": supporting_experiences,
+            "supporting_concepts": [cid],
+            "supporting_abstractions": related_abs,
+            "supporting_predictions": related_preds,
+            "supporting_hypotheses": related_hyps,
+            "prediction_history": related_audits,
+            "hypothesis_history": related_hyps,
+            "abstraction_history": related_abs,
+            "confidence_history": conf_hist,
+            "confidence": round(concept.confidence, 4),
+            "confidence_increased": any(h["increased"] for h in conf_hist),
+            "confidence_decreased": any(h["decreased"] for h in conf_hist),
+            "temporal_pattern_influence": related_patterns,
+            "knowledge_adoption_history": adopted,
+            "reflection_influence": reflective,
+            "consolidation_influence": sleep_batches,
+            "adaptations": [a.to_public() for a in adaptations[-12:]],
+            "provenance_ids": provenance_ids[:16],
+            "has_evolved": len(adaptations) > 1 or len(conf_hist) > 1,
+            "reversible": reversible,
+            "why_reversible": (
+                "Applied adaptations can be rolled back to prior living-structure "
+                "snapshots; Experiences and provenance remain immutable."
+                if reversible
+                else "No reversible adaptation is recorded for this object yet."
+            ),
+            "invents_experiences": False,
+            "exposes_internals": False,
+            "plans": False,
+            "decides": False,
+        }
+
+    def why_was_this_learned(self, cue_or_id: str = "") -> dict[str, Any]:
+        """Cognitive alias for Cap6 explain_learning."""
+        return self.explain_learning(cue_or_id)
+
+    def _resolve_explain_concept(self, cue_or_id: str):
+        if not cue_or_id:
+            return None
+        concept = self.store.concepts.get(cue_or_id)
+        if concept is not None:
+            return concept
+        matches = self.store.find_concepts_by_label(cue_or_id)
+        if matches:
+            return matches[0]
+        q = cue_or_id.casefold()
+        for c in self.store.concepts.values():
+            if any(q in lab.casefold() for lab in c.labels):
+                return c
+            if q in " ".join(c.labels).casefold():
+                return c
+        return None
+
+    def _explain_by_artifact_id(self, artifact_id: str) -> dict[str, Any] | None:
+        if artifact_id in self.store.abstractions and self.concepts is not None:
+            return {
+                **self.concepts.explain_abstraction(artifact_id),
+                "question": "Why was this learned?",
+                "exposes_internals": False,
+            }
+        if artifact_id in self.store.temporal_patterns:
+            return {
+                **self.explain_temporal_pattern(artifact_id),
+                "question": "Why was this learned?",
+                "exposes_internals": False,
+            }
+        if artifact_id in self.store.hypotheses:
+            hyp = self.store.hypotheses[artifact_id]
+            return {
+                "question": "Why was this learned?",
+                "known": True,
+                "answer": (
+                    f"Hypothesis '{hyp.claim}' is {hyp.status.value} "
+                    f"(confidence {hyp.confidence:.0%})."
+                ),
+                "supporting_evidence": list(hyp.supporting_ids),
+                "conflicting_evidence": list(hyp.conflicting_ids),
+                "hypothesis_history": [hyp.to_public()],
+                "invents_experiences": False,
+                "exposes_internals": False,
+            }
+        if artifact_id in self.store.prediction_audits:
+            aud = self.store.prediction_audits[artifact_id]
+            return {
+                "question": "Why was this learned?",
+                "known": True,
+                "answer": aud.explanation,
+                "prediction_history": [aud.to_public()],
+                "invents_experiences": False,
+                "exposes_internals": False,
+            }
+        if artifact_id in self.store.adaptations:
+            ad = self.store.adaptations[artifact_id]
+            return {
+                "question": "Why was this learned?",
+                "known": True,
+                "answer": ad.summary or f"Adaptation {ad.kind.value} recorded.",
+                "adaptations": [ad.to_public()],
+                "supporting_evidence": list(ad.evidence_experience_ids),
+                "reflection_influence": list(ad.reflective_experience_ids),
+                "consolidation_influence": [ad.sleep_batch_id] if ad.sleep_batch_id else [],
+                "reversible": ad.applied,
+                "invents_experiences": False,
+                "exposes_internals": False,
+            }
+        return None
+
     def observables(self) -> dict[str, Any]:
         return {
             "adaptation_count": len(self.store.adaptations),
