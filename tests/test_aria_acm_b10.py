@@ -1,4 +1,4 @@
-"""Aria promotion gates — ACM v0.41.0 B10 Conversation-Safe Debugging."""
+"""Aria promotion gates — ACM v0.42.0 B10 Conversation-Safe Debugging."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ def test_b10_pin() -> None:
     data = json.loads(
         (Path(__file__).resolve().parents[1] / "aria_acm" / "VERSION.json").read_text()
     )
-    assert data["source_version"] == "0.41.0"
-    assert data["aria_acm_local_version"] == "aria-acm-v0.41.0-1"
-    assert data["promotion"] == "B21-RELATIONSHIP-PRESENTATION"
+    assert data["source_version"] == "0.42.0"
+    assert data["aria_acm_local_version"] == "aria-acm-v0.42.0-1"
+    assert data["promotion"] == "B36-ERASE-GOVERNANCE"
 
 
 def test_b10_debug_capture_parity() -> None:
@@ -24,7 +24,7 @@ def test_b10_debug_capture_parity() -> None:
     )
     from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT
 
-    assert __version__ == "0.41.0"
+    assert __version__ == "0.42.0"
     eng = CognitiveEngine(
         agent_id="aria-b10",
         conversation_debug_policy=with_debug_enabled(

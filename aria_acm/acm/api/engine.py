@@ -120,6 +120,8 @@ class CognitiveEngine:
 
         self._conflict_gate = ConflictResolutionGate()
         self._identity_corrections: dict[str, dict[str, Any]] = {}
+        self._erase_gate = None
+        self._erase_audits: dict[str, dict[str, Any]] = {}
         self.durable = None
         if persist_path:
             from acm.persistence import DurableCognitiveStore
@@ -1887,6 +1889,48 @@ class CognitiveEngine:
         from acm.authority.identity_edit import pending_identity_changes
 
         return pending_identity_changes(self)
+
+    def preview_erase_request(self, text: str) -> dict[str, Any]:
+        """B36 — preview soft-forget / prune / legal-erase impact (read-only)."""
+        from acm.authority.erase_governance import preview_erase_request
+
+        return preview_erase_request(self, text)
+
+    def propose_erase_request(self, text: str) -> dict[str, Any]:
+        """B36 — propose erase/forget pending assent."""
+        from acm.authority.erase_governance import propose_erase_request
+
+        return propose_erase_request(self, text)
+
+    def assent_erase_request(self, proposal_id: str) -> dict[str, Any]:
+        """B36 — assent a pending erase/forget proposal."""
+        from acm.authority.erase_governance import assent_erase_request
+
+        return assent_erase_request(self, proposal_id)
+
+    def reject_erase_request(self, proposal_id: str) -> dict[str, Any]:
+        """B36 — reject a pending erase/forget proposal."""
+        from acm.authority.erase_governance import reject_erase_request
+
+        return reject_erase_request(self, proposal_id)
+
+    def cancel_erase_request(self, proposal_id: str) -> dict[str, Any]:
+        """B36 — cancel a pending erase/forget proposal."""
+        from acm.authority.erase_governance import cancel_erase_request
+
+        return cancel_erase_request(self, proposal_id)
+
+    def apply_erase_request(self, text: str, *, assent: bool = True) -> dict[str, Any]:
+        """B36 — trusted-host erase/forget commit (or propose if assent=False)."""
+        from acm.authority.erase_governance import apply_erase_request
+
+        return apply_erase_request(self, text, assent=assent)
+
+    def pending_erase_requests(self) -> dict[str, Any]:
+        """B36 — list pending erase/forget proposals (read-only)."""
+        from acm.authority.erase_governance import pending_erase_requests
+
+        return pending_erase_requests(self)
 
     def present_relationship_memory(self, request: str) -> dict[str, Any]:
         """B21 — explicit relationship-memory presentation (D044; read-only)."""
