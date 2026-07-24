@@ -31,12 +31,25 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.
 
+## Wave resume (2026-07-24 late afternoon)
+- FIXED & CERTIFIED: non-blocking task nudge (replaced `confirm()`); prompt-history one-click delete + undo restore API; flytying export/print + cheatsheet/session gating; maker `ok:false` gate + printer empty CTA; voice duplex/STT/stop toasts; meme delete; upgrade propose gate; browser screenshot warn; audit install_key XSS; tools/projects empty CTAs; revoke/benchmark/cancel/install-poll gates; 9 broken element-ID wirings + STT `#listeningPartial`; tool-confirm modal wired into chat + HA entity actions; recovered Decompyle++ corruption (`p1–p5` flags, `web_browse`, `situational_briefing`, `notify_util`, `restart_flag`, `diff_util`, `service_policy`); chat busy-stuck + stream-drop toast; palette speak-replies/uncensored/server-Whisper/LAN/Actions; Audit→Actions; **60m soak 686 rounds / 0 fails** (avg 35ms); follow-on 60m soak running (`/tmp/aria_ui_soak_60m_b.log`).
+- INTENTIONALLY DEFERRED: multi-hour soak (>60m); multi-monitor DPI/dock; HA live (`:8123` refused); Comfy live gen; phone layouts; `JARVIS_FIRST_RUN_MODELS` default remains off (avoid surprise multi-GB pulls on GUI boot — enable via env/CLI intentionally).
+- Verdict: **NO**
+
+**Resume priorities:**
+1. Collect `/tmp/aria_ui_soak_60m_b.log` when finished; optional multi-hour soak.
+2. HA/Comfy live when those services are up.
+3. Multi-monitor / DPI certification.
+4. Remaining Decompyle++ style cleanup (modules import clean; headers stripped).
+5. First-run model pull progress in startup overlay (only if flag on).
+6. Exhaustive per-control matrix completion for residual panels.
+
 ## Wave resume (2026-07-24 evening++)
-- FIXED & CERTIFIED: journal migrate/index/habit/review/calendar-note/key/preset success gating; dashboard clock leak fixed; palette Stop speaking; Documents↔Journal + Planner→Documents + Dashboard→Calendar; audit empty CTA; icon aria-labels; **15m soak 285 rounds / 0 fails** (60m soak PID 2682009 running).
+- FIXED & CERTIFIED: journal migrate/index/habit/review/calendar-note/key/preset success gating; dashboard clock leak fixed; palette Stop speaking; Documents↔Journal + Planner→Documents + Dashboard→Calendar; audit empty CTA; icon aria-labels; **15m soak 285 rounds / 0 fails** (60m soak completed later with 0 fails).
 - INTENTIONALLY DEFERRED: multi-hour soak completion; multi-monitor DPI/dock; HA live (`:8123` refused); Comfy live gen; phone layouts.
 - Verdict: **NO**
 
-**Resume:** collect `/tmp/aria_ui_soak_60m.log`; HA/Comfy when up; multi-monitor; residual matrix / flytying fav a11y if any remain.
+**Resume (superseded):** see late-afternoon wave above.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.
