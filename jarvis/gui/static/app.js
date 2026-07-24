@@ -2337,7 +2337,6 @@ async function loadVisionSettings() {
     }
   } catch (err) {
     if (note) note.textContent = "Vision settings unavailable";
-    window.showAriaToast?.(err.message || "Vision settings unavailable", "err", 4000);
   }
 }
 
@@ -3484,8 +3483,12 @@ uncensoredToggle.addEventListener("change", async () => {
     const form = new FormData();
     form.append("uncensored", "false");
     const res = await fetch("/api/mode", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) return;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      window.showAriaToast?.(data.message || "Could not leave uncensored mode", "err", 5000);
+      uncensoredToggle.checked = true;
+      return;
+    }
     sessionStorage.removeItem(UNCENSORED_SESSION_KEY);
     document.body.classList.toggle("uncensored-mode", data.uncensored);
     modeLabel.textContent = data.uncensored ? "Uncensored · Local" : "Local AI Assistant";
@@ -3521,7 +3524,9 @@ uncensoredToggle.addEventListener("change", async () => {
   const res = await fetch("/api/mode", { method: "POST", body: form });
   const data = await res.json();
   if (!res.ok || data.ok === false) {
-    statusText.textContent = data.message || "Uncensored unlock failed";
+    const failMsg = data.message || "Uncensored unlock failed";
+    if (statusText) statusText.textContent = failMsg;
+    window.showAriaToast?.(failMsg, "err", 5000);
     if (data.message && (data.message.includes("match") || data.message.includes("Confirm") || data.message.includes("Wrong"))) {
       const retry = await showUncensoredPasswordModal(
         data.message.includes("match") || data.message.includes("Confirm") || !auth.configured,
@@ -3550,6 +3555,7 @@ uncensoredToggle.addEventListener("change", async () => {
   uncensoredToggle.checked = true;
   document.body.classList.toggle("uncensored-mode", data.uncensored);
   modeLabel.textContent = data.uncensored ? "Uncensored · Local" : "Local AI Assistant";
+  window.showAriaToast?.(data.uncensored ? "Uncensored mode unlocked" : "Standard mode", "ok", 3000);
   const settings = await loadModelSettings();
   if (settings) renderModelSettings({ ...settings, mode: data.uncensored ? "uncensored" : "standard" });
   if (data.comfyui_settings) {
@@ -4085,12 +4091,14 @@ debugBundleBtn?.addEventListener("click", async () => {
     const text = data.text || JSON.stringify(data, null, 2);
     if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
-      statusText.textContent = "Debug bundle copied to clipboard";
+      if (statusText) statusText.textContent = "Debug bundle copied to clipboard";
+      window.showAriaToast?.("Debug bundle copied", "ok", 2500);
     } else {
       prompt("Copy debug bundle:", text.slice(0, 8000));
     }
   } catch (e) {
     showError(`Debug bundle failed: ${e.message || e}`);
+    window.showAriaToast?.(`Debug bundle failed: ${e.message || e}`, "err", 5000);
   }
 });
 
