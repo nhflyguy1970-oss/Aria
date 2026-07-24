@@ -854,7 +854,7 @@
             : '<span class="flytying-video-thumb"></span>';
         const label = providerLabel(v);
         const delBtn = v.custom
-          ? `<button type="button" class="flytying-video-del" data-ckey="${esc(customVideoKey(v))}" title="Remove custom video">×</button>`
+          ? `<button type="button" class="flytying-video-del" data-ckey="${esc(customVideoKey(v))}" title="Remove custom video" aria-label="Remove custom video">×</button>`
           : "";
         return `<li class="flytying-video-item">${delBtn}<button type="button" class="flytying-video-btn${vkey === _selectedVideoKey ? " active" : ""}" data-vidx="${idx}" data-vkey="${esc(vkey)}" data-recipe="${esc(v.recipe_id || v.recipe_name || "")}">${thumb}<span class="flytying-video-meta"><span class="flytying-video-provider">${esc(label)}</span><span>${esc(v.recipe_name || v.title)}</span></span></button></li>`;
       })

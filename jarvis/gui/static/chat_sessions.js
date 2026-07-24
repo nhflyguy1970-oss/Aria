@@ -43,7 +43,7 @@
           const branchHint = s.branch_id ? ` <span class="muted small">→ ${esc(s.branch_id)}</span>` : "";
           return `<li data-id="${esc(s.id)}" data-branch="${esc(s.branch_id || "")}"><button type="button" class="chat-session-btn${s.pinned ? " pinned" : ""}">`
             + `${pin}${esc(s.title || s.id)}</button>${branchHint}`
-            + `<button type="button" class="ghost-btn tiny chat-session-pin" title="Pin">★</button>`
+            + `<button type="button" class="ghost-btn tiny chat-session-pin" title="Pin session" aria-label="Pin session">★</button>`
             + `</li>`;
         }).join("")
         : "<li class='muted'>No saved sessions. <button type='button' class='ghost-btn tiny' id='chatSessionsEmptyNewBtn'>New session</button> or use + Branch</li>";

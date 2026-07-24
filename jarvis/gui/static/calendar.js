@@ -295,7 +295,7 @@ function renderWorkScheduleEditor(sched) {
         <input type="time" class="cal-ws-start audio-path-input" value="${escapeHtml(b.start)}" />
         <input type="time" class="cal-ws-end audio-path-input" value="${escapeHtml(b.end)}" />
         <input type="text" class="cal-ws-label audio-path-input" value="${escapeHtml(b.label || "Work")}" placeholder="Label" />
-        <button type="button" class="ghost-btn tiny cal-ws-remove">×</button>
+        <button type="button" class="ghost-btn tiny cal-ws-remove" title="Remove work block" aria-label="Remove work block">×</button>
       </div>`
     ).join("");
     html += `<div class="cal-work-day" data-day="${key}">
@@ -318,7 +318,7 @@ function renderWorkScheduleEditor(sched) {
         <input type="time" class="cal-ws-start audio-path-input" value="09:00" />
         <input type="time" class="cal-ws-end audio-path-input" value="17:00" />
         <input type="text" class="cal-ws-label audio-path-input" value="Work" />
-        <button type="button" class="ghost-btn tiny cal-ws-remove">×</button>
+        <button type="button" class="ghost-btn tiny cal-ws-remove" title="Remove work block" aria-label="Remove work block">×</button>
       </div>`);
       bindWorkRemove(el);
     });

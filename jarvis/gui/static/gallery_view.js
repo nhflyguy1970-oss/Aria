@@ -126,7 +126,7 @@
       el.innerHTML = items.length
         ? items.map((p) => `<div class="prompt-history-item">
           <button type="button" class="ghost-btn small prompt-reuse" data-prompt="${escapeHtml(p.prompt)}">Reuse</button>
-          <button type="button" class="ghost-btn small prompt-fav" data-id="${escapeHtml(p.id)}">${p.favorite ? "★" : "☆"}</button>
+          <button type="button" class="ghost-btn small prompt-fav" data-id="${escapeHtml(p.id)}" title="${p.favorite ? "Unfavorite" : "Favorite"}" aria-label="${p.favorite ? "Unfavorite prompt" : "Favorite prompt"}">${p.favorite ? "★" : "☆"}</button>
           <button type="button" class="ghost-btn small prompt-del" data-id="${escapeHtml(p.id)}" title="Delete" aria-label="Delete saved prompt">×</button>
           <span class="prompt-text">${escapeHtml(p.prompt.slice(0, 120))}${p.prompt.length > 120 ? "…" : ""}</span>
         </div>`).join("")

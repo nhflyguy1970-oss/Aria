@@ -238,7 +238,7 @@ async function loadVideoGallery() {
     }
     grid.innerHTML = videos.map((v) => {
       return `<div class="video-gallery-item" data-path="${escapeHtml(v.path)}" data-video-name="${escapeHtml(v.name)}">
-        <button type="button" class="gallery-del video-del" data-name="${escapeHtml(v.name)}" title="Delete">×</button>
+        <button type="button" class="gallery-del video-del" data-name="${escapeHtml(v.name)}" title="Delete video" aria-label="Delete video">×</button>
         <video preload="metadata" class="video-thumb clickable-video" title="Click to open player"></video>
         <p class="video-item-name">${escapeHtml(v.name)}</p>
         <button type="button" class="ghost-btn small video-analyze-btn" data-path="${escapeHtml(v.path)}">Analyze frame</button>
