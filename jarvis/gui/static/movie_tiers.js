@@ -829,14 +829,17 @@
     if (list) list.classList.add("hidden");
     out.innerHTML = "<li class='muted'>Searching…</li>";
     try {
-      const data = await fetchJson(`/api/documents/search?q=${encodeURIComponent(q)}&limit=8`);
+      const res = await fetch(`/api/documents/search?q=${encodeURIComponent(q)}&limit=8`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.detail || `Search failed (${res.status})`);
       const hits = data.hits || [];
       out.innerHTML = hits.length
         ? hits.map((h) => `<li><strong>${escapeHtml(h.title || h.source || "?")}</strong> `
           + `<span class="muted">${escapeHtml((h.text || "").slice(0, 120))}…</span></li>`).join("")
         : "<li class='muted'>No matches</li>";
-    } catch (_) {
-      out.innerHTML = "<li>Search failed</li>";
+    } catch (err) {
+      out.innerHTML = `<li class='muted'>${escapeHtml(err.message || "Search failed")}</li>`;
+      window.showAriaToast?.(err.message || "Document search failed", "err", 5000);
     }
   }
 

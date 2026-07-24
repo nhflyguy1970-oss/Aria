@@ -4910,18 +4910,27 @@ function initMemoryBrowser() {
       alert("Choose a cheatsheet first");
       return;
     }
-    const res = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}`);
-    const data = await res.json();
-    if (!data.ok) return;
-    const next = prompt("Edit cheatsheet (markdown):", data.cheatsheet?.content || "");
-    if (next == null || next.trim() === data.cheatsheet?.content) return;
-    await fetch(`/api/cheatsheets/${encodeURIComponent(key)}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: next.trim() }),
-    });
-    loadMemoryBrowser();
-    showCheatsheet(key);
+    try {
+      const res = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) throw new Error(data.message || data.detail || "Could not load cheatsheet");
+      const next = prompt("Edit cheatsheet (markdown):", data.cheatsheet?.content || "");
+      if (next == null || next.trim() === data.cheatsheet?.content) return;
+      const put = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: next.trim() }),
+      });
+      const putData = await put.json().catch(() => ({}));
+      if (!put.ok || putData.ok === false) {
+        throw new Error(putData.message || putData.detail || `Save failed (${put.status})`);
+      }
+      window.showAriaToast?.("Cheatsheet saved", "ok", 2500);
+      loadMemoryBrowser();
+      showCheatsheet(key);
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Cheatsheet save failed", "err", 5000);
+    }
   });
   document.getElementById("cheatsheetResetBtn")?.addEventListener("click", async () => {
     const key = document.getElementById("cheatsheetSelect")?.value;
@@ -4930,9 +4939,18 @@ function initMemoryBrowser() {
       return;
     }
     if (!confirm(`Restore the default ${key} cheatsheet? Your edits will be lost.`)) return;
-    await fetch(`/api/cheatsheets/${encodeURIComponent(key)}/reset`, { method: "POST" });
-    loadMemoryBrowser();
-    showCheatsheet(key);
+    try {
+      const res = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}/reset`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.message || data.detail || `Reset failed (${res.status})`);
+      }
+      window.showAriaToast?.("Cheatsheet reset to default", "ok", 2500);
+      loadMemoryBrowser();
+      showCheatsheet(key);
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Cheatsheet reset failed", "err", 5000);
+    }
   });
 }
 
