@@ -110,11 +110,19 @@
           body: JSON.stringify({ pin }),
         });
         const data = await res.json();
-        if (out) out.textContent = res.ok ? "PIN saved" : (data.message || "Failed");
-        if (res.ok) $("securityPinInput").value = "";
+        if (!res.ok) {
+          const msg = data.message || "Failed";
+          if (out) out.textContent = msg;
+          window.showAriaToast?.(msg, "err", 5000);
+          return;
+        }
+        if (out) out.textContent = "PIN saved";
+        $("securityPinInput").value = "";
+        window.showAriaToast?.("PIN saved", "ok", 2500);
         refreshSecurityPanel();
       } catch (e) {
         if (out) out.textContent = e.message || "Failed";
+        window.showAriaToast?.(e.message || "PIN setup failed", "err", 5000);
       }
     });
     $("securityLockBtn")?.addEventListener("click", async () => {

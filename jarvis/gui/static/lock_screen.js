@@ -77,7 +77,9 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        if (err) err.textContent = data.message || "Unlock failed";
+        const msg = data.message || "Unlock failed";
+        if (err) err.textContent = msg;
+        window.showAriaToast?.(msg, "err", 4000);
         return;
       }
       setSession(data.session);
@@ -85,8 +87,11 @@
       if (err) err.textContent = "";
       resetIdle();
       notifyUnlocked();
+      window.showAriaToast?.("Unlocked", "ok", 2000);
     } catch (e) {
-      if (err) err.textContent = String(e.message || e);
+      const msg = String(e.message || e);
+      if (err) err.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
     }
   }
 
@@ -132,7 +137,9 @@
       });
       const data = await res.json();
       if (!res.ok) {
-        if (err) err.textContent = data.message || "Face unlock failed";
+        const msg = data.message || "Face unlock failed";
+        if (err) err.textContent = msg;
+        window.showAriaToast?.(msg, "err", 4000);
         return;
       }
       setSession(data.session);
@@ -140,8 +147,11 @@
       if (err) err.textContent = "";
       resetIdle();
       notifyUnlocked();
+      window.showAriaToast?.("Unlocked with face", "ok", 2000);
     } catch (e) {
-      if (err) err.textContent = String(e.message || e);
+      const msg = String(e.message || e);
+      if (err) err.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
     }
   }
 
@@ -156,6 +166,7 @@
       const status = $("pinSetupStatus");
       if (!pin) {
         if (status) status.textContent = "Enter 4–6 digits";
+        window.showAriaToast?.("Enter 4–6 digits", "warn", 3000);
         return;
       }
       try {
@@ -164,11 +175,20 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pin }),
         });
-        const data = await res.json();
-        if (status) status.textContent = res.ok ? "PIN saved" : (data.message || "Setup failed");
-        if (res.ok) $("pinSetupInput").value = "";
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const msg = data.message || "Setup failed";
+          if (status) status.textContent = msg;
+          window.showAriaToast?.(msg, "err", 5000);
+          return;
+        }
+        if (status) status.textContent = "PIN saved";
+        $("pinSetupInput").value = "";
+        window.showAriaToast?.("PIN saved", "ok", 2500);
       } catch (e) {
-        if (status) status.textContent = String(e.message || e);
+        const msg = String(e.message || e);
+        if (status) status.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
       }
     });
     checkLock();
