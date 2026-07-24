@@ -146,7 +146,13 @@ async function restoreUncensoredSession() {
     document.body.classList.add("uncensored-mode");
     (document.getElementById("modeLabel") || {}).textContent = "Uncensored · Local AI Assistant";
     if (data.comfyui_settings) window.loadComfyMode?.();
-  } catch (_) {}
+  } catch (e) {
+    window.showAriaToast?.(
+      `Could not restore uncensored session: ${e?.message || e}`,
+      "err",
+      5000,
+    );
+  }
 }
 
 uncensoredToggle?.addEventListener("change", async () => {

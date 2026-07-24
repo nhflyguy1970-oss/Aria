@@ -67,7 +67,15 @@ function renderPlanner(data) {
   const tasks = data.tasks || [];
   tasksEl.innerHTML = "";
   if (!tasks.length) {
-    tasksEl.innerHTML = "<li class='muted'>No tasks yet</li>";
+    tasksEl.innerHTML =
+      "<li class='muted'>No tasks yet. <button type='button' class='ghost-btn tiny' id='plannerEmptyAddBtn'>Add task</button> or ask in <button type='button' class='ghost-btn tiny' id='plannerEmptyChatBtn'>Chat</button></li>";
+    tasksEl.querySelector("#plannerEmptyAddBtn")?.addEventListener("click", () => {
+      $("plannerTaskInput")?.focus();
+    });
+    tasksEl.querySelector("#plannerEmptyChatBtn")?.addEventListener("click", () => {
+      window.switchToView?.("chat");
+      window.jarvisSendToChat?.("Add a planner task: ");
+    });
   }
   tasks.forEach((t) => {
     const li = document.createElement("li");
@@ -94,7 +102,18 @@ function renderPlanner(data) {
   };
   timersEl.innerHTML = (data.timers || []).map((t) => `<li>${fmtTimer(t)}</li>`).join("") || "<li class='muted'>No active timers</li>";
   alarmsEl.innerHTML = (data.alarms || []).map((a) => `<li>${a.label || "alarm"} @ ${(a.fire_at || "").slice(11, 16)}</li>`).join("") || "<li class='muted'>No alarms</li>";
-  eventsEl.innerHTML = (data.events_today || []).map((e) => `<li>${(e.start_time || "").slice(11, 16)} ${e.title}</li>`).join("") || "<li class='muted'>No events today</li>";
+  const events = data.events_today || [];
+  if (!events.length) {
+    eventsEl.innerHTML =
+      "<li class='muted'>No events today. <button type='button' class='ghost-btn tiny' id='plannerEmptyCalBtn'>Open Calendar</button></li>";
+    eventsEl.querySelector("#plannerEmptyCalBtn")?.addEventListener("click", () => {
+      window.switchToView?.("calendar");
+    });
+  } else {
+    eventsEl.innerHTML = events
+      .map((e) => `<li>${(e.start_time || "").slice(11, 16)} ${e.title}</li>`)
+      .join("");
+  }
 }
 
 async function loadPlanner() {
@@ -532,7 +551,11 @@ async function loadSkillsWorkflows() {
                 `<li><strong>${s.name || s.slug}</strong> <span class="muted">${s.description || ""}</span></li>`
             )
             .join("")
-        : "<li class='muted'>No skills installed</li>";
+        : "<li class='muted'>No skills installed — use Chat to teach Aria a skill, or open <button type='button' class='ghost-btn tiny' id='skillsEmptyChatBtn'>Chat</button></li>";
+      skillsEl.querySelector("#skillsEmptyChatBtn")?.addEventListener("click", () => {
+        window.switchToView?.("chat");
+        window.jarvisSendToChat?.("Help me create a reusable skill for ");
+      });
     }
     if (workflowsEl) {
       const workflows = wfData.workflows || [];
@@ -543,7 +566,12 @@ async function loadSkillsWorkflows() {
                 `<li><strong>${w.name || w.slug}</strong> <span class="muted">${w.count || 1}× · ${w.steps || 0} steps</span></li>`
             )
             .join("")
-        : "<li class='muted'>No learned workflows yet</li>";
+        : "<li class='muted'>No learned workflows yet. <button type='button' class='ghost-btn tiny' id='wfEmptyScanBtn'>Scan action log</button></li>";
+      workflowsEl.querySelector("#wfEmptyScanBtn")?.addEventListener("click", () => {
+        const btn = $("workflowScanBtn");
+        if (btn) btn.click();
+        else scanWorkflowsFromActionLog();
+      });
     }
   } catch (e) {
     if (skillsEl) skillsEl.innerHTML = `<li class='muted'>${e.message}</li>`;

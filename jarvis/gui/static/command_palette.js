@@ -405,6 +405,16 @@
         },
       },
       {
+        id: "act:compare-images",
+        label: "Compare two images",
+        group: "Actions",
+        keywords: "vision attach side-by-side diff",
+        run: () => {
+          goView("chat");
+          setTimeout(() => document.getElementById("compareModeBtn")?.click(), 80);
+        },
+      },
+      {
         id: "act:planner-task",
         label: "Add planner task",
         group: "Actions",

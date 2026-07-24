@@ -230,7 +230,7 @@ function renderPhotosBlock(day, photos) {
     </figure>`).join("");
   return `<div class="bujo-photos" data-day="${escapeHtml(day)}">
     <h4>Photos</h4>
-    <div class="bujo-photo-grid">${items || '<p class="bujo-empty">No photos yet.</p>'}</div>
+    <div class="bujo-photo-grid">${items || '<p class="bujo-empty">No photos yet. Add one below, or open <button type="button" class="ghost-btn tiny" id="bujoEmptyGalleryBtn">Gallery</button>.</p>'}</div>
     <div class="bujo-photo-add">
       <input type="file" id="bujoPhotoFile" accept="image/*" />
       <input type="text" id="bujoPhotoCaption" placeholder="Caption (optional)" />
@@ -444,6 +444,9 @@ function bindLinkClicks() {
 
 function bindDayExtras(day) {
   bindWellnessExtras(day);
+  document.getElementById("bujoEmptyGalleryBtn")?.addEventListener("click", () => {
+    window.switchToView?.("gallery");
+  });
   document.getElementById("bujoSavePrompts")?.addEventListener("click", async () => {
     const form = new FormData();
     form.append("day", day);
