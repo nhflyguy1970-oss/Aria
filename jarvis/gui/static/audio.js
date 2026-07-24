@@ -1047,61 +1047,73 @@ async function loadAudioPanel() {
       return;
     }
     statusEl.textContent = "Transcribing…";
-    const form = new FormData();
-    form.append("file", file);
-    form.append("model", selectedWhisperModel());
-    const res = await fetch("/api/audio/transcribe-upload", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "Transcribe failed", "err");
-      return;
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("model", selectedWhisperModel());
+      const res = await fetch("/api/audio/transcribe-upload", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        audioStatus(statusEl, data.message || data.error || `Transcribe failed (${res.status})`, "err");
+        return;
+      }
+      setAudioLastPath(data.path);
+      audioStatus(statusEl, "Transcript ready", "ok");
+      showPlayback(data.path, data.transcript);
+      await loadWaveform(data.path);
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "Transcribe failed", "err");
     }
-    setAudioLastPath(data.path);
-    audioStatus(statusEl, "Transcript ready", "ok");
-    showPlayback(data.path, data.transcript);
-    await loadWaveform(data.path);
   });
 
   document.getElementById("audioTranscribePathBtn")?.addEventListener("click", async () => {
     const path = document.getElementById("audioTranscribePath")?.value.trim();
     if (!path) return;
     statusEl.textContent = "Transcribing…";
-    const form = new FormData();
-    form.append("path", path);
-    form.append("model", selectedWhisperModel());
-    const res = await fetch("/api/audio/transcribe", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "Transcribe failed", "err");
-      return;
+    try {
+      const form = new FormData();
+      form.append("path", path);
+      form.append("model", selectedWhisperModel());
+      const res = await fetch("/api/audio/transcribe", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        audioStatus(statusEl, data.message || data.error || `Transcribe failed (${res.status})`, "err");
+        return;
+      }
+      setAudioLastPath(path);
+      audioStatus(statusEl, "Transcript ready", "ok");
+      showPlayback(path, data.transcript);
+      await loadWaveform(path);
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "Transcribe failed", "err");
     }
-    setAudioLastPath(path);
-    audioStatus(statusEl, "Transcript ready", "ok");
-    showPlayback(path, data.transcript);
-    await loadWaveform(path);
   });
 
   async function runTts(play) {
     const text = document.getElementById("audioTtsText")?.value.trim();
     if (!text) return;
     statusEl.textContent = "Generating speech…";
-    const form = new FormData();
-    form.append("text", text);
-    form.append("auto_play", play ? "1" : "0");
-    const res = await fetch("/api/audio/generate", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "TTS failed", "err");
-      return;
+    try {
+      const form = new FormData();
+      form.append("text", text);
+      form.append("auto_play", play ? "1" : "0");
+      const res = await fetch("/api/audio/generate", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        audioStatus(statusEl, data.message || data.error || `TTS failed (${res.status})`, "err");
+        return;
+      }
+      audioStatus(statusEl, play ? "Playing on Sound Blaster…" : `Saved: ${data.audio_path}`, "ok");
+      const ttsPreview = document.getElementById("audioTtsPreview");
+      if (ttsPreview && data.audio_path) {
+        ttsPreview.src = audioFileUrl(data.audio_path);
+        ttsPreview.load();
+        ttsPreview.classList.remove("hidden");
+      }
+      refreshRecentLists();
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "TTS failed", "err");
     }
-    audioStatus(statusEl, play ? "Playing on Sound Blaster…" : `Saved: ${data.audio_path}`, "ok");
-    const ttsPreview = document.getElementById("audioTtsPreview");
-    if (ttsPreview && data.audio_path) {
-      ttsPreview.src = audioFileUrl(data.audio_path);
-      ttsPreview.load();
-      ttsPreview.classList.remove("hidden");
-    }
-    refreshRecentLists();
   }
 
   document.getElementById("audioTtsBtn")?.addEventListener("click", () => runTts(false));
@@ -1111,40 +1123,44 @@ async function loadAudioPanel() {
     const prompt = document.getElementById("audioMusicPrompt")?.value.trim();
     if (!prompt) return;
     statusEl.textContent = "Queueing music generation…";
-    const form = new FormData();
-    form.append("prompt", prompt);
-    form.append("duration", document.getElementById("audioMusicDur")?.value || "10");
-    form.append("async_job", "1");
-    const res = await fetch("/api/audio/music", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "MusicGen failed", "err");
-      return;
-    }
-    if (data.job_id && typeof window.pollAudioJob === "function") {
-      await window.pollAudioJob(data.job_id, statusEl, (result) => {
-        const path = result?.audio_path;
-        if (!path) return;
-        statusEl.textContent = `Saved: ${path}`;
+    try {
+      const form = new FormData();
+      form.append("prompt", prompt);
+      form.append("duration", document.getElementById("audioMusicDur")?.value || "10");
+      form.append("async_job", "1");
+      const res = await fetch("/api/audio/music", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        audioStatus(statusEl, data.message || data.error || `MusicGen failed (${res.status})`, "err");
+        return;
+      }
+      if (data.job_id && typeof window.pollAudioJob === "function") {
+        await window.pollAudioJob(data.job_id, statusEl, (result) => {
+          const path = result?.audio_path;
+          if (!path) return;
+          statusEl.textContent = `Saved: ${path}`;
+          const mp = document.getElementById("audioMusicPreview");
+          if (mp) {
+            mp.src = audioFileUrl(path);
+            mp.load();
+            mp.classList.remove("hidden");
+          }
+          refreshRecentLists();
+        });
+        return;
+      }
+      if (data.audio_path) {
+        statusEl.textContent = `Saved: ${data.audio_path}`;
         const mp = document.getElementById("audioMusicPreview");
         if (mp) {
-          mp.src = audioFileUrl(path);
+          mp.src = audioFileUrl(data.audio_path);
           mp.load();
           mp.classList.remove("hidden");
         }
         refreshRecentLists();
-      });
-      return;
-    }
-    if (data.audio_path) {
-      statusEl.textContent = `Saved: ${data.audio_path}`;
-      const mp = document.getElementById("audioMusicPreview");
-      if (mp) {
-        mp.src = audioFileUrl(data.audio_path);
-        mp.load();
-        mp.classList.remove("hidden");
       }
-      refreshRecentLists();
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "MusicGen failed", "err");
     }
   });
 
@@ -1189,24 +1205,36 @@ async function loadAudioPanel() {
 
   document.getElementById("audioBatchBtn")?.addEventListener("click", async () => {
     const paths = document.getElementById("audioBatchPaths")?.value.trim();
-    if (!paths) return;
+    if (!paths) {
+      window.showAriaToast?.("Enter one path per line to batch-transcribe", "warn", 3000);
+      return;
+    }
     setAudioBusy(true);
     statusEl.textContent = "Batch transcribing…";
-    const form = new FormData();
-    form.append("paths", paths);
-    form.append("model", selectedWhisperModel());
-    form.append("language", document.getElementById("audioWhisperLang")?.value || "en");
-    const res = await fetch("/api/audio/batch-transcribe", { method: "POST", body: form });
-    const data = await res.json();
-    const out = document.getElementById("audioBatchOut");
-    if (out) {
-      out.textContent = (data.results || []).map((r) =>
-        `${r.path}\n${r.ok ? r.transcript : r.transcript}\n---`
-      ).join("\n");
-      out.classList.remove("hidden");
+    try {
+      const form = new FormData();
+      form.append("paths", paths);
+      form.append("model", selectedWhisperModel());
+      form.append("language", document.getElementById("audioWhisperLang")?.value || "en");
+      const res = await fetch("/api/audio/batch-transcribe", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        audioStatus(statusEl, data.message || data.error || `Batch failed (${res.status})`, "err");
+        return;
+      }
+      const out = document.getElementById("audioBatchOut");
+      if (out) {
+        out.textContent = (data.results || []).map((r) =>
+          `${r.path}\n${r.ok ? r.transcript : r.transcript}\n---`
+        ).join("\n");
+        out.classList.remove("hidden");
+      }
+      audioStatus(statusEl, "Batch done", "ok");
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "Batch failed", "err");
+    } finally {
+      setAudioBusy(false);
     }
-    statusEl.textContent = "Batch done";
-    setAudioBusy(false);
   });
 
   window.finishAudioRecording = finishRecording;
