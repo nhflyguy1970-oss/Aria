@@ -378,7 +378,12 @@ def test_command_palette_is_wired():
     assert "Media job resume failed" in Path("jarvis/gui/static/media_jobs.js").read_text(encoding="utf-8")
     assert "function showProgress" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function setChatBusy" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
-    assert "window.jarvisChat" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "window.jarvisChat" in Path("jarvis/gui/static/chat_state.js").read_text(encoding="utf-8")
+    assert Path("jarvis/gui/static/api_key_fetch.js").is_file()
+    assert "api_key_fetch.js" in html
+    assert "initApiKeyFetch" in Path("jarvis/gui/static/api_key_fetch.js").read_text(encoding="utf-8")
+    assert "initApiKeyFetch" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "chat_state.js" in html
     assert "function showProgress" in Path("jarvis/gui/static/chat_progress.js").read_text(encoding="utf-8")
     assert "setChatBusy," in Path("jarvis/gui/static/chat_progress.js").read_text(encoding="utf-8")
     assert "const resolveVideoUrl" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
@@ -395,7 +400,7 @@ def test_command_palette_is_wired():
     assert "buildDataTableHtml," in Path("jarvis/gui/static/chat_images.js").read_text(encoding="utf-8")
     assert "async function sendMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "async function sendMessage" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
-    assert "get useStreaming" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "get useStreaming" in Path("jarvis/gui/static/chat_state.js").read_text(encoding="utf-8")
     assert "window.finishSendUi" in Path("jarvis/gui/static/chat_attach.js").read_text(encoding="utf-8")
     assert "function handleDone" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function handleDone" in Path("jarvis/gui/static/chat_done.js").read_text(encoding="utf-8")

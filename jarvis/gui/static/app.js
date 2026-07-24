@@ -1,36 +1,9 @@
-(function initApiKeyFetch() {
-  const params = new URLSearchParams(location.search);
-  const qKey = params.get("api_key")?.trim();
-  if (qKey) sessionStorage.setItem("jarvis_api_key", qKey);
-  const nativeFetch = window.fetch.bind(window);
-  window.fetch = async (url, opts = {}) => {
-    const key = sessionStorage.getItem("jarvis_api_key");
-    const path = String(url).split("?")[0];
-    if (path.startsWith("/api/")) {
-      const headers = new Headers(opts.headers || {});
-      if (key && !headers.has("X-API-Key")) headers.set("X-API-Key", key);
-      if (typeof window.jarvisDeviceId === "function" && !headers.has("X-Jarvis-Device")) {
-        headers.set("X-Jarvis-Device", window.jarvisDeviceId());
-      }
-      const sess = typeof window.jarvisSession === "function" ? window.jarvisSession() : "";
-      if (sess && !headers.has("X-Jarvis-Session")) headers.set("X-Jarvis-Session", sess);
-      opts = { ...opts, headers };
-    }
-    const res = await nativeFetch(url, opts);
-    if (
-      res.status === 401
-      && path.startsWith("/api/")
-      && !["/api/health", "/api/live", "/api/lan"].includes(path)
-    ) {
-      window.showApiKeyModal?.("Invalid or missing API key.");
-    }
-    return res;
-  };
-})();
-
+/** Aria app shell — post-startup, session globals, thin orchestration. */
 // Media URL/auth helpers → media_urls.js
 // LAN / API key modal → lan_access.js
+// API key fetch wrapper → api_key_fetch.js
 // Branding → branding.js
+// Chat state → chat_state.js
 // Attachment state / finishSendUi → chat_attach.js
 // Composer → chat_input.js
 // clear / readAloud / mic → chat_controls.js
@@ -38,13 +11,7 @@
 window.initHaPanel?.();
 
 let _lastEditorFile = "";
-let lastAssistantText = "";
-let useStreaming = true;
 let _activeBranchId = "main";
-let chatAbortController = null;
-let chatStopRequested = false;
-let activeStreamText = "";
-let activeChatRequestId = "";
 
 const GALLERY_THUMB_MAX = 384;
 window.GALLERY_THUMB_MAX = GALLERY_THUMB_MAX;
@@ -55,36 +22,6 @@ function isNativeApp() {
   return document.documentElement.classList.contains("jarvis-app");
 }
 window.isNativeApp = isNativeApp;
-
-function syncMediaBusyClass() {
-  if (!window.activeMediaJobs) window.activeMediaJobs = new Set();
-  document.documentElement.classList.toggle("media-busy", window.activeMediaJobs.size > 0);
-}
-window.syncMediaBusyClass = syncMediaBusyClass;
-
-let chatRequestActive = false;
-
-function mediaWorkActive() {
-  return chatRequestActive || (window.activeMediaJobs?.size || 0) > 0;
-}
-window.mediaWorkActive = mediaWorkActive;
-
-window.jarvisChat = {
-  get chatRequestActive() { return chatRequestActive; },
-  set chatRequestActive(v) { chatRequestActive = v; },
-  get chatAbortController() { return chatAbortController; },
-  set chatAbortController(v) { chatAbortController = v; },
-  get chatStopRequested() { return chatStopRequested; },
-  set chatStopRequested(v) { chatStopRequested = v; },
-  get activeStreamText() { return activeStreamText; },
-  set activeStreamText(v) { activeStreamText = v; },
-  get activeChatRequestId() { return activeChatRequestId; },
-  set activeChatRequestId(v) { activeChatRequestId = v; },
-  get useStreaming() { return useStreaming; },
-  set useStreaming(v) { useStreaming = v; },
-  get lastAssistantText() { return lastAssistantText; },
-  set lastAssistantText(v) { lastAssistantText = v; },
-};
 
 Object.defineProperty(window, "activeBranchId", {
   get() { return _activeBranchId; },
@@ -148,7 +85,7 @@ window.ariaPostStartup = function ariaPostStartup() {
     document.getElementById("presetQualityBtn")?.classList.add("active");
     window.startHealthMonitoring?.();
     setInterval(() => {
-      if (document.hidden || mediaWorkActive()) return;
+      if (document.hidden || window.mediaWorkActive?.()) return;
       window.loadCodingPanel?.();
     }, 90000);
     window.scheduleEditorContextPoll?.();
