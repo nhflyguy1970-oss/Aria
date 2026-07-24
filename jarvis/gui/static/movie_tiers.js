@@ -192,17 +192,52 @@
     }
   }
 
-  /* --- Module chip filter (Tier 1 #10) --- */
+  /* --- Module chip filter (Tier 1 #10) — navigate + set preferred mode --- */
+  const MODULE_NAV = {
+    all: { view: "chat", hint: "Unified mode — Aria routes by intent" },
+    general: { view: "chat", hint: "Chat mode" },
+    coding: { view: "chat", hint: "Coding mode — ask about code, files, or fixes" },
+    vision: { view: "chat", hint: "Vision mode — attach an image or use the camera" },
+    audio: { view: "audio", hint: "Audio workspace" },
+    image: { view: "gallery", hint: "Image gallery & generation" },
+    video: { view: "video", hint: "Video workspace" },
+    meme: { view: "meme", hint: "Meme engine" },
+    data: { view: "chat", hint: "Data mode — attach CSV/JSON or ask about datasets" },
+    memory: { view: "memory", hint: "Memory browser" },
+    journal: { view: "journal", hint: "Bullet journal" },
+  };
+
+  function applyModuleFilter(mod) {
+    const target = MODULE_NAV[mod] || MODULE_NAV.all;
+    window.jarvisPreferredModule = mod === "all" ? "" : mod;
+    localStorage.setItem(LS.moduleFilter, mod);
+    document.querySelectorAll(".module-chip").forEach((c) => {
+      c.classList.toggle("active", (c.dataset.module || "all") === mod);
+      c.setAttribute("aria-pressed", (c.dataset.module || "all") === mod ? "true" : "false");
+    });
+    if (target.view) window.switchToView?.(target.view);
+    const status = document.getElementById("statusText");
+    if (status && target.hint) status.textContent = target.hint;
+    window.showAriaToast?.(target.hint || `Mode: ${mod}`, "ok", 2500);
+    window.dispatchEvent(new CustomEvent("jarvis-module-filter", { detail: { module: mod } }));
+  }
+
   function initModuleFilter() {
     const saved = localStorage.getItem(LS.moduleFilter) || "all";
+    window.jarvisPreferredModule = saved === "all" ? "" : saved;
     document.querySelectorAll(".module-chip").forEach((chip) => {
-      if (chip.dataset.module === saved) chip.classList.add("active");
-      else if (saved !== "all") chip.classList.remove("active");
-      chip.addEventListener("click", () => {
-        const mod = chip.dataset.module || "all";
-        localStorage.setItem(LS.moduleFilter, mod);
-        document.querySelectorAll(".module-chip").forEach((c) => c.classList.toggle("active", c === chip));
-        window.dispatchEvent(new CustomEvent("jarvis-module-filter", { detail: { module: mod } }));
+      if (!chip.getAttribute("role")) chip.setAttribute("role", "button");
+      if (!chip.hasAttribute("tabindex")) chip.setAttribute("tabindex", "0");
+      const isActive = chip.dataset.module === saved || (saved === "all" && chip.dataset.module === "all");
+      chip.classList.toggle("active", isActive);
+      chip.setAttribute("aria-pressed", isActive ? "true" : "false");
+      const activate = () => applyModuleFilter(chip.dataset.module || "all");
+      chip.addEventListener("click", activate);
+      chip.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          activate();
+        }
       });
     });
   }

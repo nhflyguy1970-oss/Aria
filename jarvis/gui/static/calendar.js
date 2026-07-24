@@ -417,6 +417,11 @@ window.initCalendar = async function initCalendar() {
       await loadWorkSchedule();
     } catch (err) {
       console.warn("Work schedule load failed:", err);
+      window.showAriaToast?.(
+        `Work schedule unavailable: ${err?.message || "request failed"}`,
+        "err",
+        5000,
+      );
     }
     const sched = calWorkSchedule || {};
     if (sched.ics_url && calEl("calendarIcsUrl")) {

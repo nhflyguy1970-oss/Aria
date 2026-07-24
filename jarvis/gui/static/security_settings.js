@@ -38,8 +38,16 @@
           : "<li class='muted'>No trusted devices</li>";
         devices.querySelectorAll(".trusted-revoke").forEach((btn) => {
           btn.addEventListener("click", async () => {
-            await fetch(`/api/security/trusted-devices/${encodeURIComponent(btn.dataset.id)}/revoke`, { method: "POST" });
-            refreshSecurityPanel();
+            try {
+              await fetchJson(
+                `/api/security/trusted-devices/${encodeURIComponent(btn.dataset.id)}/revoke`,
+                { method: "POST" },
+              );
+              window.showAriaToast?.("Trusted device revoked", "ok", 3000);
+              refreshSecurityPanel();
+            } catch (err) {
+              window.showAriaToast?.(err.message || "Revoke failed", "err", 5000);
+            }
           });
         });
       }

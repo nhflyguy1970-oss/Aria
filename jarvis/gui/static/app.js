@@ -1872,10 +1872,24 @@ function stopChat() {
   if (activeChatRequestId) {
     const fd = new FormData();
     fd.append("request_id", activeChatRequestId);
-    fetch("/api/chat/cancel", { method: "POST", body: fd }).catch(() => {});
+    fetch("/api/chat/cancel", { method: "POST", body: fd })
+      .then(async (res) => {
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.message || err.detail || `Cancel failed (${res.status})`);
+        }
+        window.showAriaToast?.("Generation cancelled", "ok", 2500);
+      })
+      .catch((err) => {
+        window.showAriaToast?.(
+          err?.message || "Could not reach cancel API — stream aborted locally",
+          "err",
+          5000,
+        );
+      });
   }
   chatAbortController?.abort();
-  statusText.textContent = "Stopping…";
+  if (statusText) statusText.textContent = "Stopping…";
 }
 
 stopChatBtn?.addEventListener("click", (e) => {
@@ -2009,6 +2023,7 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
   if (pendingVideoSecond.trim()) form.append("video_second", pendingVideoSecond.trim());
   if (pendingPdfPage.trim()) form.append("pdf_page", pendingPdfPage.trim());
   if (activeBranchId) form.append("branch_id", activeBranchId);
+  if (window.jarvisPreferredModule) form.append("preferred_module", window.jarvisPreferredModule);
 
   const trimmed = text.trim();
   const isInstant = /^(hi|hello|hey|what can you|what (services|models|do you)|help|capabilities)/i.test(trimmed)
@@ -3103,12 +3118,19 @@ document.getElementById("webcamBtn")?.addEventListener("click", async () => {
 });
 
 clearBtn.addEventListener("click", async () => {
-  const f = new FormData();
-  f.append("message", "clear");
-  if (activeBranchId) f.append("branch_id", activeBranchId);
-  await fetch("/api/chat", { method: "POST", body: f });
-  messagesEl.innerHTML = "";
-  addMessage("assistant", "Fresh start. What would you like to do?");
+  try {
+    const f = new FormData();
+    f.append("message", "clear");
+    if (activeBranchId) f.append("branch_id", activeBranchId);
+    const res = await fetch("/api/chat", { method: "POST", body: f });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Clear failed (${res.status})`);
+    messagesEl.innerHTML = "";
+    addMessage("assistant", "Fresh start. What would you like to do?");
+    window.showAriaToast?.("Conversation cleared", "ok", 2500);
+  } catch (err) {
+    window.showAriaToast?.(err.message || "Could not clear conversation", "err", 5000);
+  }
 });
 
 
@@ -5057,10 +5079,14 @@ async function loadMemoryBrowser() {
         ? topics.map((t) => `<li><strong>${escapeHtml(t.title || t.slug)}</strong> <code>${escapeHtml(t.slug || "")}</code></li>`).join("")
         : "<li>No knowledge briefs yet — say <em>learn about: …</em></li>";
     }
-  } catch (_) {}
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Knowledge topics unavailable", "err", 4000);
+  }
   try {
     await loadKnowledgeResearchPanel();
-  } catch (_) {}
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Research panel unavailable", "err", 4000);
+  }
   await loadCheatsheets(document.getElementById("cheatsheetSelect")?.value || "");
   const el = document.getElementById("memoryList");
   const statsEl = document.getElementById("memoryStats");
@@ -5073,8 +5099,16 @@ async function loadMemoryBrowser() {
   if (q) params.set("q", q);
   if (type) params.set("type", type);
   if (namespace) params.set("namespace", namespace);
-  const res = await fetch(`/api/memory/all?${params}`);
-  const data = await res.json();
+  let data = {};
+  try {
+    const res = await fetch(`/api/memory/all?${params}`);
+    data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Memory load failed (${res.status})`);
+  } catch (err) {
+    el.innerHTML = `<p class="memory-empty">${escapeHtml(err.message || "Memory load failed")}</p>`;
+    window.showAriaToast?.(err.message || "Memory load failed", "err", 5000);
+    return;
+  }
   const stats = data.stats || {};
   if (statsEl) {
     const byType = stats.by_type
@@ -5110,8 +5144,15 @@ async function loadMemoryBrowser() {
         ? "Delete this cheatsheet? Use Reset default to restore bundled text instead."
         : "Delete this memory?";
       if (!confirm(msg)) return;
-      await fetch(`/api/memory/${btn.dataset.id}`, { method: "DELETE" });
-      loadMemoryBrowser();
+      try {
+        const res = await fetch(`/api/memory/${btn.dataset.id}`, { method: "DELETE" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || data.detail || `Delete failed (${res.status})`);
+        window.showAriaToast?.("Memory deleted", "ok", 2500);
+        loadMemoryBrowser();
+      } catch (err) {
+        window.showAriaToast?.(err.message || "Delete failed", "err", 5000);
+      }
     };
   });
   el.querySelectorAll(".memory-edit-btn").forEach((btn) => {
@@ -5120,12 +5161,19 @@ async function loadMemoryBrowser() {
       const content = item?.querySelector(".memory-content")?.textContent || "";
       const next = prompt("Edit memory:", content);
       if (next == null || next.trim() === content) return;
-      await fetch(`/api/memory/${btn.dataset.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: next.trim() }),
-      });
-      loadMemoryBrowser();
+      try {
+        const res = await fetch(`/api/memory/${btn.dataset.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: next.trim() }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || data.detail || `Update failed (${res.status})`);
+        window.showAriaToast?.("Memory updated", "ok", 2500);
+        loadMemoryBrowser();
+      } catch (err) {
+        window.showAriaToast?.(err.message || "Update failed", "err", 5000);
+      }
     };
   });
 }
@@ -5142,12 +5190,19 @@ function initMemoryBrowser() {
   document.getElementById("memoryAddBtn")?.addEventListener("click", async () => {
     const content = prompt("Memory to store:");
     if (!content?.trim()) return;
-    await fetch("/api/memory", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: content.trim(), type: "fact" }),
-    });
-    loadMemoryBrowser();
+    try {
+      const res = await fetch("/api/memory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: content.trim(), type: "fact" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.detail || `Save failed (${res.status})`);
+      window.showAriaToast?.("Memory saved", "ok", 2500);
+      loadMemoryBrowser();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Save failed", "err", 5000);
+    }
   });
   document.getElementById("memoryExportBtn")?.addEventListener("click", async () => {
     const res = await fetch("/api/memory/export");

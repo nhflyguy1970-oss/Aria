@@ -14,26 +14,20 @@ Shipped this wave: **Ctrl+K / Commands** palette covering 21 views, 17 Mission C
 
 Prior waves already repaired disconnected APIs, MC races/bindings, a11y Esc/focus, upgrade Clear, Gallery generate, etc.
 
-**Full stop-condition is not met** (deep soaks, federated search, god-`app.js` split, HA/Comfy long-runs, multi-monitor).
+**Full stop-condition is not met** (deep soaks, god-`app.js` split, HA/Comfy long-runs, multi-monitor, exhaustive per-control matrix).
 
-## Competitive analysis
-
-See `docs/ARIA_COMPETITIVE_ANALYSIS_V2.md`. Key adopted principle: unified find-and-act palette (Cursor/VS Code/Raycast), not search-only.
-
-## Product inventory (baseline)
-
-21 primary tabs · ~499 `/api` routes · 11 extensions · 17 MC tabs · Cap Bus verbs · see prior inventory + matrix seed.
-
-## Latest wave — command palette
+## Latest wave — silent-fail elimination + calendar↔journal
 
 | Item | Detail |
 |------|--------|
-| Entry | `Ctrl/Cmd+K`, sidebar **Commands** button |
-| Coverage | Navigate (21), Mission Control (17), Actions/AI/System/Search + federated Results |
-| A11y | `role=dialog`, listbox options, Esc close, focus restore |
-| Assets | `command_palette.js?v=1.0.2`, `calendar.js?v=5.16.80` |
-| Tests | wiring suite + `test_product_cross_system_search.py` |
-| Live | Palette → knowledge search; Calendar today shows planner tasks |
+| Cross-links | Calendar day → Journal/Planner; Journal → Calendar/Planner (`openCalendarDay`, `setBujoTab`) |
+| Module chips | Navigate + `preferred_module` on chat; toast + a11y pressed |
+| MC Dashboard | `data-ws-nav=workstation` opens overview tab |
+| Projects | Create uses API slug; create/import/switch errors toast |
+| Feedback | Chat cancel, memory edit/delete, palette search, security revoke, journal stats, work schedule |
+| Dead code | Removed orphan `browser.js` |
+| UX | Async backup + `aria_theme` persistence + reduced-motion |
+| Tests | `tests/test_product_ui_api_wiring.py` |
 
 ### Architecture / debt (continuation)
 

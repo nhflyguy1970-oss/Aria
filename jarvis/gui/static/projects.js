@@ -35,13 +35,17 @@ async function loadProjects() {
       btn.textContent = isActive ? "Active" : "Switch";
       btn.disabled = isActive;
       btn.addEventListener("click", async () => {
-        await p2Fetch("/api/projects/switch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: p.slug }),
-        });
-        loadProjects();
-        window.showAriaToast?.(`Project: ${p.slug}`);
+        try {
+          await p2Fetch("/api/projects/switch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slug: p.slug }),
+          });
+          loadProjects();
+          window.showAriaToast?.(`Project: ${p.slug}`, "ok", 2500);
+        } catch (err) {
+          window.showAriaToast?.(err.message || "Switch failed", "err", 5000);
+        }
       });
       li.appendChild(document.createElement("br"));
       li.appendChild(btn);
@@ -96,29 +100,41 @@ window.initProjects = function initProjects() {
   $("projectsCreateBtn")?.addEventListener("click", async () => {
     const title = $("projectsTitleInput")?.value?.trim();
     if (!title) return;
-    await p2Fetch("/api/projects", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title }),
-    });
-    $("projectsTitleInput").value = "";
-    await p2Fetch("/api/projects/switch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: title.toLowerCase().replace(/\s+/g, "-").slice(0, 48) }),
-    }).catch(() => {});
-    loadProjects();
+    try {
+      const created = await p2Fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      $("projectsTitleInput").value = "";
+      const slug = created?.project?.slug || created?.slug;
+      if (!slug) throw new Error("Create succeeded but no project slug returned");
+      await p2Fetch("/api/projects/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug }),
+      });
+      window.showAriaToast?.(`Active project: ${created?.project?.title || title}`, "ok", 3500);
+      loadProjects();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Could not create project", "err", 5000);
+    }
   });
   $("projectsImportBtn")?.addEventListener("click", async () => {
     const path = $("projectsGitInput")?.value?.trim();
     if (!path) return;
-    await p2Fetch("/api/projects/import-git", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path }),
-    });
-    $("projectsGitInput").value = "";
-    loadProjects();
+    try {
+      await p2Fetch("/api/projects/import-git", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path }),
+      });
+      $("projectsGitInput").value = "";
+      window.showAriaToast?.("Project imported", "ok", 3500);
+      loadProjects();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Import failed", "err", 5000);
+    }
   });
   $("projectPickerSkipBtn")?.addEventListener("click", () => {
     $("projectPickerModal")?.classList.add("hidden");

@@ -322,22 +322,20 @@ async function loadTimelineInspector() {
   return { events: eventsResp.events || [], stats };
 }
 
+async function reloadTimelineInspector() {
+  const body = mc$("mcTabBody");
+  if (!body || _mcTab !== "timeline") return;
+  try {
+    const { events, stats } = await loadTimelineInspector();
+    body.innerHTML = renderTimelineInspector(events, stats);
+  } catch (e) {
+    body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
+  }
+}
+
 function wireTimelineInspector() {
-  const search = mc$("mcTimelineSearch");
-  const sev = mc$("mcTimelineSeverity");
-  const reload = async () => {
-    const body = mc$("mcTabBody");
-    if (!body || _mcTab !== "timeline") return;
-    try {
-      const { events, stats } = await loadTimelineInspector();
-      body.innerHTML = renderTimelineInspector(events, stats);
-      wireTimelineInspector();
-    } catch (e) {
-      body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
-    }
-  };
-  search?.addEventListener("input", () => setTimeout(reload, 250));
-  sev?.addEventListener("change", reload);
+  /* Delegated via ensureMcDelegates — kept for call-site compatibility. */
+  ensureMcDelegates();
 }
 
 function renderRecovery(d) {
@@ -451,58 +449,8 @@ async function loadRoutingInspector() {
 }
 
 function wireRoutingInspector() {
-  mc$("#mcRoutingSearch")?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      _mcRoutingSearch = e.target.value || "";
-      renderMcTab("routing");
-    }
-  });
-  document.querySelectorAll(".mc-route-filter").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const f = btn.dataset.routeFilter || "";
-      _mcRoutingFilter = _mcRoutingFilter === f ? "" : f;
-      renderMcTab("routing");
-    });
-  });
-  mc$("#mcRoutingLiveBtn")?.addEventListener("click", () => {
-    _mcRoutingLive = !_mcRoutingLive;
-    if (_mcRoutingLive) {
-      if (_mcRoutingPoll) clearInterval(_mcRoutingPoll);
-      _mcRoutingPoll = setInterval(() => {
-        if (_mcTab === "routing") renderMcTab("routing");
-      }, 2000);
-    } else if (_mcRoutingPoll) {
-      clearInterval(_mcRoutingPoll);
-      _mcRoutingPoll = null;
-    }
-    renderMcTab("routing");
-  });
-  document.querySelectorAll(".mc-routing-table tbody tr[data-route-id]").forEach((row) => {
-    row.addEventListener("click", async () => {
-      const id = row.dataset.routeId;
-      const detail = mc$("#mcRoutingDetail");
-      if (!detail || !id) return;
-      try {
-        const data = await mcFetch(`/api/mission-control/routing/${encodeURIComponent(id)}`);
-        const rec = data.record || {};
-        const debug = rec.debug || {};
-        const sem = rec.semantic_report || {};
-        detail.classList.remove("hidden");
-        detail.innerHTML = `<h4>Semantic Report</h4>
-          <p><strong>Prompt:</strong> ${mcEsc(rec.prompt)}</p>
-          <p><strong>Intent:</strong> <code>${mcEsc(rec.intent)}</code> · <strong>Confidence:</strong> ${rec.confidence ?? "—"}</p>
-          <p><strong>Route:</strong> ${mcEsc(rec.route)} · <strong>Handler:</strong> ${mcEsc(rec.handler)}</p>
-          <p><strong>Latency:</strong> ${rec.latency_ms} ms · <strong>Band:</strong> ${mcEsc(rec.confidence_band || "—")}</p>
-          <h5>Classifier output</h5>
-          <pre class="mc-pre">${mcEsc(JSON.stringify(sem.semantic || sem, null, 2))}</pre>
-          <h5>Grammar / Morphology / Syntax</h5>
-          <pre class="mc-pre">${mcEsc(JSON.stringify({grammar: sem.grammar, morphology: sem.morphology, syntax: sem.syntax}, null, 2))}</pre>
-          <p><strong>Rule matched:</strong> ${mcEsc(rec.rule_matched || "—")} · <strong>Stage:</strong> ${mcEsc(rec.router_stage || "—")}</p>`;
-      } catch (e) {
-        detail.textContent = e.message;
-      }
-    });
-  });
+  /* Delegated via ensureMcDelegates — kept for call-site compatibility. */
+  ensureMcDelegates();
 }
 
 function renderIntentAnalytics(data) {
@@ -695,48 +643,121 @@ async function renderMcTab(tab) {
   }
   if (!stillCurrent()) return;
   body.innerHTML = html;
-  wireMcTabActions(tab);
+  ensureMcDelegates();
 }
 
-function wireMcTabActions(tab) {
-  mc$("#mcActivityFilterBtn")?.addEventListener("click", () => renderMcTab("activity"));
-  mc$("#mcRepairBtn")?.addEventListener("click", async () => {
-    try {
-      const data = await mcFetch("/api/workstation/recover", { method: "POST" });
-      const issues = data.report?.warnings ?? data.report?.issues?.length ?? 0;
-      const summary = data.ok
-        ? (issues ? `Repair done · ${issues} warning(s)` : "Repair done · healthy")
-        : "Repair finished with issues";
-      window.showAriaToast?.(summary, data.ok ? "ok" : "warn");
-      loadMissionControl();
-    } catch (e) {
-      window.showAriaToast?.(e.message, "err");
+function ensureMcDelegates() {
+  const body = mc$("mcTabBody");
+  if (!body || body.dataset.mcDelegates === "1") return;
+  body.dataset.mcDelegates = "1";
+  let timelineTimer = null;
+
+  body.addEventListener("input", (e) => {
+    if (e.target?.id !== "mcTimelineSearch" || _mcTab !== "timeline") return;
+    clearTimeout(timelineTimer);
+    timelineTimer = setTimeout(() => reloadTimelineInspector(), 250);
+  });
+  body.addEventListener("change", (e) => {
+    if (e.target?.id !== "mcTimelineSeverity" || _mcTab !== "timeline") return;
+    reloadTimelineInspector();
+  });
+  body.addEventListener("keydown", (e) => {
+    if (e.target?.id === "mcRoutingSearch" && e.key === "Enter") {
+      _mcRoutingSearch = e.target.value || "";
+      renderMcTab("routing");
     }
   });
-  mc$("#mcAcceptanceBtn")?.addEventListener("click", () => {
-    window.switchToView?.("chat");
-    window.sendMessage?.("workstation acceptance");
-  });
-  mc$("#mcPerfRunBtn")?.addEventListener("click", async () => {
-    try {
-      await mcFetch("/api/mission-control/performance-lab/run", { method: "POST" });
-      window.showAriaToast?.("Benchmark complete", "ok");
-      loadMissionControl();
-    } catch (e) {
-      window.showAriaToast?.(e.message, "err");
+  body.addEventListener("click", async (e) => {
+    const filter = e.target.closest?.(".mc-route-filter");
+    if (filter) {
+      const f = filter.dataset.routeFilter || "";
+      _mcRoutingFilter = _mcRoutingFilter === f ? "" : f;
+      renderMcTab("routing");
+      return;
     }
-  });
-  document.querySelectorAll("[data-mc-launch]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const kind = btn.dataset.mcLaunch;
-      if (kind === "uncensored") {
-        window.switchToView?.("chat");
-        window.sendMessage?.("switch to uncensored");
-      } else {
-        window.switchToView?.("chat");
+    if (e.target.closest?.("#mcRoutingLiveBtn")) {
+      _mcRoutingLive = !_mcRoutingLive;
+      if (_mcRoutingLive) {
+        if (_mcRoutingPoll) clearInterval(_mcRoutingPoll);
+        _mcRoutingPoll = setInterval(() => {
+          if (_mcTab === "routing") renderMcTab("routing");
+        }, 2000);
+      } else if (_mcRoutingPoll) {
+        clearInterval(_mcRoutingPoll);
+        _mcRoutingPoll = null;
       }
-    });
+      renderMcTab("routing");
+      return;
+    }
+    const row = e.target.closest?.(".mc-routing-table tbody tr[data-route-id]");
+    if (row) {
+      const id = row.dataset.routeId;
+      const detail = mc$("mcRoutingDetail");
+      if (!detail || !id) return;
+      try {
+        const data = await mcFetch(`/api/mission-control/routing/${encodeURIComponent(id)}`);
+        const rec = data.record || {};
+        const sem = rec.semantic_report || {};
+        detail.classList.remove("hidden");
+        detail.innerHTML = `<h4>Semantic Report</h4>
+          <p><strong>Prompt:</strong> ${mcEsc(rec.prompt)}</p>
+          <p><strong>Intent:</strong> <code>${mcEsc(rec.intent)}</code> · <strong>Confidence:</strong> ${rec.confidence ?? "—"}</p>
+          <p><strong>Route:</strong> ${mcEsc(rec.route)} · <strong>Handler:</strong> ${mcEsc(rec.handler)}</p>
+          <p><strong>Latency:</strong> ${rec.latency_ms} ms · <strong>Band:</strong> ${mcEsc(rec.confidence_band || "—")}</p>
+          <h5>Classifier output</h5>
+          <pre class="mc-pre">${mcEsc(JSON.stringify(sem.semantic || sem, null, 2))}</pre>
+          <h5>Grammar / Morphology / Syntax</h5>
+          <pre class="mc-pre">${mcEsc(JSON.stringify({grammar: sem.grammar, morphology: sem.morphology, syntax: sem.syntax}, null, 2))}</pre>
+          <p><strong>Rule matched:</strong> ${mcEsc(rec.rule_matched || "—")} · <strong>Stage:</strong> ${mcEsc(rec.router_stage || "—")}</p>`;
+      } catch (err) {
+        detail.textContent = err.message;
+      }
+      return;
+    }
+    if (e.target.closest?.("#mcActivityFilterBtn")) {
+      renderMcTab("activity");
+      return;
+    }
+    if (e.target.closest?.("#mcRepairBtn")) {
+      try {
+        const data = await mcFetch("/api/workstation/recover", { method: "POST" });
+        const issues = data.report?.warnings ?? data.report?.issues?.length ?? 0;
+        const summary = data.ok
+          ? (issues ? `Repair done · ${issues} warning(s)` : "Repair done · healthy")
+          : "Repair finished with issues";
+        window.showAriaToast?.(summary, data.ok ? "ok" : "warn");
+        loadMissionControl();
+      } catch (err) {
+        window.showAriaToast?.(err.message, "err");
+      }
+      return;
+    }
+    if (e.target.closest?.("#mcAcceptanceBtn")) {
+      window.switchToView?.("chat");
+      window.sendMessage?.("workstation acceptance");
+      return;
+    }
+    if (e.target.closest?.("#mcPerfRunBtn")) {
+      try {
+        await mcFetch("/api/mission-control/performance-lab/run", { method: "POST" });
+        window.showAriaToast?.("Benchmark complete", "ok");
+        loadMissionControl();
+      } catch (err) {
+        window.showAriaToast?.(err.message, "err");
+      }
+      return;
+    }
+    const launch = e.target.closest?.("[data-mc-launch]");
+    if (launch) {
+      const kind = launch.dataset.mcLaunch;
+      window.switchToView?.("chat");
+      if (kind === "uncensored") window.sendMessage?.("switch to uncensored");
+    }
   });
+}
+
+function wireMcTabActions() {
+  ensureMcDelegates();
 }
 
 function switchMcTab(tab) {
@@ -797,10 +818,11 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       window.switchToView?.("workstation");
-      if (target === "workstationActivityList") switchMcTab("activity");
+      if (target === "workstation" || target === "overview") switchMcTab("overview");
+      else if (target === "workstationActivityList") switchMcTab("activity");
       else if (target === "workstationConnection") switchMcTab("connection");
       else if (target === "workstationInference") switchMcTab("inference");
-      else if (target && target !== "workstation") switchMcTab("overview");
+      else if (target) switchMcTab("overview");
     });
   });
 });

@@ -347,11 +347,15 @@ async function loadJournalStats() {
   if (!journalStats) return;
   try {
     const res = await fetch("/api/journal/stats");
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Stats failed (${res.status})`);
     const s = data.stats || {};
     journalStats.textContent =
       `${s.open_tasks || 0} open tasks · ${s.daily_pages || 0} daily · ${s.weekly_pages || 0} weekly · ${s.habits || 0} habits · ${s.collections || 0} collections`;
-  } catch (_) {}
+  } catch (err) {
+    journalStats.textContent = "Journal stats unavailable";
+    window.showAriaToast?.(err?.message || "Journal stats unavailable", "err", 4000);
+  }
 }
 
 async function postDaily(content, bulletType, day) {

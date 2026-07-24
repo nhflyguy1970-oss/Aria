@@ -30,3 +30,8 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.
+
+## Wave resume (2026-07-24)
+- FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.
+- INTENTIONALLY DEFERRED: full app.js god-file split; long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; complete per-control matrix.
+- Verdict: **NO** — continue highest-priority silent-fail / discoverability / AI-workflow work.

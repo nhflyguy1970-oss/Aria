@@ -210,6 +210,23 @@ def test_command_palette_is_wired():
     assert "journalOpenCalendarBtn" in html
     assert "window.setBujoTab" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "prefers-reduced-motion" in css
+    mt = Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "applyModuleFilter" in mt and "MODULE_NAV" in mt
+    assert 'target === "workstation"' in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
+    assert "created?.project?.slug" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
+    assert "Generation cancelled" in app
+    assert "preferred_module" in app
+    assert "preferred_module" in Path("jarvis/gui/server.py").read_text(encoding="utf-8")
+    assert "Knowledge search unavailable" in js
+    assert "Trusted device revoked" in Path("jarvis/gui/static/security_settings.js").read_text(encoding="utf-8")
+    assert "Journal stats unavailable" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
+    assert "Work schedule unavailable" in cal
+    assert "Memory deleted" in app
+    assert "ensureMcDelegates" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
+    assert "Conversation cleared" in app
+    assert "act:clear-chat" in js
+    assert "Memory load failed" in app
+
     assert not Path("jarvis/gui/static/browser.js").exists()
     assert Path("jarvis/gui/static/browser_panel.js").is_file()
 

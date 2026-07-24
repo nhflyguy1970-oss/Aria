@@ -2872,6 +2872,7 @@ async def chat(
     pdf_page: str = Form(""),
     request_id: str = Form(""),
     lite_ui: str = Form("false"),
+    preferred_module: str = Form(""),
 ):
     import json as _json
 
@@ -2922,6 +2923,12 @@ async def chat(
     use_stream = _form_bool(stream)
     use_lite_ui = _form_bool(lite_ui)
     bid = branch_id.strip() or None
+    pref = (preferred_module or "").strip().lower()
+    if pref and pref not in ("all", "unified"):
+        try:
+            assistant.session.note_module(pref)
+        except Exception:
+            pass
 
     if use_stream:
         rid = request_id.strip()

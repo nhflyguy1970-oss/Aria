@@ -125,6 +125,48 @@
         },
       },
       {
+        id: "act:clear-chat",
+        label: "Clear conversation",
+        group: "Actions",
+        keywords: "reset wipe history",
+        run: () => $("clearBtn")?.click(),
+      },
+      {
+        id: "act:stop-chat",
+        label: "Stop responding",
+        group: "Actions",
+        keywords: "cancel abort generation",
+        run: () => $("stopChatBtn")?.click(),
+      },
+      {
+        id: "act:export-chat",
+        label: "Export chat (Markdown)",
+        group: "Actions",
+        keywords: "download md transcript",
+        run: () => $("exportChatBtn")?.click(),
+      },
+      {
+        id: "act:new-branch",
+        label: "New chat branch",
+        group: "Actions",
+        keywords: "fork conversation",
+        run: () => $("newBranchBtn")?.click(),
+      },
+      {
+        id: "act:free-vram",
+        label: "Free VRAM",
+        group: "System",
+        keywords: "gpu memory unload",
+        run: () => $("freeVramBtn")?.click(),
+      },
+      {
+        id: "act:reindex-code",
+        label: "Reindex code",
+        group: "System",
+        keywords: "search symbols lsp",
+        run: () => $("indexCodeBtn")?.click(),
+      },
+      {
         id: "act:job-center",
         label: "Open job center",
         group: "Actions",
@@ -428,10 +470,20 @@
       const res = await fetch(`/api/knowledge/search?q=${encodeURIComponent(needle)}&limit=8`);
       const data = await res.json().catch(() => ({}));
       if (seq !== searchSeq) return;
+      if (!res.ok) {
+        throw new Error(data.message || data.detail || `Search failed (${res.status})`);
+      }
       const hits = Array.isArray(data.hits) ? data.hits : [];
       contentHits = hits.slice(0, 8).map((h, i) => hitToCommand(h, i));
-    } catch {
-      if (seq === searchSeq) contentHits = [];
+    } catch (err) {
+      if (seq === searchSeq) {
+        contentHits = [];
+        if (!fetchContentHits._toasted) {
+          fetchContentHits._toasted = true;
+          window.showAriaToast?.(err?.message || "Knowledge search unavailable", "err", 4000);
+          setTimeout(() => { fetchContentHits._toasted = false; }, 8000);
+        }
+      }
     }
   }
 
