@@ -261,7 +261,7 @@ const editorContextPill = document.getElementById("editorContextPill");
 const editorPillText = document.getElementById("editorPillText");
 const editorContextCard = document.getElementById("editorContextCard");
 const editorContextLabel = document.getElementById("editorContextLabel");
-var lastEditorFile = "";
+let _lastEditorFile = "";
 const clearBtn = document.getElementById("clearBtn");
 const micBtn = document.getElementById("micBtn");
 const readAloudBtn = document.getElementById("readAloudBtn");
@@ -2559,8 +2559,9 @@ window.loadHealth = loadHealth;
 window.loadVisionSettings = loadVisionSettings;
 window.loadEditorContext = loadEditorContext;
 Object.defineProperty(window, "lastEditorFile", {
-  get() { return lastEditorFile; },
-  set(v) { lastEditorFile = v; },
+  get() { return _lastEditorFile; },
+  set(v) { _lastEditorFile = v; },
+  configurable: true,
 });
 
 
@@ -2612,8 +2613,8 @@ async function loadEditorContext() {
       }
     }
 
-    if (fresh && file !== lastEditorFile) {
-      lastEditorFile = file;
+    if (fresh && file !== _lastEditorFile) {
+      _lastEditorFile = file;
       refreshEditorSuggestions(file, ctx.has_selection);
     }
     return { fresh, file, ctx };
@@ -2659,7 +2660,7 @@ function refreshEditorSuggestions(file, hasSelection) {
 
 function sendQuickCodingMessage(msg) {
   if (!msg) return;
-  const file = lastEditorFile;
+  const file = _lastEditorFile;
   let text = msg;
   if (msg === "run tests for") {
     if (file) text = `run tests for ${file}`;
@@ -3078,7 +3079,9 @@ setInterval(() => {
 }, isNativeApp() ? 5000 : 2500);
 
 // Define before startup_overlay.js invokes waitForServices → ariaPostStartup
-window.ariaPostStartup = () => {
+window.ariaBootMarker = "app-reached-post-startup";
+window.ariaPostStartup = function ariaPostStartup() {
+  window.ariaBootMarker = "post-startup-invoked";
   try { window.initAriaModalChrome?.(); } catch (_) {}
   loadSuggestions();
   loadHealth().then(async () => {
