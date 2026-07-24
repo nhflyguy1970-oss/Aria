@@ -4434,6 +4434,7 @@ async function pollWakewordChat() {
 function initAriaModalChrome() {
   /** Closable overlays (Esc). Lock screen is excluded — must unlock deliberately. */
   const MODAL_IDS = [
+    "commandPaletteModal",
     "imageLightbox",
     "videoLightbox",
     "inpaintModal",
@@ -4481,6 +4482,10 @@ function initAriaModalChrome() {
     }
     if (el.id === "toolConfirmModal") {
       document.getElementById("toolConfirmNo")?.click();
+      return;
+    }
+    if (el.id === "commandPaletteModal") {
+      window.closeAriaCommandPalette?.();
       return;
     }
     el.classList.add("hidden");

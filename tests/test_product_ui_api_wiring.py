@@ -154,6 +154,26 @@ def test_a11y_modal_esc_and_ux_debt_regressions():
     assert 'switchMcTab("inference")' in mc
 
 
+def test_command_palette_is_wired():
+    from pathlib import Path
+
+    html = Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
+    js = Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
+    css = Path("jarvis/gui/static/style.css").read_text(encoding="utf-8")
+    mc = Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
+
+    assert 'id="commandPaletteModal"' in html
+    assert 'id="commandPaletteBtn"' in html
+    assert 'id="commandPaletteInput"' in html
+    assert "command_palette.js" in html
+    assert "Ctrl</kbd>+<kbd>K" in html or "Ctrl+K" in html
+    assert "openAriaCommandPalette" in js
+    assert 'toLowerCase() !== "k"' in js or 'toLowerCase() === "k"' in js
+    assert "command-palette-modal" in css
+    assert "window.switchMcTab = switchMcTab" in mc
+    assert Path("docs/ARIA_COMPETITIVE_ANALYSIS_V2.md").is_file()
+
+
 def test_stop_playback_and_clear_tts_queue_do_not_raise():
     from jarvis.audio_device import stop_playback
     from jarvis.tts_playback_queue import clear_tts_queue

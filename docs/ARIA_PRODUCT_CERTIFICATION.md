@@ -1,26 +1,56 @@
 # Aria Product Certification — Progress Report
 
 **Date:** 2026-07-24  
+**Charter:** Product Evolution & Certification v2.0  
 **Stance:** Zero-trust product UX / capability / architecture audit  
 **Browser policy:** Single persistent session; no reload loops (reload only for startup/restart recovery)  
-**Status:** **INCOMPLETE for full charter stop-condition** — additional defects found and fixed; exhaustive every-control modernization not finished
+**Status:** **INCOMPLETE for full charter stop-condition** — competitive review done; command palette shipped; exhaustive subsystem certification continues
 
 ## Executive Summary
 
-Phase 1 inventory is complete (21 primary tabs, ~499 live `/api` routes, 11 extensions, Mission Control 17 UI tabs, Cap Bus 16 verbs). Zero-trust exercise continues against a live workstation (`8765`) with AI-Platform Mission Control (`8780`).
+v2.0 began with a documented competitive analysis (`docs/ARIA_COMPETITIVE_ANALYSIS_V2.md`) and a certification matrix seed (`docs/ARIA_CERTIFICATION_MATRIX_V2.md`). Highest-ROI gap vs modern desktop AI tools was a missing **global command palette**.
 
-This wave proved and repaired:
+Shipped this wave: **Ctrl+K / Commands** palette covering 21 views, 17 Mission Control tabs, and core Actions/AI/System commands, with recent history, fuzzy filter, a11y dialog+listbox, and visible trigger. Live-verified in the persistent Aria browser session.
 
-1. Disconnected UI APIs (audio stop/sink, Playwright install, journal projects) — prior wave  
-2. Phantom PIN exemption for missing `/api/homeassistant/daylight`  
-3. Mission Control async tab race (Connection overwrite of Knowledge)  
-4. Missing AI-Platform `databases` tab loader + Aria `connection` tab proxy  
-5. Browser status line falsely reported “Playwright not installed” when stack was ready  
-6. MongoDB “up” + “container stopped” contradictory detail copy  
+Prior waves already repaired disconnected APIs, MC races/bindings, a11y Esc/focus, upgrade Clear, Gallery generate, etc.
 
-Primary tabs, MC tabs, planner task add, journal gratitude/writes, memory list, calendar, settings modal, documents/gallery/video/meme/audio/flytying/maker/security/presence/voice/actions/dashboard all **smoke-rendered** in one persistent browser session.
+**Full stop-condition is not met** (deep soaks, federated search, god-`app.js` split, HA/Comfy long-runs, multi-monitor).
 
-**Full charter stop-condition is not met.** God-`app.js`, a11y, visual coherence, command palette, deep Comfy/HA/coding/voice-live workflows, multi-monitor soak, and long-session leak profiling remain open.
+## Competitive analysis
+
+See `docs/ARIA_COMPETITIVE_ANALYSIS_V2.md`. Key adopted principle: unified find-and-act palette (Cursor/VS Code/Raycast), not search-only.
+
+## Product inventory (baseline)
+
+21 primary tabs · ~499 `/api` routes · 11 extensions · 17 MC tabs · Cap Bus verbs · see prior inventory + matrix seed.
+
+## Latest wave — command palette
+
+| Item | Detail |
+|------|--------|
+| Entry | `Ctrl/Cmd+K`, sidebar **Commands** button |
+| Coverage | Navigate (21), Mission Control (17), Actions/AI/System |
+| A11y | `role=dialog`, listbox options, Esc close, focus restore |
+| Assets | `command_palette.js?v=1.0.0`, `style.css?v=5.16.79`, `app.js?v=5.16.79` |
+| Tests | `test_command_palette_is_wired` (+ full wiring suite 12 passed) |
+| Live | Palette open → filter → Enter navigates to Gallery |
+
+## Remaining deferred (blocks YES)
+
+1. Federated palette search (memory/docs/journal)  
+2. Deep Comfy/HA/coding/voice-live soaks  
+3. God-`app.js` modularization  
+4. Long-duration + multi-monitor certification  
+5. Full per-feature matrix completion for every control  
+
+## Verdict question
+
+Would I proudly ship Aria today as a polished, modern, production-quality AI operating environment that I would personally use every day as my primary interface?
+
+**NO**
+
+Evidence: discoverability improved materially with a real command palette, and prior wiring/a11y defects are fixed, but the v2 charter requires complete subsystem certification, deep soaks, architecture modernization, and federated AI-native search — not yet complete.
+
 
 ## Complete product inventory (Phase 1)
 

@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=5.16.78" />
+  <link rel="stylesheet" href="/static/style.css?v=5.16.79" />
   <script>
     (function () {
       var standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -277,6 +277,7 @@
           <div class="sidebar-btn-row sidebar-btn-row--compact">
             <button type="button" id="settingsBtn" class="ghost-btn small">Settings</button>
             <button type="button" id="shortcutsBtn" class="ghost-btn small">Shortcuts</button>
+            <button type="button" id="commandPaletteBtn" class="ghost-btn small" title="Command palette (Ctrl+K)" aria-keyshortcuts="Control+K Meta+K">Commands</button>
             <button type="button" id="jobCenterBtn" class="ghost-btn small" title="Background jobs (media, coding, audio)">Job center</button>
             <button type="button" id="debugBundleBtn" class="ghost-btn small" title="Copy diagnostics for troubleshooting">Debug bundle</button>
             <button type="button" id="reloadUiBtn" class="ghost-btn small" title="Reload this window (Ctrl+Shift+R)">Reload UI</button>
@@ -1632,6 +1633,7 @@
         <div class="crop-modal-card profile-modal-card">
           <h3>Keyboard shortcuts</h3>
           <ul class="shortcuts-list">
+            <li><kbd>Ctrl</kbd>+<kbd>K</kbd> — command palette (navigate &amp; actions)</li>
             <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — send (in textarea: <kbd>Shift</kbd>+<kbd>Ctrl</kbd>+<kbd>Enter</kbd>)</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> — reload UI (native window)</li>
             <li><kbd>Ctrl</kbd>+<kbd>/</kbd> — this panel</li>
@@ -1639,6 +1641,19 @@
             <li>Hold mic / PTT — local Whisper transcribe</li>
           </ul>
           <button type="button" id="shortcutsCloseBtn" class="ghost-btn">Close</button>
+        </div>
+      </div>
+
+      <div id="commandPaletteModal" class="command-palette-modal hidden" role="dialog" aria-modal="true" aria-labelledby="commandPaletteTitle">
+        <div class="command-palette-card">
+          <div class="command-palette-head">
+            <h3 id="commandPaletteTitle" class="visually-hidden">Command palette</h3>
+            <input type="search" id="commandPaletteInput" class="command-palette-input" placeholder="Navigate or run a command…" autocomplete="off" spellcheck="false" aria-autocomplete="list" aria-controls="commandPaletteList" aria-label="Command palette search" />
+            <button type="button" id="commandPaletteCloseBtn" class="ghost-btn tiny" aria-label="Close command palette">Esc</button>
+          </div>
+          <ul id="commandPaletteList" class="command-palette-list" role="listbox" aria-label="Commands"></ul>
+          <p id="commandPaletteEmpty" class="command-palette-empty muted hidden">No matching commands</p>
+          <p class="command-palette-footer muted">↑↓ navigate · Enter run · Esc close</p>
         </div>
       </div>
 
@@ -1730,7 +1745,7 @@
   <script type="module" src="/static/modules/jobs.mjs?v=5.16.70"></script>
   <script type="module" src="/static/modules/health.mjs?v=5.16.70"></script>
   <script src="/static/planner.js?v=5.16.74"></script>
-  <script src="/static/mission_control.js?v=1.0.4"></script>
+  <script src="/static/mission_control.js?v=1.0.5"></script>
   <script src="/static/calendar.js?v=5.16.74"></script>
   <script src="/static/flytying.js?v=5.16.74"></script>
   <script src="/static/projects.js?v=5.16.70"></script>
@@ -1745,6 +1760,7 @@
   <script src="/static/world_state_hud.js?v=5.16.70"></script>
   <script src="/static/audit.js?v=5.16.70"></script>
   <script src="/static/voice_tab.js?v=5.16.70"></script>
-  <script src="/static/app.js?v=5.16.78"></script>
+  <script src="/static/command_palette.js?v=1.0.0"></script>
+  <script src="/static/app.js?v=5.16.79"></script>
 </body>
 </html>
