@@ -1167,7 +1167,6 @@ html.media-busy .sidebar .module-chip:not(.active) {
   white-space: pre-wrap;
 }
 
-.coding-panel { margin-top: 0; }
 .coding-tools { font-size: 0.72rem; margin-bottom: 0.35rem; }
 .coding-tasks { font-size: 0.72rem; max-height: 100px; overflow-y: auto; }
 .coding-task-row { display: flex; justify-content: space-between; padding: 0.15rem 0; }
@@ -1728,7 +1727,6 @@ html.media-busy .sidebar .module-chip:not(.active) {
   background: var(--surface2); color: var(--text); border: 1px solid var(--border);
   border-radius: 4px; padding: 0.25rem 0.4rem; font-size: 0.8rem;
 }
-.bujo-cal { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; }
 .bujo-cal-hint {
   font-size: 0.78rem; color: var(--text-muted); margin: 0 0 0.75rem;
   font-family: var(--font); line-height: 1.4;
@@ -3463,7 +3461,6 @@ html.theme-jarvis-blue .brand-icon { color: #5eb8ff; }
 .planner-list { list-style: none; padding: 0; margin: 0; }
 .planner-list-item { padding: 0.35rem 0; border-bottom: 1px solid var(--border); }
 .dashboard-body { padding: 0.5rem 1rem; }
-.dashboard-pre { white-space: pre-wrap; font-size: 0.9rem; }
 .system-monitor-strip { padding: 0 1rem; font-size: 0.85rem; }
 #dashboardView {
   overflow-x: hidden;
@@ -3507,13 +3504,11 @@ html.theme-jarvis-blue .brand-icon { color: #5eb8ff; }
 /* ARIA Life panels — maker, security, browser, voice */
 .life-panel { max-width: 52rem; }
 .life-subheading { font-size: 0.95rem; margin: 1rem 0 0.35rem; font-weight: 600; }
-.life-btn-row { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.5rem 0; }
 .security-status-line.locked { color: var(--warn, #e6a817); }
 .security-tool-row { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 0.9rem; }
 .security-tool-row.ok strong { color: var(--ok, #3dd68c); }
 .security-pin-block,
 .security-unlock-block { margin-top: 0.75rem; }
-.maker-model-row { display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
 .browser-status-line { font-family: var(--mono, monospace); font-size: 0.85rem; }
 .browser-log { max-height: 12rem; overflow: auto; white-space: pre-wrap; }
 .browser-shot-wrap { min-height: 2rem; margin: 0.5rem 0; }
@@ -3523,7 +3518,6 @@ html.theme-jarvis-blue .brand-icon { color: #5eb8ff; }
 .lock-screen.hidden { display: none; }
 .lock-card { background: var(--panel, #12151c); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; max-width: 22rem; width: 90%; text-align: center; }
 .lock-card h2 { margin-top: 0; }
-.presence-section { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 .presence-stage { position: relative; max-width: 28rem; margin: 0.5rem 0; }
 .presence-video { width: 100%; border-radius: 6px; background: #000; }
 .presence-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
@@ -4037,7 +4031,6 @@ html.theme-jarvis-blue .brand-icon { color: #5eb8ff; }
 .global-world-state-bar.is-clickable { cursor: pointer; }
 .global-world-state-bar.is-clickable:hover { filter: brightness(1.08); }
 .global-world-state-bar.is-clickable:focus-visible { outline: 2px solid var(--accent, #d4a054); outline-offset: 2px; }
-html.jarvis-shell .global-world-state-bar { margin: 0 1.25rem 0.5rem; }
 .wake-pill {
   font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 999px;
   border: 1px solid var(--border); background: var(--surface-2); cursor: pointer; margin-left: 0.35rem;
@@ -4119,7 +4112,6 @@ html.theme-jarvis-blue .brand-icon { color: #5eb8ff; }
 .dash-welcome { margin: 0 0 0.15rem; font-size: 0.88rem; }
 .dash-page-header h2 { margin: 0; font-size: 1.85rem; font-weight: 700; color: var(--accent, #33b5e5); }
 .dash-date { margin: 0.2rem 0 0.5rem; font-size: 0.88rem; }
-.dashboard-pre { white-space: pre-wrap; font-size: 0.85rem; }
 .dash-header-row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; }
 .dash-bubble { flex: 1; min-width: 140px; padding: 0.85rem 1rem; border-radius: 14px; background: var(--panel-elevated, #0f1524); border: 1px solid var(--border, #1a2236); display: flex; flex-direction: column; gap: 0.2rem; }
 .dash-bubble-icon { font-size: 1.4rem; }
