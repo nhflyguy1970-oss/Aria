@@ -27,8 +27,18 @@ async function loadProjects() {
       const li = document.createElement("li");
       li.className = "planner-list-item";
       const isActive = p.slug === data.active;
-      li.innerHTML = `<strong>${p.title}</strong> <span class="muted">(${p.slug})</span>`
-        + (isActive ? ' <span class="ok">active</span>' : "");
+      const title = document.createElement("strong");
+      title.textContent = p.title || p.slug || "Untitled project";
+      const slug = document.createElement("span");
+      slug.className = "muted";
+      slug.textContent = ` (${p.slug || "?"})`;
+      li.append(title, slug);
+      if (isActive) {
+        const active = document.createElement("span");
+        active.className = "ok";
+        active.textContent = " active";
+        li.append(active);
+      }
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "ghost-btn tiny";
@@ -63,7 +73,13 @@ async function loadProjects() {
       });
     }
   } catch (e) {
-    if (list) list.innerHTML = `<li class="muted">${e.message}</li>`;
+    if (list) {
+      list.replaceChildren();
+      const error = document.createElement("li");
+      error.className = "muted";
+      error.textContent = e.message || "Could not load projects";
+      list.appendChild(error);
+    }
     window.showAriaToast?.(e.message || "Could not load projects", "err", 5000);
   }
 }

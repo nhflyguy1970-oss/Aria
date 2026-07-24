@@ -800,7 +800,8 @@ window.ariaPostStartup = function ariaPostStartup() {
     document.getElementById("presetQualityBtn")?.classList.add("active");
     window.startHealthMonitoring?.();
     setInterval(() => {
-      if (!mediaWorkActive()) window.loadCodingPanel?.();
+      if (document.hidden || mediaWorkActive()) return;
+      window.loadCodingPanel?.();
     }, 90000);
     scheduleEditorContextPoll();
   });

@@ -364,7 +364,10 @@
         window.showAriaToast?.(err.message || "Calibration save failed", "err", 5000);
       }
     });
-    setInterval(refreshGpuMode, 20000);
+    setInterval(() => {
+      if (document.hidden) return;
+      refreshGpuMode();
+    }, 20000);
     $("faceEnrollBtn")?.addEventListener("click", async () => {
       const video = $("presenceVideo");
       if (!video?.videoWidth) {

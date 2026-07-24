@@ -83,7 +83,11 @@ function renderModelSettings(settings) {
 
   const modelsEl = document.getElementById("modelsStatus");
   if (modelsEl && active.general) {
-    modelsEl.innerHTML = `<span>${active.general}</span><br><span>${active.coder}</span>`;
+    const general = document.createElement("span");
+    general.textContent = active.general;
+    const coder = document.createElement("span");
+    coder.textContent = active.coder || "Not configured";
+    modelsEl.replaceChildren(general, document.createElement("br"), coder);
   }
 }
 

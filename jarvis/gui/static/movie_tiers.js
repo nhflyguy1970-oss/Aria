@@ -904,12 +904,12 @@
     showLastGoodSettings();
     refreshContextSuggestions();
     setInterval(() => {
-      if (window.mediaWorkActive?.()) return;
+      if (document.hidden || window.mediaWorkActive?.()) return;
       refreshEnvStrip();
       refreshWorldStateHud();
     }, 60000);
     setInterval(() => {
-      if (window.mediaWorkActive?.()) return;
+      if (document.hidden || window.mediaWorkActive?.()) return;
       refreshWakePill();
     }, 15000);
     setTimeout(maybeTaskNudge, 8000);

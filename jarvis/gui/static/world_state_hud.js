@@ -86,7 +86,10 @@
   function start() {
     refreshWorldHud();
     if (timer) clearInterval(timer);
-    timer = setInterval(refreshWorldHud, POLL_MS);
+    timer = setInterval(() => {
+      if (document.hidden) return;
+      refreshWorldHud();
+    }, POLL_MS);
   }
 
   if (document.readyState === "loading") {

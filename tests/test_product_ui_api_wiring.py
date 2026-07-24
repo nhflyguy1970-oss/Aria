@@ -482,6 +482,13 @@ def test_command_palette_is_wired():
     assert "applyModuleFilter" in mt and "MODULE_NAV" in mt
     assert 'target === "workstation"' in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "created?.project?.slug" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
+    assert "title.textContent = p.title" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
+    assert "li.innerHTML = `<strong>${p.title}" not in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
+    assert "modelsEl.replaceChildren" in Path("jarvis/gui/static/models_panel.js").read_text(encoding="utf-8")
+    assert "document.hidden || window.mediaWorkActive" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "if (document.hidden) return;" in Path("jarvis/gui/static/presence.js").read_text(encoding="utf-8")
+    assert "if (document.hidden) return;" in Path("jarvis/gui/static/world_state_hud.js").read_text(encoding="utf-8")
+    assert "document.hidden || window.mediaWorkActive" in Path("jarvis/gui/static/wakeword_chat.js").read_text(encoding="utf-8")
     assert "Generation cancelled" in Path("jarvis/gui/static/chat_progress.js").read_text(encoding="utf-8")
     assert "preferred_module" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
     assert "preferred_module" in Path("jarvis/gui/server.py").read_text(encoding="utf-8")

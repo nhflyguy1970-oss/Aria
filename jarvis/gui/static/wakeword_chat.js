@@ -53,6 +53,7 @@ async function pollWakewordChat() {
 
   window.pollWakewordChat = pollWakewordChat;
   setInterval(() => {
-    if (!window.mediaWorkActive?.()) pollWakewordChat();
+    if (document.hidden || window.mediaWorkActive?.()) return;
+    pollWakewordChat();
   }, window.isNativeApp?.() ? 5000 : 2500);
 })();
