@@ -112,8 +112,8 @@ async function queueImageEdit(imagePath, prompt, regionKey, statusEl, onDone, de
   if (!wholeImage) {
     let d = denoise;
     if (d == null || d === "") {
-      const el = document.getElementById("inpaintDenoise");
-      d = el?.value;
+      d = document.getElementById("imageLightboxDenoise")?.value
+        || document.getElementById("inpaintDenoise")?.value;
     }
     const denoiseVal = Number(d);
     form.append(

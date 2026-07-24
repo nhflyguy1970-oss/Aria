@@ -49,3 +49,6 @@ Expand this matrix as each subsystem completes deep certification.
 - `memory_browser.js`, `image_engine.js` extracted; `app.js` ~4442 lines
 - Audio remount race; song GPU limits; fly-tying state/notes; presence calib POST; docs learn; meme bind guard
 - **NO** — resume: documents.js extract, long-duration/multi-monitor, Comfy/voice soaks, per-control matrix
+
+## Change log
+- 2026-07-24: media_lightbox extract; gallery ✎ → inpaint modal; models/git/cloud-live/VRAM/actions/fly-init friction ships.

@@ -2496,7 +2496,10 @@ clearBtn.addEventListener("click", async () => {
 
 
 readAloudBtn.addEventListener("click", async () => {
-  if (!lastAssistantText) return;
+  if (!lastAssistantText) {
+    window.showAriaToast?.("Nothing to read yet — wait for an assistant reply", "info", 3000);
+    return;
+  }
   readAloudBtn.disabled = true;
   statusText.textContent = "Speaking on Sound Blaster…";
   try {
@@ -2504,10 +2507,15 @@ readAloudBtn.addEventListener("click", async () => {
     form.append("text", lastAssistantText.replace(/[*`#]/g, "").slice(0, 4000));
     const res = await fetch("/api/audio/speak", { method: "POST", body: form });
     const data = await res.json();
-    if (!data.ok) showError(data.message || "Could not play audio.");
-    else statusText.textContent = "Ready · Sound Blaster";
+    if (!data.ok) {
+      showError(data.message || "Could not play audio.");
+      window.showAriaToast?.(data.message || "Could not play audio", "err", 5000);
+    } else {
+      statusText.textContent = "Ready · Sound Blaster";
+    }
   } catch (e) {
     showError(`Audio playback failed: ${e.message}`);
+    window.showAriaToast?.(`Audio playback failed: ${e.message}`, "err", 5000);
   } finally {
     readAloudBtn.disabled = false;
   }
@@ -3177,59 +3185,84 @@ async function loadModelSettings() {
 window.loadModelSettings = loadModelSettings;
 
 document.getElementById("saveModelsBtn")?.addEventListener("click", async () => {
-  const mode = uncensoredToggle.checked ? "uncensored" : "standard";
-  const form = new FormData();
-  form.append("mode", mode);
-  form.append("general", modelSelects.general?.value || "");
-  form.append("coder", modelSelects.coder?.value || "");
-  form.append("review", modelSelects.review?.value || "");
-  form.append("vision", modelSelects.vision?.value || "");
-  form.append("image", modelSelects.image?.value || "");
-  form.append("embed", modelSelects.embed?.value || "");
-  const res = await fetch("/api/models/settings", { method: "POST", body: form });
-  const data = await res.json();
-  if (data.settings) renderModelSettings({ ...data.settings, mode });
-  const vq = document.getElementById("visionQualitySelect");
-  if (vq) vq.value = "custom";
-  await fetch("/api/vision/settings", { method: "POST", body: new URLSearchParams({ quality_mode: "custom" }) });
-  await loadVisionSettings();
-  statusText.textContent = "Models saved (vision: use selected model)";
+  try {
+    const mode = uncensoredToggle.checked ? "uncensored" : "standard";
+    const form = new FormData();
+    form.append("mode", mode);
+    form.append("general", modelSelects.general?.value || "");
+    form.append("coder", modelSelects.coder?.value || "");
+    form.append("review", modelSelects.review?.value || "");
+    form.append("vision", modelSelects.vision?.value || "");
+    form.append("image", modelSelects.image?.value || "");
+    form.append("embed", modelSelects.embed?.value || "");
+    const res = await fetch("/api/models/settings", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Save failed (${res.status})`);
+    if (data.settings) renderModelSettings({ ...data.settings, mode });
+    const vq = document.getElementById("visionQualitySelect");
+    if (vq) vq.value = "custom";
+    await fetch("/api/vision/settings", { method: "POST", body: new URLSearchParams({ quality_mode: "custom" }) });
+    await loadVisionSettings();
+    const msg = "Models saved (vision: use selected model)";
+    statusText.textContent = msg;
+    window.showAriaToast?.(msg, "ok", 2500);
+  } catch (err) {
+    window.showAriaToast?.(err.message || "Could not save models", "err", 5000);
+  }
 });
 
 document.getElementById("refreshModelsBtn")?.addEventListener("click", async () => {
-  const res = await fetch("/api/models/refresh", { method: "POST" });
-  const data = await res.json();
-  if (data.settings) {
-    renderModelSettings({ ...data.settings, mode: uncensoredToggle.checked ? "uncensored" : "standard" });
+  try {
+    const res = await fetch("/api/models/refresh", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Refresh failed (${res.status})`);
+    if (data.settings) {
+      renderModelSettings({ ...data.settings, mode: uncensoredToggle.checked ? "uncensored" : "standard" });
+    }
     statusText.textContent = "Models refreshed";
+    window.showAriaToast?.("Models refreshed", "ok", 2500);
+  } catch (err) {
+    window.showAriaToast?.(err.message || "Could not refresh models", "err", 5000);
   }
 });
 
 document.getElementById("resetModelsBtn")?.addEventListener("click", async () => {
-  const mode = uncensoredToggle.checked ? "uncensored" : "standard";
-  const form = new FormData();
-  form.append("mode", mode);
-  const res = await fetch("/api/models/reset", { method: "POST", body: form });
-  const data = await res.json();
-  if (data.settings) renderModelSettings({ ...data.settings, mode });
-  statusText.textContent = "Models reset to optimized defaults";
-  document.querySelectorAll(".preset-btn").forEach((b) => b.classList.remove("active"));
-  document.getElementById("presetQualityBtn")?.classList.add("active");
+  try {
+    const mode = uncensoredToggle.checked ? "uncensored" : "standard";
+    const form = new FormData();
+    form.append("mode", mode);
+    const res = await fetch("/api/models/reset", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Reset failed (${res.status})`);
+    if (data.settings) renderModelSettings({ ...data.settings, mode });
+    statusText.textContent = "Models reset to optimized defaults";
+    window.showAriaToast?.("Models reset to defaults", "ok", 2500);
+    document.querySelectorAll(".preset-btn").forEach((b) => b.classList.remove("active"));
+    document.getElementById("presetQualityBtn")?.classList.add("active");
+  } catch (err) {
+    window.showAriaToast?.(err.message || "Could not reset models", "err", 5000);
+  }
 });
 
 async function applyPreset(preset) {
-  const mode = uncensoredToggle.checked ? "uncensored" : "standard";
-  const form = new FormData();
-  form.append("preset", preset);
-  form.append("mode", mode);
-  const res = await fetch("/api/models/preset", { method: "POST", body: form });
-  const data = await res.json();
-  if (data.settings) {
-    renderModelSettings({ ...data.settings, mode });
-    statusText.textContent = `Applied ${preset} preset`;
+  try {
+    const mode = uncensoredToggle.checked ? "uncensored" : "standard";
+    const form = new FormData();
+    form.append("preset", preset);
+    form.append("mode", mode);
+    const res = await fetch("/api/models/preset", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Preset failed (${res.status})`);
+    if (data.settings) {
+      renderModelSettings({ ...data.settings, mode });
+      statusText.textContent = `Applied ${preset} preset`;
+      window.showAriaToast?.(`Applied ${preset} preset`, "ok", 2500);
+    }
+    document.querySelectorAll(".preset-btn").forEach((b) => b.classList.remove("active"));
+    document.getElementById(preset === "fast" ? "presetFastBtn" : "presetQualityBtn")?.classList.add("active");
+  } catch (err) {
+    window.showAriaToast?.(err.message || `Could not apply ${preset} preset`, "err", 5000);
   }
-  document.querySelectorAll(".preset-btn").forEach((b) => b.classList.remove("active"));
-  document.getElementById(preset === "fast" ? "presetFastBtn" : "presetQualityBtn")?.classList.add("active");
 }
 
 document.getElementById("presetFastBtn")?.addEventListener("click", () => applyPreset("fast"));
@@ -3644,7 +3677,9 @@ async function runLspAction(kind) {
   const path = lspPathValue();
   const line = lspLineValue();
   if (!path) {
-    setLspOut("Enter a file path or sync Cursor editor context.");
+    const msg = "Enter a file path or sync Cursor editor context.";
+    setLspOut(msg);
+    window.showAriaToast?.(msg, "warn", 3500);
     return;
   }
   setLspOut(kind === "diagnostics" ? "Checking…" : "…");
@@ -3667,7 +3702,9 @@ async function runLspAction(kind) {
     const res = await fetch(url, opts);
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.ok === false) {
-      setLspOut(data.message || data.detail || "LSP request failed");
+      const msg = data.message || data.detail || "LSP request failed";
+      setLspOut(msg);
+      window.showAriaToast?.(msg, "err", 5000);
       return;
     }
     if (kind === "diagnostics") {
@@ -3689,6 +3726,7 @@ async function runLspAction(kind) {
   } catch (e) {
     const msg = e?.name === "AbortError" ? "LSP timed out — try again or narrow the file" : String(e);
     setLspOut(msg);
+    window.showAriaToast?.(msg, "err", 5000);
   } finally {
     clearTimeout(timer);
   }
@@ -3789,10 +3827,12 @@ async function loadGitStatus() {
   if (!el) return;
   try {
     const res = await fetch("/api/git/status");
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Git status failed (${res.status})`);
     el.textContent = data.status || "—";
-  } catch (_) {
+  } catch (err) {
     el.textContent = "Git: unavailable";
+    window.showAriaToast?.(err.message || "Git status unavailable", "err", 4000);
   }
 }
 
@@ -3803,10 +3843,12 @@ async function loadGitDiff() {
   box.textContent = "Loading diff…";
   try {
     const res = await fetch("/api/git/diff");
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Git diff failed (${res.status})`);
     box.textContent = data.diff?.trim() || "(no diff)";
-  } catch (_) {
+  } catch (err) {
     box.textContent = "Could not load diff";
+    window.showAriaToast?.(err.message || "Could not load diff", "err", 4000);
   }
 }
 
@@ -3817,11 +3859,13 @@ async function loadGitLog() {
   box.textContent = "Loading log…";
   try {
     const res = await fetch("/api/git/log?limit=12");
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Git log failed (${res.status})`);
     const lines = (data.log || []).join("\n");
     box.textContent = lines || "(empty log)";
-  } catch (_) {
+  } catch (err) {
     box.textContent = "Could not load log";
+    window.showAriaToast?.(err.message || "Could not load log", "err", 4000);
   }
 }
 
