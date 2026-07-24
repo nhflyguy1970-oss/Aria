@@ -210,6 +210,10 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/gallery_view.js").is_file()
     assert Path("jarvis/gui/static/memory_browser.js").is_file()
     assert Path("jarvis/gui/static/image_engine.js").is_file()
+    assert Path("jarvis/gui/static/documents.js").is_file()
+    assert "async function loadDocumentsTab" not in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "Code index rebuilt" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "Poll failed:" in Path("jarvis/gui/static/audit.js").read_text(encoding="utf-8")
     assert "async function loadCheatsheets" not in app
     assert "function syncComfySettings" not in app
     assert "window.syncComfySettings" in Path("jarvis/gui/static/image_engine.js").read_text(encoding="utf-8")
@@ -220,7 +224,7 @@ def test_command_palette_is_wired():
     assert "window.syncMuteButton" in Path("jarvis/gui/static/voice_bar.js").read_text(encoding="utf-8")
     assert 'dataset.bound === "1"' in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert 'dataset.bound === "1"' in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
-    assert "Reindexing…" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "Reindexing…" in Path("jarvis/gui/static/documents.js").read_text(encoding="utf-8")
 
     assert "act:backup" in js
     assert "act:theme-toggle" in js

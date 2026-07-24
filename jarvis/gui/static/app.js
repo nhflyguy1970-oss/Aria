@@ -178,7 +178,8 @@ async function refreshLanPanel() {
   if (!line) return;
   try {
     const res = await fetch("/api/lan");
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `LAN status failed (${res.status})`);
     jarvisLanIps = data.lan_ips || [];
     jarvisApiKeyRequired = Boolean(data.api_key_required);
     jarvisLocalhostKeyExempt = data.api_key_localhost_exempt !== false;
@@ -199,8 +200,9 @@ async function refreshLanPanel() {
         : `<span class="muted">No LAN IP detected — use PC IP manually.</span>`;
     }
     copyBtn?.classList.toggle("hidden", !lanPrimaryUrl);
-  } catch (_) {
-    line.textContent = "LAN status unavailable.";
+  } catch (err) {
+    line.textContent = err.message || "LAN status unavailable.";
+    window.showAriaToast?.(err.message || "LAN status unavailable", "err", 4000);
   }
 }
 
@@ -3082,7 +3084,7 @@ function switchToView(view) {
   if (view === "maker" && window.initMakerLab) window.initMakerLab();
   if (view === "browser" && window.initBrowserPanel) window.initBrowserPanel();
   if (view !== "browser" && window.stopBrowserPanelPoll) window.stopBrowserPanelPoll();
-  if (view === "security" && window.initSecurity) window.initSecurity();
+  if (view === "security" && window.initSecurity) { window.initSecurity(); window.refreshToolsSidebar?.(); }
   if (view === "presence" && window.initPresence) window.initPresence();
   if (view === "audit" && window.initAudit) window.initAudit();
   if (view === "voice" && window.initVoiceTab) window.initVoiceTab();
@@ -3092,8 +3094,8 @@ function switchToView(view) {
   if (view === "gallery") window.loadGallery?.();
   if (view === "video" && typeof loadVideoGallery === "function") loadVideoGallery();
   if (view === "meme" && typeof loadMemeGallery === "function") loadMemeGallery();
-  if (view === "actions") loadActions();
-  if (view === "documents" && window.loadDocumentsTab) window.loadDocumentsTab();
+  if (view === "actions") (window.loadActions || loadActions)(document.getElementById("actionsFilter")?.value);
+  if (view === "documents") { window.initDocumentsTab?.(); window.loadDocumentsTab?.(); }
   document.querySelector(`.view-tab[data-view="${view}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
@@ -3924,11 +3926,17 @@ async function loadCodingPanel() {
 document.getElementById("indexCodeBtn")?.addEventListener("click", async () => {
   statusText.textContent = "Indexing code…";
   try {
-    await fetch("/api/code/reindex", { method: "POST" });
-    statusText.textContent = "Code index rebuilt";
+    const res = await fetch("/api/code/reindex", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.message || data.detail || `Index failed (${res.status})`);
+    }
+    statusText.textContent = data.message || "Code index rebuilt";
+    window.showAriaToast?.(data.message || "Code index rebuilt", "ok", 3000);
     loadCodingPanel();
-  } catch (_) {
-    statusText.textContent = "Index failed";
+  } catch (err) {
+    statusText.textContent = err.message || "Index failed";
+    window.showAriaToast?.(err.message || "Code index failed", "err", 5000);
   }
 });
 

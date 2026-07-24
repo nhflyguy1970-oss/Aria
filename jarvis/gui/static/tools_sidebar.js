@@ -54,11 +54,13 @@
     if (!el) return;
     try {
       const res = await fetch("/api/security/brain-mode");
-      const d = await res.json();
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(d.message || `Brain mode failed (${res.status})`);
       el.textContent = d.label || d.mode || "—";
       el.title = `Mode: ${d.mode} · Ollama: ${d.local ? "up" : "down"}`;
-    } catch (_) {
-      el.textContent = "";
+    } catch (err) {
+      el.textContent = "Unavailable";
+      el.title = err.message || "Brain mode unavailable";
     }
   }
 

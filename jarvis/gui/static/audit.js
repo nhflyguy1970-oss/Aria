@@ -390,8 +390,11 @@
               return;
             }
             applyProgressFromApi(latest);
-          } catch (_) {}
-        }, 2000);
+          } catch (err) {
+              stopAuditProgress();
+              setStatus(`Poll failed: ${err.message || err}`, false);
+            }
+          }, 2000);
         return;
       }
 
@@ -407,6 +410,12 @@
 
   function initAudit() {
     if (!$("auditView")) return;
+    const root = $("auditView");
+    if (root.dataset.loaded === "1") {
+      loadAudit({ force: false });
+      return;
+    }
+    root.dataset.loaded = "1";
     loadAudit({ force: true });
   }
 
