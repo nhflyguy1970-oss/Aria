@@ -5488,6 +5488,8 @@ async function loadGallery() {
   }
 }
 
+window.loadGallery = loadGallery;
+
 async function loadPromptHistory() {
   const el = document.getElementById("promptHistoryList");
   if (!el) return;
@@ -5632,12 +5634,6 @@ document.getElementById("gitRefreshBtn")?.addEventListener("click", () => loadGi
 document.getElementById("gitDiffBtn")?.addEventListener("click", () => loadGitDiff());
 document.getElementById("gitLogBtn")?.addEventListener("click", () => loadGitLog());
 
-document.getElementById("themeToggle")?.addEventListener("click", () => {
-  document.body.classList.toggle("light-theme");
-  const btn = document.getElementById("themeToggle");
-  if (btn) btn.textContent = document.body.classList.contains("light-theme") ? "Dark theme" : "Light theme";
-});
-
 document.getElementById("exportChatBtn")?.addEventListener("click", () => {
   const params = new URLSearchParams();
   if (activeBranchId) params.set("branch_id", activeBranchId);
@@ -5651,14 +5647,57 @@ document.getElementById("exportChatPdfBtn")?.addEventListener("click", () => {
 });
 
 document.getElementById("backupDataBtn")?.addEventListener("click", async () => {
+  const btn = document.getElementById("backupDataBtn");
+  if (btn) btn.disabled = true;
+  window.showAriaToast?.("Backup starting…", "info");
   try {
-    const res = await fetch("/api/admin/backup", { method: "POST" });
-    const data = await res.json();
-    alert(data.ok ? data.message || "Backup complete" : data.message || "Backup failed");
-  } catch (_) {
-    alert("Backup failed");
+    const res = await fetch("/api/admin/backup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ async: true }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      window.showAriaToast?.(data.message || "Backup failed", "err");
+      return;
+    }
+    if (data.pending && data.job_id) {
+      window.showAriaToast?.(`Backup queued (${data.job_id.slice(0, 8)}…)`, "ok");
+      window.jarvisJobs?.refreshJobCenter?.();
+      document.getElementById("jobCenterBtn")?.classList.add("pulse");
+    } else {
+      window.showAriaToast?.(data.message || "Backup complete", "ok");
+    }
+  } catch (e) {
+    window.showAriaToast?.(String(e.message || e || "Backup failed"), "err");
+  } finally {
+    if (btn) btn.disabled = false;
   }
 });
+
+document.getElementById("themeToggle")?.addEventListener("click", () => {
+  document.body.classList.toggle("light-theme");
+  const on = document.body.classList.contains("light-theme");
+  try {
+    localStorage.setItem("aria_theme", on ? "light" : "dark");
+  } catch {
+    /* ignore */
+  }
+  const btn = document.getElementById("themeToggle");
+  if (btn) btn.textContent = on ? "Dark theme" : "Light theme";
+});
+
+(function restoreAriaTheme() {
+  try {
+    if (localStorage.getItem("aria_theme") === "light") {
+      document.body.classList.add("light-theme");
+      const btn = document.getElementById("themeToggle");
+      if (btn) btn.textContent = "Dark theme";
+    }
+  } catch {
+    /* ignore */
+  }
+})();
 
 document.getElementById("profileSelect")?.addEventListener("change", async (e) => {
   const pid = e.target.value;

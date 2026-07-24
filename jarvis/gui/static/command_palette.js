@@ -223,6 +223,20 @@
         keywords: "layout",
         run: () => window.resetSidebarLayout?.(),
       },
+      {
+        id: "act:backup",
+        label: "Backup Aria data",
+        group: "System",
+        keywords: "export snapshot archive",
+        run: () => $("backupDataBtn")?.click(),
+      },
+      {
+        id: "act:theme-toggle",
+        label: "Toggle light / dark theme",
+        group: "System",
+        keywords: "appearance light dark",
+        run: () => $("themeToggle")?.click(),
+      },
     ];
 
     function focusSearch(view, inputId, clickBtnId) {

@@ -120,6 +120,10 @@ function renderDayPanel(data) {
 
   el.innerHTML = `
     <h3>${escapeHtml(data.title || data.day)}</h3>
+    <div class="cal-day-actions">
+      <button type="button" id="calOpenJournalBtn" class="ghost-btn small">Open in Journal</button>
+      <button type="button" id="calOpenPlannerBtn" class="ghost-btn small">Open Planner</button>
+    </div>
     ${hasItems ? "" : `<p class="muted">Nothing scheduled for this day.</p>`}
     ${holidays ? `<ul class="cal-day-list">${holidays}</ul>` : ""}
     ${work ? `<p class="cal-section-label">Work schedule</p><ul class="cal-day-list">${work}</ul>` : ""}
@@ -150,6 +154,19 @@ function renderDayPanel(data) {
   calEl("calNoteSaveBtn")?.addEventListener("click", () => saveCalendarNote(data.day));
   el.querySelectorAll(".cal-open-planner").forEach((btn) => {
     btn.addEventListener("click", () => window.switchToView?.("planner"));
+  });
+  calEl("calOpenPlannerBtn")?.addEventListener("click", () => window.switchToView?.("planner"));
+  calEl("calOpenJournalBtn")?.addEventListener("click", () => {
+    window.switchToView?.("journal");
+    setTimeout(() => {
+      const jd = document.getElementById("journalDate");
+      if (jd && data.day) {
+        jd.value = data.day;
+        jd.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      window.setBujoTab?.("daily");
+      document.querySelector('.bujo-tab[data-bujo="daily"]')?.click();
+    }, 120);
   });
 }
 
@@ -379,6 +396,14 @@ function bindCalendarControls() {
   calEl("calendarIcsSaveBtn")?.addEventListener("click", saveIcsUrl);
   calEl("calendarIcsTestBtn")?.addEventListener("click", testIcsUrl);
 }
+
+window.openCalendarDay = async function openCalendarDay(day) {
+  const iso = String(day || todayIso()).slice(0, 10);
+  window.switchToView?.("calendar");
+  const month = iso.slice(0, 7);
+  await loadCalendarMonth(month);
+  await loadCalendarDay(iso);
+};
 
 window.initCalendar = async function initCalendar() {
   const root = calEl("calendarView");

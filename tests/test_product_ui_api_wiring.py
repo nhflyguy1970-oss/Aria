@@ -196,10 +196,22 @@ def test_command_palette_is_wired():
     assert Path("docs/ARIA_GUI_INVENTORY_V2.md").is_file()
     assert "Ctrl</kbd>+<kbd>L" in html or "Ctrl+L" in html
     cal = Path("jarvis/gui/static/calendar.js").read_text(encoding="utf-8")
+    app = Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "planner_tasks" in cal
     assert "cal-open-planner" in cal
+    assert "calOpenJournalBtn" in cal
+    assert "window.openCalendarDay" in cal
     assert "planner_tasks" in Path("jarvis/calendar_tab.py").read_text(encoding="utf-8")
-    assert Path("jarvis/gui/static/modal_chrome.js").is_file()
+    assert "async: true" in app
+    assert "aria_theme" in app
+    assert "window.loadGallery" in app
+    assert "act:backup" in js
+    assert "act:theme-toggle" in js
+    assert "journalOpenCalendarBtn" in html
+    assert "window.setBujoTab" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
+    assert "prefers-reduced-motion" in css
+    assert not Path("jarvis/gui/static/browser.js").exists()
+    assert Path("jarvis/gui/static/browser_panel.js").is_file()
 
 
 def test_stop_playback_and_clear_tts_queue_do_not_raise():

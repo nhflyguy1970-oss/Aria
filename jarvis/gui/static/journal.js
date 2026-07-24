@@ -1667,6 +1667,15 @@ journalSearch?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") document.getElementById("journalSearchBtn")?.click();
 });
 
+document.getElementById("journalOpenCalendarBtn")?.addEventListener("click", () => {
+  const day = journalDate?.value || new Date().toISOString().slice(0, 10);
+  window.openCalendarDay?.(day);
+});
+
+document.getElementById("journalOpenPlannerBtn")?.addEventListener("click", () => {
+  window.switchToView?.("planner");
+});
+
 document.getElementById("journalPrintBtn")?.addEventListener("click", () => {
   const month = journalMonth?.value || new Date().toISOString().slice(0, 7);
   window.open(`/api/journal/print?month=${month}`, "_blank");
@@ -1769,3 +1778,5 @@ window.initJournal = () => {
   refreshBujo();
 };
 window.refreshBujo = refreshBujo;
+
+window.setBujoTab = setBujoTab;
