@@ -20,7 +20,8 @@ async function runUpgradeAction(action, proposalId, messageEl) {
   try {
     const res = await fetch(url, { method: "POST", body: form });
     const data = await res.json();
-    (window.addMessage || (() => {}))("assistant", data.message || (data.ok ? "Done." : "Failed."), {
+    const msg = data.message || (data.ok ? "Done." : "Failed.");
+    (window.addMessage || (() => {}))("assistant", msg, {
       module: "coding",
       type: data.type,
       upgrade_wizard: true,
@@ -28,13 +29,15 @@ async function runUpgradeAction(action, proposalId, messageEl) {
       verified: data.verified,
       show_undo: data.show_undo,
     });
+    window.showAriaToast?.(msg, data.ok ? "ok" : "err", data.ok ? 3000 : 5000);
     if (data.proposal_id) upgradeWizardState.proposal_id = data.proposal_id;
     if (data.verified) upgradeWizardState.verified = true;
     if (data.snapshot_id) upgradeWizardState.snapshot_id = data.snapshot_id;
     refreshUpgradeWizardPanel();
     messageEl?.querySelector?.(".proposal-actions")?.remove();
-  } catch (_) {
+  } catch (err) {
     (window.addMessage || (() => {}))("assistant", "Upgrade action failed.");
+    window.showAriaToast?.(err?.message || "Upgrade action failed", "err", 5000);
   }
 }
 
@@ -134,8 +137,9 @@ function initUpgradeWizardModal() {
       });
       if (data.proposal_id) upgradeWizardState.proposal_id = data.proposal_id;
       refreshUpgradeWizardPanel();
-    } catch (_) {
+    } catch (err) {
       if (logEl) logEl.textContent = "Propose failed.";
+      window.showAriaToast?.(err?.message || "Propose failed", "err", 5000);
     } finally {
       if (proposeBtn) proposeBtn.disabled = false;
     }
