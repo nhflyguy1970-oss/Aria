@@ -1381,7 +1381,9 @@ async function loadJournalKey() {
       if (c.symbol) items.push(`<span class="bujo-key-item"><span class="bujo-key-sym">${escapeHtml(c.symbol)}</span> ${escapeHtml(c.label || "custom")}</span>`);
     });
     el.innerHTML = items.join("") || '<span class="bujo-key-item">Set symbols on Key tab</span>';
-  } catch (_) {}
+  } catch (err) {
+    el.innerHTML = '<span class="bujo-key-item muted">Key legend unavailable</span>';
+  }
 }
 
 async function loadKey() {

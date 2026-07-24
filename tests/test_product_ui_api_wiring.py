@@ -122,7 +122,7 @@ def test_mc_dollar_accepts_hash_ids_and_audit_controls_wired():
     upgrade_js = Path("jarvis/gui/static/upgrade_wizard.js").read_text(encoding="utf-8")
     media_js = Path("jarvis/gui/static/media_lightbox.js").read_text(encoding="utf-8")
     assert "inpaintDenoise" in app_js or "inpaintDenoise" in media_js
-    assert "refreshSidebarVideoStatus" in app_js
+    assert "refreshSidebarVideoStatus" in app_js or "refreshSidebarVideoStatus" in Path("jarvis/gui/static/video_sidebar.js").read_text(encoding="utf-8")
     assert 'fetch("/api/upgrade/clear"' in upgrade_js or 'fetch("/api/upgrade/clear"' in app_js
     assert "upgradeClearBtn" in upgrade_js or "upgradeClearBtn" in app_js
     assert "galleryGenerateBtn" in gallery_js or "galleryGenerateBtn" in app_js
