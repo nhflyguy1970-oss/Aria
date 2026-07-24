@@ -400,6 +400,7 @@ def test_command_palette_is_wired():
     assert "function addMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function addMessage" in Path("jarvis/gui/static/chat_messages.js").read_text(encoding="utf-8")
     assert "Drop PDFs/DOCX" in Path("jarvis/gui/static/documents.js").read_text(encoding="utf-8")
+    assert "audit-empty-run" in Path("jarvis/gui/static/audit.js").read_text(encoding="utf-8")
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showGeneratedImage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showAudioPlayer" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")

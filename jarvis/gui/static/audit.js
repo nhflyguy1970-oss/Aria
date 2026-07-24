@@ -61,7 +61,7 @@
 
   function renderItems(items, sectionClass) {
     if (!items?.length) {
-      return `<p class="audit-empty muted">None</p>`;
+      return `<p class="audit-empty muted">None yet. <button type="button" class="ghost-btn tiny audit-empty-run">Run full audit</button></p>`;
     }
     return `<ul class="audit-list ${sectionClass}">${
       items.map((item) => {
@@ -319,6 +319,13 @@
 
   function bindCopyDelegation() {
     $("auditReportBody")?.addEventListener("click", (e) => {
+      const emptyRun = e.target.closest(".audit-empty-run");
+      if (emptyRun) {
+        e.preventDefault();
+        e.stopPropagation();
+        $("auditRunBtn")?.click();
+        return;
+      }
       const installBtn = e.target.closest(".audit-run-install");
       if (installBtn) {
         e.preventDefault();
