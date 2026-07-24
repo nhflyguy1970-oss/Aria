@@ -297,6 +297,9 @@ def test_command_palette_is_wired():
     assert "window.showApiKeyModal" in Path("jarvis/gui/static/lan_access.js").read_text(encoding="utf-8")
     assert "function showApiKeyModal" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "lan_access.js" in html
+    assert "skip-link" in html
+    assert 'id="mainContent"' in html
+    assert ".skip-link" in css
     assert "Transcript copied" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
     assert "Task added" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "Kasa unavailable" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8") or "Kasa: unavailable" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8")

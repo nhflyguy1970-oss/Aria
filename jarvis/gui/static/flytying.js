@@ -239,7 +239,7 @@
       await persistInventoryRows(rows, { replace: true });
       if (status) status.textContent = `Saved ${rows.length} material${rows.length === 1 ? "" : "s"}`;
     } catch (e) {
-      if (status) status.textContent = e.message || "Could not save";
+      failUi(status, e.message || "Could not save");
     }
   }
 
@@ -352,7 +352,7 @@
       clearEntryFields();
       if (status) status.textContent = `Added: ${label}`;
     } catch (e) {
-      if (status) status.textContent = e.message || "Could not add material";
+      failUi(status, e.message || "Could not add material");
     }
   }
 
@@ -393,7 +393,7 @@
       applyInventoryResponse(data);
       if (status) status.textContent = "Saved";
     } catch (e) {
-      if (status) status.textContent = e.message || "Could not save";
+      failUi(status, e.message || "Could not save");
     }
   }
 
@@ -431,7 +431,7 @@
       if (bulk) bulk.value = "";
       if (status) status.textContent = `Imported ${added} record${added === 1 ? "" : "s"} (${_inventory.length} total)`;
     } catch (e) {
-      if (status) status.textContent = e.message || "Could not import materials";
+      failUi(status, e.message || "Could not import materials");
     }
   }
 
@@ -445,7 +445,7 @@
       if (status) status.textContent = "Removed from inventory";
     } catch (e) {
       if (e.status !== 404) {
-        if (status) status.textContent = e.message;
+        failUi(status, e.message);
         return;
       }
       const rows = _inventory.filter((i) => String(i.id || "") !== String(itemId));
@@ -470,6 +470,12 @@
     const chat = $("flytyingChatStatus");
     if (chat && msg && !$("flytyingScanModal")?.classList.contains("hidden")) return;
     if (chat && msg) chat.textContent = msg;
+  }
+
+  function failUi(statusEl, msg) {
+    const m = msg || "Something went wrong";
+    if (statusEl) statusEl.textContent = m;
+    window.showAriaToast?.(m, "err", 4500);
   }
 
   async function processBarcode(raw, opts = {}) {
@@ -585,6 +591,7 @@
       tick();
     } catch (e) {
       setScanStatus(`Camera error: ${e.message}`);
+      window.showAriaToast?.(`Camera error: ${e.message}`, "err", 5000);
     }
   }
 
@@ -879,7 +886,7 @@
       await loadVideos();
       if (status) status.textContent = "Video removed";
     } catch (e) {
-      if (status) status.textContent = e.message;
+      failUi(status, e.message);
     }
   }
 
@@ -1330,7 +1337,7 @@
       if (status) status.textContent = data.model ? `Model: ${data.model}` : "";
       if (data.matches?.[0]) selectRecipe(recipeKey(data.matches[0]));
     } catch (e) {
-      if (status) status.textContent = e.message;
+      failUi(status, e.message);
     }
   }
 
@@ -1360,7 +1367,7 @@
       if (first) showVideo(first);
       if (status) status.textContent = data.message || "Video added";
     } catch (e) {
-      if (status) status.textContent = e.message;
+      failUi(status, e.message);
     }
   }
 
@@ -1407,6 +1414,7 @@
       );
     } catch (e) {
       alert(e.message);
+      window.showAriaToast?.(e.message || "Fly tying action failed", "err", 5000);
     }
   }
 
@@ -1424,7 +1432,7 @@
       refreshStatus();
       loadRecipes();
     } catch (e) {
-      if (status) status.textContent = e.message;
+      failUi(status, e.message);
     }
   }
 
