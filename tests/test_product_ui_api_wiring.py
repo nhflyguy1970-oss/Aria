@@ -258,7 +258,17 @@ def test_command_palette_is_wired():
     assert "act:journal-rapid" in js
     assert "act:planner-task" in js
     assert "act:calendar-today" in js
+    assert "act:security" in js
+    assert "act:webcam" in js
+    assert "act:gallery" in js
     assert "journalOpenCalendarBtn" in html
+    assert "memoryOpenJournalBtn" in html
+    assert "memoryOpenProjectsBtn" in html
+    assert Path("jarvis/gui/static/vision_settings.js").is_file()
+    assert "window.loadVisionSettings" in Path("jarvis/gui/static/vision_settings.js").read_text(encoding="utf-8")
+    assert "async function loadVisionSettings" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "Vision quality:" in Path("jarvis/gui/static/vision_settings.js").read_text(encoding="utf-8")
+    assert "Normalize failed" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
     assert "window.setBujoTab" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "showAriaToast" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "Journal exported" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
@@ -306,7 +316,7 @@ def test_command_palette_is_wired():
     assert "Kasa unavailable" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8") or "Kasa: unavailable" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8")
     assert "act:integrations-keys" in js
     assert "Restarting" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
-    assert "Vision quality:" in app or "Vision quality:" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "Vision quality:" in app or "Vision quality:" in Path("jarvis/gui/static/vision_settings.js").read_text(encoding="utf-8")
 
 
 def test_stop_playback_and_clear_tts_queue_do_not_raise():

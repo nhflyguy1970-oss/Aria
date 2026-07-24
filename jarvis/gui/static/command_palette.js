@@ -452,6 +452,47 @@
         keywords: "music podcast genre song whisper",
         run: () => goView("audio"),
       },
+      {
+        id: "act:security",
+        label: "Open Security / PIN",
+        group: "System",
+        keywords: "lock pin auth trust",
+        run: () => goView("security"),
+      },
+      {
+        id: "act:gallery",
+        label: "Open Gallery",
+        group: "Actions",
+        keywords: "images comfy generate",
+        run: () => goView("gallery"),
+      },
+      {
+        id: "act:memory",
+        label: "Open Memory",
+        group: "Actions",
+        keywords: "knowledge recall acm",
+        run: () => goView("memory"),
+      },
+      {
+        id: "act:webcam",
+        label: "Capture webcam attachment",
+        group: "Actions",
+        keywords: "camera vision photo",
+        run: () => {
+          goView("chat");
+          setTimeout(() => $("webcamBtn")?.click(), 60);
+        },
+      },
+      {
+        id: "act:vision-quality",
+        label: "Focus vision quality",
+        group: "System",
+        keywords: "vlm image model mode",
+        run: () => {
+          goView("chat");
+          setTimeout(() => $("visionQualitySelect")?.focus(), 60);
+        },
+      },
     ];
 
     function focusSearch(view, inputId, clickBtnId) {

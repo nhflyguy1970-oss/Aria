@@ -13,7 +13,9 @@ async function loadCheatsheets(selectKey) {
       `<option value="${window.escapeHtml(c.key)}">${window.escapeHtml(c.key)} — ${window.escapeHtml(c.title)}</option>`
     ).join("")}`;
     if (selectKey) sel.value = selectKey;
-  } catch (_) {}
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Could not load cheatsheets", "err", 4000);
+  }
 }
 
 async function showCheatsheet(key) {
@@ -22,7 +24,7 @@ async function showCheatsheet(key) {
   const res = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}`);
   const data = await res.json();
   if (!data.ok) {
-    alert(data.error || "Cheatsheet not found");
+    window.showAriaToast?.(data.error || "Cheatsheet not found", "err", 5000);
     return;
   }
   box.textContent = data.cheatsheet?.content || "";
@@ -574,6 +576,12 @@ function initMemoryBrowser() {
     } catch (err) {
       window.showAriaToast?.(err.message || "Save failed", "err", 5000);
     }
+  });
+  document.getElementById("memoryOpenJournalBtn")?.addEventListener("click", () => {
+    window.switchToView?.("journal");
+  });
+  document.getElementById("memoryOpenProjectsBtn")?.addEventListener("click", () => {
+    window.switchToView?.("projects");
   });
   document.getElementById("memoryExportBtn")?.addEventListener("click", async () => {
     try {
