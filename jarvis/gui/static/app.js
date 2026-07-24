@@ -1468,7 +1468,13 @@ async function resumePendingMediaJobs() {
         if (job?.id && !job.done) ids.add(job.id);
       }
     }
-  } catch (_) {}
+  } catch (e) {
+    window.showAriaToast?.(
+      `Could not resume media jobs: ${e?.message || e}`,
+      "err",
+      4000,
+    );
+  }
   for (const jobId of ids) {
     if (!jobId || activeMediaJobs.has(jobId)) continue;
     try {
@@ -2170,53 +2176,7 @@ function refreshVisionChips() {
 }
 
 // openCropModal / webcam → crop_webcam.js (window.openCropModal, window.captureWebcamAttachment)
-
-function initVisionDropPaste() {
-  const chatView = document.getElementById("chatView");
-  const overlay = document.getElementById("dropOverlay");
-  if (!chatView) return;
-
-  chatView.addEventListener("dragover", (e) => {
-    if (![...e.dataTransfer.types].includes("Files")) return;
-    e.preventDefault();
-    overlay?.classList.remove("hidden");
-  });
-  chatView.addEventListener("dragleave", (e) => {
-    if (e.target === chatView) overlay?.classList.add("hidden");
-  });
-  chatView.addEventListener("drop", (e) => {
-    e.preventDefault();
-    overlay?.classList.add("hidden");
-    const imgs = [...e.dataTransfer.files].filter(
-      (f) => isVisionAttachment(f) || /^image\//i.test(f.type),
-    );
-    if (imgs.length >= 2) {
-      assignMultipleAttachments(imgs);
-    } else if (imgs.length === 1) {
-      assignAttachment(imgs[0], compareMode && Boolean(pendingFile));
-    }
-  });
-
-  document.addEventListener("paste", (e) => {
-    if (isTextEntryElement(e.target)) return;
-    const items = e.clipboardData?.items;
-    if (!items) return;
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const blob = item.getAsFile();
-        if (blob) {
-          e.preventDefault();
-          assignAttachment(new File([blob], `paste-${Date.now()}.png`, { type: blob.type }));
-          break;
-        }
-      }
-    }
-  });
-}
-
-initVisionDropPaste();
-
-// webcam → crop_webcam.js
+// initVisionDropPaste → vision_drop.js
 
 clearBtn?.addEventListener("click", async () => {
   try {
@@ -2315,8 +2275,10 @@ window.jarvisAttach = {
   get pendingCrop() { return pendingCrop; },
   set pendingCrop(v) { pendingCrop = v; },
   isVisionAttachment,
+  isTextEntryElement,
   updateAttachmentPreview,
   assignAttachment,
+  assignMultipleAttachments,
 };
 // loadVisionSettings → vision_settings.js
 Object.defineProperty(window, "activeBranchId", {

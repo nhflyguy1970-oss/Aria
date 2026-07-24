@@ -147,8 +147,19 @@ imageEngineInstallNsfwBtn?.addEventListener("click", async () => {
           imageEngineInstallNsfwBtn.textContent = "Install NSFW checkpoints";
           imageEngineInstallNsfwBtn.disabled = false;
           await loadComfyMode();
+          window.showAriaToast?.(st.message || "NSFW checkpoint install finished", "ok", 4000);
         }
-      } catch (_) {}
+      } catch (err) {
+        clearInterval(poll);
+        imageEngineInstallNsfwBtn.dataset.running = "0";
+        imageEngineInstallNsfwBtn.textContent = "Install NSFW checkpoints";
+        imageEngineInstallNsfwBtn.disabled = false;
+        window.showAriaToast?.(
+          err?.message || "Lost contact while installing NSFW checkpoints",
+          "err",
+          5000,
+        );
+      }
     }, 8000);
   } catch (err) {
     imageEngineInstallNsfwBtn.disabled = false;
