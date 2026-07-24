@@ -376,6 +376,7 @@ def test_command_palette_is_wired():
     assert "researchEmptyRunBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "knowledgeEmptyChatBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "profileEmptyEditBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
+    assert "mcEmptyRoutingChatBtn" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "act:run-research" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
     assert "function appendAuthenticatedVideo" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "appendGeneratedVideo," in Path("jarvis/gui/static/chat_video.js").read_text(encoding="utf-8")

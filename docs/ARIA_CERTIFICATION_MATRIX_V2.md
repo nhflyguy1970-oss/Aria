@@ -43,7 +43,7 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: …/**chat_progress**/**chat_video**; image/vision/data HTML builders → **chat_images**; knowledge/browser/profile empty CTAs; `act:run-research`; boot fix (no `const resolveVideoUrl`). `app.js` ~**1677** lines.
+- FIXED & CERTIFIED: …/**chat_progress**/**chat_video**; image/vision/data HTML → **chat_images**; knowledge/browser/profile + MC routing/intent/analytics empty CTAs; `act:run-research`; boot fix (no `const resolveVideoUrl`). `app.js` ~**1677** lines.
 - INTENTIONALLY DEFERRED: chat/stream/sendMessage still in app.js (core pipeline); long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 

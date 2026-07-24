@@ -271,7 +271,7 @@ function renderSettings(d) {
       "Intent Registry",
       regRows
         ? `<table class="mc-table"><thead><tr><th>Intent</th><th>Handler</th><th>Uses</th><th>Confidence</th><th>Success</th></tr></thead><tbody>${regRows}</tbody></table>`
-        : "<p class='muted'>No intent statistics yet.</p>"
+        : "<p class='muted'>No intent statistics yet. <button type='button' class='ghost-btn tiny' id='mcEmptyIntentChatBtn'>Ask Chat</button></p>"
     ),
   ]);
 }
@@ -359,7 +359,7 @@ function renderRecovery(d) {
 function renderRoutingOverviewCard(stats) {
   const s = stats || {};
   if (!s.count) {
-    return mcCard("Routing", "<p class='muted'>No routing records yet.</p>");
+    return mcCard("Routing", "<p class='muted'>No routing records yet. <button type='button' class='ghost-btn tiny' id='mcEmptyRoutingChatBtn'>Ask Chat</button></p>");
   }
   const last = s.last_route || {};
   return mcCard(
@@ -475,7 +475,7 @@ function renderIntentAnalytics(data) {
       "Intent distribution",
       rows
         ? `<table class="mc-table"><thead><tr><th>Intent</th><th>Count</th><th>%</th><th>Conf</th><th>Route ms</th></tr></thead><tbody>${rows}</tbody></table>`
-        : "<p class='muted'>No analytics yet.</p>"
+        : "<p class='muted'>No analytics yet. <button type='button' class='ghost-btn tiny' id='mcEmptyAnalyticsChatBtn'>Ask Chat</button></p>"
     ),
     mcCard("Classifier", renderClassifierCard()),
   ]);
@@ -725,6 +725,13 @@ function ensureMcDelegates() {
     }
     if (e.target.closest?.("#mcEmptyActivityChatBtn")) {
       window.switchToView?.("chat");
+      return;
+    }
+    if (e.target.closest?.("#mcEmptyIntentChatBtn")
+        || e.target.closest?.("#mcEmptyRoutingChatBtn")
+        || e.target.closest?.("#mcEmptyAnalyticsChatBtn")) {
+      window.switchToView?.("chat");
+      window.jarvisSendToChat?.("Summarize Mission Control routing and intent health");
       return;
     }
     if (e.target.closest?.("#mcEmptyRecChatBtn")) {
