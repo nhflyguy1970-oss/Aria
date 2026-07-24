@@ -165,6 +165,9 @@ def test_a11y_modal_esc_and_ux_debt_regressions():
     assert "window.closeImageLightbox" in app_js or "window.closeImageLightbox" in media_js
     assert "media_lightbox.js" in html
     assert "coding_panel.js" in html
+    assert "models_panel.js" in html
+    assert "window.loadModelSettings" in Path("jarvis/gui/static/models_panel.js").read_text(encoding="utf-8")
+    assert "async function loadModelSettings" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     coding_js = Path("jarvis/gui/static/coding_panel.js").read_text(encoding="utf-8")
     assert "window.loadCodingPanel" in coding_js
     assert "async function loadCodingPanel" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")

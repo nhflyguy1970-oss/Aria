@@ -166,6 +166,7 @@
         head.setAttribute("aria-expanded", sec.classList.contains("collapsed") ? "false" : "true");
         if (key === "models" && !sec.classList.contains("collapsed")) {
           document.getElementById("modelsEditor")?.classList.remove("hidden");
+          document.getElementById("modelsToggle")?.setAttribute("aria-expanded", "true");
           if (typeof window.loadModelSettings === "function") window.loadModelSettings();
         }
       });
