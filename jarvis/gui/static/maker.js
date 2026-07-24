@@ -286,6 +286,14 @@
   }
 
   function initMakerLab() {
+    const root = $("makerView");
+    if (root?.dataset.bound === "1") {
+      refreshCadStatus();
+      loadModels();
+      refreshPrinter();
+      return;
+    }
+    if (root) root.dataset.bound = "1";
     $("cadRefreshBtn")?.addEventListener("click", () => { refreshCadStatus(); loadModels(); });
     $("cadGenerateBtn")?.addEventListener("click", generateCad);
     $("cadHelloCubeBtn")?.addEventListener("click", helloCube);

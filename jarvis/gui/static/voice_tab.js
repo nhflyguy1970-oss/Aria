@@ -10,7 +10,11 @@ async function saveVoiceTabSetting(patch) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
   });
-  return res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.message || data.detail || `Save failed (${res.status})`);
+  }
+  return data;
 }
 
 async function loadVoiceCheatsheet(key) {
@@ -84,14 +88,22 @@ window.initVoiceTab = function initVoiceTab() {
   loadVoiceTab();
   $("voiceTabRefreshBtn")?.addEventListener("click", loadVoiceTab);
   $("voiceTabDuplexSelect")?.addEventListener("change", async (ev) => {
-    await saveVoiceTabSetting({ duplex_mode: ev.target.value });
-    window.showAriaToast?.(`Duplex: ${ev.target.value}`);
-    loadVoiceTab();
+    try {
+      await saveVoiceTabSetting({ duplex_mode: ev.target.value });
+      window.showAriaToast?.(`Duplex: ${ev.target.value}`, "ok");
+      loadVoiceTab();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Duplex save failed", "err", 5000);
+    }
   });
   $("voiceTabSttSelect")?.addEventListener("change", async (ev) => {
-    await saveVoiceTabSetting({ stt_backend: ev.target.value });
-    window.showAriaToast?.(`STT: ${ev.target.value}`);
-    loadVoiceTab();
+    try {
+      await saveVoiceTabSetting({ stt_backend: ev.target.value });
+      window.showAriaToast?.(`STT: ${ev.target.value}`, "ok");
+      loadVoiceTab();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "STT save failed", "err", 5000);
+    }
   });
   $("voiceTabSaveBtn")?.addEventListener("click", async () => {
     const patch = {
@@ -101,9 +113,13 @@ window.initVoiceTab = function initVoiceTab() {
       interrupt_on_speak: Boolean($("voiceTabInterrupt")?.checked),
       speak_chunk_sentences: Boolean($("voiceTabChunkSentences")?.checked),
     };
-    await saveVoiceTabSetting(patch);
-    window.showAriaToast?.("Voice settings saved", "ok");
-    loadVoiceTab();
+    try {
+      await saveVoiceTabSetting(patch);
+      window.showAriaToast?.("Voice settings saved", "ok");
+      loadVoiceTab();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Voice settings save failed", "err", 5000);
+    }
   });
   $("voiceTabCloudBtn")?.addEventListener("click", () => {
     $("cloudLiveBtn")?.click();

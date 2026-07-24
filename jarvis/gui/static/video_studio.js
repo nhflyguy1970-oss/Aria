@@ -344,12 +344,17 @@ document.getElementById("videoFreeVramBtn")?.addEventListener("click", async () 
       await window.freeJarvisVram(status);
     } else {
       const res = await fetch("/api/gpu/free-vram", { method: "POST" });
-      const data = await res.json();
-      if (status) {
-        status.textContent = data.ok ? "VRAM freed — ready for video gen" : (data.message || "Free VRAM failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.message || data.detail || `Free VRAM failed (${res.status})`);
       }
+      if (status) status.textContent = "VRAM freed — ready for video gen";
+      window.showAriaToast?.("VRAM freed", "ok", 3000);
     }
-  } catch (_) {}
+  } catch (err) {
+    if (status) status.textContent = err.message || "Free VRAM failed";
+    window.showAriaToast?.(err.message || "Free VRAM failed", "err", 5000);
+  }
 });
 
 document.getElementById("videoSettingsSaveBtn")?.addEventListener("click", () => saveVideoSettings());

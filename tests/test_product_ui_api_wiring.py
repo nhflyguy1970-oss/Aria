@@ -212,6 +212,11 @@ def test_command_palette_is_wired():
     assert "Memory exported" in app
     assert "dataset.bound === \"1\"" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
     assert "Could not switch project" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
+    assert "window.syncMuteButton" in Path("jarvis/gui/static/voice_bar.js").read_text(encoding="utf-8")
+    assert 'dataset.bound === "1"' in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert 'dataset.bound === "1"' in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
+    assert "Reindexing…" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+
     assert "act:backup" in js
     assert "act:theme-toggle" in js
     assert "journalOpenCalendarBtn" in html

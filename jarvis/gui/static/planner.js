@@ -375,6 +375,9 @@ function showListeningOverlay(show) {
 
 window.initPlanner = function initPlanner() {
   loadPlanner();
+  const root = $("plannerView");
+  if (root?.dataset.bound === "1") return;
+  if (root) root.dataset.bound = "1";
   $("plannerAddTaskBtn")?.addEventListener("click", async () => {
     const text = $("plannerTaskInput")?.value?.trim();
     if (!text) return;

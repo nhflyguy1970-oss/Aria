@@ -346,6 +346,7 @@ async function toggleCloudLive() {
   }
 }
 
+window.syncMuteButton = syncMuteButton;
 window.showAriaToast = showToast;
 window.setVoiceBarState = setVoiceBarState;
 window.jarvisRefreshVoiceUi = refreshVoiceUi;

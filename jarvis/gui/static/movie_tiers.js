@@ -846,12 +846,27 @@
   });
 
   $("documentsReindexBtn")?.addEventListener("click", async () => {
-    const data = await fetchJson("/api/documents/reindex", { method: "POST" });
+    const btn = $("documentsReindexBtn");
     const status = $("documentsIndexStatus");
-    if (status) status.textContent = data.ok ? `Indexed ${data.chunks} chunks` : "Reindex failed";
-    loadDocumentsTab();
-    $("documentsList")?.classList.remove("hidden");
-    $("documentsSearchResults")?.classList.add("hidden");
+    if (btn) btn.disabled = true;
+    if (status) status.textContent = "Reindexing…";
+    try {
+      const res = await fetch("/api/documents/reindex", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.message || data.detail || `Reindex failed (${res.status})`);
+      }
+      if (status) status.textContent = `Indexed ${data.chunks ?? 0} chunks`;
+      window.showAriaToast?.(`Indexed ${data.chunks ?? 0} document chunks`, "ok", 3500);
+      loadDocumentsTab();
+      $("documentsList")?.classList.remove("hidden");
+      $("documentsSearchResults")?.classList.add("hidden");
+    } catch (err) {
+      if (status) status.textContent = err.message || "Reindex failed";
+      window.showAriaToast?.(err.message || "Reindex failed", "err", 5000);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
   });
 
   /* --- ICS wizard in journal (Tier 2 #12) --- */
