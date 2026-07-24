@@ -798,6 +798,7 @@ function initMissionControl() {
   loadMissionControl();
   if (_mcPoll) clearInterval(_mcPoll);
   _mcPoll = setInterval(() => {
+    if (document.hidden) return;
     if (document.getElementById("workstationView")?.classList.contains("hidden")) return;
     loadMissionControl();
   }, 30000);

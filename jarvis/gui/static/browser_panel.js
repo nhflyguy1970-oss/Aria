@@ -145,8 +145,14 @@
 
   function startPoll() {
     stopPoll();
-    pollTimer = setInterval(refreshBrowserPanel, 4000);
-    refreshBrowserPanel();
+    const tick = () => {
+      if (document.hidden) return;
+      const view = $("browserView");
+      if (view?.classList.contains("hidden")) return;
+      refreshBrowserPanel();
+    };
+    pollTimer = setInterval(tick, 4000);
+    tick();
   }
 
   function stopPoll() {
@@ -163,6 +169,12 @@
       return;
     }
     if (root) root.dataset.bound = "1";
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && !$("browserView")?.classList.contains("hidden")) {
+        refreshBrowserPanel();
+      }
+    });
 
     $("browserRefreshBtn")?.addEventListener("click", () => refreshBrowserPanel({ toastOnError: true }));
     $("browserInstallPwBtn")?.addEventListener("click", async () => {

@@ -337,6 +337,8 @@ def test_command_palette_is_wired():
     assert "Voice tab load failed" in Path("jarvis/gui/static/voice_tab.js").read_text(encoding="utf-8")
     assert "Browser agent unavailable" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
     assert "toastOnError" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
+    assert "document.hidden" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
+    assert "document.hidden" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "Planner load failed" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "News briefing failed" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "Diarize failed" in Path("jarvis/gui/static/audio_advanced.js").read_text(encoding="utf-8")
