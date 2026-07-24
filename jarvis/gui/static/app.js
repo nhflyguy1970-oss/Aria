@@ -2100,7 +2100,7 @@ function handleDone(data, text, streamed = false, options = {}) {
 
 window.handleDone = handleDone;
 
-chatForm.addEventListener("submit", (e) => {
+chatForm?.addEventListener("submit", (e) => {
   e.preventDefault();
   const text = messageInput.value;
   messageInput.value = "";
@@ -2109,9 +2109,9 @@ chatForm.addEventListener("submit", (e) => {
   sendMessage(text);
 });
 
-messageInput.addEventListener("input", resizeMessageInput);
+messageInput?.addEventListener("input", resizeMessageInput);
 
-messageInput.addEventListener("keydown", (e) => {
+messageInput?.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     chatForm.dispatchEvent(new Event("submit"));
@@ -2477,7 +2477,7 @@ document.getElementById("webcamBtn")?.addEventListener("click", async () => {
   }
 });
 
-clearBtn.addEventListener("click", async () => {
+clearBtn?.addEventListener("click", async () => {
   try {
     const f = new FormData();
     f.append("message", "clear");
@@ -2494,7 +2494,7 @@ clearBtn.addEventListener("click", async () => {
 });
 
 
-readAloudBtn.addEventListener("click", async () => {
+readAloudBtn?.addEventListener("click", async () => {
   if (!lastAssistantText) {
     window.showAriaToast?.("Nothing to read yet — wait for an assistant reply", "info", 3000);
     return;
@@ -3077,8 +3077,8 @@ setInterval(() => {
   if (!mediaWorkActive()) pollWakewordChat();
 }, isNativeApp() ? 5000 : 2500);
 
-// Define before startup_overlay.js invokes waitForServices → __ariaPostStartup
-window.__ariaPostStartup = () => {
+// Define before startup_overlay.js invokes waitForServices → ariaPostStartup
+window.ariaPostStartup = () => {
   try { window.initAriaModalChrome?.(); } catch (_) {}
   loadSuggestions();
   loadHealth().then(async () => {

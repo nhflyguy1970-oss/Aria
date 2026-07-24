@@ -96,13 +96,13 @@ document.getElementById("startupSkipBtn")?.addEventListener("click", () => {
   async function bootWhenReady() {
     await waitForServices();
     for (let i = 0; i < 40; i++) {
-      if (typeof window.__ariaPostStartup === "function") {
-        window.__ariaPostStartup();
+      if (typeof window.ariaPostStartup === "function") {
+        window.ariaPostStartup();
         return;
       }
       await new Promise((r) => setTimeout(r, 50));
     }
-    console.warn("[aria] __ariaPostStartup never registered");
+    console.warn("[aria] ariaPostStartup never registered");
   }
   bootWhenReady();
 })();
