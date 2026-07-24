@@ -372,7 +372,7 @@ async function postWeekly(content, bulletType, week) {
   form.append("content", content);
   form.append("bullet_type", bulletType);
   if (week) form.append("week", week);
-  await fetch("/api/journal/weekly", { method: "POST", body: form });
+  return journalPost("/api/journal/weekly", { method: "POST", body: form });
 }
 
 async function postMonthly(content, bulletType, month) {
@@ -380,7 +380,7 @@ async function postMonthly(content, bulletType, month) {
   form.append("content", content);
   form.append("bullet_type", bulletType);
   if (month) form.append("month", month);
-  await fetch("/api/journal/monthly", { method: "POST", body: form });
+  return journalPost("/api/journal/monthly", { method: "POST", body: form });
 }
 
 async function postFuture(content, bulletType, month) {
@@ -395,7 +395,10 @@ async function postCollection(name, content, bulletType) {
   const form = new FormData();
   form.append("content", content);
   form.append("bullet_type", bulletType);
-  await fetch(`/api/journal/collections/${encodeURIComponent(name)}/add`, { method: "POST", body: form });
+  return journalPost(`/api/journal/collections/${encodeURIComponent(name)}/add`, {
+    method: "POST",
+    body: form,
+  });
 }
 
 function bindWellnessExtras(day) {
@@ -594,28 +597,33 @@ function bindAddRow() {
     const content = document.getElementById("bujoAddContent")?.value.trim();
     const bulletType = document.getElementById("bujoAddType")?.value || "task";
     if (!content) return;
+    let out = { ok: true };
     if (currentBujo === "daily") {
-      await postDaily(content, bulletType, journalDate?.value);
+      out = await postDaily(content, bulletType, journalDate?.value);
     } else if (currentBujo === "weekly") {
-      await postWeekly(content, bulletType, journalWeek?.value);
+      out = await postWeekly(content, bulletType, journalWeek?.value);
     } else if (currentBujo === "monthly" && monthlySelectedDay) {
-      await postDaily(content, bulletType, monthlySelectedDay);
+      out = await postDaily(content, bulletType, monthlySelectedDay);
+      if (!out?.ok) return;
       await openMonthlyDay(monthlySelectedDay);
+      const input = document.getElementById("bujoAddContent");
+      if (input) input.value = "";
+      journalNotify("Entry saved", false);
       return;
     } else if (currentBujo === "monthly") {
-      await postMonthly(content, bulletType, journalMonth?.value);
+      out = await postMonthly(content, bulletType, journalMonth?.value);
     } else if (currentBujo === "future") {
       const month = futureMonthValue();
-      const out = await postFuture(content, bulletType, month);
-      if (!out.ok) return;
+      out = await postFuture(content, bulletType, month);
     } else if (currentBujo === "collections") {
       const name = document.getElementById("colActive")?.value;
       if (!name) {
         journalNotify("Select or create a collection first");
         return;
       }
-      await postCollection(name, content, bulletType);
+      out = await postCollection(name, content, bulletType);
     }
+    if (!out?.ok) return;
     const input = document.getElementById("bujoAddContent");
     if (input) input.value = "";
     journalNotify("Entry saved", false);
@@ -1399,13 +1407,16 @@ async function loadWellness() {
     <h3>Wellness · ${escapeHtml(month)}</h3>
     <p class="bujo-cal-hint">Mood is set on each Daily page · gratitude stream from all days this month</p>
     <p>Average mood: <strong>${data.mood_average ?? "—"}</strong> · logged ${data.days_logged || 0} days</p>
-    <div class="bujo-wellness-grid">${moodCells || '<p class="bujo-empty">No mood logged yet.</p>'}</div>
+    <div class="bujo-wellness-grid">${moodCells || '<p class="bujo-empty">No mood logged yet. <button type="button" class="ghost-btn tiny" id="bujoWellnessEmptyDailyBtn">Open daily log</button></p>'}</div>
     <h4>Gratitude stream</h4>
-    <ul class="bujo-gratitude-stream">${gratitude || '<li class="bujo-empty">No gratitude entries this month.</li>'}</ul>`;
+    <ul class="bujo-gratitude-stream">${gratitude || '<li class="bujo-empty">No gratitude entries this month. <button type="button" class="ghost-btn tiny" id="bujoWellnessEmptyGratitudeBtn">Open daily log</button></li>'}</ul>`;
   bujoContent.querySelectorAll(".bujo-wellness-day").forEach((el, i) => {
     const d = data.days[i];
     if (d) el.onclick = () => { if (journalDate) journalDate.value = d.date; setBujoTab("daily"); };
   });
+  const openDaily = () => setBujoTab("daily");
+  bujoContent.querySelector("#bujoWellnessEmptyDailyBtn")?.addEventListener("click", openDaily);
+  bujoContent.querySelector("#bujoWellnessEmptyGratitudeBtn")?.addEventListener("click", openDaily);
 }
 
 async function loadJournalKey() {

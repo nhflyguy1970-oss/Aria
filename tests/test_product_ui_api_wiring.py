@@ -263,7 +263,11 @@ def test_command_palette_is_wired():
     assert "act:gallery" in js
     assert "act:ics-wizard" in js
     assert "act:checklist" in js
-    assert "act:open-meme" in js
+    assert "act:meme-studio" in js
+    assert "act:mute-voice" in js
+    assert "act:lock-security" in js
+    assert "act:pomodoro" in js
+    assert "act:open-meme" not in js
     assert "act:open-projects" in js
     assert "act:debug-bundle" in js
     assert "act:browser-task" in js

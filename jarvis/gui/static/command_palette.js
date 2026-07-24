@@ -215,8 +215,35 @@
         id: "act:meme-studio",
         label: "Open Meme Studio",
         group: "Actions",
-        keywords: "caption image funny",
-        run: () => window.switchToView?.("meme"),
+        keywords: "caption image funny meme generate",
+        run: () => goView("meme"),
+      },
+      {
+        id: "act:mute-voice",
+        label: "Toggle voice mute",
+        group: "Actions",
+        keywords: "mute unmute speaker silence",
+        run: () => $("voiceMuteBtn")?.click(),
+      },
+      {
+        id: "act:lock-security",
+        label: "Lock Aria (PIN)",
+        group: "System",
+        keywords: "security pin lock screen",
+        run: () => {
+          goView("security");
+          setTimeout(() => $("securityLockBtn")?.click(), 80);
+        },
+      },
+      {
+        id: "act:pomodoro",
+        label: "Start Pomodoro",
+        group: "Actions",
+        keywords: "timer focus 25 planner",
+        run: () => {
+          goView("planner");
+          setTimeout(() => $("plannerPomodoroBtn")?.click(), 80);
+        },
       },
       {
         id: "act:video-studio",
@@ -587,13 +614,6 @@
           goView("memory");
           setTimeout(() => $("knowledgeResearchRunBtn")?.click(), 120);
         },
-      },
-      {
-        id: "act:open-meme",
-        label: "Open Meme studio",
-        group: "Actions",
-        keywords: "caption generate meme",
-        run: () => goView("meme"),
       },
       {
         id: "act:open-projects",

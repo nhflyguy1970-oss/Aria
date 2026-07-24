@@ -593,22 +593,59 @@ async function loadAudioPanel() {
   updateRecordModeUi();
 
   document.getElementById("audioWhisperModel")?.addEventListener("change", async () => {
-    const form = new FormData();
-    form.append("model", selectedWhisperModel());
-    await fetch("/api/audio/whisper-model", { method: "POST", body: form });
-    loadAudioStatus();
+    try {
+      const form = new FormData();
+      form.append("model", selectedWhisperModel());
+      const res = await fetch("/api/audio/whisper-model", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || `Whisper model save failed (${res.status})`;
+        audioStatus(statusEl, msg, "err");
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      audioStatus(statusEl, `Whisper model: ${selectedWhisperModel()}`, "ok");
+      window.showAriaToast?.("Whisper model saved", "ok", 2000);
+      loadAudioStatus();
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Whisper model save failed", "err", 5000);
+    }
   });
 
   document.getElementById("audioWhisperLang")?.addEventListener("change", async () => {
-    const form = new FormData();
-    form.append("language", document.getElementById("audioWhisperLang")?.value || "en");
-    await fetch("/api/audio/whisper-language", { method: "POST", body: form });
+    try {
+      const form = new FormData();
+      form.append("language", document.getElementById("audioWhisperLang")?.value || "en");
+      const res = await fetch("/api/audio/whisper-language", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || `Language save failed (${res.status})`;
+        audioStatus(statusEl, msg, "err");
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      window.showAriaToast?.("Whisper language saved", "ok", 2000);
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Language save failed", "err", 5000);
+    }
   });
 
   document.getElementById("audioPiperSpeed")?.addEventListener("change", async () => {
-    const form = new FormData();
-    form.append("speed", document.getElementById("audioPiperSpeed")?.value || "1");
-    await fetch("/api/audio/piper-speed", { method: "POST", body: form });
+    try {
+      const form = new FormData();
+      form.append("speed", document.getElementById("audioPiperSpeed")?.value || "1");
+      const res = await fetch("/api/audio/piper-speed", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || `Speech speed save failed (${res.status})`;
+        audioStatus(statusEl, msg, "err");
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      window.showAriaToast?.("Speech speed saved", "ok", 2000);
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Speech speed save failed", "err", 5000);
+    }
   });
 
   document.getElementById("audioMicProfile")?.addEventListener("change", async () => {
@@ -626,11 +663,24 @@ async function loadAudioPanel() {
   });
 
   document.getElementById("audioInputSource")?.addEventListener("change", async () => {
-    const form = new FormData();
-    form.append("source", selectedInputSource());
-    await fetch("/api/audio/input-source", { method: "POST", body: form });
-    loadAudioStatus();
-    statusEl.textContent = `Input saved: ${selectedInputSource().split(".").pop()}`;
+    try {
+      const form = new FormData();
+      form.append("source", selectedInputSource());
+      const res = await fetch("/api/audio/input-source", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || `Input source save failed (${res.status})`;
+        audioStatus(statusEl, msg, "err");
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      loadAudioStatus();
+      const okMsg = `Input saved: ${selectedInputSource().split(".").pop()}`;
+      statusEl.textContent = okMsg;
+      window.showAriaToast?.(okMsg, "ok", 2000);
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Input source save failed", "err", 5000);
+    }
   });
 
   document.getElementById("audioOutputSink")?.addEventListener("change", async () => {

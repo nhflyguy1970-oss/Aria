@@ -100,8 +100,15 @@ function renderPlanner(data) {
     const s = rem % 60;
     return `${t.label || "timer"} — ${m}m ${s}s`;
   };
-  timersEl.innerHTML = (data.timers || []).map((t) => `<li>${fmtTimer(t)}</li>`).join("") || "<li class='muted'>No active timers</li>";
-  alarmsEl.innerHTML = (data.alarms || []).map((a) => `<li>${a.label || "alarm"} @ ${(a.fire_at || "").slice(11, 16)}</li>`).join("") || "<li class='muted'>No alarms</li>";
+  timersEl.innerHTML = (data.timers || []).map((t) => `<li>${fmtTimer(t)}</li>`).join("")
+    || "<li class='muted'>No active timers. <button type='button' class='ghost-btn tiny' id='plannerEmptyPomoBtn'>Start Pomodoro</button></li>";
+  timersEl.querySelector("#plannerEmptyPomoBtn")?.addEventListener("click", () => $("plannerPomodoroBtn")?.click());
+  alarmsEl.innerHTML = (data.alarms || []).map((a) => `<li>${a.label || "alarm"} @ ${(a.fire_at || "").slice(11, 16)}</li>`).join("")
+    || "<li class='muted'>No alarms. <button type='button' class='ghost-btn tiny' id='plannerEmptyAlarmBtn'>Add alarm</button></li>";
+  alarmsEl.querySelector("#plannerEmptyAlarmBtn")?.addEventListener("click", () => {
+    $("plannerAlarmTime")?.focus();
+    window.showAriaToast?.("Set a time and click Add alarm", "info", 3000);
+  });
   const events = data.events_today || [];
   if (!events.length) {
     eventsEl.innerHTML =
