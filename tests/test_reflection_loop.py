@@ -17,6 +17,7 @@ def test_reflection_disabled(monkeypatch):
 
 def test_reflection_status(monkeypatch):
     monkeypatch.setenv("JARVIS_REFLECTION_DAILY", "1")
+    monkeypatch.setenv("JARVIS_BRAIN_MODE", "1")
     monkeypatch.setenv("JARVIS_REFLECTION_HOUR", "22")
     from jarvis.reflection_loop import reflection_hour, reflection_status
 
@@ -33,9 +34,11 @@ def test_store_strategies(data_dir, monkeypatch):
     from jarvis.reflection_loop import STRATEGIES_NAMESPACE, _store_strategies
 
     store = MemoryStore(path=data_dir / "memory.json")
-    n = _store_strategies(store, ["Prefer pytest before merge.", "Prefer pytest before merge."])
+    unique = f"Prefer pytest before merge ({data_dir.name})."
+    n = _store_strategies(store, [unique, unique])
     assert n == 1
-    rows = store.list_entries(entry_type="strategy", namespace=STRATEGIES_NAMESPACE)
+    rows = [e for e in store.list_entries(entry_type="strategy", namespace=STRATEGIES_NAMESPACE)
+            if (e.get("content") or "") == unique]
     assert len(rows) == 1
     assert "reflection" in (rows[0].get("tags") or [])
 

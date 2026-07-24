@@ -68,6 +68,23 @@ def collect(*, log_bytes: int = 6000) -> dict[str, Any]:
         "serve": _tail(LOG_DIR / "serve.log", log_bytes),
     }
 
+    try:
+        from jarvis.engineering.cad_deps import cad_status
+        from jarvis.engineering.printer_store import get_printer
+
+        printer = get_printer() or {}
+        bundle["cad_print"] = {
+            **cad_status(),
+            "printer": {
+                "name": printer.get("name"),
+                "host": printer.get("host"),
+                "backend": printer.get("backend"),
+                "model": printer.get("model"),
+            },
+        }
+    except Exception as exc:
+        bundle["cad_print"] = {"error": str(exc)}
+
     bundle["text"] = format_text(bundle)
     return bundle
 
