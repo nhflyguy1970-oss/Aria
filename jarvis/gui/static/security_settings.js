@@ -42,10 +42,14 @@
         devices.querySelectorAll(".trusted-revoke").forEach((btn) => {
           btn.addEventListener("click", async () => {
             try {
-              await fetchJson(
+              const out = await fetchJson(
                 `/api/security/trusted-devices/${encodeURIComponent(btn.dataset.id)}/revoke`,
                 { method: "POST" },
               );
+              if (out.ok === false) {
+                window.showAriaToast?.(out.message || out.error || "Revoke failed", "err", 5000);
+                return;
+              }
               window.showAriaToast?.("Trusted device revoked", "ok", 3000);
               refreshSecurityPanel();
             } catch (err) {

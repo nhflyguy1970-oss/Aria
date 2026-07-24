@@ -79,7 +79,13 @@ export function renderJobCenter(data) {
       btn.className = "ghost-btn tiny";
       btn.textContent = "Cancel";
       btn.addEventListener("click", async () => {
-        await cancelJobByQueue(job.queue, job.id);
+        try {
+          const ok = await cancelJobByQueue(job.queue, job.id);
+          if (ok === false) window.showAriaToast?.("Cancel failed — job may have finished", "err", 4000);
+          else window.showAriaToast?.("Cancel requested", "ok", 2500);
+        } catch (err) {
+          window.showAriaToast?.(err?.message || "Cancel failed", "err", 4000);
+        }
         await refreshJobCenter();
       });
       li.appendChild(document.createElement("br"));

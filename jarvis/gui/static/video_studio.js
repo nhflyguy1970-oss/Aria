@@ -422,8 +422,10 @@ document.getElementById("videoEngineInstallAdBtn")?.addEventListener("click", as
     btn.dataset.running = "1";
     btn.textContent = "Installing (~2 GB)…";
     const poll = setInterval(async () => {
-      const st = await fetch("/api/comfyui/install-animatediff/status");
-      const info = await st.json();
+      if (document.hidden) return;
+      const st = await fetch("/api/comfyui/install-animatediff/status").catch(() => null);
+      const info = st ? await st.json().catch(() => ({})) : {};
+      if (!st) return;
       if (!info.running) {
         clearInterval(poll);
         btn.dataset.running = "0";
@@ -432,6 +434,8 @@ document.getElementById("videoEngineInstallAdBtn")?.addEventListener("click", as
         loadVideoSettings();
         if (info.readiness?.ready) {
           window.showAriaToast?.("AnimateDiff ready — restart ComfyUI if it was already running.", "ok", 6000);
+        } else {
+          window.showAriaToast?.(info.message || "AnimateDiff install finished but not ready — check logs", "err", 6000);
         }
       }
     }, 5000);
@@ -460,14 +464,22 @@ document.getElementById("videoEngineInstallNsfwBtn")?.addEventListener("click", 
     btn.dataset.running = "1";
     btn.textContent = "Downloading (~44 GB)…";
     const poll = setInterval(async () => {
-      const st = await fetch("/api/comfyui/install-nsfw/status");
-      const info = await st.json();
+      if (document.hidden) return;
+      const st = await fetch("/api/comfyui/install-nsfw/status").catch(() => null);
+      const info = st ? await st.json().catch(() => ({})) : {};
+      if (!st) return;
       if (!info.running) {
         clearInterval(poll);
         btn.dataset.running = "0";
         btn.textContent = "Install NSFW checkpoints";
         btn.disabled = false;
         loadVideoSettings();
+        const failed = info.error || /error|fail/i.test(info.message || "");
+        window.showAriaToast?.(
+          info.message || (failed ? "NSFW checkpoint install failed" : "NSFW checkpoint install finished"),
+          failed ? "err" : "ok",
+          4000,
+        );
       }
     }, 8000);
   } catch (err) {

@@ -761,7 +761,8 @@ function ensureMcDelegates() {
     }
     if (e.target.closest?.("#mcPerfRunBtn")) {
       try {
-        await mcFetch("/api/mission-control/performance-lab/run", { method: "POST" });
+        const out = await mcFetch("/api/mission-control/performance-lab/run", { method: "POST" });
+        if (out.ok === false) throw new Error(out.error || out.message || "Benchmark failed");
         window.showAriaToast?.("Benchmark complete", "ok");
         loadMissionControl();
       } catch (err) {

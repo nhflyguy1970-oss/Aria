@@ -131,6 +131,7 @@ imageEngineInstallNsfwBtn?.addEventListener("click", async () => {
     const data = await res.json();
     if (!res.ok || !data.ok) {
       { const __st = document.getElementById("statusText"); if (__st) __st.textContent = data.message || "Could not start NSFW install"; }
+      window.showAriaToast?.(data.message || "Could not start NSFW install", "err", 5000);
       imageEngineInstallNsfwBtn.disabled = false;
       imageEngineInstallNsfwBtn.textContent = "Install NSFW checkpoints";
       return;
@@ -139,15 +140,23 @@ imageEngineInstallNsfwBtn?.addEventListener("click", async () => {
     imageEngineInstallNsfwBtn.textContent = "Downloading (~44 GB)…";
     { const __st = document.getElementById("statusText"); if (__st) __st.textContent = data.message || "NSFW checkpoint download started"; }
     const poll = setInterval(async () => {
+      if (document.hidden) return;
       try {
-        const st = await (await fetch("/api/comfyui/install-nsfw/status")).json();
+        const stRes = await fetch("/api/comfyui/install-nsfw/status");
+        const st = await stRes.json().catch(() => ({}));
+        if (!stRes.ok) throw new Error(st.message || `Status check failed (${stRes.status})`);
         if (!st.running) {
           clearInterval(poll);
           imageEngineInstallNsfwBtn.dataset.running = "0";
           imageEngineInstallNsfwBtn.textContent = "Install NSFW checkpoints";
           imageEngineInstallNsfwBtn.disabled = false;
           await loadComfyMode();
-          window.showAriaToast?.(st.message || "NSFW checkpoint install finished", "ok", 4000);
+          const failed = st.error || /error|fail/i.test(st.message || "");
+          window.showAriaToast?.(
+            st.message || (failed ? "NSFW checkpoint install failed" : "NSFW checkpoint install finished"),
+            failed ? "err" : "ok",
+            4000,
+          );
         }
       } catch (err) {
         clearInterval(poll);
