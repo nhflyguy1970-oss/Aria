@@ -44,3 +44,8 @@ Expand this matrix as each subsystem completes deep certification.
 - `gallery_view.js` extract; browser navigate/screenshot feedback; memory import/export/prune; project picker toasts
 - Planner/maker bind guards; syncMuteButton; docs reindex/search; voice tab save; video free-VRAM; cheatsheet edit/reset
 - Verdict remains **NO** — next: memory_browser.js extract, image_engine extract, long-duration/multi-monitor, Comfy/voice soaks
+
+### Extracts + feedback (continued)
+- `memory_browser.js`, `image_engine.js` extracted; `app.js` ~4442 lines
+- Audio remount race; song GPU limits; fly-tying state/notes; presence calib POST; docs learn; meme bind guard
+- **NO** — resume: documents.js extract, long-duration/multi-monitor, Comfy/voice soaks, per-control matrix

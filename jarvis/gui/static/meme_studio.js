@@ -119,6 +119,12 @@ async function generateMeme(previewOnly = false) {
 }
 
 function initMemeStudio() {
+  const root = document.getElementById("memeView");
+  if (root?.dataset.bound === "1") {
+    loadMemeGallery();
+    return;
+  }
+  if (root) root.dataset.bound = "1";
   document.getElementById("memeGenerateBtn")?.addEventListener("click", () => generateMeme(false));
   document.getElementById("memePreviewBtn")?.addEventListener("click", () => generateMeme(true));
   document.getElementById("memeChatHintBtn")?.addEventListener("click", () => {
