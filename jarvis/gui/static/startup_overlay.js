@@ -93,5 +93,16 @@ document.getElementById("startupSkipBtn")?.addEventListener("click", () => {
 
   window.hideStartupOverlay = hideStartupOverlay;
   window.waitForServices = waitForServices;
-  waitForServices().then(() => window.__ariaPostStartup?.());
+  async function bootWhenReady() {
+    await waitForServices();
+    for (let i = 0; i < 40; i++) {
+      if (typeof window.__ariaPostStartup === "function") {
+        window.__ariaPostStartup();
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    console.warn("[aria] __ariaPostStartup never registered");
+  }
+  bootWhenReady();
 })();

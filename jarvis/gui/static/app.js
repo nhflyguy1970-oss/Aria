@@ -3059,9 +3059,6 @@ async function pollWakewordChat() {
   }
 }
 
-loadSuggestions();
-// image/video lightbox init → media_lightbox.js
-window.initAriaModalChrome?.();
 document.getElementById("reloadUiBtn")?.addEventListener("click", () => reloadJarvisUi());
 document.getElementById("resetLayoutBtn")?.addEventListener("click", () => {
   resetSidebarLayout();
@@ -3079,7 +3076,11 @@ document.addEventListener("visibilitychange", () => {
 setInterval(() => {
   if (!mediaWorkActive()) pollWakewordChat();
 }, isNativeApp() ? 5000 : 2500);
+
+// Define before startup_overlay.js invokes waitForServices → __ariaPostStartup
 window.__ariaPostStartup = () => {
+  try { window.initAriaModalChrome?.(); } catch (_) {}
+  loadSuggestions();
   loadHealth().then(async () => {
     await window.restoreUncensoredSession?.();
     window.loadModelSettings?.();
