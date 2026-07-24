@@ -949,39 +949,47 @@ async function loadAudioPanel() {
     const start = waveState.trimStart * waveState.duration;
     const end = waveState.trimEnd * waveState.duration;
     statusEl.textContent = "Trimming…";
-    const form = new FormData();
-    form.append("path", waveState.path);
-    form.append("start_sec", String(start));
-    form.append("end_sec", String(end));
-    const res = await fetch("/api/audio/edit", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "Trim failed", "err");
-      return;
+    try {
+      const form = new FormData();
+      form.append("path", waveState.path);
+      form.append("start_sec", String(start));
+      form.append("end_sec", String(end));
+      const res = await fetch("/api/audio/edit", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        audioStatus(statusEl, data.message || data.error || `Trim failed (${res.status})`, "err");
+        return;
+      }
+      setAudioLastPath(data.audio_path);
+      showPlayback(data.audio_path, null);
+      audioStatus(statusEl, "Trim saved", "ok");
+      await loadWaveform(data.audio_path);
+      refreshRecentLists();
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "Trim failed", "err");
     }
-    setAudioLastPath(data.audio_path);
-    showPlayback(data.audio_path, null);
-    audioStatus(statusEl, "Trim saved", "ok");
-    await loadWaveform(data.audio_path);
-    refreshRecentLists();
   });
 
   document.getElementById("audioNormalizeBtn")?.addEventListener("click", async () => {
     const path = waveState.path || audioLastPath;
     if (!path) return;
-    const form = new FormData();
-    form.append("path", path);
-    form.append("normalize", "1");
-    const res = await fetch("/api/audio/edit", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "Normalize failed", "err");
-      return;
+    try {
+      const form = new FormData();
+      form.append("path", path);
+      form.append("normalize", "1");
+      const res = await fetch("/api/audio/edit", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        audioStatus(statusEl, data.message || data.error || `Normalize failed (${res.status})`, "err");
+        return;
+      }
+      audioStatus(statusEl, "Normalized", "ok");
+      setAudioLastPath(data.audio_path);
+      showPlayback(data.audio_path, null);
+      refreshRecentLists();
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "Normalize failed", "err");
     }
-    audioStatus(statusEl, "Normalized", "ok");
-    setAudioLastPath(data.audio_path);
-    showPlayback(data.audio_path, null);
-    refreshRecentLists();
   });
 
   document.getElementById("audioEditBtn")?.addEventListener("click", async () => {
@@ -989,19 +997,23 @@ async function loadAudioPanel() {
     const instruction = document.getElementById("audioEditInstruction")?.value.trim();
     if (!path) return;
     statusEl.textContent = "Editing…";
-    const form = new FormData();
-    form.append("path", path);
-    form.append("instruction", instruction);
-    const res = await fetch("/api/audio/edit", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "Edit failed", "err");
-      return;
+    try {
+      const form = new FormData();
+      form.append("path", path);
+      form.append("instruction", instruction);
+      const res = await fetch("/api/audio/edit", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        audioStatus(statusEl, data.message || data.error || `Edit failed (${res.status})`, "err");
+        return;
+      }
+      audioStatus(statusEl, `Saved: ${data.audio_path}`, "ok");
+      setAudioLastPath(data.audio_path);
+      showPlayback(data.audio_path, null);
+      refreshRecentLists();
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "Edit failed", "err");
     }
-    audioStatus(statusEl, `Saved: ${data.audio_path}`, "ok");
-    setAudioLastPath(data.audio_path);
-    showPlayback(data.audio_path, null);
-    refreshRecentLists();
   });
 
   document.getElementById("audioConvertBtn")?.addEventListener("click", async () => {
@@ -1011,17 +1023,21 @@ async function loadAudioPanel() {
       audioStatus(statusEl, "Need source path and output path", "warn");
       return;
     }
-    const form = new FormData();
-    form.append("path", path);
-    form.append("output", output);
-    const res = await fetch("/api/audio/convert", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "Convert failed", "err");
-      return;
+    try {
+      const form = new FormData();
+      form.append("path", path);
+      form.append("output", output);
+      const res = await fetch("/api/audio/convert", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        audioStatus(statusEl, data.message || data.error || `Convert failed (${res.status})`, "err");
+        return;
+      }
+      audioStatus(statusEl, `Converted: ${data.audio_path}`, "ok");
+      refreshRecentLists();
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "Convert failed", "err");
     }
-    audioStatus(statusEl, `Converted: ${data.audio_path}`, "ok");
-    refreshRecentLists();
   });
 
   document.getElementById("audioTranscribeUploadBtn")?.addEventListener("click", async () => {
