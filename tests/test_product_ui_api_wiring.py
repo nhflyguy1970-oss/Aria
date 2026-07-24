@@ -540,7 +540,16 @@ def test_command_palette_is_wired():
     assert "Work schedule unavailable" in cal
     assert "Memory deleted" in app or "Memory deleted" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "ensureMcDelegates" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
-    assert "Conversation cleared" in app
+    assert "Conversation cleared" in Path("jarvis/gui/static/chat_controls.js").read_text(encoding="utf-8")
+    assert "initChatControls" in Path("jarvis/gui/static/chat_controls.js").read_text(encoding="utf-8")
+    assert "chat_controls.js" in Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
+    assert "act:read-aloud" in js
+    assert "dashSceneEmptyHaBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "Memory settings unavailable" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
+    assert "Video trimmed" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")
+    assert "bujoSearchEmptyDailyBtn" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
+    assert "Collection created" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
+    assert "Home Assistant status unavailable" in Path("jarvis/gui/static/ha_panel.js").read_text(encoding="utf-8")
     assert "act:clear-chat" in js
     assert "Memory load failed" in app or "Memory load failed" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
 

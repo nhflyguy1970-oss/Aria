@@ -132,6 +132,13 @@
         run: () => $("clearBtn")?.click(),
       },
       {
+        id: "act:read-aloud",
+        label: "Read last reply aloud",
+        group: "Actions",
+        keywords: "tts speak voice audio narration",
+        run: () => $("readAloudBtn")?.click(),
+      },
+      {
         id: "act:stop-chat",
         label: "Stop responding",
         group: "Actions",

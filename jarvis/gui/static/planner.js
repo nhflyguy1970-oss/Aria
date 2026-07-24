@@ -236,7 +236,7 @@ async function loadDashboard() {
       <section class="dash-scenes">
         <h3>Home scenes</h3>
         <p class="muted">Focus, Relax, movie mode — from scene_presets.json</p>
-        <div class="dash-scene-btns">${presetsHtml || '<span class="muted">No presets</span>'}</div>
+        <div class="dash-scene-btns">${presetsHtml || '<span class="muted">No presets. <button type="button" class="ghost-btn tiny" id="dashSceneEmptyHaBtn">Open smart home setup</button></span>'}</div>
       </section>
       <section class="dash-intel">
         <div class="dash-intel-head"><h3>System intelligence</h3><span class="dash-live-tag">Live</span></div>
@@ -280,6 +280,10 @@ async function loadDashboard() {
           btn.disabled = false;
         }
       });
+    });
+    body.querySelector("#dashSceneEmptyHaBtn")?.addEventListener("click", () => {
+      $("haSetupBtn")?.click() || document.getElementById("haSetupModal")?.classList.remove("hidden");
+      window.showAriaToast?.("Configure Home Assistant to enable scene presets", "info", 4000);
     });
 
     const cats = news.categories || ["Top Stories", "Technology", "Markets", "Science", "Culture"];

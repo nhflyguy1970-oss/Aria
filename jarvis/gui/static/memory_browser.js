@@ -64,9 +64,14 @@ async function loadMemorySettings() {
   try {
     const res = await fetch("/api/memory/settings");
     const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.ok) return;
+    if (!res.ok || !data.ok) {
+      window.showAriaToast?.(data.message || data.error || `Memory settings unavailable (${res.status})`, "err", 4000);
+      return;
+    }
     applyMemorySettingsToUi(data);
-  } catch (_) {}
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Could not load memory settings", "err", 4000);
+  }
 }
 
 async function saveMemorySettings(patch) {

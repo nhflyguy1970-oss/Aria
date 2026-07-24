@@ -47,6 +47,7 @@
       list.querySelectorAll(".doc-summarize").forEach((btn) => {
         btn.addEventListener("click", () => {
           const p = btn.dataset.path || "";
+          window.switchToView?.("chat");
           if (typeof window.sendMessage === "function") {
             window.sendMessage(`summarize ${p}`);
           }

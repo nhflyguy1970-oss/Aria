@@ -1142,48 +1142,69 @@ async function loadCollections() {
       window.showAriaToast?.("Enter a collection name", "warn", 3000);
       return;
     }
-    const form = new FormData();
-    form.append("name", name);
-    form.append("description", document.getElementById("colDesc")?.value.trim() || "");
-    await fetch("/api/journal/collections", { method: "POST", body: form });
-    loadCollections();
+    try {
+      const form = new FormData();
+      form.append("name", name);
+      form.append("description", document.getElementById("colDesc")?.value.trim() || "");
+      const res = await fetch("/api/journal/collections", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        journalNotify(data.message || data.error || `Could not create collection (${res.status})`);
+        return;
+      }
+      journalNotify("Collection created", false);
+      loadCollections();
+    } catch (err) {
+      journalNotify(err?.message || "Could not create collection");
+    }
   });
 }
 
 async function loadSearchResults(q) {
-  const res = await fetch(`/api/journal/search?q=${encodeURIComponent(q)}`);
-  const data = await res.json();
-  const hits = data.results || [];
-  if (!hits.length) {
-    bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><p class="bujo-empty">No matches.</p>`;
-    return;
+  try {
+    const res = await fetch(`/api/journal/search?q=${encodeURIComponent(q)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><p class="bujo-empty">Search failed.</p>`;
+      journalNotify(data.message || data.error || `Search failed (${res.status})`);
+      return;
+    }
+    const hits = data.results || [];
+    if (!hits.length) {
+      bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><p class="bujo-empty">No matches. <button type="button" class="ghost-btn tiny" id="bujoSearchEmptyDailyBtn">Open daily log</button></p>`;
+      document.getElementById("bujoSearchEmptyDailyBtn")?.addEventListener("click", () => setBujoTab("daily"));
+      return;
+    }
+    bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><ul class="bujo-list bujo-search-results">${hits.map((h) =>
+      `<li class="bujo-item bujo-search-hit" data-section="${escapeHtml(h.section || "")}" data-id="${escapeHtml(h.id || "")}">
+        <span class="bujo-sym">${sym(h)}</span>
+        <span class="bujo-text${bulletTextClass(h)}">[${escapeHtml(h.section || "")}] ${escapeHtml(h.content || h.topic || "")}</span>
+      </li>`
+    ).join("")}</ul>`;
+    bujoContent.querySelectorAll(".bujo-search-hit").forEach((row) => {
+      row.onclick = () => {
+        const sec = row.dataset.section || "";
+        if (sec.startsWith("daily:")) {
+          if (journalDate) journalDate.value = sec.slice(6);
+          setBujoTab("daily");
+        } else if (sec.startsWith("monthly:")) {
+          if (journalMonth) journalMonth.value = sec.slice(8);
+          setBujoTab("monthly");
+        } else if (sec.startsWith("weekly:")) {
+          if (journalWeek) journalWeek.value = sec.slice(7);
+          setBujoTab("weekly");
+        } else if (sec.startsWith("collection:")) {
+          navigateBujoPage(sec);
+        } else if (sec.startsWith("future:")) {
+          if (journalMonth) journalMonth.value = sec.slice(7);
+          setBujoTab("future");
+        }
+      };
+    });
+  } catch (err) {
+    bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><p class="bujo-empty">Search unavailable.</p>`;
+    journalNotify(err?.message || "Journal search failed");
   }
-  bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><ul class="bujo-list bujo-search-results">${hits.map((h) =>
-    `<li class="bujo-item bujo-search-hit" data-section="${escapeHtml(h.section || "")}" data-id="${escapeHtml(h.id || "")}">
-      <span class="bujo-sym">${sym(h)}</span>
-      <span class="bujo-text${bulletTextClass(h)}">[${escapeHtml(h.section || "")}] ${escapeHtml(h.content || h.topic || "")}</span>
-    </li>`
-  ).join("")}</ul>`;
-  bujoContent.querySelectorAll(".bujo-search-hit").forEach((row) => {
-    row.onclick = () => {
-      const sec = row.dataset.section || "";
-      if (sec.startsWith("daily:")) {
-        if (journalDate) journalDate.value = sec.slice(6);
-        setBujoTab("daily");
-      } else if (sec.startsWith("monthly:")) {
-        if (journalMonth) journalMonth.value = sec.slice(8);
-        setBujoTab("monthly");
-      } else if (sec.startsWith("weekly:")) {
-        if (journalWeek) journalWeek.value = sec.slice(7);
-        setBujoTab("weekly");
-      } else if (sec.startsWith("collection:")) {
-        navigateBujoPage(sec);
-      } else if (sec.startsWith("future:")) {
-        if (journalMonth) journalMonth.value = sec.slice(7);
-        setBujoTab("future");
-      }
-    };
-  });
 }
 
 function closeBulletPanels() {

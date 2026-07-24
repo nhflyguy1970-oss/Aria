@@ -46,9 +46,6 @@ const statusText = document.getElementById("statusText");
 window.initHaPanel?.();
 
 let _lastEditorFile = "";
-const clearBtn = document.getElementById("clearBtn");
-const micBtn = document.getElementById("micBtn");
-const readAloudBtn = document.getElementById("readAloudBtn");
 const appTitle = document.getElementById("appTitle");
 const appTagline = document.getElementById("appTagline");
 const hudEnv = document.getElementById("hudEnv");
@@ -64,7 +61,6 @@ let pendingPdfPage = "1";
 let visionChips = [];
 let dataChips = [];
 let lastAssistantText = "";
-let recognition = null;
 let useStreaming = true;
 let _activeBranchId = "main";
 let assistantDisplayName = "ARIA";
@@ -326,88 +322,7 @@ messageInput?.addEventListener("keydown", (e) => {
 // openCropModal / webcam → crop_webcam.js (window.openCropModal, window.captureWebcamAttachment)
 // initVisionDropPaste → vision_drop.js
 
-clearBtn?.addEventListener("click", async () => {
-  try {
-    const f = new FormData();
-    f.append("message", "clear");
-    if (_activeBranchId) f.append("branch_id", _activeBranchId);
-    const res = await fetch("/api/chat", { method: "POST", body: f });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.detail || `Clear failed (${res.status})`);
-    messagesEl.innerHTML = "";
-    window.addMessage?.("assistant", "Fresh start. What would you like to do?");
-    window.showAriaToast?.("Conversation cleared", "ok", 2500);
-  } catch (err) {
-    window.showAriaToast?.(err.message || "Could not clear conversation", "err", 5000);
-  }
-});
-
-
-readAloudBtn?.addEventListener("click", async () => {
-  if (!lastAssistantText) {
-    window.showAriaToast?.("Nothing to read yet — wait for an assistant reply", "info", 3000);
-    return;
-  }
-  readAloudBtn.disabled = true;
-  statusText.textContent = "Speaking on Sound Blaster…";
-  try {
-    const form = new FormData();
-    form.append("text", lastAssistantText.replace(/[*`#]/g, "").slice(0, 4000));
-    const res = await fetch("/api/audio/speak", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      window.showError(data.message || "Could not play audio.");
-      window.showAriaToast?.(data.message || "Could not play audio", "err", 5000);
-    } else {
-      statusText.textContent = "Ready · Sound Blaster";
-    }
-  } catch (e) {
-    window.showError(`Audio playback failed: ${e.message}`);
-    window.showAriaToast?.(`Audio playback failed: ${e.message}`, "err", 5000);
-  } finally {
-    readAloudBtn.disabled = false;
-  }
-});
-
-if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-  const useBrowserMicStt = () => localStorage.getItem("jarvis_chat_server_whisper") === "0";
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SpeechRecognition();
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  recognition.lang = "en-US";
-
-  recognition.onresult = (e) => {
-    const transcript = e.results[0][0].transcript;
-    messageInput.value = transcript;
-    micBtn.classList.remove("listening");
-    window.sendMessage?.(transcript);
-  };
-  recognition.onerror = (ev) => {
-    micBtn.classList.remove("listening");
-    const err = ev?.error || "mic error";
-    if (err !== "aborted" && err !== "no-speech") {
-      window.showAriaToast?.(`Mic: ${err}`, "err", 4000);
-    }
-  };
-  recognition.onend = () => micBtn.classList.remove("listening");
-
-  if (useBrowserMicStt()) {
-    micBtn.addEventListener("click", () => {
-      if (micBtn.classList.contains("listening")) {
-        recognition.stop();
-      } else {
-        micBtn.classList.add("listening");
-        recognition.start();
-      }
-    });
-  } else {
-    micBtn.title = micBtn.title || "Hold for server Whisper (see Settings)";
-  }
-} else {
-  micBtn.title = "Voice not supported in this browser";
-  micBtn.disabled = true;
-}
+// clear / readAloud / mic → chat_controls.js (window.initChatControls)
 
 // window.sendMessage → chat_send.js
 window.isNativeApp = isNativeApp;
@@ -577,7 +492,7 @@ document.addEventListener("keydown", (e) => {
   }
   if (e.ctrlKey && e.key === "l" && !inTextField) {
     e.preventDefault();
-    clearBtn.click();
+    document.getElementById("clearBtn")?.click();
   }
 });
 

@@ -301,22 +301,26 @@ async function analyzeVideoFrame(path) {
   const sec = prompt("Analyze at second (e.g. 0 or 12.5):", "0");
   if (sec === null) return;
   const question = prompt("Question about this frame:", "Describe this video frame.") || "Describe this video frame.";
-  const form = new FormData();
-  form.append("path", path);
-  form.append("second", sec);
-  form.append("question", question);
-  const res = await fetch("/api/video/analyze-frame", { method: "POST", body: form });
-  const data = await res.json();
-  if (!data.ok) {
-    const msg = data.message || "Analysis failed";
-    window.showAriaToast?.(msg, "err", 5000);
-    return;
-  }
-  window.showAriaToast?.("Frame analysis ready", "ok", 2500);
-  if (typeof window.jarvisSendToChat === "function") {
-    window.jarvisSendToChat(`Frame analysis:\n\n${data.message}`);
-  } else {
-    window.showAriaToast?.(data.message || "Analysis ready", "info", 6000);
+  try {
+    const form = new FormData();
+    form.append("path", path);
+    form.append("second", sec);
+    form.append("question", question);
+    const res = await fetch("/api/video/analyze-frame", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      const msg = data.message || `Analysis failed (${res.status})`;
+      window.showAriaToast?.(msg, "err", 5000);
+      return;
+    }
+    window.showAriaToast?.("Frame analysis ready", "ok", 2500);
+    if (typeof window.jarvisSendToChat === "function") {
+      window.jarvisSendToChat(`Frame analysis:\n\n${data.message}`);
+    } else {
+      window.showAriaToast?.(data.message || "Analysis ready", "info", 6000);
+    }
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Frame analysis failed", "err", 5000);
   }
 }
 
@@ -325,32 +329,43 @@ async function trimVideoPrompt(path) {
   if (start === null) return;
   const duration = prompt("Duration (seconds):", "5");
   if (duration === null) return;
-  const form = new FormData();
-  form.append("path", path);
-  form.append("start", start);
-  form.append("duration", duration);
-  const res = await fetch("/api/video/trim", { method: "POST", body: form });
-  const data = await res.json();
-  if (!data.ok) {
-    window.showAriaToast?.(data.message || "Trim failed", "err", 5000);
-    return;
+  try {
+    const form = new FormData();
+    form.append("path", path);
+    form.append("start", start);
+    form.append("duration", duration);
+    const res = await fetch("/api/video/trim", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      window.showAriaToast?.(data.message || `Trim failed (${res.status})`, "err", 5000);
+      return;
+    }
+    window.showAriaToast?.("Video trimmed", "ok", 2500);
+    loadVideoGallery();
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Trim failed", "err", 5000);
   }
-  loadVideoGallery();
 }
 
 document.getElementById("videoUploadInput")?.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
-  const form = new FormData();
-  form.append("file", file);
-  const res = await fetch("/api/video/upload", { method: "POST", body: form });
-  const data = await res.json();
-  e.target.value = "";
-  if (!data.ok) {
-    window.showAriaToast?.(data.message || "Upload failed", "err", 5000);
-    return;
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/video/upload", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    e.target.value = "";
+    if (!res.ok || data.ok === false) {
+      window.showAriaToast?.(data.message || `Upload failed (${res.status})`, "err", 5000);
+      return;
+    }
+    window.showAriaToast?.("Video uploaded", "ok", 2500);
+    loadVideoGallery();
+  } catch (err) {
+    e.target.value = "";
+    window.showAriaToast?.(err?.message || "Upload failed", "err", 5000);
   }
-  loadVideoGallery();
 });
 
 document.getElementById("videoFreeVramBtn")?.addEventListener("click", async () => {

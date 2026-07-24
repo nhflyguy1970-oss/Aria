@@ -232,8 +232,9 @@ async function refreshHaPanel() {
       webhookLine?.classList.add("hidden");
       copyBtn?.classList.add("hidden");
     }
-  } catch (_) {
+  } catch (err) {
     line.textContent = "Smart home status unavailable.";
+    window.showAriaToast?.(err?.message || "Home Assistant status unavailable", "err", 4000);
   }
 }
 
