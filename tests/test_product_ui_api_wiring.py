@@ -529,6 +529,8 @@ def test_command_palette_is_wired():
     assert "window.stopFlytyingCameraScan" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert "refreshWorldStateHud" not in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "bindBarNavigation" in Path("jarvis/gui/static/world_state_hud.js").read_text(encoding="utf-8")
+    assert "openFromBar" in Path("jarvis/gui/static/world_state_hud.js").read_text(encoding="utf-8")
+    assert "Home Assistant offline" in Path("jarvis/gui/static/world_state_hud.js").read_text(encoding="utf-8")
     assert 'window.switchToView("chat")' in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "dashSuggestChatBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "bujoProjectEmptyChatBtn" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
