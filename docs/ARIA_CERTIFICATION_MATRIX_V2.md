@@ -43,11 +43,11 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: …/attachment_compare/media_jobs/coding_jobs/**media_urls** extracts; empty-state CTAs (+Projects/Fly videos/Memory/MC recs/Gallery/Meme/Video); act:compare-images + act:resume-media-jobs; coding cancel + poll failure toasts. `app.js` ~**2241** lines.
-- INTENTIONALLY DEFERRED: chat/stream/sendMessage still in app.js (core pipeline); proposal/diff helpers still coupled; long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
+- FIXED & CERTIFIED: …/media_urls/**coding_proposals** extracts; empty-state CTAs (+Projects/Fly/Memory/MC/Gallery/Meme/Video/Calendar); act:compare-images + act:resume-media-jobs; apply/undo/diff load toasts. `app.js` ~**1945** lines.
+- INTENTIONALLY DEFERRED: chat/stream/sendMessage still in app.js (core pipeline); long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 
-**Next priorities:** chat-stream/sendMessage extract; coding proposal/diff extract; long-duration memory-leak soak; multi-monitor native; Comfy/HA deep soaks; per-control matrix completion.
+**Next priorities:** chat-stream/sendMessage extract; showProgress/chat UI extract; long-duration memory-leak soak; multi-monitor native; Comfy/HA deep soaks; per-control matrix completion.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.

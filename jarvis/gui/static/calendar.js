@@ -124,7 +124,7 @@ function renderDayPanel(data) {
       <button type="button" id="calOpenJournalBtn" class="ghost-btn small">Open in Journal</button>
       <button type="button" id="calOpenPlannerBtn" class="ghost-btn small">Open Planner</button>
     </div>
-    ${hasItems ? "" : `<p class="muted">Nothing scheduled for this day.</p>`}
+    ${hasItems ? "" : `<p class="muted">Nothing scheduled for this day. <button type="button" class="ghost-btn tiny" id="calEmptyAddBtn">Add entry</button> or <button type="button" class="ghost-btn tiny" id="calEmptyChatBtn">ask Chat</button></p>`}
     ${holidays ? `<ul class="cal-day-list">${holidays}</ul>` : ""}
     ${work ? `<p class="cal-section-label">Work schedule</p><ul class="cal-day-list">${work}</ul>` : ""}
     ${ics ? `<p class="cal-section-label">External calendar</p><ul class="cal-day-list">${ics}</ul>` : ""}
@@ -152,6 +152,11 @@ function renderDayPanel(data) {
 
   calEl("calAddBtn")?.addEventListener("click", () => addCalendarEntry(data.day));
   calEl("calNoteSaveBtn")?.addEventListener("click", () => saveCalendarNote(data.day));
+  calEl("calEmptyAddBtn")?.addEventListener("click", () => calEl("calAddContent")?.focus());
+  calEl("calEmptyChatBtn")?.addEventListener("click", () => {
+    window.switchToView?.("chat");
+    window.jarvisSendToChat?.(`Add a calendar event on ${data.day}: `);
+  });
   el.querySelectorAll(".cal-open-planner").forEach((btn) => {
     btn.addEventListener("click", () => window.switchToView?.("planner"));
   });

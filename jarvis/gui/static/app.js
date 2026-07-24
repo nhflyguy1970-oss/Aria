@@ -165,6 +165,7 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 window.escapeHtml = escapeHtml;
+window.formatMessage = formatMessage;
 
 function formatMessage(text) {
   let html = escapeHtml(text);
@@ -563,257 +564,7 @@ function progressLabel(text) {
   return "Thinking…";
 }
 
-function formatDiff(diff, options = {}) {
-  const text = typeof diff === "string" ? diff : (diff == null ? "" : String(diff));
-  if (!text) return "";
-  const maxLines = options.maxLines || 160;
-  const lines = text.split("\n");
-  const slice = lines.length > maxLines ? lines.slice(0, maxLines) : lines;
-  return slice.map((line) => {
-    const escaped = escapeHtml(line);
-    if (line.startsWith("+") && !line.startsWith("+++")) return `<span class="add">${escaped}</span>`;
-    if (line.startsWith("-") && !line.startsWith("---")) return `<span class="del">${escaped}</span>`;
-    return escaped;
-  }).join("\n");
-}
-
-function mountDiffBlock(pre, diff, meta) {
-  if (!pre) return;
-  pre.className = "diff-block";
-  pre.innerHTML = formatDiff(diff);
-  if (meta?.diff_truncated && meta?.proposal_id) {
-    const note = document.createElement("div");
-    note.className = "diff-truncated-note";
-    const total = meta.diff_total_lines ? ` (${meta.diff_total_lines} lines total)` : "";
-    note.textContent = `Diff preview truncated${total}.`;
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "ghost-btn small";
-    btn.textContent = "Load full diff";
-    btn.onclick = async () => {
-      btn.disabled = true;
-      btn.textContent = "Loading…";
-      try {
-        const res = await fetch(`/api/proposals/${encodeURIComponent(meta.proposal_id)}`);
-        const data = await res.json();
-        if (data.ok && data.diff) {
-          pre.innerHTML = formatDiff(data.diff, { maxLines: 400 });
-          note.remove();
-        } else {
-          btn.textContent = "Could not load";
-        }
-      } catch (_) {
-        btn.textContent = "Retry load";
-        btn.disabled = false;
-      }
-    };
-    note.appendChild(btn);
-    pre.insertAdjacentElement("afterend", note);
-  }
-}
-
-function resolveMetaType(data) {
-  // Streamed coding/image results use type=done + result_type=proposal|image_result
-  if (data.type === "done" && data.result_type) return data.result_type;
-  return data.type || data.result_type
-    || (data.action === "generate_image" ? "image_result" : undefined)
-    || (data.action === "generate_video" ? "video_result" : undefined)
-    || (data.action === "generate_meme" ? "image_result" : undefined)
-    || (data.type === "media_job" || data.result_type === "media_job" ? "media_job" : undefined)
-    || (data.type === "coding_job" || data.result_type === "coding_job" ? "coding_job" : undefined)
-    || (data.action === "capabilities" || data.action === "greeting" ? "info" : undefined)
-    || (data.action === "morning_briefing" || data.type === "briefing" ? "briefing" : undefined);
-}
-
-function appendUndoButton(messageDiv) {
-  if (!messageDiv || messageDiv.querySelector?.(".undo-apply-btn")) return;
-  const bubble = messageDiv.querySelector?.(".bubble") || messageDiv;
-  if (!bubble) return;
-  const actions = document.createElement("div");
-  actions.className = "proposal-actions";
-  const undoBtn = document.createElement("button");
-  undoBtn.className = "reject-btn undo-apply-btn";
-  undoBtn.textContent = "Undo apply";
-  undoBtn.onclick = () => undoLastApply(undoBtn);
-  actions.appendChild(undoBtn);
-  bubble.appendChild(actions);
-}
-
-function clearProposalExtras(bubble) {
-  if (!bubble) return;
-  bubble.querySelectorAll(
-    ".diagnostics-block, .test-impact, .diff-block, .diff-truncated-note, "
-    + ".proposal-actions, .agent-steps, .proposal-render-error"
-  ).forEach((el) => el.remove());
-}
-
-function prepareNativeCodingResult(result) {
-  if (!isNativeApp() || !result?.proposal_id) return result;
-  let message = String(result.message || "")
-    .replace(/```[\s\S]*?```/g, "")
-    .replace(/\*\*Syntax check:\*\*[\s\S]*?(?=\n\n\*\*|\n\nSay |\n\nApply|$)/i, "")
-    .replace(/\*\*Pre-apply verify:\*\*[\s\S]*?(?=\n\n\*\*|\n\nSay |$)/i, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-  if (message.length > 650) message = `${message.slice(0, 650)}…`;
-  if (!message) message = "Code proposal ready — use **Apply** or **Dismiss** below.";
-  return {
-    ...result,
-    message,
-    diff: undefined,
-    diff_omitted: true,
-    agent_steps: undefined,
-    diagnostics: undefined,
-    test_impact: undefined,
-  };
-}
-
-function attachProposalExtras(bubble, meta, messageDiv) {
-  if (!bubble || !meta) return;
-  try {
-  const bodyText = messageDiv?.querySelector?.(".msg-body")?.dataset?.rawText
-    || messageDiv?.querySelector?.(".msg-body")?.textContent
-    || "";
-  if (meta.agent_steps && meta.agent_steps.length && !bubble.querySelector(".agent-steps")) {
-    if (!isNativeApp()) {
-      const stepsEl = document.createElement("div");
-      stepsEl.className = "agent-steps";
-      meta.agent_steps.forEach((s) => {
-        const line = document.createElement("div");
-        line.className = "agent-step" + (s.ok === false ? " fail" : "");
-        line.textContent = `${s.step}. ${s.action}: ${s.detail}`;
-        stepsEl.appendChild(line);
-      });
-      bubble.appendChild(stepsEl);
-    }
-  }
-
-  if (meta.diagnostics && meta.diagnostics.length && !isNativeApp() && !/syntax check/i.test(bodyText)) {
-    const diagEl = document.createElement("div");
-    diagEl.className = "diagnostics-block" + (meta.syntax_ok === false ? " has-errors" : "");
-    const title = document.createElement("div");
-    title.className = "diagnostics-title";
-    if (meta.verify_ok === false) {
-      title.textContent = "Pre-apply tests failed";
-      diagEl.classList.add("has-errors");
-    } else {
-      title.textContent = meta.syntax_ok === false ? "Syntax issues found" : "Syntax check passed";
-    }
-    diagEl.appendChild(title);
-    const pre = document.createElement("pre");
-    pre.className = "diagnostics-list";
-    pre.textContent = meta.diagnostics
-      .slice(0, 12)
-      .map((d) => `${d.path}:${d.line} [${d.severity}] (${d.source}) ${d.message}`)
-      .join("\n");
-    diagEl.appendChild(pre);
-    bubble.appendChild(diagEl);
-  }
-
-  if (meta.test_impact && !isNativeApp() && !/tests that will run/i.test(bodyText)) {
-    const ti = document.createElement("div");
-    ti.className = "test-impact";
-    ti.innerHTML = formatMessage(meta.test_impact);
-    bubble.appendChild(ti);
-  }
-
-  if (meta.proposal_id) {
-    if (meta.diff) {
-      const pre = document.createElement("pre");
-      mountDiffBlock(pre, meta.diff, meta);
-      bubble.appendChild(pre);
-    } else if (meta.diff_omitted || (isNativeApp() && !meta.diff)) {
-      const note = document.createElement("div");
-      note.className = "diff-truncated-note";
-      note.textContent = isNativeApp()
-        ? "Diff hidden in desktop app to save memory."
-        : "Diff not included in this response.";
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "ghost-btn small";
-      btn.textContent = "View diff";
-      btn.onclick = async () => {
-        btn.disabled = true;
-        btn.textContent = "Loading…";
-        try {
-          const res = await fetch(`/api/proposals/${encodeURIComponent(meta.proposal_id)}`);
-          const data = await res.json();
-          if (data.ok && data.diff) {
-            const pre = document.createElement("pre");
-            mountDiffBlock(pre, data.diff, { ...meta, diff_truncated: data.diff_truncated });
-            note.replaceWith(pre);
-          } else {
-            btn.textContent = "Could not load";
-            btn.disabled = false;
-          }
-        } catch (_) {
-          btn.textContent = "Retry load";
-          btn.disabled = false;
-        }
-      };
-      note.appendChild(btn);
-      bubble.appendChild(note);
-    }
-    const actions = document.createElement("div");
-    actions.className = "proposal-actions";
-    if (meta.upgrade_wizard) {
-      const verifyBtn = document.createElement("button");
-      verifyBtn.className = "ghost-btn";
-      verifyBtn.textContent = "Verify tests";
-      verifyBtn.onclick = () => window.runUpgradeAction?.("verify", meta.proposal_id, messageDiv);
-      const applyBtn = document.createElement("button");
-      applyBtn.className = "apply-btn";
-      applyBtn.textContent = meta.verified ? "Apply upgrade" : "Apply upgrade (verify first)";
-      applyBtn.onclick = () => window.runUpgradeAction?.("apply", meta.proposal_id, messageDiv);
-      const rollbackBtn = document.createElement("button");
-      rollbackBtn.className = "reject-btn";
-      rollbackBtn.textContent = "Rollback";
-      rollbackBtn.onclick = () => window.runUpgradeAction?.("rollback", "", messageDiv);
-      actions.append(verifyBtn, applyBtn, rollbackBtn);
-    } else {
-      const applyBtn = document.createElement("button");
-      applyBtn.className = "apply-btn";
-      const verifyFailed = meta.verify_ok === false;
-      applyBtn.textContent = verifyFailed
-        ? "Apply anyway (tests failed in preview)"
-        : (meta.syntax_ok === false ? "Apply anyway" : "Apply changes");
-      applyBtn.onclick = () => {
-        if (verifyFailed && !confirm("Pre-apply pytest failed. Apply these changes anyway?")) return;
-        applyProposal(meta.proposal_id, messageDiv, meta.syntax_ok === false);
-      };
-      const rejectBtn = document.createElement("button");
-      rejectBtn.className = "reject-btn";
-      rejectBtn.textContent = "Dismiss";
-      rejectBtn.onclick = () => sendMessage("don't apply that");
-      actions.append(applyBtn, rejectBtn);
-    }
-    bubble.appendChild(actions);
-  }
-
-  if (meta.show_remember_key_points || meta.type === "knowledge_learned") {
-    const actions = document.createElement("div");
-    actions.className = "proposal-actions";
-    const rememberBtn = document.createElement("button");
-    rememberBtn.className = "apply-btn";
-    rememberBtn.textContent = "Remember key points";
-    rememberBtn.onclick = () => sendMessage("remember key points from that");
-    actions.appendChild(rememberBtn);
-    bubble.appendChild(actions);
-  }
-
-  if (meta.show_undo) {
-    appendUndoButton(messageDiv);
-  }
-  } catch (e) {
-    console.error("attachProposalExtras failed", e);
-    if (messageDiv && !bubble.querySelector(".proposal-render-error")) {
-      const err = document.createElement("p");
-      err.className = "proposal-render-error";
-      err.textContent = "Could not render proposal UI — use Apply from chat or retry.";
-      bubble.appendChild(err);
-    }
-  }
-}
+// Coding proposals/diff/apply → coding_proposals.js
 
 function addMessage(role, content, meta = {}, options = {}) {
   const div = document.createElement("div");
@@ -842,7 +593,7 @@ function addMessage(role, content, meta = {}, options = {}) {
   if (content) body.dataset.rawText = content;
   bubble.appendChild(body);
 
-  const mountExtras = () => attachProposalExtras(bubble, meta, div);
+  const mountExtras = () => window.attachProposalExtras?.(bubble, meta, div);
   if (meta.proposal_id && isNativeApp()) {
     requestAnimationFrame(() => requestAnimationFrame(mountExtras));
   } else {
@@ -897,53 +648,7 @@ function addTyping() {
   return div;
 }
 
-function shouldShowUndo(data) {
-  if (!data || data.ok === false) return false;
-  if (data.show_undo) return true;
-  return data.module === "coding"
-    && (data.type === "applied" || data.result_type === "applied"
-      || /\b(applied changes|Done — applied)\b/i.test(data.message || ""));
-}
-
-async function applyProposal(proposalId, messageEl, force = false) {
-  if (force && !confirm("This proposal has syntax errors. Apply anyway?")) return;
-  const form = new FormData();
-  form.append("proposal_id", proposalId);
-  if (force) form.append("force", "true");
-  try {
-    const res = await fetch("/api/apply", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok || data.ok === false) {
-      addMessage("assistant", data.message || "Could not apply changes.", { module: data.module || "coding" });
-      return;
-    }
-    addMessage("assistant", data.message || "Applied.", {
-      module: data.module || "coding",
-      type: "applied",
-      show_undo: true,
-    });
-    messageEl?.querySelector?.(".proposal-actions")?.remove();
-    messageEl?.querySelector?.(".diff-block")?.remove();
-  } catch (e) {
-    addMessage("assistant", "Failed to apply changes.");
-  }
-}
-
-async function undoLastApply(triggerBtn) {
-  try {
-    const res = await fetch("/api/undo-apply", { method: "POST" });
-    const data = await res.json();
-    addMessage("assistant", data.message || (data.ok ? "Restored." : "Nothing to undo."), { module: "coding" });
-    if (data.ok) {
-      triggerBtn?.closest?.(".proposal-actions")?.remove();
-      document.querySelectorAll(".undo-apply-btn").forEach((btn) => {
-        btn.closest(".proposal-actions")?.remove();
-      });
-    }
-  } catch (e) {
-    addMessage("assistant", "Undo failed.");
-  }
-}
+// shouldShowUndo / applyProposal / undoLastApply → coding_proposals.js
 
 // upgrade wizard → upgrade_wizard.js
 
@@ -1348,12 +1053,12 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
 
 function handleDone(data, text, streamed = false, options = {}) {
   if (isNativeApp() && data?.proposal_id) {
-    data = prepareNativeCodingResult(data);
+    data = window.prepareNativeCodingResult?.(data);
     text = data.message || text;
   }
   const meta = {
     module: data.module,
-    type: resolveMetaType(data),
+    type: window.resolveMetaType?.(data),
     proposal_id: data.proposal_id,
     diff: data.diff,
     diff_truncated: data.diff_truncated,
@@ -1364,7 +1069,7 @@ function handleDone(data, text, streamed = false, options = {}) {
     syntax_ok: data.syntax_ok,
     verify_ok: data.verify_ok,
     test_impact: data.test_impact,
-    show_undo: shouldShowUndo(data),
+    show_undo: window.shouldShowUndo?.(data),
   };
 
   if (data.module) {
@@ -1484,13 +1189,13 @@ function handleDone(data, text, streamed = false, options = {}) {
     if (options.replaceQueued) {
       applyAssistantMeta(messageEl, meta);
       options.targetBody.querySelector(".coding-job-status")?.remove();
-      clearProposalExtras(bubble);
+      window.clearProposalExtras?.(bubble);
     }
     options.targetBody.innerHTML = formatMessage(text || data.message || "");
     syncMessageRawText(options.targetBody, text || data.message || "");
     ensureMessageCopyAction(messageEl, options.targetBody);
     if (bubble && (meta.proposal_id || meta.diagnostics || meta.agent_steps)) {
-      const mount = () => attachProposalExtras(bubble, meta, messageEl);
+      const mount = () => window.attachProposalExtras?.(bubble, meta, messageEl);
       if (meta.proposal_id && isNativeApp()) {
         requestAnimationFrame(() => requestAnimationFrame(mount));
       } else {
@@ -1515,7 +1220,7 @@ function handleDone(data, text, streamed = false, options = {}) {
     }
     if (bubble && (meta.proposal_id || meta.type === "proposal" || meta.show_undo
       || meta.diagnostics || meta.agent_steps)) {
-      const mount = () => attachProposalExtras(bubble, meta, lastMsg);
+      const mount = () => window.attachProposalExtras?.(bubble, meta, lastMsg);
       if (meta.proposal_id && isNativeApp()) {
         requestAnimationFrame(() => requestAnimationFrame(mount));
       } else {
@@ -1586,7 +1291,6 @@ function handleDone(data, text, streamed = false, options = {}) {
   }
 }
 
-window.prepareNativeCodingResult = prepareNativeCodingResult;
 window.handleDone = handleDone;
 
 chatForm?.addEventListener("submit", (e) => {
