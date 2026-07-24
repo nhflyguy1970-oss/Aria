@@ -77,7 +77,9 @@ async function reloadBranchMessages() {
         );
       }
     }
-  } catch (_) {}
+  } catch (err) {
+    window.showAriaToast?.(err.message || "Could not load branch messages", "err", 5000);
+  }
 }
 
 branchSelect?.addEventListener("change", async () => {

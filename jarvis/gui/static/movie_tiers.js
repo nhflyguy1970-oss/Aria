@@ -109,10 +109,17 @@
   async function toggleWake() {
     try {
       const data = await fetchJson("/api/audio/wakeword/status");
-      const path = (data.running ?? data.listening) ? "/api/audio/wakeword/stop" : "/api/audio/wakeword/start";
-      await fetch(path, { method: "POST" });
+      const wasOn = !!(data.running ?? data.listening);
+      const path = wasOn ? "/api/audio/wakeword/stop" : "/api/audio/wakeword/start";
+      const res = await fetch(path, { method: "POST" });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || out.ok === false) throw new Error(out.message || out.detail || `Wake toggle failed (${res.status})`);
+      await refreshWakePill();
+      window.showAriaToast?.(wasOn ? "Wake word stopped" : "Wake word started", "ok", 2500);
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Wake word toggle failed", "err", 5000);
       refreshWakePill();
-    } catch (_) {}
+    }
   }
 
   /* --- Speak replies (Tier 1 #2) --- */
@@ -145,8 +152,12 @@
     try {
       const form = new FormData();
       form.append("text", plain);
-      await fetch("/api/audio/speak", { method: "POST", body: form });
-    } catch (_) {}
+      const res = await fetch("/api/audio/speak", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Speak failed (${res.status})`);
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Could not speak reply", "err", 4000);
+    }
   };
 
   /* --- Collapsible sidebar (Tier 1 #5, Tier 4 #40 mobile accordion) --- */
@@ -283,7 +294,9 @@
       form.append("source", "default");
       const data = await fetchJson("/api/audio/record/ptt/start", { method: "POST", body: form });
       if (data.ok) { pttSession = data.session_id; pttActive = true; return true; }
-    } catch (_) {}
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Could not start push-to-talk", "err", 4000);
+    }
     return false;
   }
 
@@ -308,7 +321,9 @@
           }
         }
       }
-    } catch (_) {}
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Push-to-talk failed", "err", 5000);
+    }
   }
 
   function initChatMicPtt() {

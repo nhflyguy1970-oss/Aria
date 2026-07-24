@@ -149,9 +149,10 @@ imageEngineInstallNsfwBtn?.addEventListener("click", async () => {
         }
       } catch (_) {}
     }, 8000);
-  } catch (_) {
+  } catch (err) {
     imageEngineInstallNsfwBtn.disabled = false;
     imageEngineInstallNsfwBtn.textContent = "Install NSFW checkpoints";
+    window.showAriaToast?.(err.message || "NSFW install failed to start", "err", 5000);
   }
 });
 
@@ -164,9 +165,12 @@ async function loadComfyMode() {
   if (!galleryModeSelect && !galleryCheckpointSelect) return;
   try {
     const res = await fetch("/api/comfyui/settings");
-    if (!res.ok) return;
+    if (!res.ok) throw new Error(`ComfyUI settings failed (${res.status})`);
     syncComfySettings(await res.json());
-  } catch (_) {}
+  } catch (err) {
+    const st = document.getElementById("imageEngineStatus");
+    if (st) st.textContent = err.message || "ComfyUI settings unavailable";
+  }
 }
 
 async function postComfySettings(fields) {
@@ -195,7 +199,9 @@ async function postComfySettings(fields) {
       const svcData = await svcRes.json();
       window.renderServices?.(svcData.services, svcData.comfyui_settings);
     }
-    { const __st = document.getElementById("statusText"); if (__st) __st.textContent = `ComfyUI · ${data.checkpoint_label || "SDXL"} · ${data.label || ""}`.trim(); }
+    const okLine = `ComfyUI · ${data.checkpoint_label || "SDXL"} · ${data.label || ""}`.trim();
+    { const __st = document.getElementById("statusText"); if (__st) __st.textContent = okLine; }
+    window.showAriaToast?.(okLine, "ok", 2500);
     return data;
   } finally {
     if (galleryModeSelect) galleryModeSelect.disabled = false;
@@ -213,6 +219,7 @@ async function setComfyMode(mode) {
   } catch (e) {
     galleryModeSelect.value = prev;
     { const __st = document.getElementById("statusText"); if (__st) __st.textContent = `ComfyUI switch failed — ${e.message}`; }
+    window.showAriaToast?.(`ComfyUI switch failed — ${e.message}`, "err", 5000);
   }
 }
 
@@ -226,6 +233,7 @@ async function setComfyCheckpoint(checkpoint) {
     galleryCheckpointSelect.value = prev;
     if (galleryCheckpointFileSelect && prevFile) galleryCheckpointFileSelect.value = prevFile;
     { const __st = document.getElementById("statusText"); if (__st) __st.textContent = `Model switch failed — ${e.message}`; }
+    window.showAriaToast?.(`Model switch failed — ${e.message}`, "err", 5000);
   }
 }
 
@@ -237,6 +245,7 @@ async function setComfyCheckpointFile(filename) {
   } catch (e) {
     galleryCheckpointFileSelect.value = prev;
     { const __st = document.getElementById("statusText"); if (__st) __st.textContent = `Checkpoint switch failed — ${e.message}`; }
+    window.showAriaToast?.(`Checkpoint switch failed — ${e.message}`, "err", 5000);
   }
 }
 
