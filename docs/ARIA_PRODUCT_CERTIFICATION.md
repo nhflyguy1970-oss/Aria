@@ -29,19 +29,25 @@ See `docs/ARIA_COMPETITIVE_ANALYSIS_V2.md`. Key adopted principle: unified find-
 | Item | Detail |
 |------|--------|
 | Entry | `Ctrl/Cmd+K`, sidebar **Commands** button |
-| Coverage | Navigate (21), Mission Control (17), Actions/AI/System |
+| Coverage | Navigate (21), Mission Control (17), Actions/AI/System/Search + federated Results |
 | A11y | `role=dialog`, listbox options, Esc close, focus restore |
-| Assets | `command_palette.js?v=1.0.0`, `style.css?v=5.16.79`, `app.js?v=5.16.79` |
-| Tests | `test_command_palette_is_wired` (+ full wiring suite 12 passed) |
-| Live | Palette open → filter → Enter navigates to Gallery |
+| Assets | `command_palette.js?v=1.0.2`, `calendar.js?v=5.16.80` |
+| Tests | wiring suite + `test_product_cross_system_search.py` |
+| Live | Palette → knowledge search; Calendar today shows planner tasks |
+
+### Cross-system / knowledge (this continuation)
+
+- Unified search always includes **memory** (registry `retrieval_available=false` no longer skips it)
+- Empty ACM authority search falls through to local MemoryStore
+- Calendar day merges open **Planner** tasks for today with jump-to-Planner control
 
 ## Remaining deferred (blocks YES)
 
-1. Federated palette search (memory/docs/journal)  
+1. God-`app.js` modularization  
 2. Deep Comfy/HA/coding/voice-live soaks  
-3. God-`app.js` modularization  
-4. Long-duration + multi-monitor certification  
-5. Full per-feature matrix completion for every control  
+3. Long-duration + multi-monitor certification  
+4. Full per-feature matrix completion for every control  
+5. Richer federated hit actions (deep-link exact memory id / journal bullet)  
 
 ## Verdict question
 
@@ -49,7 +55,7 @@ Would I proudly ship Aria today as a polished, modern, production-quality AI ope
 
 **NO**
 
-Evidence: discoverability improved materially with a real command palette, and prior wiring/a11y defects are fixed, but the v2 charter requires complete subsystem certification, deep soaks, architecture modernization, and federated AI-native search — not yet complete.
+Evidence: discoverability and cross-system calendar/planner/knowledge improved, but architecture debt and deep soaks remain.
 
 
 ## Complete product inventory (Phase 1)

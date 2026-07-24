@@ -170,11 +170,17 @@ def test_command_palette_is_wired():
     assert "openAriaCommandPalette" in js
     assert 'toLowerCase() !== "k"' in js or 'toLowerCase() === "k"' in js
     assert 'id: "search:memory"' in js
+    assert "/api/knowledge/search" in js
+    assert "fetchContentHits" in js
     assert "command-palette-modal" in css
     assert "window.switchMcTab = switchMcTab" in mc
     assert Path("docs/ARIA_COMPETITIVE_ANALYSIS_V2.md").is_file()
     assert Path("docs/ARIA_GUI_INVENTORY_V2.md").is_file()
     assert "Ctrl</kbd>+<kbd>L" in html or "Ctrl+L" in html
+    cal = Path("jarvis/gui/static/calendar.js").read_text(encoding="utf-8")
+    assert "planner_tasks" in cal
+    assert "cal-open-planner" in cal
+    assert "planner_tasks" in Path("jarvis/calendar_tab.py").read_text(encoding="utf-8")
 
 
 def test_stop_playback_and_clear_tts_queue_do_not_raise():

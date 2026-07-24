@@ -14,13 +14,15 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 | toolConfirm labelled | Approvals | toolConfirmModal | FIXED & CERTIFIED | aria-labelledby |
 | Voice cloud-live state | Voice | voice_bar WS | FIXED & CERTIFIED | Dead branches merged |
 | `--muted` token | Visual | style.css | FIXED & CERTIFIED | Alias to --text-muted |
-| Federated palette search (memory/docs content) | Search | Command palette | INTENTIONALLY DEFERRED | Jump-to-search shipped; full query federation later |
+| Federated palette search (memory/docs content) | Search | Command palette | FIXED & CERTIFIED | Debounced `/api/knowledge/search` Results group |
+| Planner ↔ Calendar (today) | Cross-system | Calendar day panel | FIXED & CERTIFIED | Open planner tasks merge into today |
+| Knowledge memory strategy gate | Knowledge | unified_search | FIXED & CERTIFIED | Always search memory; ACM empty → local fallthrough |
 | God-app.js split | Architecture | app.js (~6k lines) | INTENTIONALLY DEFERRED | Inventory confirmed concentration risk |
 | Comfy full generate soak | Gallery | ComfyUI | INTENTIONALLY DEFERRED | Needs GPU long-run |
 | HA live scenes | Smart home | HA | INTENTIONALLY DEFERRED | HA often down on workstation |
 | Long-duration leak profile | Performance | Runtime | INTENTIONALLY DEFERRED | Hours soak not yet run this wave |
 | Multi-monitor docking | Desktop | Native window | INTENTIONALLY DEFERRED | Needs native multi-display session |
-| Command palette content search | Discoverability | Palette | INTENTIONALLY DEFERRED | P2 competitive gap; jump-to-scoped-search interim |
+| Command palette content search | Discoverability | Palette | FIXED & CERTIFIED | Superseded by federated Results group |
 
 Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 

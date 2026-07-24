@@ -113,7 +113,10 @@ function renderDayPanel(data) {
   const tasks = (data.tasks || []).filter((t) => t.status !== "done").map((t) =>
     `<li class="cal-item cal-item-task">☐ ${escapeHtml(t.content || "")}</li>`
   ).join("");
-  const hasItems = Boolean(holidays || work || ics || events || tasks);
+  const plannerTasks = (data.planner_tasks || []).map((t) =>
+    `<li class="cal-item cal-item-planner">☐ ${escapeHtml(t.content || "")} <button type="button" class="ghost-btn tiny cal-open-planner" title="Open Planner">Planner</button></li>`
+  ).join("");
+  const hasItems = Boolean(holidays || work || ics || events || tasks || plannerTasks);
 
   el.innerHTML = `
     <h3>${escapeHtml(data.title || data.day)}</h3>
@@ -122,7 +125,8 @@ function renderDayPanel(data) {
     ${work ? `<p class="cal-section-label">Work schedule</p><ul class="cal-day-list">${work}</ul>` : ""}
     ${ics ? `<p class="cal-section-label">External calendar</p><ul class="cal-day-list">${ics}</ul>` : ""}
     ${events ? `<p class="cal-section-label">Appointments &amp; events</p><ul class="cal-day-list">${events}</ul>` : ""}
-    ${tasks ? `<p class="cal-section-label">Tasks</p><ul class="cal-day-list">${tasks}</ul>` : ""}
+    ${tasks ? `<p class="cal-section-label">Journal tasks</p><ul class="cal-day-list">${tasks}</ul>` : ""}
+    ${plannerTasks ? `<p class="cal-section-label">Planner tasks (today)</p><ul class="cal-day-list">${plannerTasks}</ul>` : ""}
     <div class="cal-add-form">
       <p class="cal-section-label">Add entry</p>
       <div class="cal-add-row">
@@ -144,6 +148,9 @@ function renderDayPanel(data) {
 
   calEl("calAddBtn")?.addEventListener("click", () => addCalendarEntry(data.day));
   calEl("calNoteSaveBtn")?.addEventListener("click", () => saveCalendarNote(data.day));
+  el.querySelectorAll(".cal-open-planner").forEach((btn) => {
+    btn.addEventListener("click", () => window.switchToView?.("planner"));
+  });
 }
 
 async function loadCalendarDay(day) {

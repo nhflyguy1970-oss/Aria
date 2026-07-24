@@ -281,6 +281,75 @@
     commands = [...nav, ...mcTabs, ...actions, ...search];
   }
 
+  let contentHits = [];
+  let searchSeq = 0;
+  let searchTimer = null;
+
+  function hitToCommand(hit, idx) {
+    const source = hit.source_type || "knowledge";
+    const label = hit.title || hit.excerpt || "Result";
+    const excerpt = (hit.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 72);
+    const id = `hit:${source}:${hit.location || hit.title || idx}`;
+    return {
+      id,
+      label: excerpt ? `${label} — ${excerpt}` : String(label),
+      group: "Results",
+      hint: hit.source_label || source,
+      keywords: `${hit.excerpt || ""} ${hit.location || ""}`,
+      run: () => openHit(hit),
+    };
+  }
+
+  function openHit(hit) {
+    const type = hit.source_type || "";
+    const loc = String(hit.location || "");
+    if (type === "conversation" || type.includes("memory") || loc.includes("acm") || loc === "memory" || loc === "profile") {
+      goView("memory");
+      setTimeout(() => {
+        const q = (hit.excerpt || hit.title || "").slice(0, 40);
+        const el = $("memorySearch");
+        if (el && q) {
+          el.value = q;
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.focus();
+        }
+      }, 80);
+      return;
+    }
+    if (type === "notes" || type === "journal" || loc.includes("journal")) {
+      goView("journal");
+      setTimeout(() => {
+        const el = $("journalSearch");
+        const q = (hit.title || "").replace(/\.[^.]+$/, "");
+        if (el) {
+          el.value = q;
+          el.focus();
+          $("journalSearchBtn")?.click();
+        }
+      }, 80);
+      return;
+    }
+    if (type === "document_library" || type.includes("document")) {
+      goView("documents");
+      setTimeout(() => {
+        const el = $("documentsSearchInput");
+        if (el) {
+          el.value = hit.title || hit.query || "";
+          el.focus();
+          $("documentsSearchBtn")?.click();
+        }
+      }, 80);
+      return;
+    }
+    if (type === "code_index" || type === "git_repository") {
+      goView("projects");
+      window.showAriaToast?.(loc || hit.title || "Open in projects / coding", "info");
+      return;
+    }
+    goView("memory");
+    window.showAriaToast?.((hit.excerpt || hit.title || "").slice(0, 120), "info");
+  }
+
   function filterCommands(q) {
     const scored = commands
       .map((c) => ({ c, s: score(c, q) }))
@@ -288,6 +357,7 @@
       .sort((a, b) => b.s - a.s || a.c.label.localeCompare(b.c.label));
 
     if (!q.trim()) {
+      contentHits = [];
       const recent = loadRecent();
       const byId = new Map(commands.map((c) => [c.id, c]));
       const recentCmds = recent.map((id) => byId.get(id)).filter(Boolean);
@@ -295,7 +365,26 @@
       filtered = [...recentCmds, ...rest].slice(0, MAX_VISIBLE);
       return;
     }
-    filtered = scored.map((x) => x.c).slice(0, MAX_VISIBLE);
+    const cmdHits = scored.map((x) => x.c);
+    filtered = [...contentHits, ...cmdHits].slice(0, MAX_VISIBLE);
+  }
+
+  async function fetchContentHits(q) {
+    const needle = q.trim();
+    if (needle.length < 2) {
+      contentHits = [];
+      return;
+    }
+    const seq = ++searchSeq;
+    try {
+      const res = await fetch(`/api/knowledge/search?q=${encodeURIComponent(needle)}&limit=8`);
+      const data = await res.json().catch(() => ({}));
+      if (seq !== searchSeq) return;
+      const hits = Array.isArray(data.hits) ? data.hits : [];
+      contentHits = hits.slice(0, 8).map((h, i) => hitToCommand(h, i));
+    } catch {
+      if (seq === searchSeq) contentHits = [];
+    }
   }
 
   function renderList() {
@@ -382,6 +471,7 @@
 
   function openPalette(fromEl) {
     buildCommands();
+    contentHits = [];
     openerEl = fromEl || document.activeElement;
     const modal = $("commandPaletteModal");
     const input = $("commandPaletteInput");
@@ -398,6 +488,8 @@
     const modal = $("commandPaletteModal");
     if (!modal) return;
     modal.classList.add("hidden");
+    clearTimeout(searchTimer);
+    searchTimer = null;
     const restore = openerEl;
     openerEl = null;
     if (restore && typeof restore.focus === "function") {
@@ -411,8 +503,20 @@
 
   function onInput() {
     activeIndex = 0;
-    filterCommands($("commandPaletteInput")?.value || "");
+    const q = $("commandPaletteInput")?.value || "";
+    filterCommands(q);
     renderList();
+    clearTimeout(searchTimer);
+    if (q.trim().length < 2) {
+      contentHits = [];
+      return;
+    }
+    searchTimer = setTimeout(async () => {
+      await fetchContentHits(q);
+      if (($("commandPaletteInput")?.value || "") !== q) return;
+      filterCommands(q);
+      renderList();
+    }, 160);
   }
 
   function init() {
@@ -447,7 +551,6 @@
     document.addEventListener("keydown", (e) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       if (String(e.key).toLowerCase() !== "k") return;
-      // Allow Ctrl+K even in inputs — palette is the intended override
       e.preventDefault();
       if (isOpen()) closePalette();
       else openPalette(document.activeElement);

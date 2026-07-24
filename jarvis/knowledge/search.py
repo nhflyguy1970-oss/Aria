@@ -116,7 +116,9 @@ def _search_memory(query: str, limit: int) -> list[dict[str, Any]]:
                         "score": float(h.get("score") or 0.7),
                         "raw": h,
                     })
-                return out
+                # Empty ACM results must not suppress local MemoryStore search.
+                if out:
+                    return out
         except Exception:
             pass
         from jarvis.assistant_instance import get_assistant
@@ -259,9 +261,10 @@ def _pick_strategies(query: str, sources: list[KnowledgeSource]) -> list[str]:
     if any(s.retrieval_available and s.type == "document_library" for s in sources):
         if _STRATEGY_HINTS["document"].search(query) or "code" not in strategies:
             strategies.append("documents")
-    if any(s.retrieval_available and s.type == "conversation" for s in sources):
-        if _STRATEGY_HINTS["conversation"].search(query):
-            strategies.append("memory")
+    # Memory is always in scope for an AI OS — do not gate on registry retrieval_available
+    # or conversational phrasing; local MemoryStore / ACM search still apply.
+    if any(s.type == "conversation" for s in sources):
+        strategies.append("memory")
     if any(s.retrieval_available and s.type in ("notes", "journal") for s in sources):
         strategies.append("journal")
     if any(s.type in ("project_folder", "git_repository", "documentation") for s in sources):

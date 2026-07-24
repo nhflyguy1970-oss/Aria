@@ -60,6 +60,24 @@ def day_detail(journal, day: str) -> dict[str, Any]:
         elif b.get("type") == "task":
             tasks.append(item)
     journal_events = timeline.get("events") or []
+    planner_tasks: list[dict[str, Any]] = []
+    if day == date.today().isoformat():
+        try:
+            from jarvis.planner_store import list_tasks
+
+            for t in list_tasks(include_completed=False):
+                planner_tasks.append(
+                    {
+                        "id": t.get("id"),
+                        "type": "planner_task",
+                        "content": t.get("text") or "",
+                        "time": None,
+                        "status": "open",
+                        "source": "planner",
+                    }
+                )
+        except Exception:
+            planner_tasks = []
     return {
         "ok": True,
         "day": day,
@@ -71,5 +89,6 @@ def day_detail(journal, day: str) -> dict[str, Any]:
         "journal_events": journal_events,
         "appointments": appointments,
         "tasks": tasks,
+        "planner_tasks": planner_tasks,
         "ics_url": ics_url(),
     }
