@@ -150,7 +150,12 @@
     );
 
     const typing = window.addTyping?.();
-    if (!typing) return;
+    if (!typing) {
+      window.setChatBusy?.(false);
+      window.hideProgress?.();
+      window.showAriaToast?.("Could not start reply UI — try again", "err", 4000);
+      return;
+    }
     const fetchOpts = { method: "POST", body: form, signal: c.chatAbortController.signal };
     const useStreaming = c.useStreaming !== false;
     const msgs = messagesEl();
@@ -279,6 +284,8 @@
               + "Wait a few seconds, then send the same request once — don't auto-retry in a loop."
             );
           } else {
+            window.showAriaToast?.("Stream dropped — retrying without streaming…", "warn", 3500);
+            if (statusText) statusText.textContent = "Retrying…";
             await sendMessage(text, true, { skipUserBubble: true });
           }
         }

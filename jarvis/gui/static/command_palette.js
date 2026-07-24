@@ -226,6 +226,49 @@
         run: () => $("voiceMuteBtn")?.click(),
       },
       {
+        id: "act:speak-replies",
+        label: "Toggle speak replies",
+        group: "Actions",
+        keywords: "tts auto speak voice replies mute",
+        run: () => {
+          const cb = $("speakRepliesToggle");
+          if (cb) {
+            cb.checked = !cb.checked;
+            cb.dispatchEvent(new Event("change"));
+          } else {
+            $("voiceMuteBtn")?.click();
+          }
+        },
+      },
+      {
+        id: "act:uncensored",
+        label: "Toggle uncensored mode",
+        group: "Settings",
+        keywords: "nsfw uncensored adult content",
+        run: () => $("uncensoredToggle")?.click(),
+      },
+      {
+        id: "act:server-whisper",
+        label: "Toggle server Whisper",
+        group: "Settings",
+        keywords: "stt whisper server mic transcription",
+        run: () => $("serverWhisperToggle")?.click(),
+      },
+      {
+        id: "act:lan-copy",
+        label: "Copy LAN URL",
+        group: "System",
+        keywords: "lan network url share phone tablet",
+        run: () => $("lanCopyUrlBtn")?.click(),
+      },
+      {
+        id: "act:open-actions",
+        label: "Open Actions / report",
+        group: "Navigate",
+        keywords: "checklist actions report daily",
+        run: () => goView("actions"),
+      },
+      {
         id: "act:stop-speaking",
         label: "Stop speaking",
         group: "Actions",

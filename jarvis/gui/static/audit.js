@@ -432,6 +432,7 @@
   function bindAuditControls() {
     $("auditRunBtn")?.addEventListener("click", () => loadAudit({ force: true }));
     $("auditOpenMcBtn")?.addEventListener("click", () => window.switchToView?.("workstation"));
+    $("auditOpenActionsBtn")?.addEventListener("click", () => window.switchToView?.("actions"));
   }
 
   window.initAudit = initAudit;

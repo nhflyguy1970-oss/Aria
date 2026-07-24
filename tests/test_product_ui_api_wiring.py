@@ -295,6 +295,11 @@ def test_command_palette_is_wired():
     assert "act:checklist" in js
     assert "act:meme-studio" in js
     assert "act:mute-voice" in js
+    assert "act:speak-replies" in js
+    assert "act:uncensored" in js
+    assert "act:server-whisper" in js
+    assert "act:lan-copy" in js
+    assert "act:open-actions" in js
     assert "act:stop-speaking" in js
     assert "act:lock-security" in js
     assert "act:pomodoro" in js
@@ -303,6 +308,9 @@ def test_command_palette_is_wired():
     assert "documentsOpenJournalBtn" in html
     assert "plannerOpenDocumentsBtn" in html
     assert "dashboardOpenCalendarBtn" in html
+    assert "auditOpenActionsBtn" in html
+    assert "Stream dropped" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
+    assert "Could not start reply UI" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
     assert "stopDashboardClock" in Path("jarvis/gui/static/view_router.js").read_text(encoding="utf-8")
     assert "audit-empty-run" in html
     assert "act:open-projects" in js
