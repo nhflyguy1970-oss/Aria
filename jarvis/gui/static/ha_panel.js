@@ -214,7 +214,9 @@ async function refreshHaPanel() {
       line.textContent = `Connected${conn.version ? ` · v${conn.version}` : ""}`;
       line.classList.remove("warn");
     } else if (data.token_set) {
-      line.textContent = conn.message || "Token saved — click Test connection or Save.";
+      const host = data.url || "Home Assistant";
+      line.textContent = conn.message
+        || `Not reachable at ${host} — start HA, then click Test connection.`;
       line.classList.add("warn");
     } else if (data.feature_on === false || data.enabled === false) {
       line.textContent = "Turn on Home Assistant below and click Save.";
