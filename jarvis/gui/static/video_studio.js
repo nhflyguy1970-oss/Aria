@@ -175,7 +175,6 @@ async function postVideoSettings(form) {
     if (!res.ok || data.ok === false) {
       const msg = data.message || data.detail || "Settings update failed";
       window.showAriaToast?.(msg, "err", 5000);
-      alert(msg);
       return;
     }
     window.showAriaToast?.("Video settings saved", "ok", 2000);
@@ -265,7 +264,7 @@ async function loadVideoGallery() {
             const msg = data.message || data.detail || res.statusText || "Delete failed";
             btn.disabled = false;
             if (window.showAriaToast) window.showAriaToast(msg, "error");
-            else alert(msg);
+            else window.showAriaToast?.(msg, "err", 5000);
             return;
           }
           btn.closest(".video-gallery-item")?.remove();
@@ -304,14 +303,13 @@ async function analyzeVideoFrame(path) {
   if (!data.ok) {
     const msg = data.message || "Analysis failed";
     window.showAriaToast?.(msg, "err", 5000);
-    alert(msg);
     return;
   }
   window.showAriaToast?.("Frame analysis ready", "ok", 2500);
   if (typeof window.jarvisSendToChat === "function") {
     window.jarvisSendToChat(`Frame analysis:\n\n${data.message}`);
   } else {
-    alert(data.message);
+    window.showAriaToast?.(data.message || "Analysis ready", "info", 6000);
   }
 }
 
@@ -327,7 +325,7 @@ async function trimVideoPrompt(path) {
   const res = await fetch("/api/video/trim", { method: "POST", body: form });
   const data = await res.json();
   if (!data.ok) {
-    alert(data.message || "Trim failed");
+    window.showAriaToast?.(data.message || "Trim failed", "err", 5000);
     return;
   }
   loadVideoGallery();
@@ -342,7 +340,7 @@ document.getElementById("videoUploadInput")?.addEventListener("change", async (e
   const data = await res.json();
   e.target.value = "";
   if (!data.ok) {
-    alert(data.message || "Upload failed");
+    window.showAriaToast?.(data.message || "Upload failed", "err", 5000);
     return;
   }
   loadVideoGallery();
@@ -394,7 +392,7 @@ document.getElementById("videoEngineInstallAdBtn")?.addEventListener("click", as
     const res = await fetch("/api/comfyui/install-animatediff", { method: "POST" });
     const data = await res.json();
     if (!data.ok) {
-      alert(data.message || "Install failed");
+      window.showAriaToast?.(data.message || "Install failed", "err", 5000);
       btn.disabled = false;
       btn.textContent = "Install AnimateDiff (~2 GB)";
       return;
@@ -411,7 +409,7 @@ document.getElementById("videoEngineInstallAdBtn")?.addEventListener("click", as
         btn.disabled = false;
         loadVideoSettings();
         if (info.readiness?.ready) {
-          alert("AnimateDiff ready — restart ComfyUI if it was already running.");
+          window.showAriaToast?.("AnimateDiff ready — restart ComfyUI if it was already running.", "ok", 6000);
         }
       }
     }, 5000);
@@ -433,7 +431,6 @@ document.getElementById("videoEngineInstallNsfwBtn")?.addEventListener("click", 
     if (!data.ok) {
       const msg = data.message || "Install failed";
       window.showAriaToast?.(msg, "err", 5000);
-      alert(msg);
       btn.disabled = false;
       btn.textContent = "Install NSFW checkpoints";
       return;

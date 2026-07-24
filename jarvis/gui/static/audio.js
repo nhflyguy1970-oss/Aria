@@ -164,7 +164,6 @@ function bindRecentButtons(root) {
       if (!res.ok || !data.ok) {
         const msg = data.message || data.detail || "Delete failed";
         window.showAriaToast?.(msg, "err", 5000);
-        alert(msg);
         return;
       }
       window.showAriaToast?.("Audio deleted", "ok", 2500);

@@ -231,7 +231,7 @@ async function saveEnvironmentPreferences() {
   });
   const data = await res.json();
   if (!data.ok) {
-    alert(data.error || "Save failed");
+    window.showAriaToast?.(data.error || "Save failed", "err", 5000);
     return;
   }
   loadMemoryBrowser();
@@ -388,7 +388,7 @@ async function loadKnowledgeResearchPanel() {
           const res = await fetch(`/api/knowledge/research/${encodeURIComponent(slug)}`);
           const brief = await res.json();
           if (!brief.ok) {
-            alert(brief.message || "Could not load brief");
+            window.showAriaToast?.(brief.message || "Could not load brief", "err", 5000);
             return;
           }
           const preview = (brief.markdown || "").slice(0, 8000);
@@ -397,10 +397,10 @@ async function loadKnowledgeResearchPanel() {
             w.document.write(`<pre style="font:14px/1.5 sans-serif;padding:1rem;white-space:pre-wrap">${window.escapeHtml(preview)}</pre>`);
             w.document.title = slug;
           } else {
-            alert(preview.slice(0, 2000));
+            window.showAriaToast?.(preview.slice(0, 500), "info", 8000);
           }
         } catch (e) {
-          alert(e.message || "Load failed");
+          window.showAriaToast?.(e.message || "Load failed", "err", 5000);
         }
       };
     });
@@ -690,7 +690,7 @@ function initMemoryBrowser() {
     const res = await fetch("/api/profile/questionnaire/reset", { method: "POST" });
     const data = await res.json();
     if (!data.ok) {
-      alert("Could not reset profile");
+      window.showAriaToast?.("Could not reset profile", "err", 5000);
       return;
     }
     renderProfileForm(data.questions || []);
@@ -702,7 +702,7 @@ function initMemoryBrowser() {
     const res = await fetch("/api/profile/questionnaire?edit=1");
     const data = await res.json();
     if (!data.ok || !(data.questions || []).length) {
-      alert("Could not load profile questions");
+      window.showAriaToast?.("Could not load profile questions", "err", 5000);
       return;
     }
     renderProfileForm(data.questions);
@@ -713,7 +713,7 @@ function initMemoryBrowser() {
   document.getElementById("cheatsheetViewBtn")?.addEventListener("click", () => {
     const key = document.getElementById("cheatsheetSelect")?.value;
     if (!key) {
-      alert("Choose a cheatsheet first");
+      window.showAriaToast?.("Choose a cheatsheet first", "warn", 3000);
       return;
     }
     showCheatsheet(key);
@@ -725,7 +725,7 @@ function initMemoryBrowser() {
   document.getElementById("cheatsheetEditBtn")?.addEventListener("click", async () => {
     const key = document.getElementById("cheatsheetSelect")?.value;
     if (!key) {
-      alert("Choose a cheatsheet first");
+      window.showAriaToast?.("Choose a cheatsheet first", "warn", 3000);
       return;
     }
     try {
@@ -753,7 +753,7 @@ function initMemoryBrowser() {
   document.getElementById("cheatsheetResetBtn")?.addEventListener("click", async () => {
     const key = document.getElementById("cheatsheetSelect")?.value;
     if (!key) {
-      alert("Choose a cheatsheet first");
+      window.showAriaToast?.("Choose a cheatsheet first", "warn", 3000);
       return;
     }
     if (!confirm(`Restore the default ${key} cheatsheet? Your edits will be lost.`)) return;
@@ -830,7 +830,7 @@ document.getElementById("profileForm")?.addEventListener("submit", async (e) => 
       { type: "info", module: "memory" }
     );
   } catch (_) {
-    alert("Save failed");
+    window.showAriaToast?.("Save failed", "err", 5000);
   } finally {
     if (btn) btn.disabled = false;
   }
