@@ -1299,8 +1299,8 @@ async function forkBranchFromIndex(displayIndex) {
       return;
     }
     _activeBranchId = data.branch_id;
-    await loadBranches();
-    await reloadBranchMessages();
+    await window.loadBranches?.();
+    await window.reloadBranchMessages?.();
     statusText.textContent = `Forked branch: ${name}`;
   } catch (e) {
     showError(String(e.message || e));
@@ -3046,8 +3046,8 @@ window.ariaPostStartup = function ariaPostStartup() {
     window.loadComfyMode?.();
     loadGpuStatus();
     loadVisionSettings();
-    loadBranches().then(() => reloadBranchMessages().then(() => resumePendingMediaJobs()));
-    loadPersonality();
+    window.loadBranches?.().then(() => window.reloadBranchMessages?.().then(() => resumePendingMediaJobs()));
+    window.loadPersonality?.();
     loadChatModelSelect();
     window.maybeShowProfileQuestionnaire?.();
     window.loadCodingPanel?.();
@@ -3360,137 +3360,6 @@ window.jarvisSendToChat = (text) => {
   resizeMessageInput();
 };
 
-async function loadPersonality() {
-  const sel = document.getElementById("personalitySelect");
-  if (!sel) return;
-  try {
-    const res = await fetch("/api/personality");
-    if (!res.ok) throw new Error(`Personality load failed (${res.status})`);
-    const data = await res.json();
-    if (data.personality && sel.querySelector(`option[value="${data.personality}"]`)) {
-      sel.value = data.personality;
-    }
-  } catch (err) {
-    window.showAriaToast?.(err.message || "Could not load personality", "err", 4000);
-  }
-}
-
-async function loadBranches() {
-  if (!branchSelect) return;
-  try {
-    const res = await fetch("/api/branches");
-    if (!res.ok) throw new Error(`Branches load failed (${res.status})`);
-    const data = await res.json();
-    _activeBranchId = data.active || "main";
-    branchSelect.innerHTML = (data.branches || []).map((b) =>
-      `<option value="${escapeHtml(b.id)}"${b.id === _activeBranchId ? " selected" : ""}>${escapeHtml(b.name)} (${b.messages})</option>`
-    ).join("");
-  } catch (err) {
-    window.showAriaToast?.(err.message || "Could not load branches", "err", 4000);
-  }
-}
-
-async function maybeShowMorningBriefing() {
-  if (_activeBranchId && _activeBranchId !== "main") return false;
-  try {
-    const res = await fetchWithTimeout("/api/briefing?launch=1", {}, 5000);
-    if (!res.ok) return false;
-    const data = await res.json();
-    if (!data.show || !data.markdown) return false;
-    addMessage("assistant", data.markdown, { type: "briefing", module: "journal" });
-    fetch("/api/briefing/dismiss", { method: "POST" }).catch(() => {});
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
-
-async function reloadBranchMessages() {
-  if (!messagesEl) return;
-  messagesEl.innerHTML = "";
-  try {
-    const res = await fetch(`/api/branches/${encodeURIComponent(_activeBranchId)}/messages`);
-    if (!res.ok) return;
-    const data = await res.json();
-    for (const m of data.messages || []) {
-      addMessage(m.role === "user" ? "user" : "assistant", m.content || "");
-    }
-    if (!(data.messages || []).length) {
-      const showed = await maybeShowMorningBriefing();
-      if (!showed) {
-        addMessage(
-          "assistant",
-          `Hello! I'm ${assistantDisplayName}. Ask **what can you do?** to see my abilities, or say **morning briefing** for today's summary.`,
-          { type: "info" }
-        );
-      }
-    }
-  } catch (_) {}
-}
-
-branchSelect?.addEventListener("change", async () => {
-  _activeBranchId = branchSelect.value;
-  const form = new FormData();
-  form.append("branch_id", _activeBranchId);
-  try {
-    const res = await fetch("/api/branches/switch", { method: "POST", body: form });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Switch failed (${res.status})`);
-    await reloadBranchMessages();
-    window.showAriaToast?.(`Switched to ${branchSelect.selectedOptions?.[0]?.textContent || _activeBranchId}`, "ok", 2500);
-  } catch (err) {
-    window.showAriaToast?.(err.message || "Could not switch branch", "err", 5000);
-  }
-});
-
-newBranchBtn?.addEventListener("click", async () => {
-  const name = prompt("Branch name:", "Branch");
-  if (!name) return;
-  const form = new FormData();
-  form.append("name", name);
-  try {
-    const res = await fetch("/api/branches", { method: "POST", body: form });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.ok) throw new Error(data.message || data.detail || `Create failed (${res.status})`);
-    _activeBranchId = data.branch_id;
-    await loadBranches();
-    await reloadBranchMessages();
-    if (statusText) statusText.textContent = `Branch: ${name}`;
-    window.showAriaToast?.(`Branch created: ${name}`, "ok", 3000);
-  } catch (err) {
-    window.showAriaToast?.(err.message || "Could not create branch", "err", 5000);
-  }
-});
-
-async function openBranchTrimModal() {
-  if (!branchTrimModal || !branchTrimList) return;
-  try {
-    const res = await fetch("/api/branches");
-    if (!res.ok) return;
-    const data = await res.json();
-    const branches = (data.branches || []).filter((b) => b.id !== "main");
-    if (!branches.length) {
-      statusText.textContent = "No extra branches to trim";
-      return;
-    }
-    branchTrimList.innerHTML = branches.map((b) =>
-      `<label class="branch-trim-item">`
-      + `<input type="checkbox" name="branch_trim" value="${escapeHtml(b.id)}">`
-      + `<span>${escapeHtml(b.name)} <code>${escapeHtml(b.id)}</code> (${b.messages} msgs)</span>`
-      + `</label>`
-    ).join("");
-    branchTrimModal.classList.remove("hidden");
-  } catch (err) {
-    window.showAriaToast?.(err.message || "Could not load branches to trim", "err", 5000);
-  }
-}
-
-function closeBranchTrimModal() {
-  branchTrimModal?.classList.add("hidden");
-}
-
-/* Job center — jarvis/gui/static/modules/jobs.mjs */
-
 debugBundleBtn?.addEventListener("click", async () => {
   try {
     const res = await fetch("/api/debug/bundle");
@@ -3509,74 +3378,5 @@ debugBundleBtn?.addEventListener("click", async () => {
   }
 });
 
-trimBranchesBtn?.addEventListener("click", () => { openBranchTrimModal(); });
+// personality/branches → chat_branches.js
 
-clearMainBranchBtn?.addEventListener("click", async () => {
-  if (!confirm("Clear all messages on the Main branch? This cannot be undone.")) return;
-  try {
-    const form = new FormData();
-    form.append("branch_id", "main");
-    let res = await fetch("/api/branches/clear", { method: "POST", body: form });
-    if (res.status === 404) {
-      res = await fetch("/api/branches/main/clear", { method: "POST" });
-    }
-    if (res.status === 404 && _activeBranchId === "main") {
-      const legacy = new FormData();
-      legacy.append("message", "clear");
-      res = await fetch("/api/chat", { method: "POST", body: legacy });
-    }
-    const data = await res.json();
-    if (!res.ok || !data.ok) {
-      showError(
-        data.message
-          || (res.status === 404
-            ? "Clear Main needs a server restart — run: jarvis-ctl restart"
-            : "Could not clear Main branch."),
-      );
-      return;
-    }
-    await loadBranches();
-    if (_activeBranchId === "main") {
-      await reloadBranchMessages();
-    } else {
-      statusText.textContent = "Main branch cleared (still on current branch)";
-    }
-  } catch (e) {
-    showError(`Clear failed: ${e.message || e}`);
-  }
-});
-
-branchTrimCancelBtn?.addEventListener("click", closeBranchTrimModal);
-branchTrimModal?.addEventListener("click", (e) => {
-  if (e.target === branchTrimModal) closeBranchTrimModal();
-});
-
-branchTrimConfirmBtn?.addEventListener("click", async () => {
-  const checked = [...(branchTrimList?.querySelectorAll('input[name="branch_trim"]:checked') || [])]
-    .map((el) => el.value);
-  if (!checked.length) {
-    if (statusText) statusText.textContent = "Select at least one branch";
-    window.showAriaToast?.("Select at least one branch", "warn", 3000);
-    return;
-  }
-  if (!confirm(`Delete ${checked.length} branch(es)? This cannot be undone.`)) return;
-  const form = new FormData();
-  form.append("branch_ids", checked.join(","));
-  try {
-    const res = await fetch("/api/branches/delete", { method: "POST", body: form });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.ok) {
-      throw new Error(data.message || "Could not delete branches.");
-    }
-    closeBranchTrimModal();
-    _activeBranchId = data.active || "main";
-    await loadBranches();
-    await reloadBranchMessages();
-    const msg = `Deleted ${(data.deleted || []).length} branch(es)`;
-    if (statusText) statusText.textContent = msg;
-    window.showAriaToast?.(msg, "ok", 3000);
-  } catch (err) {
-    showError(err.message || "Could not delete branches.");
-    window.showAriaToast?.(err.message || "Could not delete branches", "err", 5000);
-  }
-});
