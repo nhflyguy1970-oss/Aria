@@ -2340,6 +2340,7 @@ async function loadVisionSettings() {
     }
   } catch (err) {
     if (note) note.textContent = "Vision settings unavailable";
+    window.showAriaToast?.(err.message || "Vision settings unavailable", "err", 4000);
   }
 }
 
@@ -3004,7 +3005,7 @@ window.ariaPostStartup = function ariaPostStartup() {
     loadChatModelSelect();
     window.maybeShowProfileQuestionnaire?.();
     window.loadCodingPanel?.();
-    loadGitStatus();
+    window.loadGitStatus?.();
     const params = new URLSearchParams(window.location.search);
     const prefill = params.get("msg");
     if (prefill && messageInput) {
@@ -3052,52 +3053,7 @@ window.addEventListener("beforeunload", () => {
 
 // loadActions → movie_tiers.js (window.loadActions)
 
-async function loadGitStatus() {
-  const el = document.getElementById("gitStatusBox");
-  if (!el) return;
-  try {
-    const res = await fetch("/api/git/status");
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.detail || `Git status failed (${res.status})`);
-    el.textContent = data.status || "—";
-  } catch (err) {
-    el.textContent = "Git: unavailable";
-    window.showAriaToast?.(err.message || "Git status unavailable", "err", 4000);
-  }
-}
-
-async function loadGitDiff() {
-  const box = document.getElementById("gitDetailBox");
-  if (!box) return;
-  box.classList.remove("hidden");
-  box.textContent = "Loading diff…";
-  try {
-    const res = await fetch("/api/git/diff");
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.detail || `Git diff failed (${res.status})`);
-    box.textContent = data.diff?.trim() || "(no diff)";
-  } catch (err) {
-    box.textContent = "Could not load diff";
-    window.showAriaToast?.(err.message || "Could not load diff", "err", 4000);
-  }
-}
-
-async function loadGitLog() {
-  const box = document.getElementById("gitDetailBox");
-  if (!box) return;
-  box.classList.remove("hidden");
-  box.textContent = "Loading log…";
-  try {
-    const res = await fetch("/api/git/log?limit=12");
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.detail || `Git log failed (${res.status})`);
-    const lines = (data.log || []).join("\n");
-    box.textContent = lines || "(empty log)";
-  } catch (err) {
-    box.textContent = "Could not load log";
-    window.showAriaToast?.(err.message || "Could not load log", "err", 4000);
-  }
-}
+// git status/diff/log → git_panel.js (window.loadGitStatus)
 
 async function loadChatModelSelect() {
   const sel = document.getElementById("chatModelSelect");
@@ -3144,10 +3100,6 @@ document.getElementById("chatModelSelect")?.addEventListener("change", async (e)
     window.showAriaToast?.(err.message || "Chat model update failed", "err", 5000);
   }
 });
-
-document.getElementById("gitRefreshBtn")?.addEventListener("click", () => loadGitStatus());
-document.getElementById("gitDiffBtn")?.addEventListener("click", () => loadGitDiff());
-document.getElementById("gitLogBtn")?.addEventListener("click", () => loadGitLog());
 
 document.getElementById("exportChatBtn")?.addEventListener("click", () => {
   const params = new URLSearchParams();
@@ -3202,11 +3154,20 @@ document.getElementById("profileSelect")?.addEventListener("change", async (e) =
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ profile: pid }),
     });
-    const data = await res.json();
-    statusText.textContent = data.ok ? `Profile: ${data.label}` : data.message || "Profile switch failed";
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      const msg = data.message || data.detail || "Profile switch failed";
+      if (statusText) statusText.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
+      return;
+    }
+    const msg = `Profile: ${data.label || pid}`;
+    if (statusText) statusText.textContent = msg;
+    window.showAriaToast?.(msg, "ok", 2500);
     loadModels();
   } catch (_) {
-    statusText.textContent = "Profile switch failed";
+    if (statusText) statusText.textContent = "Profile switch failed";
+    window.showAriaToast?.("Profile switch failed", "err", 5000);
   }
 });
 

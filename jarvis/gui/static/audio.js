@@ -154,11 +154,14 @@ function bindRecentButtons(root) {
       form.append("path", path);
       form.append("category", category);
       const res = await fetch("/api/audio/delete", { method: "POST", body: form });
-      const data = await res.json();
-      if (!data.ok) {
-        alert(data.message || "Delete failed");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const msg = data.message || data.detail || "Delete failed";
+        window.showAriaToast?.(msg, "err", 5000);
+        alert(msg);
         return;
       }
+      window.showAriaToast?.("Audio deleted", "ok", 2500);
       if (audioLastPath === path) {
         showPlayback("", null);
         document.getElementById("audioWaveWrap")?.classList.add("hidden");
@@ -230,7 +233,15 @@ async function playOnSpeakers(path) {
   if (!path) return;
   const form = new FormData();
   form.append("path", path);
-  await fetch("/api/audio/play", { method: "POST", body: form });
+  try {
+    const res = await fetch("/api/audio/play", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      window.showAriaToast?.(data.message || data.detail || "Playback failed", "err", 5000);
+    }
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Playback failed", "err", 5000);
+  }
 }
 
 function formatPeak(peak) {
@@ -766,8 +777,10 @@ async function loadAudioPanel() {
     try {
       await navigator.clipboard.writeText(text);
       statusEl.textContent = "Transcript copied";
+      window.showAriaToast?.("Transcript copied", "ok", 2000);
     } catch (_) {
       statusEl.textContent = "Copy failed";
+      window.showAriaToast?.("Copy failed", "err", 4000);
     }
   });
 
@@ -776,6 +789,7 @@ async function loadAudioPanel() {
     if (!text || !window.jarvisSendToChat) return;
     window.jarvisSendToChat(text);
     statusEl.textContent = "Sent to chat";
+    window.showAriaToast?.("Sent to chat", "ok", 2000);
   });
 
   document.getElementById("audioJournalBtn")?.addEventListener("click", async () => {
@@ -785,34 +799,55 @@ async function loadAudioPanel() {
     form.append("text", text);
     form.append("audio_path", audioLastPath || "");
     form.append("bullet_type", "note");
-    const res = await fetch("/api/audio/journal-with-audio", { method: "POST", body: form });
-    const data = await res.json();
-    statusEl.textContent = data.ok ? "Added to today's journal" : (data.message || "Journal failed");
+    try {
+      const res = await fetch("/api/audio/journal-with-audio", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const msg = data.message || data.detail || "Journal failed";
+        statusEl.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      statusEl.textContent = "Added to today's journal";
+      window.showAriaToast?.("Added to today's journal", "ok", 3000);
+    } catch (err) {
+      statusEl.textContent = err?.message || "Journal failed";
+      window.showAriaToast?.(err?.message || "Journal failed", "err", 5000);
+    }
   });
 
   document.getElementById("audioSummarizeBtn")?.addEventListener("click", async () => {
     const path = audioLastPath || document.getElementById("audioEditPath")?.value.trim();
     if (!path) {
       statusEl.textContent = "Record or pick a file first";
+      window.showAriaToast?.("Record or pick a file first", "warn", 3500);
       return;
     }
     statusEl.textContent = "Summarizing…";
     const form = new FormData();
     form.append("path", path);
     form.append("model", selectedWhisperModel());
-    const res = await fetch("/api/audio/analyze", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      statusEl.textContent = data.message || "Summarize failed";
-      return;
+    try {
+      const res = await fetch("/api/audio/analyze", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const msg = data.message || data.detail || "Summarize failed";
+        statusEl.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      const summaryEl = document.getElementById("audioSummary");
+      if (summaryEl) {
+        summaryEl.textContent = data.summary || "";
+        summaryEl.classList.remove("hidden");
+      }
+      if (data.transcript) showPlayback(path, data.transcript);
+      statusEl.textContent = "Summary ready";
+      window.showAriaToast?.("Summary ready", "ok", 2500);
+    } catch (err) {
+      statusEl.textContent = err?.message || "Summarize failed";
+      window.showAriaToast?.(err?.message || "Summarize failed", "err", 5000);
     }
-    const summaryEl = document.getElementById("audioSummary");
-    if (summaryEl) {
-      summaryEl.textContent = data.summary || "";
-      summaryEl.classList.remove("hidden");
-    }
-    if (data.transcript) showPlayback(path, data.transcript);
-    statusEl.textContent = "Summary ready";
   });
 
   document.getElementById("audioTrimApplyBtn")?.addEventListener("click", async () => {
