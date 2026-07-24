@@ -36,7 +36,12 @@
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
           const path = btn.dataset.path;
-          if (!path || !openImageLightbox || !resolveImageUrl) return;
+          if (!path) return;
+          if (typeof window.openInpaintModal === "function") {
+            window.openInpaintModal(path);
+            return;
+          }
+          if (!openImageLightbox || !resolveImageUrl) return;
           const file = path.split(/[/\\]/).pop();
           openImageLightbox(
             resolveImageUrl(path, { thumb: false }),

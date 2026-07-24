@@ -582,196 +582,12 @@ function bindClickableImages(container) {
       const figure = img.closest(".gen-image");
       const path = img.dataset.imagePath || figure?.dataset.imagePath || "";
       const full = img.dataset.fullSrc || img.src;
-      openImageLightbox(full, img.alt || "", path, img.src);
+      window.openImageLightbox?.(full, img.alt || "", path, img.src);
     });
   });
 }
 
-let lightboxImagePath = "";
-
-function openImageLightbox(url, caption = "", imagePath = "", previewUrl = "") {
-  window.openImageLightbox = openImageLightbox;
-  const modal = document.getElementById("imageLightbox");
-  const img = document.getElementById("imageLightboxImg");
-  const cap = document.getElementById("imageLightboxCaption");
-  const promptEl = document.getElementById("imageLightboxPrompt");
-  const statusEl = document.getElementById("imageLightboxStatus");
-  if (!modal || !img || !url) return;
-  lightboxImagePath = imagePath || "";
-  const preview = previewUrl && previewUrl !== url ? previewUrl : "";
-  img.src = preview || url;
-  img.alt = caption || "Image";
-  if (cap) cap.textContent = caption || "";
-  if (promptEl) promptEl.value = "";
-  if (statusEl) statusEl.textContent = preview ? "Loading full resolution…" : "";
-  modal.classList.remove("hidden");
-  promptEl?.focus();
-  if (preview) {
-    const fullImg = new Image();
-    fullImg.onload = () => {
-      if (!modal.classList.contains("hidden") && lightboxImagePath === (imagePath || "")) {
-        img.src = url;
-        if (statusEl) statusEl.textContent = "";
-      }
-    };
-    fullImg.onerror = () => {
-      if (statusEl) statusEl.textContent = "Could not load full image — showing preview.";
-    };
-    fullImg.src = url;
-  }
-}
-
-function closeImageLightbox() {
-  document.getElementById("imageLightbox")?.classList.add("hidden");
-  lightboxImagePath = "";
-}
-window.closeImageLightbox = closeImageLightbox;
-
-function openVideoLightbox(url, caption = "") {
-  const modal = document.getElementById("videoLightbox");
-  const player = document.getElementById("videoLightboxPlayer");
-  const cap = document.getElementById("videoLightboxCaption");
-  if (!modal || !player || !url) return;
-  player.pause();
-  player.removeAttribute("src");
-  player.load();
-  player.src = url;
-  if (cap) cap.textContent = caption || "";
-  modal.classList.remove("hidden");
-  player.play().catch(() => {});
-}
-window.openVideoLightbox = openVideoLightbox;
-
-function closeVideoLightbox() {
-  const player = document.getElementById("videoLightboxPlayer");
-  if (player) {
-    player.pause();
-    player.removeAttribute("src");
-    player.load();
-  }
-  document.getElementById("videoLightbox")?.classList.add("hidden");
-}
-window.closeVideoLightbox = closeVideoLightbox;
-
-function bindClickableVideos(root) {
-  const scope = root || document;
-  scope.querySelectorAll(".gen-video video, .video-gallery-item .video-thumb").forEach((video) => {
-    if (video.dataset.lightboxBound) return;
-    video.dataset.lightboxBound = "1";
-    const isThumb = video.classList.contains("video-thumb");
-    video.classList.add("clickable-video");
-    if (!video.title) video.title = isThumb ? "Click to open player" : "Double-click to open full player";
-    const open = (e) => {
-      const src = video.currentSrc || video.src;
-      if (!src) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const host = video.closest(".gen-video, .video-gallery-item");
-      const caption = host?.querySelector("figcaption, .video-item-name")?.textContent?.trim() || "";
-      openVideoLightbox(src, caption);
-    };
-    video.addEventListener(isThumb ? "click" : "dblclick", open);
-  });
-}
-window.bindClickableVideos = bindClickableVideos;
-
-function initVideoLightbox() {
-  document.getElementById("videoLightboxClose")?.addEventListener("click", closeVideoLightbox);
-  const modal = document.getElementById("videoLightbox");
-  modal?.addEventListener("click", (e) => {
-    if (e.target === modal) closeVideoLightbox();
-  });
-}
-
-async function queueImageEdit(imagePath, prompt, regionKey, statusEl, onDone, denoise) {
-  if (!imagePath || !prompt) {
-    if (statusEl) statusEl.textContent = "Enter what you want to change.";
-    return false;
-  }
-  const regionKeyNorm = regionKey || "full";
-  const wholeImage = regionKeyNorm === "full";
-  const form = new FormData();
-  form.append("path", imagePath);
-  form.append("prompt", prompt);
-  const endpoint = wholeImage ? "/api/image/edit" : "/api/image/inpaint";
-  if (!wholeImage) {
-    let d = denoise;
-    if (d == null || d === "") {
-      const el = document.getElementById("inpaintDenoise");
-      d = el?.value;
-    }
-    const denoiseVal = Number(d);
-    form.append(
-      "denoise",
-      Number.isFinite(denoiseVal) ? String(Math.min(1, Math.max(0.5, denoiseVal))) : "0.82",
-    );
-    const region = INPAINT_REGIONS[regionKeyNorm];
-    if (region) form.append("region", JSON.stringify(region));
-  }
-  try {
-    if (statusEl) statusEl.textContent = wholeImage ? "Queuing img2img edit…" : "Queuing inpaint…";
-    const res = await fetch(endpoint, { method: "POST", body: form });
-    const out = await res.json().catch(() => ({}));
-    if (!res.ok || !out.ok) {
-      const detail = out.message || out.detail
-        || (res.status === 404 ? "Edit API not loaded — use jarvis-ctl restart, then Reload UI" : null)
-        || `Edit failed (${res.status})`;
-      if (statusEl) statusEl.textContent = detail;
-      return false;
-    }
-    if (out.job_id) {
-      const { body } = addMessage("assistant", out.message || (wholeImage ? "Editing image…" : "Inpainting…"), {
-        module: "image",
-        type: "media_job",
-      });
-      const msg = body?.closest?.(".message");
-      pollMediaJob(out.job_id, msg);
-      onDone?.();
-      return true;
-    }
-    if (out.image_path) {
-      showGeneratedImage(out.image_path, out.image_name);
-      onDone?.();
-      return true;
-    }
-    if (statusEl) statusEl.textContent = "Edit queued but no job id returned.";
-    return false;
-  } catch (err) {
-    if (statusEl) statusEl.textContent = String(err);
-    return false;
-  }
-}
-
-function initImageLightbox() {
-  document.getElementById("imageLightboxClose")?.addEventListener("click", closeImageLightbox);
-  const modal = document.getElementById("imageLightbox");
-  modal?.addEventListener("click", (e) => {
-    if (e.target === modal) closeImageLightbox();
-  });
-  document.getElementById("imageLightboxEditBtn")?.addEventListener("click", async () => {
-    const prompt = document.getElementById("imageLightboxPrompt")?.value?.trim();
-    const regionKey = document.getElementById("imageLightboxRegion")?.value || "full";
-    const statusEl = document.getElementById("imageLightboxStatus");
-    const btn = document.getElementById("imageLightboxEditBtn");
-    if (!lightboxImagePath) {
-      if (statusEl) statusEl.textContent = "Image path missing — try Gallery or regenerate.";
-      return;
-    }
-    if (btn) btn.disabled = true;
-    if (statusEl) statusEl.textContent = "Queuing edit…";
-    await queueImageEdit(lightboxImagePath, prompt, regionKey, statusEl, () => {
-      closeImageLightbox();
-      if (statusText) statusText.textContent = "Image edit running…";
-    });
-    if (btn) btn.disabled = false;
-  });
-  document.getElementById("imageLightboxPrompt")?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      document.getElementById("imageLightboxEditBtn")?.click();
-    }
-  });
-}
+// media lightbox / queueImageEdit / inpaint → media_lightbox.js
 
 function applyAssistantMeta(messageEl, meta) {
   const bubble = messageEl?.querySelector?.(".bubble") || messageEl?.closest?.(".message")?.querySelector?.(".bubble");
@@ -3116,6 +2932,9 @@ function resetSidebarLayout() {
 window.switchToView = switchToView;
 window.renderServices = renderServices;
 window.resetSidebarLayout = resetSidebarLayout;
+window.addMessage = addMessage;
+window.pollMediaJob = pollMediaJob;
+
 
 
 document.getElementById("openVideoStudioBtn")?.addEventListener("click", () => {
@@ -3750,8 +3569,7 @@ async function pollWakewordChat() {
 }
 
 loadSuggestions();
-initImageLightbox();
-initVideoLightbox();
+// image/video lightbox init → media_lightbox.js
 window.initAriaModalChrome?.();
 document.getElementById("reloadUiBtn")?.addEventListener("click", () => reloadJarvisUi());
 document.getElementById("resetLayoutBtn")?.addEventListener("click", () => {
@@ -3960,56 +3778,7 @@ window.addEventListener("beforeunload", () => {
 
 // profile questionnaire → memory_browser.js
 
-const INPAINT_REGIONS = {
-  full: null,
-  center: { x: 0.25, y: 0.25, w: 0.5, h: 0.5 },
-  "top left": { x: 0, y: 0, w: 0.5, h: 0.5 },
-  "top right": { x: 0.5, y: 0, w: 0.5, h: 0.5 },
-  "bottom left": { x: 0, y: 0.5, w: 0.5, h: 0.5 },
-  "bottom right": { x: 0.5, y: 0.5, w: 0.5, h: 0.5 },
-};
-
-let inpaintTargetPath = "";
-
-function openInpaintModal(imagePath) {
-  inpaintTargetPath = imagePath || "";
-  const modal = document.getElementById("inpaintModal");
-  const promptEl = document.getElementById("inpaintPrompt");
-  const statusEl = document.getElementById("inpaintStatus");
-  if (!modal || !inpaintTargetPath) return;
-  if (promptEl) promptEl.value = "";
-  if (statusEl) statusEl.textContent = "";
-  modal.classList.remove("hidden");
-  promptEl?.focus();
-}
-
-function closeInpaintModal() {
-  document.getElementById("inpaintModal")?.classList.add("hidden");
-  inpaintTargetPath = "";
-}
-
-document.getElementById("inpaintCancelBtn")?.addEventListener("click", closeInpaintModal);
-document.getElementById("inpaintModal")?.addEventListener("click", (e) => {
-  if (e.target?.id === "inpaintModal") closeInpaintModal();
-});
-document.getElementById("inpaintRunBtn")?.addEventListener("click", async () => {
-  const prompt = document.getElementById("inpaintPrompt")?.value?.trim();
-  const regionKey = document.getElementById("inpaintRegion")?.value || "full";
-  const denoise = document.getElementById("inpaintDenoise")?.value;
-  const statusEl = document.getElementById("inpaintStatus");
-  const runBtn = document.getElementById("inpaintRunBtn");
-  if (!inpaintTargetPath || !prompt) {
-    if (statusEl) statusEl.textContent = "Enter a prompt.";
-    return;
-  }
-  if (runBtn) runBtn.disabled = true;
-  if (statusEl) statusEl.textContent = "Queuing edit…";
-  await queueImageEdit(inpaintTargetPath, prompt, regionKey, statusEl, () => {
-    closeInpaintModal();
-    if (statusText) statusText.textContent = "Image edit running…";
-  }, denoise);
-  if (runBtn) runBtn.disabled = false;
-});
+// inpaint modal → media_lightbox.js
 
 // gallery → gallery_view.js (window.loadGallery)
 
@@ -4064,6 +3833,9 @@ async function loadChatModelSelect() {
       fetch("/api/chat/model"),
       fetch("/api/models/settings"),
     ]);
+    if (!modelRes.ok || !settingsRes.ok) {
+      throw new Error(`Model list failed (${modelRes.status}/${settingsRes.status})`);
+    }
     const modelData = await modelRes.json();
     const settings = await settingsRes.json();
     const installed = settings.installed || [];
@@ -4079,7 +3851,9 @@ async function loadChatModelSelect() {
     }
     sel.innerHTML = opts.join("");
     sel.value = current;
-  } catch (_) {}
+  } catch (err) {
+    window.showAriaToast?.(err.message || "Could not load chat models", "err", 5000);
+  }
 }
 
 document.getElementById("chatModelSelect")?.addEventListener("change", async (e) => {
@@ -4087,9 +3861,14 @@ document.getElementById("chatModelSelect")?.addEventListener("change", async (e)
   form.append("model", e.target.value);
   try {
     const res = await fetch("/api/chat/model", { method: "POST", body: form });
-    const data = await res.json();
-    statusText.textContent = data.effective ? `Chat model: ${data.effective}` : "Chat model: default";
-  } catch (_) {}
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || `Chat model update failed (${res.status})`);
+    const msg = data.effective ? `Chat model: ${data.effective}` : "Chat model: default";
+    if (statusText) statusText.textContent = msg;
+    window.showAriaToast?.(msg, "ok", 2500);
+  } catch (err) {
+    window.showAriaToast?.(err.message || "Chat model update failed", "err", 5000);
+  }
 });
 
 document.getElementById("gitRefreshBtn")?.addEventListener("click", () => loadGitStatus());
@@ -4228,6 +4007,8 @@ function showGeneratedImage(path, name) {
   const msg = document.querySelector(".message.assistant:last-child .msg-body");
   setTimeout(() => appendGeneratedImage(msg, path, name), 600);
 }
+
+window.showGeneratedImage = showGeneratedImage;
 
 function showAudioPlayer(path, transcript) {
   if (!path) return;
