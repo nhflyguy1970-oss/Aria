@@ -320,6 +320,8 @@
     }
     initialized = true;
     loadSettings();
+    $("presenceOpenSecurityBtn")?.addEventListener("click", () => window.switchToView?.("security"));
+    $("presenceOpenVoiceBtn")?.addEventListener("click", () => window.switchToView?.("voice"));
     $("presenceStartBtn")?.addEventListener("click", startCamera);
     $("presenceStopBtn")?.addEventListener("click", stopCamera);
     $("gestureModeSelect")?.addEventListener("change", saveSettings);

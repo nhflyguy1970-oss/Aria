@@ -1557,7 +1557,11 @@
       </div>
 
       <div id="presenceView" class="view-panel hidden">
-        <h2>Presence</h2>
+        <div class="presence-header-row">
+          <h2>Presence</h2>
+          <button type="button" id="presenceOpenSecurityBtn" class="ghost-btn small" title="Open Security">Security</button>
+          <button type="button" id="presenceOpenVoiceBtn" class="ghost-btn small" title="Open Voice">Voice</button>
+        </div>
         <p id="presenceStatus" class="muted">Webcam + gestures</p>
         <div class="presence-stage">
           <video id="presenceVideo" class="presence-video" autoplay playsinline muted></video>
@@ -1812,9 +1816,9 @@
   <script src="/static/projects.js?v=5.16.90"></script>
   <script src="/static/vendor/three/three.min.js"></script>
   <script src="/static/vendor/three/STLLoader.js"></script>
-  <script src="/static/maker.js?v=5.16.117"></script>
+  <script src="/static/maker.js?v=5.16.118"></script>
   <script src="/static/browser_panel.js?v=5.16.90"></script>
-  <script src="/static/presence.js?v=5.16.102"></script>
+  <script src="/static/presence.js?v=5.16.103"></script>
   <script src="/static/security_settings.js?v=5.16.103"></script>
   <script src="/static/tools_sidebar.js?v=5.16.101"></script>
   <script src="/static/floating_panels.js?v=5.16.70"></script>
@@ -1822,7 +1826,7 @@
   <script src="/static/audit.js?v=5.16.95"></script>
   <script src="/static/voice_tab.js?v=5.16.90"></script>
   <script src="/static/modal_chrome.js?v=1.0.0"></script>
-  <script src="/static/command_palette.js?v=1.0.17"></script>
+  <script src="/static/command_palette.js?v=1.0.18"></script>
   <script src="/static/ha_panel.js?v=1.0.1"></script>
   <script src="/static/upgrade_wizard.js?v=1.0.2"></script>
   <script src="/static/image_engine.js?v=1.0.2"></script>

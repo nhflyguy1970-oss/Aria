@@ -595,6 +595,13 @@
         run: focusSearch("flytying", "flytyingSearchInput"),
       },
       {
+        id: "search:gallery-prompt",
+        label: "Focus gallery prompt",
+        group: "Search",
+        keywords: "comfy image generate",
+        run: focusSearch("gallery", "galleryPromptInput"),
+      },
+      {
         id: "search:mc-routing",
         label: "Search Mission Control routing",
         group: "Search",

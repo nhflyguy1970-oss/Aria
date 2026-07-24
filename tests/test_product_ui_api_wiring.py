@@ -267,6 +267,8 @@ def test_command_palette_is_wired():
     assert "act:open-projects" in js
     assert "act:debug-bundle" in js
     assert "act:browser-task" in js
+    assert "search:gallery-prompt" in js
+    assert "presenceOpenSecurityBtn" in html
     assert "journalOpenCalendarBtn" in html
     assert "memoryOpenJournalBtn" in html
     assert "memoryOpenProjectsBtn" in html

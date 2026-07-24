@@ -37,7 +37,7 @@
     }
   }
 
-  async function loadModels() {
+  async function loadModels(opts = {}) {
     const list = $("cadModelList");
     if (!list) return;
     try {
@@ -59,7 +59,9 @@
       if (!selectedModelId && models.length) selectModel(models[0].id);
     } catch (e) {
       list.innerHTML = `<li class="muted">${esc(e.message)}</li>`;
-      window.showAriaToast?.(e.message || "Could not load CAD models", "err", 5000);
+      if (opts.toastOnError) {
+        window.showAriaToast?.(e.message || "Could not load CAD models", "err", 5000);
+      }
     }
   }
 
@@ -307,7 +309,10 @@
       return;
     }
     if (root) root.dataset.bound = "1";
-    $("cadRefreshBtn")?.addEventListener("click", () => { refreshCadStatus({ toastOnError: true }); loadModels(); });
+    $("cadRefreshBtn")?.addEventListener("click", () => {
+      refreshCadStatus({ toastOnError: true });
+      loadModels({ toastOnError: true });
+    });
     $("cadGenerateBtn")?.addEventListener("click", generateCad);
     $("cadHelloCubeBtn")?.addEventListener("click", helloCube);
     $("cadSliceBtn")?.addEventListener("click", sliceSelected);
