@@ -326,10 +326,13 @@ async function loadChecklist(full = true) {
           ? ` (${data.passed}/${data.total} incl. optional)`
           : "";
       summary.textContent = `${reqPass}/${reqTotal} required passed${optNote} · ${ms}ms`;
+      const tone = reqPass === reqTotal ? "ok" : "warn";
+      window.showAriaToast?.(summary.textContent, tone, 3500);
     }
   } catch (e) {
     el.innerHTML = `<li class="fail">✗ ${String(e.message || e).replace(/</g, "&lt;")}</li>`;
     if (summary) summary.textContent = "Check failed";
+    window.showAriaToast?.(e.message || "Checklist failed", "err", 5000);
   } finally {
     if (btn) {
       btn.disabled = false;

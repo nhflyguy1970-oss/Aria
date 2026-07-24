@@ -268,6 +268,7 @@ def test_command_palette_is_wired():
     assert "documentsOpenMemoryBtn" in html
     assert "documentsOpenCalendarBtn" in html
     assert "Slice complete" in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
+    assert "ICS saved" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8") or "ICS OK" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "Video settings saved" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")
     assert Path("jarvis/gui/static/vision_settings.js").is_file()
     assert "window.loadVisionSettings" in Path("jarvis/gui/static/vision_settings.js").read_text(encoding="utf-8")
