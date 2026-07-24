@@ -2505,27 +2505,7 @@ function refreshEditorSuggestions(file, hasSelection) {
   });
 }
 
-function sendQuickCodingMessage(msg) {
-  if (!msg) return;
-  const file = _lastEditorFile;
-  let text = msg;
-  if (msg === "run tests for") {
-    if (file) text = `run tests for ${file}`;
-    else {
-      messageInput.value = "run tests for ";
-      messageInput.focus();
-      return;
-    }
-  }
-  messageInput.value = text;
-  sendMessage(text);
-}
-
-editorContextPill?.addEventListener("click", () => sendQuickCodingMessage("editor context"));
-editorContextCard?.addEventListener("click", () => sendQuickCodingMessage("editor context"));
-document.querySelectorAll(".coding-quick-btn").forEach((btn) => {
-  btn.addEventListener("click", () => sendQuickCodingMessage(btn.dataset.msg || ""));
-});
+// coding quick buttons → coding_quick.js (window.sendQuickCodingMessage)
 
 async function loadSuggestions() {
   try {

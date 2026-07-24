@@ -206,6 +206,9 @@
     $("browserResumeBtn")?.addEventListener("click", () => browserAction("/api/browser/resume", "Resume"));
     $("browserTakeoverBtn")?.addEventListener("click", () => browserAction("/api/browser/takeover", "Takeover"));
     $("browserStopBtn")?.addEventListener("click", () => browserAction("/api/browser/stop", "Stop"));
+    $("browserOpenMemoryBtn")?.addEventListener("click", () => window.switchToView?.("memory"));
+    $("browserOpenDocumentsBtn")?.addEventListener("click", () => window.switchToView?.("documents"));
+    $("browserOpenChatBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
     startPoll();
   }
 

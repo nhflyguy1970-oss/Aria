@@ -142,6 +142,8 @@
         window.showAriaToast?.(e.message || "Lock failed", "err");
       }
     });
+    $("securityOpenPresenceBtn")?.addEventListener("click", () => window.switchToView?.("presence"));
+    $("securityOpenVoiceBtn")?.addEventListener("click", () => window.switchToView?.("voice"));
     refreshSecurityPanel();
   }
 

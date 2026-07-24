@@ -264,6 +264,9 @@ def test_command_palette_is_wired():
     assert "act:ics-wizard" in js
     assert "act:checklist" in js
     assert "act:open-meme" in js
+    assert "act:open-projects" in js
+    assert "act:debug-bundle" in js
+    assert "act:browser-task" in js
     assert "journalOpenCalendarBtn" in html
     assert "memoryOpenJournalBtn" in html
     assert "memoryOpenProjectsBtn" in html
@@ -276,6 +279,10 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/vision_settings.js").is_file()
     assert Path("jarvis/gui/static/free_vram.js").is_file()
     assert Path("jarvis/gui/static/profile_controls.js").is_file()
+    assert Path("jarvis/gui/static/coding_quick.js").is_file()
+    assert "coding_quick.js" in html
+    assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
+    assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "profile_controls.js" in html
     assert "Profile switch failed" in Path("jarvis/gui/static/profile_controls.js").read_text(encoding="utf-8")
     assert 'getElementById("profileSelect")' not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
@@ -295,6 +302,7 @@ def test_command_palette_is_wired():
     assert "alert(data.error || \"Could not save profile\")" not in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "alert(" not in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "Choose a cheatsheet first" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
+    assert "Profile questionnaire skipped" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "plannerOpenCalendarBtn" in html
     assert "calendarOpenPlannerBtn" in html
     assert "calendarOpenJournalBtn" in html
@@ -305,6 +313,10 @@ def test_command_palette_is_wired():
     assert "memeOpenGalleryBtn" in html
     assert "audioOpenVoiceBtn" in html
     assert "voiceOpenAudioBtn" in html
+    assert "browserOpenMemoryBtn" in html
+    assert "securityOpenPresenceBtn" in html
+    assert "aria-labelledby=\"projectPickerTitle\"" in html
+    assert "aria-labelledby=\"settingsModalTitle\"" in html
     assert "flytyingOpenGalleryBtn" in html
     assert "cadOpenGalleryBtn" in html
     assert "Could not load projects" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")

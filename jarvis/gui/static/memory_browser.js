@@ -837,12 +837,22 @@ document.getElementById("profileForm")?.addEventListener("submit", async (e) => 
 });
 
 document.getElementById("profileSkipBtn")?.addEventListener("click", async () => {
-  await fetch("/api/profile/questionnaire", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ skip: true }),
-  });
-  document.getElementById("profileModal")?.classList.add("hidden");
+  try {
+    const res = await fetch("/api/profile/questionnaire", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ skip: true }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      window.showAriaToast?.(data.message || "Could not skip profile", "err", 5000);
+      return;
+    }
+    document.getElementById("profileModal")?.classList.add("hidden");
+    window.showAriaToast?.("Profile questionnaire skipped", "ok", 2500);
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Could not skip profile", "err", 5000);
+  }
 });
 
 

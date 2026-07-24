@@ -1479,7 +1479,12 @@
 
       <div id="browserView" class="view-panel hidden">
         <div id="browserFloatPanel">
-        <h2 class="float-drag-head">Browser agent <button type="button" id="browserFloatBtn" class="ghost-btn tiny" title="Detach floating window" aria-label="Detach browser panel">⧉</button></h2>
+        <div class="browser-header-row">
+          <h2 class="float-drag-head">Browser agent <button type="button" id="browserFloatBtn" class="ghost-btn tiny" title="Detach floating window" aria-label="Detach browser panel">⧉</button></h2>
+          <button type="button" id="browserOpenMemoryBtn" class="ghost-btn small" title="Open Memory">Memory</button>
+          <button type="button" id="browserOpenDocumentsBtn" class="ghost-btn small" title="Open Documents">Documents</button>
+          <button type="button" id="browserOpenChatBtn" class="ghost-btn small" title="Open Chat">Chat</button>
+        </div>
         <p id="browserStatusLine" class="muted">Loading…</p>
         <p id="browserUrlLine" class="muted"></p>
         <p id="browserPlaywrightHint" class="muted small hidden"></p>
@@ -1514,7 +1519,11 @@
       </div>
 
       <div id="securityView" class="view-panel hidden">
-        <h2>Security</h2>
+        <div class="security-header-row">
+          <h2>Security</h2>
+          <button type="button" id="securityOpenPresenceBtn" class="ghost-btn small" title="Open Presence">Presence</button>
+          <button type="button" id="securityOpenVoiceBtn" class="ghost-btn small" title="Open Voice">Voice</button>
+        </div>
         <p id="securityStatusLine" class="muted">Loading…</p>
         <section class="checklist-section">
           <h3>PIN lock</h3>
@@ -1646,17 +1655,17 @@
 
       <div id="listeningOverlay" class="listening-overlay hidden" aria-live="polite">Listening…</div>
 
-      <div id="projectPickerModal" class="crop-modal hidden" role="dialog">
+      <div id="projectPickerModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="projectPickerTitle">
         <div class="crop-modal-card">
-          <h3>Choose a project</h3>
+          <h3 id="projectPickerTitle">Choose a project</h3>
           <div id="projectPickerList" class="sidebar-btn-row"></div>
           <button type="button" id="projectPickerSkipBtn" class="ghost-btn small">Skip</button>
         </div>
       </div>
 
-      <div id="settingsModal" class="crop-modal hidden" role="dialog">
+      <div id="settingsModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
         <div class="crop-modal-card profile-modal-card">
-          <h3>Voice &amp; chat settings</h3>
+          <h3 id="settingsModalTitle">Voice &amp; chat settings</h3>
           <label class="toggle-row"><span>Speak replies (auto TTS)</span><input type="checkbox" id="settingsSpeakToggle" /><span class="toggle-slider"></span></label>
           <label class="toggle-row"><span>Chat mic → server Whisper</span><input type="checkbox" id="serverWhisperToggle" checked /><span class="toggle-slider"></span></label>
           <p class="muted">Wake word STT defaults to <code>small</code> via env. Audio tab has full Whisper + Sound Blaster controls.</p>
@@ -1664,9 +1673,9 @@
         </div>
       </div>
 
-      <div id="shortcutsModal" class="crop-modal hidden" role="dialog">
+      <div id="shortcutsModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="shortcutsModalTitle">
         <div class="crop-modal-card profile-modal-card">
-          <h3>Keyboard shortcuts</h3>
+          <h3 id="shortcutsModalTitle">Keyboard shortcuts</h3>
           <ul class="shortcuts-list">
             <li><kbd>Ctrl</kbd>+<kbd>K</kbd> — command palette (navigate &amp; actions)</li>
             <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — send (in textarea: <kbd>Shift</kbd>+<kbd>Ctrl</kbd>+<kbd>Enter</kbd>)</li>
@@ -1795,24 +1804,25 @@
   <script src="/static/vendor/three/three.min.js"></script>
   <script src="/static/vendor/three/STLLoader.js"></script>
   <script src="/static/maker.js?v=5.16.116"></script>
-  <script src="/static/browser_panel.js?v=5.16.89"></script>
+  <script src="/static/browser_panel.js?v=5.16.90"></script>
   <script src="/static/presence.js?v=5.16.102"></script>
-  <script src="/static/security_settings.js?v=5.16.102"></script>
+  <script src="/static/security_settings.js?v=5.16.103"></script>
   <script src="/static/tools_sidebar.js?v=5.16.101"></script>
   <script src="/static/floating_panels.js?v=5.16.70"></script>
   <script src="/static/world_state_hud.js?v=5.16.70"></script>
   <script src="/static/audit.js?v=5.16.95"></script>
   <script src="/static/voice_tab.js?v=5.16.90"></script>
   <script src="/static/modal_chrome.js?v=1.0.0"></script>
-  <script src="/static/command_palette.js?v=1.0.16"></script>
+  <script src="/static/command_palette.js?v=1.0.17"></script>
   <script src="/static/ha_panel.js?v=1.0.1"></script>
   <script src="/static/upgrade_wizard.js?v=1.0.2"></script>
-  <script src="/static/image_engine.js?v=1.0.1"></script>
+  <script src="/static/image_engine.js?v=1.0.2"></script>
   <script src="/static/media_lightbox.js?v=1.0.1"></script>
   <script src="/static/lan_access.js?v=1.0.0"></script>
   <script src="/static/vision_settings.js?v=1.0.0"></script>
   <script src="/static/free_vram.js?v=1.0.0"></script>
-  <script src="/static/app.js?v=5.16.126"></script>
+  <script src="/static/app.js?v=5.16.127"></script>
+  <script src="/static/coding_quick.js?v=1.0.0"></script>
   <script src="/static/models_panel.js?v=1.0.0"></script>
   <script src="/static/uncensored_mode.js?v=1.0.0"></script>
   <script src="/static/startup_overlay.js?v=1.0.2"></script>
@@ -1827,6 +1837,6 @@
   <script src="/static/theme.js?v=1.0.0"></script>
   <script src="/static/coding_panel.js?v=1.0.1"></script>
   <script src="/static/gallery_view.js?v=1.0.3"></script>
-  <script src="/static/memory_browser.js?v=1.0.3"></script>
+  <script src="/static/memory_browser.js?v=1.0.4"></script>
 </body>
 </html>

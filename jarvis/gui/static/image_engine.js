@@ -28,6 +28,7 @@ const imageEngineInstallNsfwBtn = document.getElementById("imageEngineInstallNsf
 const imageEngineUncensoredBanner = document.getElementById("imageEngineUncensoredBanner");
 const openComfyUiLink = document.getElementById("openComfyUiLink");
 let comfyModeBusy = false;
+let comfySettingsFailToasted = false;
 let lastComfySettings = null;
 
 function populateCheckpointFileSelect(settings) {
@@ -170,6 +171,10 @@ async function loadComfyMode() {
   } catch (err) {
     const st = document.getElementById("imageEngineStatus");
     if (st) st.textContent = err.message || "ComfyUI settings unavailable";
+    if (!comfySettingsFailToasted) {
+      comfySettingsFailToasted = true;
+      window.showAriaToast?.(err.message || "ComfyUI settings unavailable", "err", 4000);
+    }
   }
 }
 

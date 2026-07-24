@@ -520,6 +520,37 @@
         keywords: "caption generate meme",
         run: () => goView("meme"),
       },
+      {
+        id: "act:open-projects",
+        label: "Open Projects",
+        group: "Actions",
+        keywords: "repos workspace coding",
+        run: () => goView("projects"),
+      },
+      {
+        id: "act:debug-bundle",
+        label: "Copy debug bundle",
+        group: "System",
+        keywords: "diagnostics troubleshooting clipboard",
+        run: () => $("debugBundleBtn")?.click(),
+      },
+      {
+        id: "act:export-chat-pdf",
+        label: "Export chat (PDF)",
+        group: "Actions",
+        keywords: "download pdf transcript",
+        run: () => $("exportChatPdfBtn")?.click(),
+      },
+      {
+        id: "act:browser-task",
+        label: "Focus browser agent task",
+        group: "Actions",
+        keywords: "playwright goal run",
+        run: () => {
+          goView("browser");
+          setTimeout(() => $("browserGoalInput")?.focus(), 80);
+        },
+      },
     ];
 
     function focusSearch(view, inputId, clickBtnId) {

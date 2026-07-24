@@ -43,7 +43,7 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: free_vram/vision_settings/lan_access/git/chat_model extracts; cross-links Memory/Projects/Docs/Gallery/Maker/Fly tying/Video/Meme/Audio/Voice/Planner/Calendar; audio/video/planner/ICS/checklist/dashboard news/projects/security/voice/meme toasts; skip-link; palette ICS/security/webcam/checklist/meme/storyboard; health.mjs audio status.
+- FIXED & CERTIFIED: free_vram/vision_settings/lan_access/git/chat_model/profile_controls/coding_quick extracts; cross-links Memory/Projects/Docs/Gallery/Maker/Fly tying/Video/Meme/Audio/Voice/Planner/Calendar/Browser/Security; audio/video/planner/ICS/checklist/dashboard news/projects/security/voice/meme toasts; alert→toast modernization; skip-link; palette ICS/security/webcam/checklist/meme/storyboard/projects/debug/browser-task; health.mjs audio status; modal aria-labelledby for project/settings/shortcuts.
 - INTENTIONALLY DEFERRED: crop/webcam extract; long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 
