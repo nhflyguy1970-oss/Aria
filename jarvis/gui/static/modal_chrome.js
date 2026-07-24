@@ -20,6 +20,8 @@
       "settingsModal",
       "shortcutsModal",
       "cropModal",
+      "flytyingScanModal",
+      "flytyingNameBarcodeModal",
     ];
 
     function isOpen(el) {
@@ -56,6 +58,14 @@
       }
       if (el.id === "commandPaletteModal") {
         window.closeAriaCommandPalette?.();
+        return;
+      }
+      if (el.id === "flytyingScanModal") {
+        window.stopFlytyingCameraScan?.();
+        return;
+      }
+      if (el.id === "flytyingNameBarcodeModal") {
+        window.closeFlytyingNameBarcodeModal?.();
         return;
       }
       el.classList.add("hidden");

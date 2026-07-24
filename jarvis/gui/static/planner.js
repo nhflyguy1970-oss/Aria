@@ -327,7 +327,11 @@ async function loadDashboard() {
         const sug = await res.json().catch(() => ({}));
         const items = (sug.suggestions || []).filter(Boolean).slice(0, 6);
         if (!items.length) {
-          chipWrap.innerHTML = '<span class="muted">No suggestions yet — open Chat to talk to Aria.</span>';
+          chipWrap.innerHTML = '<span class="muted">No suggestions yet. <button type="button" class="ghost-btn tiny" id="dashSuggestChatBtn">Open Chat</button></span>';
+          chipWrap.querySelector("#dashSuggestChatBtn")?.addEventListener("click", () => {
+            window.switchToView?.("chat");
+            document.getElementById("messageInput")?.focus();
+          });
         } else {
           chipWrap.innerHTML = items
             .map(

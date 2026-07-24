@@ -185,24 +185,8 @@
     });
   }
 
-  async function refreshWorldStateHud() {
-    const el = $("globalWorldStateHud");
-    const dot = document.querySelector(".world-state-dot");
-    if (!el) return;
-    try {
-      const [envData, liveData] = await Promise.all([
-        fetchJson("/api/environment"),
-        fetchJson("/api/live").catch(() => ({})),
-      ]);
-      const svc = envData.services_ready ? "systems online" : "warming up";
-      const gpu = envData.gpu?.name ? envData.gpu.name.replace(/^.*\[AMD\/ATI\]\s*/, "").split("(")[0].trim() : "";
-      const ollama = liveData.ready === false ? " · Ollama starting" : "";
-      el.textContent = `${svc}${gpu ? " · " + gpu : ""}${ollama}`;
-      if (dot) dot.style.background = envData.services_ready ? "var(--accent)" : "#fbbf24";
-    } catch (_) {
-      el.textContent = "World state unavailable";
-    }
-  }
+  // World-state HUD is owned by world_state_hud.js (polls /api/world-state).
+  // Keep env strip only here to avoid dual writers flickering #globalWorldStateHud.
 
   /* --- Module chip filter (Tier 1 #10) — navigate + set preferred mode --- */
   const MODULE_NAV = {
@@ -897,7 +881,7 @@
     initHud();
     $("wakePill")?.addEventListener("click", toggleWake);
     refreshEnvStrip();
-    refreshWorldStateHud();
+    refreshEnvStrip();
     refreshProfileBanner();
     refreshWakePill();
     loadPinnedBriefing();
@@ -907,7 +891,6 @@
     setInterval(() => {
       if (document.hidden || window.mediaWorkActive?.()) return;
       refreshEnvStrip();
-      refreshWorldStateHud();
     }, 60000);
     setInterval(() => {
       if (document.hidden || window.mediaWorkActive?.()) return;

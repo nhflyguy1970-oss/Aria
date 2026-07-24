@@ -4032,6 +4032,9 @@ html.theme-jarvis-blue .brand-icon { color: #5eb8ff; }
 .global-world-state-bar.is-warn .world-state-dot { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.65); }
 .global-world-state-bar.is-error .world-state-dot { background: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.65); }
 .world-state-hud-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+.global-world-state-bar.is-clickable { cursor: pointer; }
+.global-world-state-bar.is-clickable:hover { filter: brightness(1.08); }
+.global-world-state-bar.is-clickable:focus-visible { outline: 2px solid var(--accent, #d4a054); outline-offset: 2px; }
 html.jarvis-shell .global-world-state-bar { margin: 0 1.25rem 0.5rem; }
 .wake-pill {
   font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 999px;

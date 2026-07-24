@@ -1623,6 +1623,8 @@
   }
 
   window.initFlytying = initFlytying;
+  window.stopFlytyingCameraScan = stopCameraScan;
+  window.closeFlytyingNameBarcodeModal = closeNameBarcodeModal;
   window.selectFlytyingPattern = function (idOrName) {
     if (window.switchToView) window.switchToView("flytying");
     else document.querySelector('.view-tab[data-view="flytying"]')?.click();

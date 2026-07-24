@@ -10,11 +10,13 @@
       if (file) text = `run tests for ${file}`;
       else {
         input.value = "run tests for ";
+        if (typeof window.switchToView === "function") window.switchToView("chat");
         input.focus();
         return;
       }
     }
     input.value = text;
+    if (typeof window.switchToView === "function") window.switchToView("chat");
     if (typeof window.sendMessage === "function") {
       window.sendMessage(text);
     }

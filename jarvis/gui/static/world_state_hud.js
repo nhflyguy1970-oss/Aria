@@ -83,7 +83,26 @@
     }
   }
 
+  function bindBarNavigation() {
+    const bar = barEl();
+    if (!bar || bar.dataset.navBound === "1") return;
+    bar.dataset.navBound = "1";
+    bar.classList.add("is-clickable");
+    bar.setAttribute("role", "button");
+    bar.setAttribute("tabindex", "0");
+    bar.setAttribute("aria-label", "Open Mission Control");
+    const open = () => window.switchToView?.("workstation");
+    bar.addEventListener("click", open);
+    bar.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    });
+  }
+
   function start() {
+    bindBarNavigation();
     refreshWorldHud();
     if (timer) clearInterval(timer);
     timer = setInterval(() => {

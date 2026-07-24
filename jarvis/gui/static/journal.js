@@ -1524,7 +1524,7 @@ async function loadProjects() {
     <h3>Project journals</h3>
     <p class="bujo-cal-hint">Per-project daily logs — separate from your main BuJo. Auto-updated morning/evening when enabled.</p>
     <div class="bujo-project-layout">
-      <div class="bujo-project-list">${listItems || '<p class="bujo-empty">No project journals yet — log via chat: “project journal for aria”.</p>'}</div>
+      <div class="bujo-project-list">${listItems || '<p class="bujo-empty">No project journals yet. <button type="button" class="ghost-btn tiny" id="bujoProjectEmptyChatBtn">Ask Chat</button> — say <em>project journal for aria</em>.</p>'}</div>
       <div class="bujo-project-panel">${detail}</div>
     </div>`;
 
@@ -1533,6 +1533,10 @@ async function loadProjects() {
       projectJournalSlug = btn.dataset.slug;
       loadProjects();
     };
+  });
+  document.getElementById("bujoProjectEmptyChatBtn")?.addEventListener("click", () => {
+    window.switchToView?.("chat");
+    window.jarvisSendToChat?.("project journal for ");
   });
 
   document.getElementById("projectJournalDay")?.addEventListener("change", (e) => {
