@@ -3,6 +3,36 @@
 from __future__ import annotations
 
 
+def test_js_referenced_static_ids_exist_in_html():
+    """CTA/deep-link targets referenced from JS must exist in index.html."""
+    import re
+    from pathlib import Path
+
+    static = Path("jarvis/gui/static")
+    html = (static / "index.html").read_text(encoding="utf-8")
+    html_ids = set(re.findall(r'id="([^"]+)"', html))
+    # IDs that were previously broken wiring (typos / renamed elements)
+    required = {
+        "workflowsScanBtn", "plannerAlarmInput", "galleryPromptInput",
+        "profileInlineEditBtn", "haSetupWizardBtn", "listeningPartial",
+        "listeningOverlay", "journalView", "audioTrimApplyBtn", "audioEditBtn",
+    }
+    js_dynamic = {"audioTrimApplyBtn", "audioEditBtn"}  # built by audio.js templates
+    missing = required - html_ids
+    for mid in sorted(missing):
+        if mid in js_dynamic:
+            assert f'id="{mid}"' in (static / "audio.js").read_text(encoding="utf-8"), mid
+        else:
+            raise AssertionError(f"index.html missing id={mid}")
+    # The old broken IDs must not come back
+    for js_name in ("planner.js", "gallery_view.js", "memory_browser.js", "journal.js", "audio.js"):
+        js = (static / js_name).read_text(encoding="utf-8")
+        for dead in ('"workflowScanBtn"', '"plannerAlarmTime"', '"galleryPrompt"',
+                     '"imagePrompt"', '"profileEditBtn"', '"haSetupBtn"', '"bujoPanel"',
+                     '"audioEditSection"', '"audioTrimBtn"', '"audioTrimStart"'):
+            assert dead not in js, f"{js_name} references dead id {dead}"
+
+
 def test_disconnected_ui_routes_are_registered():
     from jarvis.gui.server import app
 

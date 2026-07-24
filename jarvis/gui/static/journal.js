@@ -20,7 +20,7 @@ function journalNotify(message, isError = true) {
     el = document.createElement("div");
     el.id = "journalToast";
     el.className = "journal-toast hidden";
-    document.getElementById("bujoPanel")?.appendChild(el);
+    (document.getElementById("journalView") || document.body).appendChild(el);
   }
   el.textContent = message;
   el.classList.toggle("journal-toast-error", isError);

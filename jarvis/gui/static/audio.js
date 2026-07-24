@@ -174,8 +174,8 @@ function bindRecentButtons(root) {
     window.showAriaToast?.("Choose a mode, then press Record", "info", 3500);
   });
   document.getElementById("audioEmptyEditFocusBtn")?.addEventListener("click", () => {
-    const edit = document.getElementById("audioEditSection") || document.getElementById("audioTrimBtn") || document.querySelector(".audio-section h3");
-    (document.getElementById("audioTrimStart") || document.getElementById("audioEditBtn") || edit)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    const edit = document.getElementById("audioEditBtn") || document.querySelector(".audio-section h3");
+    (document.getElementById("audioTrimApplyBtn") || edit)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
     window.showAriaToast?.("Load a file into the player, then use edit tools", "info", 4000);
   });
   root.querySelectorAll(".audio-recent-del").forEach((btn) => {

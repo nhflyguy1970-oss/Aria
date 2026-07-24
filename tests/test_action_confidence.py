@@ -36,8 +36,10 @@ def test_autonomy_decision_low(data_dir, monkeypatch):
     from jarvis import action_confidence as ac
 
     ac._loaded = False
-    ac._stats = {"workflow_run": {"success": 0, "failure": 5}}
+    ac._stats = {}
     ac.STORE_FILE = data_dir / "action_confidence.json"
+    for _ in range(5):
+        ac.record_outcome("workflow_run", ok=False)
     d = ac.autonomy_decision("workflow_run")
     assert d["needs_confirm"] is True
     assert d["tier"] == "low"

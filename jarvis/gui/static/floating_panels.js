@@ -151,16 +151,11 @@
     document.querySelector("#toolConfirmYes")?.click();
   }
 
-  function onGestureGrab() {
-    /* legacy hook — fist drag handled in gestureFrame */
-  }
-
   function onGestureRelease() {
     state.gestureDrag?.panel?.classList.remove("gesture-dragging");
     state.gestureDrag = null;
   }
 
-  window.jarvisGestureGrab = onGestureGrab;
   window.jarvisGestureRelease = onGestureRelease;
   window.jarvisGestureCursor = gestureCursor;
   window.jarvisFloatingPanels = {

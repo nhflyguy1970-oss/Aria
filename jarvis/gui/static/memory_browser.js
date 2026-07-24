@@ -457,7 +457,7 @@ async function loadProfileInlinePanel() {
     } else {
       el.innerHTML = `<p>No profile answers yet. <button type="button" class="ghost-btn tiny" id="profileEmptyEditBtn">Edit answers</button></p>`;
       el.querySelector("#profileEmptyEditBtn")?.addEventListener("click", () => {
-        document.getElementById("profileEditBtn")?.click()
+        document.getElementById("profileInlineEditBtn")?.click()
           || document.getElementById("profileModal")?.classList.remove("hidden");
       });
     }

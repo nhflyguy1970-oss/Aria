@@ -840,8 +840,6 @@ function initMissionControl() {
 }
 
 window.initWorkstation = initMissionControl;
-window.initMissionControl = initMissionControl;
-window.loadMissionControl = loadMissionControl;
 window.switchMcTab = switchMcTab;
 
 document.addEventListener("DOMContentLoaded", () => {

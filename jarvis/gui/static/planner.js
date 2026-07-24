@@ -106,7 +106,7 @@ function renderPlanner(data) {
   alarmsEl.innerHTML = (data.alarms || []).map((a) => `<li>${a.label || "alarm"} @ ${(a.fire_at || "").slice(11, 16)}</li>`).join("")
     || "<li class='muted'>No alarms. <button type='button' class='ghost-btn tiny' id='plannerEmptyAlarmBtn'>Add alarm</button></li>";
   alarmsEl.querySelector("#plannerEmptyAlarmBtn")?.addEventListener("click", () => {
-    $("plannerAlarmTime")?.focus();
+    $("plannerAlarmInput")?.focus();
     window.showAriaToast?.("Set a time and click Add alarm", "info", 3000);
   });
   const events = data.events_today || [];
@@ -295,7 +295,7 @@ async function loadDashboard() {
       });
     });
     body.querySelector("#dashSceneEmptyHaBtn")?.addEventListener("click", () => {
-      $("haSetupBtn")?.click() || document.getElementById("haSetupModal")?.classList.remove("hidden");
+      $("haSetupWizardBtn")?.click() || document.getElementById("haSetupModal")?.classList.remove("hidden");
       window.showAriaToast?.("Configure Home Assistant to enable scene presets", "info", 4000);
     });
 
@@ -596,7 +596,7 @@ async function loadSkillsWorkflows() {
             .join("")
         : "<li class='muted'>No learned workflows yet. <button type='button' class='ghost-btn tiny' id='wfEmptyScanBtn'>Scan action log</button></li>";
       workflowsEl.querySelector("#wfEmptyScanBtn")?.addEventListener("click", () => {
-        const btn = $("workflowScanBtn");
+        const btn = $("workflowsScanBtn");
         if (btn) btn.click();
         else scanWorkflowsFromActionLog();
       });

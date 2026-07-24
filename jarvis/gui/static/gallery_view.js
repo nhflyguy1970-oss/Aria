@@ -133,8 +133,7 @@
         : `<p>No saved prompts yet. <button type="button" class="ghost-btn tiny" id="promptHistoryEmptyBtn">Focus gallery prompt</button> or generate an image in chat.</p>`;
       el.querySelector("#promptHistoryEmptyBtn")?.addEventListener("click", () => {
         document.getElementById("galleryEmptyPromptBtn")?.click();
-        document.getElementById("galleryPrompt")?.focus();
-        document.getElementById("imagePrompt")?.focus();
+        document.getElementById("galleryPromptInput")?.focus();
         window.showAriaToast?.("Enter a prompt, then generate", "info", 3000);
       });
       el.querySelectorAll(".prompt-reuse").forEach((btn) => {
