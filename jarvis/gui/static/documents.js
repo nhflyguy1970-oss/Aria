@@ -29,7 +29,11 @@
             + `<button type="button" class="ghost-btn tiny doc-summarize" data-path="${escapeHtml(path)}">Summarize</button> `
             + `<button type="button" class="ghost-btn tiny doc-learn" data-path="${escapeHtml(path)}">Learn</button></li>`;
         }).join("")
-        : "<li class='muted'>Drop PDFs/DOCX in data/documents/</li>";
+        : `<li class='muted'>No documents yet. Drop PDFs/DOCX in <code>data/documents/</code> or <button type='button' class='ghost-btn tiny' id='docsEmptyChatBtn'>ask Chat</button>.</li>`;
+      list.querySelector("#docsEmptyChatBtn")?.addEventListener("click", () => {
+        window.switchToView?.("chat");
+        window.jarvisSendToChat?.("Help me import documents into the library");
+      });
       list.querySelectorAll(".doc-attach").forEach((btn) => {
         btn.addEventListener("click", () => {
           const p = btn.dataset.path || "";

@@ -351,87 +351,7 @@ function isDataAttachment(file) {
 
 // Coding proposals/diff/apply → coding_proposals.js
 
-function addMessage(role, content, meta = {}, options = {}) {
-  const div = document.createElement("div");
-  div.className = `message ${role}`;
-  if (meta.type) div.dataset.msgType = meta.type;
-
-  const avatar = document.createElement("div");
-  avatar.className = "avatar";
-  avatar.textContent = role === "user" ? "You" : "J";
-
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  if (meta.type === "briefing") bubble.classList.add("briefing-bubble");
-
-  const showTag = meta.module && meta.module !== "general" && meta.type !== "info";
-  if (showTag && role === "assistant") {
-    const tag = document.createElement("div");
-    tag.className = `module-tag ${meta.module}`;
-    tag.textContent = meta.module;
-    bubble.appendChild(tag);
-  }
-
-  const body = document.createElement("div");
-  body.className = "msg-body";
-  body.innerHTML = formatMessage(content);
-  if (content) body.dataset.rawText = content;
-  bubble.appendChild(body);
-
-  const mountExtras = () => window.attachProposalExtras?.(bubble, meta, div);
-  if (meta.proposal_id && isNativeApp()) {
-    requestAnimationFrame(() => requestAnimationFrame(mountExtras));
-  } else {
-    mountExtras();
-  }
-
-  if (meta.type === "clarification" && meta.choices) {
-    const chips = document.createElement("div");
-    chips.className = "clarification-chips";
-    meta.choices.forEach((choice, i) => {
-      const chip = document.createElement("button");
-      chip.className = "suggestion-chip";
-      chip.textContent = choice;
-      chip.onclick = () => window.sendMessage?.(String(i + 1));
-      chips.appendChild(chip);
-    });
-    bubble.appendChild(chips);
-  }
-
-  div.append(avatar, bubble);
-
-  const msgIndex = messagesEl.querySelectorAll(".message").length;
-  div.dataset.msgIndex = String(msgIndex);
-  if (role === "user" || role === "assistant") {
-    const actions = document.createElement("div");
-    actions.className = "message-actions";
-    const copyBtn = createCopyButton(body);
-    actions.appendChild(copyBtn);
-    const forkBtn = document.createElement("button");
-    forkBtn.type = "button";
-    forkBtn.className = "ghost-btn small fork-btn";
-    forkBtn.title = "Fork branch from this message";
-    forkBtn.textContent = "⎇ Fork";
-    forkBtn.onclick = () => forkBranchFromIndex(msgIndex);
-    actions.appendChild(forkBtn);
-    bubble.appendChild(actions);
-  }
-
-  messagesEl.appendChild(div);
-  if (!options.skipScroll) messagesEl.scrollTop = messagesEl.scrollHeight;
-
-  if (role === "assistant") lastAssistantText = content;
-  return { div, body };
-}
-
-function addTyping() {
-  const div = document.createElement("div");
-  div.className = "message assistant typing-msg";
-  div.innerHTML = `<div class="avatar">J</div><div class="bubble"><div class="msg-body"><div class="typing"><span></span><span></span><span></span></div></div></div>`;
-  messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-  return div;
-}
+// addMessage / addTyping → chat_messages.js
 
 // shouldShowUndo / applyProposal / undoLastApply → coding_proposals.js
 
@@ -489,6 +409,8 @@ async function forkBranchFromIndex(displayIndex) {
   }
 }
 
+window.forkBranchFromIndex = forkBranchFromIndex;
+
 // sendMessage → chat_send.js
 
 
@@ -501,7 +423,7 @@ async function forkBranchFromIndex(displayIndex) {
 // handleDone → chat_done.js
 
 window.finishSendUi = finishSendUi;
-window.addTyping = addTyping;
+// window.addTyping → chat_messages.js
 
 chatForm?.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -536,7 +458,7 @@ clearBtn?.addEventListener("click", async () => {
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || data.detail || `Clear failed (${res.status})`);
     messagesEl.innerHTML = "";
-    addMessage("assistant", "Fresh start. What would you like to do?");
+    window.addMessage?.("assistant", "Fresh start. What would you like to do?");
     window.showAriaToast?.("Conversation cleared", "ok", 2500);
   } catch (err) {
     window.showAriaToast?.(err.message || "Could not clear conversation", "err", 5000);
@@ -992,7 +914,8 @@ function switchToView(view) {
 
 window.switchToView = switchToView;
 window.renderServices = renderServices;
-window.addMessage = addMessage;
+// window.addMessage → chat_messages.js
+window.createCopyButton = createCopyButton;
 window.ensureMessageCopyAction = ensureMessageCopyAction;
 window.scrollMessageIntoView = scrollMessageIntoView;
 window.applyAssistantMeta = applyAssistantMeta;

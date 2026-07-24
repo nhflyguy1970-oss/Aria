@@ -43,11 +43,11 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: …/**chat_progress**/**chat_video**/**chat_send**/**chat_done**; image HTML → chat_images; empty CTAs; boot fix. `app.js` ~**1169** lines. E2E chat send+handleDone verified.
-- INTENTIONALLY DEFERRED: addMessage/health/pollLive still in app.js; long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
+- FIXED & CERTIFIED: …/**chat_progress**/**chat_messages**/**chat_send**/**chat_done**/**chat_video**; docs empty Chat CTA; `app.js` ~**1092** lines. E2E chat pipeline verified end-to-end.
+- INTENTIONALLY DEFERRED: health/pollLive still in app.js; long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 
-**Next priorities:** addMessage extract or health/pollLive extract; long-duration soak; multi-monitor; Comfy/HA deep soaks; matrix completion.
+**Next priorities:** health/pollLive extract; long-duration soak; multi-monitor; Comfy/HA deep soaks; matrix completion.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.
