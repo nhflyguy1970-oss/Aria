@@ -1098,6 +1098,22 @@ def acm_dashboard(*, limit: int = 100) -> dict[str, Any]:
     except Exception:
         who = {}
 
+    projected = project_list_entries(None, limit=min(max(limit, 20), 200))
+    _ns_counts: dict[str, int] = {}
+    for row in projected:
+        ns = str(row.get("namespace") or "default")
+        _ns_counts[ns] = _ns_counts.get(ns, 0) + 1
+    _recent_rows = [
+        {
+            "namespace": str(r.get("namespace") or "default"),
+            # Mission Control never surfaces memory body text (privacy policy).
+            "content": f"[{r.get('type') or 'entry'}] {str(r.get('id') or '')[:16]}",
+            "id": r.get("id"),
+            "type": r.get("type"),
+        }
+        for r in projected[-12:]
+    ]
+
     return {
         "ok": True,
         "title": "ACM Cognitive Dashboard",
@@ -1178,11 +1194,15 @@ def acm_dashboard(*, limit: int = 100) -> dict[str, Any]:
         "entry_count": len(exps),
         "active_facts": len(exps),
         "superseded_facts": 0,
+        "semantic_vectors": 0,
+        "cutover_mode": "acm_primary",
+        "namespaces": _ns_counts,
+        "recent": _recent_rows,
         "health": {"ok": True, "store_reachable": True},
         "history": [],  # contents never in MC; use recent_cognitive_events (ids only)
         "statistics": {
             "entry_count": len(exps),
-            "provider": "aria_acm",
+            "provider": "aria_core.acm_bridge → CognitiveEngine",
             "experiences": len(exps),
             "concepts": len(concepts),
             "goals": len(goals),
@@ -1201,6 +1221,7 @@ def acm_dashboard(*, limit: int = 100) -> dict[str, Any]:
             "cognitive_orchestrator",
             "mission_control",
             "conversation",
+            "memory_ui",
         ],
         "note": (
             "ACM Cognitive Dashboard — embedded ACM is the sole cognitive SoT. "

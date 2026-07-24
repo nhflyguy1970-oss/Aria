@@ -67,7 +67,8 @@ def register_routes(app, assistant) -> None:
             load_memory_in_system_prompt,
             load_memory_namespace,
         )
-        return {
+
+        payload = {
             "stats": assistant.memory.stats(),
             "namespace": load_memory_namespace(),
             "session_namespace": assistant.session.memory_namespace,
@@ -76,7 +77,17 @@ def register_routes(app, assistant) -> None:
             "auto_checkpoint": load_auto_checkpoint(),
             "auto_namespace": load_auto_namespace(),
             "memory_in_system_prompt": load_memory_in_system_prompt(),
+            "source_of_truth": "acm",
         }
+        try:
+            from aria_core.acm_bridge import acm_dashboard, acm_is_authoritative
+
+            if acm_is_authoritative():
+                payload["acm"] = acm_dashboard(limit=50)
+                payload["source_of_truth"] = "acm"
+        except Exception:
+            pass
+        return payload
 
     @app.get("/api/memory/settings")
     def memory_settings_get():
@@ -142,7 +153,9 @@ def register_routes(app, assistant) -> None:
                 if spec in body:
                     prefs[spec] = str(body[spec])
         if not prefs:
-            return JSONResponse(status_code=400, content={"ok": False, "error": "preferences required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "error": "preferences required"}
+            )
         assistant.refresh_system_prompt()
         return save_environment_preferences_to_memory(assistant.memory, prefs)
 
@@ -341,6 +354,7 @@ def register_routes(app, assistant) -> None:
     @app.post("/api/memory/namespace")
     async def memory_namespace_set(request: Request):
         from jarvis.config import save_memory_namespace
+
         body = await request.json()
         ns = (body.get("namespace") or "default").strip() or "default"
         save_memory_namespace(ns)

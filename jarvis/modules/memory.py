@@ -489,10 +489,26 @@ class JsonMemoryStore:
         return removed
 
     def namespaces(self) -> list[str]:
+        try:
+            from aria_core.acm_store_facade import acm_namespaces
+
+            diverted = acm_namespaces()
+            if diverted is not None:
+                return diverted
+        except ImportError:
+            pass
         ns = sorted({e.get("namespace", DEFAULT_NAMESPACE) for e in self._data["entries"]})
         return ns or [DEFAULT_NAMESPACE]
 
     def stats(self) -> dict:
+        try:
+            from aria_core.acm_store_facade import acm_stats
+
+            diverted = acm_stats()
+            if diverted is not None:
+                return diverted
+        except ImportError:
+            pass
         entries = self._data["entries"]
         by_type: dict[str, int] = {}
         for e in entries:
@@ -545,6 +561,14 @@ class JsonMemoryStore:
         )
 
     def export_data(self, *, include_embeddings: bool = False) -> dict:
+        try:
+            from aria_core.acm_store_facade import acm_export_data
+
+            diverted = acm_export_data(include_embeddings=include_embeddings)
+            if diverted is not None:
+                return diverted
+        except ImportError:
+            pass
         entries = self._data["entries"]
         if include_embeddings:
             public = [self._attach_embedding(dict(e), include=True) for e in entries]

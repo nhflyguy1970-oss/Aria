@@ -18,6 +18,7 @@ from jarvis.modules.memory import MemoryStore
 
 @pytest.fixture
 def store(data_dir, monkeypatch):
+    monkeypatch.setenv("ARIA_ACM_PRIMARY", "0")
     monkeypatch.setattr("jarvis.llm.embed_text", lambda t: [1.0, 0.0] if t else [])
     return MemoryStore(path=data_dir / "memory.json")
 
@@ -33,12 +34,6 @@ def test_machine_facts_exclude_user_preferences():
 def test_preference_facts_from_settings(data_dir, monkeypatch):
     monkeypatch.setattr("jarvis.config.CHAT_SETTINGS_FILE", data_dir / "chat_settings.json")
     import jarvis.config as jarvis_config
-    import jarvis.memory_knowledge as mk
-
-    monkeypatch.setattr(mk, "_load_chat_settings", jarvis_config._load_chat_settings)
-    monkeypatch.setattr(mk, "_write_chat_settings", jarvis_config._write_chat_settings)
-    monkeypatch.setattr("jarvis.memory_knowledge._load_chat_settings", jarvis_config._load_chat_settings)
-    monkeypatch.setattr("jarvis.memory_knowledge._write_chat_settings", jarvis_config._write_chat_settings)
 
     prefs = load_environment_preferences()
     prefs["pref-privacy-local"] = "User wants everything offline and self-hosted."
@@ -52,12 +47,8 @@ def test_preference_facts_from_settings(data_dir, monkeypatch):
 
 
 def test_save_preferences_to_memory(store, data_dir, monkeypatch):
+    monkeypatch.setenv("ARIA_ACM_PRIMARY", "0")
     monkeypatch.setattr("jarvis.config.CHAT_SETTINGS_FILE", data_dir / "chat_settings.json")
-    import jarvis.config as jarvis_config
-    import jarvis.memory_knowledge as mk
-
-    monkeypatch.setattr("jarvis.memory_knowledge._load_chat_settings", jarvis_config._load_chat_settings)
-    monkeypatch.setattr("jarvis.memory_knowledge._write_chat_settings", jarvis_config._write_chat_settings)
 
     result = save_environment_preferences_to_memory(store, {
         "pref-linux-commands": "User prefers fish shell and ripgrep.",
@@ -66,7 +57,9 @@ def test_save_preferences_to_memory(store, data_dir, monkeypatch):
     })
     assert result["ok"] is True
     env = store.list_entries(namespace=ENV_NAMESPACE)
-    linux = next(e for e in env if "pref-linux-commands" in (e.get("tags") or []))
+    linux = next(
+        e for e in env if any("pref-linux-commands" in str(t) for t in (e.get("tags") or []))
+    )
     assert "fish" in linux["content"]
     assert "user-preference" in linux["tags"]
 

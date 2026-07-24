@@ -57,14 +57,61 @@ def _snapshot_counts(db_path: Path) -> dict:
             try:
                 c = eng.identity.schema_concept(role)
                 out[f"identity_{role}_attrs"] = [
-                    {"key": a.key, "value": a.value[:120], "active": a.active}
-                    for a in c.attributes
+                    {"key": a.key, "value": a.value[:120], "active": a.active} for a in c.attributes
                 ]
             except Exception as exc:  # noqa: BLE001
                 out[f"identity_{role}_attrs"] = {"error": type(exc).__name__}
     except Exception as exc:  # noqa: BLE001
         out["engine_error"] = type(exc).__name__
     return out
+
+
+def destroy_and_reset(*, persist: Path) -> dict:
+    """Wipe durable ACM files without archiving, then recreate empty schema."""
+    from aria_core import acm_bridge
+
+    pre = _snapshot_counts(persist)
+    acm_bridge.reset_for_tests()
+    eng = acm_bridge.get_engine()
+    if getattr(eng, "durable", None) is not None:
+        try:
+            eng.durable.flush(kind="pre_destroy_checkpoint")
+        except Exception:
+            pass
+        try:
+            eng.durable.close()
+        except Exception:
+            pass
+    acm_bridge.reset_for_tests()
+
+    removed: list[str] = []
+    for suffix in ("", "-wal", "-shm"):
+        src = Path(str(persist) + suffix) if suffix else persist
+        if src.exists():
+            src.unlink()
+            removed.append(str(src))
+    # Stale one-shot migration marker (safe to drop on empty production start)
+    marker = Path(str(persist) + ".d047_cleanup.json")
+    if marker.exists():
+        marker.unlink()
+        removed.append(str(marker))
+
+    persist.parent.mkdir(parents=True, exist_ok=True)
+    acm_bridge.reset_for_tests()
+    eng = acm_bridge.get_engine()
+    if getattr(eng, "durable", None) is not None:
+        eng.durable.flush(kind="post_reset_empty")
+        eng.durable.close()
+    acm_bridge.reset_for_tests()
+
+    post = _snapshot_counts(persist)
+    return {
+        "ok": True,
+        "mode": "destroy_no_archive",
+        "removed": removed,
+        "pre": pre,
+        "post": post,
+    }
 
 
 def archive_and_reset(*, persist: Path, archive_root: Path) -> dict:
@@ -157,13 +204,20 @@ def _is_clean(counts: dict) -> bool:
         return False
     if int(counts.get("adaptations") or 0) != 0:
         return False
-    # Learned concepts may include empty schema nuclei after ensure_schemas —
-    # require no identity attribute values.
-    for role in ("agent", "user", "project"):
+    # User/project identity attribute values are autobiographical — must be empty.
+    for role in ("user", "project"):
         attrs = counts.get(f"identity_{role}_attrs") or []
         if isinstance(attrs, list) and any(a.get("active") and a.get("value") for a in attrs):
             return False
-    # Non-schema concepts should be zero ideally; allow only identity schema shells
+    # Agent schema may seed a structural name from agent_id (not autobiographical content).
+    agent_attrs = counts.get("identity_agent_attrs") or []
+    if isinstance(agent_attrs, list):
+        for a in agent_attrs:
+            if not (a.get("active") and a.get("value")):
+                continue
+            if str(a.get("key") or "") != "name":
+                return False
+    # Non-schema concepts should be zero; allow only identity schema shells (≤3).
     concepts = int(counts.get("concepts") or 0)
     if concepts > 3:
         return False
@@ -208,12 +262,24 @@ def main() -> int:
         action="store_true",
         help="Only validate current store; do not archive/reset",
     )
+    parser.add_argument(
+        "--no-archive",
+        action="store_true",
+        help="Destroy live durable store without copying an archive (production empty start)",
+    )
     args = parser.parse_args()
     persist = args.persist_path or _default_persist()
     if args.validate_only:
         result = validate_only(persist=persist)
         print(json.dumps(result, indent=2))
         return 0 if result.get("clean") and result.get("architecture_ok") else 1
+
+    if args.no_archive:
+        result = destroy_and_reset(persist=persist)
+        print(json.dumps(result, indent=2))
+        v = validate_only(persist=persist)
+        print(json.dumps({"validation": v}, indent=2))
+        return 0 if result.get("ok") and v.get("clean") and v.get("architecture_ok") else 1
 
     archive_root = args.archive_root or (persist.parent / "archives")
     result = archive_and_reset(persist=persist, archive_root=archive_root)

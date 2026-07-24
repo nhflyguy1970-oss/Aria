@@ -53,6 +53,7 @@ _IDENTIFY_PATTERNS = (
 )
 
 VIDEO_EXTENSIONS = {".mp4", ".webm", ".mov", ".mkv", ".avi", ".m4v"}
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp", ".tif", ".tiff"}
 PDF_EXTENSIONS = {".pdf"}
 
 REGION_PRESETS: dict[str, dict[str, float]] = {

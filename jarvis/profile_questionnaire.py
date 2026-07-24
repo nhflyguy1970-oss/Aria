@@ -18,6 +18,7 @@ class _Question(TypedDict, total=False):
     format: str
     options: list[tuple[str, str]]
 
+
 PROFILE_NAMESPACE = "profile"
 PROFILE_TAGS = ["profile", "onboarding"]
 
@@ -165,11 +166,22 @@ def _display_value(question_id: str, raw: str) -> str:
 
 
 def clear_profile_entries(memory_store) -> int:
-    """Remove all profile namespace memories."""
-    before = len(memory_store.list_entries(namespace=PROFILE_NAMESPACE))
+    """Remove all profile namespace memories (ACM PRIMARY: cool/forget each id)."""
+    entries = memory_store.list_entries(namespace=PROFILE_NAMESPACE)
+    before = len(entries)
+    try:
+        from aria_core.acm_bridge import acm_is_authoritative
+
+        if acm_is_authoritative():
+            for e in entries:
+                eid = e.get("id")
+                if eid:
+                    memory_store.delete_id(eid)
+            return before
+    except ImportError:
+        pass
     memory_store._data["entries"] = [
-        e for e in memory_store._data["entries"]
-        if e.get("namespace") != PROFILE_NAMESPACE
+        e for e in memory_store._data["entries"] if e.get("namespace") != PROFILE_NAMESPACE
     ]
     if before:
         memory_store._save()

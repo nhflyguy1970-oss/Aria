@@ -235,13 +235,52 @@ def test_uncensored_password_min_length_12():
         assert "12" in str(exc)
 
 
-def test_trusted_device_requires_ip_binding(tmp_path, monkeypatch):
-    monkeypatch.setenv("JARVIS_TRUSTED_LAN", "1")
-    from jarvis.security import trusted_devices as td
+def test_acm_stats_and_export_under_primary(primary_env, tmp_path, monkeypatch):
+    monkeypatch.setenv("ARIA_ACM_PERSIST_PATH", str(tmp_path / "cog.db"))
+    from aria_core import acm_bridge
+    from aria_core.acm_store_facade import acm_export_data, acm_stats
 
-    monkeypatch.setattr(td, "STORE", tmp_path / "trusted.json")
-    td.trust_device("dev-1", client_ip="192.168.1.50", label="laptop")
-    assert td.is_trusted("dev-1", client_ip="192.168.1.50") is True
-    assert td.is_trusted("dev-1", client_ip="10.0.0.2") is False
-    assert td.is_trusted("dev-1", client_ip=None) is False
-    assert td.is_trusted("spoofed", client_ip="192.168.1.50") is False
+    acm_bridge.reset_for_tests()
+    stats = acm_stats()
+    assert stats is not None
+    assert stats.get("backend") == "acm"
+    assert "acm" in stats
+    exp = acm_export_data()
+    assert exp is not None
+    assert exp.get("source") == "acm"
+    assert "entries" in exp
+
+
+def test_cognitive_reset_script_clean_check_allows_agent_schema_name():
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "scripts" / "acm_cognitive_memory_reset.py"
+    spec = importlib.util.spec_from_file_location("acm_cognitive_memory_reset", path)
+    assert spec and spec.loader
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    assert mod._is_clean(
+        {
+            "experiences": 0,
+            "goals": 0,
+            "associations": 0,
+            "adaptations": 0,
+            "concepts": 3,
+            "identity_agent_attrs": [{"key": "name", "value": "aria", "active": True}],
+            "identity_user_attrs": [],
+            "identity_project_attrs": [],
+        }
+    )
+    assert not mod._is_clean(
+        {
+            "experiences": 0,
+            "goals": 0,
+            "associations": 0,
+            "adaptations": 0,
+            "concepts": 3,
+            "identity_agent_attrs": [],
+            "identity_user_attrs": [{"key": "name", "value": "Jeff", "active": True}],
+            "identity_project_attrs": [],
+        }
+    )

@@ -42,17 +42,15 @@ They are not scientifically valid as a behavioral baseline.
 - Configuration, system prompts, documentation, tests, build, releases  
 - Aria application functionality  
 
-## Archive
+## Archive (optional)
 
-| Field | Value |
-|-------|-------|
-| Label | Pre-D041 Behavioral Validation |
-| Mark | Known contaminated identity data. Not suitable for future validation. Research only. Never use during cognition. |
-| Location | `/media/jeff/AI/jarvis/data/acm/archives/pre_d041_behavioral_validation_20260716T125819Z/` |
-| Contents | `cognitive.db` (+ wal/shm copies), `MANIFEST.json`, `README.md`, `POST_RESET_VALIDATION.json` |
-| Git | **Not** committed (`/data/` is gitignored) — retained on disk for research |
+By default the operator tool **archives** then resets. For production empty start without preserving prior content:
 
-Do **not** set `ARIA_ACM_PERSIST_PATH` to the archive path for production cognition.
+```bash
+.venv/bin/python scripts/acm_cognitive_memory_reset.py --no-archive
+```
+
+See [`PRODUCTION_ACM_EMPTY_START.md`](PRODUCTION_ACM_EMPTY_START.md).
 
 ## Post-reset baseline
 

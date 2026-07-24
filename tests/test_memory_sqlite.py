@@ -9,6 +9,8 @@ from jarvis.modules.memory_sqlite import SqliteMemoryStore
 
 @pytest.fixture
 def sqlite_store(data_dir, monkeypatch):
+    # Legacy vault unit tests — not ACM PRIMARY projection
+    monkeypatch.setenv("ARIA_ACM_PRIMARY", "0")
     monkeypatch.setattr("jarvis.llm.embed_text", lambda t: [1.0, 0.0] if t else [])
     db = data_dir / "mem.db"
     vec = data_dir / "mem_vectors.db"
@@ -39,6 +41,7 @@ def test_sqlite_branch_summary_upsert(sqlite_store):
 
 
 def test_create_memory_store_json_path(data_dir, monkeypatch):
+    monkeypatch.setenv("ARIA_ACM_PRIMARY", "0")
     monkeypatch.setattr("jarvis.llm.embed_text", lambda t: [1.0, 0.0] if t else [])
     path = data_dir / "memory.json"
     store = create_memory_store(path)
@@ -48,6 +51,7 @@ def test_create_memory_store_json_path(data_dir, monkeypatch):
 
 
 def test_memory_store_facade_sqlite(data_dir, monkeypatch):
+    monkeypatch.setenv("ARIA_ACM_PRIMARY", "0")
     monkeypatch.setenv("JARVIS_MEMORY_BACKEND", "sqlite")
     monkeypatch.setattr("jarvis.config.MEMORY_DB_FILE", data_dir / "memory.db")
     monkeypatch.setattr("jarvis.config.MEMORY_FILE", data_dir / "memory.json")
@@ -59,6 +63,7 @@ def test_memory_store_facade_sqlite(data_dir, monkeypatch):
 
 
 def test_json_embeddings_moved_to_sidecar(data_dir, monkeypatch):
+    monkeypatch.setenv("ARIA_ACM_PRIMARY", "0")
     monkeypatch.setattr("jarvis.llm.embed_text", lambda t: [1.0, 0.5] if t else [])
     path = data_dir / "memory.json"
     path.write_text(

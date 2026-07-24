@@ -516,6 +516,14 @@ class SqliteMemoryStore:
         return len(remove_ids)
 
     def namespaces(self) -> list[str]:
+        try:
+            from aria_core.acm_store_facade import acm_namespaces
+
+            diverted = acm_namespaces()
+            if diverted is not None:
+                return diverted
+        except ImportError:
+            pass
         rows = self._conn.execute(
             "SELECT DISTINCT namespace FROM memories ORDER BY namespace"
         ).fetchall()
@@ -523,6 +531,14 @@ class SqliteMemoryStore:
         return ns or [DEFAULT_NAMESPACE]
 
     def stats(self) -> dict:
+        try:
+            from aria_core.acm_store_facade import acm_stats
+
+            diverted = acm_stats()
+            if diverted is not None:
+                return diverted
+        except ImportError:
+            pass
         by_type: dict[str, int] = {}
         for r in self._conn.execute("SELECT type, COUNT(*) FROM memories GROUP BY type"):
             by_type[str(r[0])] = int(r[1])
@@ -585,6 +601,14 @@ class SqliteMemoryStore:
         )
 
     def export_data(self, *, include_embeddings: bool = False) -> dict:
+        try:
+            from aria_core.acm_store_facade import acm_export_data
+
+            diverted = acm_export_data(include_embeddings=include_embeddings)
+            if diverted is not None:
+                return diverted
+        except ImportError:
+            pass
         entries = self._iter_entries(include_embedding=include_embeddings)
         if not include_embeddings:
             entries = [to_public(e) for e in entries]

@@ -84,3 +84,64 @@ def acm_update(
     _ = (entry_type, tags, namespace)
     out = acm_bridge.primary_correct(experience_id=entry_id, text=content)
     return bool(out.get("ok"))
+
+
+def acm_stats() -> dict[str, Any] | None:
+    """Memory UI stats projected from ACM when authoritative."""
+    from aria_core import acm_bridge
+
+    if not acm_bridge.acm_is_authoritative():
+        return None
+    dash = acm_bridge.acm_dashboard(limit=50)
+    rows = acm_bridge.project_list_entries(None, limit=2000)
+    by_type: dict[str, int] = {}
+    namespaces: set[str] = set()
+    for r in rows:
+        t = str(r.get("type") or "note")
+        by_type[t] = by_type.get(t, 0) + 1
+        namespaces.add(str(r.get("namespace") or "default"))
+    return {
+        "total": len(rows),
+        "namespaces": sorted(namespaces) or ["default"],
+        "by_type": by_type,
+        "backend": "acm",
+        "vectors": 0,
+        "acm": {
+            "experiences": (dash.get("experiences") or {}).get("count"),
+            "concepts": (dash.get("concepts") or {}).get("count"),
+            "associations": (dash.get("associations") or {}).get("count"),
+            "goals_active": (dash.get("goals") or {}).get("active_count"),
+        },
+    }
+
+
+def acm_namespaces() -> list[str] | None:
+    from aria_core import acm_bridge
+
+    if not acm_bridge.acm_is_authoritative():
+        return None
+    rows = acm_bridge.project_list_entries(None, limit=2000)
+    ns = sorted({str(r.get("namespace") or "default") for r in rows})
+    return ns or ["default"]
+
+
+def acm_export_data(*, include_embeddings: bool = False) -> dict[str, Any] | None:
+    from aria_core import acm_bridge
+    from jarvis.modules.memory_common import utc_now
+
+    if not acm_bridge.acm_is_authoritative():
+        return None
+    _ = include_embeddings
+    rows = acm_bridge.project_list_entries(None, limit=5000)
+    dash = acm_bridge.acm_dashboard()
+    return {
+        "version": 3,
+        "source": "acm",
+        "exported_at": utc_now(),
+        "entries": rows,
+        "acm_dashboard": {
+            "experiences": dash.get("experiences"),
+            "concepts": dash.get("concepts"),
+            "goals": dash.get("goals"),
+        },
+    }
