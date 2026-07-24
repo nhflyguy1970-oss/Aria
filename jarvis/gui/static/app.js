@@ -2942,19 +2942,11 @@ function switchToView(view) {
   document.querySelector(`.view-tab[data-view="${view}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
 
-function resetSidebarLayout() {
-  localStorage.removeItem("jarvis_sidebar_collapsed");
-  document.querySelectorAll(".sidebar-section.collapsed").forEach((sec) => {
-    sec.classList.remove("collapsed");
-    const head = sec.querySelector(".sidebar-section-head");
-    if (head) head.setAttribute("aria-expanded", "true");
-  });
-  document.body.classList.remove("mobile-sidebar-open");
-}
+// sidebar chrome → sidebar_chrome.js (window.resetSidebarLayout)
+
 
 window.switchToView = switchToView;
 window.renderServices = renderServices;
-window.resetSidebarLayout = resetSidebarLayout;
 window.addMessage = addMessage;
 window.pollMediaJob = pollMediaJob;
 
@@ -2966,12 +2958,6 @@ document.addEventListener("DOMContentLoaded", () => {
   window.refreshSidebarVideoStatus?.();
 });
 
-document.getElementById("mobileMenuBtn")?.addEventListener("click", () => {
-  document.body.classList.toggle("mobile-sidebar-open");
-});
-document.querySelector(".sidebar-backdrop")?.addEventListener("click", () => {
-  document.body.classList.remove("mobile-sidebar-open");
-});
 
 function fetchWithTimeout(url, options = {}, timeoutMs = 5000) {
   const ctrl = new AbortController();
@@ -2989,10 +2975,6 @@ window.fetchWithTimeout = fetchWithTimeout;
 // wakeword → wakeword_chat.js (window.pollWakewordChat)
 
 document.getElementById("reloadUiBtn")?.addEventListener("click", () => reloadJarvisUi());
-document.getElementById("resetLayoutBtn")?.addEventListener("click", () => {
-  resetSidebarLayout();
-  if (statusText) statusText.textContent = "Sidebar expanded — all sections visible";
-});
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && String(e.key).toLowerCase() === "r") {
     e.preventDefault();
