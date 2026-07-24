@@ -446,7 +446,11 @@ async function loadProfileInlinePanel() {
     } else if (data.completed) {
       el.innerHTML = "<p>Profile completed. Click <strong>Edit answers</strong> to update your questionnaire.</p>";
     } else {
-      el.innerHTML = "<p>No profile answers yet. Click Edit answers to fill in the questionnaire.</p>";
+      el.innerHTML = `<p>No profile answers yet. <button type="button" class="ghost-btn tiny" id="profileEmptyEditBtn">Edit answers</button></p>`;
+      el.querySelector("#profileEmptyEditBtn")?.addEventListener("click", () => {
+        document.getElementById("profileEditBtn")?.click()
+          || document.getElementById("profileModal")?.classList.remove("hidden");
+      });
     }
   } catch (e) {
     el.textContent = e.message || "Could not load profile";

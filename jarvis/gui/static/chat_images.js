@@ -123,6 +123,54 @@ function appendGeneratedImage(container, imgPath, imageName) {
   else appendImageFigure(container, imgPath, imageName, cap);
 }
 
+function buildVisionMessageHtml(text) {
+  const format = window.formatMessage || ((t) => t);
+  return format((text || "").trim() || "Image analysis complete.");
+}
+
+function buildImageMessageHtml(data, text) {
+  let intro = (text || data.message || "").trim();
+  const prompt = (data.enhanced_prompt || "").trim();
+  let negative = "";
+  const format = window.formatMessage || ((t) => t);
+  const esc = window.escapeHtml || ((t) => t);
+
+  const negMatch = intro.match(/\n\n\*\*Avoiding:\*\*\s*([\s\S]*)$/);
+  if (negMatch) {
+    negative = negMatch[1].trim();
+    intro = intro.slice(0, negMatch.index).trim();
+  }
+  intro = intro.replace(/\n\n\*\*Prompt sent to[^*]+:\*\*\n[\s\S]*$/, "").trim();
+  if (!intro) intro = "Here's your image.";
+
+  let html = format(intro);
+  if (prompt) {
+    html += `<details class="prompt-details" open><summary>Prompt sent to model</summary><pre class="prompt-text">${esc(prompt)}</pre></details>`;
+  }
+  if (negative) {
+    html += `<details class="prompt-details"><summary>Negative prompt</summary><pre class="prompt-text">${esc(negative)}</pre></details>`;
+  }
+  return html;
+}
+
+function buildDataTableHtml(preview) {
+  if (!preview?.columns?.length) return "";
+  const esc = window.escapeHtml || ((t) => String(t));
+  const cols = preview.columns;
+  const rows = preview.rows || [];
+  const streamNote = preview.streaming ? " · streaming (preview)" : preview.truncated ? " · truncated" : "";
+  let html = `<div class="data-preview"><p class="data-preview-meta">📊 ${esc(preview.name || "dataset")} · ${preview.row_count ?? "?"} rows${streamNote}</p><div class="data-table-wrap"><table class="data-table"><thead><tr>`;
+  cols.forEach((c) => { html += `<th>${esc(String(c))}</th>`; });
+  html += "</tr></thead><tbody>";
+  rows.forEach((r) => {
+    html += "<tr>";
+    cols.forEach((c) => { html += `<td>${esc(String(r[c] ?? ""))}</td>`; });
+    html += "</tr>";
+  });
+  html += "</tbody></table></div></div>";
+  return html;
+}
+
 
   Object.assign(window, {
     resolveImageUrl,
@@ -131,5 +179,8 @@ function appendGeneratedImage(container, imgPath, imageName) {
     appendImageReveal,
     bindClickableImages,
     appendGeneratedImage,
+    buildVisionMessageHtml,
+    buildImageMessageHtml,
+    buildDataTableHtml,
   });
 })();

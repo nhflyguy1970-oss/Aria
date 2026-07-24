@@ -301,32 +301,7 @@ function applyAssistantMeta(messageEl, meta) {
 
 // appendGeneratedImage → chat_images.js
 
-function buildVisionMessageHtml(text) {
-  return formatMessage((text || "").trim() || "Image analysis complete.");
-}
-
-function buildImageMessageHtml(data, text) {
-  let intro = (text || data.message || "").trim();
-  const prompt = (data.enhanced_prompt || "").trim();
-  let negative = "";
-
-  const negMatch = intro.match(/\n\n\*\*Avoiding:\*\*\s*([\s\S]*)$/);
-  if (negMatch) {
-    negative = negMatch[1].trim();
-    intro = intro.slice(0, negMatch.index).trim();
-  }
-  intro = intro.replace(/\n\n\*\*Prompt sent to[^*]+:\*\*\n[\s\S]*$/, "").trim();
-  if (!intro) intro = "Here's your image.";
-
-  let html = formatMessage(intro);
-  if (prompt) {
-    html += `<details class="prompt-details" open><summary>Prompt sent to model</summary><pre class="prompt-text">${escapeHtml(prompt)}</pre></details>`;
-  }
-  if (negative) {
-    html += `<details class="prompt-details"><summary>Negative prompt</summary><pre class="prompt-text">${escapeHtml(negative)}</pre></details>`;
-  }
-  return html;
-}
+// buildVision/Image/DataTable HTML → chat_images.js
 
 function scrollMessageIntoView(node, block = "start") {
   const msg = node?.closest?.(".message") || node;
@@ -378,23 +353,6 @@ function isDataAttachment(file) {
     file && (/\.(csv|json|xlsx|xlsm|db|sqlite|sqlite3)$/i.test(file.name)
       || file.type === "text/csv" || file.type === "application/json"),
   );
-}
-
-function buildDataTableHtml(preview) {
-  if (!preview?.columns?.length) return "";
-  const cols = preview.columns;
-  const rows = preview.rows || [];
-  const streamNote = preview.streaming ? " · streaming (preview)" : preview.truncated ? " · truncated" : "";
-  let html = `<div class="data-preview"><p class="data-preview-meta">📊 ${escapeHtml(preview.name || "dataset")} · ${preview.row_count ?? "?"} rows${streamNote}</p><div class="data-table-wrap"><table class="data-table"><thead><tr>`;
-  cols.forEach((c) => { html += `<th>${escapeHtml(String(c))}</th>`; });
-  html += "</tr></thead><tbody>";
-  rows.forEach((r) => {
-    html += "<tr>";
-    cols.forEach((c) => { html += `<td>${escapeHtml(String(r[c] ?? ""))}</td>`; });
-    html += "</tr>";
-  });
-  html += "</tbody></table></div></div>";
-  return html;
 }
 
 // progressLabel / showProgress / setChatBusy / stopChat → chat_progress.js
@@ -873,7 +831,7 @@ function handleDone(data, text, streamed = false, options = {}) {
       body = addMessage("assistant", "", meta, { skipScroll: true }).body;
     }
     if (body) {
-      body.innerHTML = buildVisionMessageHtml(text || data.message);
+      body.innerHTML = window.buildVisionMessageHtml(text || data.message);
       const row = document.createElement("div");
       row.className = "compare-images-row";
       data.compare_paths.forEach((p, i) => {
@@ -894,7 +852,7 @@ function handleDone(data, text, streamed = false, options = {}) {
     }
     if (body) {
       body.innerHTML = formatMessage(text || data.message || "");
-      if (data.data_preview) body.insertAdjacentHTML("beforeend", buildDataTableHtml(data.data_preview));
+      if (data.data_preview) body.insertAdjacentHTML("beforeend", window.buildDataTableHtml(data.data_preview));
       if (data.chart_path) {
         const chartUrl = window.apiAuthUrl(`/api/audio/file?path=${encodeURIComponent(data.chart_path)}`);
         body.insertAdjacentHTML("beforeend", `<figure class="gen-image data-chart"><img src="${chartUrl}" alt="chart" /><figcaption>Chart</figcaption></figure>`);
@@ -921,7 +879,7 @@ function handleDone(data, text, streamed = false, options = {}) {
       body = addMessage("assistant", "", meta, { skipScroll: true }).body;
     }
     if (body) {
-      body.innerHTML = buildVisionMessageHtml(text || data.message);
+      body.innerHTML = window.buildVisionMessageHtml(text || data.message);
       window.appendImageFigure(body, imgPath, data.image_name, "Analyzed image");
       scrollMessageIntoView(body, "start");
     }
@@ -938,7 +896,7 @@ function handleDone(data, text, streamed = false, options = {}) {
       body.querySelector(".media-job-status")?.remove();
     }
     if (body) {
-      body.innerHTML = buildImageMessageHtml(data, text || data.message);
+      body.innerHTML = window.buildImageMessageHtml(data, text || data.message);
       // Defer decode until after ComfyUI releases GPU — avoids WebKit OOM on job finish.
       const mountImg = () => {
         window.appendGeneratedImage(body, imgPath, data.image_name);
