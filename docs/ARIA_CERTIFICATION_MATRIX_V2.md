@@ -43,7 +43,7 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: …/coding_proposals/**chat_images**/**chat_progress** extracts; empty-state CTAs (+Calendar/Audio/Knowledge research); live reconnect + fork toasts; apply/undo/diff load toasts; `act:run-research`. Removed `app.js` `const resolveVideoUrl` shim that **broke boot** (conflict with `video_studio.js` global). `app.js` ~**1762** lines.
+- FIXED & CERTIFIED: …/**chat_progress**/**chat_video** extracts; knowledge research + browser empty CTAs; `act:run-research`; fixed `app.js` boot (no `const resolveVideoUrl` clash with video_studio). `app.js` ~**1719** lines.
 - INTENTIONALLY DEFERRED: chat/stream/sendMessage still in app.js (core pipeline); long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 

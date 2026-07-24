@@ -298,6 +298,7 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/coding_proposals.js").is_file()
     assert Path("jarvis/gui/static/chat_images.js").is_file()
     assert Path("jarvis/gui/static/chat_progress.js").is_file()
+    assert Path("jarvis/gui/static/chat_video.js").is_file()
     assert "coding_quick.js" in html
     assert "chat_media.js" in html
     assert "crop_webcam.js" in html
@@ -309,6 +310,7 @@ def test_command_palette_is_wired():
     assert "coding_proposals.js" in html
     assert "chat_images.js" in html
     assert "chat_progress.js" in html
+    assert "chat_video.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
@@ -374,6 +376,9 @@ def test_command_palette_is_wired():
     assert "researchEmptyRunBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "knowledgeEmptyChatBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "act:run-research" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
+    assert "function appendAuthenticatedVideo" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "appendGeneratedVideo," in Path("jarvis/gui/static/chat_video.js").read_text(encoding="utf-8")
+    assert "browserEmptyFocusUrl" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showGeneratedImage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showAudioPlayer" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")

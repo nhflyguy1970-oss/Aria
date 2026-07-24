@@ -12,10 +12,10 @@
     return data;
   }
 
-  function setTaskResult(msg, tone) {
+  function setTaskResult(msg, tone = "info") {
     const out = $("browserTaskResult");
     if (out) out.textContent = msg || "";
-    if (msg) window.showAriaToast?.(msg, tone || (tone === "ok" ? "ok" : "err"), 4500);
+    if (msg) window.showAriaToast?.(msg, tone, 4500);
   }
 
   function esc(s) {
@@ -41,7 +41,20 @@
             ? "system browser"
             : "Playwright not installed";
       statusEl.textContent = `${st.status || "idle"} · ${mode}${st.paused ? " · paused" : ""}${st.takeover ? " · takeover" : ""}`;
-      if (urlEl) urlEl.textContent = st.url || "No page loaded";
+      if (urlEl) {
+        if (st.url) {
+          urlEl.textContent = st.url;
+        } else {
+          urlEl.innerHTML = `No page loaded. <button type="button" class="ghost-btn tiny" id="browserEmptyFocusUrl">Enter URL</button> or <button type="button" class="ghost-btn tiny" id="browserEmptyChatBtn">ask Chat</button>`;
+          urlEl.querySelector("#browserEmptyFocusUrl")?.addEventListener("click", () => {
+            $("browserUrlInput")?.focus();
+          });
+          urlEl.querySelector("#browserEmptyChatBtn")?.addEventListener("click", () => {
+            window.switchToView?.("chat");
+            window.jarvisSendToChat?.("Browse to ");
+          });
+        }
+      }
       if (hintEl) {
         const hint = st.playwright_hint || (
           !agentReady
