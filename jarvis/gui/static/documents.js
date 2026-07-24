@@ -117,6 +117,8 @@
     });
     $("documentsOpenMemoryBtn")?.addEventListener("click", () => window.switchToView?.("memory"));
     $("documentsOpenCalendarBtn")?.addEventListener("click", () => window.switchToView?.("calendar"));
+    $("documentsOpenChatBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
+    $("documentsOpenProjectsBtn")?.addEventListener("click", () => window.switchToView?.("projects"));
     $("documentsReindexBtn")?.addEventListener("click", async () => {
       const btn = $("documentsReindexBtn");
       const status = $("documentsIndexStatus");
