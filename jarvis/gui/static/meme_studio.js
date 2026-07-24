@@ -41,12 +41,17 @@ async function loadMemeGallery() {
         if (!name || !confirm(`Delete ${name}?`)) return;
         const delRes = await fetch(`/api/meme-gallery/${encodeURIComponent(name)}`, { method: "DELETE" });
         const delData = await delRes.json();
-        if (delData.ok) loadMemeGallery();
-        else alert(delData.message || "Delete failed");
+        if (delData.ok) {
+          window.showAriaToast?.("Meme deleted", "ok", 2500);
+          loadMemeGallery();
+        } else {
+          window.showAriaToast?.(delData.message || "Delete failed", "err", 5000);
+        }
       });
     });
   } catch (e) {
     grid.innerHTML = `<p class="muted">Failed to load memes — ${escapeHtml(String(e.message || e))}</p>`;
+    window.showAriaToast?.(e.message || "Failed to load memes", "err", 5000);
   }
 }
 
@@ -64,11 +69,15 @@ async function generateMeme(previewOnly = false) {
   const useAi = document.getElementById("memeUseAiCheckbox")?.checked !== false;
 
   if (!previewOnly && !useAi && !top && !bottom) {
-    setMemeStatus("Add top/bottom text or an idea.", true);
+    const msg = "Add top/bottom text or an idea.";
+    setMemeStatus(msg, true);
+    window.showAriaToast?.(msg, "warn", 3500);
     return;
   }
   if (previewOnly && !top && !bottom) {
-    setMemeStatus("Preview needs top or bottom text.", true);
+    const msg = "Preview needs top or bottom text.";
+    setMemeStatus(msg, true);
+    window.showAriaToast?.(msg, "warn", 3500);
     return;
   }
 
@@ -101,7 +110,9 @@ async function generateMeme(previewOnly = false) {
       const result = await pollMemeJob(data.job_id);
       imageName = result.image_name;
     }
-    setMemeStatus(previewOnly ? "Preview ready" : "Meme saved");
+    const okMsg = previewOnly ? "Preview ready" : "Meme saved";
+    setMemeStatus(okMsg);
+    window.showAriaToast?.(okMsg, "ok", 2500);
     const preview = document.getElementById("memePreview");
     if (preview && imageName) {
       preview.innerHTML = `
@@ -112,7 +123,9 @@ async function generateMeme(previewOnly = false) {
     }
     loadMemeGallery();
   } catch (e) {
-    setMemeStatus(String(e.message || e), true);
+    const msg = String(e.message || e);
+    setMemeStatus(msg, true);
+    window.showAriaToast?.(msg, "err", 5000);
   } finally {
     if (btn) btn.disabled = false;
   }
