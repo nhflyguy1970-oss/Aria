@@ -1406,18 +1406,16 @@
   async function showLibraryHealth() {
     try {
       const h = await fetchJson("/api/flytying/health");
-      alert(
-        `Library health\n` +
-          `Total: ${h.total}\n` +
-          `With images: ${h.with_images} (${h.image_pct}%)\n` +
-          `With videos: ${h.with_videos} (${h.video_pct}%)\n` +
-          `Avg quality: ${h.avg_quality}\n` +
-          `Duplicate name groups: ${h.duplicate_name_groups}\n` +
-          `Aliases loaded: ${h.alias_count}`
-      );
+      const msg =
+        `Library: ${h.total} · images ${h.with_images} (${h.image_pct}%) · videos ${h.with_videos} (${h.video_pct}%) · avg quality ${h.avg_quality}`;
+      const status = $("flytyingStatus");
+      if (status) status.textContent = msg;
+      window.showAriaToast?.(msg, "ok", 6000);
+      const detail =
+        `Duplicate name groups: ${h.duplicate_name_groups} · Aliases: ${h.alias_count}`;
+      $("flytyingSearchHint") && ($("flytyingSearchHint").textContent = detail);
     } catch (e) {
-      alert(e.message);
-      window.showAriaToast?.(e.message || "Fly tying action failed", "err", 5000);
+      window.showAriaToast?.(e.message || "Fly tying health failed", "err", 5000);
     }
   }
 

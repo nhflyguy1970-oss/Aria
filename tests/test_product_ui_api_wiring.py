@@ -284,6 +284,8 @@ def test_command_palette_is_wired():
     assert "async function freeJarvisVram" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "renderAudioStatus" in Path("jarvis/gui/static/modules/health.mjs").read_text(encoding="utf-8")
     assert "Could not save fly tying model" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
+    assert "Library:" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
+    assert "alert(" not in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert "Could not save profile" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "alert(data.error || \"Could not save profile\")" not in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "alert(" not in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
