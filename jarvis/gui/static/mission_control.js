@@ -27,6 +27,8 @@ let _mcRoutingLive = false;
 let _mcRoutingPoll = null;
 let _mcRoutingFilter = "";
 let _mcRoutingSearch = "";
+/** Monotonic token so slow async tab loads cannot overwrite a newer tab. */
+let _mcRenderGen = 0;
 
 function mc$(id) {
   return document.getElementById(id);
@@ -579,6 +581,8 @@ function renderConnection(conn) {
 async function renderMcTab(tab) {
   const body = mc$("mcTabBody");
   if (!body) return;
+  const gen = ++_mcRenderGen;
+  const stillCurrent = () => gen === _mcRenderGen && _mcTab === tab;
   if (tab === "connection") {
     body.innerHTML = "<p class='muted'>Loading…</p>";
     let html = "";
@@ -588,6 +592,7 @@ async function renderMcTab(tab) {
     } catch (e) {
       html = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
+    if (!stillCurrent()) return;
     body.innerHTML = html;
     return;
   }
@@ -595,10 +600,12 @@ async function renderMcTab(tab) {
     body.innerHTML = "<p class='muted'>Loading routing inspector…</p>";
     try {
       const { records, stats } = await loadRoutingInspector();
+      if (!stillCurrent()) return;
       body.innerHTML = renderRoutingInspector(records, stats);
       wireRoutingInspector();
       if (_mcRoutingLive) body.scrollTop = body.scrollHeight;
     } catch (e) {
+      if (!stillCurrent()) return;
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
     return;
@@ -607,8 +614,10 @@ async function renderMcTab(tab) {
     body.innerHTML = "<p class='muted'>Loading intent analytics…</p>";
     try {
       const data = await mcFetch("/api/mission-control/intent-analytics?window=week");
+      if (!stillCurrent()) return;
       body.innerHTML = renderIntentAnalytics(data);
     } catch (e) {
+      if (!stillCurrent()) return;
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
     return;
@@ -617,9 +626,11 @@ async function renderMcTab(tab) {
     body.innerHTML = "<p class='muted'>Loading release readiness…</p>";
     try {
       const data = await mcFetch("/api/mission-control/release");
+      if (!stillCurrent()) return;
       body.innerHTML = renderReleaseDashboard(data);
       wireMcTabActions();
     } catch (e) {
+      if (!stillCurrent()) return;
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
     return;
@@ -628,9 +639,11 @@ async function renderMcTab(tab) {
     body.innerHTML = "<p class='muted'>Loading event timeline…</p>";
     try {
       const { events, stats } = await loadTimelineInspector();
+      if (!stillCurrent()) return;
       body.innerHTML = renderTimelineInspector(events, stats);
       wireTimelineInspector();
     } catch (e) {
+      if (!stillCurrent()) return;
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
     return;
@@ -678,6 +691,7 @@ async function renderMcTab(tab) {
     default:
       html = "<p class='muted'>Unknown tab</p>";
   }
+  if (!stillCurrent()) return;
   body.innerHTML = html;
   wireMcTabActions(tab);
 }

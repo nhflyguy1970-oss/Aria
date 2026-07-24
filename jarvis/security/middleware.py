@@ -26,7 +26,6 @@ class PinLockMiddleware(BaseHTTPMiddleware):
     EXEMPT_PATHS = frozenset({
         "/api/security/unlock",
         "/api/security/lock/status",
-        "/api/homeassistant/daylight",
         "/api/security/session/touch",
     })
 

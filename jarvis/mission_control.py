@@ -12,6 +12,13 @@ def collect_mission_control(*, record_metrics: bool = True) -> dict[str, Any]:
 
 
 def get_tab(tab: str) -> dict[str, Any]:
+    key = (tab or "").strip().lower()
+    # Aria-local surface (not an AI-Platform MC tab name).
+    if key == "connection":
+        from jarvis.platform_runtime import runtime_connection_status
+
+        return {"ok": True, "tab": "connection", "data": runtime_connection_status()}
+
     from aiplatform.mission_control.aggregator import get_tab as platform_tab
 
     return platform_tab(tab)

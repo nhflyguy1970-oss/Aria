@@ -1,14 +1,26 @@
 # Aria Product Certification — Progress Report
 
 **Date:** 2026-07-24  
-**Stance:** Zero-trust product UX / capability audit  
-**Status:** **INCOMPLETE for full charter stop-condition** — critical disconnected UI wiring fixed; exhaustive every-control modernization not finished
+**Stance:** Zero-trust product UX / capability / architecture audit  
+**Browser policy:** Single persistent session; no reload loops (reload only for startup/restart recovery)  
+**Status:** **INCOMPLETE for full charter stop-condition** — additional defects found and fixed; exhaustive every-control modernization not finished
 
 ## Executive Summary
 
-Phase 1 inventory and live smoke of all primary view tabs completed. Zero-trust API/UI wiring audit discovered **four user-visible controls that called missing backends (HTTP 404)**. Those are fixed with permanent regression coverage. All **21** primary view tabs switch and render without JS exceptions in a live browser session.
+Phase 1 inventory is complete (21 primary tabs, ~499 live `/api` routes, 11 extensions, Mission Control 17 UI tabs, Cap Bus 16 verbs). Zero-trust exercise continues against a live workstation (`8765`) with AI-Platform Mission Control (`8780`).
 
-This report does **not** claim every button, dialog, and long-running workflow across Gallery/Video/Fly-tying/HA/Coding has been deep-certified. Remaining work is deferred as an ongoing product-quality backlog.
+This wave proved and repaired:
+
+1. Disconnected UI APIs (audio stop/sink, Playwright install, journal projects) — prior wave  
+2. Phantom PIN exemption for missing `/api/homeassistant/daylight`  
+3. Mission Control async tab race (Connection overwrite of Knowledge)  
+4. Missing AI-Platform `databases` tab loader + Aria `connection` tab proxy  
+5. Browser status line falsely reported “Playwright not installed” when stack was ready  
+6. MongoDB “up” + “container stopped” contradictory detail copy  
+
+Primary tabs, MC tabs, planner task add, journal gratitude/writes, memory list, calendar, settings modal, documents/gallery/video/meme/audio/flytying/maker/security/presence/voice/actions/dashboard all **smoke-rendered** in one persistent browser session.
+
+**Full charter stop-condition is not met.** God-`app.js`, a11y, visual coherence, command palette, deep Comfy/HA/coding/voice-live workflows, multi-monitor soak, and long-session leak profiling remain open.
 
 ## Complete product inventory (Phase 1)
 
@@ -38,9 +50,9 @@ This report does **not** claim every button, dialog, and long-running workflow a
 | Documents | `documentsView` | `loadDocumentsTab` |
 | Actions | `actionsView` | `loadActions` |
 
-### Sidebar sections
+### Sidebar / chrome
 
-Mode · Capabilities · Services · Mission Control shortcuts · Integrations · Agent tools · Video · Smart home · Chat & data · Coding · Model settings · Tips
+Mode · Capabilities · Services · Mission Control shortcuts · Integrations · Agent tools · Video · Smart home · Chat & data · Coding · Model settings · Tips · Job Center · floating docks (HA/Maker/Browser/Printer when flagged)
 
 ### Extensions (11)
 
@@ -48,66 +60,76 @@ Mode · Capabilities · Services · Mission Control shortcuts · Integrations ·
 
 ### HTTP API surface
 
-**494** OpenAPI paths under `/api/*` (groups include audio 59, journal 61, flytying 39, mission-control 20, security 16, voice 9, memory 18, …).
+~499 registered `/api` routes + WS; auth: NetworkGuard → RateLimit → APIKey → PinLock.  
+Inventory detail: [Inventory Aria GUI](76561828-7f8b-48b7-ab17-b47732f0567a).
 
-### Static UI modules
-
-`app.js` (~5.8k LOC) plus specialized panels: `mission_control.js`, `journal.js`, `flytying.js`, `audio*.js`, `calendar.js`, `planner.js`, `browser_panel.js`, `security*.js`, `voice_*.js`, `projects.js`, `maker.js`, `video_studio.js`, `meme_studio.js`, `lock_screen.js`, …
-
-### Execution map (canonical)
+### Execution map
 
 ```
-UI control (view-tab / button / form)
-  → fetch(/api/…) or Cap Bus / chat action
-    → jarvis.gui.server / extension register_routes
-      → aria_core (memory/learning/cognition) when cognitive
-        → ACM / jarvis organs / aiplatform (optional)
-          → JSON / FileResponse
-            → DOM update / toast / panel refresh
+UI control → fetch(/api/…) / Cap Bus / chat action
+  → jarvis.gui.server / extension routes
+    → aria_core / ACM / jarvis organs / aiplatform
+      → JSON / FileResponse → DOM / toast / panel refresh
 ```
 
-## Capabilities exercised (this pass)
+## Features / capabilities exercised (this certification)
 
 | Surface | Result |
 |---------|--------|
-| All 21 view tabs switch | PASS (browser Runtime.evaluate) |
-| `/api/live`, health, memory, MC, gallery, journal, … | PASS smoke |
-| Audio Stop button path | Was **404** → **FIXED** |
-| Audio output sink selector | Was **404** → **FIXED** |
-| Browser Install Playwright | Was **404** → **FIXED** |
-| Journal → Projects panel | Was **404** → **FIXED** |
-| Home Assistant (sidebar) | Unreachable locally (expected if HA down) |
+| All 21 view tabs switch + render | PASS (persistent browser) |
+| All 17 MC tabs (incl. connection/databases) | PASS after race + loader fixes |
+| MC tab race (connection → knowledge) | Was **FAIL** → **FIXED** |
+| Planner add task | PASS (persisted via `/api/planner`) |
+| Journal gratitude + daily API | PASS |
+| Memory `/api/memory/all` | PASS (entries present; ACM bridge) |
+| Calendar month + day click | PASS |
+| Settings modal open | PASS |
+| Browser status truthfulness | Was **FAIL** → **FIXED** |
+| Documents / Gallery / Video / Meme / Audio / Flytying / Maker | PASS smoke render |
+| HA entities | Expected fail when HA down (500) |
+| UI↔route string scan | ~279/284 matched (template false-positives only) |
 
 ## Broken features discovered → fixes
 
 | Bug | Root cause | Fix |
 |-----|------------|-----|
-| Stop speaking / audio stop | No `/api/audio/stop`; `stop_playback` missing though TTS imported it | Implemented `stop_playback` + route; interruptible Popen playback |
-| Output device dropdown | No `/api/audio/output-sink` | Route + `list_output_sinks` + settings persist |
-| Browser Install button | No `/api/browser/install-playwright` | Route → `ensure_playwright(install=True)` |
-| Project journals UI | No `/api/journal/projects*` | Routes on `extra_routes` → `ProjectJournal` |
+| Audio stop / output sink 404 | Missing routes + `stop_playback` | Implemented + tests |
+| Browser Install Playwright 404 | Missing route | Route → `ensure_playwright` |
+| Journal projects 404 | Missing routes | `extra_routes` → `ProjectJournal` |
+| Phantom PIN exempt daylight | Exempt without route | Removed exempt; regression |
+| MC tab content race | Async `renderMcTab` no generation guard | `_mcRenderGen` / `stillCurrent()` |
+| `/api/mission-control/databases` | Tab in `_TABS` but no loader | AI-Platform `_TAB_LOADERS["databases"]` |
+| `/api/mission-control/connection` | Not a platform tab | Aria `get_tab` → `runtime_connection_status` |
+| Browser “Playwright not installed” | UI required `agent_ready`; API lacked it | API `agent_ready` + UI fallback |
+| Mongo “up” + “container stopped” | Health TCP vs docker detail | Clearer detail string |
+
+## Technical debt removed
+
+| Item | Action |
+|------|--------|
+| `jarvis/gui/static/security.js` | **Deleted** (superseded by `security_settings.js`) |
+| Orphan `jarvis/api.py` | Still present (documented; not wired) |
 
 ## Regression tests
 
-`tests/test_product_ui_api_wiring.py` (registered in `scripts/ci_check.py`)
+`tests/test_product_ui_api_wiring.py` — disconnected routes, PIN exempts, MC databases/connection loaders, browser `agent_ready` + UI wiring.  
+AI-Platform: `tests/test_mission_control.py::test_get_tab_databases`.
 
-## Documentation / commits
+## Remaining deferred (blocks full YES)
 
-See git history for this pass. Inventory and deferred backlog live in this document.
-
-## Remaining deferred (blocks full YES under this charter)
-
-1. Deep workflow certification per subsystem (Fly tying, ComfyUI, Video, Coding LSP, HA scenes, Automation inbound, Maker STL, Gemini live, …)
-2. Usability modernization of god `app.js` / navigation density
-3. Accessibility audit (keyboard, contrast, screen readers)
-4. Multi-monitor / window lifecycle soak
-5. Long-duration UI memory leak profiling
-6. Visual consistency / theme pass
-7. Command palette completeness
-8. Every modal/wizard/context-menu exercise
+1. Deep workflows: ComfyUI generate, video render, Gemini live, coding LSP apply, HA scenes when HA up, Maker STL print path  
+2. God `app.js` split / navigation modernization  
+3. Accessibility (keyboard, contrast, SR)  
+4. Visual consistency / theme coherence  
+5. Command palette / global search  
+6. Multi-monitor + long-session memory profiling  
+7. Alias/duplicate API cleanup; orphan `jarvis/api.py` removal  
+8. Every modal/wizard/context-menu full exercise  
 
 ## Verdict question
 
-Under the **full** stop-condition of this charter (every control, every workflow, polished modernization), Aria is **not yet fully certified**.
+Would I proudly ship Aria today as a polished, modern, production-quality AI operating environment that I would personally use every day as my primary interface?
 
-Under the **operational daily-use** charter (Core/ACM certified; primary tabs load; critical wiring repaired), Aria remains usable as the workstation AI environment — with the deferred backlog above.
+**NO**
+
+Evidence: critical wiring and MC correctness improved, and daily tabs smoke-pass, but the charter requires every control/workflow polished and modernized. Significant architecture (god `app.js`), discoverability (no command palette), a11y, visual consistency, and deep generative/HA/coding workflows remain uncertified.

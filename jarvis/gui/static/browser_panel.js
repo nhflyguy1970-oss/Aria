@@ -22,7 +22,8 @@
     if (!statusEl) return;
     try {
       const st = await fetchJson("/api/browser/status");
-      const mode = st.agent_ready
+      const agentReady = st.agent_ready ?? Boolean(st.playwright && st.chromium);
+      const mode = agentReady
         ? "Playwright"
         : st.playwright && !st.chromium
           ? "Playwright (install Chromium)"
@@ -33,17 +34,17 @@
       if (urlEl) urlEl.textContent = st.url || "No page loaded";
       if (hintEl) {
         const hint = st.playwright_hint || (
-          !st.agent_ready
+          !agentReady
             ? "Full agent: pip install playwright && playwright install chromium"
             : ""
         );
         hintEl.textContent = hint;
         hintEl.classList.toggle("hidden", !hint);
       }
-      if (img && st.last_screenshot && st.agent_ready) {
+      if (img && st.last_screenshot && agentReady) {
         img.src = `/api/browser/screenshot/image?t=${Date.now()}`;
         img.classList.remove("hidden");
-      } else if (img && (st.fallback || !st.agent_ready)) {
+      } else if (img && (st.fallback || !agentReady)) {
         img.classList.add("hidden");
       }
     } catch (_) {

@@ -19,6 +19,41 @@ def test_disconnected_ui_routes_are_registered():
         assert required in paths, f"missing route {required}"
 
 
+def test_pin_lock_exact_exempt_paths_exist_as_routes():
+    """PIN-exempt exact paths must be live routes (no phantom exemptions)."""
+    from jarvis.gui.server import app
+    from jarvis.security.middleware import PinLockMiddleware
+
+    paths = {getattr(route, "path", None) for route in app.routes}
+    for exempt in PinLockMiddleware.EXEMPT_PATHS:
+        assert exempt in paths, f"PIN-exempt path has no route: {exempt}"
+
+
+def test_mission_control_tab_loaders_databases_and_connection():
+    from jarvis.mission_control import get_tab
+
+    dbs = get_tab("databases")
+    assert dbs.get("ok") is True, dbs
+    assert "databases" in (dbs.get("data") or {})
+
+    conn = get_tab("connection")
+    assert conn.get("ok") is True, conn
+    assert conn.get("tab") == "connection"
+    data = conn.get("data") or {}
+    assert "mission_control_reachable" in data or "ok" in data
+
+
+def test_browser_status_exposes_agent_ready():
+    from jarvis.browser_agent import status
+
+    st = status()
+    assert "playwright" in st and "chromium" in st
+    assert st.get("agent_ready") is bool(st.get("playwright") and st.get("chromium"))
+    src = open("jarvis/gui/static/browser_panel.js", encoding="utf-8").read()
+    assert "agent_ready" in src
+    assert "st.playwright && st.chromium" in src or "playwright && st.chromium" in src
+
+
 def test_stop_playback_and_clear_tts_queue_do_not_raise():
     from jarvis.audio_device import stop_playback
     from jarvis.tts_playback_queue import clear_tts_queue

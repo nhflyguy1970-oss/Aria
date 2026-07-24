@@ -39,10 +39,13 @@ def status() -> dict[str, Any]:
     stack = browser_stack_ready()
     with _LOCK:
         out = dict(_STATE)
+    playwright = bool(stack.get("playwright"))
+    chromium = bool(stack.get("chromium"))
     return {
         "enabled": browser_agent_enabled(),
-        "playwright": bool(stack.get("playwright")),
-        "chromium": bool(stack.get("chromium")),
+        "playwright": playwright,
+        "chromium": chromium,
+        "agent_ready": playwright and chromium,
         **out,
     }
 
