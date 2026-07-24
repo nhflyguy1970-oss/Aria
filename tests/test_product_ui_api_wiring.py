@@ -154,7 +154,7 @@ def test_a11y_modal_esc_and_ux_debt_regressions():
     assert "window.initAriaModalChrome?.()" in app_js
     assert "function initAriaModalChrome" not in app_js
     assert "galleryGenerateBtn" in app_js or "galleryGenerateBtn" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
-    assert 'aria-label="Delete' in app_js
+    assert 'aria-label="Delete' in app_js or 'aria-label="Delete' in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
     assert "window.loadMemoryBrowser" in app_js
     assert "window.closeImageLightbox" in app_js
 
