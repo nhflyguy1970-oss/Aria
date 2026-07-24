@@ -334,8 +334,17 @@ function isNativeApp() {
 }
 
 function syncMediaBusyClass() {
-  document.documentElement.classList.toggle("media-busy", activeMediaJobs.size > 0);
+  if (!window.activeMediaJobs) window.activeMediaJobs = new Set();
+  document.documentElement.classList.toggle("media-busy", window.activeMediaJobs.size > 0);
 }
+window.syncMediaBusyClass = syncMediaBusyClass;
+
+let chatRequestActive = false;
+
+function mediaWorkActive() {
+  return chatRequestActive || (window.activeMediaJobs?.size || 0) > 0;
+}
+window.mediaWorkActive = mediaWorkActive;
 
 function resolveImageUrl(imgPath, { thumb = false, thumbMax = CHAT_IMAGE_THUMB_MAX } = {}) {
   if (!imgPath) return "";
@@ -1048,8 +1057,6 @@ function hideProgress() {
   if (progressFill) progressFill.style.width = "0%";
 }
 
-let chatRequestActive = false;
-
 function setChatBusy(busy) {
   chatRequestActive = busy;
   sendBtn.disabled = busy;
@@ -1403,134 +1410,19 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
   }
 }
 
-const activeMediaJobs = new Set();
-const MEDIA_JOBS_STORAGE_KEY = "jarvisActiveMediaJobs";
-const MEDIA_SHOWN_STORAGE_KEY = "jarvisShownMediaJobs";
-let mediaJobsResumeStarted = false;
-
-function markMediaJobShown(jobId) {
-  if (!jobId) return;
-  try {
-    const ids = JSON.parse(sessionStorage.getItem(MEDIA_SHOWN_STORAGE_KEY) || "[]");
-    if (!ids.includes(jobId)) {
-      ids.push(jobId);
-      sessionStorage.setItem(MEDIA_SHOWN_STORAGE_KEY, JSON.stringify(ids.slice(-24)));
-    }
-  } catch (_) {}
-}
-
-function wasMediaJobShown(jobId) {
-  if (!jobId) return false;
-  try {
-    return JSON.parse(sessionStorage.getItem(MEDIA_SHOWN_STORAGE_KEY) || "[]").includes(jobId);
-  } catch (_) {
-    return false;
-  }
-}
-
-function mediaWorkActive() {
-  return chatRequestActive || activeMediaJobs.size > 0;
-}
-window.mediaWorkActive = mediaWorkActive;
-
-function trackMediaJob(jobId) {
-  if (!jobId) return;
-  try {
-    const ids = JSON.parse(sessionStorage.getItem(MEDIA_JOBS_STORAGE_KEY) || "[]");
-    if (!ids.includes(jobId)) {
-      ids.push(jobId);
-      sessionStorage.setItem(MEDIA_JOBS_STORAGE_KEY, JSON.stringify(ids.slice(-12)));
-    }
-  } catch (_) {}
-}
-
-function untrackMediaJob(jobId) {
-  if (!jobId) return;
-  try {
-    const ids = JSON.parse(sessionStorage.getItem(MEDIA_JOBS_STORAGE_KEY) || "[]").filter((id) => id !== jobId);
-    sessionStorage.setItem(MEDIA_JOBS_STORAGE_KEY, JSON.stringify(ids));
-  } catch (_) {}
-}
-
-async function resumePendingMediaJobs() {
-  if (mediaJobsResumeStarted) return;
-  mediaJobsResumeStarted = true;
-  const ids = new Set();
-  try {
-    JSON.parse(sessionStorage.getItem(MEDIA_JOBS_STORAGE_KEY) || "[]").forEach((id) => ids.add(id));
-  } catch (_) {}
-  try {
-    const res = await fetch("/api/media/status");
-    if (res.ok) {
-      const data = await res.json();
-      if (data.busy && data.job_id) ids.add(data.job_id);
-      for (const job of data.recent || []) {
-        if (job?.id && !job.done) ids.add(job.id);
-      }
-    }
-  } catch (e) {
-    window.showAriaToast?.(
-      `Could not resume media jobs: ${e?.message || e}`,
-      "err",
-      4000,
-    );
-  }
-  for (const jobId of ids) {
-    if (!jobId || activeMediaJobs.has(jobId)) continue;
-    try {
-      const res = await fetch(`/api/media/job/${encodeURIComponent(jobId)}`);
-      if (!res.ok) {
-        untrackMediaJob(jobId);
-        continue;
-      }
-      const data = await res.json();
-      if (!data.ok) continue;
-      if (data.done && data.result?.ok) {
-        if (wasMediaJobShown(jobId)) {
-          untrackMediaJob(jobId);
-          continue;
-        }
-        markMediaJobShown(jobId);
-        untrackMediaJob(jobId);
-        const { body } = addMessage("assistant", data.result.message || "Image ready", {
-          module: data.result.module || "image",
-          type: "media_job",
-        });
-        handleDone(data.result, data.result.message || "", false, {
-          targetBody: body,
-          replaceQueued: true,
-        });
-        continue;
-      }
-      if (data.done) {
-        untrackMediaJob(jobId);
-        continue;
-      }
-      const { body } = addMessage("assistant", data.message || "Image job running…", {
-        module: "image",
-        type: "media_job",
-      });
-      pollMediaJob(jobId, body?.closest?.(".message"));
-    } catch (err) {
-      window.showAriaToast?.(
-        `Media job resume failed: ${err?.message || err}`,
-        "err",
-        4000,
-      );
-    }
-  }
-}
+// Media job track/resume/poll → media_jobs.js (window.activeMediaJobs / pollMediaJob / resumePendingMediaJobs)
 
 async function pollCodingJob(jobId, messageEl) {
-  if (!jobId || activeMediaJobs.has(`coding-${jobId}`)) return;
-  activeMediaJobs.add(`coding-${jobId}`);
+  if (!window.activeMediaJobs) window.activeMediaJobs = new Set();
+  if (!jobId || window.activeMediaJobs.has(`coding-${jobId}`)) return;
+  window.activeMediaJobs.add(`coding-${jobId}`);
 
   const started = Date.now();
   const maxPollMs = 30 * 60 * 1000;
   const pollDelay = () => (isNativeApp() ? 3000 : 1500);
 
   const finishJob = () => {
-    activeMediaJobs.delete(`coding-${jobId}`);
+    window.activeMediaJobs.delete(`coding-${jobId}`);
   };
 
   const tick = async () => {
@@ -1623,95 +1515,13 @@ async function pollCodingJob(jobId, messageEl) {
         return;
       }
       setTimeout(tick, pollDelay());
-    } catch (_) {
+    } catch (err) {
       if (Date.now() - started < maxPollMs) {
         setTimeout(tick, pollDelay() + 500);
       } else {
         finishJob();
-      }
-    }
-  };
-  tick();
-}
-
-window.jarvisPollCodingJob = pollCodingJob;
-
-async function pollMediaJob(jobId, messageEl) {
-  if (!jobId || activeMediaJobs.has(jobId)) return;
-  activeMediaJobs.add(jobId);
-  syncMediaBusyClass();
-  trackMediaJob(jobId);
-  const started = Date.now();
-  const maxPollMs = 10 * 60 * 1000;
-  const pollDelay = () => (isNativeApp() ? 5000 : 2200);
-
-  const finishJob = () => {
-    activeMediaJobs.delete(jobId);
-    syncMediaBusyClass();
-    untrackMediaJob(jobId);
-  };
-
-  const tick = async () => {
-    try {
-      const res = await fetch(`/api/media/job/${encodeURIComponent(jobId)}`);
-      if (!res.ok) {
-        if (res.status === 404 && Date.now() - started > 8000) {
-          finishJob();
-          const body = messageEl?.querySelector?.(".msg-body") || messageEl;
-          if (body) {
-            body.insertAdjacentHTML(
-              "beforeend",
-              '<p class="warn">Lost track of this job after a server restart. Check <strong>Gallery</strong> for your image.</p>',
-            );
-          }
-          return;
-        }
-        if (Date.now() - started < maxPollMs) {
-          setTimeout(tick, pollDelay());
-          return;
-        }
-        finishJob();
-        return;
-      }
-      const data = await res.json();
-      if (!data.ok) {
-        if (Date.now() - started < maxPollMs) {
-          setTimeout(tick, pollDelay());
-          return;
-        }
-        finishJob();
-        return;
-      }
-      const body = messageEl?.querySelector?.(".msg-body") || messageEl;
-      if (body) {
-        let note = body.querySelector(".media-job-status");
-        if (!note) {
-          note = document.createElement("p");
-          note.className = "media-job-status muted";
-          body.appendChild(note);
-        }
-        note.textContent = data.message || "Working…";
-      }
-      if (data.done) {
-        finishJob();
-        if (data.result?.ok) {
-          markMediaJobShown(jobId);
-          handleDone(data.result, data.result.message || "", false, { targetBody: body, replaceQueued: true });
-        } else if (body) {
-          body.insertAdjacentHTML(
-            "beforeend",
-            `<p class="warn">${escapeHtml(data.error || data.result?.message || "Media job failed")}</p>`,
-          );
-        }
-        return;
-      }
-      setTimeout(tick, pollDelay());
-    } catch (err) {
-      if (Date.now() - started < maxPollMs) setTimeout(tick, pollDelay());
-      else {
-        finishJob();
         window.showAriaToast?.(
-          `Media job polling failed: ${err?.message || err}`,
+          `Coding job polling failed: ${err?.message || err}`,
           "err",
           5000,
         );
@@ -1720,6 +1530,10 @@ async function pollMediaJob(jobId, messageEl) {
   };
   tick();
 }
+
+window.jarvisPollCodingJob = pollCodingJob;
+
+// pollMediaJob → media_jobs.js
 
 function handleDone(data, text, streamed = false, options = {}) {
   if (isNativeApp() && data?.proposal_id) {
@@ -1925,7 +1739,7 @@ function handleDone(data, text, streamed = false, options = {}) {
   ) {
     const msg = options.targetBody?.closest?.(".message")
       || document.querySelector(".message.assistant:last-child");
-    pollMediaJob(data.job_id, msg);
+    window.pollMediaJob?.(data.job_id, msg);
   }
 
   if (data.memory_citations?.length) {
@@ -2277,7 +2091,7 @@ async function pollLive() {
     const res = await fetch("/api/live");
     if (!res.ok) {
       jarvisServerWasDown = true;
-      if (statusText && activeMediaJobs.size > 0) {
+      if (statusText && (window.activeMediaJobs?.size || 0) > 0) {
         statusText.textContent = "Server reconnecting — image job still running…";
       }
       return;
@@ -2286,7 +2100,7 @@ async function pollLive() {
     if (jarvisServerWasDown) {
       jarvisServerWasDown = false;
       if (statusText) {
-        statusText.textContent = activeMediaJobs.size > 0
+        statusText.textContent = (window.activeMediaJobs?.size || 0) > 0
           ? "Server back — finishing image job…"
           : `Ready · v${data.version || "?"}`;
       }
@@ -2443,7 +2257,6 @@ function switchToView(view) {
 window.switchToView = switchToView;
 window.renderServices = renderServices;
 window.addMessage = addMessage;
-window.pollMediaJob = pollMediaJob;
 
 
 
@@ -2489,7 +2302,7 @@ window.ariaPostStartup = function ariaPostStartup() {
     window.loadComfyMode?.();
     loadGpuStatus();
     window.loadVisionSettings?.();
-    window.loadBranches?.().then(() => window.reloadBranchMessages?.().then(() => resumePendingMediaJobs()));
+    window.loadBranches?.().then(() => window.reloadBranchMessages?.().then(() => window.resumePendingMediaJobs?.()));
     window.loadPersonality?.();
     window.loadChatModelSelect?.();
     window.maybeShowProfileQuestionnaire?.();

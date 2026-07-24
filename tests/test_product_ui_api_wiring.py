@@ -292,11 +292,13 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/crop_webcam.js").is_file()
     assert Path("jarvis/gui/static/vision_drop.js").is_file()
     assert Path("jarvis/gui/static/attachment_compare.js").is_file()
+    assert Path("jarvis/gui/static/media_jobs.js").is_file()
     assert "coding_quick.js" in html
     assert "chat_media.js" in html
     assert "crop_webcam.js" in html
     assert "vision_drop.js" in html
     assert "attachment_compare.js" in html
+    assert "media_jobs.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
@@ -319,15 +321,20 @@ def test_command_palette_is_wired():
     assert "set pendingFile(v)" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "window.initVisionDropPaste" in Path("jarvis/gui/static/vision_drop.js").read_text(encoding="utf-8")
     assert "assignMultipleAttachments" in Path("jarvis/gui/static/attachment_compare.js").read_text(encoding="utf-8")
-    assert "Could not resume media jobs" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "Could not resume media jobs" in Path("jarvis/gui/static/media_jobs.js").read_text(encoding="utf-8")
+    assert "async function pollMediaJob" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "window.pollMediaJob" in Path("jarvis/gui/static/media_jobs.js").read_text(encoding="utf-8") or "pollMediaJob," in Path("jarvis/gui/static/media_jobs.js").read_text(encoding="utf-8")
+    assert "projectsEmptyCreateBtn" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
     assert "Lost contact while installing NSFW" in Path("jarvis/gui/static/image_engine.js").read_text(encoding="utf-8")
     assert "mcEmptyActivityDashBtn" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "docsEmptyChatBtn" in Path("jarvis/gui/static/documents.js").read_text(encoding="utf-8")
     assert "securityEmptyPresenceBtn" in Path("jarvis/gui/static/security_settings.js").read_text(encoding="utf-8")
     assert "makerEmptyHelloBtn" in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
     assert "flyEmptyScanBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
+    assert "flyEmptyVideoBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
+    assert "Coding job polling failed" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "Could not load voice settings" in Path("jarvis/gui/static/voice_bar.js").read_text(encoding="utf-8")
-    assert "Media job resume failed" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "Media job resume failed" in Path("jarvis/gui/static/media_jobs.js").read_text(encoding="utf-8")
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showGeneratedImage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showAudioPlayer" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")

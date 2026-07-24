@@ -840,7 +840,8 @@
       return blob.includes(q);
     });
     if (!filtered.length) {
-      list.innerHTML = '<li class="muted">No videos found</li>';
+      list.innerHTML = '<li class="muted">No videos found. <button type="button" class="ghost-btn tiny" id="flyEmptyVideoBtn">Open Video studio</button></li>';
+      list.querySelector("#flyEmptyVideoBtn")?.addEventListener("click", () => window.switchToView?.("video"));
       return;
     }
     list.innerHTML = filtered

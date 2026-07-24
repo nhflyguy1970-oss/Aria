@@ -52,7 +52,15 @@ async function loadProjects() {
       list.appendChild(li);
     }
     if (!(data.projects || []).length) {
-      list.innerHTML = '<li class="muted">No projects yet.</li>';
+      list.innerHTML =
+        '<li class="muted">No projects yet. <button type="button" class="ghost-btn tiny" id="projectsEmptyCreateBtn">Create project</button> or <button type="button" class="ghost-btn tiny" id="projectsEmptyChatBtn">ask Chat</button></li>';
+      list.querySelector("#projectsEmptyCreateBtn")?.addEventListener("click", () => {
+        $("projectsTitleInput")?.focus();
+      });
+      list.querySelector("#projectsEmptyChatBtn")?.addEventListener("click", () => {
+        window.switchToView?.("chat");
+        window.jarvisSendToChat?.("Create a new project named ");
+      });
     }
   } catch (e) {
     if (list) list.innerHTML = `<li class="muted">${e.message}</li>`;
