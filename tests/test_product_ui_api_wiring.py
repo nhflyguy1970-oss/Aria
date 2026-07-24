@@ -296,6 +296,7 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/coding_jobs.js").is_file()
     assert Path("jarvis/gui/static/media_urls.js").is_file()
     assert Path("jarvis/gui/static/coding_proposals.js").is_file()
+    assert Path("jarvis/gui/static/chat_images.js").is_file()
     assert "coding_quick.js" in html
     assert "chat_media.js" in html
     assert "crop_webcam.js" in html
@@ -305,6 +306,7 @@ def test_command_palette_is_wired():
     assert "coding_jobs.js" in html
     assert "media_urls.js" in html
     assert "coding_proposals.js" in html
+    assert "chat_images.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
@@ -342,6 +344,9 @@ def test_command_palette_is_wired():
     assert "async function pollCodingJob" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function resolveVideoUrl" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function attachProposalExtras" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "function resolveImageUrl" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "function resolveImageUrl" in Path("jarvis/gui/static/chat_images.js").read_text(encoding="utf-8")
+    assert "appendGeneratedImage," in Path("jarvis/gui/static/chat_images.js").read_text(encoding="utf-8")
     assert "attachProposalExtras," in Path("jarvis/gui/static/coding_proposals.js").read_text(encoding="utf-8")
     assert "Failed to apply changes" in Path("jarvis/gui/static/coding_proposals.js").read_text(encoding="utf-8")
     assert "calEmptyAddBtn" in Path("jarvis/gui/static/calendar.js").read_text(encoding="utf-8")
@@ -361,7 +366,7 @@ def test_command_palette_is_wired():
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showGeneratedImage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showAudioPlayer" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
-    assert "window.appendGeneratedImage" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "appendGeneratedImage," in Path("jarvis/gui/static/chat_images.js").read_text(encoding="utf-8")
     assert "aria-labelledby=\"cropModalTitle\"" in html
     assert "aria-labelledby=\"haSetupModalTitle\"" in html
     assert "cropModal" in Path("jarvis/gui/static/modal_chrome.js").read_text(encoding="utf-8")

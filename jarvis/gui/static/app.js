@@ -259,6 +259,7 @@ function ensureMessageCopyAction(messageDiv, body) {
 const GALLERY_THUMB_MAX = 384;
 window.GALLERY_THUMB_MAX = GALLERY_THUMB_MAX;
 const CHAT_IMAGE_THUMB_MAX = 320;
+window.CHAT_IMAGE_THUMB_MAX = CHAT_IMAGE_THUMB_MAX;
 
 function isNativeApp() {
   return document.documentElement.classList.contains("jarvis-app");
@@ -277,122 +278,7 @@ function mediaWorkActive() {
 }
 window.mediaWorkActive = mediaWorkActive;
 
-function resolveImageUrl(imgPath, { thumb = false, thumbMax = CHAT_IMAGE_THUMB_MAX } = {}) {
-  if (!imgPath) return "";
-  const file = imgPath.split(/[/\\]/).pop();
-  let url;
-  if (/\/uploads[/\\]/i.test(imgPath)) {
-    url = `/api/uploads/${encodeURIComponent(file)}`;
-  } else if (/\/generated[/\\]memes[/\\]/i.test(imgPath)) {
-    url = `/api/meme-gallery/${encodeURIComponent(file)}`;
-  } else if (/\/generated[/\\]/i.test(imgPath)) {
-    const base = `/api/gallery/${encodeURIComponent(file)}`;
-    url = thumb ? `${base}?max=${thumbMax}` : base;
-  } else {
-    url = `/api/audio/file?path=${encodeURIComponent(imgPath)}`;
-  }
-  return apiAuthUrl(url);
-}
-
-function galleryViewVisible() {
-  const el = document.getElementById("galleryView");
-  return el && !el.classList.contains("hidden");
-}
-window.galleryViewVisible = galleryViewVisible;
-window.resolveImageUrl = resolveImageUrl;
-
-async function appendImageFigure(container, imgPath, imageName, caption, { thumb = true } = {}) {
-  if (!container || !imgPath || !/\.(png|jpe?g|webp|gif|bmp)$/i.test(imgPath)) return;
-  const file = imageName || imgPath.split(/[/\\]/).pop();
-  const url = resolveImageUrl(imgPath, { thumb });
-  const fullUrl = resolveImageUrl(imgPath, { thumb: false });
-  const label = caption || file;
-  const pathAttr = escapeHtml(imgPath);
-  const fig = document.createElement("figure");
-  fig.className = "gen-image";
-  fig.dataset.imagePath = imgPath;
-  const img = document.createElement("img");
-  img.alt = file;
-  img.loading = "lazy";
-  img.decoding = "async";
-  img.className = "clickable-image";
-  img.dataset.imagePath = imgPath;
-  img.title = "Click to view and edit";
-  img.dataset.fullSrc = fullUrl;
-  const cap = document.createElement("figcaption");
-  cap.textContent = label;
-  fig.appendChild(img);
-  fig.appendChild(cap);
-  container.appendChild(fig);
-  attachMediaLoadError(img, "image");
-  if (!mediaNeedsApiKey() || isNativeApp()) {
-    img.src = url;
-    bindClickableImages(container);
-    return;
-  }
-  const key = getStoredApiKey();
-  if (key) {
-    try {
-      const res = await fetch(fullUrl);
-      if (res.ok) {
-        const blob = await res.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        img.dataset.fullSrc = blobUrl;
-        if (thumb && url !== fullUrl) {
-          const thumbRes = await fetch(url);
-          img.src = thumbRes.ok ? URL.createObjectURL(await thumbRes.blob()) : blobUrl;
-        } else {
-          img.src = blobUrl;
-        }
-      } else {
-        img.src = url;
-      }
-    } catch {
-      img.src = url;
-    }
-  } else {
-    img.src = url;
-  }
-  bindClickableImages(container);
-}
-
-function appendImageReveal(container, imgPath, imageName, caption) {
-  if (!container || !imgPath) return;
-  const file = imageName || imgPath.split(/[/\\]/).pop();
-  const label = caption || file;
-  const fig = document.createElement("figure");
-  fig.className = "gen-image gen-image-reveal";
-  fig.dataset.imagePath = imgPath;
-  fig.innerHTML =
-    `<button type="button" class="gen-image-reveal-btn">Show image · ${escapeHtml(file)}</button>`
-    + `<figcaption>${escapeHtml(label)}</figcaption>`;
-  fig.querySelector(".gen-image-reveal-btn")?.addEventListener("click", () => {
-    const cap = fig.querySelector("figcaption")?.textContent || file;
-    fig.remove();
-    appendImageFigure(container, imgPath, file, cap);
-  });
-  container.appendChild(fig);
-}
-
-function bindClickableImages(container) {
-  window.bindClickableImages = bindClickableImages;
-  if (!container) return;
-  container.querySelectorAll(".gen-image img, .gallery-item > img").forEach((img) => {
-    if (img.dataset.lightboxBound) return;
-    img.dataset.lightboxBound = "1";
-    img.classList.add("clickable-image");
-    if (!img.title) img.title = "Click to view and edit";
-    img.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const figure = img.closest(".gen-image");
-      const path = img.dataset.imagePath || figure?.dataset.imagePath || "";
-      const full = img.dataset.fullSrc || img.src;
-      window.openImageLightbox?.(full, img.alt || "", path, img.src);
-    });
-  });
-}
-
-// media lightbox / queueImageEdit / inpaint → media_lightbox.js
+// Image URL/figure helpers → chat_images.js
 
 function applyAssistantMeta(messageEl, meta) {
   const bubble = messageEl?.querySelector?.(".bubble") || messageEl?.closest?.(".message")?.querySelector?.(".bubble");
@@ -411,11 +297,7 @@ function applyAssistantMeta(messageEl, meta) {
   }
 }
 
-function appendGeneratedImage(container, imgPath, imageName) {
-  const cap = imageName || imgPath.split(/[/\\]/).pop();
-  if (isNativeApp()) appendImageReveal(container, imgPath, imageName, cap);
-  else appendImageFigure(container, imgPath, imageName, cap);
-}
+// appendGeneratedImage → chat_images.js
 
 function buildVisionMessageHtml(text) {
   return formatMessage((text || "").trim() || "Image analysis complete.");
@@ -1116,10 +998,10 @@ function handleDone(data, text, streamed = false, options = {}) {
       const row = document.createElement("div");
       row.className = "compare-images-row";
       data.compare_paths.forEach((p, i) => {
-        appendImageFigure(row, p, null, `Image ${i + 1}`);
+        window.appendImageFigure(row, p, null, `Image ${i + 1}`);
       });
       if (data.diff_path) {
-        appendImageFigure(row, data.diff_path, null, "Visual diff (A | B | changes)");
+        window.appendImageFigure(row, data.diff_path, null, "Visual diff (A | B | changes)");
       }
       body.appendChild(row);
       scrollMessageIntoView(body, "start");
@@ -1161,7 +1043,7 @@ function handleDone(data, text, streamed = false, options = {}) {
     }
     if (body) {
       body.innerHTML = buildVisionMessageHtml(text || data.message);
-      appendImageFigure(body, imgPath, data.image_name, "Analyzed image");
+      window.appendImageFigure(body, imgPath, data.image_name, "Analyzed image");
       scrollMessageIntoView(body, "start");
     }
   } else if (hasImage) {
@@ -1180,7 +1062,7 @@ function handleDone(data, text, streamed = false, options = {}) {
       body.innerHTML = buildImageMessageHtml(data, text || data.message);
       // Defer decode until after ComfyUI releases GPU — avoids WebKit OOM on job finish.
       const mountImg = () => {
-        appendGeneratedImage(body, imgPath, data.image_name);
+        window.appendGeneratedImage(body, imgPath, data.image_name);
         scrollMessageIntoView(body, "start");
       };
       if (options.replaceQueued) setTimeout(mountImg, isNativeApp() ? 2500 : 600);
@@ -1289,8 +1171,8 @@ function handleDone(data, text, streamed = false, options = {}) {
       window.jarvisNotify("Coding task done", (text || data.message || "Finished").slice(0, 120));
     }
   }
-  if (hasImage && data.module === "image" && galleryViewVisible() && !isNativeApp()) {
-    setTimeout(() => { if (galleryViewVisible()) window.loadGallery?.(); }, 800);
+  if (hasImage && data.module === "image" && window.galleryViewVisible() && !isNativeApp()) {
+    setTimeout(() => { if (window.galleryViewVisible()) window.loadGallery?.(); }, 800);
   }
 }
 
@@ -1947,7 +1829,6 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-window.appendGeneratedImage = appendGeneratedImage;
 window.resizeMessageInput = resizeMessageInput;
 
 // showGeneratedImage / showAudioPlayer / jarvisSendToChat → chat_media.js
