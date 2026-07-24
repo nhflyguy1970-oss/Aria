@@ -431,6 +431,7 @@ function bindCalendarControls() {
   });
   calEl("calendarOpenPlannerBtn")?.addEventListener("click", () => window.switchToView?.("planner"));
   calEl("calendarOpenJournalBtn")?.addEventListener("click", () => window.switchToView?.("journal"));
+  calEl("calendarOpenDocumentsBtn")?.addEventListener("click", () => window.switchToView?.("documents"));
   calEl("calendarIcsSaveBtn")?.addEventListener("click", saveIcsUrl);
   calEl("calendarIcsTestBtn")?.addEventListener("click", testIcsUrl);
 }

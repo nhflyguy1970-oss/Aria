@@ -226,7 +226,7 @@ function renderPhotosBlock(day, photos) {
     <figure class="bujo-photo" data-id="${escapeHtml(p.id)}">
       <img src="/api/journal/photos/${encodeURIComponent(p.filename)}" alt="${escapeHtml(p.caption || "Day photo")}" loading="lazy" />
       ${p.caption ? `<figcaption>${escapeHtml(p.caption)}</figcaption>` : ""}
-      <button type="button" class="bujo-act bujo-photo-del" data-id="${escapeHtml(p.id)}" title="Remove photo">✕</button>
+      <button type="button" class="bujo-act bujo-photo-del" data-id="${escapeHtml(p.id)}" title="Remove photo" aria-label="Remove photo">✕</button>
     </figure>`).join("");
   return `<div class="bujo-photos" data-day="${escapeHtml(day)}">
     <h4>Photos</h4>
@@ -303,7 +303,7 @@ function renderBulletMenu(b, showThread = false) {
   items.push(`<button type="button" class="bujo-act${sigs.includes("inspiration") ? " on" : ""}" data-act="sig" data-sig="inspiration" data-id="${b.id}" title="Inspiration">! inspiration</button>`);
   items.push(`<button type="button" class="bujo-act${sigs.includes("explore") ? " on" : ""}" data-act="sig" data-sig="explore" data-id="${b.id}" title="Explore">👁 explore</button>`);
   items.push(`<button type="button" class="bujo-act" data-act="remember" data-id="${b.id}" title="Save to memory">★ remember</button>`);
-  items.push(`<button type="button" class="bujo-act" data-act="del" data-id="${b.id}" title="Delete">✕ delete</button>`);
+    items.push(`<button type="button" class="bujo-act" data-act="del" data-id="${b.id}" title="Delete" aria-label="Delete entry">✕ delete</button>`);
   return `<details class="bujo-menu">
     <summary class="bujo-act bujo-menu-toggle" title="More actions">⋯</summary>
     <div class="bujo-menu-panel">${items.join("")}</div>
@@ -324,7 +324,7 @@ function renderBulletItem(b, editable, showThread = false) {
       <span class="bujo-text${bulletTextClass(b)}" data-editable="${editable ? "1" : "0"}">${timeTag}${escapeHtml(b.content)}</span>
       ${links ? `<span class="bujo-links">${links}</span>` : ""}
       ${editable ? `<span class="bujo-actions">
-        ${openTask ? `<button type="button" class="bujo-act" data-act="done" data-id="${b.id}" title="Complete">×</button>` : ""}
+        ${openTask ? `<button type="button" class="bujo-act" data-act="done" data-id="${b.id}" title="Complete" aria-label="Mark complete">×</button>` : ""}
         ${openTask ? `<button type="button" class="bujo-act" data-act="migrate" data-id="${b.id}" title="Migrate to tomorrow">›</button>` : ""}
         ${renderBulletMenu(b, showThread)}
       </span>` : ""}
@@ -1006,7 +1006,7 @@ async function loadIndex() {
     ).join(", ");
     const auto = e.auto ? '<span class="bujo-index-auto">auto</span>' : "";
     return `<tr><td>${escapeHtml(e.topic)} ${auto}</td><td>${pages || "—"}</td>
-     <td><button type="button" class="bujo-act" data-act="idx-del" data-id="${e.id}">✕</button></td></tr>`;
+     <td><button type="button" class="bujo-act" data-act="idx-del" data-id="${e.id}" title="Delete index entry" aria-label="Delete index entry">✕</button></td></tr>`;
   }).join("");
   bujoContent.innerHTML = `
     <h3>Index</h3>
@@ -1776,6 +1776,10 @@ document.getElementById("journalOpenPlannerBtn")?.addEventListener("click", () =
 
 document.getElementById("journalOpenMemoryBtn")?.addEventListener("click", () => {
   window.switchToView?.("memory");
+});
+
+document.getElementById("journalOpenAudioBtn")?.addEventListener("click", () => {
+  window.switchToView?.("audio");
 });
 
 document.getElementById("journalPrintBtn")?.addEventListener("click", () => {

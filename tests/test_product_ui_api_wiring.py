@@ -274,7 +274,10 @@ def test_command_palette_is_wired():
     assert "search:gallery-prompt" in js
     assert "presenceOpenSecurityBtn" in html
     assert "journalOpenCalendarBtn" in html
+    assert "journalOpenAudioBtn" in html
     assert "memoryOpenJournalBtn" in html
+    assert "memoryOpenDocumentsBtn" in html
+    assert "calendarOpenDocumentsBtn" in html
     assert "memoryOpenProjectsBtn" in html
     assert "projectsOpenMemoryBtn" in html
     assert "documentsOpenMemoryBtn" in html

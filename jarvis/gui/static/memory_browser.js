@@ -619,6 +619,9 @@ function initMemoryBrowser() {
   document.getElementById("memoryOpenBrowserBtn")?.addEventListener("click", () => {
     window.switchToView?.("browser");
   });
+  document.getElementById("memoryOpenDocumentsBtn")?.addEventListener("click", () => {
+    window.switchToView?.("documents");
+  });
   document.getElementById("memoryExportBtn")?.addEventListener("click", async () => {
     try {
       const res = await fetch("/api/memory/export");
