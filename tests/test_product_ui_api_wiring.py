@@ -295,6 +295,9 @@ def test_command_palette_is_wired():
     assert "crop_webcam.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
+    assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
+    assert "window.jarvisSendToChat =" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "actionsEmptyChatBtn" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "window.openCropModal" in Path("jarvis/gui/static/crop_webcam.js").read_text(encoding="utf-8")
     assert "window.captureWebcamAttachment" in Path("jarvis/gui/static/crop_webcam.js").read_text(encoding="utf-8")
     assert "window.jarvisAttach" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")

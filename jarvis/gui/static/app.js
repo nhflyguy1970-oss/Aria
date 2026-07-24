@@ -2827,16 +2827,9 @@ document.addEventListener("keydown", (e) => {
 });
 
 window.appendGeneratedImage = appendGeneratedImage;
+window.resizeMessageInput = resizeMessageInput;
 
-// showGeneratedImage / showAudioPlayer → chat_media.js
-
-window.jarvisSendToChat = (text) => {
-  if (!text) return;
-  messageInput.value = text;
-  document.querySelector('.view-tab[data-view="chat"]')?.click();
-  messageInput.focus();
-  resizeMessageInput();
-};
+// showGeneratedImage / showAudioPlayer / jarvisSendToChat → chat_media.js
 
 // debug bundle → profile_controls.js
 

@@ -768,7 +768,8 @@
           + `<strong>${escapeHtml(a.action || a.event || "")}</strong> `
           + `${a.module ? `<code>${escapeHtml(a.module)}</code> ` : ""}`
           + `${escapeHtml((a.detail || "").slice(0, 80))}</li>`).join("")
-        : "<li class='muted'>No actions logged yet.</li>";
+        : "<li class='muted'>No actions logged yet. <button type='button' class='ghost-btn tiny' id='actionsEmptyChatBtn'>Open Chat</button></li>";
+      el.querySelector("#actionsEmptyChatBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
     } catch (err) {
       el.innerHTML = "<li>Could not load actions.</li>";
       window.showAriaToast?.(err?.message || "Could not load actions", "err", 5000);

@@ -26,4 +26,15 @@
 
   window.showGeneratedImage = showGeneratedImage;
   window.showAudioPlayer = showAudioPlayer;
+
+  window.jarvisSendToChat = (text) => {
+    if (!text) return;
+    const input = document.getElementById("messageInput");
+    if (input) input.value = text;
+    window.switchToView?.("chat") || document.querySelector('.view-tab[data-view="chat"]')?.click();
+    setTimeout(() => {
+      input?.focus();
+      if (typeof window.resizeMessageInput === "function") window.resizeMessageInput();
+    }, 40);
+  };
 })();
