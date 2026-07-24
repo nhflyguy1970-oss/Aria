@@ -177,6 +177,23 @@
         },
       },
       {
+        id: "act:models-editor",
+        label: "Open models editor",
+        group: "System",
+        keywords: "ollama settings roles",
+        run: () => {
+          const ed = $("modelsEditor");
+          const tog = $("modelsToggle");
+          ed?.classList.remove("hidden");
+          tog?.setAttribute("aria-expanded", "true");
+          // expand models sidebar section if collapsed
+          const sec = ed?.closest(".sidebar-section");
+          if (sec?.classList.contains("collapsed")) sec.querySelector(".sidebar-section-head")?.click();
+          window.loadModelSettings?.();
+          window.showAriaToast?.("Models editor", "ok", 2000);
+        },
+      },
+      {
         id: "act:pull-models",
         label: "Pull missing models",
         group: "System",
