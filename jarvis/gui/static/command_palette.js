@@ -540,6 +540,16 @@
         },
       },
       {
+        id: "act:run-research",
+        label: "Run knowledge research now",
+        group: "Actions",
+        keywords: "nightly briefs learn memory knowledge",
+        run: () => {
+          goView("memory");
+          setTimeout(() => $("knowledgeResearchRunBtn")?.click(), 120);
+        },
+      },
+      {
         id: "act:open-meme",
         label: "Open Meme studio",
         group: "Actions",

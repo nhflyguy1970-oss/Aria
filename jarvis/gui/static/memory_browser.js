@@ -365,8 +365,17 @@ async function runKnowledgeResearchNow() {
 }
 
 async function loadKnowledgeResearchPanel() {
-  const rRes = await fetch("/api/knowledge/research");
-  if (!rRes.ok) return;
+  let rRes;
+  try {
+    rRes = await fetch("/api/knowledge/research");
+  } catch (e) {
+    window.showAriaToast?.(e.message || "Could not load research", "err", 5000);
+    return;
+  }
+  if (!rRes.ok) {
+    window.showAriaToast?.(`Could not load research (${rRes.status})`, "err", 5000);
+    return;
+  }
   const rData = await rRes.json();
   const topicsEl = document.getElementById("knowledgeResearchTopics");
   if (topicsEl) {
@@ -379,7 +388,14 @@ async function loadKnowledgeResearchPanel() {
     const last = rData.last_run_day ? ` · last run ${window.escapeHtml(rData.last_run_day)}` : "";
     rEl.innerHTML = briefs.length
       ? briefs.map((b) => renderKnowledgeResearchBrief(b)).join("") + `<li class="muted">${briefs.length} brief(s)${last}</li>`
-      : `<li class="muted">No nightly research yet${last} — click Run research now or wait for 11 PM.</li>`;
+      : `<li class="muted">No nightly research yet${last}. <button type="button" class="ghost-btn tiny" id="researchEmptyRunBtn">Run research now</button> or <button type="button" class="ghost-btn tiny" id="researchEmptyChatBtn">ask Chat</button>.</li>`;
+    rEl.querySelector("#researchEmptyRunBtn")?.addEventListener("click", () => {
+      document.getElementById("knowledgeResearchRunBtn")?.click();
+    });
+    rEl.querySelector("#researchEmptyChatBtn")?.addEventListener("click", () => {
+      window.switchToView?.("chat");
+      window.jarvisSendToChat?.("Run nightly knowledge research now");
+    });
     rEl.querySelectorAll(".knowledge-research-link").forEach((btn) => {
       btn.onclick = async () => {
         const slug = btn.dataset.slug;
@@ -451,7 +467,11 @@ async function loadMemoryBrowser() {
       const topics = kData.topics || [];
       kEl.innerHTML = topics.length
         ? topics.map((t) => `<li><strong>${window.escapeHtml(t.title || t.slug)}</strong> <code>${window.escapeHtml(t.slug || "")}</code></li>`).join("")
-        : "<li>No knowledge briefs yet — say <em>learn about: …</em></li>";
+        : `<li>No knowledge briefs yet. <button type="button" class="ghost-btn tiny" id="knowledgeEmptyChatBtn">Ask Chat</button> — say <em>learn about: …</em></li>`;
+      kEl.querySelector("#knowledgeEmptyChatBtn")?.addEventListener("click", () => {
+        window.switchToView?.("chat");
+        window.jarvisSendToChat?.("learn about: ");
+      });
     }
   } catch (err) {
     window.showAriaToast?.(err?.message || "Knowledge topics unavailable", "err", 4000);

@@ -1,22 +1,27 @@
 /** Video studio — keyframe checkpoints, gallery, upload, trim, frame analysis. */
 
-function resolveVideoUrl(pathOrName, { playback = true } = {}) {
-  if (typeof window.resolveVideoPlaybackUrl === "function" && playback) {
-    const raw = (pathOrName || "").split(/[/\\]/).pop();
-    if (!raw) return "";
-    let file = raw.replace(/\.(mp4|mov|m4v|mkv|avi)$/i, ".webm");
-    const base = `/api/video-gallery/${encodeURIComponent(file)}`;
-    if (typeof window.mediaNeedsApiKey === "function"
-      && typeof window.isSameMachineHost === "function"
-      && (window.mediaNeedsApiKey() && !window.isSameMachineHost())) {
-      return typeof window.apiAuthUrl === "function" ? window.apiAuthUrl(base) : base;
-    }
-    return base;
-  }
+function videoStudioResolveUrl(pathOrName, { playback = true } = {}) {
   const file = (pathOrName || "").split(/[/\\]/).pop();
   if (!file) return "";
-  const base = `/api/video-gallery/${encodeURIComponent(file)}`;
+  let name = file;
+  if (playback && !/\.webm$/i.test(name)) {
+    name = name.replace(/\.(mp4|mov|m4v|mkv|avi)$/i, ".webm");
+  }
+  const base = `/api/video-gallery/${encodeURIComponent(name)}`;
+  if (typeof window.mediaNeedsApiKey === "function"
+      && typeof window.isSameMachineHost === "function"
+      && window.mediaNeedsApiKey() && !window.isSameMachineHost()) {
+    return typeof window.apiAuthUrl === "function" ? window.apiAuthUrl(base) : base;
+  }
   return typeof window.apiAuthUrl === "function" ? window.apiAuthUrl(base) : base;
+}
+
+function resolveVideoUrlForStudio(pathOrName, opts) {
+  // Prefer shared media_urls helper when present (loaded after this file).
+  if (typeof window.resolveVideoUrl === "function") {
+    return window.resolveVideoUrl(pathOrName, opts);
+  }
+  return videoStudioResolveUrl(pathOrName, opts);
 }
 
 function attachVideoLoadError(video) {
@@ -54,7 +59,7 @@ async function appendGalleryVideo(videoEl, fileName) {
       return;
     }
   }
-  videoEl.src = resolveVideoUrl(fileName);
+  videoEl.src = resolveVideoUrlForStudio(fileName);
 }
 
 let videoSettingsBusy = false;
@@ -483,7 +488,7 @@ async function pollStoryboardJob(jobId, statusEl) {
       if (data.done) {
         const result = data.result || {};
         if (result.ok && result.video_path) {
-          const url = resolveVideoUrl(result.video_path);
+          const url = resolveVideoUrlForStudio(result.video_path);
           if (statusEl) {
             statusEl.innerHTML = `Ready: <a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(result.video_path.split(/[/\\]/).pop())}</a>`;
           }

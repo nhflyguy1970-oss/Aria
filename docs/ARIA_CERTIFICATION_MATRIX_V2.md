@@ -43,11 +43,11 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: …/coding_proposals/**chat_images** extracts; empty-state CTAs (+Calendar/Audio); live reconnect + fork toasts; apply/undo/diff load toasts. `app.js` ~**1839** lines.
+- FIXED & CERTIFIED: …/coding_proposals/**chat_images**/**chat_progress** extracts; empty-state CTAs (+Calendar/Audio/Knowledge research); live reconnect + fork toasts; apply/undo/diff load toasts; `act:run-research`. Removed `app.js` `const resolveVideoUrl` shim that **broke boot** (conflict with `video_studio.js` global). `app.js` ~**1762** lines.
 - INTENTIONALLY DEFERRED: chat/stream/sendMessage still in app.js (core pipeline); long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 
-**Next priorities:** chat-stream/sendMessage extract; showProgress/chat UI extract; long-duration memory-leak soak; multi-monitor native; Comfy/HA deep soaks; per-control matrix completion.
+**Next priorities:** chat-stream/sendMessage extract; long-duration memory-leak soak; multi-monitor native; Comfy/HA deep soaks; per-control matrix completion.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.

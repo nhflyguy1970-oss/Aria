@@ -29,14 +29,7 @@
 })();
 
 // Media URL/auth helpers → media_urls.js (window.apiAuthUrl / resolveVideo* / attachMediaLoadError)
-const getStoredApiKey = (...a) => window.getStoredApiKey?.(...a) ?? (sessionStorage.getItem("jarvis_api_key") || "");
-const apiAuthUrl = (...a) => window.apiAuthUrl?.(...a);
-const isSameMachineHost = (...a) => window.isSameMachineHost?.(...a) ?? (location.hostname === "localhost" || location.hostname === "127.0.0.1");
-const mediaNeedsApiKey = (...a) => window.mediaNeedsApiKey?.(...a) ?? false;
-const fetchMediaBlobUrl = (...a) => window.fetchMediaBlobUrl?.(...a);
-const resolveVideoUrl = (...a) => window.resolveVideoUrl?.(...a);
-const resolveVideoPlaybackUrl = (...a) => window.resolveVideoPlaybackUrl?.(...a);
-const attachMediaLoadError = (...a) => window.attachMediaLoadError?.(...a);
+// Do not redeclare as const/let — video_studio.js already binds resolveVideoUrl globally.
 
 // LAN / API key modal → lan_access.js (window.showApiKeyModal, window.mediaNeedsApiKey)
 
@@ -66,9 +59,6 @@ const modeLabel = document.getElementById("modeLabel");
 const appTitle = document.getElementById("appTitle");
 const appTagline = document.getElementById("appTagline");
 const hudEnv = document.getElementById("hudEnv");
-const progressBar = document.getElementById("progressBar");
-const progressText = document.getElementById("progressText");
-const progressFill = progressBar?.querySelector(".progress-fill");
 const gpuStatusEl = document.getElementById("gpuStatus");
 const pullLogEl = document.getElementById("pullLog");
 
@@ -80,8 +70,6 @@ let pendingVideoSecond = "";
 let pendingPdfPage = "1";
 let visionChips = [];
 let dataChips = [];
-let progressTimer = null;
-let progressStart = 0;
 let lastAssistantText = "";
 let recognition = null;
 let useStreaming = true;
@@ -278,6 +266,20 @@ function mediaWorkActive() {
 }
 window.mediaWorkActive = mediaWorkActive;
 
+window.jarvisChat = {
+  get chatRequestActive() { return chatRequestActive; },
+  set chatRequestActive(v) { chatRequestActive = v; },
+  get chatAbortController() { return chatAbortController; },
+  set chatAbortController(v) { chatAbortController = v; },
+  get chatStopRequested() { return chatStopRequested; },
+  set chatStopRequested(v) { chatStopRequested = v; },
+  get activeStreamText() { return activeStreamText; },
+  set activeStreamText(v) { activeStreamText = v; },
+  get activeChatRequestId() { return activeChatRequestId; },
+  set activeChatRequestId(v) { activeChatRequestId = v; },
+};
+
+
 // Image URL/figure helpers → chat_images.js
 
 function applyAssistantMeta(messageEl, meta) {
@@ -374,14 +376,14 @@ async function appendAuthenticatedVideo(container, videoPath, videoName) {
   video.controls = true;
   video.preload = "metadata";
   video.className = "chat-video-player";
-  attachMediaLoadError(video, "video");
+  window.attachMediaLoadError(video, "video");
   const cap = document.createElement("figcaption");
   cap.textContent = label;
   fig.appendChild(video);
   fig.appendChild(cap);
   container.appendChild(fig);
 
-  const playback = await resolveVideoPlaybackUrl(videoPath);
+  const playback = await window.resolveVideoPlaybackUrl(videoPath);
   if (!playback.ok && playback.needsKey) {
     const warn = document.createElement("p");
     warn.className = "media-load-warn warn small";
@@ -438,13 +440,7 @@ function buildDataTableHtml(preview) {
   return html;
 }
 
-function progressLabel(text) {
-  if (isVideoRequest(text)) return "Rendering keyframe & motion clip…";
-  if (isImageRequest(text)) return "Understanding scene & generating…";
-  if (pendingFile2) return "Comparing images…";
-  if (isVisionAttachment(pendingFile)) return "Analyzing image…";
-  return "Thinking…";
-}
+// progressLabel / showProgress / setChatBusy / stopChat → chat_progress.js
 
 // Coding proposals/diff/apply → coding_proposals.js
 
@@ -543,82 +539,11 @@ async function parseJsonResponse(res) {
   }
 }
 
-function showError(msg) {
-  addMessage("assistant", msg, { type: "info" });
-  statusText.textContent = "Error";
-}
-
-function showProgress(label = "Thinking…") {
-  if (!progressBar) return;
-  progressBar.classList.remove("hidden");
-  if (progressFill) progressFill.style.width = "30%";
-  if (progressText) progressText.textContent = label;
-  progressStart = Date.now();
-  clearInterval(progressTimer);
-  progressTimer = setInterval(() => {
-    const sec = Math.floor((Date.now() - progressStart) / 1000);
-    if (progressText) {
-      progressText.textContent = sec > 0 ? `${label} (${sec}s)` : label;
-    }
-    if (progressFill) {
-      const w = Math.min(90, 30 + sec * 3);
-      progressFill.style.width = `${w}%`;
-    }
-  }, 500);
-}
-
-function hideProgress() {
-  clearInterval(progressTimer);
-  progressTimer = null;
-  if (progressBar) progressBar.classList.add("hidden");
-  if (progressFill) progressFill.style.width = "0%";
-}
-
-function setChatBusy(busy) {
-  chatRequestActive = busy;
-  sendBtn.disabled = busy;
-  sendBtn.classList.toggle("hidden", busy);
-  stopChatBtn?.classList.toggle("hidden", !busy);
-  if (!busy) {
-    chatAbortController = null;
-    chatStopRequested = false;
-    activeStreamText = "";
-  }
-}
-
-function stopChat() {
-  chatStopRequested = true;
-  if (activeChatRequestId) {
-    const fd = new FormData();
-    fd.append("request_id", activeChatRequestId);
-    fetch("/api/chat/cancel", { method: "POST", body: fd })
-      .then(async (res) => {
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.message || err.detail || `Cancel failed (${res.status})`);
-        }
-        window.showAriaToast?.("Generation cancelled", "ok", 2500);
-      })
-      .catch((err) => {
-        window.showAriaToast?.(
-          err?.message || "Could not reach cancel API — stream aborted locally",
-          "err",
-          5000,
-        );
-      });
-  }
-  chatAbortController?.abort();
-  if (statusText) statusText.textContent = "Stopping…";
-}
-
-stopChatBtn?.addEventListener("click", (e) => {
-  e.preventDefault();
-  stopChat();
-});
+// showError / showProgress / hideProgress / setChatBusy / stopChat → chat_progress.js
 
 function finishSendUi() {
-  hideProgress();
-  setChatBusy(false);
+  window.hideProgress?.();
+  window.setChatBusy?.(false);
   pendingFile = null;
   pendingFile2 = null;
   pendingCrop = null;
@@ -633,10 +558,7 @@ function finishSendUi() {
   window.updateCompareButton?.();
 }
 
-function updateProgressStatus(message) {
-  if (progressText) progressText.textContent = message;
-  statusText.textContent = message;
-}
+// updateProgressStatus → chat_progress.js
 
 function isStreamableAttachment(file) {
   if (!file) return false;
@@ -664,7 +586,7 @@ async function forkBranchFromIndex(displayIndex) {
     const res = await fetch("/api/branches/fork", { method: "POST", body: form });
     const data = await res.json();
     if (!data.ok) {
-      showError(data.message || "Could not fork branch.");
+      window.showError(data.message || "Could not fork branch.");
       window.showAriaToast?.(data.message || "Could not fork branch", "err", 5000);
       return;
     }
@@ -674,7 +596,7 @@ async function forkBranchFromIndex(displayIndex) {
     statusText.textContent = `Forked branch: ${name}`;
     window.showAriaToast?.(`Forked branch: ${name}`, "ok", 3000);
   } catch (e) {
-    showError(String(e.message || e));
+    window.showError(String(e.message || e));
     window.showAriaToast?.(String(e.message || e), "err", 5000);
   }
 }
@@ -683,7 +605,7 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
   if (!text.trim() && !pendingFile && !pendingFile2) return;
 
   if (compareMode && pendingFile && !pendingFile2) {
-    showError("Compare needs **two images**. Click **+ Add image 2** in the preview, or click **Compare** and select both files at once.");
+    window.showError("Compare needs **two images**. Click **+ Add image 2** in the preview, or click **Compare** and select both files at once.");
     return;
   }
   if (pendingFile2 && !pendingFile) {
@@ -712,21 +634,21 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
   activeStreamText = "";
   activeChatRequestId = crypto.randomUUID?.() || `req-${Date.now()}`;
   chatAbortController = new AbortController();
-  setChatBusy(true);
-  showProgress(progressLabel(text));
+  window.setChatBusy(true);
+  window.showProgress(window.progressLabel(text));
 
   if (isVideoRequest(text)) {
     const proceed = (await window.vramPreflight?.("generate_video")) !== false;
     if (!proceed) {
-      setChatBusy(false);
-      hideProgress();
+      window.setChatBusy(false);
+      window.hideProgress();
       return;
     }
   } else if (isImageRequest(text)) {
     const proceed = (await window.vramPreflight?.("generate_image")) !== false;
     if (!proceed) {
-      setChatBusy(false);
-      hideProgress();
+      window.setChatBusy(false);
+      window.hideProgress();
       return;
     }
   }
@@ -808,14 +730,14 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
             let event;
             try { event = JSON.parse(line.slice(6)); } catch { continue; }
             if (event.type === "status") {
-              updateProgressStatus(event.message || "Processing…");
+              window.updateProgressStatus(event.message || "Processing…");
               if (body) {
                 body.innerHTML = `<p class="status-hint">${escapeHtml(event.message || "Processing…")}</p>`;
                 messagesEl.scrollTop = messagesEl.scrollHeight;
               }
             } else if (event.type === "agent_step") {
               const label = `${event.action || "step"}: ${event.detail || ""}`;
-              updateProgressStatus(label);
+              window.updateProgressStatus(label);
               if (body && !isNativeApp()) {
                 const steps = body.querySelector(".agent-steps") || document.createElement("div");
                 steps.className = "agent-steps";
@@ -827,7 +749,7 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
                 messagesEl.scrollTop = messagesEl.scrollHeight;
               }
             } else if (event.type === "token") {
-              updateProgressStatus("Generating…");
+              window.updateProgressStatus("Generating…");
               full += event.content;
               activeStreamText = full;
               body.innerHTML = formatMessage(full);
@@ -839,7 +761,7 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
               typing.classList.remove("typing-msg");
               if (!event.ok && !full && !event.image_path) {
                 typing.remove();
-                showError(event.message || "Request failed.");
+                window.showError(event.message || "Request failed.");
                 break;
               }
               const streamed = Boolean(full);
@@ -857,7 +779,7 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
                 handleDone(event, full || event.message, streamed, doneOpts);
               } catch (err) {
                 console.error("handleDone failed", err);
-                showError(`Could not display response: ${err.message || err}`);
+                window.showError(`Could not display response: ${err.message || err}`);
               }
               finishSendUi();
               break;
@@ -877,11 +799,11 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
       } else if (!gotDone) {
         typing.remove();
         if (isVideoRequest(text)) {
-          showError("Video generation did not finish — check the Video tab or try again.");
+          window.showError("Video generation did not finish — check the Video tab or try again.");
         } else if (isImageRequest(text)) {
-          showError("Image generation did not finish — check the Gallery tab or try again.");
+          window.showError("Image generation did not finish — check the Gallery tab or try again.");
         } else if (isCodingAgent) {
-          showError(
+          window.showError(
             `**${ariaName()} lost the coding stream** (the server may have restarted mid-task).\n\n`
             + "Wait a few seconds, then send the same request once — don't auto-retry in a loop."
           );
@@ -894,7 +816,7 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
       const data = await parseJsonResponse(res);
       typing.remove();
       if (!res.ok || data.ok === false) {
-        showError(data.message || "Something went wrong.");
+        window.showError(data.message || "Something went wrong.");
         return;
       }
       handleDone(data, data.message);
@@ -915,15 +837,15 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
     }
     const msg = String(e.message || e);
     if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
-      showError(
+      window.showError(
         `**Lost connection to ${ariaName()}** (the server may have restarted while working).\n\n`
         + "Wait a few seconds and try again. If it keeps happening, use the desktop shortcut or run:\n"
         + "`./scripts/launch-jarvis.sh`"
       );
     } else if (msg.includes("Ollama")) {
-      showError(`**${msg}**\n\n${ariaName()} is starting Ollama automatically — try again in a few seconds.`);
+      window.showError(`**${msg}**\n\n${ariaName()} is starting Ollama automatically — try again in a few seconds.`);
     } else {
-      showError(`**Error:** ${msg}`);
+      window.showError(`**Error:** ${msg}`);
     }
   } finally {
     finishSendUi();
@@ -1017,7 +939,7 @@ function handleDone(data, text, streamed = false, options = {}) {
       body.innerHTML = formatMessage(text || data.message || "");
       if (data.data_preview) body.insertAdjacentHTML("beforeend", buildDataTableHtml(data.data_preview));
       if (data.chart_path) {
-        const chartUrl = apiAuthUrl(`/api/audio/file?path=${encodeURIComponent(data.chart_path)}`);
+        const chartUrl = window.apiAuthUrl(`/api/audio/file?path=${encodeURIComponent(data.chart_path)}`);
         body.insertAdjacentHTML("beforeend", `<figure class="gen-image data-chart"><img src="${chartUrl}" alt="chart" /><figcaption>Chart</figcaption></figure>`);
       }
       if (data.export_path) {
@@ -1121,7 +1043,7 @@ function handleDone(data, text, streamed = false, options = {}) {
   if (data.warnings?.length) showChatWarnings(data.warnings);
   if (data.audio_path) showAudioPlayer(data.audio_path, data.transcript);
   if (data.chart_path && data.module !== "data") {
-    const chartUrl = apiAuthUrl(`/api/audio/file?path=${encodeURIComponent(data.chart_path)}`);
+    const chartUrl = window.apiAuthUrl(`/api/audio/file?path=${encodeURIComponent(data.chart_path)}`);
     const msg = document.querySelector(".message.assistant:last-child .msg-body");
     if (msg) {
       msg.insertAdjacentHTML("beforeend", `<img src="${chartUrl}" alt="chart" style="max-width:100%" />`);
@@ -1232,13 +1154,13 @@ readAloudBtn?.addEventListener("click", async () => {
     const res = await fetch("/api/audio/speak", { method: "POST", body: form });
     const data = await res.json();
     if (!data.ok) {
-      showError(data.message || "Could not play audio.");
+      window.showError(data.message || "Could not play audio.");
       window.showAriaToast?.(data.message || "Could not play audio", "err", 5000);
     } else {
       statusText.textContent = "Ready · Sound Blaster";
     }
   } catch (e) {
-    showError(`Audio playback failed: ${e.message}`);
+    window.showError(`Audio playback failed: ${e.message}`);
     window.showAriaToast?.(`Audio playback failed: ${e.message}`, "err", 5000);
   } finally {
     readAloudBtn.disabled = false;
@@ -1286,10 +1208,11 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
 }
 
 window.sendMessage = sendMessage;
-window.showError = showError;
 window.isNativeApp = isNativeApp;
 window.loadHealth = loadHealth;
 window.isVisionAttachment = isVisionAttachment;
+window.isImageRequest = isImageRequest;
+window.isVideoRequest = isVideoRequest;
 window.isDataAttachment = isDataAttachment;
 window.jarvisAttach = {
   get pendingFile() { return pendingFile; },
