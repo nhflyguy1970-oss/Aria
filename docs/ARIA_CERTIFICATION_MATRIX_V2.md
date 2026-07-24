@@ -42,12 +42,12 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.
 
-## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: Calendar ICS save/test/add-entry toasts; **ICS single source of truth** (Documents deep-links to Calendar; palette `act:ics-wizard` opens Calendar ICS); Ask Aria palette fallback; 4-round 84-switch soak (0 errors).
-- INTENTIONALLY DEFERRED: multi-hour soak; multi-monitor DPI/dock (no multi-display rig); HA live interactive (configured but `connected:false`); Comfy interactive gen (settings API OK, live GPU jobs env-dependent).
+## Wave resume (2026-07-24 late+)
+- FIXED & CERTIFIED: Calendar ICS single source of truth; calendar ICS/add-entry toasts; HA unreachable copy; flytying search `aria-label`; shortcuts help (Ask Aria + world-state); `scripts/aria_ui_soak.py` (30s smoke: 19 rounds, 0 failures, avg 13ms); browser HA Test offline path surfaces Connection refused; multi-res 1280×800: no document overflow; 84-switch soak 0 errors.
+- INTENTIONALLY DEFERRED: multi-hour soak (harness shipped; 15m run in progress); multi-monitor DPI/dock (no multi-display rig — viewport matrix used as proxy); HA live interactive (`connected:false`, connection refused to :8123); Comfy live image gen (settings/link OK, GPU jobs env-dependent); phone-width layouts (desktop product).
 - Verdict: **NO**
 
-**Next priorities:** HA/Comfy interactive when online; multi-hour soak harness; multi-monitor; residual matrix polish.
+**Next priorities:** complete multi-hour soak log; HA/Comfy when services up; multi-monitor when hardware available; residual matrix polish.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.
