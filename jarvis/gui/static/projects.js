@@ -77,19 +77,26 @@ async function maybeProjectPicker() {
       btn.className = "ghost-btn";
       btn.textContent = `${p.title} (${p.slug})`;
       btn.addEventListener("click", async () => {
-        await p2Fetch("/api/projects/switch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slug: p.slug }),
-        });
-        modal.classList.add("hidden");
-        sessionStorage.setItem("jarvisProjectPickerDone", "1");
-        loadProjects();
+        try {
+          await p2Fetch("/api/projects/switch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ slug: p.slug }),
+          });
+          modal.classList.add("hidden");
+          sessionStorage.setItem("jarvisProjectPickerDone", "1");
+          window.showAriaToast?.(`Active project: ${p.title || p.slug}`, "ok", 3000);
+          loadProjects();
+        } catch (err) {
+          window.showAriaToast?.(err.message || "Could not switch project", "err", 5000);
+        }
       });
       pickList.appendChild(btn);
     }
     modal.classList.remove("hidden");
-  } catch (_) {}
+  } catch (err) {
+    window.showAriaToast?.(err.message || "Could not load project picker", "err", 5000);
+  }
 }
 
 window.initProjects = function initProjects() {

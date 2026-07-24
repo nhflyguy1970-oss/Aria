@@ -367,6 +367,7 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+window.escapeHtml = escapeHtml;
 
 function formatMessage(text) {
   let html = escapeHtml(text);
@@ -458,6 +459,7 @@ function ensureMessageCopyAction(messageDiv, body) {
 }
 
 const GALLERY_THUMB_MAX = 384;
+window.GALLERY_THUMB_MAX = GALLERY_THUMB_MAX;
 const CHAT_IMAGE_THUMB_MAX = 320;
 
 function isNativeApp() {
@@ -489,6 +491,8 @@ function galleryViewVisible() {
   const el = document.getElementById("galleryView");
   return el && !el.classList.contains("hidden");
 }
+window.galleryViewVisible = galleryViewVisible;
+window.resolveImageUrl = resolveImageUrl;
 
 async function appendImageFigure(container, imgPath, imageName, caption, { thumb = true } = {}) {
   if (!container || !imgPath || !/\.(png|jpe?g|webp|gif|bmp)$/i.test(imgPath)) return;
@@ -564,6 +568,7 @@ function appendImageReveal(container, imgPath, imageName, caption) {
 }
 
 function bindClickableImages(container) {
+  window.bindClickableImages = bindClickableImages;
   if (!container) return;
   container.querySelectorAll(".gen-image img, .gallery-item > img").forEach((img) => {
     if (img.dataset.lightboxBound) return;
@@ -583,6 +588,7 @@ function bindClickableImages(container) {
 let lightboxImagePath = "";
 
 function openImageLightbox(url, caption = "", imagePath = "", previewUrl = "") {
+  window.openImageLightbox = openImageLightbox;
   const modal = document.getElementById("imageLightbox");
   const img = document.getElementById("imageLightboxImg");
   const cap = document.getElementById("imageLightboxCaption");
@@ -2283,7 +2289,7 @@ function handleDone(data, text, streamed = false, options = {}) {
     }
   }
   if (hasImage && data.module === "image" && galleryViewVisible() && !isNativeApp()) {
-    setTimeout(() => { if (galleryViewVisible()) loadGallery(); }, 800);
+    setTimeout(() => { if (galleryViewVisible()) window.loadGallery?.(); }, 800);
   }
 }
 
@@ -3315,7 +3321,7 @@ function switchToView(view) {
   if (view === "audio" && window.initAudio) window.initAudio();
   if (view === "journal" && window.initJournal) window.initJournal();
   if (view === "memory") loadMemoryBrowser();
-  if (view === "gallery") loadGallery();
+  if (view === "gallery") window.loadGallery?.();
   if (view === "video" && typeof loadVideoGallery === "function") loadVideoGallery();
   if (view === "meme" && typeof loadMemeGallery === "function") loadMemeGallery();
   if (view === "actions") loadActions();
@@ -3334,6 +3340,7 @@ function resetSidebarLayout() {
 }
 
 window.switchToView = switchToView;
+window.loadComfyMode = loadComfyMode;
 window.resetSidebarLayout = resetSidebarLayout;
 
 if (galleryModeSelect) {
@@ -3354,22 +3361,7 @@ galleryWorkflowInput?.addEventListener("change", async () => {
     statusText.textContent = `Workflow failed — ${e.message}`;
   }
 });
-document.getElementById("galleryGenerateBtn")?.addEventListener("click", () => {
-  const prompt = document.getElementById("galleryPromptInput")?.value?.trim();
-  if (!prompt) {
-    window.showAriaToast?.("Enter an image description first", "warn");
-    document.getElementById("galleryPromptInput")?.focus();
-    return;
-  }
-  switchToView("chat");
-  sendMessage(`generate image: ${prompt}`);
-});
-document.getElementById("galleryPromptInput")?.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    document.getElementById("galleryGenerateBtn")?.click();
-  }
-});
+// gallery generate → gallery_view.js
 document.getElementById("openImageSettingsBtn")?.addEventListener("click", () => {
   switchToView("gallery");
   document.getElementById("imageEnginePanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -4328,23 +4320,41 @@ async function loadMemoryConflicts() {
     box.querySelectorAll(".memory-keep-a").forEach((btn) => {
       btn.onclick = async () => {
         const item = btn.closest(".memory-conflict-item");
-        await fetch("/api/memory/conflicts/resolve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ keep_id: item.dataset.keep, drop_id: item.dataset.drop }),
-        });
-        loadMemoryBrowser();
+        try {
+          const res = await fetch("/api/memory/conflicts/resolve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ keep_id: item.dataset.keep, drop_id: item.dataset.drop }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.ok === false) {
+            throw new Error(data.message || data.detail || `Resolve failed (${res.status})`);
+          }
+          window.showAriaToast?.("Kept memory A", "ok", 2500);
+          loadMemoryBrowser();
+        } catch (err) {
+          window.showAriaToast?.(err.message || "Resolve failed", "err", 5000);
+        }
       };
     });
     box.querySelectorAll(".memory-keep-b").forEach((btn) => {
       btn.onclick = async () => {
         const item = btn.closest(".memory-conflict-item");
-        await fetch("/api/memory/conflicts/resolve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ keep_id: item.dataset.drop, drop_id: item.dataset.keep }),
-        });
-        loadMemoryBrowser();
+        try {
+          const res = await fetch("/api/memory/conflicts/resolve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ keep_id: item.dataset.drop, drop_id: item.dataset.keep }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.ok === false) {
+            throw new Error(data.message || data.detail || `Resolve failed (${res.status})`);
+          }
+          window.showAriaToast?.("Kept memory B", "ok", 2500);
+          loadMemoryBrowser();
+        } catch (err) {
+          window.showAriaToast?.(err.message || "Resolve failed", "err", 5000);
+        }
       };
     });
   } catch (_) {
@@ -4756,13 +4766,20 @@ function initMemoryBrowser() {
     }
   });
   document.getElementById("memoryExportBtn")?.addEventListener("click", async () => {
-    const res = await fetch("/api/memory/export");
-    const blob = new Blob([JSON.stringify(await res.json(), null, 2)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `jarvis-memory-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    try {
+      const res = await fetch("/api/memory/export");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || data.detail || `Export failed (${res.status})`);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `jarvis-memory-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      window.showAriaToast?.("Memory exported", "ok", 2500);
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Export failed", "err", 5000);
+    }
   });
   const importFile = document.getElementById("memoryImportFile");
   document.getElementById("memoryImportBtn")?.addEventListener("click", () => importFile?.click());
@@ -4772,30 +4789,53 @@ function initMemoryBrowser() {
     try {
       const payload = JSON.parse(await file.text());
       const merge = confirm("Merge with existing memories? (Cancel = replace all)");
-      await fetch("/api/memory/import", {
+      const res = await fetch("/api/memory/import", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, merge }),
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.error || data.message || data.detail || `Import failed (${res.status})`);
+      }
+      window.showAriaToast?.(`Imported ${data.added ?? 0} memories`, "ok", 3500);
       loadMemoryBrowser();
     } catch (e) {
-      alert("Import failed: invalid JSON");
+      window.showAriaToast?.(
+        e instanceof SyntaxError ? "Import failed: invalid JSON" : (e.message || "Import failed"),
+        "err",
+        5000,
+      );
     }
     importFile.value = "";
   });
   document.getElementById("memoryPruneBtn")?.addEventListener("click", async () => {
     if (!confirm("Remove stale auto-extracted memories?")) return;
-    const res = await fetch("/api/memory/prune", { method: "POST" });
-    const data = await res.json();
-    alert(`Pruned ${data.removed || 0} entries`);
-    loadMemoryBrowser();
+    try {
+      const res = await fetch("/api/memory/prune", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.message || data.detail || `Prune failed (${res.status})`);
+      }
+      window.showAriaToast?.(`Pruned ${data.removed || 0} entries`, "ok", 3500);
+      loadMemoryBrowser();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Prune failed", "err", 5000);
+    }
   });
   document.getElementById("memoryScrubBtn")?.addEventListener("click", async () => {
     if (!confirm("Remove test artifacts from memory (broken_calc, buy milk, stale checkpoints)?")) return;
-    const res = await fetch("/api/memory/trust/scrub", { method: "POST" });
-    const data = await res.json();
-    alert(`Scrubbed ${data.removed || 0} entries`);
-    loadMemoryBrowser();
+    try {
+      const res = await fetch("/api/memory/trust/scrub", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.message || data.detail || `Scrub failed (${res.status})`);
+      }
+      window.showAriaToast?.(`Scrubbed ${data.removed || 0} entries`, "ok", 3500);
+      loadMemoryBrowser();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Scrub failed", "err", 5000);
+    }
   });
   document.getElementById("memoryAutoMode")?.addEventListener("change", (e) => {
     void saveMemorySettings({ auto_memory_mode: e.target.value }).catch((err) => {
@@ -4811,11 +4851,20 @@ function initMemoryBrowser() {
   bindMemorySettingCheckbox("memoryInPrompt", "memory_in_system_prompt");
   document.getElementById("envPrefsSaveBtn")?.addEventListener("click", () => saveEnvironmentPreferences());
   document.getElementById("envMachineSyncBtn")?.addEventListener("click", async () => {
-    const res = await fetch("/api/memory/environment/sync?machine_only=true", { method: "POST" });
-    const data = await res.json();
-    if (data.ok) {
-      alert(`Machine facts refreshed (${data.added || 0} added, ${data.updated || 0} updated).`);
+    try {
+      const res = await fetch("/api/memory/environment/sync?machine_only=true", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        throw new Error(data.message || data.detail || `Sync failed (${res.status})`);
+      }
+      window.showAriaToast?.(
+        `Machine facts refreshed (${data.added || 0} added, ${data.updated || 0} updated)`,
+        "ok",
+        4000,
+      );
       loadMemoryBrowser();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Machine sync failed", "err", 5000);
     }
   });
   document.getElementById("profileRetakeBtn")?.addEventListener("click", async () => {
@@ -5019,127 +5068,7 @@ document.getElementById("inpaintRunBtn")?.addEventListener("click", async () => 
   if (runBtn) runBtn.disabled = false;
 });
 
-async function loadGallery() {
-  const el = document.getElementById("galleryGrid");
-  if (!el) return;
-  if (document.getElementById("imageEngineUncensoredBanner")) {
-    await loadComfyMode();
-  }
-  try {
-    const res = await fetch("/api/gallery");
-    if (!res.ok) throw new Error(`Gallery unavailable (${res.status})`);
-    const data = await res.json();
-  el.innerHTML = (data.images || []).map((img) => {
-    const thumb = apiAuthUrl(`/api/gallery/${encodeURIComponent(img.name)}?max=${GALLERY_THUMB_MAX}`);
-    const full = apiAuthUrl(`/api/gallery/${encodeURIComponent(img.name)}`);
-    return `<div class="gallery-item">
-      <button type="button" class="gallery-del" data-name="${escapeHtml(img.name)}" title="Delete" aria-label="Delete ${escapeHtml(img.name)}">×</button>
-      <button type="button" class="gallery-upscale" data-path="${escapeHtml(img.path)}" title="Upscale 2×" aria-label="Upscale ${escapeHtml(img.name)} 2×">2×</button>
-      <button type="button" class="gallery-inpaint" data-path="${escapeHtml(img.path)}" title="Edit image" aria-label="Edit ${escapeHtml(img.name)}">✎</button>
-      <img src="${thumb}" data-full-src="${escapeHtml(full)}" alt="${escapeHtml(img.name)}" loading="lazy" decoding="async" data-image-path="${escapeHtml(img.path)}" title="Click to view and edit" />
-    </div>`;
-  }).join("") || "<p class=\"muted\">No generated images yet. Use the prompt above, or ask in chat: <code>generate image: …</code></p>";
-  el.querySelectorAll(".gallery-inpaint").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const path = btn.dataset.path;
-      if (!path) return;
-      const file = path.split(/[/\\]/).pop();
-      openImageLightbox(
-        resolveImageUrl(path, { thumb: false }),
-        file,
-        path,
-        resolveImageUrl(path, { thumb: true, thumbMax: GALLERY_THUMB_MAX }),
-      );
-    });
-  });
-  el.querySelectorAll(".gallery-upscale").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      const path = btn.dataset.path;
-      if (!path) return;
-      btn.disabled = true;
-      const form = new FormData();
-      form.append("path", path);
-      form.append("scale", "2");
-      const res = await fetch("/api/image/upscale", { method: "POST", body: form });
-      const out = await res.json();
-      btn.disabled = false;
-      if (!res.ok || !out.ok) {
-        statusText.textContent = out.message || "Upscale failed";
-        return;
-      }
-      statusText.textContent = `Upscaled → ${out.image_path?.split("/").pop() || "done"}`;
-      loadGallery();
-    });
-  });
-  el.querySelectorAll(".gallery-del").forEach((btn) => {
-    btn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      const name = btn.dataset.name;
-      if (!name || !confirm(`Delete ${name}?`)) return;
-      const delRes = await fetch(`/api/gallery/${encodeURIComponent(name)}`, { method: "DELETE" });
-      const delData = await delRes.json();
-      if (!delRes.ok || !delData.ok) {
-        statusText.textContent = delData.message || "Delete failed";
-        return;
-      }
-      loadGallery();
-    });
-  });
-  bindClickableImages(el);
-  loadPromptHistory();
-  } catch (err) {
-    el.innerHTML = `<p class="warn">Could not load gallery — ${escapeHtml(String(err.message || err))}</p>`;
-  }
-}
-
-window.loadGallery = loadGallery;
-
-async function loadPromptHistory() {
-  const el = document.getElementById("promptHistoryList");
-  if (!el) return;
-  try {
-    const res = await fetch("/api/prompts?limit=30");
-    const data = await res.json();
-    const items = data.prompts || [];
-    el.innerHTML = items.length
-      ? items.map((p) => `<div class="prompt-history-item">
-          <button type="button" class="ghost-btn small prompt-reuse" data-prompt="${escapeHtml(p.prompt)}">Reuse</button>
-          <button type="button" class="ghost-btn small prompt-fav" data-id="${escapeHtml(p.id)}">${p.favorite ? "★" : "☆"}</button>
-          <button type="button" class="ghost-btn small prompt-del" data-id="${escapeHtml(p.id)}" title="Delete" aria-label="Delete saved prompt">×</button>
-          <span class="prompt-text">${escapeHtml(p.prompt.slice(0, 120))}${p.prompt.length > 120 ? "…" : ""}</span>
-        </div>`).join("")
-      : "<p>No saved prompts yet — generate an image to build history.</p>";
-    el.querySelectorAll(".prompt-reuse").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        messageInput.value = btn.dataset.prompt;
-        document.querySelector('.view-tab[data-view="chat"]')?.click();
-        messageInput.focus();
-      });
-    });
-    el.querySelectorAll(".prompt-fav").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        await fetch(`/api/prompts/${encodeURIComponent(btn.dataset.id)}/favorite`, { method: "POST" });
-        loadPromptHistory();
-      });
-    });
-    el.querySelectorAll(".prompt-del").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        if (!confirm("Delete this prompt from history?")) return;
-        const delRes = await fetch(`/api/prompts/${encodeURIComponent(btn.dataset.id)}`, { method: "DELETE" });
-        const delData = await delRes.json();
-        if (!delRes.ok || !delData.ok) {
-          statusText.textContent = delData.message || "Delete failed";
-          return;
-        }
-        loadPromptHistory();
-      });
-    });
-  } catch (_) {
-    el.textContent = "Could not load prompt history.";
-  }
-}
+// gallery → gallery_view.js (window.loadGallery)
 
 async function loadActions() {
   const el = document.getElementById("actionsList");

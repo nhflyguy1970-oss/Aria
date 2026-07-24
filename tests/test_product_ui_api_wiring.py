@@ -114,13 +114,14 @@ def test_mc_dollar_accepts_hash_ids_and_audit_controls_wired():
     assert 'fetch("/api/voice/smoke")' in voice
     assert 'fetch("/api/voice/smoke", { method: "POST" })' not in voice
     app_js = Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    gallery_js = Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
     upgrade_js = Path("jarvis/gui/static/upgrade_wizard.js").read_text(encoding="utf-8")
     assert "inpaintDenoise" in app_js
     assert "refreshSidebarVideoStatus" in app_js
     assert 'fetch("/api/upgrade/clear"' in upgrade_js or 'fetch("/api/upgrade/clear"' in app_js
     assert "upgradeClearBtn" in upgrade_js or "upgradeClearBtn" in app_js
-    assert "galleryGenerateBtn" in app_js
-    assert "generate image:" in app_js
+    assert "galleryGenerateBtn" in gallery_js or "galleryGenerateBtn" in app_js
+    assert "generate image:" in gallery_js or "generate image:" in app_js
     maker = Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
     assert "printerModelSelect" in maker
 
@@ -152,7 +153,7 @@ def test_a11y_modal_esc_and_ux_debt_regressions():
     assert "window.initAriaModalChrome" in modal
     assert "window.initAriaModalChrome?.()" in app_js
     assert "function initAriaModalChrome" not in app_js
-    assert "galleryGenerateBtn" in app_js
+    assert "galleryGenerateBtn" in app_js or "galleryGenerateBtn" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
     assert 'aria-label="Delete' in app_js
     assert "window.loadMemoryBrowser" in app_js
     assert "window.closeImageLightbox" in app_js
@@ -205,7 +206,12 @@ def test_command_palette_is_wired():
     assert "planner_tasks" in Path("jarvis/calendar_tab.py").read_text(encoding="utf-8")
     assert "async: true" in app
     assert "aria_theme" in app
-    assert "window.loadGallery" in app
+    assert "window.loadGallery" in app or "window.loadGallery" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
+    assert Path("jarvis/gui/static/gallery_view.js").is_file()
+    assert "async function loadGallery" not in app
+    assert "Memory exported" in app
+    assert "dataset.bound === \"1\"" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
+    assert "Could not switch project" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
     assert "act:backup" in js
     assert "act:theme-toggle" in js
     assert "journalOpenCalendarBtn" in html
