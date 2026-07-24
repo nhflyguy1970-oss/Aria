@@ -21,10 +21,15 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 | Skip-to-content | A11y | Body skip-link → #mainContent | FIXED & CERTIFIED | Focusable skip target |
 | Cross-system Memory↔Journal/Projects | Cross-system | Memory toolbar | FIXED & CERTIFIED | Bidirectional with Projects |
 | Cross-system Gallery↔Maker/Fly tying | Cross-system | Gallery / Maker / Fly tying | FIXED & CERTIFIED | Nav shortcuts |
+| Cross-system Gallery↔Video↔Meme | Cross-system | Gallery / Video / Meme headers | FIXED & CERTIFIED | Bidirectional media studio links |
+| Cross-system Audio↔Voice | Cross-system | Audio / Voice headers | FIXED & CERTIFIED | Studio ↔ settings |
+| Cross-system Planner↔Calendar↔Journal | Cross-system | Planner / Calendar toolbars | FIXED & CERTIFIED | Header shortcuts + journal deep-links |
 | Cross-system Documents↔Memory/Calendar | Cross-system | Documents toolbar | FIXED & CERTIFIED | ICS wizard toasts |
 | Free VRAM module | System | free_vram.js | FIXED & CERTIFIED | Extracted from app.js |
 | Vision settings module | Vision | vision_settings.js | FIXED & CERTIFIED | Extracted from app.js |
+| Audio status in health module | System | health.mjs renderAudioStatus | FIXED & CERTIFIED | Extracted from app.js |
 | Audio advanced feedback | Audio | Detect/diarize/live/PTT | FIXED & CERTIFIED | Toasts on fail/success |
+| Palette checklist / meme / storyboard | Discoverability | Command palette | FIXED & CERTIFIED | First-flight + media focus actions |
 | Crop/compare/webcam extract | Architecture | app.js attachments | INTENTIONALLY DEFERRED | ~84 coupled refs; high regression risk |
 | Comfy full generate soak | Gallery | ComfyUI | INTENTIONALLY DEFERRED | Needs GPU long-run |
 | HA live scenes | Smart home | HA | INTENTIONALLY DEFERRED | HA often down on workstation |
@@ -38,7 +43,7 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: free_vram/vision_settings/lan_access/git/chat_model extracts; cross-links Memory/Projects/Docs/Gallery/Maker/Fly tying; audio/video/planner/ICS/checklist/dashboard news toasts; skip-link; palette ICS/security/webcam.
+- FIXED & CERTIFIED: free_vram/vision_settings/lan_access/git/chat_model extracts; cross-links Memory/Projects/Docs/Gallery/Maker/Fly tying/Video/Meme/Audio/Voice/Planner/Calendar; audio/video/planner/ICS/checklist/dashboard news/projects/security/voice/meme toasts; skip-link; palette ICS/security/webcam/checklist/meme/storyboard; health.mjs audio status.
 - INTENTIONALLY DEFERRED: crop/webcam extract; long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 

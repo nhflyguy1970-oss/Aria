@@ -275,6 +275,11 @@ def test_command_palette_is_wired():
     assert "Video settings saved" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")
     assert Path("jarvis/gui/static/vision_settings.js").is_file()
     assert Path("jarvis/gui/static/free_vram.js").is_file()
+    assert Path("jarvis/gui/static/profile_controls.js").is_file()
+    assert "profile_controls.js" in html
+    assert "Profile switch failed" in Path("jarvis/gui/static/profile_controls.js").read_text(encoding="utf-8")
+    assert 'getElementById("profileSelect")' not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert 'getElementById("personalitySelect")' not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "window.freeJarvisVram" in Path("jarvis/gui/static/free_vram.js").read_text(encoding="utf-8")
     assert "async function freeJarvisVram" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "renderAudioStatus" in Path("jarvis/gui/static/modules/health.mjs").read_text(encoding="utf-8")
