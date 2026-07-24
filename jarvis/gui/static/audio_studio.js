@@ -278,16 +278,32 @@ function bindSongStudio(statusEl) {
   }
 
   fetch("/api/audio/song/limits?duration=30")
-    .then((r) => r.json())
+    .then(async (r) => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.message || data.detail || `Limits failed (${r.status})`);
+      return data;
+    })
     .then(applySongLimits)
-    .catch(() => {});
+    .catch((err) => {
+      const el = document.getElementById("audioSongSafeHint");
+      if (el) el.textContent = err.message || "GPU limits unavailable";
+      window.showAriaToast?.(err.message || "Song GPU limits unavailable", "err", 5000);
+    });
 
   document.getElementById("audioSongDur")?.addEventListener("change", () => {
     const dur = document.getElementById("audioSongDur")?.value || "30";
     fetch(`/api/audio/song/limits?duration=${encodeURIComponent(dur)}`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.message || data.detail || `Limits failed (${r.status})`);
+        return data;
+      })
       .then(applySongLimits)
-      .catch(() => {});
+      .catch((err) => {
+        const el = document.getElementById("audioSongSafeHint");
+        if (el) el.textContent = err.message || "GPU limits unavailable";
+        window.showAriaToast?.(err.message || "Song GPU limits unavailable", "err", 4000);
+      });
   });
 }
 

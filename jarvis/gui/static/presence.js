@@ -325,19 +325,29 @@
       savedCalibration = calibration;
       const captured = Object.values(calibration.captured).filter(Boolean).length;
       const steps = $("gestureCalibSteps");
-      if (steps) {
-        steps.textContent = captured
-          ? `Calibration saved (${Object.entries(calibration.captured)
-              .filter(([, v]) => v)
-              .map(([k]) => k)
-              .join(", ")})`
-          : "Calibration saved — no gestures captured; using defaults";
+      try {
+        const res = await fetch("/api/security/gestures/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode, calibration }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) {
+          throw new Error(data.message || data.detail || `Save failed (${res.status})`);
+        }
+        if (steps) {
+          steps.textContent = captured
+            ? `Calibration saved (${Object.entries(calibration.captured)
+                .filter(([, v]) => v)
+                .map(([k]) => k)
+                .join(", ")})`
+            : "Calibration saved — no gestures captured; using defaults";
+        }
+        window.showAriaToast?.("Gesture calibration saved", "ok", 3000);
+      } catch (err) {
+        if (steps) steps.textContent = err.message || "Calibration save failed";
+        window.showAriaToast?.(err.message || "Calibration save failed", "err", 5000);
       }
-      await fetch("/api/security/gestures/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, calibration }),
-      });
     });
     setInterval(refreshGpuMode, 20000);
     $("faceEnrollBtn")?.addEventListener("click", async () => {

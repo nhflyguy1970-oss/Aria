@@ -98,7 +98,9 @@
       );
       renderInventory();
       renderQueue();
-    } catch (_) {}
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Could not load fly-tying user state", "err", 5000);
+    }
   }
 
   function composeMaterialName(item) {
@@ -1171,11 +1173,16 @@
       renderInstructions(data);
       $("flytyingSaveNoteBtn")?.addEventListener("click", async () => {
         const note = ($("flytyingNoteInput")?.value || "").trim();
-        await fetchJson("/api/flytying/notes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ recipe_id: data.recipe_id || data.name, note }),
-        });
+        try {
+          await fetchJson("/api/flytying/notes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recipe_id: data.recipe_id || data.name, note }),
+          });
+          window.showAriaToast?.(note ? "Note saved" : "Note cleared", "ok", 2500);
+        } catch (err) {
+          window.showAriaToast?.(err.message || "Could not save note", "err", 5000);
+        }
       });
       const noteEl = $("flytyingNoteInput");
       if (noteEl) noteEl.value = data.user_note || "";

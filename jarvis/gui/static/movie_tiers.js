@@ -793,22 +793,22 @@
           const label = btn.textContent;
           btn.textContent = "Learning…";
           try {
-            const data = await fetchJson("/api/documents/learn", {
+            const res = await fetch("/api/documents/learn", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ path: p }),
             });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.ok === false) {
+              throw new Error(data.message || data.detail || `Learn failed (${res.status})`);
+            }
+            const msg = data.message || `Learned from ${p}`;
             if (typeof window.appendAssistantMessage === "function") {
-              const msg = data.message
-                || (data.ok ? `Learned from ${p}` : "Document learn failed");
               window.appendAssistantMessage(msg);
-            } else if (typeof window.sendMessage === "function") {
-              window.sendMessage(`learn from document ${p}`);
             }
-          } catch (_) {
-            if (typeof window.sendMessage === "function") {
-              window.sendMessage(`learn from document ${p}`);
-            }
+            window.showAriaToast?.(msg, "ok", 3500);
+          } catch (err) {
+            window.showAriaToast?.(err.message || "Document learn failed", "err", 5000);
           } finally {
             btn.disabled = false;
             btn.textContent = label;

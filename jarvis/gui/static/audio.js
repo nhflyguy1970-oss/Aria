@@ -1075,6 +1075,10 @@ window.initAudio = () => {
     refreshRecentLists();
     return;
   }
+  if (window._audioPanelLoadPromise) return window._audioPanelLoadPromise;
   audioPanelMounted = true;
-  loadAudioPanel();
+  window._audioPanelLoadPromise = Promise.resolve(loadAudioPanel()).finally(() => {
+    window._audioPanelLoadPromise = null;
+  });
+  return window._audioPanelLoadPromise;
 };
