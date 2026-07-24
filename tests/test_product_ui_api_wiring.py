@@ -166,6 +166,8 @@ def test_a11y_modal_esc_and_ux_debt_regressions():
     assert "media_lightbox.js" in html
     assert "coding_panel.js" in html
     assert "models_panel.js" in html
+    assert "uncensored_mode.js" in html
+    assert "window.restoreUncensoredSession" in Path("jarvis/gui/static/uncensored_mode.js").read_text(encoding="utf-8")
     assert "window.loadModelSettings" in Path("jarvis/gui/static/models_panel.js").read_text(encoding="utf-8")
     assert "async function loadModelSettings" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     coding_js = Path("jarvis/gui/static/coding_panel.js").read_text(encoding="utf-8")
