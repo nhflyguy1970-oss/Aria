@@ -1389,7 +1389,15 @@
       if (hint) hint.textContent = `Seasonal picks (${(data.hatch || {}).month || "?"})`;
       if (!list) return;
       if (!_recipes.length) {
-        list.innerHTML = '<li class="muted">No seasonal matches</li>';
+        list.innerHTML = '<li class="muted">No seasonal matches. <button type="button" class="ghost-btn tiny" id="flyEmptySeasonalSearchBtn">Search all patterns</button></li>';
+        list.querySelector("#flyEmptySeasonalSearchBtn")?.addEventListener("click", () => {
+          const input = $("flytyingSearchInput");
+          if (input) {
+            input.value = "";
+            input.focus();
+          }
+          $("flytyingSearchBtn")?.click();
+        });
         return;
       }
       list.innerHTML = _recipes

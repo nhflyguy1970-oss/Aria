@@ -228,7 +228,7 @@ def test_command_palette_is_wired():
     assert "calOpenJournalBtn" in cal
     assert "window.openCalendarDay" in cal
     assert "planner_tasks" in Path("jarvis/calendar_tab.py").read_text(encoding="utf-8")
-    assert "async: true" in app
+    assert "async: true" in Path("jarvis/gui/static/chat_export.js").read_text(encoding="utf-8")
     assert "aria_theme" in app or "aria_theme" in Path("jarvis/gui/static/theme.js").read_text(encoding="utf-8")
     assert "theme.js" in html
     assert "window.loadGallery" in app or "window.loadGallery" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
@@ -497,6 +497,17 @@ def test_command_palette_is_wired():
     assert "editor_context.js" in html
     assert "async function loadEditorContext" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "window.loadSuggestions" in Path("jarvis/gui/static/editor_context.js").read_text(encoding="utf-8")
+    assert Path("jarvis/gui/static/view_router.js").is_file()
+    assert "view_router.js" in html
+    assert "function switchToView" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "window.switchToView" in Path("jarvis/gui/static/view_router.js").read_text(encoding="utf-8")
+    assert Path("jarvis/gui/static/chat_export.js").is_file()
+    assert "chat_export.js" in html
+    assert "exportChatBtn" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "Pop-up blocked" in Path("jarvis/gui/static/chat_export.js").read_text(encoding="utf-8")
+    assert "panel.focus" in Path("jarvis/gui/static/view_router.js").read_text(encoding="utf-8")
+    assert "flyEmptySeasonalSearchBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
+    assert 'modal.dataset.retake === "1"' in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "Generation cancelled" in Path("jarvis/gui/static/chat_progress.js").read_text(encoding="utf-8")
     assert "preferred_module" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
     assert "preferred_module" in Path("jarvis/gui/server.py").read_text(encoding="utf-8")

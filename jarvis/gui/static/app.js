@@ -195,12 +195,14 @@ function createCopyButton(body) {
       copyBtn.classList.add("copied");
       copyBtn.textContent = "Copied";
       if (statusText) statusText.textContent = "Message copied";
+      window.showAriaToast?.("Message copied", "ok", 2000);
       setTimeout(() => {
         copyBtn.classList.remove("copied");
         copyBtn.textContent = "Copy";
       }, 1600);
-    } else if (statusText) {
-      statusText.textContent = "Select text and press Ctrl+C";
+    } else {
+      if (statusText) statusText.textContent = "Select text and press Ctrl+C";
+      window.showAriaToast?.("Copy failed — select text and press Ctrl+C", "warn", 4000);
     }
   };
   return copyBtn;
@@ -565,47 +567,11 @@ Object.defineProperty(window, "lastEditorFile", {
 // image engine → image_engine.js
 
 
-function switchToView(view) {
-  const VIEW_PANELS = [
-    "chatView", "dashboardView", "workstationView", "plannerView", "calendarView", "flytyingView", "projectsView",
-    "makerView", "browserView", "securityView", "presenceView", "auditView", "voiceView", "audioView", "journalView",
-    "memoryView", "galleryView", "videoView", "memeView", "documentsView", "actionsView",
-  ];
-  document.querySelectorAll(".view-tab").forEach((t) => {
-    t.classList.toggle("active", t.dataset.view === view);
-  });
-  const targetId = `${view}View`;
-  VIEW_PANELS.forEach((id) => {
-    document.getElementById(id)?.classList.toggle("hidden", id !== targetId);
-  });
-  if (view === "dashboard" && window.initDashboard) window.initDashboard();
-  if (view === "workstation" && window.initWorkstation) window.initWorkstation();
-  if (view === "planner" && window.initPlanner) window.initPlanner();
-  if (view === "calendar" && window.initCalendar) window.initCalendar();
-  if (view === "flytying" && window.initFlytying) window.initFlytying();
-  if (view === "projects" && window.initProjects) window.initProjects();
-  if (view === "maker" && window.initMakerLab) window.initMakerLab();
-  if (view === "browser" && window.initBrowserPanel) window.initBrowserPanel();
-  if (view !== "browser" && window.stopBrowserPanelPoll) window.stopBrowserPanelPoll();
-  if (view === "security" && window.initSecurity) { window.initSecurity(); window.refreshToolsSidebar?.(); }
-  if (view === "presence" && window.initPresence) window.initPresence();
-  if (view === "audit" && window.initAudit) window.initAudit();
-  if (view === "voice" && window.initVoiceTab) window.initVoiceTab();
-  if (view === "audio" && window.initAudio) window.initAudio();
-  if (view === "journal" && window.initJournal) window.initJournal();
-  if (view === "memory") window.loadMemoryBrowser?.();
-  if (view === "gallery") window.loadGallery?.();
-  if (view === "video" && typeof loadVideoGallery === "function") loadVideoGallery();
-  if (view === "meme" && typeof loadMemeGallery === "function") loadMemeGallery();
-  if (view === "actions") window.loadActions?.(document.getElementById("actionsFilter")?.value);
-  if (view === "documents") { window.initDocumentsTab?.(); window.loadDocumentsTab?.(); }
-  document.querySelector(`.view-tab[data-view="${view}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
-}
+// View routing → view_router.js (window.switchToView)
 
 // sidebar chrome → sidebar_chrome.js (window.resetSidebarLayout)
 
 
-window.switchToView = switchToView;
 // window.addMessage → chat_messages.js
 window.createCopyButton = createCopyButton;
 window.ensureMessageCopyAction = ensureMessageCopyAction;
@@ -671,7 +637,7 @@ window.ariaPostStartup = function ariaPostStartup() {
     }
     const hashView = (window.location.hash || "").replace(/^#/, "").trim();
     if (hashView && document.querySelector(`.view-tab[data-view="${hashView}"]`)) {
-      switchToView(hashView);
+      window.switchToView?.(hashView);
     }
     document.getElementById("presetQualityBtn")?.classList.add("active");
     window.startHealthMonitoring?.();
@@ -685,10 +651,7 @@ window.ariaPostStartup = function ariaPostStartup() {
 
 // coding / LSP → coding_panel.js (window.loadCodingPanel / runLspAction)
 
-// View switching
-document.querySelectorAll(".view-tab").forEach((tab) => {
-  tab.addEventListener("click", () => switchToView(tab.dataset.view));
-});
+// View switching → view_router.js
 
 // memory → memory_browser.js (window.loadMemoryBrowser / initMemoryBrowser)
 
@@ -711,46 +674,7 @@ window.addEventListener("beforeunload", () => {
 
 // chat model select → chat_model_select.js (window.loadChatModelSelect)
 
-document.getElementById("exportChatBtn")?.addEventListener("click", () => {
-  const params = new URLSearchParams();
-  if (_activeBranchId) params.set("branch_id", _activeBranchId);
-  params.set("memory", "1");
-  window.open(`/api/chat/export?${params}`, "_blank");
-});
-
-document.getElementById("exportChatPdfBtn")?.addEventListener("click", () => {
-  const q = _activeBranchId ? `?branch_id=${encodeURIComponent(_activeBranchId)}` : "";
-  window.open(`/api/chat/export/pdf${q}`, "_blank");
-});
-
-document.getElementById("backupDataBtn")?.addEventListener("click", async () => {
-  const btn = document.getElementById("backupDataBtn");
-  if (btn) btn.disabled = true;
-  window.showAriaToast?.("Backup starting…", "info");
-  try {
-    const res = await fetch("/api/admin/backup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ async: true }),
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.ok) {
-      window.showAriaToast?.(data.message || "Backup failed", "err");
-      return;
-    }
-    if (data.pending && data.job_id) {
-      window.showAriaToast?.(`Backup queued (${data.job_id.slice(0, 8)}…)`, "ok");
-      window.jarvisJobs?.refreshJobCenter?.();
-      document.getElementById("jobCenterBtn")?.classList.add("pulse");
-    } else {
-      window.showAriaToast?.(data.message || "Backup complete", "ok");
-    }
-  } catch (e) {
-    window.showAriaToast?.(String(e.message || e || "Backup failed"), "err");
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-});
+// Chat export / backup → chat_export.js
 
 // theme → theme.js
 

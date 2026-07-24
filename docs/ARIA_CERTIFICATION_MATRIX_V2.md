@@ -43,7 +43,7 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: …/**chat_progress**/**chat_messages**/**chat_send**/**chat_done**/**chat_video**; health/live → `modules/health.mjs`; **editor_context.js** extract (suggestions + Cursor pill/poll); hidden-window polling across presence/HUD/movie/wakeword/coding/jobs/planner/MC/audio-live; project/model DOM-safe text; audio empty CTAs (record/edit); stop-speaking errors toast; branch history safe; uncensored session clear; docs/audit empty CTAs. `app.js` ~**780** lines. E2E Ready + health/live APIs verified.
+- FIXED & CERTIFIED: chat pipeline modules; health.mjs; **editor_context.js**; **view_router.js** (hash sync + panel focus); **chat_export.js** (popup-blocked toast); idle polling pause; DOM-safe project/model text; audio/flytying empty CTAs; profile retake errors toast; copy toast. `app.js` ~**670** lines.
 - INTENTIONALLY DEFERRED: long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 

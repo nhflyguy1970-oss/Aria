@@ -825,13 +825,29 @@ function renderProfileForm(questions) {
 async function maybeShowProfileQuestionnaire() {
   const modal = document.getElementById("profileModal");
   if (!modal) return;
+  const retake = modal.dataset.retake === "1";
   try {
     const res = await fetch("/api/profile/questionnaire");
-    const data = await res.json();
-    if (!data.ok || data.completed || !(data.questions || []).length) return;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      if (retake) {
+        window.showAriaToast?.(data.error || data.message || "Could not load profile questionnaire", "err", 4000);
+      }
+      return;
+    }
+    if (!data.ok || data.completed || !(data.questions || []).length) {
+      if (retake && data.completed) {
+        window.showAriaToast?.("Profile questionnaire already completed", "info", 3000);
+      }
+      return;
+    }
     renderProfileForm(data.questions);
     modal.classList.remove("hidden");
-  } catch (_) {}
+  } catch (err) {
+    if (retake) {
+      window.showAriaToast?.(err?.message || "Could not load profile questionnaire", "err", 4000);
+    }
+  }
 }
 
 document.getElementById("profileForm")?.addEventListener("submit", async (e) => {
