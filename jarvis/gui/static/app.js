@@ -54,8 +54,6 @@ let _lastEditorFile = "";
 const clearBtn = document.getElementById("clearBtn");
 const micBtn = document.getElementById("micBtn");
 const readAloudBtn = document.getElementById("readAloudBtn");
-const uncensoredToggle = document.getElementById("uncensoredToggle");
-const modeLabel = document.getElementById("modeLabel");
 const appTitle = document.getElementById("appTitle");
 const appTagline = document.getElementById("appTagline");
 const hudEnv = document.getElementById("hudEnv");
@@ -106,6 +104,7 @@ function applyBranding(data = {}) {
   const profileTitle = document.getElementById("profileModalTitle");
   if (profileTitle) profileTitle.textContent = `Help ${name} learn about you`;
 }
+window.applyBranding = applyBranding;
 let chatAbortController = null;
 let chatStopRequested = false;
 let activeStreamText = "";
@@ -127,14 +126,7 @@ const jobCenterSummary = document.getElementById("jobCenterSummary");
 const jobCenterRefreshBtn = document.getElementById("jobCenterRefreshBtn");
 const jobCenterCloseBtn = document.getElementById("jobCenterCloseBtn");
 
-const JARVIS_UI_VERSION = document.querySelector('meta[name="jarvis-ui-version"]')?.content || "5.15.1";
-
 // readStreamChunk / STREAM_IDLE_MS → chat_send.js
-const startupOverlay = document.getElementById("startupOverlay");
-const startupStatus = document.getElementById("startupStatus");
-const startupLog = document.getElementById("startupLog");
-const servicesPanel = document.getElementById("servicesPanel");
-
 function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
@@ -534,7 +526,6 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
 
 // window.sendMessage → chat_send.js
 window.isNativeApp = isNativeApp;
-window.loadHealth = loadHealth;
 window.isVisionAttachment = isVisionAttachment;
 window.isImageRequest = isImageRequest;
 window.isVideoRequest = isVideoRequest;
@@ -693,181 +684,7 @@ async function loadSuggestions() {
   }
 }
 
-// freeJarvisVram → free_vram.js (window.freeJarvisVram)
-
-function renderGpuStatus(gpu) {
-  if (window.jarvisHealth?.renderGpuStatus) {
-    window.jarvisHealth.renderGpuStatus(gpu);
-    return;
-  }
-}
-
-// freeVramBtn click wired in modules/health.mjs
-
-function renderAudioStatus(audio) {
-  if (window.jarvisHealth?.renderAudioStatus) {
-    window.jarvisHealth.renderAudioStatus(audio);
-    return;
-  }
-}
-
-async function loadGpuStatus() {
-  if (window.jarvisHealth?.loadGpuStatus) {
-    await window.jarvisHealth.loadGpuStatus();
-  }
-}
-window.loadGpuStatus = loadGpuStatus;
-
-let jarvisServerWasDown = false;
-let jarvisKnownVersion = null;
-
-function reloadJarvisUi(reason = "") {
-  if (mediaWorkActive()) {
-    const msg = "Image job running — reload deferred (finishes in chat when done)";
-    if (statusText) statusText.textContent = msg;
-    return;
-  }
-  if (reason && statusText) statusText.textContent = reason;
-  setTimeout(() => location.reload(), reason ? 350 : 0);
-}
-
-window.reloadJarvisUi = reloadJarvisUi;
-
-async function pollLive() {
-  if (mediaWorkActive()) return;
-  try {
-    const res = await fetch("/api/live");
-    if (!res.ok) {
-      jarvisServerWasDown = true;
-      if (statusText && (window.activeMediaJobs?.size || 0) > 0) {
-        statusText.textContent = "Server reconnecting — image job still running…";
-      }
-      return;
-    }
-    const data = await res.json();
-    if (jarvisServerWasDown) {
-      jarvisServerWasDown = false;
-      window.__ariaLiveFailToast = false;
-      if (statusText) {
-        statusText.textContent = (window.activeMediaJobs?.size || 0) > 0
-          ? "Server back — finishing image job…"
-          : `Ready · v${data.version || "?"}`;
-      }
-      window.showAriaToast?.("Connection restored", "ok", 2500);
-    }
-    jarvisKnownVersion = data.version || jarvisKnownVersion;
-    applyBranding(data);
-    if (data.ui_version && data.ui_version !== JARVIS_UI_VERSION) {
-      const envEl = document.getElementById("envStrip");
-      if (envEl && !envEl.dataset.versionWarn) {
-        envEl.dataset.versionWarn = "1";
-        envEl.classList.add("version-warn");
-        envEl.title = `UI ${JARVIS_UI_VERSION} · server expects ${data.ui_version} — Reload UI`;
-      }
-    }
-    uncensoredToggle.checked = data.uncensored;
-    document.body.classList.toggle("uncensored-mode", data.uncensored);
-    modeLabel.textContent = data.uncensored ? "Uncensored · Local" : "Local AI Assistant";
-    if (data.version && statusText) {
-      statusText.textContent = data.ready
-        ? `Ready · v${data.version}`
-        : `Starting services · v${data.version}`;
-    }
-  } catch (err) {
-    jarvisServerWasDown = true;
-    if (!window.__ariaLiveFailToast) {
-      window.__ariaLiveFailToast = true;
-      window.showAriaToast?.(
-        err?.message || "Lost connection to Aria — retrying…",
-        "err",
-        4000,
-      );
-    }
-  }
-}
-
-async function loadHealth() {
-  const modelsEl = document.getElementById("modelsStatus");
-  try {
-    const [healthRes, svcRes] = await Promise.all([
-      fetchWithTimeout("/api/health", {}, 3000),
-      fetchWithTimeout("/api/services", {}, 5000).catch(() => null),
-    ]);
-    if (!healthRes.ok) throw new Error("health check failed");
-    const data = await healthRes.json();
-    if (svcRes?.ok) {
-      const svc = await svcRes.json();
-      if (svc.services) renderServices(svc.services, svc.comfyui_settings);
-      if (svc.ollama && data.ollama == null) data.ollama = svc.ollama;
-    }
-    if (data.gpu) renderGpuStatus(data.gpu);
-    if (data.audio) renderAudioStatus(data.audio);
-    uncensoredToggle.checked = data.uncensored;
-    document.body.classList.toggle("uncensored-mode", data.uncensored);
-    modeLabel.textContent = data.uncensored ? "Uncensored · Local" : "Local AI Assistant";
-
-    if (data.services) renderServices(data.services, data.comfyui_settings);
-
-    const visionRow = servicesPanel?.querySelector('[data-svc="vision"]');
-    if (visionRow && data.vision) {
-      const v = data.vision;
-      visionRow.classList.toggle("online", v.installed);
-      visionRow.classList.toggle("offline", !v.installed);
-      const mode = v.quality_mode === "quality" ? "preset:quality"
-        : v.quality_mode === "fast" ? "preset:fast" : "selected";
-      visionRow.innerHTML = `<span class="svc-dot"></span> Vision · ${v.model || "?"} (${mode})`;
-      if (v.note) visionRow.title = v.note;
-    }
-
-    if (data.version) {
-      if (data.busy) {
-        statusText.textContent = `Busy · ${data.busy_job || "media"} · v${data.version}`;
-      } else {
-        statusText.textContent = data.ready
-          ? `Ready · v${data.version}`
-          : `Starting services · v${data.version}`;
-      }
-    }
-
-    if (modelsEl) {
-      if (!data.ollama?.running) {
-        modelsEl.innerHTML = '<span class="warn">Starting Ollama…</span>';
-      } else if (data.models_missing?.length) {
-        modelsEl.innerHTML = `<span class="warn">Pulling models: ${data.models_missing.join(", ")}</span>`;
-      } else {
-        const m = data.models || {};
-        const embedNote = data.embed_ok === false && data.embed_warning
-          ? `<br><span class="warn">${escapeHtml(data.embed_warning)}</span>` : "";
-        modelsEl.innerHTML = `<span>${m.general || "?"}</span><br><span>${m.coder || "?"}</span>${embedNote}`;
-      }
-    }
-    return data;
-  } catch (e) {
-    if (modelsEl) {
-      modelsEl.innerHTML = `<span class="warn">Connecting to ${ariaName()}…</span>`;
-    }
-    statusText.textContent = "Connecting…";
-    return null;
-  }
-}
-
-function renderServices(services, comfySettings) {
-  if (!servicesPanel || !services) return;
-  for (const svc of services) {
-    const row = servicesPanel.querySelector(`[data-svc="${svc.name}"]`);
-    if (!row) continue;
-    row.classList.remove("online", "offline", "starting");
-    if (svc.running || svc.message === "ready") {
-      row.classList.add("online");
-    } else if (svc.required) {
-      row.classList.add("starting");
-    } else {
-      row.classList.add("offline");
-    }
-    row.innerHTML = `<span class="svc-dot"></span> ${svc.label}${svc.detail ? ` · ${svc.detail}` : ""}`;
-  }
-  if (comfySettings) window.syncComfySettings?.(comfySettings);
-}
+// Health/live polling, GPU/audio status and service rendering → modules/health.mjs
 
 // image engine → image_engine.js
 
@@ -913,7 +730,6 @@ function switchToView(view) {
 
 
 window.switchToView = switchToView;
-window.renderServices = renderServices;
 // window.addMessage → chat_messages.js
 window.createCopyButton = createCopyButton;
 window.ensureMessageCopyAction = ensureMessageCopyAction;
@@ -945,11 +761,10 @@ window.fetchWithTimeout = fetchWithTimeout;
 
 // wakeword → wakeword_chat.js (window.pollWakewordChat)
 
-document.getElementById("reloadUiBtn")?.addEventListener("click", () => reloadJarvisUi());
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && String(e.key).toLowerCase() === "r") {
     e.preventDefault();
-    reloadJarvisUi();
+    window.reloadJarvisUi?.();
   }
 });
 document.addEventListener("visibilitychange", () => {
@@ -959,11 +774,11 @@ document.addEventListener("visibilitychange", () => {
 window.ariaPostStartup = function ariaPostStartup() {
   try { window.initAriaModalChrome?.(); } catch (_) {}
   loadSuggestions();
-  loadHealth().then(async () => {
+  Promise.resolve(window.loadHealth?.()).then(async () => {
     await window.restoreUncensoredSession?.();
     window.loadModelSettings?.();
     window.loadComfyMode?.();
-    loadGpuStatus();
+    window.loadGpuStatus?.();
     window.loadVisionSettings?.();
     window.loadBranches?.().then(() => window.reloadBranchMessages?.().then(() => window.resumePendingMediaJobs?.()));
     window.loadPersonality?.();
@@ -983,10 +798,7 @@ window.ariaPostStartup = function ariaPostStartup() {
       switchToView(hashView);
     }
     document.getElementById("presetQualityBtn")?.classList.add("active");
-    setInterval(pollLive, isNativeApp() ? 45000 : 20000);
-    setInterval(() => {
-      if (!mediaWorkActive()) loadHealth();
-    }, 180000);
+    window.startHealthMonitoring?.();
     setInterval(() => {
       if (!mediaWorkActive()) window.loadCodingPanel?.();
     }, 90000);

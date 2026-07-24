@@ -59,12 +59,195 @@ export async function loadGpuStatus() {
   } catch (_) {}
 }
 
+const UI_VERSION = document.querySelector('meta[name="jarvis-ui-version"]')?.content || "unknown";
+let serverWasDown = false;
+let knownVersion = null;
+let liveTimer = null;
+let healthTimer = null;
+
+function mediaWorkActive() {
+  return window.mediaWorkActive?.() === true;
+}
+
+function setLocalMode(uncensored) {
+  const toggle = $("uncensoredToggle");
+  const label = $("modeLabel");
+  if (toggle) toggle.checked = Boolean(uncensored);
+  document.body.classList.toggle("uncensored-mode", Boolean(uncensored));
+  if (label) label.textContent = uncensored ? "Uncensored · Local" : "Local AI Assistant";
+}
+
+function fetchWithTimeout(url, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
+export function renderServices(services, comfySettings) {
+  const panel = $("servicesPanel");
+  if (!panel || !Array.isArray(services)) return;
+  for (const service of services) {
+    const row = panel.querySelector(`[data-svc="${CSS.escape(String(service.name || ""))}"]`);
+    if (!row) continue;
+    row.classList.remove("online", "offline", "starting");
+    if (service.running || service.message === "ready") row.classList.add("online");
+    else if (service.required) row.classList.add("starting");
+    else row.classList.add("offline");
+    row.replaceChildren();
+    const dot = document.createElement("span");
+    dot.className = "svc-dot";
+    row.append(dot, document.createTextNode(
+      ` ${service.label || service.name || "Service"}${service.detail ? ` · ${service.detail}` : ""}`,
+    ));
+  }
+  if (comfySettings) window.syncComfySettings?.(comfySettings);
+}
+
+export function reloadUi(reason = "") {
+  const status = $("statusText");
+  if (mediaWorkActive()) {
+    if (status) status.textContent = "Media job running — reload deferred until it finishes";
+    window.showAriaToast?.("Reload deferred while media work is active", "info", 3000);
+    return false;
+  }
+  if (reason && status) status.textContent = reason;
+  setTimeout(() => location.reload(), reason ? 350 : 0);
+  return true;
+}
+
+export async function pollLive() {
+  if (document.hidden || mediaWorkActive()) return null;
+  const status = $("statusText");
+  try {
+    const res = await fetchWithTimeout("/api/live", 5000);
+    if (!res.ok) throw new Error(`Live check failed (${res.status})`);
+    const data = await res.json();
+    if (serverWasDown) {
+      serverWasDown = false;
+      window.__ariaLiveFailToast = false;
+      if (status) {
+        status.textContent = (window.activeMediaJobs?.size || 0) > 0
+          ? "Server back — finishing media job…"
+          : `Ready · v${data.version || "?"}`;
+      }
+      window.showAriaToast?.("Connection restored", "ok", 2500);
+    }
+    knownVersion = data.version || knownVersion;
+    window.applyBranding?.(data);
+    const env = $("envStrip");
+    if (data.ui_version && data.ui_version !== UI_VERSION && env && !env.dataset.versionWarn) {
+      env.dataset.versionWarn = "1";
+      env.classList.add("version-warn");
+      env.title = `UI ${UI_VERSION} · server expects ${data.ui_version} — Reload UI`;
+    }
+    setLocalMode(data.uncensored);
+    if (data.version && status) {
+      status.textContent = data.ready
+        ? `Ready · v${data.version}`
+        : `Starting services · v${data.version}`;
+    }
+    return data;
+  } catch (error) {
+    serverWasDown = true;
+    if (!window.__ariaLiveFailToast) {
+      window.__ariaLiveFailToast = true;
+      window.showAriaToast?.(
+        error?.name === "AbortError" ? "Aria health check timed out — retrying…" : (error?.message || "Lost connection to Aria — retrying…"),
+        "err",
+        4000,
+      );
+    }
+    return null;
+  }
+}
+
+export async function loadHealth() {
+  const models = $("modelsStatus");
+  const status = $("statusText");
+  try {
+    const [healthRes, servicesRes] = await Promise.all([
+      fetchWithTimeout("/api/health", 3000),
+      fetchWithTimeout("/api/services", 5000).catch(() => null),
+    ]);
+    if (!healthRes.ok) throw new Error(`Health check failed (${healthRes.status})`);
+    const data = await healthRes.json();
+    if (servicesRes?.ok) {
+      const serviceData = await servicesRes.json();
+      renderServices(serviceData.services, serviceData.comfyui_settings);
+      if (serviceData.ollama && data.ollama == null) data.ollama = serviceData.ollama;
+    }
+    if (data.gpu) renderGpuStatus(data.gpu);
+    if (data.audio) renderAudioStatus(data.audio);
+    setLocalMode(data.uncensored);
+    if (data.services) renderServices(data.services, data.comfyui_settings);
+
+    const visionRow = $("servicesPanel")?.querySelector('[data-svc="vision"]');
+    if (visionRow && data.vision) {
+      const vision = data.vision;
+      visionRow.classList.toggle("online", Boolean(vision.installed));
+      visionRow.classList.toggle("offline", !vision.installed);
+      const mode = vision.quality_mode === "quality" ? "preset:quality"
+        : vision.quality_mode === "fast" ? "preset:fast" : "selected";
+      visionRow.replaceChildren();
+      const dot = document.createElement("span");
+      dot.className = "svc-dot";
+      visionRow.append(dot, document.createTextNode(` Vision · ${vision.model || "?"} (${mode})`));
+      visionRow.title = vision.note || "";
+    }
+    if (data.version && status) {
+      status.textContent = data.busy
+        ? `Busy · ${data.busy_job || "media"} · v${data.version}`
+        : data.ready ? `Ready · v${data.version}` : `Starting services · v${data.version}`;
+    }
+    if (models) {
+      if (!data.ollama?.running) {
+        models.textContent = "Starting Ollama…";
+        models.className = "warn";
+      } else if (data.models_missing?.length) {
+        models.textContent = `Pulling models: ${data.models_missing.join(", ")}`;
+        models.className = "warn";
+      } else {
+        const configured = data.models || {};
+        models.replaceChildren(
+          document.createTextNode(configured.general || "?"),
+          document.createElement("br"),
+          document.createTextNode(configured.coder || "?"),
+        );
+        if (data.embed_ok === false && data.embed_warning) {
+          models.append(document.createElement("br"));
+          const warning = document.createElement("span");
+          warning.className = "warn";
+          warning.textContent = data.embed_warning;
+          models.append(warning);
+        }
+      }
+    }
+    return data;
+  } catch (error) {
+    if (models) {
+      models.textContent = `Connecting to ${window.ariaName?.() || "ARIA"}…`;
+      models.className = "warn";
+    }
+    if (status) status.textContent = "Connecting…";
+    return null;
+  }
+}
+
+export function startHealthMonitoring() {
+  if (liveTimer || healthTimer) return;
+  liveTimer = setInterval(pollLive, window.isNativeApp?.() ? 45000 : 20000);
+  healthTimer = setInterval(() => {
+    if (!document.hidden && !mediaWorkActive()) loadHealth();
+  }, 180000);
+}
+
 function initHealthModule() {
   $("freeVramBtn")?.addEventListener("click", () => {
     if (typeof window.freeJarvisVram === "function") {
       window.freeJarvisVram($("statusText"));
     }
   });
+  $("reloadUiBtn")?.addEventListener("click", () => reloadUi());
 }
 
 if (document.readyState === "loading") {
@@ -73,4 +256,22 @@ if (document.readyState === "loading") {
   initHealthModule();
 }
 
-window.jarvisHealth = { renderGpuStatus, renderAudioStatus, loadGpuStatus };
+window.jarvisHealth = {
+  renderGpuStatus,
+  renderAudioStatus,
+  loadGpuStatus,
+  renderServices,
+  reloadUi,
+  pollLive,
+  loadHealth,
+  startHealthMonitoring,
+  get knownVersion() { return knownVersion; },
+};
+Object.assign(window, {
+  loadGpuStatus,
+  renderServices,
+  reloadJarvisUi: reloadUi,
+  pollLive,
+  loadHealth,
+  startHealthMonitoring,
+});
