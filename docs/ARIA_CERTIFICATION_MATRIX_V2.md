@@ -51,6 +51,7 @@ Expand this matrix as each subsystem completes deep certification.
 - **NO** — resume: documents.js extract, long-duration/multi-monitor, Comfy/voice soaks, per-control matrix
 
 ## Change log
+- 2026-07-24: app.js ~3382 lines after media/coding/models/uncensored/startup/wakeword/chat_branches extracts; boot fixed (lastEditorFile); ship verdict still NO.
 - 2026-07-24: wakeword_chat extract; HA/upgrade toasts; app boot lastEditorFile fix.
 - 2026-07-24: Fix lastEditorFile window binding (app boot); startup_overlay + models/uncensored extracts.
 - 2026-07-24: models_panel extract; modelsToggle wired.
