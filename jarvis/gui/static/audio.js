@@ -103,8 +103,9 @@ async function loadAudioStatus() {
       <span class="audio-stat" title="${escapeHtml(d.output_sink || "")}">🔊 ${escapeHtml(outLabel)}</span>
       <span class="audio-stat" title="${escapeHtml(d.input_source || "")}">🎤 ${escapeHtml(hw || micLabel)} · ${escapeHtml(capVol)}${routeTag}</span>`;
     return data;
-  } catch (_) {
+  } catch (err) {
     audioStatusBar.textContent = "Could not load audio status.";
+    window.showAriaToast?.(err?.message || "Could not load audio status", "err", 4000);
     return null;
   }
 }

@@ -177,6 +177,13 @@
         },
       },
       {
+        id: "act:video-studio",
+        label: "Open Video Studio",
+        group: "Actions",
+        keywords: "animatediff ken burns storyboard",
+        run: () => $("openVideoStudioBtn")?.click() || window.switchToView?.("video"),
+      },
+      {
         id: "act:models-editor",
         label: "Open models editor",
         group: "System",
