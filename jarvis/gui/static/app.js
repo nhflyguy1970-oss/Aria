@@ -129,19 +129,7 @@ const jobCenterCloseBtn = document.getElementById("jobCenterCloseBtn");
 
 const JARVIS_UI_VERSION = document.querySelector('meta[name="jarvis-ui-version"]')?.content || "5.15.1";
 
-const STREAM_IDLE_MS = 180000;
-
-function readStreamChunk(reader, idleMs = STREAM_IDLE_MS) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`${ariaName()} took too long to respond. Try again or check that Ollama is running.`));
-    }, idleMs);
-    reader.read().then(
-      (result) => { clearTimeout(timer); resolve(result); },
-      (err) => { clearTimeout(timer); reject(err); },
-    );
-  });
-}
+// readStreamChunk / STREAM_IDLE_MS → chat_send.js
 const startupOverlay = document.getElementById("startupOverlay");
 const startupStatus = document.getElementById("startupStatus");
 const startupLog = document.getElementById("startupLog");
@@ -277,6 +265,10 @@ window.jarvisChat = {
   set activeStreamText(v) { activeStreamText = v; },
   get activeChatRequestId() { return activeChatRequestId; },
   set activeChatRequestId(v) { activeChatRequestId = v; },
+  get useStreaming() { return useStreaming; },
+  set useStreaming(v) { useStreaming = v; },
+  get lastAssistantText() { return lastAssistantText; },
+  set lastAssistantText(v) { lastAssistantText = v; },
 };
 
 
@@ -400,7 +392,7 @@ function addMessage(role, content, meta = {}, options = {}) {
       const chip = document.createElement("button");
       chip.className = "suggestion-chip";
       chip.textContent = choice;
-      chip.onclick = () => sendMessage(String(i + 1));
+      chip.onclick = () => window.sendMessage?.(String(i + 1));
       chips.appendChild(chip);
     });
     bubble.appendChild(chips);
@@ -445,14 +437,7 @@ function addTyping() {
 
 // upgrade wizard → upgrade_wizard.js
 
-async function parseJsonResponse(res) {
-  const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(res.ok ? "Invalid server response" : `Server error (${res.status}): ${text.slice(0, 200)}`);
-  }
-}
+// parseJsonResponse → chat_send.js
 
 // showError / showProgress / hideProgress / setChatBusy / stopChat → chat_progress.js
 
@@ -475,11 +460,7 @@ function finishSendUi() {
 
 // updateProgressStatus → chat_progress.js
 
-function isStreamableAttachment(file) {
-  if (!file) return false;
-  if (file.size > 500000) return false;
-  return /\.(txt|md|py|json|csv|log|yaml|yml|toml|xml|html|js|ts|tsx|jsx|sh|rs|go)$/i.test(file.name);
-}
+// isStreamableAttachment → chat_send.js
 
 function showChatWarnings(warnings) {
   if (!warnings?.length) return;
@@ -516,256 +497,8 @@ async function forkBranchFromIndex(displayIndex) {
   }
 }
 
-async function sendMessage(text, forceNoStream = false, options = {}) {
-  if (!text.trim() && !pendingFile && !pendingFile2) return;
+// sendMessage → chat_send.js
 
-  if (compareMode && pendingFile && !pendingFile2) {
-    window.showError("Compare needs **two images**. Click **+ Add image 2** in the preview, or click **Compare** and select both files at once.");
-    return;
-  }
-  if (pendingFile2 && !pendingFile) {
-    pendingFile = pendingFile2;
-    pendingFile2 = null;
-  }
-
-  const skipUserBubble = Boolean(options.skipUserBubble);
-
-  let displayText = text.trim();
-  if (pendingFile) {
-    displayText = displayText
-      ? `${displayText}\n📎 ${pendingFile.name}`
-      : `📎 ${pendingFile.name}`;
-  }
-  if (pendingFile2) {
-    displayText = displayText
-      ? `${displayText}\n📎 ${pendingFile2.name}`
-      : `📎 ${pendingFile2.name}`;
-  }
-  if (!skipUserBubble) {
-    addMessage("user", displayText || "(attachment)");
-  }
-
-  chatStopRequested = false;
-  activeStreamText = "";
-  activeChatRequestId = crypto.randomUUID?.() || `req-${Date.now()}`;
-  chatAbortController = new AbortController();
-  window.setChatBusy(true);
-  window.showProgress(window.progressLabel(text));
-
-  if (isVideoRequest(text)) {
-    const proceed = (await window.vramPreflight?.("generate_video")) !== false;
-    if (!proceed) {
-      window.setChatBusy(false);
-      window.hideProgress();
-      return;
-    }
-  } else if (isImageRequest(text)) {
-    const proceed = (await window.vramPreflight?.("generate_image")) !== false;
-    if (!proceed) {
-      window.setChatBusy(false);
-      window.hideProgress();
-      return;
-    }
-  }
-
-  const form = new FormData();
-  form.append("request_id", activeChatRequestId);
-  const defaultMsg = pendingFile2
-    ? "Compare these two images. Describe similarities and differences."
-    : isDataAttachment(pendingFile)
-      ? "Load and summarize this data."
-      : "Please analyze the attached file.";
-  form.append("message", text.trim() || defaultMsg);
-  if (pendingFile) form.append("file", pendingFile);
-  if (pendingFile2) form.append("file2", pendingFile2);
-  if (pendingCrop) form.append("crop", JSON.stringify(pendingCrop));
-  if (pendingVideoSecond.trim()) form.append("video_second", pendingVideoSecond.trim());
-  if (pendingPdfPage.trim()) form.append("pdf_page", pendingPdfPage.trim());
-  if (_activeBranchId) form.append("branch_id", _activeBranchId);
-  if (window.jarvisPreferredModule) form.append("preferred_module", window.jarvisPreferredModule);
-
-  const trimmed = text.trim();
-  const isInstant = /^(hi|hello|hey|what can you|what (services|models|do you)|help|capabilities)/i.test(trimmed)
-    || /^(undo|apply)(\s+(it|that|last|the changes?|apply))?\s*$/i.test(trimmed);
-  const isCodingFix = /\b(?:fix|repair|debug|improve|refactor|clean up)\b/i.test(text) && /[^\s`'"]+\.py/.test(text);
-  const isCodingCreate = /\b(with tests?|pytest)\b/i.test(text)
-    && /\b(implement|create|write|make|build|add)\b/i.test(text);
-  const isCodingAgent = /\b(implement|build|add feature|debug until|refactor across)\b/i.test(text)
-    || isCodingFix || isCodingCreate;
-  const isWebSearch = /\b(search (the )?web|web search|look up online|google)\b/i.test(trimmed);
-  const hasVisionAttach = isVisionAttachment(pendingFile) || isVisionAttachment(pendingFile2);
-  const streamableFile = isStreamableAttachment(pendingFile);
-  const wantsStream = isImageRequest(text) || isVideoRequest(text) || isCodingAgent || hasVisionAttach || (
-    !forceNoStream && (!pendingFile || streamableFile) && !isInstant && text.length > 0
-    && !/^(run|apply|undo|review|find|load|transcribe|generate)/i.test(trimmed)
-    && (!/^search/i.test(trimmed) || isWebSearch)
-  );
-  const isLikelyChat = !forceNoStream && wantsStream && !isImageRequest(text) && !isVideoRequest(text);
-
-  const typing = addTyping();
-  const fetchOpts = { method: "POST", body: form, signal: chatAbortController.signal };
-
-  try {
-    if (useStreaming && wantsStream) {
-      form.append("stream", "true");
-      if (isNativeApp()) form.append("lite_ui", "true");
-      const body = typing.querySelector(".msg-body");
-      body.innerHTML = isVideoRequest(text)
-        ? `<p class="status-hint">Starting video generation…</p>`
-        : isImageRequest(text)
-          ? `<p class="status-hint">Starting image generation…</p>`
-          : "";
-      let full = "";
-      let gotDone = false;
-
-      const res = await fetch("/api/chat", fetchOpts);
-      if (!res.ok) {
-        const err = await parseJsonResponse(res);
-        throw new Error(err.message || `Request failed (${res.status})`);
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let streamFinished = false;
-
-      try {
-        while (!streamFinished) {
-          if (chatStopRequested) {
-            streamFinished = true;
-            break;
-          }
-          const { done, value } = await readStreamChunk(reader);
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop();
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            let event;
-            try { event = JSON.parse(line.slice(6)); } catch { continue; }
-            if (event.type === "status") {
-              window.updateProgressStatus(event.message || "Processing…");
-              if (body) {
-                body.innerHTML = `<p class="status-hint">${escapeHtml(event.message || "Processing…")}</p>`;
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-              }
-            } else if (event.type === "agent_step") {
-              const label = `${event.action || "step"}: ${event.detail || ""}`;
-              window.updateProgressStatus(label);
-              if (body && !isNativeApp()) {
-                const steps = body.querySelector(".agent-steps") || document.createElement("div");
-                steps.className = "agent-steps";
-                if (!steps.parentElement) body.appendChild(steps);
-                const line = document.createElement("div");
-                line.className = "agent-step" + (event.ok === false ? " fail" : "");
-                line.textContent = `${event.step || "•"}. ${label}`;
-                steps.appendChild(line);
-                messagesEl.scrollTop = messagesEl.scrollHeight;
-              }
-            } else if (event.type === "token") {
-              window.updateProgressStatus("Generating…");
-              full += event.content;
-              activeStreamText = full;
-              body.innerHTML = formatMessage(full);
-              syncMessageRawText(body, full);
-              messagesEl.scrollTop = messagesEl.scrollHeight;
-            } else if (event.type === "done" || (event.ok && event.image_path)) {
-              gotDone = true;
-              streamFinished = true;
-              typing.classList.remove("typing-msg");
-              if (!event.ok && !full && !event.image_path) {
-                typing.remove();
-                window.showError(event.message || "Request failed.");
-                break;
-              }
-              const streamed = Boolean(full);
-              const isPendingMediaJob = Boolean(
-                event.job_id
-                && (event.type === "media_job" || event.result_type === "media_job" || event.pending),
-              );
-              if (!streamed && !isPendingMediaJob) typing.remove();
-              if (isPendingMediaJob) typing.classList.remove("typing-msg");
-              lastAssistantText = full || event.message;
-              const doneOpts = isPendingMediaJob
-                ? { targetBody: typing.querySelector(".msg-body"), pendingMediaJob: true }
-                : {};
-              try {
-                handleDone(event, full || event.message, streamed, doneOpts);
-              } catch (err) {
-                console.error("handleDone failed", err);
-                window.showError(`Could not display response: ${err.message || err}`);
-              }
-              finishSendUi();
-              break;
-            }
-          }
-        }
-      } finally {
-        try { await reader.cancel(); } catch (_) {}
-      }
-
-      if (chatStopRequested) {
-        typing.remove();
-        if (activeStreamText.trim()) {
-          addMessage("assistant", `${activeStreamText.trim()}\n\n*(stopped)*`, { type: "info" });
-        }
-        statusText.textContent = "Stopped";
-      } else if (!gotDone) {
-        typing.remove();
-        if (isVideoRequest(text)) {
-          window.showError("Video generation did not finish — check the Video tab or try again.");
-        } else if (isImageRequest(text)) {
-          window.showError("Image generation did not finish — check the Gallery tab or try again.");
-        } else if (isCodingAgent) {
-          window.showError(
-            `**${ariaName()} lost the coding stream** (the server may have restarted mid-task).\n\n`
-            + "Wait a few seconds, then send the same request once — don't auto-retry in a loop."
-          );
-        } else {
-          await sendMessage(text, true, { skipUserBubble: true });
-        }
-      }
-    } else {
-      const res = await fetch("/api/chat", fetchOpts);
-      const data = await parseJsonResponse(res);
-      typing.remove();
-      if (!res.ok || data.ok === false) {
-        window.showError(data.message || "Something went wrong.");
-        return;
-      }
-      handleDone(data, data.message);
-    }
-  } catch (e) {
-    typing.remove();
-    if (chatStopRequested || e.name === "AbortError") {
-      if (activeStreamText.trim()) {
-        addMessage("assistant", `${activeStreamText.trim()}\n\n*(stopped)*`, { type: "info" });
-      }
-      statusText.textContent = "Stopped";
-      return;
-    }
-    if (!forceNoStream && useStreaming && wantsStream && !isCodingAgent
-        && !/\bdebug until\b.*\btests?\s+pass\b/i.test(text)) {
-      await sendMessage(text, true, { skipUserBubble: true });
-      return;
-    }
-    const msg = String(e.message || e);
-    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
-      window.showError(
-        `**Lost connection to ${ariaName()}** (the server may have restarted while working).\n\n`
-        + "Wait a few seconds and try again. If it keeps happening, use the desktop shortcut or run:\n"
-        + "`./scripts/launch-jarvis.sh`"
-      );
-    } else if (msg.includes("Ollama")) {
-      window.showError(`**${msg}**\n\n${ariaName()} is starting Ollama automatically — try again in a few seconds.`);
-    } else {
-      window.showError(`**Error:** ${msg}`);
-    }
-  } finally {
-    finishSendUi();
-  }
-}
 
 // Media job track/resume/poll → media_jobs.js (window.activeMediaJobs / pollMediaJob / resumePendingMediaJobs)
 
@@ -1014,6 +747,8 @@ function handleDone(data, text, streamed = false, options = {}) {
 }
 
 window.handleDone = handleDone;
+window.finishSendUi = finishSendUi;
+window.addTyping = addTyping;
 
 chatForm?.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -1021,7 +756,7 @@ chatForm?.addEventListener("submit", (e) => {
   messageInput.value = "";
   messageInput.style.height = "auto";
   resizeMessageInput();
-  sendMessage(text);
+  window.sendMessage?.(text);
 });
 
 messageInput?.addEventListener("input", resizeMessageInput);
@@ -1094,7 +829,7 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
     const transcript = e.results[0][0].transcript;
     messageInput.value = transcript;
     micBtn.classList.remove("listening");
-    sendMessage(transcript);
+    window.sendMessage?.(transcript);
   };
   recognition.onerror = (ev) => {
     micBtn.classList.remove("listening");
@@ -1122,7 +857,7 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
   micBtn.disabled = true;
 }
 
-window.sendMessage = sendMessage;
+// window.sendMessage → chat_send.js
 window.isNativeApp = isNativeApp;
 window.loadHealth = loadHealth;
 window.isVisionAttachment = isVisionAttachment;
@@ -1505,6 +1240,7 @@ function switchToView(view) {
 window.switchToView = switchToView;
 window.renderServices = renderServices;
 window.addMessage = addMessage;
+window.syncMessageRawText = syncMessageRawText;
 
 
 
@@ -1561,7 +1297,7 @@ window.ariaPostStartup = function ariaPostStartup() {
     if (prefill && messageInput) {
       messageInput.value = prefill;
       window.history.replaceState({}, "", window.location.pathname);
-      setTimeout(() => sendMessage(prefill), 300);
+      setTimeout(() => window.sendMessage?.(prefill), 300);
     }
     const hashView = (window.location.hash || "").replace(/^#/, "").trim();
     if (hashView && document.querySelector(`.view-tab[data-view="${hashView}"]`)) {
@@ -1659,7 +1395,7 @@ document.addEventListener("keydown", (e) => {
   if (e.ctrlKey && e.key === "Enter") {
     if (inTextField && e.target !== messageInput) return;
     e.preventDefault();
-    sendMessage(messageInput.value);
+    window.sendMessage?.(messageInput.value);
   }
   if (e.ctrlKey && e.key === "l" && !inTextField) {
     e.preventDefault();

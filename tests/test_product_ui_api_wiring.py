@@ -299,6 +299,7 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/chat_images.js").is_file()
     assert Path("jarvis/gui/static/chat_progress.js").is_file()
     assert Path("jarvis/gui/static/chat_video.js").is_file()
+    assert Path("jarvis/gui/static/chat_send.js").is_file()
     assert "coding_quick.js" in html
     assert "chat_media.js" in html
     assert "crop_webcam.js" in html
@@ -311,6 +312,7 @@ def test_command_palette_is_wired():
     assert "chat_images.js" in html
     assert "chat_progress.js" in html
     assert "chat_video.js" in html
+    assert "chat_send.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
@@ -384,6 +386,10 @@ def test_command_palette_is_wired():
     assert "function buildImageMessageHtml" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "buildImageMessageHtml," in Path("jarvis/gui/static/chat_images.js").read_text(encoding="utf-8")
     assert "buildDataTableHtml," in Path("jarvis/gui/static/chat_images.js").read_text(encoding="utf-8")
+    assert "async function sendMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "async function sendMessage" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
+    assert "get useStreaming" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "window.finishSendUi" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showGeneratedImage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showAudioPlayer" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
@@ -459,7 +465,7 @@ def test_command_palette_is_wired():
     assert 'target === "workstation"' in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "created?.project?.slug" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
     assert "Generation cancelled" in Path("jarvis/gui/static/chat_progress.js").read_text(encoding="utf-8")
-    assert "preferred_module" in app
+    assert "preferred_module" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
     assert "preferred_module" in Path("jarvis/gui/server.py").read_text(encoding="utf-8")
     assert "Knowledge search unavailable" in js
     assert "Trusted device revoked" in Path("jarvis/gui/static/security_settings.js").read_text(encoding="utf-8")
