@@ -27,6 +27,7 @@ async function loadVoiceCheatsheet(key) {
     body.textContent = data.cheatsheet?.content || data.content || "(empty cheatsheet)";
   } catch (e) {
     body.textContent = e.message || "Could not load cheatsheet";
+    window.showAriaToast?.(e.message || "Could not load cheatsheet", "err", 4000);
   }
 }
 
@@ -78,6 +79,7 @@ async function loadVoiceTab() {
     window.jarvisRefreshVoiceUi?.();
   } catch (e) {
     status.textContent = e.message;
+    window.showAriaToast?.(e.message || "Voice tab load failed", "err", 5000);
   }
 }
 
@@ -87,6 +89,8 @@ window.initVoiceTab = function initVoiceTab() {
   root.dataset.bound = "1";
   loadVoiceTab();
   $("voiceTabRefreshBtn")?.addEventListener("click", loadVoiceTab);
+  $("voiceOpenAudioBtn")?.addEventListener("click", () => window.switchToView?.("audio"));
+  $("voiceOpenPresenceBtn")?.addEventListener("click", () => window.switchToView?.("presence"));
   $("voiceTabDuplexSelect")?.addEventListener("change", async (ev) => {
     try {
       await saveVoiceTabSetting({ duplex_mode: ev.target.value });

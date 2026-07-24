@@ -53,6 +53,7 @@
       }
     } catch (e) {
       if (status) status.textContent = `Security API: ${e.message || "unavailable"}`;
+      window.showAriaToast?.(e.message || "Security status unavailable", "err", 5000);
     }
 
     try {

@@ -262,6 +262,8 @@ def test_command_palette_is_wired():
     assert "act:webcam" in js
     assert "act:gallery" in js
     assert "act:ics-wizard" in js
+    assert "act:checklist" in js
+    assert "act:open-meme" in js
     assert "journalOpenCalendarBtn" in html
     assert "memoryOpenJournalBtn" in html
     assert "memoryOpenProjectsBtn" in html
@@ -276,8 +278,19 @@ def test_command_palette_is_wired():
     assert "window.freeJarvisVram" in Path("jarvis/gui/static/free_vram.js").read_text(encoding="utf-8")
     assert "async function freeJarvisVram" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "galleryOpenMakerBtn" in html
+    assert "galleryOpenVideoBtn" in html
+    assert "galleryOpenMemeBtn" in html
+    assert "videoOpenGalleryBtn" in html
+    assert "memeOpenGalleryBtn" in html
+    assert "audioOpenVoiceBtn" in html
+    assert "voiceOpenAudioBtn" in html
     assert "flytyingOpenGalleryBtn" in html
     assert "cadOpenGalleryBtn" in html
+    assert "Could not load projects" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
+    assert "Security status unavailable" in Path("jarvis/gui/static/security_settings.js").read_text(encoding="utf-8")
+    assert "Voice tab load failed" in Path("jarvis/gui/static/voice_tab.js").read_text(encoding="utf-8")
+    assert "Browser agent unavailable" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
+    assert "toastOnError" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
     assert "Planner load failed" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "News briefing failed" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "Diarize failed" in Path("jarvis/gui/static/audio_advanced.js").read_text(encoding="utf-8")

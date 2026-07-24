@@ -24,7 +24,7 @@
     return d.innerHTML;
   }
 
-  async function refreshBrowserPanel() {
+  async function refreshBrowserPanel({ toastOnError = false } = {}) {
     const statusEl = $("browserStatusLine");
     const urlEl = $("browserUrlLine");
     const img = $("browserScreenshot");
@@ -59,6 +59,9 @@
       }
     } catch (err) {
       statusEl.textContent = "Browser agent unavailable";
+      if (toastOnError) {
+        window.showAriaToast?.(err?.message || "Browser agent unavailable", "err", 5000);
+      }
     }
   }
 
@@ -161,7 +164,7 @@
     }
     if (root) root.dataset.bound = "1";
 
-    $("browserRefreshBtn")?.addEventListener("click", refreshBrowserPanel);
+    $("browserRefreshBtn")?.addEventListener("click", () => refreshBrowserPanel({ toastOnError: true }));
     $("browserInstallPwBtn")?.addEventListener("click", async () => {
       const out = $("browserTaskResult");
       if (out) out.textContent = "Installing Playwright + Chromium…";

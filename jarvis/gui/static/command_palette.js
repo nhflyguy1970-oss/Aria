@@ -493,6 +493,33 @@
           setTimeout(() => $("icsUrlInput")?.focus(), 80);
         },
       },
+      {
+        id: "act:checklist",
+        label: "Run first-flight checklist",
+        group: "System",
+        keywords: "smoke test dashboard health",
+        run: () => {
+          goView("dashboard");
+          setTimeout(() => $("checklistRunBtn")?.click(), 80);
+        },
+      },
+      {
+        id: "act:video-storyboard",
+        label: "Focus video storyboard",
+        group: "Actions",
+        keywords: "ken burns animate gallery paths",
+        run: () => {
+          goView("video");
+          setTimeout(() => $("storyboardPathsInput")?.focus(), 80);
+        },
+      },
+      {
+        id: "act:open-meme",
+        label: "Open Meme studio",
+        group: "Actions",
+        keywords: "caption generate meme",
+        run: () => goView("meme"),
+      },
     ];
 
     function focusSearch(view, inputId, clickBtnId) {

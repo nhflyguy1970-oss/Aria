@@ -56,6 +56,7 @@ async function loadProjects() {
     }
   } catch (e) {
     if (list) list.innerHTML = `<li class="muted">${e.message}</li>`;
+    window.showAriaToast?.(e.message || "Could not load projects", "err", 5000);
   }
 }
 

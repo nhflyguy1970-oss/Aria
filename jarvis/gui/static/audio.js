@@ -1132,6 +1132,16 @@ async function loadAudioPanel() {
 }
 
 window.initAudio = () => {
+  const audioView = document.getElementById("audioView");
+  if (audioView && audioView.dataset.crossBound !== "1") {
+    audioView.dataset.crossBound = "1";
+    document.getElementById("audioOpenVoiceBtn")?.addEventListener("click", () => {
+      window.switchToView?.("voice");
+    });
+    document.getElementById("audioOpenJournalBtn")?.addEventListener("click", () => {
+      window.switchToView?.("journal");
+    });
+  }
   if (audioPanelMounted && audioContent?.querySelector("#audioRecordBtn")) {
     loadAudioStatus();
     refreshRecentLists();

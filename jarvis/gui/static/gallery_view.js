@@ -183,6 +183,12 @@
     document.getElementById("galleryOpenFlytyingBtn")?.addEventListener("click", () => {
       window.switchToView?.("flytying");
     });
+    document.getElementById("galleryOpenVideoBtn")?.addEventListener("click", () => {
+      window.switchToView?.("video");
+    });
+    document.getElementById("galleryOpenMemeBtn")?.addEventListener("click", () => {
+      window.switchToView?.("meme");
+    });
   }
 
   window.loadGallery = loadGallery;

@@ -101,7 +101,9 @@ async function generateMeme(previewOnly = false) {
     });
     const data = await res.json();
     if (!data.ok) {
-      setMemeStatus(data.message || "Meme failed", true);
+      const msg = data.message || "Meme failed";
+      setMemeStatus(msg, true);
+      window.showAriaToast?.(msg, "err", 5000);
       return;
     }
     let imageName = data.image_name;
@@ -147,6 +149,12 @@ function initMemeStudio() {
       input.value = "make a meme about ";
       input.focus();
     }
+  });
+  document.getElementById("memeOpenGalleryBtn")?.addEventListener("click", () => {
+    window.switchToView?.("gallery");
+  });
+  document.getElementById("memeOpenVideoBtn")?.addEventListener("click", () => {
+    window.switchToView?.("video");
   });
   loadMemeGallery();
 }

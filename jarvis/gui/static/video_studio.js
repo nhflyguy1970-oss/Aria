@@ -463,6 +463,12 @@ document.getElementById("videoGenHintBtn")?.addEventListener("click", () => {
     window.jarvisSendToChat("generate a video of ");
   }
 });
+document.getElementById("videoOpenGalleryBtn")?.addEventListener("click", () => {
+  window.switchToView?.("gallery");
+});
+document.getElementById("videoOpenMemeBtn")?.addEventListener("click", () => {
+  window.switchToView?.("meme");
+});
 
 async function pollStoryboardJob(jobId, statusEl) {
   if (!jobId) return;
