@@ -258,6 +258,7 @@ def register_routes(app, assistant) -> None:
                 backend=str(body.get("backend") or "moonraker"),
                 port=int(body.get("port") or 0),
                 api_key=str(body.get("api_key") or ""),
+                model=str(body.get("model") or body.get("model_id") or ""),
             )
         except ValueError as exc:
             return JSONResponse(status_code=400, content={"ok": False, "message": str(exc)})

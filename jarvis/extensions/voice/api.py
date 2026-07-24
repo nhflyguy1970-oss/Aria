@@ -37,6 +37,7 @@ def register_routes(app, assistant) -> None:
         return {"ok": True, **stt_status()}
 
     @app.get("/api/voice/smoke")
+    @app.post("/api/voice/smoke")
     def voice_smoke_route():
         from jarvis.voice_smoke import run_voice_smoke
 

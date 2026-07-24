@@ -1572,6 +1572,9 @@
           </label>
           <button type="button" id="voiceTabSaveBtn" class="ghost-btn small">Save settings</button>
           <button type="button" id="voiceTabRefreshBtn" class="ghost-btn small">Refresh</button>
+          <button type="button" id="routerWarmBtn" class="ghost-btn small" title="Warm FunctionGemma router">Warm router</button>
+          <button type="button" id="voiceSmokeBtn" class="ghost-btn small" title="Run voice smoke checks">Voice smoke</button>
+          <span id="routerStatusPill" class="muted small">Router: …</span>
         </div>
         <div class="voice-tab-cloud">
           <h3 class="life-subheading">Cloud live</h3>
@@ -1695,14 +1698,17 @@
   <div id="lockScreen" class="lock-screen hidden" role="dialog" aria-modal="true">
     <div class="lock-card">
       <h2>ARIA locked</h2>
-      <p class="muted">Enter PIN or use a trusted device</p>
+      <p class="muted">Enter PIN, face unlock, or use a trusted device</p>
       <input type="password" id="lockPinInput" class="audio-path-input" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="off" />
       <label class="toggle-row"><span>Trust this device</span><input type="checkbox" id="lockTrustDevice" /></label>
-      <button type="button" id="lockUnlockBtn" class="apply-btn">Unlock</button>
+      <div class="ha-actions">
+        <button type="button" id="lockUnlockBtn" class="apply-btn">Unlock</button>
+        <button type="button" id="lockFaceBtn" class="ghost-btn">Unlock with face</button>
+      </div>
       <p id="lockError" class="fail"></p>
     </div>
   </div>
-  <script src="/static/lock_screen.js?v=5.16.70"></script>
+  <script src="/static/lock_screen.js?v=5.16.76"></script>
   <script src="/static/audio_studio.js?v=1.3.0"></script>
   <script src="/static/audio_advanced.js?v=1.5.0"></script>
   <script src="/static/audio.js?v=5.16.70"></script>
@@ -1713,18 +1719,18 @@
   <script src="/static/chat_sessions.js?v=5.16.70"></script>
   <script src="/static/movie_tiers.js?v=5.16.74"></script>
   <script src="/static/gemini_live.js?v=5.16.70"></script>
-  <script src="/static/voice_bar.js?v=5.16.70"></script>
+  <script src="/static/voice_bar.js?v=5.16.76"></script>
   <script src="/static/jarvis_ambient.js?v=1.2.0"></script>
   <script type="module" src="/static/modules/jobs.mjs?v=5.16.70"></script>
   <script type="module" src="/static/modules/health.mjs?v=5.16.70"></script>
   <script src="/static/planner.js?v=5.16.74"></script>
-  <script src="/static/mission_control.js?v=1.0.1"></script>
+  <script src="/static/mission_control.js?v=1.0.2"></script>
   <script src="/static/calendar.js?v=5.16.74"></script>
   <script src="/static/flytying.js?v=5.16.74"></script>
   <script src="/static/projects.js?v=5.16.70"></script>
   <script src="/static/vendor/three/three.min.js"></script>
   <script src="/static/vendor/three/STLLoader.js"></script>
-  <script src="/static/maker.js?v=5.16.74"></script>
+  <script src="/static/maker.js?v=5.16.76"></script>
   <script src="/static/browser_panel.js?v=5.16.71"></script>
   <script src="/static/presence.js?v=5.16.70"></script>
   <script src="/static/security_settings.js?v=5.16.74"></script>
@@ -1733,6 +1739,6 @@
   <script src="/static/world_state_hud.js?v=5.16.70"></script>
   <script src="/static/audit.js?v=5.16.70"></script>
   <script src="/static/voice_tab.js?v=5.16.70"></script>
-  <script src="/static/app.js?v=5.16.75"></script>
+  <script src="/static/app.js?v=5.16.76"></script>
 </body>
 </html>

@@ -94,6 +94,28 @@ def test_lsp_diagnostics_ui_uses_quick_mode():
     assert "Checking…" in src
 
 
+def test_mc_dollar_accepts_hash_ids_and_audit_controls_wired():
+    from pathlib import Path
+
+    mc = Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
+    assert 'replace(/^#/, "")' in mc or "replace(/^#/, '')" in mc
+    assert "mcRoutingLiveBtn" in mc
+    assert "mcRepairBtn" in mc
+    html = Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
+    assert 'id="lockFaceBtn"' in html
+    assert 'id="routerWarmBtn"' in html
+    assert 'id="voiceSmokeBtn"' in html
+    assert 'id="routerStatusPill"' in html
+    voice = Path("jarvis/gui/static/voice_bar.js").read_text(encoding="utf-8")
+    assert 'fetch("/api/voice/smoke")' in voice
+    assert 'fetch("/api/voice/smoke", { method: "POST" })' not in voice
+    app_js = Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "inpaintDenoise" in app_js
+    assert "refreshSidebarVideoStatus" in app_js
+    maker = Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
+    assert "printerModelSelect" in maker
+
+
 def test_stop_playback_and_clear_tts_queue_do_not_raise():
     from jarvis.audio_device import stop_playback
     from jarvis.tts_playback_queue import clear_tts_queue

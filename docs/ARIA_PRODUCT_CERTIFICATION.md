@@ -109,6 +109,11 @@ UI control → fetch(/api/…) / Cap Bus / chat action
 | Skill defaults / `skill_run` routing | Empty `skill_defaults`; NLU stole “run … skill” | Bundled defaults + router priority |
 | Dashboard workflows show `null` | `list_workflows` treated `index.json` as a workflow | Skip index; require slug/name |
 | LSP Check stuck on `…` | Deep mypy diagnostics hang UI (~40s+) | Quick `deep=0` default + AbortController timeout |
+| MC tab actions dead | `mc$("#id")` with `getElementById` | Strip leading `#` in `mc$` |
+| Printer model select ignored | UI never sent `model` | Wire select + API `model=` |
+| Inpaint denoise ignored | Hardcoded 0.82 | Read `#inpaintDenoise` |
+| Face unlock / router warm / voice smoke | Missing DOM or POST vs GET | Added controls; smoke GET (+ POST alias) |
+| Sidebar video status static | Never refreshed | `refreshSidebarVideoStatus` via `/api/resources` |
 
 ## Technical debt removed
 

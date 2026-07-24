@@ -172,13 +172,26 @@
 
   async function addPrinter() {
     const host = $("printerHostInput")?.value?.trim();
-    if (!host) return;
-    await engFetch("/api/engineering/printers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: $("printerNameInput")?.value || "Printer", host }),
-    });
-    await refreshPrinter();
+    const model = $("printerModelSelect")?.value?.trim() || "";
+    if (!host && !model) {
+      window.showAriaToast?.("Enter a host or choose a printer model", "warn");
+      return;
+    }
+    try {
+      await engFetch("/api/engineering/printers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: $("printerNameInput")?.value || "Printer",
+          host: host || "",
+          model,
+        }),
+      });
+      await refreshPrinter();
+      window.showAriaToast?.("Printer saved", "ok");
+    } catch (e) {
+      window.showAriaToast?.(e.message || "Add printer failed", "err");
+    }
   }
 
   async function discoverPrinters() {

@@ -31,7 +31,9 @@ let _mcRoutingSearch = "";
 let _mcRenderGen = 0;
 
 function mc$(id) {
-  return document.getElementById(id);
+  // Accept both "id" and "#id" — many call sites use CSS-selector style.
+  const key = String(id || "").replace(/^#/, "");
+  return key ? document.getElementById(key) : null;
 }
 
 async function mcFetch(url, opts = {}) {

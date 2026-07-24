@@ -988,7 +988,7 @@ function initVideoLightbox() {
   });
 }
 
-async function queueImageEdit(imagePath, prompt, regionKey, statusEl, onDone) {
+async function queueImageEdit(imagePath, prompt, regionKey, statusEl, onDone, denoise) {
   if (!imagePath || !prompt) {
     if (statusEl) statusEl.textContent = "Enter what you want to change.";
     return false;
@@ -1000,7 +1000,16 @@ async function queueImageEdit(imagePath, prompt, regionKey, statusEl, onDone) {
   form.append("prompt", prompt);
   const endpoint = wholeImage ? "/api/image/edit" : "/api/image/inpaint";
   if (!wholeImage) {
-    form.append("denoise", "0.82");
+    let d = denoise;
+    if (d == null || d === "") {
+      const el = document.getElementById("inpaintDenoise");
+      d = el?.value;
+    }
+    const denoiseVal = Number(d);
+    form.append(
+      "denoise",
+      Number.isFinite(denoiseVal) ? String(Math.min(1, Math.max(0.5, denoiseVal))) : "0.82",
+    );
     const region = INPAINT_REGIONS[regionKeyNorm];
     if (region) form.append("region", JSON.stringify(region));
   }
@@ -3760,14 +3769,41 @@ document.getElementById("openImageSettingsBtn")?.addEventListener("click", () =>
 document.getElementById("openVideoStudioBtn")?.addEventListener("click", () => {
   switchToView("video");
   document.body.classList.remove("mobile-sidebar-open");
+  refreshSidebarVideoStatus();
 });
 document.getElementById("openVideoGalleryBtn")?.addEventListener("click", () => {
   switchToView("video");
   document.getElementById("videoGalleryGrid")?.scrollIntoView({ behavior: "smooth", block: "start" });
   document.body.classList.remove("mobile-sidebar-open");
+  refreshSidebarVideoStatus();
 });
-document.getElementById("sidebarVideoFreeVramBtn")?.addEventListener("click", () => {
+document.getElementById("sidebarVideoFreeVramBtn")?.addEventListener("click", async () => {
   if (typeof window.freeJarvisVram === "function") window.freeJarvisVram(statusText);
+  await refreshSidebarVideoStatus();
+});
+
+async function refreshSidebarVideoStatus() {
+  const el = document.getElementById("sidebarVideoStatus");
+  if (!el) return;
+  try {
+    const res = await fetch("/api/resources");
+    const data = await res.json().catch(() => ({}));
+    const free = data.free_vram_mb ?? data.vram_free_mb;
+    const total = data.vram_mb;
+    const line = data.status_line || (
+      free != null && total != null
+        ? `${Math.round(free)} / ${Math.round(total)} MB VRAM free`
+        : null
+    );
+    el.textContent = line
+      ? `AnimateDiff · Ken Burns · ${line}`
+      : "AnimateDiff · Ken Burns · chat: “make a video…”";
+  } catch (_) {
+    el.textContent = "AnimateDiff · Ken Burns · chat: “make a video…”";
+  }
+}
+document.addEventListener("DOMContentLoaded", () => {
+  refreshSidebarVideoStatus();
 });
 
 document.getElementById("mobileMenuBtn")?.addEventListener("click", () => {
@@ -5323,6 +5359,7 @@ document.getElementById("inpaintModal")?.addEventListener("click", (e) => {
 document.getElementById("inpaintRunBtn")?.addEventListener("click", async () => {
   const prompt = document.getElementById("inpaintPrompt")?.value?.trim();
   const regionKey = document.getElementById("inpaintRegion")?.value || "full";
+  const denoise = document.getElementById("inpaintDenoise")?.value;
   const statusEl = document.getElementById("inpaintStatus");
   const runBtn = document.getElementById("inpaintRunBtn");
   if (!inpaintTargetPath || !prompt) {
@@ -5334,7 +5371,7 @@ document.getElementById("inpaintRunBtn")?.addEventListener("click", async () => 
   await queueImageEdit(inpaintTargetPath, prompt, regionKey, statusEl, () => {
     closeInpaintModal();
     if (statusText) statusText.textContent = "Image edit running…";
-  });
+  }, denoise);
   if (runBtn) runBtn.disabled = false;
 });
 

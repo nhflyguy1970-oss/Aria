@@ -60,7 +60,7 @@ async function runVoiceSmoke() {
   const btn = document.getElementById("voiceSmokeBtn");
   if (btn) btn.disabled = true;
   try {
-    const res = await fetch("/api/voice/smoke", { method: "POST" });
+    const res = await fetch("/api/voice/smoke");
     const data = await res.json();
     const ok = Boolean(data.ok);
     showToast(
