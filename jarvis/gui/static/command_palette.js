@@ -805,7 +805,30 @@
       return;
     }
     const cmdHits = scored.map((x) => x.c);
-    filtered = [...contentHits, ...cmdHits].slice(0, MAX_VISIBLE);
+    const trimmed = q.trim();
+    const askCmd = trimmed
+      ? [{
+        id: "ask:aria",
+        label: `Ask Aria: “${trimmed}”`,
+        group: "AI",
+        hint: "Chat",
+        run: () => {
+          window.switchToView?.("chat");
+          const send = () => {
+            if (typeof window.jarvisSendToChat === "function") {
+              window.jarvisSendToChat(trimmed);
+            } else {
+              const input = document.getElementById("messageInput");
+              if (input) input.value = trimmed;
+              window.sendMessage?.(trimmed);
+            }
+          };
+          setTimeout(send, 60);
+        },
+      }]
+      : [];
+    const head = [...contentHits, ...cmdHits].slice(0, MAX_VISIBLE - askCmd.length);
+    filtered = [...head, ...askCmd];
   }
 
   async function fetchContentHits(q) {

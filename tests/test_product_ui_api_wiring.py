@@ -553,6 +553,8 @@ def test_command_palette_is_wired():
     assert "act:read-aloud" in js
     assert "act:ha-test" in js
     assert "act:image-engine" in js
+    assert "ask:aria" in js
+    assert "Ask Aria:" in js
     assert "dashSceneEmptyHaBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "Memory settings unavailable" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "Video trimmed" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")

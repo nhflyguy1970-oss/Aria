@@ -42,12 +42,12 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.
 
-## Wave resume (2026-07-24 night)
-- FIXED & CERTIFIED: **api_key_fetch.js** (loads first); **chat_state.js**; chat_attach/input; palette **act:ha-test** + **act:image-engine**. `app.js` ~**99** lines. View-cycle soak OK; HA/Comfy/world-state APIs 200.
-- INTENTIONALLY DEFERRED: multi-hour soak; multi-monitor DPI/dock; Comfy/HA interactive deep soaks when offline; exhaustive matrix.
+## Wave resume (2026-07-24 night+)
+- FIXED & CERTIFIED: command palette **Ask Aria** fallback (unmatched query → chat); 3-round 63-switch soak (0 errors, no heap growth); contextual world-state bar; HA/Comfy palette actions. `app.js` ~**99** lines.
+- INTENTIONALLY DEFERRED: multi-hour soak; multi-monitor DPI/dock; Comfy/HA interactive deep soaks (HA offline in env); exhaustive per-control matrix.
 - Verdict: **NO**
 
-**Next priorities:** multi-hour soak harness; multi-monitor; Comfy/HA interactive soaks; matrix completion.
+**Next priorities:** multi-hour soak; multi-monitor; Comfy/HA interactive soaks; matrix completion; residual a11y polish.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.
