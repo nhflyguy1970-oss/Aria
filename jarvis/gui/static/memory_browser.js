@@ -509,7 +509,11 @@ async function loadMemoryBrowser() {
         <button type="button" class="memory-edit-btn" data-id="${window.escapeHtml(e.id)}">Edit</button>
         <button type="button" class="memory-del-btn" data-id="${window.escapeHtml(e.id)}">Delete</button>
       </div>
-    </div>`).join("") || "<p class=\"memory-empty\">No memories stored.</p>";
+    </div>`).join("") || `<p class="memory-empty">No memories stored. <button type="button" class="ghost-btn tiny" id="memoryEmptyChatBtn">Ask Chat</button> or import from the toolbar.</p>`;
+    el.querySelector("#memoryEmptyChatBtn")?.addEventListener("click", () => {
+      window.switchToView?.("chat");
+      window.jarvisSendToChat?.("Remember that ");
+    });
   el.querySelectorAll(".memory-del-btn").forEach((btn) => {
     btn.onclick = async () => {
       const item = btn.closest(".memory-item");

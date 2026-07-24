@@ -88,7 +88,7 @@ function renderOperationalAdvisor(advisor) {
   const healthy = adv.healthy ? "mc-advisor--ok" : recs.length ? "mc-advisor--warn" : "mc-advisor--ok";
   return mcCard(
     "Operational advisor",
-    `<p class="mc-advisor-headline ${healthy}"><strong>${mcEsc(adv.headline || "—")}</strong></p>${items || "<p class='muted'>No recommendations</p>"}`
+    `<p class="mc-advisor-headline ${healthy}"><strong>${mcEsc(adv.headline || "—")}</strong></p>${items || "<p class='muted'>No recommendations. <button type='button' class='ghost-btn tiny' id='mcEmptyRecChatBtn'>Ask Chat</button></p>"}`
   );
 }
 
@@ -725,6 +725,11 @@ function ensureMcDelegates() {
     }
     if (e.target.closest?.("#mcEmptyActivityChatBtn")) {
       window.switchToView?.("chat");
+      return;
+    }
+    if (e.target.closest?.("#mcEmptyRecChatBtn")) {
+      window.switchToView?.("chat");
+      window.jarvisSendToChat?.("What should I focus on in Mission Control right now?");
       return;
     }
     if (e.target.closest?.("#mcRepairBtn")) {

@@ -43,7 +43,7 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: free_vram (+vramPreflight)/vision_settings/lan_access/git/chat_model/profile_controls/coding_quick/chat_media (+jarvisSendToChat)/crop_webcam/vision_drop/attachment_compare/**media_jobs** extracts; empty-state CTAs (Actions/Planner/Journal/skills/workflows/MC/Documents/Security/Maker/Fly materials+videos/Projects); act:compare-images; uncensored restore + media/coding poll failure toasts; NSFW install + voice settings toasts; cross-links; dashboard AI chips; alert→toast; skip-link + focus-visible; palette expansions; visibility-aware polling. `app.js` ~**2425** lines.
+- FIXED & CERTIFIED: …/attachment_compare/**media_jobs**/**coding_jobs** extracts; empty-state CTAs (+Projects/Fly videos/Memory/MC recommendations); coding cancel feedback; poll failure toasts. `app.js` ~**2311** lines.
 - INTENTIONALLY DEFERRED: chat/stream/sendMessage still in app.js (core pipeline); long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 

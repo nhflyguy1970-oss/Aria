@@ -293,12 +293,14 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/vision_drop.js").is_file()
     assert Path("jarvis/gui/static/attachment_compare.js").is_file()
     assert Path("jarvis/gui/static/media_jobs.js").is_file()
+    assert Path("jarvis/gui/static/coding_jobs.js").is_file()
     assert "coding_quick.js" in html
     assert "chat_media.js" in html
     assert "crop_webcam.js" in html
     assert "vision_drop.js" in html
     assert "attachment_compare.js" in html
     assert "media_jobs.js" in html
+    assert "coding_jobs.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
@@ -332,7 +334,10 @@ def test_command_palette_is_wired():
     assert "makerEmptyHelloBtn" in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
     assert "flyEmptyScanBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert "flyEmptyVideoBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
-    assert "Coding job polling failed" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "Coding job polling failed" in Path("jarvis/gui/static/coding_jobs.js").read_text(encoding="utf-8")
+    assert "async function pollCodingJob" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "memoryEmptyChatBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
+    assert "mcEmptyRecChatBtn" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "Could not load voice settings" in Path("jarvis/gui/static/voice_bar.js").read_text(encoding="utf-8")
     assert "Media job resume failed" in Path("jarvis/gui/static/media_jobs.js").read_text(encoding="utf-8")
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")

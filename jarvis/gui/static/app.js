@@ -1412,126 +1412,7 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
 
 // Media job track/resume/poll → media_jobs.js (window.activeMediaJobs / pollMediaJob / resumePendingMediaJobs)
 
-async function pollCodingJob(jobId, messageEl) {
-  if (!window.activeMediaJobs) window.activeMediaJobs = new Set();
-  if (!jobId || window.activeMediaJobs.has(`coding-${jobId}`)) return;
-  window.activeMediaJobs.add(`coding-${jobId}`);
-
-  const started = Date.now();
-  const maxPollMs = 30 * 60 * 1000;
-  const pollDelay = () => (isNativeApp() ? 3000 : 1500);
-
-  const finishJob = () => {
-    window.activeMediaJobs.delete(`coding-${jobId}`);
-  };
-
-  const tick = async () => {
-    try {
-      const res = await fetch(`/api/coding/job/${encodeURIComponent(jobId)}`);
-      if (!res.ok) {
-        if (res.status === 404 && Date.now() - started > 8000) {
-          finishJob();
-          const body = messageEl?.querySelector?.(".msg-body") || messageEl;
-          if (body && !body.querySelector(".coding-job-lost")) {
-            body.insertAdjacentHTML(
-              "beforeend",
-              "<p class=\"warn coding-job-lost\">Coding job was interrupted by a server restart. "
-              + "Send the same request again to retry.</p>",
-            );
-          }
-          return;
-        }
-        if (Date.now() - started < maxPollMs) {
-          setTimeout(tick, pollDelay());
-          return;
-        }
-        finishJob();
-        return;
-      }
-      const data = await res.json();
-      if (!data.ok) {
-        if (Date.now() - started < maxPollMs) {
-          setTimeout(tick, pollDelay());
-          return;
-        }
-        finishJob();
-        return;
-      }
-      const body = messageEl?.querySelector?.(".msg-body") || messageEl;
-      if (body) {
-        let note = body.querySelector(".coding-job-status");
-        if (!note) {
-          note = document.createElement("p");
-          note.className = "coding-job-status muted";
-          body.appendChild(note);
-        }
-        note.textContent = data.message || "Coding agent working…";
-        if (data.steps?.length) {
-          let stepsEl = body.querySelector(".coding-job-steps");
-          if (!stepsEl) {
-            stepsEl = document.createElement("ul");
-            stepsEl.className = "coding-job-steps";
-            body.appendChild(stepsEl);
-          }
-          stepsEl.innerHTML = data.steps.slice(-6).map((s) =>
-            `<li>${escapeHtml(s.action)}: ${escapeHtml(s.detail || "")}</li>`,
-          ).join("");
-        }
-        if (!body.querySelector(".coding-cancel-btn")) {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "ghost-btn small coding-cancel-btn";
-          btn.textContent = "Stop job";
-          btn.addEventListener("click", () => {
-            fetch(`/api/coding/job/${encodeURIComponent(jobId)}/cancel`, { method: "POST" });
-          });
-          body.appendChild(btn);
-        }
-      }
-      if (data.done) {
-        finishJob();
-        if (data.result?.ok) {
-          const result = prepareNativeCodingResult(data.result);
-          const mountResult = () => {
-            handleDone(result, result.message || "", false, {
-              targetBody: body,
-              replaceQueued: true,
-            });
-            if (isNativeApp() && window.jarvisNotify) {
-              window.jarvisNotify("Coding ready", "Proposal ready — Apply or Dismiss in chat");
-            }
-          };
-          if (isNativeApp()) {
-            setTimeout(mountResult, 900);
-          } else {
-            mountResult();
-          }
-        } else if (body) {
-          body.insertAdjacentHTML(
-            "beforeend",
-            `<p class="warn">${escapeHtml(data.error || data.result?.message || "Coding job failed")}</p>`,
-          );
-        }
-        return;
-      }
-      setTimeout(tick, pollDelay());
-    } catch (err) {
-      if (Date.now() - started < maxPollMs) {
-        setTimeout(tick, pollDelay() + 500);
-      } else {
-        finishJob();
-        window.showAriaToast?.(
-          `Coding job polling failed: ${err?.message || err}`,
-          "err",
-          5000,
-        );
-      }
-    }
-  };
-  tick();
-}
-
-window.jarvisPollCodingJob = pollCodingJob;
+// pollCodingJob → coding_jobs.js (window.jarvisPollCodingJob)
 
 // pollMediaJob → media_jobs.js
 
@@ -1731,8 +1612,7 @@ function handleDone(data, text, streamed = false, options = {}) {
 
   if (data.job_id && (data.type === "coding_job" || data.result_type === "coding_job")) {
     const msg = document.querySelector(".message.assistant:last-child");
-    if (window.jarvisPollCodingJob) window.jarvisPollCodingJob(data.job_id, msg);
-    else pollCodingJob(data.job_id, msg);
+    window.jarvisPollCodingJob?.(data.job_id, msg);
   } else if (
     data.job_id
     && (data.type === "media_job" || data.result_type === "media_job" || data.pending)
@@ -1776,6 +1656,7 @@ function handleDone(data, text, streamed = false, options = {}) {
   }
 }
 
+window.prepareNativeCodingResult = prepareNativeCodingResult;
 window.handleDone = handleDone;
 
 chatForm?.addEventListener("submit", (e) => {
