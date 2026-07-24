@@ -31,6 +31,7 @@
       el.textContent = `CAD: ${parts.join(" · ") || "not installed"}${slicers ? ` · Slicer: ${slicers}` : ""}`;
     } catch (e) {
       el.textContent = `CAD status: ${e.message}`;
+      window.showAriaToast?.(e.message || "CAD status unavailable", "err", 4000);
     }
   }
 
@@ -210,13 +211,14 @@
       }
     } catch (e) {
       if (list) list.innerHTML = `<li class="muted">${esc(e.message)}</li>`;
+      window.showAriaToast?.(e.message || "Printer discovery failed", "err", 5000);
     }
   }
 
   async function startPrint() {
     const gcode = wrap.dataset.lastGcode || "";
     if (!gcode) {
-      alert("Slice a model first.");
+      window.showAriaToast?.("Slice a model first", "warn", 3500);
       return;
     }
     const bed = $("printBedConfirm")?.checked;
