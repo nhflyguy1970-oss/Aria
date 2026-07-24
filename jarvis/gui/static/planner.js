@@ -283,7 +283,11 @@ async function loadDashboard() {
       loadCat(cats[0]);
     }
 
-    $("dashNewsRefresh")?.addEventListener("click", () => loadDashboard());
+    const newsRefresh = $("dashNewsRefresh");
+    if (newsRefresh && newsRefresh.dataset.bound !== "1") {
+      newsRefresh.dataset.bound = "1";
+      newsRefresh.addEventListener("click", () => loadDashboard());
+    }
     startDashboardClock();
   } catch (e) {
     $("dashboardBody") && ($("dashboardBody").textContent = e.message);
