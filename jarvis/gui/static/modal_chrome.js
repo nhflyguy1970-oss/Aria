@@ -19,6 +19,7 @@
       "projectPickerModal",
       "settingsModal",
       "shortcutsModal",
+      "cropModal",
     ];
 
     function isOpen(el) {

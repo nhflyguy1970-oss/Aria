@@ -694,10 +694,10 @@
         </div>
       </div>
 
-      <div id="cropModal" class="crop-modal hidden">
+      <div id="cropModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="cropModalTitle">
         <div class="crop-modal-card">
-          <h3>Crop region</h3>
-          <div id="cropCanvasWrap" class="crop-canvas-wrap"><canvas id="cropCanvas"></canvas></div>
+          <h3 id="cropModalTitle">Crop region</h3>
+          <div id="cropCanvasWrap" class="crop-canvas-wrap"><canvas id="cropCanvas" aria-label="Crop canvas"></canvas></div>
           <div class="crop-actions">
             <button type="button" id="cropApplyBtn" class="apply-btn small">Apply crop</button>
             <button type="button" id="cropCancelBtn" class="ghost-btn small">Cancel</button>
@@ -1719,9 +1719,9 @@
         </div>
       </div>
 
-      <div id="haSetupModal" class="crop-modal hidden" role="dialog">
+      <div id="haSetupModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="haSetupModalTitle">
         <div class="crop-modal-card profile-modal-card">
-          <h3>Smart home setup</h3>
+          <h3 id="haSetupModalTitle">Smart home setup</h3>
           <ol class="ha-setup-steps">
             <li><strong>Geeni bulbs</strong> — migrate to Smart Life / Tuya app, add Tuya integration in HA.</li>
             <li><strong>Wyze bulbs</strong> — install HACS, then ha-wyzeapi; add Wyze credentials in HA.</li>
@@ -1828,8 +1828,8 @@
   <script src="/static/world_state_hud.js?v=5.16.70"></script>
   <script src="/static/audit.js?v=5.16.96"></script>
   <script src="/static/voice_tab.js?v=5.16.90"></script>
-  <script src="/static/modal_chrome.js?v=1.0.0"></script>
-  <script src="/static/command_palette.js?v=1.0.18"></script>
+  <script src="/static/modal_chrome.js?v=1.0.1"></script>
+  <script src="/static/command_palette.js?v=1.0.19"></script>
   <script src="/static/ha_panel.js?v=1.0.1"></script>
   <script src="/static/upgrade_wizard.js?v=1.0.2"></script>
   <script src="/static/image_engine.js?v=1.0.2"></script>
@@ -1837,9 +1837,10 @@
   <script src="/static/lan_access.js?v=1.0.0"></script>
   <script src="/static/vision_settings.js?v=1.0.0"></script>
   <script src="/static/free_vram.js?v=1.0.0"></script>
-  <script src="/static/app.js?v=5.16.128"></script>
+  <script src="/static/app.js?v=5.16.129"></script>
   <script src="/static/coding_quick.js?v=1.0.0"></script>
   <script src="/static/chat_media.js?v=1.0.0"></script>
+  <script src="/static/crop_webcam.js?v=1.0.0"></script>
   <script src="/static/models_panel.js?v=1.0.0"></script>
   <script src="/static/uncensored_mode.js?v=1.0.0"></script>
   <script src="/static/startup_overlay.js?v=1.0.2"></script>

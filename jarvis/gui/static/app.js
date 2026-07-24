@@ -2091,7 +2091,9 @@ function updateAttachmentPreview() {
   document.getElementById("cancelCompareBtn")?.addEventListener("click", () => {
     exitCompareMode();
   });
-  document.getElementById("cropAttachBtn")?.addEventListener("click", openCropModal);
+  document.getElementById("cropAttachBtn")?.addEventListener("click", () => {
+    window.openCropModal?.();
+  });
   updateCompareButton();
 }
 
@@ -2187,61 +2189,7 @@ function refreshVisionChips() {
   });
 }
 
-async function openCropModal() {
-  if (!pendingFile || !isVisionAttachment(pendingFile)) return;
-  const modal = document.getElementById("cropModal");
-  const canvas = document.getElementById("cropCanvas");
-  if (!modal || !canvas) return;
-  const ctx = canvas.getContext("2d");
-  const img = new Image();
-  img.onload = () => {
-    const maxW = 640;
-    const scale = Math.min(1, maxW / img.width);
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    modal.classList.remove("hidden");
-    let start = null;
-    let rect = null;
-    const redraw = () => {
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      if (rect) {
-        ctx.strokeStyle = "#d4a054";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
-      }
-    };
-    canvas.onmousedown = (ev) => {
-      start = { x: ev.offsetX, y: ev.offsetY };
-      rect = null;
-    };
-    canvas.onmousemove = (ev) => {
-      if (!start) return;
-      rect = {
-        x: Math.min(start.x, ev.offsetX),
-        y: Math.min(start.y, ev.offsetY),
-        w: Math.abs(ev.offsetX - start.x),
-        h: Math.abs(ev.offsetY - start.y),
-      };
-      redraw();
-    };
-    canvas.onmouseup = () => { start = null; };
-    document.getElementById("cropApplyBtn").onclick = () => {
-      if (rect && rect.w > 4 && rect.h > 4) {
-        pendingCrop = {
-          x: rect.x / canvas.width,
-          y: rect.y / canvas.height,
-          w: rect.w / canvas.width,
-          h: rect.h / canvas.height,
-        };
-      }
-      modal.classList.add("hidden");
-      updateAttachmentPreview();
-    };
-    document.getElementById("cropCancelBtn").onclick = () => modal.classList.add("hidden");
-  };
-  img.src = URL.createObjectURL(pendingFile);
-}
+// openCropModal / webcam → crop_webcam.js (window.openCropModal, window.captureWebcamAttachment)
 
 function initVisionDropPaste() {
   const chatView = document.getElementById("chatView");
@@ -2288,27 +2236,7 @@ function initVisionDropPaste() {
 
 initVisionDropPaste();
 
-document.getElementById("webcamBtn")?.addEventListener("click", async () => {
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-    const video = document.createElement("video");
-    video.srcObject = stream;
-    await video.play();
-    await new Promise((r) => setTimeout(r, 400));
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    canvas.getContext("2d").drawImage(video, 0, 0);
-    stream.getTracks().forEach((t) => t.stop());
-    canvas.toBlob((blob) => {
-      if (!blob) return;
-      assignAttachment(new File([blob], `webcam-${Date.now()}.jpg`, { type: "image/jpeg" }));
-    }, "image/jpeg", 0.92);
-  } catch (e) {
-    showError(`Webcam unavailable: ${e.message || e}`);
-    window.showAriaToast?.(`Webcam unavailable: ${e.message || e}`, "err", 5000);
-  }
-});
+// webcam → crop_webcam.js
 
 clearBtn?.addEventListener("click", async () => {
   try {
@@ -2397,6 +2325,19 @@ window.sendMessage = sendMessage;
 window.showError = showError;
 window.isNativeApp = isNativeApp;
 window.loadHealth = loadHealth;
+window.assignAttachment = assignAttachment;
+window.updateAttachmentPreview = updateAttachmentPreview;
+window.isVisionAttachment = isVisionAttachment;
+window.jarvisAttach = {
+  get pendingFile() { return pendingFile; },
+  get pendingFile2() { return pendingFile2; },
+  get compareMode() { return compareMode; },
+  get pendingCrop() { return pendingCrop; },
+  set pendingCrop(v) { pendingCrop = v; },
+  isVisionAttachment,
+  updateAttachmentPreview,
+  assignAttachment,
+};
 // loadVisionSettings → vision_settings.js
 Object.defineProperty(window, "activeBranchId", {
   get() { return _activeBranchId; },

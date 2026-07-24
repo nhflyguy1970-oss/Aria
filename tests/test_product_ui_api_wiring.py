@@ -286,14 +286,24 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/profile_controls.js").is_file()
     assert Path("jarvis/gui/static/coding_quick.js").is_file()
     assert Path("jarvis/gui/static/chat_media.js").is_file()
+    assert Path("jarvis/gui/static/crop_webcam.js").is_file()
     assert "coding_quick.js" in html
     assert "chat_media.js" in html
+    assert "crop_webcam.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
+    assert "window.openCropModal" in Path("jarvis/gui/static/crop_webcam.js").read_text(encoding="utf-8")
+    assert "window.captureWebcamAttachment" in Path("jarvis/gui/static/crop_webcam.js").read_text(encoding="utf-8")
+    assert "window.jarvisAttach" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "async function openCropModal" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert 'getElementById("webcamBtn")' not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showGeneratedImage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showAudioPlayer" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "window.appendGeneratedImage" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "aria-labelledby=\"cropModalTitle\"" in html
+    assert "aria-labelledby=\"haSetupModalTitle\"" in html
+    assert "cropModal" in Path("jarvis/gui/static/modal_chrome.js").read_text(encoding="utf-8")
     assert "journalOpenMemoryBtn" in html
     assert "memoryOpenBrowserBtn" in html
     assert "dashboardOpenMcBtn" in html

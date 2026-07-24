@@ -30,7 +30,7 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 | Audio status in health module | System | health.mjs renderAudioStatus | FIXED & CERTIFIED | Extracted from app.js |
 | Audio advanced feedback | Audio | Detect/diarize/live/PTT | FIXED & CERTIFIED | Toasts on fail/success |
 | Palette checklist / meme / storyboard | Discoverability | Command palette | FIXED & CERTIFIED | First-flight + media focus actions |
-| Crop/compare/webcam extract | Architecture | app.js attachments | INTENTIONALLY DEFERRED | ~84 coupled refs; high regression risk |
+| Crop/compare/webcam extract | Architecture | app.js attachments | FIXED & CERTIFIED | crop_webcam.js + jarvisAttach bridge; compare preview remains in app.js |
 | Comfy full generate soak | Gallery | ComfyUI | INTENTIONALLY DEFERRED | Needs GPU long-run |
 | HA live scenes | Smart home | HA | INTENTIONALLY DEFERRED | HA often down on workstation |
 | Long-duration leak profile | Performance | Runtime | INTENTIONALLY DEFERRED | Hours soak not yet run this wave |

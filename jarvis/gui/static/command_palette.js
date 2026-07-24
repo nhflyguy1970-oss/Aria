@@ -480,7 +480,13 @@
         keywords: "camera vision photo",
         run: () => {
           goView("chat");
-          setTimeout(() => $("webcamBtn")?.click(), 60);
+          setTimeout(() => {
+            if (typeof window.captureWebcamAttachment === "function") {
+              window.captureWebcamAttachment();
+            } else {
+              $("webcamBtn")?.click();
+            }
+          }, 60);
         },
       },
       {
