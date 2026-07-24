@@ -1,6 +1,3 @@
-# Source Generated with Decompyle++
-# File: routes.cpython-312.pyc (Python 3.12)
-
 '''Fast-path routes for projects and scenes.'''
 from __future__ import annotations
 import re

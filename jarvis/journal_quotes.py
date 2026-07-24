@@ -1,6 +1,3 @@
-# Source Generated with Decompyle++
-# File: journal_quotes.cpython-312.pyc (Python 3.12)
-
 '''Daily quotes — Stoic, Native American, and Tai Chi traditions.'''
 from __future__ import annotations
 from datetime import date

@@ -1,6 +1,3 @@
-# Source Generated with Decompyle++
-# File: journal_prompts.cpython-312.pyc (Python 3.12)
-
 '''Morning and evening journal prompts.'''
 from __future__ import annotations
 from datetime import date

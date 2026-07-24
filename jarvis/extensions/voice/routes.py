@@ -1,6 +1,3 @@
-# Source Generated with Decompyle++
-# File: routes.cpython-312.pyc (Python 3.12)
-
 '''Voice fast-path routes.'''
 from __future__ import annotations
 import re
