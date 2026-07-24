@@ -294,6 +294,7 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/attachment_compare.js").is_file()
     assert Path("jarvis/gui/static/media_jobs.js").is_file()
     assert Path("jarvis/gui/static/coding_jobs.js").is_file()
+    assert Path("jarvis/gui/static/media_urls.js").is_file()
     assert "coding_quick.js" in html
     assert "chat_media.js" in html
     assert "crop_webcam.js" in html
@@ -301,6 +302,7 @@ def test_command_palette_is_wired():
     assert "attachment_compare.js" in html
     assert "media_jobs.js" in html
     assert "coding_jobs.js" in html
+    assert "media_urls.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
@@ -336,6 +338,9 @@ def test_command_palette_is_wired():
     assert "flyEmptyVideoBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert "Coding job polling failed" in Path("jarvis/gui/static/coding_jobs.js").read_text(encoding="utf-8")
     assert "async function pollCodingJob" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "function resolveVideoUrl" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "function resolveVideoUrl" in Path("jarvis/gui/static/media_urls.js").read_text(encoding="utf-8")
+    assert "attachMediaLoadError," in Path("jarvis/gui/static/media_urls.js").read_text(encoding="utf-8")
     assert "memoryEmptyChatBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "mcEmptyRecChatBtn" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "galleryEmptyPromptBtn" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
