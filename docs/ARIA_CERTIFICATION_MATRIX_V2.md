@@ -42,9 +42,9 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.
 
-## Wave resume (2026-07-24 late++)
-- FIXED & CERTIFIED: **chat_controls.js**; **branding.js**; palette read-aloud; planner scene empty→HA; memory settings toasts; video analyze/trim/upload; docs Summarize→Chat; HA status toast; journal search/collections; gallery upscale/delete try/catch. `app.js` ~**470** lines.
-- INTENTIONALLY DEFERRED: long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive matrix; jarvisAttach/finishSendUi further extracts.
+## Wave resume (2026-07-24 evening)
+- FIXED & CERTIFIED: **chat_controls.js**; **branding.js**; **chat_meta.js**; palette read-aloud; planner/journal/video/HA/gallery/uncensored silent-fail hardening; empty CTAs. `app.js` ~**437** lines. 0 orphan button IDs.
+- INTENTIONALLY DEFERRED: long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive matrix; jarvisAttach/finishSendUi extract.
 - Verdict: **NO**
 
 **Next priorities:** jarvisAttach extract; long-duration soak; multi-monitor; Comfy/HA deep soaks; matrix completion.

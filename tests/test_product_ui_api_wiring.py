@@ -555,6 +555,11 @@ def test_command_palette_is_wired():
     assert "function applyBranding" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "window.applyBranding" in Path("jarvis/gui/static/branding.js").read_text(encoding="utf-8")
     assert "Upscale failed" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
+    assert Path("jarvis/gui/static/chat_meta.js").is_file()
+    assert "chat_meta.js" in html
+    assert "function applyAssistantMeta" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "window.applyAssistantMeta" in Path("jarvis/gui/static/chat_meta.js").read_text(encoding="utf-8")
+    assert "Could not leave uncensored mode" in Path("jarvis/gui/static/uncensored_mode.js").read_text(encoding="utf-8")
     assert "act:clear-chat" in js
     assert "Memory load failed" in app or "Memory load failed" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
 

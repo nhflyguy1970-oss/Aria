@@ -167,21 +167,26 @@ async function restoreUncensoredSession() {
 uncensoredToggle?.addEventListener("change", async () => {
   const wantUncensored = uncensoredToggle.checked;
   if (!wantUncensored) {
-    const form = new FormData();
-    form.append("uncensored", "false");
-    const res = await fetch("/api/mode", { method: "POST", body: form });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || !data.ok) {
-      window.showAriaToast?.(data.message || "Could not leave uncensored mode", "err", 5000);
+    try {
+      const form = new FormData();
+      form.append("uncensored", "false");
+      const res = await fetch("/api/mode", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        window.showAriaToast?.(data.message || `Could not leave uncensored mode (${res.status})`, "err", 5000);
+        uncensoredToggle.checked = true;
+        return;
+      }
+      sessionStorage.removeItem(UNCENSORED_SESSION_KEY);
+      document.body.classList.toggle("uncensored-mode", data.uncensored);
+      (document.getElementById("modeLabel") || {}).textContent = data.uncensored ? "Uncensored · Local" : "Local AI Assistant";
+      const settings = await window.loadModelSettings?.();
+      if (settings) window.renderModelSettings?.({ ...settings, mode: "standard" });
+      if (data.comfyui_settings) window.syncComfySettings?.(data.comfyui_settings);
+    } catch (err) {
       uncensoredToggle.checked = true;
-      return;
+      window.showAriaToast?.(err?.message || "Could not leave uncensored mode", "err", 5000);
     }
-    sessionStorage.removeItem(UNCENSORED_SESSION_KEY);
-    document.body.classList.toggle("uncensored-mode", data.uncensored);
-    (document.getElementById("modeLabel") || {}).textContent = data.uncensored ? "Uncensored · Local" : "Local AI Assistant";
-    const settings = await window.loadModelSettings?.();
-    if (settings) window.renderModelSettings?.({ ...settings, mode: "standard" });
-    if (data.comfyui_settings) window.syncComfySettings?.(data.comfyui_settings);
     return;
   }
 
@@ -203,52 +208,58 @@ uncensoredToggle?.addEventListener("change", async () => {
     sessionToken = "";
   }
 
-  const form = new FormData();
-  form.append("uncensored", "true");
-  form.append("password", password);
-  form.append("confirm_password", confirm);
-  form.append("session_token", sessionToken);
-  const res = await fetch("/api/mode", { method: "POST", body: form });
-  const data = await res.json();
-  if (!res.ok || data.ok === false) {
-    const failMsg = data.message || "Uncensored unlock failed";
-    if (statusText) (document.getElementById("statusText") || {}).textContent = failMsg;
-    window.showAriaToast?.(failMsg, "err", 5000);
-    if (data.message && (data.message.includes("match") || data.message.includes("Confirm") || data.message.includes("Wrong"))) {
-      const retry = await showUncensoredPasswordModal(
-        data.message.includes("match") || data.message.includes("Confirm") || !auth.configured,
-        auth.configured,
-      );
-      if (!retry) return;
-      const form2 = new FormData();
-      form2.append("uncensored", "true");
-      form2.append("password", retry.password);
-      form2.append("confirm_password", retry.confirm || "");
-      form2.append("session_token", "");
-      const res2 = await fetch("/api/mode", { method: "POST", body: form2 });
-      const data2 = await res2.json();
-      if (!res2.ok || data2.ok === false) {
-        (document.getElementById("statusText") || {}).textContent = data2.message || "Uncensored unlock failed";
+  try {
+    const form = new FormData();
+    form.append("uncensored", "true");
+    form.append("password", password);
+    form.append("confirm_password", confirm);
+    form.append("session_token", sessionToken);
+    const res = await fetch("/api/mode", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      const failMsg = data.message || `Uncensored unlock failed (${res.status})`;
+      if (statusText) (document.getElementById("statusText") || {}).textContent = failMsg;
+      window.showAriaToast?.(failMsg, "err", 5000);
+      if (data.message && (data.message.includes("match") || data.message.includes("Confirm") || data.message.includes("Wrong"))) {
+        const retry = await showUncensoredPasswordModal(
+          data.message.includes("match") || data.message.includes("Confirm") || !auth.configured,
+          auth.configured,
+        );
+        if (!retry) return;
+        const form2 = new FormData();
+        form2.append("uncensored", "true");
+        form2.append("password", retry.password);
+        form2.append("confirm_password", retry.confirm || "");
+        form2.append("session_token", "");
+        const res2 = await fetch("/api/mode", { method: "POST", body: form2 });
+        const data2 = await res2.json().catch(() => ({}));
+        if (!res2.ok || data2.ok === false) {
+          const msg2 = data2.message || `Uncensored unlock failed (${res2.status})`;
+          (document.getElementById("statusText") || {}).textContent = msg2;
+          window.showAriaToast?.(msg2, "err", 5000);
+          return;
+        }
+        Object.assign(data, data2);
+      } else {
         return;
       }
-      Object.assign(data, data2);
-    } else {
-      return;
     }
-  }
-  if (data.session_token) {
-    sessionStorage.setItem(UNCENSORED_SESSION_KEY, data.session_token);
-  }
-  uncensoredToggle.checked = true;
-  document.body.classList.toggle("uncensored-mode", data.uncensored);
-  (document.getElementById("modeLabel") || {}).textContent = data.uncensored ? "Uncensored · Local" : "Local AI Assistant";
-  window.showAriaToast?.(data.uncensored ? "Uncensored mode unlocked" : "Standard mode", "ok", 3000);
-  const settings = await window.loadModelSettings?.();
-  if (settings) window.renderModelSettings?.({ ...settings, mode: data.uncensored ? "uncensored" : "standard" });
-  if (data.comfyui_settings) {
-    window.syncComfySettings?.(data.comfyui_settings);
-  } else {
-    await window.loadComfyMode?.();
+    if (data.session_token) {
+      sessionStorage.setItem(UNCENSORED_SESSION_KEY, data.session_token);
+    }
+    uncensoredToggle.checked = true;
+    document.body.classList.toggle("uncensored-mode", data.uncensored);
+    (document.getElementById("modeLabel") || {}).textContent = data.uncensored ? "Uncensored · Local" : "Local AI Assistant";
+    window.showAriaToast?.(data.uncensored ? "Uncensored mode unlocked" : "Standard mode", "ok", 3000);
+    const settings = await window.loadModelSettings?.();
+    if (settings) window.renderModelSettings?.({ ...settings, mode: data.uncensored ? "uncensored" : "standard" });
+    if (data.comfyui_settings) {
+      window.syncComfySettings?.(data.comfyui_settings);
+    } else {
+      await window.loadComfyMode?.();
+    }
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Uncensored unlock failed", "err", 5000);
   }
 });
 

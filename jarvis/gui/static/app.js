@@ -109,42 +109,11 @@ window.jarvisChat = {
 
 
 // Image URL/figure helpers → chat_images.js
-
-function applyAssistantMeta(messageEl, meta) {
-  const bubble = messageEl?.querySelector?.(".bubble") || messageEl?.closest?.(".message")?.querySelector?.(".bubble");
-  if (!bubble) return;
-  const showTag = meta.module && meta.module !== "general" && meta.type !== "info";
-  let tag = bubble.querySelector(".module-tag");
-  if (showTag) {
-    if (!tag) {
-      tag = document.createElement("div");
-      bubble.appendChild(tag);
-    }
-    tag.className = `module-tag ${meta.module}`;
-    tag.textContent = meta.module;
-  } else if (tag) {
-    tag.remove();
-  }
-}
+// applyAssistantMeta / scrollMessageIntoView → chat_meta.js
 
 // appendGeneratedImage → chat_images.js
 
 // buildVision/Image/DataTable HTML → chat_images.js
-
-function scrollMessageIntoView(node, block = "start") {
-  const msg = node?.closest?.(".message") || node;
-  if (!msg || !messagesEl) return;
-  const msgTop = msg.offsetTop;
-  const msgBottom = msgTop + msg.offsetHeight;
-  const viewTop = messagesEl.scrollTop;
-  const viewBottom = viewTop + messagesEl.clientHeight;
-  if (block === "start") {
-    if (msgTop < viewTop) messagesEl.scrollTop = msgTop;
-    else if (msgBottom > viewBottom) messagesEl.scrollTop = msgBottom - messagesEl.clientHeight;
-  } else {
-    messagesEl.scrollTop = Math.max(0, msgBottom - messagesEl.clientHeight);
-  }
-}
 
 function resizeMessageInput() {
   if (!messageInput) return;
@@ -340,8 +309,7 @@ Object.defineProperty(window, "lastEditorFile", {
 
 // window.addMessage → chat_messages.js
 // createCopyButton / syncMessageRawText → chat_format.js
-window.scrollMessageIntoView = scrollMessageIntoView;
-window.applyAssistantMeta = applyAssistantMeta;
+// scrollMessageIntoView / applyAssistantMeta → chat_meta.js
 
 
 
