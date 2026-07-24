@@ -2875,16 +2875,20 @@ async function freeJarvisVram(statusEl) {
   if (target) target.textContent = "Freeing VRAM…";
   try {
     const res = await fetch("/api/gpu/free-vram", { method: "POST" });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.message || data.detail || `Free VRAM failed (${res.status})`);
+    }
     const n = (data.unloaded_ollama || []).length;
-    const msg = data.ok
-      ? `VRAM freed${n ? ` (${n} Ollama model${n === 1 ? "" : "s"} unloaded)` : ""}`
-      : (data.message || "Free VRAM failed");
+    const msg = `VRAM freed${n ? ` (${n} Ollama model${n === 1 ? "" : "s"} unloaded)` : ""}`;
     if (target) target.textContent = msg;
+    window.showAriaToast?.(msg, "ok", 3000);
     loadGpuStatus();
     return data;
   } catch (e) {
-    if (target) target.textContent = String(e);
+    const msg = e.message || String(e);
+    if (target) target.textContent = msg;
+    window.showAriaToast?.(msg, "err", 5000);
     throw e;
   }
 }
@@ -2898,7 +2902,7 @@ function renderGpuStatus(gpu) {
   }
 }
 
-document.getElementById("freeVramBtn")?.addEventListener("click", () => freeJarvisVram(statusText));
+// freeVramBtn click wired in modules/health.mjs
 
 function renderAudioStatus(audio) {
   if (!gpuStatusEl || !audio) return;
@@ -3094,7 +3098,7 @@ function switchToView(view) {
   if (view === "gallery") window.loadGallery?.();
   if (view === "video" && typeof loadVideoGallery === "function") loadVideoGallery();
   if (view === "meme" && typeof loadMemeGallery === "function") loadMemeGallery();
-  if (view === "actions") (window.loadActions || loadActions)(document.getElementById("actionsFilter")?.value);
+  if (view === "actions") window.loadActions?.(document.getElementById("actionsFilter")?.value);
   if (view === "documents") { window.initDocumentsTab?.(); window.loadDocumentsTab?.(); }
   document.querySelector(`.view-tab[data-view="${view}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
 }
@@ -4009,23 +4013,7 @@ document.getElementById("inpaintRunBtn")?.addEventListener("click", async () => 
 
 // gallery → gallery_view.js (window.loadGallery)
 
-async function loadActions() {
-  const el = document.getElementById("actionsList");
-  if (!el) return;
-  try {
-    const res = await fetch("/api/actions");
-    const data = await res.json();
-    const acts = data.actions || [];
-    el.innerHTML = acts.length
-      ? acts.map((a) => `<li><span class="act-time">${escapeHtml((a.time || "").slice(0, 19))}</span> `
-        + `<strong>${escapeHtml(a.action || "")}</strong> `
-        + `${a.module ? `<code>${escapeHtml(a.module)}</code> ` : ""}`
-        + `${escapeHtml((a.detail || "").slice(0, 80))}</li>`).join("")
-      : "<li class='muted'>No actions logged yet.</li>";
-  } catch (_) {
-    el.innerHTML = "<li>Could not load actions.</li>";
-  }
-}
+// loadActions → movie_tiers.js (window.loadActions)
 
 async function loadGitStatus() {
   const el = document.getElementById("gitStatusBox");
@@ -4191,8 +4179,15 @@ document.getElementById("profileSelect")?.addEventListener("change", async (e) =
 });
 
 document.getElementById("actionsClearBtn")?.addEventListener("click", async () => {
-  await fetch("/api/actions/clear", { method: "POST" });
-  loadActions();
+  try {
+    const res = await fetch("/api/actions/clear", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Clear failed (${res.status})`);
+    window.showAriaToast?.("Action log cleared", "ok", 2500);
+    window.loadActions?.(document.getElementById("actionsFilter")?.value);
+  } catch (err) {
+    window.showAriaToast?.(err.message || "Clear failed", "err", 5000);
+  }
 });
 
 function notifyDesktop(title, body) {

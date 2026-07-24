@@ -238,7 +238,13 @@ async function refreshVoiceUi() {
       btn.title = cloud.message || "Cloud live voice";
       btn.classList.toggle("active", Boolean(_cloudSessionId));
     }
-  } catch (_) {}
+  } catch (err) {
+    const btn = document.getElementById("cloudLiveBtn");
+    if (btn) {
+      btn.disabled = true;
+      btn.title = err?.message || "Cloud live status unavailable";
+    }
+  }
   syncMuteButton();
 }
 
@@ -271,7 +277,10 @@ async function toggleCloudLive() {
     showToast("Cloud live ended", "info");
     return;
   }
-  if (btn?.disabled) return;
+  if (btn?.disabled) {
+    showToast(btn?.title || "Cloud live unavailable — add a Gemini key under Integrations", "err");
+    return;
+  }
   const primePromise = window.jarvisGeminiLive?.primeAudio?.().catch((e) => {
     showToast(`Mic unlock failed: ${e.message}`, "warn");
     return false;

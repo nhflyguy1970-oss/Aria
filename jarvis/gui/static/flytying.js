@@ -1581,14 +1581,21 @@
     });
   }
 
+  let _flyInitPromise = null;
   async function initFlytying() {
-    bindOnce();
-    loadChat();
-    renderChat();
-    await loadUserState();
-    await Promise.all([refreshStatus(), loadModelSelect(), loadRecipes(), loadVideos()]);
-    const hash = (location.hash || "").match(/flytying\/([^/?]+)/);
-    if (hash && hash[1]) selectRecipe(decodeURIComponent(hash[1]));
+    if (_flyInitPromise) return _flyInitPromise;
+    _flyInitPromise = (async () => {
+      bindOnce();
+      loadChat();
+      renderChat();
+      await loadUserState();
+      await Promise.all([refreshStatus(), loadModelSelect(), loadRecipes(), loadVideos()]);
+      const hash = (location.hash || "").match(/flytying\/([^/?]+)/);
+      if (hash && hash[1]) selectRecipe(decodeURIComponent(hash[1]));
+    })().finally(() => {
+      _flyInitPromise = null;
+    });
+    return _flyInitPromise;
   }
 
   window.initFlytying = initFlytying;

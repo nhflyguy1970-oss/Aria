@@ -705,6 +705,12 @@
             : "Saved.";
         }
         await loadIntegrationsPanel();
+        window.jarvisRefreshVoiceUi?.();
+        window.showAriaToast?.(
+          data.gemini_api_key_set ? "Saved — Cloud Live ready" : "Integration keys saved",
+          "ok",
+          3500,
+        );
       } catch (e) {
         if (msg) msg.textContent = String(e);
       }
