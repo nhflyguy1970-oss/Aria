@@ -232,6 +232,11 @@ async function loadDashboard() {
         <ul id="dashNewsList" class="dash-news-list"></ul>
         <button type="button" id="dashNewsRefresh" class="ghost-btn small">Refresh briefing</button>
       </section>
+      <section class="dash-ai-suggest" id="dashAiSuggestSection">
+        <h3>Try asking Aria</h3>
+        <p class="muted">Quick prompts from your current context</p>
+        <div id="dashAiSuggestChips" class="dash-ai-chips"></div>
+      </section>
     `;
 
     body.querySelectorAll(".dash-stat-card[data-view]").forEach((btn) => {
@@ -294,6 +299,46 @@ async function loadDashboard() {
       newsRefresh.dataset.bound = "1";
       newsRefresh.addEventListener("click", () => loadDashboard());
     }
+
+    // AI-native: surface suggestion chips on the dashboard (same source as chat)
+    const chipWrap = $("dashAiSuggestChips");
+    if (chipWrap) {
+      try {
+        const res = await fetch("/api/suggestions");
+        const sug = await res.json().catch(() => ({}));
+        const items = (sug.suggestions || []).filter(Boolean).slice(0, 6);
+        if (!items.length) {
+          chipWrap.innerHTML = '<span class="muted">No suggestions yet — open Chat to talk to Aria.</span>';
+        } else {
+          chipWrap.innerHTML = items
+            .map(
+              (s) =>
+                `<button type="button" class="ghost-btn small dash-ai-chip" data-prompt="${esc(s)}">${esc(s)}</button>`
+            )
+            .join("");
+          chipWrap.querySelectorAll(".dash-ai-chip").forEach((btn) => {
+            btn.addEventListener("click", () => {
+              const prompt = btn.dataset.prompt || "";
+              window.switchToView?.("chat");
+              setTimeout(() => {
+                if (typeof window.jarvisSendToChat === "function") {
+                  window.jarvisSendToChat(prompt);
+                } else {
+                  const input = $("messageInput");
+                  if (input) {
+                    input.value = prompt;
+                    input.focus();
+                  }
+                }
+              }, 80);
+            });
+          });
+        }
+      } catch (_) {
+        chipWrap.innerHTML = '<span class="muted">Suggestions unavailable</span>';
+      }
+    }
+
     startDashboardClock();
   } catch (e) {
     if ($("dashboardBody")) $("dashboardBody").textContent = e.message;

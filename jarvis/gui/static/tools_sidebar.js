@@ -70,8 +70,14 @@
   function initToolsSidebar() {
     refreshToolsSidebar();
     refreshBrainMode();
-    setInterval(refreshToolsSidebar, 30000);
-    setInterval(refreshBrainMode, 30000);
+    setInterval(() => {
+      if (document.hidden) return;
+      refreshToolsSidebar();
+    }, 30000);
+    setInterval(() => {
+      if (document.hidden) return;
+      refreshBrainMode();
+    }, 30000);
     document.getElementById("toolsRefreshBtn")?.addEventListener("click", () => refreshToolsSidebar({ toast: true }));
   }
 

@@ -4123,8 +4123,8 @@ html.theme-jarvis-blue .brand-icon { color: #5eb8ff; }
 .dash-stat-card:hover { border-color: var(--accent, #33b5e5); }
 .dash-stat-num { display: block; font-size: 1.5rem; font-weight: 700; }
 .dash-stat-label { font-size: 0.75rem; color: var(--muted, #8b9bb4); }
-.dash-scenes, .dash-intel, .dash-briefing { margin: 1rem 0; }
-.dash-scene-btns, .dash-news-cats { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
+.dash-scenes, .dash-intel, .dash-briefing, .dash-ai-suggest { margin: 1rem 0; }
+.dash-scene-btns, .dash-news-cats, .dash-ai-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
 .dash-intel-head { display: flex; align-items: center; gap: 0.5rem; }
 .dash-live-tag { font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 6px; background: #1a2236; color: #8b9bb4; }
 .dash-intel-item { padding: 0.5rem 0; border-bottom: 1px solid var(--border, #1a2236); }

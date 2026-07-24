@@ -795,6 +795,18 @@ function initMissionControl() {
     mc$("mcRefreshBtn").dataset.wired = "1";
     mc$("mcRefreshBtn").addEventListener("click", loadMissionControl);
   }
+  if (mc$("mcOpenChatBtn") && !mc$("mcOpenChatBtn").dataset.wired) {
+    mc$("mcOpenChatBtn").dataset.wired = "1";
+    mc$("mcOpenChatBtn").addEventListener("click", () => window.switchToView?.("chat"));
+  }
+  if (mc$("mcOpenAuditBtn") && !mc$("mcOpenAuditBtn").dataset.wired) {
+    mc$("mcOpenAuditBtn").dataset.wired = "1";
+    mc$("mcOpenAuditBtn").addEventListener("click", () => window.switchToView?.("audit"));
+  }
+  if (mc$("mcOpenDashboardBtn") && !mc$("mcOpenDashboardBtn").dataset.wired) {
+    mc$("mcOpenDashboardBtn").dataset.wired = "1";
+    mc$("mcOpenDashboardBtn").addEventListener("click", () => window.switchToView?.("dashboard"));
+  }
   loadMissionControl();
   if (_mcPoll) clearInterval(_mcPoll);
   _mcPoll = setInterval(() => {

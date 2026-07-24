@@ -278,6 +278,9 @@ def test_command_palette_is_wired():
     assert "documentsOpenChatBtn" in html
     assert "documentsOpenProjectsBtn" in html
     assert "auditOpenMcBtn" in html
+    assert "mcOpenAuditBtn" in html
+    assert "dashAiSuggestChips" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "document.hidden" in Path("jarvis/gui/static/tools_sidebar.js").read_text(encoding="utf-8")
     assert "Slice complete" in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
     assert "ICS saved" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8") or "ICS OK" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "Video settings saved" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")
