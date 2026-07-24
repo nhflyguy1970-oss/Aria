@@ -39,3 +39,8 @@ Expand this matrix as each subsystem completes deep certification.
 ### Continuation (same day)
 - FIXED & CERTIFIED: HA entity/service restart feedback; vision quality toasts; integrations palette action; `ha_panel.js` + `upgrade_wizard.js` extracts (`app.js` ~5718→~5582).
 - INTENTIONALLY DEFERRED: gallery/memory further extracts; long-duration/multi-monitor; Comfy/voice deep soaks; exhaustive per-control matrix.
+
+### Continuation ship log
+- `gallery_view.js` extract; browser navigate/screenshot feedback; memory import/export/prune; project picker toasts
+- Planner/maker bind guards; syncMuteButton; docs reindex/search; voice tab save; video free-VRAM; cheatsheet edit/reset
+- Verdict remains **NO** — next: memory_browser.js extract, image_engine extract, long-duration/multi-monitor, Comfy/voice soaks
