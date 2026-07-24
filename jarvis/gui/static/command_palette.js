@@ -177,6 +177,13 @@
         },
       },
       {
+        id: "act:meme-studio",
+        label: "Open Meme Studio",
+        group: "Actions",
+        keywords: "caption image funny",
+        run: () => window.switchToView?.("meme"),
+      },
+      {
         id: "act:video-studio",
         label: "Open Video Studio",
         group: "Actions",
