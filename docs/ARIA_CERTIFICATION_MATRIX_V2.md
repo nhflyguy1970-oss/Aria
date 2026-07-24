@@ -43,11 +43,11 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: chat pipeline modules; health.mjs; **editor_context.js**; **view_router.js** (hash sync + panel focus); **chat_export.js** (popup-blocked toast); idle polling pause; DOM-safe project/model text; audio/flytying empty CTAs; profile retake errors toast; copy toast. `app.js` ~**670** lines.
+- FIXED & CERTIFIED: chat pipeline; health.mjs; editor_context; view_router; chat_export; **chat_format.js**; dead DOM consts removed; journal/audio/session empty CTAs; PTT `!ok` toast; session create/pin feedback. `app.js` ~**591** lines.
 - INTENTIONALLY DEFERRED: long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 
-**Next priorities:** silent-fail/friction pass; long-duration soak; multi-monitor; Comfy/HA deep soaks; matrix completion.
+**Next priorities:** audio studio try/catch toasts; coding/gallery/jobs empty CTAs; long-duration soak; multi-monitor; Comfy/HA deep soaks; matrix completion.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.

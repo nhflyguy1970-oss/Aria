@@ -105,121 +105,9 @@ let chatStopRequested = false;
 let activeStreamText = "";
 let activeChatRequestId = "";
 
-const branchSelect = document.getElementById("branchSelect");
-const newBranchBtn = document.getElementById("newBranchBtn");
-const trimBranchesBtn = document.getElementById("trimBranchesBtn");
-const clearMainBranchBtn = document.getElementById("clearMainBranchBtn");
-const branchTrimModal = document.getElementById("branchTrimModal");
-const branchTrimList = document.getElementById("branchTrimList");
-const branchTrimConfirmBtn = document.getElementById("branchTrimConfirmBtn");
-const branchTrimCancelBtn = document.getElementById("branchTrimCancelBtn");
-
-const jobCenterBtn = document.getElementById("jobCenterBtn");
-const jobCenterModal = document.getElementById("jobCenterModal");
-const jobCenterList = document.getElementById("jobCenterList");
-const jobCenterSummary = document.getElementById("jobCenterSummary");
-const jobCenterRefreshBtn = document.getElementById("jobCenterRefreshBtn");
-const jobCenterCloseBtn = document.getElementById("jobCenterCloseBtn");
-
-// readStreamChunk / STREAM_IDLE_MS → chat_send.js
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
-}
-window.escapeHtml = escapeHtml;
-window.formatMessage = formatMessage;
-
-function formatMessage(text) {
-  let html = escapeHtml(text);
-  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
-  html = html.replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>");
-  html = html.replace(/\n/g, "<br>");
-  return html;
-}
-
-function messagePlainText(bodyEl) {
-  if (!bodyEl) return "";
-  return (bodyEl.innerText || bodyEl.textContent || "").trim();
-}
-
-async function copyTextToClipboard(text) {
-  const value = (text || "").trim();
-  if (!value) return false;
-  try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(value);
-      return true;
-    }
-  } catch (_) {}
-  try {
-    const ta = document.createElement("textarea");
-    ta.value = value;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    const ok = document.execCommand("copy");
-    ta.remove();
-    return ok;
-  } catch (_) {
-    return false;
-  }
-}
-
-function isTextEntryElement(el) {
-  if (!el) return false;
-  const tag = el.tagName;
-  if (tag === "TEXTAREA" || tag === "INPUT") return true;
-  return Boolean(el.isContentEditable);
-}
-
-function syncMessageRawText(body, text) {
-  if (!body) return;
-  const t = (text || "").trim();
-  if (t) body.dataset.rawText = t;
-}
-
-function createCopyButton(body) {
-  const copyBtn = document.createElement("button");
-  copyBtn.type = "button";
-  copyBtn.className = "ghost-btn small copy-btn";
-  copyBtn.title = "Copy message";
-  copyBtn.textContent = "Copy";
-  copyBtn.onclick = async () => {
-    const text = body.dataset.rawText || messagePlainText(body);
-    const ok = await copyTextToClipboard(text);
-    if (ok) {
-      copyBtn.classList.add("copied");
-      copyBtn.textContent = "Copied";
-      if (statusText) statusText.textContent = "Message copied";
-      window.showAriaToast?.("Message copied", "ok", 2000);
-      setTimeout(() => {
-        copyBtn.classList.remove("copied");
-        copyBtn.textContent = "Copy";
-      }, 1600);
-    } else {
-      if (statusText) statusText.textContent = "Select text and press Ctrl+C";
-      window.showAriaToast?.("Copy failed — select text and press Ctrl+C", "warn", 4000);
-    }
-  };
-  return copyBtn;
-}
-
-function ensureMessageCopyAction(messageDiv, body) {
-  if (!messageDiv || !body) return;
-  const bubble = messageDiv.querySelector?.(".bubble") || messageDiv;
-  if (!bubble || bubble.querySelector(".copy-btn")) return;
-  let actions = bubble.querySelector(".message-actions");
-  if (!actions) {
-    actions = document.createElement("div");
-    actions.className = "message-actions";
-    bubble.appendChild(actions);
-  }
-  actions.prepend(createCopyButton(body));
-}
+// Branches → chat_branches.js
+// Job center → modules/jobs.mjs
+// Message format/copy → chat_format.js (window.escapeHtml / formatMessage / createCopyButton)
 
 const GALLERY_THUMB_MAX = 384;
 window.GALLERY_THUMB_MAX = GALLERY_THUMB_MAX;
@@ -546,8 +434,8 @@ window.jarvisAttach = {
   set dataChips(v) { dataChips = Array.isArray(v) ? v : []; },
   isVisionAttachment,
   isDataAttachment,
-  isTextEntryElement,
-  escapeHtml,
+  isTextEntryElement: (...args) => window.isTextEntryElement?.(...args),
+  escapeHtml: (...args) => window.escapeHtml?.(...args),
 };
 // Attachment methods filled by attachment_compare.js
 // loadVisionSettings → vision_settings.js
@@ -573,11 +461,9 @@ Object.defineProperty(window, "lastEditorFile", {
 
 
 // window.addMessage → chat_messages.js
-window.createCopyButton = createCopyButton;
-window.ensureMessageCopyAction = ensureMessageCopyAction;
+// createCopyButton / syncMessageRawText → chat_format.js
 window.scrollMessageIntoView = scrollMessageIntoView;
 window.applyAssistantMeta = applyAssistantMeta;
-window.syncMessageRawText = syncMessageRawText;
 
 
 
@@ -683,7 +569,7 @@ window.addEventListener("beforeunload", () => {
 // notify → notify.js (window.jarvisNotify)
 
 document.addEventListener("keydown", (e) => {
-  const inTextField = isTextEntryElement(e.target);
+  const inTextField = window.isTextEntryElement?.(e.target);
   if (e.ctrlKey && e.key === "Enter") {
     if (inTextField && e.target !== messageInput) return;
     e.preventDefault();

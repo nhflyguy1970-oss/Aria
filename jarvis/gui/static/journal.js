@@ -250,7 +250,7 @@ function renderWellnessBlock(day, data) {
         `<button type="button" class="bujo-mood-btn${mood === n ? " on" : ""}" data-mood="${n}">${n}</button>`
       ).join("")}
     </div>
-    <ul class="bujo-gratitude-list">${gratitude || '<li class="bujo-empty">No gratitude lines yet.</li>'}</ul>
+    <ul class="bujo-gratitude-list">${gratitude || '<li class="bujo-empty">No gratitude lines yet. <button type="button" class="ghost-btn tiny" id="bujoEmptyGratitudeBtn">Add one</button></li>'}</ul>
     <div class="bujo-gratitude-add">
       <span class="bujo-gratitude-prefix">${escapeHtml(GRATITUDE_PREFIX)}</span>
       <input type="text" id="bujoGratitudeInput" placeholder="sunshine, coffee, a good walk…" aria-label="Gratitude completion" />
@@ -425,6 +425,11 @@ function bindWellnessExtras(day) {
   });
   document.getElementById("bujoGratitudeInput")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") document.getElementById("bujoGratitudeBtn")?.click();
+  });
+  document.getElementById("bujoEmptyGratitudeBtn")?.addEventListener("click", () => {
+    const input = document.getElementById("bujoGratitudeInput");
+    input?.focus();
+    input?.scrollIntoView?.({ behavior: "smooth", block: "center" });
   });
 }
 

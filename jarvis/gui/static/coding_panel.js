@@ -116,15 +116,20 @@ async function loadCodingPanel() {
       const data = await tasksRes.json();
       const tasks = data.tasks || [];
       if (!tasks.length) {
-        tasksEl.innerHTML = "<span class='muted'>No coding tasks</span>";
+        tasksEl.innerHTML = "<span class='muted'>No coding tasks. <button type='button' class='ghost-btn tiny' id='codingEmptyChatBtn'>Ask Chat</button></span>";
+        tasksEl.querySelector("#codingEmptyChatBtn")?.addEventListener("click", () => {
+          window.switchToView?.("chat");
+          window.jarvisSendToChat?.("Create a coding task: ");
+        });
       } else {
         tasksEl.innerHTML = tasks.slice(0, 5).map((t) =>
           `<div class="coding-task-row"><span>${window.escapeHtml(t.id)}</span> <span class="muted">${window.escapeHtml(t.status)}</span></div>`
         ).join("");
       }
     }
-  } catch (_) {
+  } catch (err) {
     toolsEl.textContent = "Coding tools offline";
+    window.showAriaToast?.(err?.message || "Coding panel unavailable", "err", 4000);
   }
 }
 

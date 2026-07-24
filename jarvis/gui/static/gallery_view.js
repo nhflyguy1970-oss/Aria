@@ -121,7 +121,13 @@
           <button type="button" class="ghost-btn small prompt-del" data-id="${escapeHtml(p.id)}" title="Delete" aria-label="Delete saved prompt">×</button>
           <span class="prompt-text">${escapeHtml(p.prompt.slice(0, 120))}${p.prompt.length > 120 ? "…" : ""}</span>
         </div>`).join("")
-        : "<p>No saved prompts yet — generate an image to build history.</p>";
+        : `<p>No saved prompts yet. <button type="button" class="ghost-btn tiny" id="promptHistoryEmptyBtn">Focus gallery prompt</button> or generate an image in chat.</p>`;
+      el.querySelector("#promptHistoryEmptyBtn")?.addEventListener("click", () => {
+        document.getElementById("galleryEmptyPromptBtn")?.click();
+        document.getElementById("galleryPrompt")?.focus();
+        document.getElementById("imagePrompt")?.focus();
+        window.showAriaToast?.("Enter a prompt, then generate", "info", 3000);
+      });
       el.querySelectorAll(".prompt-reuse").forEach((btn) => {
         btn.addEventListener("click", () => {
           const messageInput = document.getElementById("messageInput");

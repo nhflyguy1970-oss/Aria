@@ -294,6 +294,7 @@
       form.append("source", "default");
       const data = await fetchJson("/api/audio/record/ptt/start", { method: "POST", body: form });
       if (data.ok) { pttSession = data.session_id; pttActive = true; return true; }
+      window.showAriaToast?.(data.message || data.error || "Could not start push-to-talk", "err", 4000);
     } catch (err) {
       window.showAriaToast?.(err.message || "Could not start push-to-talk", "err", 4000);
     }

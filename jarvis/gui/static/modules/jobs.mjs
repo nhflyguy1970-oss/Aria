@@ -88,7 +88,11 @@ export function renderJobCenter(data) {
     jobCenterList.appendChild(li);
   }
   if (!(data.recent || []).length) {
-    jobCenterList.innerHTML = '<li class="muted">No recent jobs.</li>';
+    jobCenterList.innerHTML = '<li class="muted">No recent jobs. <button type="button" class="ghost-btn tiny" id="jobsEmptyChatBtn">Ask Chat</button></li>';
+    jobCenterList.querySelector("#jobsEmptyChatBtn")?.addEventListener("click", () => {
+      closeJobCenter();
+      window.switchToView?.("chat");
+    });
   }
   updateJobCenterBadge(data);
 }
@@ -97,10 +101,15 @@ export async function refreshJobCenter() {
   const jobCenterSummary = $("jobCenterSummary");
   try {
     const res = await fetch("/api/jobs");
-    if (!res.ok) return;
+    if (!res.ok) {
+      if (jobCenterSummary) jobCenterSummary.textContent = `Could not load jobs (${res.status}).`;
+      window.showAriaToast?.(`Job center unavailable (${res.status})`, "err", 4000);
+      return;
+    }
     renderJobCenter(await res.json());
-  } catch (_) {
+  } catch (err) {
     if (jobCenterSummary) jobCenterSummary.textContent = "Could not load jobs.";
+    window.showAriaToast?.(err?.message || "Could not load jobs", "err", 4000);
   }
 }
 

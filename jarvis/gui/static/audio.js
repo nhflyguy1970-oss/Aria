@@ -1086,23 +1086,41 @@ async function loadAudioPanel() {
 
   document.getElementById("audioSearchBtn")?.addEventListener("click", async () => {
     const q = document.getElementById("audioSearchQ")?.value.trim();
-    if (!q) return;
-    const res = await fetch(`/api/audio/search?q=${encodeURIComponent(q)}`);
-    const data = await res.json();
+    if (!q) {
+      window.showAriaToast?.("Enter a search query", "warn", 2500);
+      return;
+    }
     const box = document.getElementById("audioSearchResults");
-    if (!box) return;
-    box.innerHTML = (data.results || []).map((r) =>
-      `<div class="audio-search-hit"><strong>${escapeHtml(r.title || "")}</strong>
-        <p>${escapeHtml(r.snippet || "")}</p>
-        <button type="button" class="ghost-btn small audio-search-open" data-path="${escapeHtml(r.path)}">Open</button></div>`
-    ).join("") || "<p class='audio-empty'>No matches</p>";
-    box.querySelectorAll(".audio-search-open").forEach((btn) => {
-      btn.onclick = () => {
-        setAudioLastPath(btn.dataset.path);
-        showPlayback(btn.dataset.path, null);
-        loadWaveform(btn.dataset.path);
-      };
-    });
+    try {
+      const res = await fetch(`/api/audio/search?q=${encodeURIComponent(q)}`);
+      const data = await res.json().catch(() => ({}));
+      if (!box) return;
+      if (!res.ok) {
+        box.innerHTML = `<p class='audio-empty'>${escapeHtml(data.message || data.error || `Search failed (${res.status})`)}</p>`;
+        window.showAriaToast?.(data.message || "Audio search failed", "err", 4000);
+        return;
+      }
+      const results = data.results || [];
+      box.innerHTML = results.map((r) =>
+        `<div class="audio-search-hit"><strong>${escapeHtml(r.title || "")}</strong>
+          <p>${escapeHtml(r.snippet || "")}</p>
+          <button type="button" class="ghost-btn small audio-search-open" data-path="${escapeHtml(r.path)}">Open</button></div>`
+      ).join("") || `<p class='audio-empty'>No matches for “${escapeHtml(q)}”. <button type="button" class="ghost-btn tiny" id="audioSearchEmptyChatBtn">Ask Chat</button></p>`;
+      box.querySelector("#audioSearchEmptyChatBtn")?.addEventListener("click", () => {
+        window.switchToView?.("chat");
+        window.jarvisSendToChat?.(`Find audio about: ${q}`);
+      });
+      box.querySelectorAll(".audio-search-open").forEach((btn) => {
+        btn.onclick = () => {
+          setAudioLastPath(btn.dataset.path);
+          showPlayback(btn.dataset.path, null);
+          loadWaveform(btn.dataset.path);
+        };
+      });
+    } catch (err) {
+      if (box) box.innerHTML = `<p class='audio-empty'>${escapeHtml(err?.message || "Audio search failed")}</p>`;
+      window.showAriaToast?.(err?.message || "Audio search failed", "err", 4000);
+    }
   });
 
   document.getElementById("audioBatchBtn")?.addEventListener("click", async () => {

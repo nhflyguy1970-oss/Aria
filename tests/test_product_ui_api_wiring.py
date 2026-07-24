@@ -505,6 +505,18 @@ def test_command_palette_is_wired():
     assert "chat_export.js" in html
     assert "exportChatBtn" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "Pop-up blocked" in Path("jarvis/gui/static/chat_export.js").read_text(encoding="utf-8")
+    assert Path("jarvis/gui/static/chat_format.js").is_file()
+    assert "chat_format.js" in html
+    assert "function escapeHtml" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "window.createCopyButton" in Path("jarvis/gui/static/chat_format.js").read_text(encoding="utf-8")
+    assert "bujoEmptyGratitudeBtn" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
+    assert "audioSearchEmptyChatBtn" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
+    assert "chatSessionsEmptyNewBtn" in Path("jarvis/gui/static/chat_sessions.js").read_text(encoding="utf-8")
+    assert "Could not start push-to-talk" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "data.message || data.error || \"Could not start push-to-talk\"" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "codingEmptyChatBtn" in Path("jarvis/gui/static/coding_panel.js").read_text(encoding="utf-8")
+    assert "jobsEmptyChatBtn" in Path("jarvis/gui/static/modules/jobs.mjs").read_text(encoding="utf-8")
+    assert "promptHistoryEmptyBtn" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
     assert "panel.focus" in Path("jarvis/gui/static/view_router.js").read_text(encoding="utf-8")
     assert "flyEmptySeasonalSearchBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert 'modal.dataset.retake === "1"' in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
