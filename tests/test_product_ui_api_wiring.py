@@ -279,6 +279,7 @@ def test_command_palette_is_wired():
     assert "flytyingOpenGalleryBtn" in html
     assert "cadOpenGalleryBtn" in html
     assert "Planner load failed" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "News briefing failed" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "Diarize failed" in Path("jarvis/gui/static/audio_advanced.js").read_text(encoding="utf-8")
     assert "window.loadVisionSettings" in Path("jarvis/gui/static/vision_settings.js").read_text(encoding="utf-8")
     assert "async function loadVisionSettings" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")

@@ -17,21 +17,32 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 | Federated palette search (memory/docs content) | Search | Command palette | FIXED & CERTIFIED | Debounced `/api/knowledge/search` Results group |
 | Planner ↔ Calendar (today) | Cross-system | Calendar day panel | FIXED & CERTIFIED | Open planner tasks merge into today |
 | Knowledge memory strategy gate | Knowledge | unified_search | FIXED & CERTIFIED | Always search memory; ACM empty → local fallthrough |
-| God-app.js split | Architecture | app.js (~5.9k after extract) | INTENTIONALLY DEFERRED | Partial: `modal_chrome.js` extracted; further slices staged |
-| Orphan `jarvis/api.py` | Dead code | Voice API duplicate | REMOVED | Live routes live in `extensions/voice/api.py` |
-| Palette model switching | Models | Command palette Models group | FIXED & CERTIFIED | Reads `#chatModelSelect` options |
-| Memory hit deep-link | Search / Memory | Palette Results → memory list | FIXED & CERTIFIED | Search + scroll/flash when id matches |
+| God-app.js split | Architecture | app.js (~3035 after extracts) | INTENTIONALLY DEFERRED | Partial: many panels extracted; crop/webcam/chat stream remain |
+| Skip-to-content | A11y | Body skip-link → #mainContent | FIXED & CERTIFIED | Focusable skip target |
+| Cross-system Memory↔Journal/Projects | Cross-system | Memory toolbar | FIXED & CERTIFIED | Bidirectional with Projects |
+| Cross-system Gallery↔Maker/Fly tying | Cross-system | Gallery / Maker / Fly tying | FIXED & CERTIFIED | Nav shortcuts |
+| Cross-system Documents↔Memory/Calendar | Cross-system | Documents toolbar | FIXED & CERTIFIED | ICS wizard toasts |
+| Free VRAM module | System | free_vram.js | FIXED & CERTIFIED | Extracted from app.js |
+| Vision settings module | Vision | vision_settings.js | FIXED & CERTIFIED | Extracted from app.js |
+| Audio advanced feedback | Audio | Detect/diarize/live/PTT | FIXED & CERTIFIED | Toasts on fail/success |
+| Crop/compare/webcam extract | Architecture | app.js attachments | INTENTIONALLY DEFERRED | ~84 coupled refs; high regression risk |
 | Comfy full generate soak | Gallery | ComfyUI | INTENTIONALLY DEFERRED | Needs GPU long-run |
 | HA live scenes | Smart home | HA | INTENTIONALLY DEFERRED | HA often down on workstation |
 | Long-duration leak profile | Performance | Runtime | INTENTIONALLY DEFERRED | Hours soak not yet run this wave |
 | Multi-monitor docking | Desktop | Native window | INTENTIONALLY DEFERRED | Needs native multi-display session |
 | Command palette content search | Discoverability | Palette | FIXED & CERTIFIED | Superseded by federated Results group |
+| Exhaustive per-control matrix | QA | All controls | INTENTIONALLY DEFERRED | Seed + regression tests; full matrix ongoing |
 
 Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.
 
-## Wave resume (2026-07-24)
+## Wave resume (2026-07-24 late)
+- FIXED & CERTIFIED: free_vram/vision_settings/lan_access/git/chat_model extracts; cross-links Memory/Projects/Docs/Gallery/Maker/Fly tying; audio/video/planner/ICS/checklist/dashboard news toasts; skip-link; palette ICS/security/webcam.
+- INTENTIONALLY DEFERRED: crop/webcam extract; long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
+- Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
+
+## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.
 - INTENTIONALLY DEFERRED: full app.js god-file split; long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; complete per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / discoverability / AI-workflow work.
@@ -51,6 +62,7 @@ Expand this matrix as each subsystem completes deep certification.
 - **NO** — resume: documents.js extract, long-duration/multi-monitor, Comfy/voice soaks, per-control matrix
 
 ## Change log
+- 2026-07-24: app.js ~3035; free_vram + vision_settings + cross-links Gallery/Maker/Fly tying; audio_advanced toasts; matrix refreshed.
 - 2026-07-24: app.js ~3382 lines after media/coding/models/uncensored/startup/wakeword/chat_branches extracts; boot fixed (lastEditorFile); ship verdict still NO.
 - 2026-07-24: wakeword_chat extract; HA/upgrade toasts; app boot lastEditorFile fix.
 - 2026-07-24: Fix lastEditorFile window binding (app boot); startup_overlay + models/uncensored extracts.

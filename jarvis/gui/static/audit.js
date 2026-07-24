@@ -339,6 +339,9 @@
     const runBtn = $("auditRunBtn");
     if (line) line.textContent = text;
     if (runBtn) runBtn.disabled = !!running;
+    if (!running && text && /fail|error|unavailable/i.test(text)) {
+      window.showAriaToast?.(text, "err", 5000);
+    }
   }
 
   function stopPoll() {

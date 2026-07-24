@@ -267,11 +267,16 @@ async function loadDashboard() {
       const loadCat = async (cat) => {
         const list = $("dashNewsList");
         if (list) list.innerHTML = "<li class='muted'>Loading…</li>";
-        const nr = await p0Fetch(`/api/curated-news?use_ai=true&category=${encodeURIComponent(cat)}`).catch(() => ({}));
-        if (list) {
-          list.innerHTML = (nr.headlines || [])
-            .map((h) => `<li><strong>${esc(h.title)}</strong> <span class="muted">_${esc(h.category || cat)}_</span></li>`)
-            .join("") || "<li class='muted'>No stories</li>";
+        try {
+          const nr = await p0Fetch(`/api/curated-news?use_ai=true&category=${encodeURIComponent(cat)}`);
+          if (list) {
+            list.innerHTML = (nr.headlines || [])
+              .map((h) => `<li><strong>${esc(h.title)}</strong> <span class="muted">_${esc(h.category || cat)}_</span></li>`)
+              .join("") || "<li class='muted'>No stories</li>";
+          }
+        } catch (err) {
+          if (list) list.innerHTML = `<li class='fail'>${esc(err.message || "News unavailable")}</li>`;
+          window.showAriaToast?.(err.message || "News briefing failed", "err", 5000);
         }
       };
       catWrap.querySelectorAll(".dash-cat-btn").forEach((b) => {
