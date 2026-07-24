@@ -394,6 +394,64 @@
         keywords: "appearance light dark",
         run: () => $("themeToggle")?.click(),
       },
+      {
+        id: "act:journal-rapid",
+        label: "Focus journal rapid log",
+        group: "Actions",
+        keywords: "bujo quick capture bullet",
+        run: () => {
+          goView("journal");
+          setTimeout(() => $("rapidLogInput")?.focus(), 80);
+        },
+      },
+      {
+        id: "act:planner-task",
+        label: "Add planner task",
+        group: "Actions",
+        keywords: "todo focus task input",
+        run: () => {
+          goView("planner");
+          setTimeout(() => $("plannerTaskInput")?.focus(), 80);
+        },
+      },
+      {
+        id: "act:documents-reindex",
+        label: "Reindex documents RAG",
+        group: "System",
+        keywords: "library pdf chunks",
+        run: () => {
+          goView("documents");
+          setTimeout(() => $("documentsReindexBtn")?.click(), 80);
+        },
+      },
+      {
+        id: "act:browser-url",
+        label: "Focus browser URL",
+        group: "Actions",
+        keywords: "playwright navigate web",
+        run: () => {
+          goView("browser");
+          setTimeout(() => $("browserUrlInput")?.focus(), 80);
+        },
+      },
+      {
+        id: "act:calendar-today",
+        label: "Open calendar today",
+        group: "Actions",
+        keywords: "schedule day",
+        run: () => {
+          goView("calendar");
+          const day = new Date().toISOString().slice(0, 10);
+          window.openCalendarDay?.(day);
+        },
+      },
+      {
+        id: "act:audio-studio",
+        label: "Open Audio studio",
+        group: "Actions",
+        keywords: "music podcast genre song whisper",
+        run: () => goView("audio"),
+      },
     ];
 
     function focusSearch(view, inputId, clickBtnId) {

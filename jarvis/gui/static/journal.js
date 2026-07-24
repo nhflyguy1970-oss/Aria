@@ -28,6 +28,7 @@ function journalNotify(message, isError = true) {
   el.classList.remove("hidden");
   clearTimeout(journalNotify._timer);
   journalNotify._timer = setTimeout(() => el.classList.add("hidden"), 4500);
+  window.showAriaToast?.(message, isError ? "err" : "ok", isError ? 5000 : 3000);
 }
 
 function showBujoLoading() {
@@ -387,8 +388,7 @@ async function postFuture(content, bulletType, month) {
   form.append("month", month);
   form.append("content", content);
   form.append("bullet_type", bulletType);
-  const out = await journalPost("/api/journal/future", { method: "POST", body: form });
-  return out.body || {};
+  return journalPost("/api/journal/future", { method: "POST", body: form });
 }
 
 async function postCollection(name, content, bulletType) {
@@ -449,22 +449,25 @@ function bindDayExtras(day) {
     form.append("day", day);
     form.append("morning", document.getElementById("bujoMorning")?.value || "");
     form.append("evening", document.getElementById("bujoEvening")?.value || "");
-    await fetch("/api/journal/daily/prompts", { method: "POST", body: form });
+    const out = await journalPost("/api/journal/daily/prompts", { method: "POST", body: form });
+    if (out.ok) journalNotify("Prompts saved", false);
   });
 
   document.getElementById("bujoPhotoBtn")?.addEventListener("click", async () => {
     const fileInput = document.getElementById("bujoPhotoFile");
     const file = fileInput?.files?.[0];
     if (!file) {
-      alert("Choose an image first");
+      journalNotify("Choose an image first");
       return;
     }
     const form = new FormData();
     form.append("day", day);
     form.append("caption", document.getElementById("bujoPhotoCaption")?.value || "");
     form.append("file", file);
-    await fetch("/api/journal/daily/photo", { method: "POST", body: form });
+    const out = await journalPost("/api/journal/daily/photo", { method: "POST", body: form });
+    if (!out.ok) return;
     fileInput.value = "";
+    journalNotify("Photo added", false);
     refreshBujo();
   });
 
@@ -576,15 +579,12 @@ function bindAddRow() {
       await postMonthly(content, bulletType, journalMonth?.value);
     } else if (currentBujo === "future") {
       const month = futureMonthValue();
-      const data = await postFuture(content, bulletType, month);
-      if (!data?.ok) {
-        alert(data?.message || "Could not add to future log");
-        return;
-      }
+      const out = await postFuture(content, bulletType, month);
+      if (!out.ok) return;
     } else if (currentBujo === "collections") {
       const name = document.getElementById("colActive")?.value;
       if (!name) {
-        alert("Select or create a collection first");
+        journalNotify("Select or create a collection first");
         return;
       }
       await postCollection(name, content, bulletType);
@@ -1579,28 +1579,36 @@ document.querySelectorAll(".bujo-tab").forEach((tab) => {
 document.getElementById("rapidLogBtn")?.addEventListener("click", async () => {
   const text = document.getElementById("rapidLogInput")?.value.trim();
   if (!text) return;
-  const form = new FormData();
-  form.append("text", text);
-  form.append("bullet_type", document.getElementById("rapidType")?.value || "task");
-  if (currentBujo === "future") {
-    const month = futureMonthValue();
-    const bulletType = document.getElementById("rapidType")?.value || "task";
-    for (const line of text.split("\n")) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      await postFuture(trimmed, bulletType, month);
+  try {
+    if (currentBujo === "future") {
+      const month = futureMonthValue();
+      const bulletType = document.getElementById("rapidType")?.value || "task";
+      let okCount = 0;
+      for (const line of text.split("\n")) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        const out = await postFuture(trimmed, bulletType, month);
+        if (!out.ok) return;
+        okCount += 1;
+      }
+      if (!okCount) {
+        journalNotify("Nothing to log");
+        return;
+      }
+    } else {
+      const form = new FormData();
+      form.append("text", text);
+      form.append("bullet_type", document.getElementById("rapidType")?.value || "task");
+      if (currentBujo === "daily" && journalDate?.value) form.append("day", journalDate.value);
+      const rapid = await journalPost("/api/journal/rapid", { method: "POST", body: form });
+      if (!rapid.ok) return;
     }
-  } else {
-    const form = new FormData();
-    form.append("text", text);
-    form.append("bullet_type", document.getElementById("rapidType")?.value || "task");
-    if (currentBujo === "daily" && journalDate?.value) form.append("day", journalDate.value);
-    const rapid = await journalPost("/api/journal/rapid", { method: "POST", body: form });
-    if (!rapid.ok) return;
+    document.getElementById("rapidLogInput").value = "";
+    journalNotify("Rapid log saved", false);
+    refreshBujo();
+  } catch (err) {
+    journalNotify(err?.message || "Rapid log failed");
   }
-  document.getElementById("rapidLogInput").value = "";
-  journalNotify("Rapid log saved", false);
-  refreshBujo();
 });
 
 document.getElementById("rapidLogInput")?.addEventListener("keydown", (e) => {
@@ -1611,36 +1619,56 @@ document.getElementById("rapidLogInput")?.addEventListener("keydown", (e) => {
 });
 
 document.getElementById("journalUndoBtn")?.addEventListener("click", async () => {
-  const res = await fetch("/api/journal/undo", { method: "POST" });
-  const data = await res.json();
-  if (data.ok) refreshBujo();
-  else alert(data.error || "Nothing to undo");
+  try {
+    const out = await journalPost("/api/journal/undo", { method: "POST" });
+    if (out.ok && out.body?.ok !== false) {
+      journalNotify("Undone", false);
+      refreshBujo();
+    } else if (out.ok) {
+      journalNotify(out.body?.error || "Nothing to undo");
+    }
+  } catch (err) {
+    journalNotify(err?.message || "Undo failed");
+  }
 });
 
 document.getElementById("journalRedoBtn")?.addEventListener("click", async () => {
-  const res = await fetch("/api/journal/redo", { method: "POST" });
-  const data = await res.json();
-  if (data.ok) refreshBujo();
-  else alert(data.error || "Nothing to redo");
+  try {
+    const out = await journalPost("/api/journal/redo", { method: "POST" });
+    if (out.ok && out.body?.ok !== false) {
+      journalNotify("Redone", false);
+      refreshBujo();
+    } else if (out.ok) {
+      journalNotify(out.body?.error || "Nothing to redo");
+    }
+  } catch (err) {
+    journalNotify(err?.message || "Redo failed");
+  }
 });
 
 document.getElementById("journalReflectBtn")?.addEventListener("click", async () => {
-  if (currentBujo === "monthly" || currentBujo === "weekly") {
+  try {
+    if (currentBujo === "monthly" || currentBujo === "weekly") {
+      const form = new FormData();
+      form.append("scope", currentBujo === "monthly" ? "month" : "week");
+      if (currentBujo === "monthly") form.append("month", journalMonth?.value || "");
+      else form.append("week", journalWeek?.value || "");
+      const out = await journalPost("/api/journal/reflect/review", { method: "POST", body: form });
+      if (!out.ok) return;
+      const data = out.body || {};
+      bujoContent.innerHTML = `<h3>Review reflection</h3><div class="bujo-reflect">${escapeHtml(data.reflection || "").replace(/\n/g, "<br>")}</div>`;
+      return;
+    }
+    const scope = currentBujo === "daily" ? "today" : "week";
     const form = new FormData();
-    form.append("scope", currentBujo === "monthly" ? "month" : "week");
-    if (currentBujo === "monthly") form.append("month", journalMonth?.value || "");
-    else form.append("week", journalWeek?.value || "");
-    const res = await fetch("/api/journal/reflect/review", { method: "POST", body: form });
-    const data = await res.json();
-    bujoContent.innerHTML = `<h3>Review reflection</h3><div class="bujo-reflect">${escapeHtml(data.reflection || "").replace(/\n/g, "<br>")}</div>`;
-    return;
+    form.append("scope", scope);
+    const out = await journalPost("/api/journal/reflect", { method: "POST", body: form });
+    if (!out.ok) return;
+    const data = out.body || {};
+    bujoContent.innerHTML = `<h3>Reflection</h3><div class="bujo-reflect">${escapeHtml(data.reflection || "").replace(/\n/g, "<br>")}</div>`;
+  } catch (err) {
+    journalNotify(err?.message || "Reflection failed");
   }
-  const scope = currentBujo === "daily" ? "today" : "week";
-  const form = new FormData();
-  form.append("scope", scope);
-  const res = await fetch("/api/journal/reflect", { method: "POST", body: form });
-  const data = await res.json();
-  bujoContent.innerHTML = `<h3>Reflection</h3><div class="bujo-reflect">${escapeHtml(data.reflection || "").replace(/\n/g, "<br>")}</div>`;
 });
 
 document.getElementById("journalMigrateBtn")?.addEventListener("click", async () => {
@@ -1656,9 +1684,10 @@ document.getElementById("journalMigrateBtn")?.addEventListener("click", async ()
   form.append("from_month", from);
   form.append("to_month", nm);
   form.append("dest", dest);
-  const res = await fetch("/api/journal/migrate-month", { method: "POST", body: form });
-  const data = await res.json();
-  alert(`Migrated ${data.migrated || 0} tasks to ${nm} (${destLabel})`);
+  const out = await journalPost("/api/journal/migrate-month", { method: "POST", body: form });
+  if (!out.ok) return;
+  const data = out.body || {};
+  journalNotify(`Migrated ${data.migrated || 0} tasks to ${nm} (${destLabel})`, false);
   refreshBujo();
 });
 
@@ -1693,13 +1722,19 @@ document.getElementById("journalPdfBtn")?.addEventListener("click", () => {
 });
 
 document.getElementById("journalExportBtn")?.addEventListener("click", async () => {
-  const res = await fetch("/api/journal/export");
-  const blob = new Blob([JSON.stringify(await res.json(), null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `jarvis-journal-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  try {
+    const out = await journalPost("/api/journal/export");
+    if (!out.ok) return;
+    const blob = new Blob([JSON.stringify(out.body, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `jarvis-journal-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    journalNotify("Journal exported", false);
+  } catch (err) {
+    journalNotify(err?.message || "Export failed");
+  }
 });
 
 document.getElementById("journalExportEncBtn")?.addEventListener("click", async () => {
@@ -1734,7 +1769,10 @@ journalImportFile?.addEventListener("change", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...payload, merge }),
     });
-    if (out.ok) refreshBujo();
+    if (out.ok) {
+      journalNotify("Journal imported", false);
+      refreshBujo();
+    }
   } catch (_) {
     journalNotify("Invalid JSON file");
   }
@@ -1758,7 +1796,10 @@ journalImportEncFile?.addEventListener("change", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ export: payload, password, merge }),
     });
-    if (out.ok) refreshBujo();
+    if (out.ok) {
+      journalNotify("Encrypted journal imported", false);
+      refreshBujo();
+    }
   } catch (_) {
     journalNotify("Invalid encrypted journal file");
   }

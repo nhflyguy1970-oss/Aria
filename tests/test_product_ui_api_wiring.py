@@ -255,8 +255,13 @@ def test_command_palette_is_wired():
 
     assert "act:backup" in js
     assert "act:theme-toggle" in js
+    assert "act:journal-rapid" in js
+    assert "act:planner-task" in js
+    assert "act:calendar-today" in js
     assert "journalOpenCalendarBtn" in html
     assert "window.setBujoTab" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
+    assert "showAriaToast" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
+    assert "Journal exported" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "prefers-reduced-motion" in css
     mt = Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "applyModuleFilter" in mt and "MODULE_NAV" in mt

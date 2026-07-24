@@ -164,6 +164,7 @@ function initApiKeyModal() {
     }
     hideApiKeyModal();
     refreshLanPanel();
+    window.showAriaToast?.("API key saved — reloading", "ok", 2500);
     location.reload();
   });
   cancelBtn?.addEventListener("click", hideApiKeyModal);
@@ -212,7 +213,9 @@ function initLanPanel() {
     if (!lanPrimaryUrl) return;
     try {
       await navigator.clipboard.writeText(lanPrimaryUrl);
-      statusText.textContent = "LAN URL copied";
+      const st = document.getElementById("statusText");
+      if (st) st.textContent = "LAN URL copied";
+      window.showAriaToast?.("LAN URL copied", "ok", 2500);
     } catch (_) {
       prompt("Copy this URL:", lanPrimaryUrl);
     }
