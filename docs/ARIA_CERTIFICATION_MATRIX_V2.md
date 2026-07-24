@@ -43,11 +43,11 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 night)
-- FIXED & CERTIFIED: **api_key_fetch.js** (loads first); **chat_state.js** (jarvisChat/mediaWork); prior chat_attach/input extracts. `app.js` ~**99** lines. View-cycle soak (8 views, no reload) OK.
-- INTENTIONALLY DEFERRED: multi-hour soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive matrix.
+- FIXED & CERTIFIED: **api_key_fetch.js** (loads first); **chat_state.js**; chat_attach/input; palette **act:ha-test** + **act:image-engine**. `app.js` ~**99** lines. View-cycle soak OK; HA/Comfy/world-state APIs 200.
+- INTENTIONALLY DEFERRED: multi-hour soak; multi-monitor DPI/dock; Comfy/HA interactive deep soaks when offline; exhaustive matrix.
 - Verdict: **NO**
 
-**Next priorities:** long-duration soak; multi-monitor; Comfy/HA deep soaks; matrix completion; residual a11y/discoverability.
+**Next priorities:** multi-hour soak harness; multi-monitor; Comfy/HA interactive soaks; matrix completion.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.

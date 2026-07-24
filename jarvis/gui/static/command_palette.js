@@ -317,6 +317,33 @@
         run: () => openModal("haSetupModal"),
       },
       {
+        id: "act:ha-test",
+        label: "Test Home Assistant connection",
+        group: "Actions",
+        keywords: "ha ping smart home connection",
+        run: () => {
+          const sec = $("haPanel")?.closest?.(".sidebar-section");
+          if (sec?.classList.contains("collapsed")) {
+            sec.querySelector(".sidebar-section-head")?.click();
+          }
+          $("haPanel")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+          setTimeout(() => $("haTestBtn")?.click(), 80);
+        },
+      },
+      {
+        id: "act:image-engine",
+        label: "Open image engine / Comfy settings",
+        group: "Actions",
+        keywords: "comfy sdxl flux checkpoint gallery mode",
+        run: () => {
+          goView("gallery");
+          setTimeout(() => {
+            $("imageEnginePanel")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+            $("galleryModeSelect")?.focus();
+          }, 80);
+        },
+      },
+      {
         id: "act:integrations-keys",
         label: "API keys (Cloud Live & models)",
         group: "Actions",
