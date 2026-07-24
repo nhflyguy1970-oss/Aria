@@ -71,11 +71,26 @@ def toggle_favorite(entry_id: str) -> dict[str, Any] | None:
     return None
 
 
-def delete_entry(entry_id: str) -> bool:
+def delete_entry(entry_id: str) -> dict[str, Any] | None:
+    """Remove an entry; returns the removed entry so it can be restored (undo)."""
     entries = _load()
-    kept = [e for e in entries if e.get("id") != entry_id]
-    if len(kept) == len(entries):
-        return False
-    _save(kept)
-    return True
+    removed = next((e for e in entries if e.get("id") == entry_id), None)
+    if removed is None:
+        return None
+    _save([e for e in entries if e.get("id") != entry_id])
+    return removed
+
+
+def restore_entry(entry: dict[str, Any]) -> dict[str, Any] | None:
+    """Re-insert a previously deleted entry (undo), keeping chronological order."""
+    prompt = (entry.get("prompt") or "").strip() if isinstance(entry, dict) else ""
+    if not prompt:
+        return None
+    entries = _load()
+    if any(e.get("id") == entry.get("id") for e in entries):
+        return entry
+    entries.append(entry)
+    entries.sort(key=lambda e: e.get("ts") or "")
+    _save(entries)
+    return entry
 

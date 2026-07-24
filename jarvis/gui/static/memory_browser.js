@@ -21,14 +21,18 @@ async function loadCheatsheets(selectKey) {
 async function showCheatsheet(key) {
   const box = document.getElementById("cheatsheetContent");
   if (!key || !box) return;
-  const res = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}`);
-  const data = await res.json();
-  if (!data.ok) {
-    window.showAriaToast?.(data.error || "Cheatsheet not found", "err", 5000);
-    return;
+  try {
+    const res = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}`);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      window.showAriaToast?.(data.error || data.message || "Cheatsheet not found", "err", 5000);
+      return;
+    }
+    box.textContent = data.cheatsheet?.content || "";
+    box.classList.remove("hidden");
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Could not load cheatsheet", "err", 5000);
   }
-  box.textContent = data.cheatsheet?.content || "";
-  box.classList.remove("hidden");
 }
 
 let memorySettingsSaveInFlight = 0;

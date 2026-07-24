@@ -777,17 +777,41 @@
     });
   }
 
-  /* --- Task nudge (Tier 2 #19) --- */
+  /* --- Task nudge (Tier 2 #19) — non-blocking actionable bar --- */
   async function maybeTaskNudge() {
     try {
       const data = await fetchJson("/api/movie/task-nudge");
       if (!data.nudge) return;
-      if (!confirm(data.message + "\n\nOpen journal?")) {
-        await fetch("/api/movie/task-nudge/dismiss", { method: "POST" });
-        return;
-      }
-      document.querySelector('.view-tab[data-view="journal"]')?.click();
-      await fetch("/api/movie/task-nudge/dismiss", { method: "POST" });
+      if ($("taskNudgeBar")) return;
+      const bar = document.createElement("div");
+      bar.id = "taskNudgeBar";
+      bar.className = "aria-toast aria-toast--info task-nudge-bar";
+      bar.setAttribute("role", "status");
+      const msg = document.createElement("span");
+      msg.textContent = data.message || "You have open tasks.";
+      const openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.className = "ghost-btn tiny";
+      openBtn.textContent = "Open journal";
+      const dismissBtn = document.createElement("button");
+      dismissBtn.type = "button";
+      dismissBtn.className = "ghost-btn tiny";
+      dismissBtn.textContent = "Dismiss";
+      dismissBtn.setAttribute("aria-label", "Dismiss task reminder");
+      const done = async () => {
+        bar.remove();
+        try { await fetch("/api/movie/task-nudge/dismiss", { method: "POST" }); } catch (_) {}
+      };
+      openBtn.addEventListener("click", () => {
+        window.switchToView?.("journal");
+        done();
+      });
+      dismissBtn.addEventListener("click", done);
+      bar.append(msg, openBtn, dismissBtn);
+      document.body.appendChild(bar);
+      setTimeout(() => {
+        if (document.body.contains(bar)) done();
+      }, 45000);
     } catch (_) {}
   }
 

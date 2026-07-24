@@ -1452,18 +1452,30 @@
   async function exportCurrentRecipe() {
     if (!_currentRecipe) return;
     const id = _currentRecipe.recipe_id || _currentRecipe.name;
-    const data = await fetchJson(`/api/flytying/recipes/${encodeURIComponent(id)}/export?format=markdown`);
-    const blob = new Blob([data.content || ""], { type: "text/markdown" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${(_currentRecipe.name || "pattern").replace(/\W+/g, "-")}.md`;
-    a.click();
+    try {
+      const data = await fetchJson(`/api/flytying/recipes/${encodeURIComponent(id)}/export?format=markdown`);
+      if (!data.content) {
+        window.showAriaToast?.(data.message || data.error || "Export returned no content", "err", 5000);
+        return;
+      }
+      const blob = new Blob([data.content], { type: "text/markdown" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${(_currentRecipe.name || "pattern").replace(/\W+/g, "-")}.md`;
+      a.click();
+      window.showAriaToast?.("Pattern exported", "ok", 2500);
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Export failed", "err", 5000);
+    }
   }
 
   function printCurrentRecipe() {
     if (!_currentRecipe) return;
     const w = window.open("", "_blank");
-    if (!w) return;
+    if (!w) {
+      window.showAriaToast?.("Pop-up blocked — allow pop-ups to print", "warn", 4500);
+      return;
+    }
     w.document.write(`<pre>${esc(_currentRecipe.formatted || _currentRecipe.name)}</pre>`);
     w.document.close();
     w.print();

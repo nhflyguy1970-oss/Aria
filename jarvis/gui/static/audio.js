@@ -778,7 +778,14 @@ async function loadAudioPanel() {
       const sf = new FormData();
       sf.append("audio_path", data.audio_path);
       sf.append("transcript", transcript);
-      fetch("/api/audio/session", { method: "POST", body: sf });
+      fetch("/api/audio/session", { method: "POST", body: sf })
+        .then(async (r) => {
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            window.showAriaToast?.(d.message || `Session save failed (${r.status})`, "warn", 4000);
+          }
+        })
+        .catch((err) => window.showAriaToast?.(err?.message || "Session save failed", "warn", 4000));
     }
   }
 

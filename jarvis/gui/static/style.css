@@ -4188,6 +4188,7 @@ html.theme-jarvis-blue .brand-icon { color: #5eb8ff; }
 .aria-toast--err { border-color: #991b1b; }
 .aria-toast--warn { border-color: #b45309; }
 .aria-toast--info { border-color: #334155; }
+.task-nudge-bar { display: flex; align-items: center; gap: 0.55rem; bottom: 4.4rem; max-width: 420px; }
 @keyframes listen-pulse { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; box-shadow: 0 0 12px var(--accent-dim); } }
 
 .service-row--action {

@@ -296,6 +296,8 @@ def test_command_palette_is_wired():
     assert "dashAiSuggestChips" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "document.hidden" in Path("jarvis/gui/static/tools_sidebar.js").read_text(encoding="utf-8")
     assert "Slice complete" in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
+    assert "taskNudgeBar" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "confirm(" not in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8").split("maybeTaskNudge")[1].split("initHud")[0]
     assert "documentsOpenIcsBtn" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "ICS feed saved" in Path("jarvis/gui/static/calendar.js").read_text(encoding="utf-8")
     assert "calendarIcsUrl" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")

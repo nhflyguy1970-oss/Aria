@@ -158,12 +158,39 @@
       });
       el.querySelectorAll(".prompt-del").forEach((btn) => {
         btn.addEventListener("click", async () => {
-          if (!confirm("Delete this prompt from history?")) return;
+          const item = btn.closest(".prompt-history-item") || btn.parentElement;
           try {
             const delRes = await fetch(`/api/prompts/${encodeURIComponent(btn.dataset.id)}`, { method: "DELETE" });
             const delData = await delRes.json().catch(() => ({}));
             if (!delRes.ok || !delData.ok) throw new Error(delData.message || "Delete failed");
-            loadPromptHistory();
+            // One-click delete with inline undo (no blocking confirm)
+            const undoRow = document.createElement("div");
+            undoRow.className = "muted small prompt-undo-row";
+            const label = document.createElement("span");
+            label.textContent = "Prompt deleted. ";
+            const undoBtn = document.createElement("button");
+            undoBtn.type = "button";
+            undoBtn.className = "ghost-btn tiny";
+            undoBtn.textContent = "Undo";
+            undoBtn.addEventListener("click", async () => {
+              try {
+                const res3 = await fetch("/api/prompts/restore", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ entry: delData.entry }),
+                });
+                const out = await res3.json().catch(() => ({}));
+                if (!res3.ok || !out.ok) throw new Error(out.message || "Undo failed");
+                loadPromptHistory();
+              } catch (err2) {
+                window.showAriaToast?.(err2.message || "Undo failed", "err", 4000);
+              }
+            });
+            undoRow.append(label, undoBtn);
+            if (item) item.replaceChildren(undoRow);
+            setTimeout(() => {
+              if (undoRow.isConnected) loadPromptHistory();
+            }, 8000);
           } catch (err) {
             window.showAriaToast?.(err.message || "Delete failed", "err", 4000);
           }

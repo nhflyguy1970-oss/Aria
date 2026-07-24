@@ -1681,9 +1681,21 @@ def register_routes(app, assistant):
     def prompts_delete(entry_id: str):
         from jarvis.prompt_history import delete_entry
 
-        if not delete_entry(entry_id):
+        removed = delete_entry(entry_id)
+        if removed is None:
             return JSONResponse(status_code=404, content={"ok": False, "message": "Not found"})
-        return {"ok": True, "deleted": entry_id}
+        return {"ok": True, "deleted": entry_id, "entry": removed}
+
+    @app.post("/api/prompts/restore")
+    async def prompts_restore(request: Request):
+        from jarvis.prompt_history import restore_entry
+
+        body = await request.json()
+        entry = body.get("entry") if isinstance(body, dict) else None
+        restored = restore_entry(entry or {})
+        if restored is None:
+            return JSONResponse(status_code=400, content={"ok": False, "message": "Nothing to restore"})
+        return {"ok": True, "entry": restored}
 
     @app.get("/api/git/log")
     def git_log(limit: int = 10):
