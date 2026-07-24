@@ -289,7 +289,7 @@ let progressStart = 0;
 let lastAssistantText = "";
 let recognition = null;
 let useStreaming = true;
-let activeBranchId = "main";
+let _activeBranchId = "main";
 let assistantDisplayName = "ARIA";
 
 function ariaName() {
@@ -1298,7 +1298,7 @@ async function forkBranchFromIndex(displayIndex) {
       showError(data.message || "Could not fork branch.");
       return;
     }
-    activeBranchId = data.branch_id;
+    _activeBranchId = data.branch_id;
     await loadBranches();
     await reloadBranchMessages();
     statusText.textContent = `Forked branch: ${name}`;
@@ -1372,7 +1372,7 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
   if (pendingCrop) form.append("crop", JSON.stringify(pendingCrop));
   if (pendingVideoSecond.trim()) form.append("video_second", pendingVideoSecond.trim());
   if (pendingPdfPage.trim()) form.append("pdf_page", pendingPdfPage.trim());
-  if (activeBranchId) form.append("branch_id", activeBranchId);
+  if (_activeBranchId) form.append("branch_id", _activeBranchId);
   if (window.jarvisPreferredModule) form.append("preferred_module", window.jarvisPreferredModule);
 
   const trimmed = text.trim();
@@ -2481,7 +2481,7 @@ clearBtn?.addEventListener("click", async () => {
   try {
     const f = new FormData();
     f.append("message", "clear");
-    if (activeBranchId) f.append("branch_id", activeBranchId);
+    if (_activeBranchId) f.append("branch_id", _activeBranchId);
     const res = await fetch("/api/chat", { method: "POST", body: f });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || data.detail || `Clear failed (${res.status})`);
@@ -2559,6 +2559,11 @@ window.showError = showError;
 window.isNativeApp = isNativeApp;
 window.loadHealth = loadHealth;
 window.loadVisionSettings = loadVisionSettings;
+Object.defineProperty(window, "activeBranchId", {
+  get() { return _activeBranchId; },
+  set(v) { _activeBranchId = v; },
+  configurable: true,
+});
 Object.defineProperty(window, "lastEditorFile", {
   get() { return _lastEditorFile; },
   set(v) { _lastEditorFile = v; },
@@ -3193,13 +3198,13 @@ document.getElementById("gitLogBtn")?.addEventListener("click", () => loadGitLog
 
 document.getElementById("exportChatBtn")?.addEventListener("click", () => {
   const params = new URLSearchParams();
-  if (activeBranchId) params.set("branch_id", activeBranchId);
+  if (_activeBranchId) params.set("branch_id", _activeBranchId);
   params.set("memory", "1");
   window.open(`/api/chat/export?${params}`, "_blank");
 });
 
 document.getElementById("exportChatPdfBtn")?.addEventListener("click", () => {
-  const q = activeBranchId ? `?branch_id=${encodeURIComponent(activeBranchId)}` : "";
+  const q = _activeBranchId ? `?branch_id=${encodeURIComponent(_activeBranchId)}` : "";
   window.open(`/api/chat/export/pdf${q}`, "_blank");
 });
 
@@ -3376,9 +3381,9 @@ async function loadBranches() {
     const res = await fetch("/api/branches");
     if (!res.ok) throw new Error(`Branches load failed (${res.status})`);
     const data = await res.json();
-    activeBranchId = data.active || "main";
+    _activeBranchId = data.active || "main";
     branchSelect.innerHTML = (data.branches || []).map((b) =>
-      `<option value="${escapeHtml(b.id)}"${b.id === activeBranchId ? " selected" : ""}>${escapeHtml(b.name)} (${b.messages})</option>`
+      `<option value="${escapeHtml(b.id)}"${b.id === _activeBranchId ? " selected" : ""}>${escapeHtml(b.name)} (${b.messages})</option>`
     ).join("");
   } catch (err) {
     window.showAriaToast?.(err.message || "Could not load branches", "err", 4000);
@@ -3386,7 +3391,7 @@ async function loadBranches() {
 }
 
 async function maybeShowMorningBriefing() {
-  if (activeBranchId && activeBranchId !== "main") return false;
+  if (_activeBranchId && _activeBranchId !== "main") return false;
   try {
     const res = await fetchWithTimeout("/api/briefing?launch=1", {}, 5000);
     if (!res.ok) return false;
@@ -3404,7 +3409,7 @@ async function reloadBranchMessages() {
   if (!messagesEl) return;
   messagesEl.innerHTML = "";
   try {
-    const res = await fetch(`/api/branches/${encodeURIComponent(activeBranchId)}/messages`);
+    const res = await fetch(`/api/branches/${encodeURIComponent(_activeBranchId)}/messages`);
     if (!res.ok) return;
     const data = await res.json();
     for (const m of data.messages || []) {
@@ -3424,15 +3429,15 @@ async function reloadBranchMessages() {
 }
 
 branchSelect?.addEventListener("change", async () => {
-  activeBranchId = branchSelect.value;
+  _activeBranchId = branchSelect.value;
   const form = new FormData();
-  form.append("branch_id", activeBranchId);
+  form.append("branch_id", _activeBranchId);
   try {
     const res = await fetch("/api/branches/switch", { method: "POST", body: form });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Switch failed (${res.status})`);
     await reloadBranchMessages();
-    window.showAriaToast?.(`Switched to ${branchSelect.selectedOptions?.[0]?.textContent || activeBranchId}`, "ok", 2500);
+    window.showAriaToast?.(`Switched to ${branchSelect.selectedOptions?.[0]?.textContent || _activeBranchId}`, "ok", 2500);
   } catch (err) {
     window.showAriaToast?.(err.message || "Could not switch branch", "err", 5000);
   }
@@ -3447,7 +3452,7 @@ newBranchBtn?.addEventListener("click", async () => {
     const res = await fetch("/api/branches", { method: "POST", body: form });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) throw new Error(data.message || data.detail || `Create failed (${res.status})`);
-    activeBranchId = data.branch_id;
+    _activeBranchId = data.branch_id;
     await loadBranches();
     await reloadBranchMessages();
     if (statusText) statusText.textContent = `Branch: ${name}`;
@@ -3515,7 +3520,7 @@ clearMainBranchBtn?.addEventListener("click", async () => {
     if (res.status === 404) {
       res = await fetch("/api/branches/main/clear", { method: "POST" });
     }
-    if (res.status === 404 && activeBranchId === "main") {
+    if (res.status === 404 && _activeBranchId === "main") {
       const legacy = new FormData();
       legacy.append("message", "clear");
       res = await fetch("/api/chat", { method: "POST", body: legacy });
@@ -3531,7 +3536,7 @@ clearMainBranchBtn?.addEventListener("click", async () => {
       return;
     }
     await loadBranches();
-    if (activeBranchId === "main") {
+    if (_activeBranchId === "main") {
       await reloadBranchMessages();
     } else {
       statusText.textContent = "Main branch cleared (still on current branch)";
@@ -3564,7 +3569,7 @@ branchTrimConfirmBtn?.addEventListener("click", async () => {
       throw new Error(data.message || "Could not delete branches.");
     }
     closeBranchTrimModal();
-    activeBranchId = data.active || "main";
+    _activeBranchId = data.active || "main";
     await loadBranches();
     await reloadBranchMessages();
     const msg = `Deleted ${(data.deleted || []).length} branch(es)`;
