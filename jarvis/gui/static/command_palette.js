@@ -160,6 +160,43 @@
         run: () => $("freeVramBtn")?.click(),
       },
       {
+        id: "act:cloud-live",
+        label: "Toggle Cloud Live voice",
+        group: "Actions",
+        keywords: "gemini live cloud microphone",
+        run: () => $("cloudLiveBtn")?.click(),
+      },
+      {
+        id: "act:git-status",
+        label: "Refresh git status",
+        group: "System",
+        keywords: "diff log repo",
+        run: () => {
+          goView("chat");
+          $("gitRefreshBtn")?.click();
+        },
+      },
+      {
+        id: "act:pull-models",
+        label: "Pull missing models",
+        group: "System",
+        keywords: "ollama download install",
+        run: () => {
+          goView("chat");
+          $("pullMissingBtn")?.click();
+        },
+      },
+      {
+        id: "act:lsp-diag",
+        label: "LSP diagnostics",
+        group: "System",
+        keywords: "coding check errors",
+        run: () => {
+          goView("chat");
+          window.runLspAction?.("diagnostics") || $("lspDiagBtn")?.click();
+        },
+      },
+      {
         id: "act:reindex-code",
         label: "Reindex code",
         group: "System",

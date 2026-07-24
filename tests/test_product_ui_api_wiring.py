@@ -88,10 +88,14 @@ def test_workflow_list_skips_index_json(data_dir, monkeypatch):
 
 
 def test_lsp_diagnostics_ui_uses_quick_mode():
-    src = open("jarvis/gui/static/app.js", encoding="utf-8").read()
-    assert 'q.set("deep", "0")' in src
-    assert "AbortController" in src
-    assert "Checking…" in src
+    from pathlib import Path
+
+    src = Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    coding = Path("jarvis/gui/static/coding_panel.js").read_text(encoding="utf-8")
+    blob = src + coding
+    assert 'q.set("deep", "0")' in blob
+    assert "AbortController" in blob
+    assert "Checking…" in blob
 
 
 def test_mc_dollar_accepts_hash_ids_and_audit_controls_wired():
@@ -160,6 +164,10 @@ def test_a11y_modal_esc_and_ux_debt_regressions():
     media_js = Path("jarvis/gui/static/media_lightbox.js").read_text(encoding="utf-8")
     assert "window.closeImageLightbox" in app_js or "window.closeImageLightbox" in media_js
     assert "media_lightbox.js" in html
+    assert "coding_panel.js" in html
+    coding_js = Path("jarvis/gui/static/coding_panel.js").read_text(encoding="utf-8")
+    assert "window.loadCodingPanel" in coding_js
+    assert "async function loadCodingPanel" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
 
     assert voice.count('data.event === "voice_state"') == 1
     assert 'data.detail === "cloud-live"' in voice
@@ -215,7 +223,9 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/image_engine.js").is_file()
     assert Path("jarvis/gui/static/documents.js").is_file()
     assert "async function loadDocumentsTab" not in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
-    assert "Code index rebuilt" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    app_js = Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    coding_js = Path("jarvis/gui/static/coding_panel.js").read_text(encoding="utf-8")
+    assert "Code index rebuilt" in app_js or "Code index rebuilt" in coding_js
     assert "Poll failed:" in Path("jarvis/gui/static/audit.js").read_text(encoding="utf-8")
     assert "async function loadCheatsheets" not in app
     assert "function syncComfySettings" not in app
