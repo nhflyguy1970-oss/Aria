@@ -35,3 +35,7 @@ Expand this matrix as each subsystem completes deep certification.
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.
 - INTENTIONALLY DEFERRED: full app.js god-file split; long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; complete per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / discoverability / AI-workflow work.
+
+### Continuation (same day)
+- FIXED & CERTIFIED: HA entity/service restart feedback; vision quality toasts; integrations palette action; `ha_panel.js` + `upgrade_wizard.js` extracts (`app.js` ~5718→~5582).
+- INTENTIONALLY DEFERRED: gallery/memory further extracts; long-duration/multi-monitor; Comfy/voice deep soaks; exhaustive per-control matrix.

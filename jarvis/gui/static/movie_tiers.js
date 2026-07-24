@@ -353,12 +353,27 @@
         e.stopPropagation();
         const svc = row.dataset.svc;
         if (!confirm(`Restart ${svc}?`)) return;
-        await fetch("/api/services/restart", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ service: svc }),
-        });
-        setTimeout(() => window.loadServicesPanel?.(), 2000);
+        btn.disabled = true;
+        const prev = btn.textContent;
+        btn.textContent = "…";
+        try {
+          const res = await fetch("/api/services/restart", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ service: svc }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.ok === false) {
+            throw new Error(data.message || data.detail || `Restart failed (${res.status})`);
+          }
+          window.showAriaToast?.(`Restarting ${svc}…`, "ok", 3500);
+          setTimeout(() => window.loadServicesPanel?.(), 2000);
+        } catch (err) {
+          window.showAriaToast?.(err.message || `Could not restart ${svc}`, "err", 5000);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = prev;
+        }
       });
       row.appendChild(btn);
     });
@@ -389,22 +404,40 @@
         : `<li class='muted'>No ${domain || "entities"} found — add integrations in HA.</li>`;
       list.querySelectorAll(".ha-ent-toggle").forEach((btn) => {
         btn.addEventListener("click", async () => {
-          await fetch("/api/homeassistant/toggle", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ entity_id: btn.dataset.eid, action: "toggle" }),
-          });
-          loadHaEntities();
+          try {
+            const res = await fetch("/api/homeassistant/toggle", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ entity_id: btn.dataset.eid, action: "toggle" }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.ok === false) {
+              throw new Error(data.message || data.detail || `Toggle failed (${res.status})`);
+            }
+            window.showAriaToast?.(`Toggled ${btn.dataset.eid}`, "ok", 2500);
+            loadHaEntities();
+          } catch (err) {
+            window.showAriaToast?.(err.message || "Toggle failed", "err", 5000);
+          }
         });
       });
       list.querySelectorAll(".ha-ent-scene").forEach((btn) => {
         btn.addEventListener("click", async () => {
-          await fetch("/api/homeassistant/scene", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ entity_id: btn.dataset.eid }),
-          });
-          loadHaEntities();
+          try {
+            const res = await fetch("/api/homeassistant/scene", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ entity_id: btn.dataset.eid }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data.ok === false) {
+              throw new Error(data.message || data.detail || `Scene failed (${res.status})`);
+            }
+            window.showAriaToast?.(`Activated ${btn.dataset.eid}`, "ok", 2500);
+            loadHaEntities();
+          } catch (err) {
+            window.showAriaToast?.(err.message || "Scene failed", "err", 5000);
+          }
         });
       });
       list.querySelectorAll(".ha-ent-chat").forEach((btn) => {
@@ -416,8 +449,9 @@
           }
         });
       });
-    } catch (_) {
-      list.innerHTML = "<li>Could not load entities</li>";
+    } catch (err) {
+      list.innerHTML = `<li class='muted'>Could not load entities: ${escapeHtml(err.message || "error")}</li>`;
+      window.showAriaToast?.(err.message || "Could not load HA entities", "err", 5000);
     }
   }
 
@@ -427,12 +461,21 @@
     $("haSceneSaveBtn")?.addEventListener("click", async () => {
       const scene = $("haSceneComposerInput")?.value?.trim();
       if (!scene) return;
-      await fetch("/api/homeassistant/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ leave_scene: scene }),
-      });
-      $("haLeaveSceneInput").value = scene;
+      try {
+        const res = await fetch("/api/homeassistant/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ leave_scene: scene }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) {
+          throw new Error(data.message || data.detail || `Save failed (${res.status})`);
+        }
+        if ($("haLeaveSceneInput")) $("haLeaveSceneInput").value = scene;
+        window.showAriaToast?.(`Leave scene set to ${scene}`, "ok", 3000);
+      } catch (err) {
+        window.showAriaToast?.(err.message || "Could not save leave scene", "err", 5000);
+      }
     });
     $("haSetupWizardBtn")?.addEventListener("click", () => $("haSetupModal")?.classList.remove("hidden"));
     $("haSetupCloseBtn")?.addEventListener("click", () => $("haSetupModal")?.classList.add("hidden"));

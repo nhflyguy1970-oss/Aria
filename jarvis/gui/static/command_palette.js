@@ -214,6 +214,25 @@
         run: () => openModal("haSetupModal"),
       },
       {
+        id: "act:integrations-keys",
+        label: "API keys (Cloud Live & models)",
+        group: "Actions",
+        keywords: "gemini openai huggingface integrations cloud live",
+        run: () => {
+          const panel = $("integrationsPanel") || $("integrationsGeminiKey")?.closest(".sidebar-section");
+          const sec = panel?.closest?.(".sidebar-section") || panel;
+          if (sec?.classList.contains("collapsed")) {
+            sec.querySelector(".sidebar-section-head")?.click();
+          }
+          $("integrationsSettingsBtn")?.click();
+          setTimeout(() => {
+            $("integrationsGeminiKey")?.focus();
+            $("integrationsGeminiKey")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+          }, 80);
+          window.showAriaToast?.("Integrations — paste keys then Save", "ok", 3500);
+        },
+      },
+      {
         id: "act:generate-image",
         label: "Generate image (Gallery)",
         group: "AI",

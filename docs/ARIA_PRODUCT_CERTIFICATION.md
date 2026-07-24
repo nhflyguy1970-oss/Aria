@@ -16,7 +16,15 @@ Prior waves already repaired disconnected APIs, MC races/bindings, a11y Esc/focu
 
 **Full stop-condition is not met** (deep soaks, god-`app.js` split, HA/Comfy long-runs, multi-monitor, exhaustive per-control matrix).
 
-## Latest wave — silent-fail elimination + calendar↔journal
+## Latest wave — modularization + HA/service feedback
+
+| Item | Detail |
+|------|--------|
+| Extracts | `ha_panel.js`, `upgrade_wizard.js` |
+| Feedback | HA toggle/scene/restart; vision quality |
+| Palette | Integrations API keys action |
+
+## Prior wave — silent-fail elimination + calendar↔journal
 
 | Item | Detail |
 |------|--------|

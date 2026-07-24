@@ -114,10 +114,11 @@ def test_mc_dollar_accepts_hash_ids_and_audit_controls_wired():
     assert 'fetch("/api/voice/smoke")' in voice
     assert 'fetch("/api/voice/smoke", { method: "POST" })' not in voice
     app_js = Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    upgrade_js = Path("jarvis/gui/static/upgrade_wizard.js").read_text(encoding="utf-8")
     assert "inpaintDenoise" in app_js
     assert "refreshSidebarVideoStatus" in app_js
-    assert 'fetch("/api/upgrade/clear"' in app_js
-    assert "upgradeClearBtn" in app_js
+    assert 'fetch("/api/upgrade/clear"' in upgrade_js or 'fetch("/api/upgrade/clear"' in app_js
+    assert "upgradeClearBtn" in upgrade_js or "upgradeClearBtn" in app_js
     assert "galleryGenerateBtn" in app_js
     assert "generate image:" in app_js
     maker = Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
@@ -232,6 +233,11 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/ha_panel.js").is_file()
     assert "window.initHaPanel" in Path("jarvis/gui/static/ha_panel.js").read_text(encoding="utf-8")
     assert "function initHaPanel" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert Path("jarvis/gui/static/upgrade_wizard.js").is_file()
+    assert "function initUpgradeWizardModal" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "act:integrations-keys" in js
+    assert "Restarting" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "Vision quality:" in app or "Vision quality:" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
 
 
 def test_stop_playback_and_clear_tts_queue_do_not_raise():
