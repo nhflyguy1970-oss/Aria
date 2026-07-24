@@ -1592,10 +1592,10 @@ def register_routes(app, assistant):
         return {"ok": True, **lsp_status()}
 
     @app.get("/api/lsp/diagnostics")
-    def lsp_diagnostics_route(path: str, deep: str = "true"):
+    def lsp_diagnostics_route(path: str, deep: str = "false"):
         from jarvis.lsp_bridge import lsp_diagnostics
 
-        d = deep.lower() not in ("0", "false", "no")
+        d = deep.lower() in ("1", "true", "yes")
         return lsp_diagnostics(path, assistant.coding._base(), deep=d)
 
     @app.get("/api/lsp/definition")

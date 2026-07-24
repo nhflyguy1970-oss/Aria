@@ -71,6 +71,29 @@ def test_dashboard_skills_and_maker_controls_are_wired():
         assert required in paths, f"missing route {required}"
 
 
+def test_workflow_list_skips_index_json(data_dir, monkeypatch):
+    wf = data_dir / "workflows"
+    wf.mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr("jarvis.workflow_learning.WORKFLOWS_DIR", wf)
+    monkeypatch.setattr("jarvis.workflow_learning.INDEX_FILE", wf / "index.json")
+    monkeypatch.setattr("jarvis.workflow_learning.WATCH_FILE", wf / "_watch_state.json")
+    (wf / "index.json").write_text('{"workflows": {}}', encoding="utf-8")
+    from jarvis.workflow_learning import ensure_demo_workflow, list_workflows
+
+    ensure_demo_workflow()
+    items = list_workflows()
+    assert items
+    assert all(i.get("slug") and i.get("name") for i in items)
+    assert not any(i.get("slug") in (None, "index") for i in items)
+
+
+def test_lsp_diagnostics_ui_uses_quick_mode():
+    src = open("jarvis/gui/static/app.js", encoding="utf-8").read()
+    assert 'q.set("deep", "0")' in src
+    assert "AbortController" in src
+    assert "Checking…" in src
+
+
 def test_stop_playback_and_clear_tts_queue_do_not_raise():
     from jarvis.audio_device import stop_playback
     from jarvis.tts_playback_queue import clear_tts_queue

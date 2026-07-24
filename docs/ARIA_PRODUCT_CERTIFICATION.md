@@ -107,6 +107,8 @@ UI control → fetch(/api/…) / Cap Bus / chat action
 | Settings Speak replies dead | `settingsSpeakToggle` unwired | Synced with `speakRepliesToggle` |
 | Calendar/Planner/Flytying/Security silent fails | Missing ok checks / empty catches | Toasts + empty states |
 | Skill defaults / `skill_run` routing | Empty `skill_defaults`; NLU stole “run … skill” | Bundled defaults + router priority |
+| Dashboard workflows show `null` | `list_workflows` treated `index.json` as a workflow | Skip index; require slug/name |
+| LSP Check stuck on `…` | Deep mypy diagnostics hang UI (~40s+) | Quick `deep=0` default + AbortController timeout |
 
 ## Technical debt removed
 

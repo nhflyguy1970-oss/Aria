@@ -307,14 +307,23 @@ def save_workflow(
 
 
 def load_workflow(slug: str) -> dict[str, Any] | None:
+    if not slug or slug in {"index", "_watch_state"}:
+        return None
     path = _workflow_path(slug)
     if not path.is_file():
         return None
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else None
     except (json.JSONDecodeError, OSError):
         return None
+    if not isinstance(data, dict):
+        return None
+    # Index / watch state files are not workflows.
+    if "workflows" in data and "slug" not in data and "steps" not in data:
+        return None
+    if not (data.get("slug") or data.get("name") or data.get("steps")):
+        return None
+    return data
 
 
 def delete_workflow(slug: str) -> bool:
@@ -375,10 +384,10 @@ def list_workflows(*, query: str = "") -> list[dict[str, Any]]:
     _ensure_dir()
     items: list[dict[str, Any]] = []
     for path in sorted(WORKFLOWS_DIR.glob("*.json")):
-        if path.name.startswith("_"):
+        if path.name.startswith("_") or path.name == "index.json":
             continue
         wf = load_workflow(path.stem)
-        if wf:
+        if wf and (wf.get("slug") or wf.get("name")):
             items.append(wf)
     q = (query or "").strip().lower()
     if not q:

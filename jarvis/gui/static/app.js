@@ -4440,8 +4440,10 @@ async function runLspAction(kind) {
     setLspOut("Enter a file path or sync Cursor editor context.");
     return;
   }
-  setLspOut("…");
+  setLspOut(kind === "diagnostics" ? "Checking…" : "…");
   const q = new URLSearchParams({ path, line: String(line), column: "1" });
+  // Quick diagnostics by default — deep mypy can hang the UI for a long time.
+  if (kind === "diagnostics") q.set("deep", "0");
   let url = `/api/lsp/${kind}?${q}`;
   let opts = {};
   if (kind === "format") {
@@ -4451,11 +4453,14 @@ async function runLspAction(kind) {
     form.append("write", "1");
     opts = { method: "POST", body: form };
   }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), kind === "diagnostics" ? 25000 : 45000);
+  opts = { ...opts, signal: ctrl.signal };
   try {
     const res = await fetch(url, opts);
-    const data = await res.json();
-    if (!data.ok) {
-      setLspOut(data.message || "LSP request failed");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      setLspOut(data.message || data.detail || "LSP request failed");
       return;
     }
     if (kind === "diagnostics") {
@@ -4475,7 +4480,10 @@ async function runLspAction(kind) {
       setLspOut(data.written ? `Formatted ${path}` : "Format preview only");
     }
   } catch (e) {
-    setLspOut(String(e));
+    const msg = e?.name === "AbortError" ? "LSP timed out — try again or narrow the file" : String(e);
+    setLspOut(msg);
+  } finally {
+    clearTimeout(timer);
   }
 }
 
