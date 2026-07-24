@@ -42,12 +42,12 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.
 
-## Wave resume (2026-07-24 evening)
-- FIXED & CERTIFIED: **chat_controls.js**; **branding.js**; **chat_meta.js**; palette read-aloud; planner/journal/video/HA/gallery/uncensored silent-fail hardening; empty CTAs. `app.js` ~**437** lines. 0 orphan button IDs.
-- INTENTIONALLY DEFERRED: long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive matrix; jarvisAttach/finishSendUi extract.
+## Wave resume (2026-07-24 evening+)
+- FIXED & CERTIFIED: **chat_attach.js** (jarvisAttach + finishSendUi); **chat_input.js** (composer/shortcuts); fork → chat_branches; models load toast. `app.js` ~**162** lines. Browser-verified attach/finish/resize globals.
+- INTENTIONALLY DEFERRED: long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive matrix; api-key fetch / jarvisChat shell extract.
 - Verdict: **NO**
 
-**Next priorities:** jarvisAttach extract; long-duration soak; multi-monitor; Comfy/HA deep soaks; matrix completion.
+**Next priorities:** jarvisChat/api-key bootstrap extract; long-duration soak; multi-monitor; Comfy/HA deep soaks; matrix completion.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.

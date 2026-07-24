@@ -112,6 +112,7 @@ async function loadModelSettings() {
       editorStatus.textContent = `Could not load models: ${e.message}`;
       editorStatus.classList.add("warn");
     }
+    window.showAriaToast?.(e.message || "Could not load models", "err", 4000);
     return null;
   }
 }

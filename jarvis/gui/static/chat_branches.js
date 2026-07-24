@@ -235,4 +235,32 @@ branchTrimConfirmBtn?.addEventListener("click", async () => {
   window.loadBranches = loadBranches;
   window.reloadBranchMessages = reloadBranchMessages;
   window.maybeShowMorningBriefing = maybeShowMorningBriefing;
+
+  async function forkBranchFromIndex(displayIndex) {
+    const name = prompt("New branch name:", "Fork");
+    if (!name) return;
+    const form = new FormData();
+    form.append("name", name);
+    form.append("display_index", String(displayIndex));
+    try {
+      const res = await fetch("/api/branches/fork", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || data.detail || `Could not fork branch (${res.status})`;
+        window.showError?.(msg);
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      window.activeBranchId = data.branch_id;
+      await loadBranches();
+      await reloadBranchMessages();
+      const status = document.getElementById("statusText");
+      if (status) status.textContent = `Forked branch: ${name}`;
+      window.showAriaToast?.(`Forked branch: ${name}`, "ok", 3000);
+    } catch (e) {
+      window.showError?.(String(e.message || e));
+      window.showAriaToast?.(String(e.message || e), "err", 5000);
+    }
+  }
+  window.forkBranchFromIndex = forkBranchFromIndex;
 })();
