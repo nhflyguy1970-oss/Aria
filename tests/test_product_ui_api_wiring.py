@@ -229,6 +229,9 @@ def test_command_palette_is_wired():
 
     assert not Path("jarvis/gui/static/browser.js").exists()
     assert Path("jarvis/gui/static/browser_panel.js").is_file()
+    assert Path("jarvis/gui/static/ha_panel.js").is_file()
+    assert "window.initHaPanel" in Path("jarvis/gui/static/ha_panel.js").read_text(encoding="utf-8")
+    assert "function initHaPanel" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
 
 
 def test_stop_playback_and_clear_tts_queue_do_not_raise():
