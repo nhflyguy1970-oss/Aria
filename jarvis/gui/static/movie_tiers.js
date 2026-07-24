@@ -763,49 +763,17 @@
 
   /* documents → documents.js */
 
-  /* --- ICS wizard in journal (Tier 2 #12) --- */
+  /* --- Documents → Calendar ICS (single source of truth) --- */
   function initIcsWizard() {
-    $("icsTestBtn")?.addEventListener("click", async () => {
-      const url = $("icsUrlInput")?.value?.trim();
-      if (!url) {
-        window.showAriaToast?.("Enter an ICS URL first", "warn", 3500);
-        return;
-      }
-      try {
-        const data = await fetchJson("/api/calendar/ics", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url, test_only: true }),
-        });
-        const msg = data.message || (data.ok ? "ICS OK" : "ICS test failed");
-        $("icsWizardStatus").textContent = msg;
-        window.showAriaToast?.(msg, data.ok ? "ok" : "err", data.ok ? 2500 : 5000);
-      } catch (err) {
-        const msg = err?.message || "ICS test failed";
-        $("icsWizardStatus").textContent = msg;
-        window.showAriaToast?.(msg, "err", 5000);
-      }
-    });
-    $("icsSaveBtn")?.addEventListener("click", async () => {
-      const url = $("icsUrlInput")?.value?.trim();
-      if (!url) {
-        window.showAriaToast?.("Enter an ICS URL first", "warn", 3500);
-        return;
-      }
-      try {
-        const data = await fetchJson("/api/calendar/ics", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ url }),
-        });
-        const msg = data.message || (data.ok === false ? "ICS save failed" : "ICS saved");
-        $("icsWizardStatus").textContent = msg;
-        window.showAriaToast?.(msg, data.ok === false ? "err" : "ok", data.ok === false ? 5000 : 2500);
-      } catch (err) {
-        const msg = err?.message || "ICS save failed";
-        $("icsWizardStatus").textContent = msg;
-        window.showAriaToast?.(msg, "err", 5000);
-      }
+    $("documentsOpenIcsBtn")?.addEventListener("click", () => {
+      window.switchToView?.("calendar");
+      setTimeout(() => {
+        const details = $("calendarIcsUrl")?.closest("details");
+        if (details) details.open = true;
+        $("calendarIcsUrl")?.focus();
+        $("calendarIcsUrl")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+        window.showAriaToast?.("Paste your ICS feed URL here", "info", 3000);
+      }, 80);
     });
   }
 

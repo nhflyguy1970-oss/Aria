@@ -537,10 +537,15 @@
         id: "act:ics-wizard",
         label: "Focus calendar ICS import",
         group: "Actions",
-        keywords: "ical feed subscribe calendar",
+        keywords: "ical feed subscribe calendar google outlook",
         run: () => {
-          goView("documents");
-          setTimeout(() => $("icsUrlInput")?.focus(), 80);
+          goView("calendar");
+          setTimeout(() => {
+            const details = $("calendarIcsUrl")?.closest("details");
+            if (details) details.open = true;
+            $("calendarIcsUrl")?.focus();
+            $("calendarIcsUrl")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+          }, 80);
         },
       },
       {

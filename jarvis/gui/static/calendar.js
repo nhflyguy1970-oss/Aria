@@ -238,21 +238,28 @@ async function addCalendarEntry(day) {
   const content = calEl("calAddContent")?.value?.trim();
   const time = calEl("calAddTime")?.value?.trim();
   const bulletType = calEl("calAddType")?.value || "event";
-  if (!content) return;
-  const form = new FormData();
-  form.append("content", content);
-  form.append("bullet_type", bulletType);
-  form.append("day", day);
-  if (time && bulletType === "event") form.append("time", time);
-  const res = await fetch("/api/journal/daily", { method: "POST", body: form });
-  const data = await res.json();
-  if (!data.ok) {
-    window.showAriaToast?.("Could not add entry", "err", 5000);
+  if (!content) {
+    window.showAriaToast?.("Enter event text first", "warn", 2500);
     return;
   }
-  calEl("calAddContent").value = "";
-  window.showAriaToast?.("Added to calendar", "ok", 4000);
-  await loadCalendarMonth(calMonth);
+  try {
+    const form = new FormData();
+    form.append("content", content);
+    form.append("bullet_type", bulletType);
+    form.append("day", day);
+    if (time && bulletType === "event") form.append("time", time);
+    const res = await fetch("/api/journal/daily", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) {
+      window.showAriaToast?.(data.message || data.error || "Could not add entry", "err", 5000);
+      return;
+    }
+    calEl("calAddContent").value = "";
+    window.showAriaToast?.("Added to calendar", "ok", 4000);
+    await loadCalendarMonth(calMonth);
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Could not add entry", "err", 5000);
+  }
 }
 
 async function saveCalendarNote(day) {
@@ -367,24 +374,48 @@ async function loadWorkSchedule() {
 }
 
 async function saveIcsUrl() {
-  const url = calEl("calendarIcsUrl")?.value?.trim() || "";
-  const data = await fetchJson("/api/calendar/ics", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url }),
-  });
-  calEl("calendarIcsStatus").textContent = data.message || (data.ok ? "Saved" : "Failed");
-  if (data.ok) await loadCalendarMonth(calMonth);
+  const status = calEl("calendarIcsStatus");
+  try {
+    const url = calEl("calendarIcsUrl")?.value?.trim() || "";
+    const data = await fetchJson("/api/calendar/ics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    });
+    const msg = data.message || (data.ok ? "ICS feed saved" : "ICS save failed");
+    if (status) status.textContent = msg;
+    window.showAriaToast?.(msg, data.ok ? "ok" : "err", data.ok ? 2500 : 5000);
+    if (data.ok) await loadCalendarMonth(calMonth);
+  } catch (err) {
+    const msg = err?.message || "ICS save failed";
+    if (status) status.textContent = msg;
+    window.showAriaToast?.(msg, "err", 5000);
+  }
 }
 
 async function testIcsUrl() {
-  const url = calEl("calendarIcsUrl")?.value?.trim() || "";
-  const data = await fetchJson("/api/calendar/ics", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url, test_only: true }),
-  });
-  calEl("calendarIcsStatus").textContent = data.message || (data.ok ? "OK" : "Failed");
+  const status = calEl("calendarIcsStatus");
+  try {
+    const url = calEl("calendarIcsUrl")?.value?.trim() || "";
+    if (!url) {
+      const msg = "Enter an ICS URL to test";
+      if (status) status.textContent = msg;
+      window.showAriaToast?.(msg, "warn", 3000);
+      return;
+    }
+    const data = await fetchJson("/api/calendar/ics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, test_only: true }),
+    });
+    const msg = data.message || (data.ok ? "ICS feed OK" : "ICS test failed");
+    if (status) status.textContent = msg;
+    window.showAriaToast?.(msg, data.ok ? "ok" : "err", data.ok ? 2500 : 5000);
+  } catch (err) {
+    const msg = err?.message || "ICS test failed";
+    if (status) status.textContent = msg;
+    window.showAriaToast?.(msg, "err", 5000);
+  }
 }
 
 function bindCalendarControls() {
