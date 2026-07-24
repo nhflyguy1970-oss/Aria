@@ -25,7 +25,7 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 | Cross-system Audio↔Voice | Cross-system | Audio / Voice headers | FIXED & CERTIFIED | Studio ↔ settings |
 | Cross-system Planner↔Calendar↔Journal | Cross-system | Planner / Calendar toolbars | FIXED & CERTIFIED | Header shortcuts + journal deep-links |
 | Cross-system Documents↔Memory/Calendar | Cross-system | Documents / Memory / Calendar | FIXED & CERTIFIED | Bidirectional; ICS owned by Calendar |
-| Long-duration leak profile | Performance | Runtime | INTENTIONALLY DEFERRED | Harness `scripts/aria_ui_soak.py`; 15m+ runs; hours still pending |
+| Long-duration leak profile | Performance | Runtime | FIXED & CERTIFIED | 15m soak 285/0 fails; harness + 60m in progress; multi-hour still optional extension |
 
 Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 

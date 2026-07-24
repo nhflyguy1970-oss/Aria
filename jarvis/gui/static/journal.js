@@ -778,7 +778,11 @@ async function loadMonthly() {
       const form = new FormData();
       form.append("item_id", cb.dataset.reviewId);
       form.append("month", month);
-      await fetch("/api/journal/monthly/review/toggle", { method: "POST", body: form });
+      const out = await journalPost("/api/journal/monthly/review/toggle", { method: "POST", body: form });
+      if (!out.ok) {
+        cb.checked = !cb.checked;
+        return;
+      }
       loadMonthly();
     };
   });
@@ -786,14 +790,17 @@ async function loadMonthly() {
     const form = new FormData();
     form.append("notes", document.getElementById("bujoReviewNotes")?.value || "");
     form.append("month", month);
-    await fetch("/api/journal/monthly/review/notes", { method: "POST", body: form });
+    const out = await journalPost("/api/journal/monthly/review/notes", { method: "POST", body: form });
+    if (!out.ok) return;
+    journalNotify("Review notes saved", false);
   });
   document.getElementById("bujoReviewAi")?.addEventListener("click", async () => {
     const form = new FormData();
     form.append("scope", "month");
     form.append("month", month);
-    const res = await fetch("/api/journal/reflect/review", { method: "POST", body: form });
-    const data = await res.json();
+    const out = await journalPost("/api/journal/reflect/review", { method: "POST", body: form });
+    if (!out.ok) return;
+    const data = out.body || {};
     window.showAriaToast?.(data.reflection || "No reflection generated.", data.reflection ? "ok" : "warn", 6000);
   });
 
@@ -871,7 +878,11 @@ async function loadWeekly() {
       const form = new FormData();
       form.append("item_id", cb.dataset.weekReviewId);
       form.append("week", week);
-      await fetch("/api/journal/weekly/review/toggle", { method: "POST", body: form });
+      const out = await journalPost("/api/journal/weekly/review/toggle", { method: "POST", body: form });
+      if (!out.ok) {
+        cb.checked = !cb.checked;
+        return;
+      }
       loadWeekly();
     };
   });
@@ -879,14 +890,17 @@ async function loadWeekly() {
     const form = new FormData();
     form.append("notes", document.getElementById("bujoWeeklyReviewNotes")?.value || "");
     form.append("week", week);
-    await fetch("/api/journal/weekly/review/notes", { method: "POST", body: form });
+    const out = await journalPost("/api/journal/weekly/review/notes", { method: "POST", body: form });
+    if (!out.ok) return;
+    journalNotify("Weekly review notes saved", false);
   });
   document.getElementById("bujoWeeklyReviewAi")?.addEventListener("click", async () => {
     const form = new FormData();
     form.append("scope", "week");
     form.append("week", week);
-    const res = await fetch("/api/journal/reflect/review", { method: "POST", body: form });
-    const data = await res.json();
+    const out = await journalPost("/api/journal/reflect/review", { method: "POST", body: form });
+    if (!out.ok) return;
+    const data = out.body || {};
     window.showAriaToast?.(data.reflection || "No reflection generated.", data.reflection ? "ok" : "warn", 6000);
   });
 }
@@ -929,16 +943,22 @@ async function loadHabits() {
     btn.onclick = async () => {
       const form = new FormData();
       form.append("day", btn.dataset.day);
-      await fetch(`/api/journal/habits/${btn.dataset.hid}/toggle`, { method: "POST", body: form });
+      const out = await journalPost(`/api/journal/habits/${btn.dataset.hid}/toggle`, { method: "POST", body: form });
+      if (!out.ok) return;
       loadHabits();
     };
   });
   document.getElementById("habitAddBtn")?.addEventListener("click", async () => {
     const name = document.getElementById("habitName")?.value.trim();
-    if (!name) return;
+    if (!name) {
+      journalNotify("Enter a habit name");
+      return;
+    }
     const form = new FormData();
     form.append("name", name);
-    await fetch("/api/journal/habits", { method: "POST", body: form });
+    const out = await journalPost("/api/journal/habits", { method: "POST", body: form });
+    if (!out.ok) return;
+    journalNotify("Habit added", false);
     loadHabits();
   });
 }
