@@ -382,21 +382,6 @@ window.initPlanner = function initPlanner() {
   const root = $("plannerView");
   if (root?.dataset.bound === "1") return;
   if (root) root.dataset.bound = "1";
-  $("plannerAddTaskBtn")?.addEventListener("click", async () => {
-    const text = $("plannerTaskInput")?.value?.trim();
-    if (!text) return;
-    try {
-      await p0Fetch("/api/planner/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      $("plannerTaskInput").value = "";
-      loadPlanner();
-    } catch (e) {
-      window.showAriaToast?.(`Add task failed: ${e.message}`, "err");
-    }
-  });
   $("plannerTimerBtn")?.addEventListener("click", async () => {
     const duration = $("plannerTimerInput")?.value?.trim();
     if (!duration) return;
@@ -407,6 +392,7 @@ window.initPlanner = function initPlanner() {
         body: JSON.stringify({ duration }),
       });
       loadPlanner();
+      window.showAriaToast?.(`Timer: ${duration}`, "ok", 2500);
     } catch (e) {
       window.showAriaToast?.(`Timer failed: ${e.message}`, "err");
     }
@@ -435,8 +421,25 @@ window.initPlanner = function initPlanner() {
         body: JSON.stringify({ time }),
       });
       loadPlanner();
+      window.showAriaToast?.(`Alarm set: ${time}`, "ok", 2500);
     } catch (e) {
       window.showAriaToast?.(`Alarm failed: ${e.message}`, "err");
+    }
+  });
+  $("plannerAddTaskBtn")?.addEventListener("click", async () => {
+    const text = $("plannerTaskInput")?.value?.trim();
+    if (!text) return;
+    try {
+      await p0Fetch("/api/planner/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      $("plannerTaskInput").value = "";
+      loadPlanner();
+      window.showAriaToast?.("Task added", "ok", 2000);
+    } catch (e) {
+      window.showAriaToast?.(`Add task failed: ${e.message}`, "err");
     }
   });
 };

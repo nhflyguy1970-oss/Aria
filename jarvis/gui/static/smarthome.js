@@ -120,8 +120,9 @@
       line.textContent = `Kasa: ${enabled} · ${pkg} · ${kasaDevices.length} device(s) · ${st.online_count || 0} on`;
       renderRoomFilters();
       renderDeviceList();
-    } catch (_) {
+    } catch (err) {
       line.textContent = "Kasa: unavailable";
+      window.showAriaToast?.(err?.message || "Kasa unavailable", "err", 4000);
     }
   }
 
@@ -133,8 +134,20 @@
     }
     try {
       const r = await fetchJson("/api/kasa/discover", { method: "POST" });
-      if (!r.ok) alert(r.error || "Discover failed");
+      if (!r.ok) {
+        const msg = r.error || r.message || "Discover failed";
+        window.showAriaToast?.(msg, "err", 5000);
+        alert(msg);
+      } else {
+        window.showAriaToast?.(
+          `Discovered ${r.devices?.length ?? r.count ?? "Kasa"} device(s)`,
+          "ok",
+          3000
+        );
+      }
       await refreshKasa();
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Discover failed", "err", 5000);
     } finally {
       if (btn) {
         btn.disabled = false;
@@ -171,13 +184,16 @@
             window.showAriaToast?.(r.message || "Scene", r.ok ? "ok" : "warn");
             if (!r.ok) alert(r.message || "Scene failed");
             await refreshKasa();
+          } catch (err) {
+            window.showAriaToast?.(err?.message || "Scene failed", "err", 5000);
           } finally {
             btn.disabled = false;
           }
         });
       });
-    } catch (_) {
+    } catch (err) {
       wrap.innerHTML = "<span class=\"muted\">Could not load presets</span>";
+      window.showAriaToast?.(err?.message || "Could not load scene presets", "err", 4000);
     }
   }
 

@@ -290,7 +290,12 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/git_panel.js").is_file()
     assert "window.loadGitStatus" in Path("jarvis/gui/static/git_panel.js").read_text(encoding="utf-8")
     assert "async function loadGitStatus" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert Path("jarvis/gui/static/chat_model_select.js").is_file()
+    assert "window.loadChatModelSelect" in Path("jarvis/gui/static/chat_model_select.js").read_text(encoding="utf-8")
+    assert "async function loadChatModelSelect" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "Transcript copied" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
+    assert "Task added" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "Kasa unavailable" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8") or "Kasa: unavailable" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8")
     assert "act:integrations-keys" in js
     assert "Restarting" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "Vision quality:" in app or "Vision quality:" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
