@@ -475,7 +475,9 @@ async function pollStoryboardJob(jobId, statusEl) {
       }
       setTimeout(tick, 1500);
     } catch (e) {
-      if (statusEl) statusEl.textContent = String(e.message || e);
+      const msg = String(e.message || e);
+      if (statusEl) statusEl.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
     }
   };
   tick();
@@ -486,7 +488,9 @@ document.getElementById("storyboardBuildBtn")?.addEventListener("click", async (
   const statusEl = document.getElementById("storyboardStatus");
   const btn = document.getElementById("storyboardBuildBtn");
   if (!paths) {
-    if (statusEl) statusEl.textContent = "Enter comma-separated image paths";
+    const msg = "Enter comma-separated image paths";
+    if (statusEl) statusEl.textContent = msg;
+    window.showAriaToast?.(msg, "warn", 3500);
     return;
   }
   if (btn) btn.disabled = true;
@@ -498,13 +502,19 @@ document.getElementById("storyboardBuildBtn")?.addEventListener("click", async (
     const res = await fetch("/api/video/storyboard", { method: "POST", body: form });
     const data = await res.json();
     if (!res.ok || !data.ok) {
-      if (statusEl) statusEl.textContent = data.message || "Could not queue storyboard";
+      const msg = data.message || "Could not queue storyboard";
+      if (statusEl) statusEl.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
       return;
     }
-    if (statusEl) statusEl.textContent = data.message || "Storyboard queued…";
+    const queued = data.message || "Storyboard queued…";
+    if (statusEl) statusEl.textContent = queued;
+    window.showAriaToast?.(queued, "ok", 2500);
     pollStoryboardJob(data.job_id, statusEl);
   } catch (e) {
-    if (statusEl) statusEl.textContent = String(e.message || e);
+    const msg = String(e.message || e);
+    if (statusEl) statusEl.textContent = msg;
+    window.showAriaToast?.(msg, "err", 5000);
   } finally {
     if (btn) btn.disabled = false;
   }
