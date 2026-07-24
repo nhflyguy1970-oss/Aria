@@ -1160,7 +1160,11 @@
       </div>
 
       <div id="plannerView" class="view-panel hidden">
-        <h2>Planner</h2>
+        <div class="planner-header">
+          <h2>Planner</h2>
+          <button type="button" id="plannerOpenCalendarBtn" class="ghost-btn small" title="Open Calendar">Calendar</button>
+          <button type="button" id="plannerOpenJournalBtn" class="ghost-btn small" title="Open Bullet Journal">Journal</button>
+        </div>
         <p id="plannerStatus" class="muted"></p>
         <div class="planner-grid">
           <section>
@@ -1204,6 +1208,8 @@
             <strong id="calendarMonthLabel">—</strong>
             <button type="button" id="calendarNextBtn" class="ghost-btn small">Next →</button>
             <button type="button" id="calendarTodayBtn" class="ghost-btn small">Today</button>
+            <button type="button" id="calendarOpenPlannerBtn" class="ghost-btn small" title="Open Planner">Planner</button>
+            <button type="button" id="calendarOpenJournalBtn" class="ghost-btn small" title="Open Bullet Journal">Journal</button>
           </div>
         </div>
         <div id="calendarHolidayLegend" class="calendar-holiday-legend"></div>
@@ -1780,9 +1786,9 @@
   <script src="/static/jarvis_ambient.js?v=1.2.0"></script>
   <script type="module" src="/static/modules/jobs.mjs?v=5.16.70"></script>
   <script type="module" src="/static/modules/health.mjs?v=5.16.71"></script>
-  <script src="/static/planner.js?v=5.16.95"></script>
+  <script src="/static/planner.js?v=5.16.96"></script>
   <script src="/static/mission_control.js?v=1.0.7"></script>
-  <script src="/static/calendar.js?v=5.16.84"></script>
+  <script src="/static/calendar.js?v=5.16.85"></script>
   <script src="/static/flytying.js?v=5.16.98"></script>
 
   <script src="/static/projects.js?v=5.16.90"></script>

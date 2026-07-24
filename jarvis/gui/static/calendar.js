@@ -393,6 +393,8 @@ function bindCalendarControls() {
     const t = todayIso();
     loadCalendarMonth(t.slice(0, 7)).then(() => loadCalendarDay(t));
   });
+  calEl("calendarOpenPlannerBtn")?.addEventListener("click", () => window.switchToView?.("planner"));
+  calEl("calendarOpenJournalBtn")?.addEventListener("click", () => window.switchToView?.("journal"));
   calEl("calendarIcsSaveBtn")?.addEventListener("click", saveIcsUrl);
   calEl("calendarIcsTestBtn")?.addEventListener("click", testIcsUrl);
 }

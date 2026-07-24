@@ -392,6 +392,8 @@ window.initPlanner = function initPlanner() {
   const root = $("plannerView");
   if (root?.dataset.bound === "1") return;
   if (root) root.dataset.bound = "1";
+  $("plannerOpenCalendarBtn")?.addEventListener("click", () => window.switchToView?.("calendar"));
+  $("plannerOpenJournalBtn")?.addEventListener("click", () => window.switchToView?.("journal"));
   $("plannerTimerBtn")?.addEventListener("click", async () => {
     const duration = $("plannerTimerInput")?.value?.trim();
     if (!duration) return;
