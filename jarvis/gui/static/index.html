@@ -685,6 +685,7 @@
             <button type="button" id="upgradeVerifyBtn" class="ghost-btn small" disabled>2. Verify tests</button>
             <button type="button" id="upgradeApplyBtn" class="ghost-btn small" disabled>3. Apply</button>
             <button type="button" id="upgradeRollbackBtn" class="reject-btn small" disabled>Rollback</button>
+            <button type="button" id="upgradeClearBtn" class="ghost-btn small" title="Clear a stuck or failed upgrade session">Clear session</button>
             <button type="button" id="upgradeRestartBtn" class="ghost-btn small">Restart ARIA</button>
             <button type="button" id="upgradeWizardCloseBtn" class="ghost-btn small">Close</button>
           </div>
@@ -910,6 +911,11 @@
           <p id="imageEngineStatus" class="image-engine-status muted">Loading…</p>
           <p id="imageEngineInstallHint" class="image-engine-hint hidden"></p>
           <button type="button" id="imageEngineInstallNsfwBtn" class="ghost-btn small hidden">Install NSFW checkpoints</button>
+          <div class="planner-add-row image-engine-generate-row">
+            <input type="text" id="galleryPromptInput" class="audio-path-input" placeholder="Describe an image to generate…" />
+            <button type="button" id="galleryGenerateBtn" class="apply-btn small">Generate</button>
+          </div>
+          <p id="galleryGenerateHint" class="muted small">Runs through chat image generation with your active checkpoint.</p>
         </section>
         <h2>Generated Images</h2>
         <div id="galleryGrid" class="gallery-grid"></div>
@@ -1724,7 +1730,7 @@
   <script type="module" src="/static/modules/jobs.mjs?v=5.16.70"></script>
   <script type="module" src="/static/modules/health.mjs?v=5.16.70"></script>
   <script src="/static/planner.js?v=5.16.74"></script>
-  <script src="/static/mission_control.js?v=1.0.2"></script>
+  <script src="/static/mission_control.js?v=1.0.3"></script>
   <script src="/static/calendar.js?v=5.16.74"></script>
   <script src="/static/flytying.js?v=5.16.74"></script>
   <script src="/static/projects.js?v=5.16.70"></script>
@@ -1739,6 +1745,6 @@
   <script src="/static/world_state_hud.js?v=5.16.70"></script>
   <script src="/static/audit.js?v=5.16.70"></script>
   <script src="/static/voice_tab.js?v=5.16.70"></script>
-  <script src="/static/app.js?v=5.16.76"></script>
+  <script src="/static/app.js?v=5.16.77"></script>
 </body>
 </html>

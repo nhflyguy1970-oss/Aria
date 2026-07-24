@@ -702,8 +702,12 @@ function wireMcTabActions(tab) {
   mc$("#mcActivityFilterBtn")?.addEventListener("click", () => renderMcTab("activity"));
   mc$("#mcRepairBtn")?.addEventListener("click", async () => {
     try {
-      await mcFetch("/api/workstation/recover", { method: "POST" });
-      window.showAriaToast?.("Repair started", "ok");
+      const data = await mcFetch("/api/workstation/recover", { method: "POST" });
+      const issues = data.report?.warnings ?? data.report?.issues?.length ?? 0;
+      const summary = data.ok
+        ? (issues ? `Repair done · ${issues} warning(s)` : "Repair done · healthy")
+        : "Repair finished with issues";
+      window.showAriaToast?.(summary, data.ok ? "ok" : "warn");
       loadMissionControl();
     } catch (e) {
       window.showAriaToast?.(e.message, "err");

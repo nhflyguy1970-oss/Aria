@@ -114,6 +114,9 @@ UI control → fetch(/api/…) / Cap Bus / chat action
 | Inpaint denoise ignored | Hardcoded 0.82 | Read `#inpaintDenoise` |
 | Face unlock / router warm / voice smoke | Missing DOM or POST vs GET | Added controls; smoke GET (+ POST alias) |
 | Sidebar video status static | Never refreshed | `refreshSidebarVideoStatus` via `/api/resources` |
+| Upgrade stuck at `apply_failed` with no Clear | Clear API existed; no UI control | `upgradeClearBtn` → `/api/upgrade/clear` |
+| Gallery had settings but no Generate | Discoverability gap | Gallery prompt + Generate → chat `generate image:` |
+| MC Repair toast said “started” after sync recover | Misleading feedback | Toast reports repair completion summary |
 
 ## Technical debt removed
 
@@ -133,7 +136,7 @@ AI-Platform: `tests/test_mission_control.py::test_get_tab_databases`.
 
 ## Remaining deferred (blocks full YES)
 
-1. Deep workflows: ComfyUI generate, video render, Gemini live, coding LSP apply, HA scenes when HA up, Maker STL print path  
+1. Deep workflows: ComfyUI full render soak, video render, Gemini live, coding LSP apply, HA scenes when HA up, Maker STL print path  
 2. God `app.js` split / navigation modernization  
 3. Accessibility (keyboard, contrast, SR)  
 4. Visual consistency / theme coherence  
@@ -141,6 +144,13 @@ AI-Platform: `tests/test_mission_control.py::test_get_tab_databases`.
 6. Multi-monitor + long-session memory profiling  
 7. Alias/duplicate API cleanup; orphan `jarvis/api.py` removal  
 8. Every modal/wizard/context-menu full exercise  
+9. Gallery Generate still delegates to chat (no dedicated `/api/image/generate`) — acceptable path, but in-tab job progress would be better  
+
+## Latest wave (2026-07-24)
+
+- Live verified: Upgrade Clear clears `apply_failed` → idle; Gallery Generate switches to chat with `generate image: …`; MC Repair toast wording fixed.  
+- Assets: `app.js?v=5.16.77`, `mission_control.js?v=1.0.3`  
+- Regressions: `tests/test_product_ui_api_wiring.py` extended for Clear/Gallery/Repair wiring (11 tests pass in wiring+upgrade clear suite).
 
 ## Verdict question
 

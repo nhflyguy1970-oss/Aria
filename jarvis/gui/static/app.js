@@ -1711,6 +1711,7 @@ async function refreshUpgradeWizardPanel() {
   const verifyBtn = document.getElementById("upgradeVerifyBtn");
   const applyBtn = document.getElementById("upgradeApplyBtn");
   const rollbackBtn = document.getElementById("upgradeRollbackBtn");
+  const clearBtn = document.getElementById("upgradeClearBtn");
   if (!stepEl) return;
   try {
     const res = await fetch("/api/upgrade/status");
@@ -1724,6 +1725,8 @@ async function refreshUpgradeWizardPanel() {
     if (verifyBtn) verifyBtn.disabled = !upgradeWizardState.proposal_id;
     if (applyBtn) applyBtn.disabled = !upgradeWizardState.proposal_id;
     if (rollbackBtn) rollbackBtn.disabled = !upgradeWizardState.snapshot_id && !(data.snapshots || []).length;
+    const stuck = step !== "idle" || !!active.proposal_id;
+    if (clearBtn) clearBtn.disabled = !stuck;
   } catch (_) {
     stepEl.textContent = "Step: offline";
   }
@@ -1737,6 +1740,7 @@ function initUpgradeWizardModal() {
   const verifyBtn = document.getElementById("upgradeVerifyBtn");
   const applyBtn = document.getElementById("upgradeApplyBtn");
   const rollbackBtn = document.getElementById("upgradeRollbackBtn");
+  const clearBtn = document.getElementById("upgradeClearBtn");
   const taskEl = document.getElementById("upgradeWizardTask");
   const logEl = document.getElementById("upgradeWizardLog");
   if (!modal || !openBtn) return;
@@ -1746,6 +1750,27 @@ function initUpgradeWizardModal() {
     refreshUpgradeWizardPanel();
   });
   closeBtn?.addEventListener("click", () => modal.classList.add("hidden"));
+
+  clearBtn?.addEventListener("click", async () => {
+    if (clearBtn) clearBtn.disabled = true;
+    if (logEl) {
+      logEl.classList.remove("hidden");
+      logEl.textContent = "Clearing upgrade session…";
+    }
+    try {
+      const res = await fetch("/api/upgrade/clear", { method: "POST" });
+      const data = await res.json();
+      upgradeWizardState.proposal_id = "";
+      upgradeWizardState.verified = false;
+      upgradeWizardState.snapshot_id = "";
+      if (logEl) logEl.textContent = data.ok ? "Session cleared." : (data.message || "Clear failed.");
+      window.showAriaToast?.(data.ok ? "Upgrade session cleared" : "Clear failed", data.ok ? "ok" : "err");
+    } catch (e) {
+      if (logEl) logEl.textContent = `Clear failed: ${e.message || e}`;
+      window.showAriaToast?.(String(e.message || e), "err");
+    }
+    await refreshUpgradeWizardPanel();
+  });
 
   proposeBtn?.addEventListener("click", async () => {
     const task = taskEl?.value?.trim();
@@ -3760,6 +3785,22 @@ galleryWorkflowInput?.addEventListener("change", async () => {
     await postComfySettings({ workflow_file: path });
   } catch (e) {
     statusText.textContent = `Workflow failed — ${e.message}`;
+  }
+});
+document.getElementById("galleryGenerateBtn")?.addEventListener("click", () => {
+  const prompt = document.getElementById("galleryPromptInput")?.value?.trim();
+  if (!prompt) {
+    window.showAriaToast?.("Enter an image description first", "warn");
+    document.getElementById("galleryPromptInput")?.focus();
+    return;
+  }
+  switchToView("chat");
+  sendMessage(`generate image: ${prompt}`);
+});
+document.getElementById("galleryPromptInput")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    document.getElementById("galleryGenerateBtn")?.click();
   }
 });
 document.getElementById("openImageSettingsBtn")?.addEventListener("click", () => {
