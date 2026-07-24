@@ -31,7 +31,10 @@
       <button type="button" class="gallery-inpaint" data-path="${escapeHtml(img.path)}" title="Edit image" aria-label="Edit ${escapeHtml(img.name)}">✎</button>
       <img src="${thumb}" data-full-src="${escapeHtml(full)}" alt="${escapeHtml(img.name)}" loading="lazy" decoding="async" data-image-path="${escapeHtml(img.path)}" title="Click to view and edit" />
     </div>`;
-      }).join("") || "<p class=\"muted\">No generated images yet. Use the prompt above, or ask in chat: <code>generate image: …</code></p>";
+      }).join("") || `<p class="muted">No generated images yet. <button type="button" class="ghost-btn tiny" id="galleryEmptyPromptBtn">Focus prompt</button> or ask in chat: <code>generate image: …</code></p>`;
+      el.querySelector("#galleryEmptyPromptBtn")?.addEventListener("click", () => {
+        document.getElementById("galleryPromptInput")?.focus();
+      });
       el.querySelectorAll(".gallery-inpaint").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();

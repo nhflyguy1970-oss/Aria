@@ -24,7 +24,11 @@ async function loadMemeGallery() {
     const data = await res.json();
     const memes = data.memes || [];
     if (!memes.length) {
-      grid.innerHTML = '<p class="muted">No memes yet — make one below or say “make a meme about …” in chat.</p>';
+      grid.innerHTML = '<p class="muted">No memes yet — <button type="button" class="ghost-btn tiny" id="memeEmptyChatBtn">ask Chat</button> or make one below.</p>';
+      grid.querySelector("#memeEmptyChatBtn")?.addEventListener("click", () => {
+        window.switchToView?.("chat");
+        window.jarvisSendToChat?.("Make a meme about ");
+      });
       return;
     }
     grid.innerHTML = memes.map((m) => `

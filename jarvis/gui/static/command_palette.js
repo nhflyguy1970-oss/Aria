@@ -530,6 +530,16 @@
         },
       },
       {
+        id: "act:resume-media-jobs",
+        label: "Resume pending media jobs",
+        group: "System",
+        keywords: "image comfy poll recover",
+        run: () => {
+          window.resumePendingMediaJobs?.();
+          window.showAriaToast?.("Checking pending media jobs…", "info", 2500);
+        },
+      },
+      {
         id: "act:open-meme",
         label: "Open Meme studio",
         group: "Actions",
