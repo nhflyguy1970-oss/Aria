@@ -137,7 +137,6 @@
       if (!r.ok) {
         const msg = r.error || r.message || "Discover failed";
         window.showAriaToast?.(msg, "err", 5000);
-        alert(msg);
       } else {
         window.showAriaToast?.(
           `Discovered ${r.devices?.length ?? r.count ?? "Kasa"} device(s)`,
@@ -182,7 +181,8 @@
               method: "POST",
             });
             window.showAriaToast?.(r.message || "Scene", r.ok ? "ok" : "warn");
-            if (!r.ok) alert(r.message || "Scene failed");
+            if (!r.ok) window.showAriaToast?.(r.message || "Scene failed", "err", 5000);
+            else window.showAriaToast?.(r.message || "Scene applied", "ok", 2500);
             await refreshKasa();
           } catch (err) {
             window.showAriaToast?.(err?.message || "Scene failed", "err", 5000);

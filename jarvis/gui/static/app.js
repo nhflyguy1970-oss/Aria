@@ -545,7 +545,7 @@ async function vramPreflight(action) {
     if (!res.ok) return true;
     const data = await res.json();
     if (data.blocked) {
-      window.alert((data.warnings || ["Media queue full"]).join("\n\n"));
+      window.showAriaToast?.((data.warnings || ["Media queue full"]).join(" · "), "warn", 6000);
       return false;
     }
     if (data.ok || !data.warnings?.length) return true;

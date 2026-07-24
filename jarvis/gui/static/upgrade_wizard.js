@@ -110,7 +110,7 @@ function initUpgradeWizardModal() {
   proposeBtn?.addEventListener("click", async () => {
     const task = taskEl?.value?.trim();
     if (!task) {
-      alert("Describe what to upgrade.");
+      window.showAriaToast?.("Describe what to upgrade.", "warn", 3000);
       return;
     }
     if (proposeBtn) proposeBtn.disabled = true;

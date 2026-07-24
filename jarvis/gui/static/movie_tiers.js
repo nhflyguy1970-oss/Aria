@@ -526,7 +526,7 @@
       const res = await fetch("/api/jarvis/restart-server", { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false) {
-        alert(data.message || "Restart failed.");
+        window.showAriaToast?.(data.message || "Restart failed.", "err", 5000);
         return;
       }
       const st = $("statusText");
@@ -544,9 +544,10 @@
           location.reload();
         }
       } else {
-        alert(
-          `${typeof ariaName === "function" ? ariaName() : "ARIA"} may still be restarting.\n\n`
-          + "Try Ctrl+Shift+R to hard-refresh the page."
+        window.showAriaToast?.(
+          `${typeof ariaName === "function" ? ariaName() : "ARIA"} may still be restarting — try Ctrl+Shift+R`,
+          "warn",
+          8000,
         );
       }
     } catch (_) {

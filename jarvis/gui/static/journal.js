@@ -436,7 +436,7 @@ function bindLinkClicks() {
       if (data.ok && data.bullet?.location) {
         navigateBujoPage(data.bullet.location);
       } else if (data.ok) {
-        alert(data.bullet?.formatted || data.bullet?.content || "Linked bullet");
+        window.showAriaToast?.(data.bullet?.formatted || data.bullet?.content || "Linked bullet", "ok", 4000);
       }
     };
   });
@@ -758,7 +758,7 @@ async function loadMonthly() {
     form.append("month", month);
     const res = await fetch("/api/journal/reflect/review", { method: "POST", body: form });
     const data = await res.json();
-    alert(data.reflection || "No reflection generated.");
+    window.showAriaToast?.(data.reflection || "No reflection generated.", data.reflection ? "ok" : "warn", 6000);
   });
 
   document.getElementById("bujoMigrateMonthIncomplete")?.addEventListener("click", async () => {
@@ -850,7 +850,7 @@ async function loadWeekly() {
     form.append("week", week);
     const res = await fetch("/api/journal/reflect/review", { method: "POST", body: form });
     const data = await res.json();
-    alert(data.reflection || "No reflection generated.");
+    window.showAriaToast?.(data.reflection || "No reflection generated.", data.reflection ? "ok" : "warn", 6000);
   });
 }
 
@@ -947,7 +947,7 @@ async function loadFuture() {
     const fm = document.getElementById("futureTransferFrom")?.value;
     const mm = document.getElementById("futureTransferTo")?.value || new Date().toISOString().slice(0, 7);
     if (!fm) {
-      alert("Pick the future month to transfer from");
+      window.showAriaToast?.("Pick the future month to transfer from", "warn", 3500);
       return;
     }
     const form = new FormData();
@@ -955,7 +955,7 @@ async function loadFuture() {
     form.append("monthly_month", mm);
     const res = await fetch("/api/journal/future/transfer", { method: "POST", body: form });
     const r = await res.json();
-    alert(`Transferred ${r.migrated || 0} open task(s) to ${formatMonthLabel(mm)}`);
+    window.showAriaToast?.(`Transferred ${r.migrated || 0} open task(s) to ${formatMonthLabel(mm)}`, "ok", 4000);
     refreshBujo();
   });
   updateRapidLogForTab();
@@ -989,7 +989,7 @@ async function loadIndex() {
     const res = await fetch("/api/journal/index/rebuild", { method: "POST" });
     const r = await res.json();
     const stats = r.result || {};
-    alert(`Auto-index rebuilt: ${stats.auto || 0} auto, ${stats.manual || 0} manual (${stats.total || 0} total)`);
+    window.showAriaToast?.(`Auto-index rebuilt: ${stats.auto || 0} auto, ${stats.manual || 0} manual (${stats.total || 0} total)`, "ok", 4500);
     loadIndex();
   });
   document.getElementById("indexAddBtn")?.addEventListener("click", async () => {
@@ -1112,7 +1112,7 @@ async function loadCollections() {
   document.getElementById("colCreateBtn")?.addEventListener("click", async () => {
     const name = document.getElementById("colName")?.value.trim();
     if (!name) {
-      alert("Enter a collection name");
+      window.showAriaToast?.("Enter a collection name", "warn", 3000);
       return;
     }
     const form = new FormData();
