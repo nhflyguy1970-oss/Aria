@@ -43,6 +43,11 @@
       });
     }
 
+    // Tool-permission approvals (e.g. upgrade apply, HA control) — open the confirm modal
+    if (data.confirm_required && data.confirm_id) {
+      window.showToolConfirm?.(data);
+    }
+
     const imgPath = data.image_path || data.output_path;
     const hasImage = imgPath && /\.(png|jpe?g|webp|gif|bmp)$/i.test(imgPath);
     const videoPath = data.video_path || (data.type === "video_result" ? data.output_path : "");

@@ -412,6 +412,10 @@
               body: JSON.stringify({ entity_id: btn.dataset.eid, action: "toggle" }),
             });
             const data = await res.json().catch(() => ({}));
+            if (data.confirm_required) {
+              window.showToolConfirm?.(data);
+              return;
+            }
             if (!res.ok || data.ok === false) {
               throw new Error(data.message || data.detail || `Toggle failed (${res.status})`);
             }
@@ -431,6 +435,10 @@
               body: JSON.stringify({ entity_id: btn.dataset.eid }),
             });
             const data = await res.json().catch(() => ({}));
+            if (data.confirm_required) {
+              window.showToolConfirm?.(data);
+              return;
+            }
             if (!res.ok || data.ok === false) {
               throw new Error(data.message || data.detail || `Scene failed (${res.status})`);
             }
