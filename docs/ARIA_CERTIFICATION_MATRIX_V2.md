@@ -43,9 +43,11 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: free_vram/vision_settings/lan_access/git/chat_model/profile_controls/coding_quick extracts; cross-links Memory/Projects/Docs/Gallery/Maker/Fly tying/Video/Meme/Audio/Voice/Planner/Calendar/Browser/Security; audio/video/planner/ICS/checklist/dashboard news/projects/security/voice/meme toasts; alert→toast modernization; skip-link; palette ICS/security/webcam/checklist/meme/storyboard/projects/debug/browser-task; health.mjs audio status; modal aria-labelledby for project/settings/shortcuts.
+- FIXED & CERTIFIED: free_vram/vision_settings/lan_access/git/chat_model/profile_controls/coding_quick/chat_media extracts; cross-links Memory/Projects/Docs/Gallery/Maker/Fly tying/Video/Meme/Audio/Voice/Planner/Calendar/Browser/Security/Presence/Dashboard/Actions/Journal; audio/video/planner/ICS/checklist/dashboard news/projects/security/voice/meme/actions toasts; alert→toast modernization; skip-link + global focus-visible; palette ICS/security/webcam/checklist/meme/storyboard/projects/debug/browser-task/gallery-prompt; health.mjs audio status; modal aria-labelledby for project/settings/shortcuts; Maker toastOnError for CAD status/models.
 - INTENTIONALLY DEFERRED: crop/webcam extract; long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
+
+**Next priorities:** crop/webcam extract (high risk); chat stream further splits; long-duration memory-leak soak; multi-monitor native; Comfy/HA deep soaks; per-control matrix completion; remaining confirm() friction only where safe.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.
