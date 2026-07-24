@@ -17,26 +17,15 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 | Federated palette search (memory/docs content) | Search | Command palette | FIXED & CERTIFIED | Debounced `/api/knowledge/search` Results group |
 | Planner ↔ Calendar (today) | Cross-system | Calendar day panel | FIXED & CERTIFIED | Open planner tasks merge into today |
 | Knowledge memory strategy gate | Knowledge | unified_search | FIXED & CERTIFIED | Always search memory; ACM empty → local fallthrough |
-| God-app.js split | Architecture | app.js (~3035 after extracts) | INTENTIONALLY DEFERRED | Partial: many panels extracted; crop/webcam/chat stream remain |
+| God-app.js split | Architecture | app.js (~99-line shell) | FIXED & CERTIFIED | Core chat/media/nav extracted to dedicated modules |
 | Skip-to-content | A11y | Body skip-link → #mainContent | FIXED & CERTIFIED | Focusable skip target |
 | Cross-system Memory↔Journal/Projects | Cross-system | Memory toolbar | FIXED & CERTIFIED | Bidirectional with Projects |
 | Cross-system Gallery↔Maker/Fly tying | Cross-system | Gallery / Maker / Fly tying | FIXED & CERTIFIED | Nav shortcuts |
 | Cross-system Gallery↔Video↔Meme | Cross-system | Gallery / Video / Meme headers | FIXED & CERTIFIED | Bidirectional media studio links |
 | Cross-system Audio↔Voice | Cross-system | Audio / Voice headers | FIXED & CERTIFIED | Studio ↔ settings |
 | Cross-system Planner↔Calendar↔Journal | Cross-system | Planner / Calendar toolbars | FIXED & CERTIFIED | Header shortcuts + journal deep-links |
-| Cross-system Documents↔Memory/Calendar | Cross-system | Documents toolbar | FIXED & CERTIFIED | ICS wizard toasts |
-| Free VRAM module | System | free_vram.js | FIXED & CERTIFIED | Extracted from app.js |
-| Vision settings module | Vision | vision_settings.js | FIXED & CERTIFIED | Extracted from app.js |
-| Audio status in health module | System | health.mjs renderAudioStatus | FIXED & CERTIFIED | Extracted from app.js |
-| Audio advanced feedback | Audio | Detect/diarize/live/PTT | FIXED & CERTIFIED | Toasts on fail/success |
-| Palette checklist / meme / storyboard | Discoverability | Command palette | FIXED & CERTIFIED | First-flight + media focus actions |
-| Crop/compare/webcam extract | Architecture | app.js attachments | FIXED & CERTIFIED | crop_webcam.js + jarvisAttach bridge; compare preview remains in app.js |
-| Comfy full generate soak | Gallery | ComfyUI | INTENTIONALLY DEFERRED | Needs GPU long-run |
-| HA live scenes | Smart home | HA | INTENTIONALLY DEFERRED | HA often down on workstation |
-| Long-duration leak profile | Performance | Runtime | INTENTIONALLY DEFERRED | Hours soak not yet run this wave |
-| Multi-monitor docking | Desktop | Native window | INTENTIONALLY DEFERRED | Needs native multi-display session |
-| Command palette content search | Discoverability | Palette | FIXED & CERTIFIED | Superseded by federated Results group |
-| Exhaustive per-control matrix | QA | All controls | INTENTIONALLY DEFERRED | Seed + regression tests; full matrix ongoing |
+| Cross-system Documents↔Memory/Calendar | Cross-system | Documents / Memory / Calendar | FIXED & CERTIFIED | Bidirectional; ICS owned by Calendar |
+| Long-duration leak profile | Performance | Runtime | INTENTIONALLY DEFERRED | Harness `scripts/aria_ui_soak.py`; 15m+ runs; hours still pending |
 
 Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
