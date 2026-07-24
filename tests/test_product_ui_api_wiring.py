@@ -300,6 +300,7 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/chat_progress.js").is_file()
     assert Path("jarvis/gui/static/chat_video.js").is_file()
     assert Path("jarvis/gui/static/chat_send.js").is_file()
+    assert Path("jarvis/gui/static/chat_done.js").is_file()
     assert "coding_quick.js" in html
     assert "chat_media.js" in html
     assert "crop_webcam.js" in html
@@ -313,6 +314,7 @@ def test_command_palette_is_wired():
     assert "chat_progress.js" in html
     assert "chat_video.js" in html
     assert "chat_send.js" in html
+    assert "chat_done.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
@@ -390,6 +392,9 @@ def test_command_palette_is_wired():
     assert "async function sendMessage" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
     assert "get useStreaming" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "window.finishSendUi" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "function handleDone" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "function handleDone" in Path("jarvis/gui/static/chat_done.js").read_text(encoding="utf-8")
+    assert "showChatWarnings," in Path("jarvis/gui/static/chat_done.js").read_text(encoding="utf-8") or "showChatWarnings }" in Path("jarvis/gui/static/chat_done.js").read_text(encoding="utf-8")
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showGeneratedImage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showAudioPlayer" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
