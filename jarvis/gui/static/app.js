@@ -2555,6 +2555,8 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
 }
 
 window.sendMessage = sendMessage;
+window.showError = showError;
+window.isNativeApp = isNativeApp;
 window.loadHealth = loadHealth;
 window.loadVisionSettings = loadVisionSettings;
 Object.defineProperty(window, "lastEditorFile", {
@@ -3013,53 +3015,7 @@ window.fetchWithTimeout = fetchWithTimeout;
 
 // uncensored mode → uncensored_mode.js (window.restoreUncensoredSession)
 
-let lastWakewordEventId = sessionStorage.getItem("jarvisWwChatId") || "";
-
-async function pollWakewordChat() {
-  if (mediaWorkActive()) return;
-  try {
-    const res = await fetch("/api/audio/wakeword/status");
-    if (!res.ok) return;
-    const data = await res.json();
-    if (!data.to_chat) return;
-    const last = data.last || {};
-    const eventId = last.chat_event_id || (last.action === "recorded" ? String(last.ts || "") : "");
-    if (!eventId || eventId === lastWakewordEventId) return;
-
-    if (last.chat_status === "pending") return;
-
-    const userText = (last.chat_message || last.transcript || "").trim();
-    if (!userText && last.chat_status !== "error") return;
-
-    lastWakewordEventId = eventId;
-    sessionStorage.setItem("jarvisWwChatId", eventId);
-    document.querySelector('.view-tab[data-view="chat"]')?.click();
-
-    if (last.chat_status === "done" && last.chat_response) {
-      addMessage("user", userText);
-      statusText.textContent = "Wake word → chat";
-      handleDone({
-        ok: last.chat_ok !== false,
-        message: last.chat_response,
-        module: last.chat_module,
-        type: last.chat_type,
-      });
-      return;
-    }
-
-    if (last.chat_status === "ready" && userText) {
-      statusText.textContent = "Wake word → chat…";
-      await sendMessage(userText);
-      return;
-    }
-
-    if (last.chat_status === "error") {
-      showError(last.chat_error || "Wake word chat failed.");
-    }
-  } catch {
-    /* ignore poll errors */
-  }
-}
+// wakeword → wakeword_chat.js (window.pollWakewordChat)
 
 document.getElementById("reloadUiBtn")?.addEventListener("click", () => reloadJarvisUi());
 document.getElementById("resetLayoutBtn")?.addEventListener("click", () => {
@@ -3075,10 +3031,6 @@ document.addEventListener("keydown", (e) => {
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) scheduleEditorContextPoll();
 });
-setInterval(() => {
-  if (!mediaWorkActive()) pollWakewordChat();
-}, isNativeApp() ? 5000 : 2500);
-
 // Define before startup_overlay.js invokes waitForServices → ariaPostStartup
 window.ariaPostStartup = function ariaPostStartup() {
   try { window.initAriaModalChrome?.(); } catch (_) {}
