@@ -155,7 +155,7 @@ def test_a11y_modal_esc_and_ux_debt_regressions():
     assert "function initAriaModalChrome" not in app_js
     assert "galleryGenerateBtn" in app_js or "galleryGenerateBtn" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
     assert 'aria-label="Delete' in app_js or 'aria-label="Delete' in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
-    assert "window.loadMemoryBrowser" in app_js
+    assert "window.loadMemoryBrowser" in app_js or "window.loadMemoryBrowser" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "window.closeImageLightbox" in app_js
 
     assert voice.count('data.event === "voice_state"') == 1
@@ -208,8 +208,13 @@ def test_command_palette_is_wired():
     assert "aria_theme" in app
     assert "window.loadGallery" in app or "window.loadGallery" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
     assert Path("jarvis/gui/static/gallery_view.js").is_file()
+    assert Path("jarvis/gui/static/memory_browser.js").is_file()
+    assert Path("jarvis/gui/static/image_engine.js").is_file()
+    assert "async function loadCheatsheets" not in app
+    assert "function syncComfySettings" not in app
+    assert "window.syncComfySettings" in Path("jarvis/gui/static/image_engine.js").read_text(encoding="utf-8")
     assert "async function loadGallery" not in app
-    assert "Memory exported" in app
+    assert "Memory exported" in app or "Memory exported" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "dataset.bound === \"1\"" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
     assert "Could not switch project" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
     assert "window.syncMuteButton" in Path("jarvis/gui/static/voice_bar.js").read_text(encoding="utf-8")
@@ -233,11 +238,11 @@ def test_command_palette_is_wired():
     assert "Trusted device revoked" in Path("jarvis/gui/static/security_settings.js").read_text(encoding="utf-8")
     assert "Journal stats unavailable" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "Work schedule unavailable" in cal
-    assert "Memory deleted" in app
+    assert "Memory deleted" in app or "Memory deleted" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "ensureMcDelegates" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "Conversation cleared" in app
     assert "act:clear-chat" in js
-    assert "Memory load failed" in app
+    assert "Memory load failed" in app or "Memory load failed" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
 
     assert not Path("jarvis/gui/static/browser.js").exists()
     assert Path("jarvis/gui/static/browser_panel.js").is_file()
