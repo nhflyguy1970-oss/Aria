@@ -115,6 +115,8 @@
     $("documentsSearchInput")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") searchDocumentsLibrary();
     });
+    $("documentsOpenMemoryBtn")?.addEventListener("click", () => window.switchToView?.("memory"));
+    $("documentsOpenCalendarBtn")?.addEventListener("click", () => window.switchToView?.("calendar"));
     $("documentsReindexBtn")?.addEventListener("click", async () => {
       const btn = $("documentsReindexBtn");
       const status = $("documentsIndexStatus");

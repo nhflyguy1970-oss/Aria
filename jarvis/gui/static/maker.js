@@ -57,6 +57,7 @@
       if (!selectedModelId && models.length) selectModel(models[0].id);
     } catch (e) {
       list.innerHTML = `<li class="muted">${esc(e.message)}</li>`;
+      window.showAriaToast?.(e.message || "Could not load CAD models", "err", 5000);
     }
   }
 
@@ -122,6 +123,7 @@
       if (data.model?.id) selectModel(data.model.id);
     } catch (e) {
       if (log) log.textContent = e.message;
+      window.showAriaToast?.(e.message || "CAD generate failed", "err", 5000);
     }
   }
 
@@ -133,8 +135,10 @@
       if (log) log.textContent = "10mm cube ready";
       await loadModels();
       if (data.model?.id) selectModel(data.model.id);
+      window.showAriaToast?.("Hello cube ready", "ok", 2500);
     } catch (e) {
       if (log) log.textContent = e.message;
+      window.showAriaToast?.(e.message || "Hello cube failed", "err", 5000);
     }
   }
 
@@ -150,8 +154,10 @@
       });
       if (log) log.textContent = `G-code: ${data.gcode_path}`;
       wrap.dataset.lastGcode = data.gcode_path;
+      window.showAriaToast?.("Slice complete", "ok", 2500);
     } catch (e) {
       if (log) log.textContent = e.message;
+      window.showAriaToast?.(e.message || "Slice failed", "err", 5000);
     }
   }
 
