@@ -301,6 +301,7 @@ def test_command_palette_is_wired():
     assert 'id="mainContent"' in html
     assert ".skip-link" in css
     assert "Transcript copied" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
+    assert "function audioStatus" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
     assert "Task added" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "Kasa unavailable" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8") or "Kasa: unavailable" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8")
     assert "act:integrations-keys" in js

@@ -13,6 +13,12 @@ function audioFileUrl(path) {
   return `/api/audio/file?path=${encodeURIComponent(path)}&t=${Date.now()}`;
 }
 
+function audioStatus(statusEl, msg, tone) {
+  if (statusEl) statusEl.textContent = msg || "";
+  if (!msg || !tone) return;
+  window.showAriaToast?.(msg, tone, tone === "ok" ? 2500 : 5000);
+}
+
 function escapeHtml(t) {
   const d = document.createElement("div");
   d.textContent = t;
@@ -584,10 +590,10 @@ async function loadAudioPanel() {
     const res = await fetch("/api/audio/mic-profile", { method: "POST", body: form });
     const data = await res.json();
     if (!data.ok) {
-      statusEl.textContent = data.message || "Profile failed";
+      audioStatus(statusEl, data.message || "Profile failed", "err");
       return;
     }
-    statusEl.textContent = data.hint || `Profile: ${data.label}`;
+    audioStatus(statusEl, data.hint || `Profile: ${data.label}`, "ok");
     loadAudioPanel();
   });
 
@@ -605,10 +611,10 @@ async function loadAudioPanel() {
     const res = await fetch("/api/audio/output-sink", { method: "POST", body: form });
     const data = await res.json();
     if (!data.ok) {
-      statusEl.textContent = data.message || "Output failed";
+      audioStatus(statusEl, data.message || "Output failed", "err");
       return;
     }
-    statusEl.textContent = `Output saved: ${selectedOutputSink().split(".").pop()}`;
+    audioStatus(statusEl, `Output saved: ${selectedOutputSink().split(".").pop()}`, "ok");
     loadAudioPanel();
   });
 
@@ -633,16 +639,20 @@ async function loadAudioPanel() {
     const res = await fetch("/api/audio/probe-capture", { method: "POST", body: form });
     const data = await res.json();
     if (!data.ok) {
-      statusEl.textContent = data.message || "Probe failed";
+      audioStatus(statusEl, data.message || "Probe failed", "err");
       return;
     }
     const ok = data.likely_ok;
     const routeWarn = data.mic_routing?.routing_ok === false
       ? ` — ${data.mic_routing.routing_hint}`
       : "";
-    statusEl.textContent = ok
-      ? `Mic OK — peak ${data.peak_db?.toFixed(1)} dB (PipeWire ${data.pipewire_volume})`
-      : `Mic weak — peak ${data.peak_db?.toFixed(1)} dB.${routeWarn || " Check alsamixer Input Source and Mic Boost."}`;
+    audioStatus(
+      statusEl,
+      ok
+        ? `Mic OK — peak ${data.peak_db?.toFixed(1)} dB (PipeWire ${data.pipewire_volume})`
+        : `Mic weak — peak ${data.peak_db?.toFixed(1)} dB.${routeWarn || " Check alsamixer Input Source and Mic Boost."}`,
+      ok ? "ok" : "warn"
+    );
   });
 
   async function finishRecording(data, transcribed) {
@@ -935,11 +945,11 @@ async function loadAudioPanel() {
     const res = await fetch("/api/audio/transcribe-upload", { method: "POST", body: form });
     const data = await res.json();
     if (!data.ok) {
-      statusEl.textContent = data.message || "Transcribe failed";
+      audioStatus(statusEl, data.message || "Transcribe failed", "err");
       return;
     }
     setAudioLastPath(data.path);
-    statusEl.textContent = "Transcript ready";
+    audioStatus(statusEl, "Transcript ready", "ok");
     showPlayback(data.path, data.transcript);
     await loadWaveform(data.path);
   });
@@ -954,11 +964,11 @@ async function loadAudioPanel() {
     const res = await fetch("/api/audio/transcribe", { method: "POST", body: form });
     const data = await res.json();
     if (!data.ok) {
-      statusEl.textContent = data.message || "Transcribe failed";
+      audioStatus(statusEl, data.message || "Transcribe failed", "err");
       return;
     }
     setAudioLastPath(path);
-    statusEl.textContent = "Transcript ready";
+    audioStatus(statusEl, "Transcript ready", "ok");
     showPlayback(path, data.transcript);
     await loadWaveform(path);
   });
@@ -973,10 +983,10 @@ async function loadAudioPanel() {
     const res = await fetch("/api/audio/generate", { method: "POST", body: form });
     const data = await res.json();
     if (!data.ok) {
-      statusEl.textContent = data.message || "TTS failed";
+      audioStatus(statusEl, data.message || "TTS failed", "err");
       return;
     }
-    statusEl.textContent = play ? "Playing on Sound Blaster…" : `Saved: ${data.audio_path}`;
+    audioStatus(statusEl, play ? "Playing on Sound Blaster…" : `Saved: ${data.audio_path}`, "ok");
     const ttsPreview = document.getElementById("audioTtsPreview");
     if (ttsPreview && data.audio_path) {
       ttsPreview.src = audioFileUrl(data.audio_path);
@@ -1000,7 +1010,7 @@ async function loadAudioPanel() {
     const res = await fetch("/api/audio/music", { method: "POST", body: form });
     const data = await res.json();
     if (!data.ok) {
-      statusEl.textContent = data.message || "MusicGen failed";
+      audioStatus(statusEl, data.message || "MusicGen failed", "err");
       return;
     }
     if (data.job_id && typeof window.pollAudioJob === "function") {
