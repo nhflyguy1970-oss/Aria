@@ -172,16 +172,21 @@ async function saveHaConfigFromUi({ closeModal = false } = {}) {
     const data = await res.json();
     if (data.connection?.ok) {
       setHaTokenValue("");
-      haPanelStatus(`Connected${testData.version ? ` · v${testData.version}` : ""}. Try "house status".`, "ok");
+      const okMsg = `Connected${testData.version ? ` · v${testData.version}` : ""}. Try "house status".`;
+      haPanelStatus(okMsg, "ok");
+      window.showAriaToast?.(okMsg, "ok", 3500);
       if (closeModal) hideHaTokenModal();
     } else {
-      haPanelStatus(data.connection?.message || "Saved — check token and URL.", "warn");
+      const warn = data.connection?.message || "Saved — check token and URL.";
+      haPanelStatus(warn, "warn");
+      window.showAriaToast?.(warn, "warn", 5000);
     }
     await refreshHaPanel();
     window.loadHealth?.();
     return data;
   } catch (e) {
     haPanelStatus(String(e), "warn");
+    window.showAriaToast?.(String(e), "err", 5000);
     return null;
   }
 }
@@ -288,15 +293,13 @@ function initHaPanel() {
       const msg = data.message
         || (res.status === 401 ? `${(window.ariaName?.() || "Aria")} API key required — enter it when prompted.` : "")
         || `Request failed (HTTP ${res.status})`;
-      haPanelStatus(
-        data.ok
-          ? `Connected${data.version ? ` · v${data.version}` : ""} — click Save to keep it.`
-          : msg,
-        data.ok ? "ok" : "warn",
-      );
+      const okMsg = `Connected${data.version ? ` · v${data.version}` : ""} — click Save to keep it.`;
+      haPanelStatus(data.ok ? okMsg : msg, data.ok ? "ok" : "warn");
+      window.showAriaToast?.(data.ok ? okMsg : msg, data.ok ? "ok" : "err", data.ok ? 3500 : 5000);
       await refreshHaPanel();
     } catch (e) {
       haPanelStatus(String(e), "warn");
+      window.showAriaToast?.(String(e), "err", 5000);
     }
   });
   document.getElementById("haSaveBtn")?.addEventListener("click", () => saveHaConfigFromUi());
@@ -305,6 +308,7 @@ function initHaPanel() {
     try {
       await navigator.clipboard.writeText(haWebhookUrl);
       const st = document.getElementById("statusText"); if (st) st.textContent = "Webhook URL copied";
+      window.showAriaToast?.("Webhook URL copied", "ok", 2500);
     } catch (_) {
       prompt("Copy webhook URL:", haWebhookUrl);
     }
