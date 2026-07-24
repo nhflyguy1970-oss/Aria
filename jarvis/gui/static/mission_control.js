@@ -796,9 +796,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
       window.switchToView?.("workstation");
-          if (target === "workstationActivityList") switchMcTab("activity");
-          else if (target === "workstationConnection") switchMcTab("connection");
-          else if (target && target !== "workstation") switchMcTab("overview");
+      if (target === "workstationActivityList") switchMcTab("activity");
+      else if (target === "workstationConnection") switchMcTab("connection");
+      else if (target === "workstationInference") switchMcTab("inference");
+      else if (target && target !== "workstation") switchMcTab("overview");
     });
   });
 });

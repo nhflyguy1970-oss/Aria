@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=5.16.72" />
+  <link rel="stylesheet" href="/static/style.css?v=5.16.78" />
   <script>
     (function () {
       var standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -114,7 +114,7 @@
           <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="chat-status">Status</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationActivityList">Activity</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationConnection">Runtime Connection</button>
-          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstation">Models &amp; Services</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationInference">Models &amp; Services</button>
           <button type="button" class="ghost-btn ws-menu-btn" onclick="document.querySelector('.view-tab[data-view=memory]')?.click()">Memory</button>
           <button type="button" class="ghost-btn ws-menu-btn" onclick="document.querySelector('.view-tab[data-view=audit]')?.click()">Repair &amp; Logs</button>
           <button type="button" class="ghost-btn ws-menu-btn" onclick="document.querySelector('.view-tab[data-view=actions]')?.click()">Report</button>
@@ -181,7 +181,7 @@
             <p class="sidebar-section-title">Smart home</p><span class="section-chevron">▾</span>
           </button>
           <div class="sidebar-section-head-actions">
-            <button type="button" id="haFloatBtn" class="ghost-btn tiny" title="Detach panel">⧉</button>
+            <button type="button" id="haFloatBtn" class="ghost-btn tiny" title="Detach panel" aria-label="Detach smart home panel">⧉</button>
             <button type="button" id="haRefreshBtn" class="ghost-btn small">Refresh</button>
           </div>
         </div>
@@ -1393,7 +1393,7 @@
 
       <div id="makerView" class="view-panel hidden">
         <div id="makerFloatPanel">
-        <h2 class="float-drag-head">Maker lab <button type="button" id="makerFloatBtn" class="ghost-btn tiny" title="Detach floating window">⧉</button></h2>
+        <h2 class="float-drag-head">Maker lab <button type="button" id="makerFloatBtn" class="ghost-btn tiny" title="Detach floating window" aria-label="Detach maker lab panel">⧉</button></h2>
         <p id="cadStatusLine" class="muted">Loading CAD status…</p>
         <div class="planner-add-row">
           <input type="text" id="cadPromptInput" placeholder="Design a 5 inch to 4 inch hose adapter…" />
@@ -1420,7 +1420,7 @@
         <p id="cadDimensionsLine" class="muted"></p>
         <div id="cadViewer" class="cad-viewer"></div>
         <ul id="cadModelList" class="planner-list"></ul>
-        <h3 class="float-drag-head">Printer <button type="button" id="printerFloatBtn" class="ghost-btn tiny" title="Detach floating window">⧉</button></h3>
+        <h3 class="float-drag-head">Printer <button type="button" id="printerFloatBtn" class="ghost-btn tiny" title="Detach floating window" aria-label="Detach printer panel">⧉</button></h3>
         <div id="printerFloatPanel">
         <p id="printerStatusLine" class="muted">Loading…</p>
         <div class="planner-add-row">
@@ -1447,7 +1447,7 @@
 
       <div id="browserView" class="view-panel hidden">
         <div id="browserFloatPanel">
-        <h2 class="float-drag-head">Browser agent <button type="button" id="browserFloatBtn" class="ghost-btn tiny" title="Detach floating window">⧉</button></h2>
+        <h2 class="float-drag-head">Browser agent <button type="button" id="browserFloatBtn" class="ghost-btn tiny" title="Detach floating window" aria-label="Detach browser panel">⧉</button></h2>
         <p id="browserStatusLine" class="muted">Loading…</p>
         <p id="browserUrlLine" class="muted"></p>
         <p id="browserPlaywrightHint" class="muted small hidden"></p>
@@ -1597,9 +1597,9 @@
         <p class="muted">Use the voice strip above chat for PTT, mute, and quick controls.</p>
       </div>
 
-      <div id="toolConfirmModal" class="crop-modal hidden" role="dialog">
+      <div id="toolConfirmModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="toolConfirmTitle">
         <div class="crop-modal-card">
-          <h3>Confirm action</h3>
+          <h3 id="toolConfirmTitle">Confirm action</h3>
           <p id="toolConfirmMessage"></p>
           <div class="sidebar-btn-row">
             <button type="button" id="toolConfirmYes" class="apply-btn small">Confirm</button>
@@ -1663,7 +1663,7 @@
     </main>
   </div>
   <div id="imageLightbox" class="image-lightbox hidden" role="dialog" aria-label="Image preview">
-    <button type="button" id="imageLightboxClose" class="image-lightbox-close" title="Close (Esc)">×</button>
+    <button type="button" id="imageLightboxClose" class="image-lightbox-close" title="Close (Esc)" aria-label="Close image preview">×</button>
     <div class="image-lightbox-card">
       <figure class="image-lightbox-inner">
         <img id="imageLightboxImg" src="" alt="" />
@@ -1694,7 +1694,7 @@
     </div>
   </div>
   <div id="videoLightbox" class="image-lightbox video-lightbox hidden" role="dialog" aria-label="Video player">
-    <button type="button" id="videoLightboxClose" class="image-lightbox-close" title="Close (Esc)">×</button>
+    <button type="button" id="videoLightboxClose" class="image-lightbox-close" title="Close (Esc)" aria-label="Close video player">×</button>
     <div class="video-lightbox-card">
       <video id="videoLightboxPlayer" controls preload="auto" playsinline class="video-lightbox-player"></video>
       <p id="videoLightboxCaption" class="video-lightbox-caption muted"></p>
@@ -1705,7 +1705,7 @@
     <div class="lock-card">
       <h2>ARIA locked</h2>
       <p class="muted">Enter PIN, face unlock, or use a trusted device</p>
-      <input type="password" id="lockPinInput" class="audio-path-input" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="off" />
+      <input type="password" id="lockPinInput" class="audio-path-input" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="off" aria-label="PIN" />
       <label class="toggle-row"><span>Trust this device</span><input type="checkbox" id="lockTrustDevice" /></label>
       <div class="ha-actions">
         <button type="button" id="lockUnlockBtn" class="apply-btn">Unlock</button>
@@ -1725,12 +1725,12 @@
   <script src="/static/chat_sessions.js?v=5.16.70"></script>
   <script src="/static/movie_tiers.js?v=5.16.74"></script>
   <script src="/static/gemini_live.js?v=5.16.70"></script>
-  <script src="/static/voice_bar.js?v=5.16.76"></script>
+  <script src="/static/voice_bar.js?v=5.16.78"></script>
   <script src="/static/jarvis_ambient.js?v=1.2.0"></script>
   <script type="module" src="/static/modules/jobs.mjs?v=5.16.70"></script>
   <script type="module" src="/static/modules/health.mjs?v=5.16.70"></script>
   <script src="/static/planner.js?v=5.16.74"></script>
-  <script src="/static/mission_control.js?v=1.0.3"></script>
+  <script src="/static/mission_control.js?v=1.0.4"></script>
   <script src="/static/calendar.js?v=5.16.74"></script>
   <script src="/static/flytying.js?v=5.16.74"></script>
   <script src="/static/projects.js?v=5.16.70"></script>
@@ -1745,6 +1745,6 @@
   <script src="/static/world_state_hud.js?v=5.16.70"></script>
   <script src="/static/audit.js?v=5.16.70"></script>
   <script src="/static/voice_tab.js?v=5.16.70"></script>
-  <script src="/static/app.js?v=5.16.77"></script>
+  <script src="/static/app.js?v=5.16.78"></script>
 </body>
 </html>

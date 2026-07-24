@@ -170,18 +170,6 @@ function connectJobWs() {
         window.jarvisJobs?.onJobProgress?.(data);
       } else if (data.event === "voice_state") {
         const st = data.state || "idle";
-        setVoiceBarState(st);
-        if (window.showListeningOverlay) {
-          window.showListeningOverlay(st === "listening");
-        }
-      } else if (data.event === "voice_state") {
-        const st = data.state || "idle";
-        setVoiceBarState(st);
-        if (window.showListeningOverlay) {
-          window.showListeningOverlay(st === "listening");
-        }
-      } else if (data.event === "voice_state") {
-        const st = data.state || "idle";
         if (data.detail === "cloud-live" || data.detail === "cloud-live-end") {
           setVoiceBarState(st === "idle" ? "idle" : "cloud-live");
         } else {

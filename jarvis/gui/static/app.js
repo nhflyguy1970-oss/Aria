@@ -1053,13 +1053,6 @@ function initImageLightbox() {
   modal?.addEventListener("click", (e) => {
     if (e.target === modal) closeImageLightbox();
   });
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-    const imageModal = document.getElementById("imageLightbox");
-    const videoModal = document.getElementById("videoLightbox");
-    if (imageModal && !imageModal.classList.contains("hidden")) closeImageLightbox();
-    else if (videoModal && !videoModal.classList.contains("hidden")) closeVideoLightbox();
-  });
   document.getElementById("imageLightboxEditBtn")?.addEventListener("click", async () => {
     const prompt = document.getElementById("imageLightboxPrompt")?.value?.trim();
     const regionKey = document.getElementById("imageLightboxRegion")?.value || "full";
@@ -4438,9 +4431,93 @@ async function pollWakewordChat() {
   }
 }
 
+function initAriaModalChrome() {
+  /** Closable overlays (Esc). Lock screen is excluded — must unlock deliberately. */
+  const MODAL_IDS = [
+    "imageLightbox",
+    "videoLightbox",
+    "inpaintModal",
+    "toolConfirmModal",
+    "upgradeWizardModal",
+    "jobCenterModal",
+    "haSetupModal",
+    "haTokenModal",
+    "apiKeyModal",
+    "profileModal",
+    "branchTrimModal",
+    "uncensoredAuthModal",
+    "projectPickerModal",
+    "settingsModal",
+    "shortcutsModal",
+  ];
+
+  function isOpen(el) {
+    return !!(el && !el.classList.contains("hidden"));
+  }
+
+  function topOpenModal() {
+    for (const id of MODAL_IDS) {
+      const el = document.getElementById(id);
+      if (isOpen(el)) return el;
+    }
+    return null;
+  }
+
+  function focusables(root) {
+    return [...(root?.querySelectorAll(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ) || [])].filter((el) => el.offsetParent !== null || el === document.activeElement);
+  }
+
+  function closeModal(el) {
+    if (!el) return;
+    if (el.id === "imageLightbox") {
+      closeImageLightbox();
+      return;
+    }
+    if (el.id === "videoLightbox") {
+      closeVideoLightbox();
+      return;
+    }
+    if (el.id === "toolConfirmModal") {
+      document.getElementById("toolConfirmNo")?.click();
+      return;
+    }
+    el.classList.add("hidden");
+  }
+
+  document.addEventListener("keydown", (e) => {
+    const modal = topOpenModal();
+    if (!modal) return;
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      closeModal(modal);
+      return;
+    }
+
+    if (e.key !== "Tab") return;
+    const nodes = focusables(modal);
+    if (!nodes.length) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    } else if (!modal.contains(document.activeElement)) {
+      e.preventDefault();
+      first.focus();
+    }
+  });
+}
+
 loadSuggestions();
 initImageLightbox();
 initVideoLightbox();
+initAriaModalChrome();
 document.getElementById("reloadUiBtn")?.addEventListener("click", () => reloadJarvisUi());
 document.getElementById("resetLayoutBtn")?.addEventListener("click", () => {
   resetSidebarLayout();
@@ -5430,12 +5507,12 @@ async function loadGallery() {
     const thumb = apiAuthUrl(`/api/gallery/${encodeURIComponent(img.name)}?max=${GALLERY_THUMB_MAX}`);
     const full = apiAuthUrl(`/api/gallery/${encodeURIComponent(img.name)}`);
     return `<div class="gallery-item">
-      <button type="button" class="gallery-del" data-name="${escapeHtml(img.name)}" title="Delete">×</button>
-      <button type="button" class="gallery-upscale" data-path="${escapeHtml(img.path)}" title="Upscale 2×">2×</button>
-      <button type="button" class="gallery-inpaint" data-path="${escapeHtml(img.path)}" title="Edit image">✎</button>
+      <button type="button" class="gallery-del" data-name="${escapeHtml(img.name)}" title="Delete" aria-label="Delete ${escapeHtml(img.name)}">×</button>
+      <button type="button" class="gallery-upscale" data-path="${escapeHtml(img.path)}" title="Upscale 2×" aria-label="Upscale ${escapeHtml(img.name)} 2×">2×</button>
+      <button type="button" class="gallery-inpaint" data-path="${escapeHtml(img.path)}" title="Edit image" aria-label="Edit ${escapeHtml(img.name)}">✎</button>
       <img src="${thumb}" data-full-src="${escapeHtml(full)}" alt="${escapeHtml(img.name)}" loading="lazy" decoding="async" data-image-path="${escapeHtml(img.path)}" title="Click to view and edit" />
     </div>`;
-  }).join("") || "<p>No generated images yet.</p>";
+  }).join("") || "<p class=\"muted\">No generated images yet. Use the prompt above, or ask in chat: <code>generate image: …</code></p>";
   el.querySelectorAll(".gallery-inpaint").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -5502,7 +5579,7 @@ async function loadPromptHistory() {
       ? items.map((p) => `<div class="prompt-history-item">
           <button type="button" class="ghost-btn small prompt-reuse" data-prompt="${escapeHtml(p.prompt)}">Reuse</button>
           <button type="button" class="ghost-btn small prompt-fav" data-id="${escapeHtml(p.id)}">${p.favorite ? "★" : "☆"}</button>
-          <button type="button" class="ghost-btn small prompt-del" data-id="${escapeHtml(p.id)}" title="Delete">×</button>
+          <button type="button" class="ghost-btn small prompt-del" data-id="${escapeHtml(p.id)}" title="Delete" aria-label="Delete saved prompt">×</button>
           <span class="prompt-text">${escapeHtml(p.prompt.slice(0, 120))}${p.prompt.length > 120 ? "…" : ""}</span>
         </div>`).join("")
       : "<p>No saved prompts yet — generate an image to build history.</p>";

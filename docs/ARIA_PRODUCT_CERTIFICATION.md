@@ -152,6 +152,20 @@ AI-Platform: `tests/test_mission_control.py::test_get_tab_databases`.
 - Assets: `app.js?v=5.16.77`, `mission_control.js?v=1.0.3`  
 - Regressions: `tests/test_product_ui_api_wiring.py` extended for Clear/Gallery/Repair wiring (11 tests pass in wiring+upgrade clear suite).
 
+## A11y / UX debt wave (from audit scan)
+
+Addressed P0/P1 from a11y scan:
+
+1. Esc closes product modals (not lock) + Tab focus cycle within top modal  
+2. `toolConfirmTitle` id + `aria-labelledby`  
+3. Icon-only detach/lightbox/gallery controls: `aria-label`  
+4. Merged unreachable `voice_state` handlers (cloud-live path live)  
+5. `--muted` alias → `--text-muted`; meme `.error` styled  
+6. MC “Models & Services” → `workstationInference` (no duplicate Dashboard target)  
+7. Gallery generate CTA (prior wave) + clearer empty-state guidance  
+
+Assets: `style.css` / `app.js` / `voice_bar.js` `?v=5.16.78`, `mission_control.js?v=1.0.4`.
+
 ## Verdict question
 
 Would I proudly ship Aria today as a polished, modern, production-quality AI operating environment that I would personally use every day as my primary interface?
