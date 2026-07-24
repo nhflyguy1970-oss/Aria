@@ -50,7 +50,14 @@ function renderOutputSinkOptions(sinks, active) {
 }
 
 function renderRecentList(items, emptyLabel, category = "") {
-  if (!items?.length) return `<p class="audio-empty">${emptyLabel}</p>`;
+  if (!items?.length) {
+    const chatCta = (category === "songs" || category === "music")
+      ? ` <button type="button" class="ghost-btn tiny audio-empty-chat" data-prompt="Generate a song: ">Ask Chat</button>`
+      : category === "generated"
+        ? ` <button type="button" class="ghost-btn tiny audio-empty-chat" data-prompt="Speak this aloud: ">Ask Chat</button>`
+        : "";
+    return `<p class="audio-empty">${emptyLabel}${chatCta}</p>`;
+  }
   return `<ul class="audio-recent">${items.map((f) =>
     `<li class="audio-recent-item" draggable="true" data-path="${escapeHtml(f.path)}" data-category="${escapeHtml(category)}">
       <button type="button" class="audio-recent-btn" data-path="${escapeHtml(f.path)}" title="Play in player">${escapeHtml(f.name)}</button>
@@ -129,7 +136,9 @@ async function refreshRecentLists() {
       <div><h4>Songs</h4>${renderRecentList(recent.songs, "No songs yet.", "songs")}</div>`;
     bindRecentButtons(grid);
     bindPlayerDropZone();
-  } catch (_) { /* keep existing list */ }
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Could not refresh audio library", "err", 4000);
+  }
 }
 
 function bindRecentButtons(root) {
@@ -147,6 +156,12 @@ function bindRecentButtons(root) {
     btn.onclick = async () => {
       await loadAudioIntoPlayer(btn.dataset.path, null);
       await playOnSpeakers(btn.dataset.path);
+    };
+  });
+  root.querySelectorAll(".audio-empty-chat").forEach((btn) => {
+    btn.onclick = () => {
+      window.switchToView?.("chat");
+      window.jarvisSendToChat?.(btn.dataset.prompt || "Generate audio: ");
     };
   });
   root.querySelectorAll(".audio-recent-del").forEach((btn) => {

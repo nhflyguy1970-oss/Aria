@@ -783,14 +783,17 @@ async function forkBranchFromIndex(displayIndex) {
     const data = await res.json();
     if (!data.ok) {
       showError(data.message || "Could not fork branch.");
+      window.showAriaToast?.(data.message || "Could not fork branch", "err", 5000);
       return;
     }
     _activeBranchId = data.branch_id;
     await window.loadBranches?.();
     await window.reloadBranchMessages?.();
     statusText.textContent = `Forked branch: ${name}`;
+    window.showAriaToast?.(`Forked branch: ${name}`, "ok", 3000);
   } catch (e) {
     showError(String(e.message || e));
+    window.showAriaToast?.(String(e.message || e), "err", 5000);
   }
 }
 
@@ -1614,11 +1617,13 @@ async function pollLive() {
     const data = await res.json();
     if (jarvisServerWasDown) {
       jarvisServerWasDown = false;
+      window.__ariaLiveFailToast = false;
       if (statusText) {
         statusText.textContent = (window.activeMediaJobs?.size || 0) > 0
           ? "Server back — finishing image job…"
           : `Ready · v${data.version || "?"}`;
       }
+      window.showAriaToast?.("Connection restored", "ok", 2500);
     }
     jarvisKnownVersion = data.version || jarvisKnownVersion;
     applyBranding(data);
@@ -1638,8 +1643,16 @@ async function pollLive() {
         ? `Ready · v${data.version}`
         : `Starting services · v${data.version}`;
     }
-  } catch (_) {
+  } catch (err) {
     jarvisServerWasDown = true;
+    if (!window.__ariaLiveFailToast) {
+      window.__ariaLiveFailToast = true;
+      window.showAriaToast?.(
+        err?.message || "Lost connection to Aria — retrying…",
+        "err",
+        4000,
+      );
+    }
   }
 }
 

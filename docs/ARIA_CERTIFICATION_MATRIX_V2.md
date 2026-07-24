@@ -43,7 +43,7 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: …/media_urls/**coding_proposals** extracts; empty-state CTAs (+Projects/Fly/Memory/MC/Gallery/Meme/Video/Calendar); act:compare-images + act:resume-media-jobs; apply/undo/diff load toasts. `app.js` ~**1945** lines.
+- FIXED & CERTIFIED: …/media_urls/**coding_proposals** extracts; empty-state CTAs (+Calendar/Audio songs/music/speech); live reconnect + fork toasts; apply/undo/diff load toasts. `app.js` ~**1958** lines.
 - INTENTIONALLY DEFERRED: chat/stream/sendMessage still in app.js (core pipeline); long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 
