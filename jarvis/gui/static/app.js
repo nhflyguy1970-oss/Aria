@@ -1511,7 +1511,13 @@ async function resumePendingMediaJobs() {
         type: "media_job",
       });
       pollMediaJob(jobId, body?.closest?.(".message"));
-    } catch (_) {}
+    } catch (err) {
+      window.showAriaToast?.(
+        `Media job resume failed: ${err?.message || err}`,
+        "err",
+        4000,
+      );
+    }
   }
 }
 

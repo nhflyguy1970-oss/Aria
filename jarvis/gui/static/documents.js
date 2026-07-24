@@ -100,7 +100,14 @@
       out.innerHTML = hits.length
         ? hits.map((h) => `<li><strong>${escapeHtml(h.title || h.source || "?")}</strong> `
           + `<span class="muted">${escapeHtml((h.text || "").slice(0, 120))}…</span></li>`).join("")
-        : "<li class='muted'>No matches</li>";
+        : `<li class='muted'>No matches. <button type='button' class='ghost-btn tiny' id='docsEmptyChatBtn'>Ask Chat</button> or <button type='button' class='ghost-btn tiny' id='docsEmptyReindexBtn'>Reindex</button></li>`;
+      out.querySelector("#docsEmptyChatBtn")?.addEventListener("click", () => {
+        window.switchToView?.("chat");
+        window.jarvisSendToChat?.(`Search my documents for: ${q}`);
+      });
+      out.querySelector("#docsEmptyReindexBtn")?.addEventListener("click", () => {
+        $("documentsReindexBtn")?.click();
+      });
     } catch (err) {
       out.innerHTML = `<li class='muted'>${escapeHtml(err.message || "Search failed")}</li>`;
       window.showAriaToast?.(err.message || "Document search failed", "err", 5000);

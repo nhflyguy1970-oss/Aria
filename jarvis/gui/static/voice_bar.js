@@ -229,7 +229,16 @@ async function refreshVoiceUi() {
     }
     updateDuplexHint({ ...duplex, duplex_mode: settings.duplex_mode });
     window.jarvisTtsChunkMaxChars = settings.tts_chunk_max_chars || 220;
-  } catch (_) {}
+  } catch (err) {
+    if (!window.__ariaVoiceUiFailToast) {
+      window.__ariaVoiceUiFailToast = true;
+      window.showAriaToast?.(
+        err?.message || "Could not load voice settings",
+        "err",
+        4000,
+      );
+    }
+  }
   try {
     const cloud = await fetch("/api/voice/cloud-live/status").then((r) => r.json());
     const btn = document.getElementById("cloudLiveBtn");

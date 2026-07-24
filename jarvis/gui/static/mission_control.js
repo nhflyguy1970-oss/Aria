@@ -206,8 +206,9 @@ function renderActivity(d, filters = {}) {
   if (comp) params.set("component", comp);
   return mcFetch(`/api/workstation/activity?${params}`).then((act) => {
     const events = act.events || d.activity?.events || [];
-    if (!events.length) return "<p class='muted'>No activity recorded yet.</p>";
-    const rows = events
+    if (!events.length) {
+      return `<p class='muted'>No activity recorded yet. <button type='button' class='ghost-btn tiny' id='mcEmptyActivityDashBtn'>Open Dashboard</button> or <button type='button' class='ghost-btn tiny' id='mcEmptyActivityChatBtn'>Chat</button> to generate events.</p>`;
+    }    const rows = events
       .map(
         (ev) => `<tr class="mc-activity-${mcEsc(ev.status || "ok")}">
           <td>${mcEsc(ev.iso)}</td><td><strong>${mcEsc(ev.type)}</strong></td>
@@ -716,6 +717,14 @@ function ensureMcDelegates() {
     }
     if (e.target.closest?.("#mcActivityFilterBtn")) {
       renderMcTab("activity");
+      return;
+    }
+    if (e.target.closest?.("#mcEmptyActivityDashBtn")) {
+      window.switchToView?.("dashboard");
+      return;
+    }
+    if (e.target.closest?.("#mcEmptyActivityChatBtn")) {
+      window.switchToView?.("chat");
       return;
     }
     if (e.target.closest?.("#mcRepairBtn")) {
