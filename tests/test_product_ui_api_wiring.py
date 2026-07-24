@@ -272,6 +272,14 @@ def test_command_palette_is_wired():
     assert "ICS saved" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8") or "ICS OK" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "Video settings saved" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")
     assert Path("jarvis/gui/static/vision_settings.js").is_file()
+    assert Path("jarvis/gui/static/free_vram.js").is_file()
+    assert "window.freeJarvisVram" in Path("jarvis/gui/static/free_vram.js").read_text(encoding="utf-8")
+    assert "async function freeJarvisVram" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "galleryOpenMakerBtn" in html
+    assert "flytyingOpenGalleryBtn" in html
+    assert "cadOpenGalleryBtn" in html
+    assert "Planner load failed" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "Diarize failed" in Path("jarvis/gui/static/audio_advanced.js").read_text(encoding="utf-8")
     assert "window.loadVisionSettings" in Path("jarvis/gui/static/vision_settings.js").read_text(encoding="utf-8")
     assert "async function loadVisionSettings" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "Vision quality:" in Path("jarvis/gui/static/vision_settings.js").read_text(encoding="utf-8")

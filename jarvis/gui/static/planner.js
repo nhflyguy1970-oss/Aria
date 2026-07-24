@@ -102,7 +102,8 @@ async function loadPlanner() {
     const data = await p0Fetch("/api/planner");
     renderPlanner(data);
   } catch (e) {
-    $("plannerStatus") && ($("plannerStatus").textContent = e.message);
+    if ($("plannerStatus")) $("plannerStatus").textContent = e.message;
+    window.showAriaToast?.(e.message || "Planner load failed", "err", 5000);
   }
 }
 

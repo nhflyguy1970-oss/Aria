@@ -312,6 +312,8 @@
     $("cadIterateBtn")?.addEventListener("click", iterateCad);
     $("cadClearBtn")?.addEventListener("click", clearGallery);
     $("cadExportBtn")?.addEventListener("click", exportSelected);
+    $("cadOpenGalleryBtn")?.addEventListener("click", () => window.switchToView?.("gallery"));
+    $("cadOpenDocumentsBtn")?.addEventListener("click", () => window.switchToView?.("documents"));
     $("printerRefreshBtn")?.addEventListener("click", refreshPrinter);
     $("printerAddBtn")?.addEventListener("click", addPrinter);
     $("printerDiscoverBtn")?.addEventListener("click", discoverPrinters);

@@ -134,7 +134,9 @@
       savedCalibration = d.calibration || null;
         if ($("gestureModeSelect")) $("gestureModeSelect").value = mode;
         if (!calibrating) updateCalibSteps(false);
-      } catch (_2) {}
+      } catch (err) {
+        window.showAriaToast?.(err?.message || "Gesture settings unavailable", "err", 4000);
+      }
     }
     refreshGpuMode();
   }

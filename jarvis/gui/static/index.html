@@ -884,6 +884,8 @@
               <p id="galleryLastGood" class="image-engine-hint muted">Last good settings…</p>
             </div>
             <a id="openComfyUiLink" class="ghost-btn small" href="http://127.0.0.1:8188" target="_blank" rel="noopener">Open ComfyUI ↗</a>
+            <button type="button" id="galleryOpenMakerBtn" class="ghost-btn small" title="Open Maker lab">Maker</button>
+            <button type="button" id="galleryOpenFlytyingBtn" class="ghost-btn small" title="Open Fly tying">Fly tying</button>
           </div>
           <div class="image-engine-grid">
             <label class="image-engine-field">
@@ -1236,6 +1238,7 @@
             <button type="button" id="flytyingHealthBtn" class="ghost-btn small" title="Library health">Health</button>
             <button type="button" id="flytyingRebuildBtn" class="ghost-btn small" title="Rebuild gold index">Rebuild</button>
             <button type="button" id="flytyingRefreshBtn" class="ghost-btn small">Refresh</button>
+            <button type="button" id="flytyingOpenGalleryBtn" class="ghost-btn small" title="Open Gallery">Gallery</button>
           </div>
         </header>
         <p id="flytyingHatchBanner" class="flytying-hatch-banner muted small"></p>
@@ -1427,6 +1430,8 @@
           <button type="button" id="cadSliceBtn" class="ghost-btn small">Slice</button>
           <button type="button" id="cadExportBtn" class="ghost-btn small">Download STL</button>
           <button type="button" id="cadRefreshBtn" class="ghost-btn small">Refresh</button>
+          <button type="button" id="cadOpenGalleryBtn" class="ghost-btn small">Gallery</button>
+          <button type="button" id="cadOpenDocumentsBtn" class="ghost-btn small">Documents</button>
           <button type="button" id="cadClearBtn" class="ghost-btn small">Clear gallery</button>
         </div>
         <p id="cadGenLog" class="muted" aria-live="polite"></p>
@@ -1749,7 +1754,7 @@
   </div>
   <script src="/static/lock_screen.js?v=5.16.101"></script>
   <script src="/static/audio_studio.js?v=5.16.100"></script>
-  <script src="/static/audio_advanced.js?v=1.5.0"></script>
+  <script src="/static/audio_advanced.js?v=1.5.1"></script>
   <script src="/static/audio.js?v=5.16.116"></script>
   <script src="/static/journal.js?v=5.16.113"></script>
   <script src="/static/video_studio.js?v=5.16.111"></script>
@@ -1763,17 +1768,17 @@
   <script src="/static/jarvis_ambient.js?v=1.2.0"></script>
   <script type="module" src="/static/modules/jobs.mjs?v=5.16.70"></script>
   <script type="module" src="/static/modules/health.mjs?v=5.16.70"></script>
-  <script src="/static/planner.js?v=5.16.93"></script>
+  <script src="/static/planner.js?v=5.16.94"></script>
   <script src="/static/mission_control.js?v=1.0.7"></script>
   <script src="/static/calendar.js?v=5.16.84"></script>
-  <script src="/static/flytying.js?v=5.16.96"></script>
+  <script src="/static/flytying.js?v=5.16.97"></script>
 
   <script src="/static/projects.js?v=5.16.89"></script>
   <script src="/static/vendor/three/three.min.js"></script>
   <script src="/static/vendor/three/STLLoader.js"></script>
-  <script src="/static/maker.js?v=5.16.115"></script>
+  <script src="/static/maker.js?v=5.16.116"></script>
   <script src="/static/browser_panel.js?v=5.16.88"></script>
-  <script src="/static/presence.js?v=5.16.101"></script>
+  <script src="/static/presence.js?v=5.16.102"></script>
   <script src="/static/security_settings.js?v=5.16.101"></script>
   <script src="/static/tools_sidebar.js?v=5.16.101"></script>
   <script src="/static/floating_panels.js?v=5.16.70"></script>
@@ -1788,7 +1793,8 @@
   <script src="/static/media_lightbox.js?v=1.0.1"></script>
   <script src="/static/lan_access.js?v=1.0.0"></script>
   <script src="/static/vision_settings.js?v=1.0.0"></script>
-  <script src="/static/app.js?v=5.16.122"></script>
+  <script src="/static/free_vram.js?v=1.0.0"></script>
+  <script src="/static/app.js?v=5.16.123"></script>
   <script src="/static/models_panel.js?v=1.0.0"></script>
   <script src="/static/uncensored_mode.js?v=1.0.0"></script>
   <script src="/static/startup_overlay.js?v=1.0.2"></script>
@@ -1801,7 +1807,7 @@
   <script src="/static/chat_model_select.js?v=1.0.0"></script>
   <script src="/static/theme.js?v=1.0.0"></script>
   <script src="/static/coding_panel.js?v=1.0.1"></script>
-  <script src="/static/gallery_view.js?v=1.0.1"></script>
+  <script src="/static/gallery_view.js?v=1.0.2"></script>
   <script src="/static/memory_browser.js?v=1.0.1"></script>
 </body>
 </html>

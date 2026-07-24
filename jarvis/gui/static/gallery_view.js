@@ -177,6 +177,12 @@
         document.getElementById("galleryGenerateBtn")?.click();
       }
     });
+    document.getElementById("galleryOpenMakerBtn")?.addEventListener("click", () => {
+      window.switchToView?.("maker");
+    });
+    document.getElementById("galleryOpenFlytyingBtn")?.addEventListener("click", () => {
+      window.switchToView?.("flytying");
+    });
   }
 
   window.loadGallery = loadGallery;

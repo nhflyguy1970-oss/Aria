@@ -1587,6 +1587,9 @@
       loadRecipes();
       loadVideos();
     });
+    $("flytyingOpenGalleryBtn")?.addEventListener("click", () => {
+      window.switchToView?.("gallery");
+    });
   }
 
   let _flyInitPromise = null;

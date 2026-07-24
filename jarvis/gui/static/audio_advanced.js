@@ -203,6 +203,11 @@ function bindAdvanced(statusEl) {
     const res = await fetch("/api/audio/vst/live", { method: "POST", body: form });
     const data = await res.json();
     if (vstStatus) vstStatus.textContent = data.message || (data.ok ? "Installed" : "Install failed");
+    window.showAriaToast?.(
+      data.message || (data.ok ? "VST installed" : "VST install failed"),
+      data.ok ? "ok" : "err",
+      data.ok ? 2500 : 5000
+    );
   });
 
   document.getElementById("audioDetectLangBtn")?.addEventListener("click", async () => {
@@ -213,9 +218,21 @@ function bindAdvanced(statusEl) {
     statusEl.textContent = "Detecting language…";
     const res = await fetch("/api/audio/detect-language", { method: "POST", body: form });
     const data = await res.json();
-    statusEl.textContent = data.ok
-      ? `Detected: ${data.language} (${Math.round((data.probability || 0) * 100)}%)`
-      : (data.error || "Detection failed");
+    if (!data.ok) {
+      const msg = data.error || "Detection failed";
+      if (typeof audioStatus === "function") audioStatus(statusEl, msg, "err");
+      else {
+        statusEl.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+      }
+      return;
+    }
+    const msg = `Detected: ${data.language} (${Math.round((data.probability || 0) * 100)}%)`;
+    if (typeof audioStatus === "function") audioStatus(statusEl, msg, "ok");
+    else {
+      statusEl.textContent = msg;
+      window.showAriaToast?.(msg, "ok", 2500);
+    }
   });
 
   document.getElementById("audioDiarizeBtn")?.addEventListener("click", async () => {
@@ -229,14 +246,24 @@ function bindAdvanced(statusEl) {
     const data = await res.json();
     setAudioBusy(false);
     if (!data.ok) {
-      statusEl.textContent = data.message || "Diarize failed";
+      const msg = data.message || "Diarize failed";
+      if (typeof audioStatus === "function") audioStatus(statusEl, msg, "err");
+      else {
+        statusEl.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+      }
       return;
     }
     const text = data.transcript || (data.segments || []).map((s) =>
       `${s.speaker} (${s.start}s): ${s.text || ""}`
     ).join("\n");
     showPlayback(path, text);
-    statusEl.textContent = `Diarized (${data.engine})`;
+    const okMsg = `Diarized (${data.engine})`;
+    if (typeof audioStatus === "function") audioStatus(statusEl, okMsg, "ok");
+    else {
+      statusEl.textContent = okMsg;
+      window.showAriaToast?.(okMsg, "ok", 2500);
+    }
   });
 
   document.getElementById("audioStreamTranscribeBtn")?.addEventListener("click", async () => {
@@ -330,7 +357,9 @@ function bindAdvanced(statusEl) {
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.message?.startsWith("ERROR:")) {
       const el = document.getElementById("audioWakewordStatus");
-      if (el) el.textContent = data.message || `Start failed (${res.status})`;
+      const msg = data.message || `Start failed (${res.status})`;
+      if (el) el.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
     }
     refreshWakewordStatus();
   });
@@ -350,7 +379,9 @@ async function startLiveRecord(statusEl) {
   const res = await fetch("/api/audio/record/live/start", { method: "POST", body: form });
   const data = await res.json();
   if (!data.ok) {
-    statusEl.textContent = data.message || "Live start failed";
+    const msg = data.message || "Live start failed";
+    statusEl.textContent = msg;
+    window.showAriaToast?.(msg, "err", 5000);
     setAudioBusy(false);
     return;
   }
