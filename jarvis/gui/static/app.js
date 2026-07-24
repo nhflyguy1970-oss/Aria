@@ -539,27 +539,7 @@ function isVideoRequest(text) {
   return /\b(create|generate|make)\b[\s\S]*\b(video|clip|animation|movie)\b/i.test(t);
 }
 
-async function vramPreflight(action) {
-  try {
-    const res = await fetch(`/api/vram/preflight?action=${encodeURIComponent(action)}`);
-    if (!res.ok) return true;
-    const data = await res.json();
-    if (data.blocked) {
-      window.showAriaToast?.((data.warnings || ["Media queue full"]).join(" · "), "warn", 6000);
-      return false;
-    }
-    if (data.ok || !data.warnings?.length) return true;
-    const tips = (data.tips || []).slice(0, 2).join("\n");
-    const adj = (data.adjustments || []).slice(0, 2).join("\n");
-    const msg = data.warnings.join("\n\n")
-      + (adj ? `\n\nPlan: ${adj}` : "")
-      + (tips ? `\n\nTip: ${tips}` : "")
-      + "\n\nContinue anyway?";
-    return window.confirm(msg);
-  } catch {
-    return true;
-  }
-}
+// vramPreflight → free_vram.js (window.vramPreflight)
 
 // pollComfySettingsJob → image_engine.js
 
@@ -1209,14 +1189,14 @@ async function sendMessage(text, forceNoStream = false, options = {}) {
   showProgress(progressLabel(text));
 
   if (isVideoRequest(text)) {
-    const proceed = await vramPreflight("generate_video");
+    const proceed = (await window.vramPreflight?.("generate_video")) !== false;
     if (!proceed) {
       setChatBusy(false);
       hideProgress();
       return;
     }
   } else if (isImageRequest(text)) {
-    const proceed = await vramPreflight("generate_image");
+    const proceed = (await window.vramPreflight?.("generate_image")) !== false;
     if (!proceed) {
       setChatBusy(false);
       hideProgress();

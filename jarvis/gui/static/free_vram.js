@@ -30,4 +30,28 @@
   }
 
   window.freeJarvisVram = freeJarvisVram;
+
+  async function vramPreflight(action) {
+    try {
+      const res = await fetch(`/api/vram/preflight?action=${encodeURIComponent(action)}`);
+      if (!res.ok) return true;
+      const data = await res.json();
+      if (data.blocked) {
+        window.showAriaToast?.((data.warnings || ["Media queue full"]).join(" · "), "warn", 6000);
+        return false;
+      }
+      if (data.ok || !data.warnings?.length) return true;
+      const tips = (data.tips || []).slice(0, 2).join("\n");
+      const adj = (data.adjustments || []).slice(0, 2).join("\n");
+      const msg = data.warnings.join("\n\n")
+        + (adj ? `\n\nPlan: ${adj}` : "")
+        + (tips ? `\n\nTip: ${tips}` : "")
+        + "\n\nContinue anyway?";
+      return window.confirm(msg);
+    } catch {
+      return true;
+    }
+  }
+
+  window.vramPreflight = vramPreflight;
 })();

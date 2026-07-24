@@ -317,6 +317,8 @@ def test_command_palette_is_wired():
     assert 'getElementById("profileSelect")' not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert 'getElementById("personalitySelect")' not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "window.freeJarvisVram" in Path("jarvis/gui/static/free_vram.js").read_text(encoding="utf-8")
+    assert "window.vramPreflight" in Path("jarvis/gui/static/free_vram.js").read_text(encoding="utf-8")
+    assert "async function vramPreflight" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "async function freeJarvisVram" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "renderAudioStatus" in Path("jarvis/gui/static/modules/health.mjs").read_text(encoding="utf-8")
     assert "Could not save fly tying model" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
