@@ -54,8 +54,8 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
     try:
-        from jarvis.workstation_activity import load_recent_from_disk, record_event
         from jarvis.platform_notifications import load_notifications_from_disk, notify
+        from jarvis.workstation_activity import load_recent_from_disk, record_event
 
         load_recent_from_disk()
         load_notifications_from_disk()
@@ -67,8 +67,8 @@ async def lifespan(app: FastAPI):
 
     def _warm_flytying_index() -> None:
         try:
-            from jarvis.flytying.config import blackfly_data_available
             from jarvis.flytying import index as recipe_index
+            from jarvis.flytying.config import blackfly_data_available
 
             if blackfly_data_available():
                 recipe_index.recipes()
@@ -184,7 +184,7 @@ def _live_payload() -> dict:
         ollama_ok = _http_ok("http://127.0.0.1:11434/api/tags", timeout=1.5)
     except Exception:
         pass
-    from jarvis.auth import api_key_enabled, localhost_key_exempt
+    from jarvis.auth import localhost_key_exempt
     from jarvis.branding import branding_dict
 
     return {
@@ -217,13 +217,16 @@ def _build_health_payload() -> dict:
 
     svc = get_status(force=True)
     gpu = detect_gpu()
-    from jarvis.vram_guard import recommendations, status as vram_status
+    from jarvis.vram_guard import recommendations
+    from jarvis.vram_guard import status as vram_status
 
     gpu["low_vram"] = vram_status()["low_vram"]
     gpu["vram_guard"] = vram_status()
     gpu["tips"] = recommendations()
     from jarvis.resource_router import (
         snapshot as resource_snapshot,
+    )
+    from jarvis.resource_router import (
         status_line as resource_status_line,
     )
 
@@ -1044,7 +1047,7 @@ async def comfyui_settings_set(
     async_apply: str = Form("1"),
 ):
     from jarvis.async_util import run_sync
-    from jarvis.comfyui_settings_jobs import get_job, submit
+    from jarvis.comfyui_settings_jobs import submit
 
     def apply_settings() -> dict:
         from jarvis.comfyui_settings import get_settings_dict, save_workflow_file
@@ -1339,9 +1342,12 @@ async def video_analyze_frame(
 def gpu_status():
     from jarvis.resource_router import (
         snapshot as resource_snapshot,
+    )
+    from jarvis.resource_router import (
         status_line as resource_status_line,
     )
-    from jarvis.vram_guard import recommendations, status as vram_status
+    from jarvis.vram_guard import recommendations
+    from jarvis.vram_guard import status as vram_status
 
     gpu = detect_gpu()
     gpu["low_vram"] = vram_status()["low_vram"]
@@ -1605,8 +1611,6 @@ async def image_inpaint(
 ):
     import json as _json
 
-    from jarvis.cache_state import invalidate_gallery
-    from jarvis.image_post import inpaint_region
 
     src = _resolve_image_path(path)
     if not src:
@@ -1785,6 +1789,44 @@ async def audio_set_input_source(source: str = Form("")):
         save_settings({"input_source": ""})
     assistant.audio.get_devices()
     return {"ok": True, "input_source": effective_input_source()}
+
+
+@app.post("/api/audio/output-sink")
+async def audio_set_output_sink(sink: str = Form("")):
+    from jarvis.audio_device import detect_devices, list_output_sinks
+    from jarvis.audio_settings import save_settings, saved_output_sink
+
+    name = sink.strip()
+    if name:
+        valid = {s["name"] for s in list_output_sinks()}
+        if valid and name not in valid:
+            return JSONResponse(
+                status_code=400,
+                content={"ok": False, "message": f"Unknown output sink: {name}"},
+            )
+        save_settings({"output_sink": name})
+        import shutil
+
+        if shutil.which("pactl"):
+            from jarvis.audio_device import _run
+
+            _run(["pactl", "set-default-sink", name])
+    else:
+        save_settings({"output_sink": ""})
+    assistant.audio.get_devices()
+    return {
+        "ok": True,
+        "output_sink": saved_output_sink() or detect_devices().get("output_sink", ""),
+    }
+
+
+@app.post("/api/audio/stop")
+async def audio_stop():
+    """Stop TTS / playback immediately (UI Stop / interrupt speak)."""
+    from jarvis.tts_playback_queue import clear_tts_queue
+
+    clear_tts_queue()
+    return {"ok": True, "stopped": True}
 
 
 @app.post("/api/audio/transcribe")

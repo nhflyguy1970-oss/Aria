@@ -4,6 +4,10 @@ import html
 import re
 from pathlib import Path
 
+from fastapi import File, Form, Request, UploadFile
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response
+
+from jarvis.action_log import clear_log, list_actions
 from jarvis.cache_state import (
     get_gallery_cache,
     get_video_gallery_cache,
@@ -12,11 +16,6 @@ from jarvis.cache_state import (
     set_gallery_cache,
     set_video_gallery_cache,
 )
-
-from fastapi import File, Form, Request, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response
-
-from jarvis.action_log import clear_log, list_actions
 from jarvis.config import DATA_DIR
 
 
@@ -1040,6 +1039,61 @@ def register_routes(app, assistant):
         html = month_print_html(journal, month or _month_key())
         return HTMLResponse(html)
 
+    @app.get("/api/journal/projects")
+    def journal_projects_list():
+        from jarvis.project_journal import list_projects
+
+        return {"ok": True, "projects": list_projects()}
+
+    @app.get("/api/journal/projects/{slug}")
+    def journal_projects_page(slug: str, day: str = ""):
+        from jarvis.modules.journal import _today
+        from jarvis.project_journal import ProjectJournal
+
+        store = ProjectJournal(slug)
+        store.ensure()
+        d = (day or "").strip() or _today()
+        page = store.daily_get(d)
+        return {
+            "ok": True,
+            "project": store.data.get("title") or store.slug,
+            "slug": store.slug,
+            "day": d,
+            "page": page,
+        }
+
+    @app.post("/api/journal/projects/{slug}/log")
+    async def journal_projects_log(slug: str, request: Request):
+        from jarvis.modules.journal import _today
+        from jarvis.project_journal import ProjectJournal
+
+        body = await request.json()
+        text = str(body.get("text") or "").strip()
+        if not text:
+            return JSONResponse(status_code=400, content={"ok": False, "error": "text required"})
+        bullet_type = str(body.get("bullet_type") or "note")
+        day = str(body.get("day") or "").strip() or _today()
+        store = ProjectJournal(slug)
+        store.ensure()
+        bullet = store.daily_add(text, bullet_type=bullet_type, day=day)
+        return {"ok": True, "bullet": bullet, "slug": store.slug, "day": day}
+
+    @app.post("/api/journal/projects/{slug}/learn")
+    async def journal_projects_learn(slug: str, request: Request):
+        from jarvis.journal_learning import learn_from_project_journal
+        from jarvis.modules.journal import _today
+
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        day = str((body or {}).get("day") or "").strip() or _today()
+        result = learn_from_project_journal(
+            assistant.memory, slug, day=day, namespace=slug
+        )
+        return {"ok": True, "day": day, "slug": slug, **(result if isinstance(result, dict) else {})}
+
     @app.get("/api/journal/export/pdf")
     def journal_export_pdf(month: str = ""):
         from jarvis.journal_export import export_month_pdf
@@ -1857,7 +1911,6 @@ def register_routes(app, assistant):
     async def video_storyboard(paths: str = Form(...), sec_per_slide: float = Form(3.5)):
         from jarvis.coding_jobs import submit
         from jarvis.config import DATA_DIR
-
         from jarvis.video_ops import resolve_storyboard_image
 
         raw = [p.strip() for p in paths.split(",") if p.strip()]
@@ -1964,7 +2017,7 @@ def register_routes(app, assistant):
 
     @app.get("/api/audit/latest")
     def audit_latest_alias():
-        from jarvis.system_audit import get_cached_audit, get_audit_status
+        from jarvis.system_audit import get_audit_status, get_cached_audit
 
         cached = get_cached_audit()
         if cached:

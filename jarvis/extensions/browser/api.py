@@ -97,6 +97,29 @@ def register_routes(app, assistant) -> None:
         except Exception as exc:
             return {"ok": False, "message": str(exc)}
 
+    @app.post("/api/browser/install-playwright")
+    def browser_install_playwright():
+        """Bootstrap Playwright + Chromium for the Browser panel Install button."""
+        try:
+            from jarvis.browser_playwright import ensure_playwright
+
+            stack = ensure_playwright(install=True)
+            ok = bool(stack.get("playwright") and stack.get("chromium"))
+            return {
+                "ok": ok,
+                **stack,
+                "hint": None
+                if ok
+                else "Install failed — try: pip install playwright && playwright install chromium",
+            }
+        except Exception as exc:
+            return {
+                "ok": False,
+                "playwright": False,
+                "chromium": False,
+                "hint": str(exc),
+            }
+
     @app.get("/api/browser/screenshot/latest")
     def browser_screenshot_latest():
         from jarvis.browser_agent import status

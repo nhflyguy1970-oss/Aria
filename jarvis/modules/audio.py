@@ -28,7 +28,7 @@ from jarvis.audio_settings import (
     saved_whisper_language,
     saved_whisper_model,
 )
-from jarvis.config import DATA_DIR, PROJECT_ROOT
+from jarvis.config import DATA_DIR
 from jarvis.conversation import Conversation
 
 AUDIO_DIR = DATA_DIR / "audio"
@@ -196,6 +196,8 @@ class AudioEngine:
             "mic_routing": mic_routing_status(),
             "mic_profiles": MIC_PROFILES,
             "whisper_models": list(WHISPER_MODELS),
+            "output_sink": self.get_devices().get("output_sink", ""),
+            "output_sinks": self.get_devices().get("output_sinks", []),
             "last_transcript_preview": (self.last_transcript[:240] + "…")
             if len(self.last_transcript) > 240
             else self.last_transcript,

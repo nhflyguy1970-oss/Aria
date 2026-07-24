@@ -5,6 +5,7 @@ import re
 import shutil
 import signal
 import subprocess
+import threading
 import time
 from pathlib import Path
 
@@ -19,6 +20,9 @@ CREATIVE_PATTERNS = (
     "ae-5",
     "recon3d",
 )
+
+_PLAYBACK_LOCK = threading.Lock()
+_PLAYBACK_PROC: subprocess.Popen | None = None
 
 
 def _run(cmd: list[str], timeout: int = 15, env: dict | None = None) -> tuple[int, str]:
@@ -103,6 +107,34 @@ def list_input_sources() -> list[dict]:
     return sources
 
 
+def list_output_sinks() -> list[dict]:
+    """All PipeWire/Pulse playback sinks."""
+    code, out = _run(["pactl", "list", "short", "sinks"])
+    if code != 0:
+        return []
+    code_d, default_out = _run(["pactl", "get-default-sink"])
+    default = default_out.strip() if code_d == 0 else ""
+    sinks: list[dict] = []
+    for line in out.splitlines():
+        parts = line.split("\t")
+        if len(parts) < 2:
+            continue
+        name = parts[1]
+        state = parts[3] if len(parts) > 3 else ""
+        label = name
+        if _match_creative(name):
+            label = "Creative Sound Blaster"
+        sinks.append(
+            {
+                "name": name,
+                "label": label,
+                "state": state,
+                "is_default": name == default,
+            }
+        )
+    return sinks
+
+
 def _auto_detect_input_source() -> str:
     """Prefer Creative analog line/mic; USB mics only when explicitly chosen in the GUI."""
     sources = list_input_sources()
@@ -172,6 +204,7 @@ def detect_devices() -> dict:
         "name": name,
         "backend": backend,
         "output_sink": sink or "alsa_output.pci-0000_04_00.0.analog-stereo",
+        "output_sinks": list_output_sinks(),
         "input_source": _detect_pipewire_source(),
         "input_sources": list_input_sources(),
         "creative_mixer": creative_mixer_snapshot(),
@@ -293,6 +326,49 @@ def apply_system_default() -> str:
     return "; ".join(msgs) if msgs else "no audio server found"
 
 
+def stop_playback() -> None:
+    """Interrupt in-progress pw-play/paplay/aplay started by play_file."""
+    global _PLAYBACK_PROC
+    with _PLAYBACK_LOCK:
+        proc = _PLAYBACK_PROC
+        _PLAYBACK_PROC = None
+    if proc is None:
+        return
+    if proc.poll() is not None:
+        return
+    try:
+        proc.terminate()
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=1)
+    except Exception:
+        pass
+
+
+def _play_with_cmd(cmd: list[str], timeout: int = 600) -> tuple[int, str]:
+    """Run a playback command as a tracked subprocess so stop_playback can interrupt it."""
+    global _PLAYBACK_PROC
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    except Exception as e:
+        return 1, str(e)
+    with _PLAYBACK_LOCK:
+        _PLAYBACK_PROC = proc
+    try:
+        try:
+            stdout, stderr = proc.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            stop_playback()
+            return 1, "playback timed out"
+        return proc.returncode or 0, (stdout or "") + (stderr or "")
+    finally:
+        with _PLAYBACK_LOCK:
+            if _PLAYBACK_PROC is proc:
+                _PLAYBACK_PROC = None
+
+
 def play_file(path: str | Path, *, vst_chain: str | None = None) -> str:
     """Play an audio file through the Creative Sound Blaster (optional VST/EQ chain)."""
     path = Path(path)
@@ -312,25 +388,27 @@ def play_file(path: str | Path, *, vst_chain: str | None = None) -> str:
             return processed
         path = Path(processed)
 
+    from jarvis.audio_settings import saved_output_sink
+
     dev = detect_devices()
-    sink = dev.get("output_sink", "")
+    sink = (saved_output_sink() or "").strip() or dev.get("output_sink", "")
     errors: list[str] = []
 
     if shutil.which("pw-play") and sink:
-        code, out = _run(["pw-play", "--target", sink, str(path)], timeout=600)
+        code, out = _play_with_cmd(["pw-play", "--target", sink, str(path)], timeout=600)
         if code == 0:
             return str(path)
         errors.append(f"pw-play: {out.strip()}")
 
     if shutil.which("paplay") and sink:
-        code, out = _run(["paplay", f"--device={sink}", str(path)], timeout=600)
+        code, out = _play_with_cmd(["paplay", f"--device={sink}", str(path)], timeout=600)
         if code == 0:
             return str(path)
         errors.append(f"paplay: {out.strip()}")
 
     if os.getenv("JARVIS_PLAYBACK_USE_ALSA", "").lower() in ("1", "true", "yes") and shutil.which("aplay"):
         alsa = dev.get("alsa_playback", alsa_playback_device())
-        code, out = _run(["aplay", "-D", alsa, str(path)], timeout=600)
+        code, out = _play_with_cmd(["aplay", "-D", alsa, str(path)], timeout=600)
         if code == 0:
             return str(path)
         errors.append(f"aplay: {out.strip()}")
