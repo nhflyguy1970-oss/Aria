@@ -60,23 +60,28 @@
           const path = btn.dataset.path;
           if (!path) return;
           btn.disabled = true;
-          const form = new FormData();
-          form.append("path", path);
-          form.append("scale", "2");
-          const res2 = await fetch("/api/image/upscale", { method: "POST", body: form });
-          const out = await res2.json().catch(() => ({}));
-          btn.disabled = false;
-          const st = statusLine();
-          if (!res2.ok || !out.ok) {
-            const msg = out.message || "Upscale failed";
-            if (st) st.textContent = msg;
-            window.showAriaToast?.(msg, "err", 5000);
-            return;
+          try {
+            const form = new FormData();
+            form.append("path", path);
+            form.append("scale", "2");
+            const res2 = await fetch("/api/image/upscale", { method: "POST", body: form });
+            const out = await res2.json().catch(() => ({}));
+            const st = statusLine();
+            if (!res2.ok || !out.ok) {
+              const msg = out.message || `Upscale failed (${res2.status})`;
+              if (st) st.textContent = msg;
+              window.showAriaToast?.(msg, "err", 5000);
+              return;
+            }
+            const okMsg = `Upscaled → ${out.image_path?.split("/").pop() || "done"}`;
+            if (st) st.textContent = okMsg;
+            window.showAriaToast?.(okMsg, "ok", 3000);
+            loadGallery();
+          } catch (err) {
+            window.showAriaToast?.(err?.message || "Upscale failed", "err", 5000);
+          } finally {
+            btn.disabled = false;
           }
-          const okMsg = `Upscaled → ${out.image_path?.split("/").pop() || "done"}`;
-          if (st) st.textContent = okMsg;
-          window.showAriaToast?.(okMsg, "ok", 3000);
-          loadGallery();
         });
       });
       el.querySelectorAll(".gallery-del").forEach((btn) => {
@@ -84,17 +89,21 @@
           e.stopPropagation();
           const name = btn.dataset.name;
           if (!name || !confirm(`Delete ${name}?`)) return;
-          const delRes = await fetch(`/api/gallery/${encodeURIComponent(name)}`, { method: "DELETE" });
-          const delData = await delRes.json().catch(() => ({}));
-          const st = statusLine();
-          if (!delRes.ok || !delData.ok) {
-            const msg = delData.message || "Delete failed";
-            if (st) st.textContent = msg;
-            window.showAriaToast?.(msg, "err", 5000);
-            return;
+          try {
+            const delRes = await fetch(`/api/gallery/${encodeURIComponent(name)}`, { method: "DELETE" });
+            const delData = await delRes.json().catch(() => ({}));
+            const st = statusLine();
+            if (!delRes.ok || !delData.ok) {
+              const msg = delData.message || `Delete failed (${delRes.status})`;
+              if (st) st.textContent = msg;
+              window.showAriaToast?.(msg, "err", 5000);
+              return;
+            }
+            window.showAriaToast?.(`Deleted ${name}`, "ok", 2500);
+            loadGallery();
+          } catch (err) {
+            window.showAriaToast?.(err?.message || "Delete failed", "err", 5000);
           }
-          window.showAriaToast?.(`Deleted ${name}`, "ok", 2500);
-          loadGallery();
         });
       });
       bindClickableImages?.(el);

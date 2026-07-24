@@ -42,12 +42,12 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.
 
-## Wave resume (2026-07-24 late+)
-- FIXED & CERTIFIED: **chat_controls.js** extract (clear/read-aloud/mic); palette `act:read-aloud`; planner scene empty → HA setup; memory settings load toasts; video analyze/trim/upload try/catch; docs Summarize → Chat; HA status toast; journal search empty CTA + collection create feedback. `app.js` ~**506** lines.
-- INTENTIONALLY DEFERRED: long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix; further app.js extracts (branding/jarvisAttach bridge).
-- Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
+## Wave resume (2026-07-24 late++)
+- FIXED & CERTIFIED: **chat_controls.js**; **branding.js**; palette read-aloud; planner scene empty→HA; memory settings toasts; video analyze/trim/upload; docs Summarize→Chat; HA status toast; journal search/collections; gallery upscale/delete try/catch. `app.js` ~**470** lines.
+- INTENTIONALLY DEFERRED: long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive matrix; jarvisAttach/finishSendUi further extracts.
+- Verdict: **NO**
 
-**Next priorities:** extract branding/jarvisAttach leftovers; long-duration soak; multi-monitor; Comfy/HA deep soaks; matrix completion.
+**Next priorities:** jarvisAttach extract; long-duration soak; multi-monitor; Comfy/HA deep soaks; matrix completion.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.

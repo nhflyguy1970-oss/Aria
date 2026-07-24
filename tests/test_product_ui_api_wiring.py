@@ -550,6 +550,11 @@ def test_command_palette_is_wired():
     assert "bujoSearchEmptyDailyBtn" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "Collection created" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "Home Assistant status unavailable" in Path("jarvis/gui/static/ha_panel.js").read_text(encoding="utf-8")
+    assert Path("jarvis/gui/static/branding.js").is_file()
+    assert "branding.js" in html
+    assert "function applyBranding" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "window.applyBranding" in Path("jarvis/gui/static/branding.js").read_text(encoding="utf-8")
+    assert "Upscale failed" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
     assert "act:clear-chat" in js
     assert "Memory load failed" in app or "Memory load failed" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
 
