@@ -2563,15 +2563,10 @@ function renderGpuStatus(gpu) {
 // freeVramBtn click wired in modules/health.mjs
 
 function renderAudioStatus(audio) {
-  if (!gpuStatusEl || !audio) return;
-  let line = gpuStatusEl.querySelector(".audio-line");
-  if (!line) {
-    line = document.createElement("div");
-    line.className = "audio-line gpu-status ok";
-    gpuStatusEl.appendChild(line);
+  if (window.jarvisHealth?.renderAudioStatus) {
+    window.jarvisHealth.renderAudioStatus(audio);
+    return;
   }
-  line.textContent = `Audio: ${(audio.name || "Sound Blaster").slice(0, 45)}`;
-  line.title = `Output: ${audio.output_sink || ""}\nInput: ${audio.input_source || ""}`;
 }
 
 async function loadGpuStatus() {

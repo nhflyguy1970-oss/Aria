@@ -39,6 +39,19 @@ export function renderGpuStatus(gpu) {
   gpuLine.title = [gpu.recommendation, ...tips].filter(Boolean).join("\n");
 }
 
+export function renderAudioStatus(audio) {
+  const gpuStatusEl = $("gpuStatus");
+  if (!gpuStatusEl || !audio) return;
+  let line = gpuStatusEl.querySelector(".audio-line");
+  if (!line) {
+    line = document.createElement("div");
+    line.className = "audio-line gpu-status ok";
+    gpuStatusEl.appendChild(line);
+  }
+  line.textContent = `Audio: ${(audio.name || "Sound Blaster").slice(0, 45)}`;
+  line.title = `Output: ${audio.output_sink || ""}\nInput: ${audio.input_source || ""}`;
+}
+
 export async function loadGpuStatus() {
   try {
     const res = await fetch("/api/gpu");
@@ -60,4 +73,4 @@ if (document.readyState === "loading") {
   initHealthModule();
 }
 
-window.jarvisHealth = { renderGpuStatus, loadGpuStatus };
+window.jarvisHealth = { renderGpuStatus, renderAudioStatus, loadGpuStatus };

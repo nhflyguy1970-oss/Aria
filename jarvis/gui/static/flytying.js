@@ -1002,7 +1002,10 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model: sel.value }),
       });
-    } catch (_) {}
+      window.showAriaToast?.(`Fly tying model: ${sel.value}`, "ok", 2000);
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Could not save fly tying model", "err", 5000);
+    }
   }
 
   function renderRecipeListItems() {

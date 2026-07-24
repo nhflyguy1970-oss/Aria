@@ -818,7 +818,7 @@ document.getElementById("profileForm")?.addEventListener("submit", async (e) => 
     });
     const data = await res.json();
     if (!res.ok || !data.ok) {
-      alert(data.error || "Could not save profile");
+      window.showAriaToast?.(data.error || data.message || "Could not save profile", "err", 5000);
       return;
     }
     document.getElementById("profileModal")?.classList.add("hidden");
