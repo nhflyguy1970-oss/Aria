@@ -6,19 +6,22 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 |---------|-----------|----------|--------|-------|
 | Primary view tabs (21) | Shell | Top tab bar | FIXED & CERTIFIED | Smoke + switchToView |
 | Mission Control tabs (17) | MC | workstation + MC nav | FIXED & CERTIFIED | Race/loaders/binding fixed |
-| Command palette | Shell / Discoverability | Ctrl+K · Commands btn | FIXED & CERTIFIED | Nav + MC + actions; recent localStorage |
+| Command palette | Shell / Discoverability | Ctrl+K · Commands btn | FIXED & CERTIFIED | Nav + MC + actions + scoped Search focus |
+| Shortcuts help completeness | Shell | shortcutsModal | FIXED & CERTIFIED | Documents Ctrl+L + Enter-to-send |
 | Upgrade Clear session | Updates | Upgrade wizard | FIXED & CERTIFIED | apply_failed recovery |
 | Gallery Generate CTA | Gallery / Image | Gallery prompt row | FIXED & CERTIFIED | Routes to chat generate |
 | Modal Esc + focus cycle | A11y | Global keydown | FIXED & CERTIFIED | Lock excluded |
 | toolConfirm labelled | Approvals | toolConfirmModal | FIXED & CERTIFIED | aria-labelledby |
 | Voice cloud-live state | Voice | voice_bar WS | FIXED & CERTIFIED | Dead branches merged |
 | `--muted` token | Visual | style.css | FIXED & CERTIFIED | Alias to --text-muted |
-| Federated palette search (memory/docs) | Search | Command palette | INTENTIONALLY DEFERRED | Stage after action palette cert |
-| God-app.js split | Architecture | app.js | INTENTIONALLY DEFERRED | High risk; staged modules already exist |
+| Federated palette search (memory/docs content) | Search | Command palette | INTENTIONALLY DEFERRED | Jump-to-search shipped; full query federation later |
+| God-app.js split | Architecture | app.js (~6k lines) | INTENTIONALLY DEFERRED | Inventory confirmed concentration risk |
 | Comfy full generate soak | Gallery | ComfyUI | INTENTIONALLY DEFERRED | Needs GPU long-run |
 | HA live scenes | Smart home | HA | INTENTIONALLY DEFERRED | HA often down on workstation |
 | Long-duration leak profile | Performance | Runtime | INTENTIONALLY DEFERRED | Hours soak not yet run this wave |
 | Multi-monitor docking | Desktop | Native window | INTENTIONALLY DEFERRED | Needs native multi-display session |
-| Command palette content search | Discoverability | Palette | INTENTIONALLY DEFERRED | P2 competitive gap |
+| Command palette content search | Discoverability | Palette | INTENTIONALLY DEFERRED | P2 competitive gap; jump-to-scoped-search interim |
+
+Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.

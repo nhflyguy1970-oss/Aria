@@ -169,9 +169,12 @@ def test_command_palette_is_wired():
     assert "Ctrl</kbd>+<kbd>K" in html or "Ctrl+K" in html
     assert "openAriaCommandPalette" in js
     assert 'toLowerCase() !== "k"' in js or 'toLowerCase() === "k"' in js
+    assert 'id: "search:memory"' in js
     assert "command-palette-modal" in css
     assert "window.switchMcTab = switchMcTab" in mc
     assert Path("docs/ARIA_COMPETITIVE_ANALYSIS_V2.md").is_file()
+    assert Path("docs/ARIA_GUI_INVENTORY_V2.md").is_file()
+    assert "Ctrl</kbd>+<kbd>L" in html or "Ctrl+L" in html
 
 
 def test_stop_playback_and_clear_tts_queue_do_not_raise():

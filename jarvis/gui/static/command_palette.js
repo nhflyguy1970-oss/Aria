@@ -225,7 +225,60 @@
       },
     ];
 
-    commands = [...nav, ...mcTabs, ...actions];
+    function focusSearch(view, inputId, clickBtnId) {
+      return () => {
+        goView(view);
+        setTimeout(() => {
+          const el = $(inputId);
+          el?.focus();
+          el?.select?.();
+          if (clickBtnId) $(clickBtnId)?.focus?.();
+        }, 80);
+      };
+    }
+
+    const search = [
+      {
+        id: "search:journal",
+        label: "Search journal",
+        group: "Search",
+        keywords: "bujo find filter",
+        run: focusSearch("journal", "journalSearch"),
+      },
+      {
+        id: "search:memory",
+        label: "Search memory",
+        group: "Search",
+        keywords: "recall find filter",
+        run: focusSearch("memory", "memorySearch"),
+      },
+      {
+        id: "search:documents",
+        label: "Search documents",
+        group: "Search",
+        keywords: "library files pdf",
+        run: focusSearch("documents", "documentsSearchInput"),
+      },
+      {
+        id: "search:flytying",
+        label: "Search fly patterns",
+        group: "Search",
+        keywords: "tying recipes",
+        run: focusSearch("flytying", "flytyingSearchInput"),
+      },
+      {
+        id: "search:mc-routing",
+        label: "Search Mission Control routing",
+        group: "Search",
+        keywords: "intent handler prompts",
+        run: () => {
+          goMc("routing");
+          setTimeout(() => $("mcRoutingSearch")?.focus(), 200);
+        },
+      },
+    ];
+
+    commands = [...nav, ...mcTabs, ...actions, ...search];
   }
 
   function filterCommands(q) {
