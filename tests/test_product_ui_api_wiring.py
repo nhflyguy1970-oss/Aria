@@ -264,6 +264,8 @@ def test_command_palette_is_wired():
     assert "journalOpenCalendarBtn" in html
     assert "memoryOpenJournalBtn" in html
     assert "memoryOpenProjectsBtn" in html
+    assert "projectsOpenMemoryBtn" in html
+    assert "Video settings saved" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")
     assert Path("jarvis/gui/static/vision_settings.js").is_file()
     assert "window.loadVisionSettings" in Path("jarvis/gui/static/vision_settings.js").read_text(encoding="utf-8")
     assert "async function loadVisionSettings" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")

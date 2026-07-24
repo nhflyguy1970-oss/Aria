@@ -104,6 +104,9 @@ window.initProjects = function initProjects() {
   if (!root || root.dataset.bound === "1") return;
   root.dataset.bound = "1";
   loadProjects();
+  $("projectsOpenMemoryBtn")?.addEventListener("click", () => window.switchToView?.("memory"));
+  $("projectsOpenCodingBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
+  $("projectsOpenDocumentsBtn")?.addEventListener("click", () => window.switchToView?.("documents"));
   $("projectsCreateBtn")?.addEventListener("click", async () => {
     const title = $("projectsTitleInput")?.value?.trim();
     if (!title) return;

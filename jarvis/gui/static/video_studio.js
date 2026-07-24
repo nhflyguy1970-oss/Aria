@@ -160,8 +160,9 @@ async function loadVideoSettings() {
     if (fileSel) fileSel.disabled = videoSettingsBusy;
     if (engineSel) engineSel.disabled = videoSettingsBusy;
     if (adFrames) adFrames.disabled = videoSettingsBusy;
-  } catch (_) {
+  } catch (err) {
     if (status) status.textContent = "Could not load video settings";
+    window.showAriaToast?.(err?.message || "Could not load video settings", "err", 4000);
   }
 }
 
@@ -170,10 +171,16 @@ async function postVideoSettings(form) {
   await loadVideoSettings();
   try {
     const res = await fetch("/api/video/settings", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok) {
-      alert(data.message || "Settings update failed");
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      const msg = data.message || data.detail || "Settings update failed";
+      window.showAriaToast?.(msg, "err", 5000);
+      alert(msg);
+      return;
     }
+    window.showAriaToast?.("Video settings saved", "ok", 2000);
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Settings update failed", "err", 5000);
   } finally {
     videoSettingsBusy = false;
     loadVideoSettings();
@@ -278,8 +285,9 @@ async function loadVideoGallery() {
     grid.querySelectorAll(".video-trim-btn").forEach((btn) => {
       btn.addEventListener("click", () => trimVideoPrompt(btn.dataset.path));
     });
-  } catch (_) {
+  } catch (err) {
     grid.innerHTML = "<p class=\"muted\">Failed to load videos</p>";
+    window.showAriaToast?.(err?.message || "Failed to load videos", "err", 5000);
   }
 }
 
@@ -294,9 +302,12 @@ async function analyzeVideoFrame(path) {
   const res = await fetch("/api/video/analyze-frame", { method: "POST", body: form });
   const data = await res.json();
   if (!data.ok) {
-    alert(data.message || "Analysis failed");
+    const msg = data.message || "Analysis failed";
+    window.showAriaToast?.(msg, "err", 5000);
+    alert(msg);
     return;
   }
+  window.showAriaToast?.("Frame analysis ready", "ok", 2500);
   if (typeof window.jarvisSendToChat === "function") {
     window.jarvisSendToChat(`Frame analysis:\n\n${data.message}`);
   } else {
@@ -404,9 +415,10 @@ document.getElementById("videoEngineInstallAdBtn")?.addEventListener("click", as
         }
       }
     }, 5000);
-  } catch (_) {
+  } catch (err) {
     btn.disabled = false;
     btn.textContent = "Install AnimateDiff (~2 GB)";
+    window.showAriaToast?.(err?.message || "AnimateDiff install failed to start", "err", 5000);
   }
 });
 
@@ -419,7 +431,9 @@ document.getElementById("videoEngineInstallNsfwBtn")?.addEventListener("click", 
     const res = await fetch("/api/comfyui/install-nsfw", { method: "POST" });
     const data = await res.json();
     if (!data.ok) {
-      alert(data.message || "Install failed");
+      const msg = data.message || "Install failed";
+      window.showAriaToast?.(msg, "err", 5000);
+      alert(msg);
       btn.disabled = false;
       btn.textContent = "Install NSFW checkpoints";
       return;
@@ -437,9 +451,10 @@ document.getElementById("videoEngineInstallNsfwBtn")?.addEventListener("click", 
         loadVideoSettings();
       }
     }, 8000);
-  } catch (_) {
+  } catch (err) {
     btn.disabled = false;
     btn.textContent = "Install NSFW checkpoints";
+    window.showAriaToast?.(err?.message || "NSFW install failed to start", "err", 5000);
   }
 });
 
