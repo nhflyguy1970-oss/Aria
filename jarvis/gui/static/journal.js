@@ -575,7 +575,9 @@ async function editCalendarNote(month, dateStr, cell) {
     form.append("day", String(dayNum));
     form.append("note", input?.value.trim() || "");
     form.append("month", month);
-    await fetch("/api/journal/monthly/calendar-note", { method: "POST", body: form });
+    const out = await journalPost("/api/journal/monthly/calendar-note", { method: "POST", body: form });
+    if (!out.ok) return;
+    journalNotify("Day note saved", false);
     panel.remove();
     refreshBujo();
   });
@@ -1164,7 +1166,9 @@ async function loadCollections() {
     btn.onclick = async () => {
       const form = new FormData();
       form.append("preset_id", btn.dataset.id);
-      await fetch("/api/journal/collections/preset", { method: "POST", body: form });
+      const out = await journalPost("/api/journal/collections/preset", { method: "POST", body: form });
+      if (!out.ok) return;
+      journalNotify("Preset collection added", false);
       loadCollections();
     };
   });
@@ -1502,11 +1506,12 @@ async function loadKey() {
       const l = row.querySelector("[data-custom-label]")?.value?.trim();
       if (s) customs.push({ symbol: s, label: l });
     });
-    await fetch("/api/journal/key", {
+    const out = await journalPost("/api/journal/key", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ symbols: sym, description: document.getElementById("bujoKeyDesc")?.value, custom: customs }),
     });
+    if (!out.ok) return;
     journalNotify("Key saved", false);
     loadJournalKey();
     loadKey();
