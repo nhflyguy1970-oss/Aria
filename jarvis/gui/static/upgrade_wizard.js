@@ -122,8 +122,14 @@ function initUpgradeWizardModal() {
       const form = new FormData();
       form.append("task", task);
       const res = await fetch("/api/upgrade/propose", { method: "POST", body: form });
-      const data = await res.json();
-      if (logEl) logEl.textContent = data.message || (data.ok ? "Proposal ready." : "Failed.");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || data.error || `Propose failed (${res.status})`;
+        if (logEl) logEl.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      if (logEl) logEl.textContent = data.message || "Proposal ready.";
       (window.addMessage || (() => {}))("assistant", data.message || "Proposal ready.", {
         module: "coding",
         type: "upgrade_proposal",

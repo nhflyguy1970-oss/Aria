@@ -43,13 +43,17 @@ async function loadMemeGallery() {
         e.stopPropagation();
         const name = btn.dataset.name;
         if (!name || !confirm(`Delete ${name}?`)) return;
-        const delRes = await fetch(`/api/meme-gallery/${encodeURIComponent(name)}`, { method: "DELETE" });
-        const delData = await delRes.json();
-        if (delData.ok) {
+        try {
+          const delRes = await fetch(`/api/meme-gallery/${encodeURIComponent(name)}`, { method: "DELETE" });
+          const delData = await delRes.json().catch(() => ({}));
+          if (!delRes.ok || !delData.ok) {
+            window.showAriaToast?.(delData.message || `Delete failed (${delRes.status})`, "err", 5000);
+            return;
+          }
           window.showAriaToast?.("Meme deleted", "ok", 2500);
           loadMemeGallery();
-        } else {
-          window.showAriaToast?.(delData.message || "Delete failed", "err", 5000);
+        } catch (err) {
+          window.showAriaToast?.(err?.message || "Delete failed", "err", 5000);
         }
       });
     });

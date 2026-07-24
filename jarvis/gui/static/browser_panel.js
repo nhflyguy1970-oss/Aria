@@ -99,13 +99,15 @@
         }));
         if (!shot.ok && !shot.skipped) {
           if (out) out.textContent = shot.message || "Navigate ok — screenshot failed";
-        } else if (out) {
-          out.textContent = r.message || `Opened ${url}`;
+          window.showAriaToast?.(shot.message || "Opened, but screenshot failed", "warn", 4000);
+        } else {
+          if (out) out.textContent = r.message || `Opened ${url}`;
+          window.showAriaToast?.(r.message || `Opened ${url}`, "ok", 3000);
         }
-      } else if (out) {
-        out.textContent = r.message || (r.fallback ? "Opened in system browser" : `Opened ${url}`);
+      } else {
+        if (out) out.textContent = r.message || (r.fallback ? "Opened in system browser" : `Opened ${url}`);
+        window.showAriaToast?.(r.message || `Opened ${url}`, "ok", 3000);
       }
-      window.showAriaToast?.(r.message || `Opened ${url}`, "ok", 3000);
       await refreshBrowserPanel();
     } catch (e) {
       const msg = String(e.message || e);

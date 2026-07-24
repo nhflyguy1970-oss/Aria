@@ -43,13 +43,14 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || res.statusText);
       const html = renderToolRows(data.tools);
-      list.innerHTML = html || "<li class='muted'>No tool status</li>";
+      list.innerHTML = html || "<li class='muted'>No tool status. <button type='button' class='ghost-btn tiny tools-retry-btn'>Retry</button></li>";
     } catch (err) {
-      list.innerHTML = "<li class='muted'>Could not load tools</li>";
+      list.innerHTML = "<li class='muted'>Could not load tools. <button type='button' class='ghost-btn tiny tools-retry-btn'>Retry</button></li>";
       if (opts.toast) {
         window.showAriaToast?.(err?.message || "Could not load tools status", "err", 4000);
       }
     }
+    list.querySelector(".tools-retry-btn")?.addEventListener("click", () => refreshToolsSidebar({ toast: true }));
   }
 
   async function refreshBrainMode() {

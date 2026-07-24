@@ -134,7 +134,11 @@ window.initProjects = function initProjects() {
   $("projectsOpenDocumentsBtn")?.addEventListener("click", () => window.switchToView?.("documents"));
   $("projectsCreateBtn")?.addEventListener("click", async () => {
     const title = $("projectsTitleInput")?.value?.trim();
-    if (!title) return;
+    if (!title) {
+      window.showAriaToast?.("Enter a project title first", "warn", 3000);
+      $("projectsTitleInput")?.focus();
+      return;
+    }
     try {
       const created = await p2Fetch("/api/projects", {
         method: "POST",

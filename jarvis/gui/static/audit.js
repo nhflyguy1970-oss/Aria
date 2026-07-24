@@ -72,7 +72,7 @@
           const isInstall = item.install_key || /\/scripts\/install-/.test(item.fix || "");
           const fixLabel = isInstall ? "Install:" : "Fix:";
           const runBtn = item.install_key
-            ? ` <button type="button" class="ghost-btn tiny audit-run-install" data-install-key="${item.install_key}">Run install</button>`
+            ? ` <button type="button" class="ghost-btn tiny audit-run-install" data-install-key="${esc(item.install_key)}">Run install</button>`
             : "";
           fixHtml = `<div class="audit-fix"><span class="audit-fix-label">${fixLabel}</span> `
             + `<code class="audit-fix-cmd" title="Click to select">${esc(item.fix || "")}</code>`

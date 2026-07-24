@@ -202,7 +202,11 @@ async function saveVoiceSetting(patch) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
   });
-  return res.json().catch(() => ({}));
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.message || data.error || `Voice setting save failed (${res.status})`);
+  }
+  return data;
 }
 
 async function refreshVoiceUi() {
@@ -386,16 +390,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("duplexModeSelect")?.addEventListener("change", async (ev) => {
     const mode = ev.target.value;
-    await saveVoiceSetting({ duplex_mode: mode });
-    const duplex = await fetch("/api/voice/duplex").then((r) => r.json()).catch(() => ({}));
-    updateDuplexHint({ ...duplex, duplex_mode: mode });
-    showToast(duplex.help || `Duplex: ${mode}`);
+    try {
+      await saveVoiceSetting({ duplex_mode: mode });
+      const duplex = await fetch("/api/voice/duplex").then((r) => r.json()).catch(() => ({}));
+      updateDuplexHint({ ...duplex, duplex_mode: mode });
+      showToast(duplex.help || `Duplex: ${mode}`);
+    } catch (err) {
+      showToast(err?.message || "Duplex mode save failed", "err");
+    }
   });
 
   document.getElementById("sttBackendSelect")?.addEventListener("change", async (ev) => {
-    const res = await saveVoiceSetting({ stt_backend: ev.target.value });
-    if (res.message) showToast(res.message, "warn");
-    else showToast(`STT: ${res.stt_backend || ev.target.value}`);
+    try {
+      const res = await saveVoiceSetting({ stt_backend: ev.target.value });
+      if (res.message) showToast(res.message, "warn");
+      else showToast(`STT: ${res.stt_backend || ev.target.value}`);
+    } catch (err) {
+      showToast(err?.message || "STT backend save failed", "err");
+    }
     refreshVoiceUi();
   });
 
@@ -418,12 +430,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("audioStopBtn")?.addEventListener("click", async () => {
-    if (_cloudSessionId) {
-      await endCloudLiveSession();
-    } else {
-      await window.jarvisGeminiLive?.stop();
+    try {
+      if (_cloudSessionId) {
+        await endCloudLiveSession();
+      } else {
+        await window.jarvisGeminiLive?.stop();
+      }
+      const res = await fetch("/api/audio/stop", { method: "POST" });
+      if (!res.ok) throw new Error(`Stop failed (${res.status})`);
+    } catch (err) {
+      showToast(err?.message || "Could not stop audio", "err");
+    } finally {
+      setVoiceBarState("idle");
     }
-    await fetch("/api/audio/stop", { method: "POST" });
-    setVoiceBarState("idle");
   });
 });

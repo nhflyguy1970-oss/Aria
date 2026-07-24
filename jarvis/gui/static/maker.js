@@ -7,7 +7,7 @@
   async function engFetch(url, opts) {
     const res = await fetch(url, opts);
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.error || res.statusText);
+    if (!res.ok || data.ok === false) throw new Error(data.message || data.error || res.statusText || "Request failed");
     return data;
   }
 
@@ -118,7 +118,11 @@
 
   async function generateCad() {
     const prompt = $("cadPromptInput")?.value?.trim();
-    if (!prompt) return;
+    if (!prompt) {
+      window.showAriaToast?.("Describe the part to generate", "warn", 3000);
+      $("cadPromptInput")?.focus();
+      return;
+    }
     const log = $("cadGenLog");
     if (log) log.textContent = "Generating…";
     try {
@@ -218,9 +222,15 @@
     try {
       const data = await engFetch("/api/engineering/printers/discover", { method: "POST" });
       if (list) {
-        list.innerHTML = (data.printers || []).map((p) =>
+        const found = (data.printers || []).map((p) =>
           `<li><button type="button" class="ghost-btn small printer-pick-btn" data-host="${esc(p.host)}">${esc(p.name)} — ${esc(p.host)}</button></li>`
-        ).join("") || "<li class='muted'>None found on LAN</li>";
+        ).join("");
+        list.innerHTML = found
+          || "<li class='muted'>None found on LAN. <button type='button' class='ghost-btn tiny' id='printerEmptyManualBtn'>Enter host manually</button></li>";
+        list.querySelector("#printerEmptyManualBtn")?.addEventListener("click", () => {
+          $("printerHostInput")?.focus();
+          window.showAriaToast?.("Type your printer's IP or hostname, then Add", "info", 3500);
+        });
         list.querySelectorAll(".printer-pick-btn").forEach((btn) => {
           btn.addEventListener("click", () => {
             if ($("printerHostInput")) $("printerHostInput").value = btn.dataset.host;
