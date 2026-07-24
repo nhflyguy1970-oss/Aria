@@ -229,7 +229,8 @@ def test_command_palette_is_wired():
     assert "window.openCalendarDay" in cal
     assert "planner_tasks" in Path("jarvis/calendar_tab.py").read_text(encoding="utf-8")
     assert "async: true" in app
-    assert "aria_theme" in app
+    assert "aria_theme" in app or "aria_theme" in Path("jarvis/gui/static/theme.js").read_text(encoding="utf-8")
+    assert "theme.js" in html
     assert "window.loadGallery" in app or "window.loadGallery" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
     assert Path("jarvis/gui/static/gallery_view.js").is_file()
     assert Path("jarvis/gui/static/memory_browser.js").is_file()
