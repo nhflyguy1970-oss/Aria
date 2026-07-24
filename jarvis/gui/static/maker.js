@@ -17,7 +17,7 @@
     return d.innerHTML;
   }
 
-  async function refreshCadStatus() {
+  async function refreshCadStatus(opts = {}) {
     const el = $("cadStatusLine");
     if (!el) return;
     try {
@@ -31,7 +31,9 @@
       el.textContent = `CAD: ${parts.join(" · ") || "not installed"}${slicers ? ` · Slicer: ${slicers}` : ""}`;
     } catch (e) {
       el.textContent = `CAD status: ${e.message}`;
-      window.showAriaToast?.(e.message || "CAD status unavailable", "err", 4000);
+      if (opts.toastOnError) {
+        window.showAriaToast?.(e.message || "CAD status unavailable", "err", 4000);
+      }
     }
   }
 
@@ -305,7 +307,7 @@
       return;
     }
     if (root) root.dataset.bound = "1";
-    $("cadRefreshBtn")?.addEventListener("click", () => { refreshCadStatus(); loadModels(); });
+    $("cadRefreshBtn")?.addEventListener("click", () => { refreshCadStatus({ toastOnError: true }); loadModels(); });
     $("cadGenerateBtn")?.addEventListener("click", generateCad);
     $("cadHelloCubeBtn")?.addEventListener("click", helloCube);
     $("cadSliceBtn")?.addEventListener("click", sliceSelected);

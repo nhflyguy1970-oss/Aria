@@ -346,6 +346,8 @@ def test_command_palette_is_wired():
     assert "showAriaToast" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "Journal exported" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "prefers-reduced-motion" in css
+    assert "button:focus-visible" in css
+    assert "toastOnError" in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
     mt = Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "applyModuleFilter" in mt and "MODULE_NAV" in mt
     assert 'target === "workstation"' in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")

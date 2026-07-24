@@ -4301,6 +4301,19 @@ body.light-theme .service-row--action:hover { background: rgba(0, 0, 0, 0.05); }
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+
+/* Consistent keyboard focus for interactive controls */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible,
+.view-tab:focus-visible,
+.suggestion-chip:focus-visible {
+  outline: 2px solid var(--accent, #d4a054);
+  outline-offset: 2px;
+}
 .command-palette-modal {
   position: fixed;
   inset: 0;
