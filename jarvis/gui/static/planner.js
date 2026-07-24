@@ -145,6 +145,12 @@ function stopDashboardClock() {
 function startDashboardClock() {
   stopDashboardClock();
   const tick = () => {
+    if (document.hidden) return;
+    const dash = document.getElementById("dashboardView");
+    if (dash?.classList.contains("hidden")) {
+      stopDashboardClock();
+      return;
+    }
     const clock = document.getElementById("dashLiveClock");
     const dateEl = $("dashboardDate");
     const now = new Date();
@@ -476,6 +482,7 @@ window.initPlanner = function initPlanner() {
   if (root) root.dataset.bound = "1";
   $("plannerOpenCalendarBtn")?.addEventListener("click", () => window.switchToView?.("calendar"));
   $("plannerOpenJournalBtn")?.addEventListener("click", () => window.switchToView?.("journal"));
+  $("plannerOpenDocumentsBtn")?.addEventListener("click", () => window.switchToView?.("documents"));
   $("plannerTimerBtn")?.addEventListener("click", async () => {
     const duration = $("plannerTimerInput")?.value?.trim();
     if (!duration) return;
@@ -538,6 +545,8 @@ window.initPlanner = function initPlanner() {
   });
 };
 
+window.stopDashboardClock = stopDashboardClock;
+
 window.initDashboard = function initDashboard() {
   loadDashboard();
   loadChecklist();
@@ -548,6 +557,7 @@ window.initDashboard = function initDashboard() {
     $("dashboardOpenMcBtn")?.addEventListener("click", () => window.switchToView?.("workstation"));
     $("dashboardOpenPlannerBtn")?.addEventListener("click", () => window.switchToView?.("planner"));
     $("dashboardOpenJournalBtn")?.addEventListener("click", () => window.switchToView?.("journal"));
+    $("dashboardOpenCalendarBtn")?.addEventListener("click", () => window.switchToView?.("calendar"));
   }
 };
 

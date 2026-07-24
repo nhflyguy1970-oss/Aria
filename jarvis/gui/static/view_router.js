@@ -16,6 +16,7 @@
       document.getElementById(id)?.classList.toggle("hidden", id !== targetId);
     });
     if (view === "dashboard" && window.initDashboard) window.initDashboard();
+    else if (view !== "dashboard") window.stopDashboardClock?.();
     if (view === "workstation" && window.initWorkstation) window.initWorkstation();
     if (view === "planner" && window.initPlanner) window.initPlanner();
     if (view === "calendar" && window.initCalendar) window.initCalendar();

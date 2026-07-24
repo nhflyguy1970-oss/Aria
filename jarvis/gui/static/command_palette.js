@@ -226,6 +226,16 @@
         run: () => $("voiceMuteBtn")?.click(),
       },
       {
+        id: "act:stop-speaking",
+        label: "Stop speaking",
+        group: "Actions",
+        keywords: "tts stop audio speak silence interrupt",
+        run: () => {
+          if (typeof window.jarvisStopSpeaking === "function") window.jarvisStopSpeaking();
+          else $("audioStopBtn")?.click();
+        },
+      },
+      {
         id: "act:lock-security",
         label: "Lock Aria (PIN)",
         group: "System",

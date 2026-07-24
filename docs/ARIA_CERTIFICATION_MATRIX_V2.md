@@ -31,12 +31,12 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.
 
-## Wave resume (2026-07-24 late+)
-- FIXED & CERTIFIED: Calendar ICS single source of truth; calendar ICS/add-entry toasts; HA unreachable copy; flytying search `aria-label`; shortcuts help (Ask Aria + world-state); `scripts/aria_ui_soak.py` (30s smoke: 19 rounds, 0 failures, avg 13ms); browser HA Test offline path surfaces Connection refused; multi-res 1280×800: no document overflow; 84-switch soak 0 errors.
-- INTENTIONALLY DEFERRED: multi-hour soak (harness shipped; 15m run in progress); multi-monitor DPI/dock (no multi-display rig — viewport matrix used as proxy); HA live interactive (`connected:false`, connection refused to :8123); Comfy live image gen (settings/link OK, GPU jobs env-dependent); phone-width layouts (desktop product).
+## Wave resume (2026-07-24 evening)
+- FIXED & CERTIFIED: ICS single source of truth; journal save gated on success; audio settings toasts; palette mute/lock/pomodoro (deduped meme); planner timer/alarm + wellness empty CTAs; Journal↔Audio / Memory↔Documents / Calendar↔Documents deep-links; BuJo icon aria-labels; HA unreachable copy; `aria_ui_soak.py` harness (30s: 0 fails); HA Test offline path; 1280×800 no overflow; Ask Aria palette.
+- INTENTIONALLY DEFERRED: multi-hour soak (15m in progress); multi-monitor DPI/dock; HA live (`:8123` refused); Comfy live gen; phone-width layouts.
 - Verdict: **NO**
 
-**Next priorities:** complete multi-hour soak log; HA/Comfy when services up; multi-monitor when hardware available; residual matrix polish.
+**Next priorities:** finish soak log; HA/Comfy when up; multi-monitor; residual matrix.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.

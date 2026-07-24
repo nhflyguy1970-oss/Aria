@@ -265,9 +265,16 @@ def test_command_palette_is_wired():
     assert "act:checklist" in js
     assert "act:meme-studio" in js
     assert "act:mute-voice" in js
+    assert "act:stop-speaking" in js
     assert "act:lock-security" in js
     assert "act:pomodoro" in js
     assert "act:open-meme" not in js
+    assert "journalOpenDocumentsBtn" in html
+    assert "documentsOpenJournalBtn" in html
+    assert "plannerOpenDocumentsBtn" in html
+    assert "dashboardOpenCalendarBtn" in html
+    assert "stopDashboardClock" in Path("jarvis/gui/static/view_router.js").read_text(encoding="utf-8")
+    assert "audit-empty-run" in html
     assert "act:open-projects" in js
     assert "act:debug-bundle" in js
     assert "act:browser-task" in js

@@ -128,6 +128,7 @@
       if (e.key === "Enter") searchDocumentsLibrary();
     });
     $("documentsOpenMemoryBtn")?.addEventListener("click", () => window.switchToView?.("memory"));
+    $("documentsOpenJournalBtn")?.addEventListener("click", () => window.switchToView?.("journal"));
     $("documentsOpenCalendarBtn")?.addEventListener("click", () => window.switchToView?.("calendar"));
     $("documentsOpenChatBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
     $("documentsOpenProjectsBtn")?.addEventListener("click", () => window.switchToView?.("projects"));

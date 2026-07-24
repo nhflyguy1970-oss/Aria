@@ -325,7 +325,7 @@ function renderBulletItem(b, editable, showThread = false) {
       ${links ? `<span class="bujo-links">${links}</span>` : ""}
       ${editable ? `<span class="bujo-actions">
         ${openTask ? `<button type="button" class="bujo-act" data-act="done" data-id="${b.id}" title="Complete" aria-label="Mark complete">×</button>` : ""}
-        ${openTask ? `<button type="button" class="bujo-act" data-act="migrate" data-id="${b.id}" title="Migrate to tomorrow">›</button>` : ""}
+        ${openTask ? `<button type="button" class="bujo-act" data-act="migrate" data-id="${b.id}" title="Migrate to tomorrow" aria-label="Migrate to tomorrow">›</button>` : ""}
         ${renderBulletMenu(b, showThread)}
       </span>` : ""}
       ${childHtml}
@@ -648,8 +648,9 @@ async function loadDaily() {
   document.getElementById("bujoMigrateOpen")?.addEventListener("click", async () => {
     const form = new FormData();
     form.append("from_day", day);
-    const res = await fetch("/api/journal/migrate-daily", { method: "POST", body: form });
-    const r = await res.json();
+    const out = await journalPost("/api/journal/migrate-daily", { method: "POST", body: form });
+    if (!out.ok) return;
+    const r = out.body || {};
     journalNotify(`Moved ${r.migrated || 0} open tasks to ${r.to_day}`, false);
     refreshBujo();
   });
@@ -804,8 +805,9 @@ async function loadMonthly() {
     form.append("from_month", month);
     form.append("to_month", nm);
     form.append("dest", dest);
-    const res = await fetch("/api/journal/migrate-month", { method: "POST", body: form });
-    const r = await res.json();
+    const out = await journalPost("/api/journal/migrate-month", { method: "POST", body: form });
+    if (!out.ok) return;
+    const r = out.body || {};
     journalNotify(`Migrated ${r.migrated || 0} open tasks to ${nm}`, false);
     refreshBujo();
   });
@@ -988,8 +990,9 @@ async function loadFuture() {
     const form = new FormData();
     form.append("future_month", fm);
     form.append("monthly_month", mm);
-    const res = await fetch("/api/journal/future/transfer", { method: "POST", body: form });
-    const r = await res.json();
+    const out = await journalPost("/api/journal/future/transfer", { method: "POST", body: form });
+    if (!out.ok) return;
+    const r = out.body || {};
     window.showAriaToast?.(`Transferred ${r.migrated || 0} open task(s) to ${formatMonthLabel(mm)}`, "ok", 4000);
     refreshBujo();
   });
@@ -1021,9 +1024,9 @@ async function loadIndex() {
       <button type="button" id="indexAddBtn" class="apply-btn small">Add manual</button>
     </div>`;
   document.getElementById("indexRebuildBtn")?.addEventListener("click", async () => {
-    const res = await fetch("/api/journal/index/rebuild", { method: "POST" });
-    const r = await res.json();
-    const stats = r.result || {};
+    const out = await journalPost("/api/journal/index/rebuild", { method: "POST" });
+    if (!out.ok) return;
+    const stats = out.body?.result || {};
     window.showAriaToast?.(`Auto-index rebuilt: ${stats.auto || 0} auto, ${stats.manual || 0} manual (${stats.total || 0} total)`, "ok", 4500);
     loadIndex();
   });
@@ -1036,7 +1039,8 @@ async function loadIndex() {
     const form = new FormData();
     form.append("topic", topic);
     form.append("pages", document.getElementById("indexPages")?.value || "");
-    await fetch("/api/journal/index", { method: "POST", body: form });
+    const out = await journalPost("/api/journal/index", { method: "POST", body: form });
+    if (!out.ok) return;
     journalNotify("Index entry added", false);
     loadIndex();
   });
@@ -1045,7 +1049,8 @@ async function loadIndex() {
   });
   bujoContent.querySelectorAll("[data-act=idx-del]").forEach((btn) => {
     btn.onclick = async () => {
-      await fetch(`/api/journal/index/${btn.dataset.id}`, { method: "DELETE" });
+      const out = await journalPost(`/api/journal/index/${btn.dataset.id}`, { method: "DELETE" });
+      if (!out.ok) return;
       loadIndex();
     };
   });
@@ -1776,6 +1781,10 @@ document.getElementById("journalOpenPlannerBtn")?.addEventListener("click", () =
 
 document.getElementById("journalOpenMemoryBtn")?.addEventListener("click", () => {
   window.switchToView?.("memory");
+});
+
+document.getElementById("journalOpenDocumentsBtn")?.addEventListener("click", () => {
+  window.switchToView?.("documents");
 });
 
 document.getElementById("journalOpenAudioBtn")?.addEventListener("click", () => {
