@@ -51,6 +51,7 @@ Expand this matrix as each subsystem completes deep certification.
 - **NO** — resume: documents.js extract, long-duration/multi-monitor, Comfy/voice soaks, per-control matrix
 
 ## Change log
+- 2026-07-24: Fix lastEditorFile window binding (app boot); startup_overlay + models/uncensored extracts.
 - 2026-07-24: models_panel extract; modelsToggle wired.
 - 2026-07-24: coding_panel + media_lightbox extracts; palette Cloud Live/git/models/LSP; branch/personality/uncensored/face/audio cancel feedback.
 

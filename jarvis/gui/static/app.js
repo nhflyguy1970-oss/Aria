@@ -2557,7 +2557,6 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
 window.sendMessage = sendMessage;
 window.loadHealth = loadHealth;
 window.loadVisionSettings = loadVisionSettings;
-window.loadEditorContext = loadEditorContext;
 Object.defineProperty(window, "lastEditorFile", {
   get() { return _lastEditorFile; },
   set(v) { _lastEditorFile = v; },
@@ -2622,6 +2621,8 @@ async function loadEditorContext() {
     return null;
   }
 }
+
+window.loadEditorContext = loadEditorContext;
 
 let editorContextPollTimer = null;
 function scheduleEditorContextPoll() {
@@ -3079,9 +3080,7 @@ setInterval(() => {
 }, isNativeApp() ? 5000 : 2500);
 
 // Define before startup_overlay.js invokes waitForServices → ariaPostStartup
-window.ariaBootMarker = "app-reached-post-startup";
 window.ariaPostStartup = function ariaPostStartup() {
-  window.ariaBootMarker = "post-startup-invoked";
   try { window.initAriaModalChrome?.(); } catch (_) {}
   loadSuggestions();
   loadHealth().then(async () => {
