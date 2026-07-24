@@ -58,12 +58,13 @@ async function maybeShowMorningBriefing() {
 }
 
 async function reloadBranchMessages() {
-  if (!document.getElementById("messages")) return;
-  const _messagesEl = document.getElementById("messages"); if (_messagesEl) _messagesEl.innerHTML = "";
+  const messages = document.getElementById("messages");
+  if (!messages) return;
   try {
     const res = await fetch(`/api/branches/${encodeURIComponent(window.activeBranchId)}/messages`);
-    if (!res.ok) return;
+    if (!res.ok) throw new Error(`Messages load failed (${res.status})`);
     const data = await res.json();
+    messages.innerHTML = "";
     for (const m of data.messages || []) {
       window.addMessage?.(m.role === "user" ? "user" : "assistant", m.content || "");
     }
@@ -77,12 +78,16 @@ async function reloadBranchMessages() {
         );
       }
     }
+    return true;
   } catch (err) {
     window.showAriaToast?.(err.message || "Could not load branch messages", "err", 5000);
+    return false;
   }
 }
 
 branchSelect?.addEventListener("change", async () => {
+  const previousBranchId = window.activeBranchId;
+  let serverSwitched = false;
   window.activeBranchId = branchSelect.value;
   const form = new FormData();
   form.append("branch_id", window.activeBranchId);
@@ -90,9 +95,18 @@ branchSelect?.addEventListener("change", async () => {
     const res = await fetch("/api/branches/switch", { method: "POST", body: form });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Switch failed (${res.status})`);
-    await reloadBranchMessages();
+    serverSwitched = true;
+    const loaded = await reloadBranchMessages();
+    if (!loaded) throw new Error("Branch switched, but its messages could not be loaded");
     window.showAriaToast?.(`Switched to ${branchSelect.selectedOptions?.[0]?.textContent || window.activeBranchId}`, "ok", 2500);
   } catch (err) {
+    if (!serverSwitched) {
+      window.activeBranchId = previousBranchId;
+      branchSelect.value = previousBranchId;
+    } else {
+      const status = document.getElementById("statusText");
+      if (status) status.textContent = "Branch switched · messages unavailable";
+    }
     window.showAriaToast?.(err.message || "Could not switch branch", "err", 5000);
   }
 });
@@ -120,7 +134,7 @@ async function openBranchTrimModal() {
   if (!branchTrimModal || !branchTrimList) return;
   try {
     const res = await fetch("/api/branches");
-    if (!res.ok) return;
+    if (!res.ok) throw new Error(`Branches load failed (${res.status})`);
     const data = await res.json();
     const branches = (data.branches || []).filter((b) => b.id !== "main");
     if (!branches.length) {

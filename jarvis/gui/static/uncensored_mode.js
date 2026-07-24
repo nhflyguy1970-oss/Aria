@@ -132,15 +132,24 @@ async function restoreUncensoredSession() {
       }
     }
     const authRes = await fetch(`/api/uncensored/auth?session_token=${encodeURIComponent(token)}`);
-    if (!authRes.ok) return;
+    if (!authRes.ok) {
+      sessionStorage.removeItem(UNCENSORED_SESSION_KEY);
+      throw new Error(`Session validation failed (${authRes.status})`);
+    }
     const auth = await authRes.json();
-    if (!auth.session_valid) return;
+    if (!auth.session_valid) {
+      sessionStorage.removeItem(UNCENSORED_SESSION_KEY);
+      window.showAriaToast?.("Uncensored session expired; sign in again to restore it", "info", 4000);
+      return;
+    }
     const form = new FormData();
     form.append("uncensored", "true");
     form.append("session_token", token);
     const res = await fetch("/api/mode", { method: "POST", body: form });
     const data = await res.json();
-    if (!res.ok || !data.uncensored) return;
+    if (!res.ok || !data.uncensored) {
+      throw new Error(data.message || data.detail || `Mode restore failed (${res.status})`);
+    }
     if (data.session_token) sessionStorage.setItem(UNCENSORED_SESSION_KEY, data.session_token);
     uncensoredToggle.checked = true;
     document.body.classList.add("uncensored-mode");
