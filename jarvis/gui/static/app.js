@@ -22,7 +22,7 @@
       && path.startsWith("/api/")
       && !["/api/health", "/api/live", "/api/lan"].includes(path)
     ) {
-      showApiKeyModal("Invalid or missing API key.");
+      window.showApiKeyModal?.("Invalid or missing API key.");
     }
     return res;
   };
@@ -41,23 +41,19 @@ function apiAuthUrl(url) {
 }
 window.apiAuthUrl = apiAuthUrl;
 
-let jarvisLanIps = [];
-let jarvisApiKeyRequired = false;
-let jarvisLocalhostKeyExempt = true;
-
-function isLoopbackHost(host) {
+function isSameMachineHost() {
+  if (typeof window.isSameMachineHost === "function" && window.isSameMachineHost !== isSameMachineHost) {
+    return window.isSameMachineHost();
+  }
+  const host = location.hostname;
   return host === "localhost" || host === "127.0.0.1" || host === "[::1]";
 }
 
-function isSameMachineHost() {
-  const host = location.hostname;
-  return isLoopbackHost(host) || jarvisLanIps.includes(host);
-}
-
 function mediaNeedsApiKey() {
-  if (!jarvisApiKeyRequired) return false;
-  if (jarvisLocalhostKeyExempt && isSameMachineHost()) return false;
-  return true;
+  if (typeof window.mediaNeedsApiKey === "function" && window.mediaNeedsApiKey !== mediaNeedsApiKey) {
+    return window.mediaNeedsApiKey();
+  }
+  return false;
 }
 
 async function fetchMediaBlobUrl(url) {
@@ -93,8 +89,7 @@ async function resolveVideoPlaybackUrl(pathOrName) {
   return { ok: true, url, direct: true, needsKey: false };
 }
 window.resolveVideoPlaybackUrl = resolveVideoPlaybackUrl;
-window.mediaNeedsApiKey = mediaNeedsApiKey;
-window.isSameMachineHost = isSameMachineHost;
+// mediaNeedsApiKey / isSameMachineHost live on window via lan_access.js
 
 const MEDIA_LOAD_ERROR_HINT = "Could not play this clip in the app — try Video gallery or open the file from data/generated_videos/";
 
@@ -113,139 +108,7 @@ function attachMediaLoadError(el, kind = "media") {
   });
 }
 
-function showApiKeyModal(message) {
-  const modal = document.getElementById("apiKeyModal");
-  const err = document.getElementById("apiKeyError");
-  if (!modal) return;
-  if (err) {
-    err.textContent = message || "";
-    err.classList.toggle("hidden", !message);
-  }
-  modal.classList.remove("hidden");
-  document.getElementById("apiKeyInput")?.focus();
-}
-
-function hideApiKeyModal() {
-  document.getElementById("apiKeyModal")?.classList.add("hidden");
-}
-
-async function verifyApiKey(key) {
-  const headers = { "X-API-Key": key };
-  const res = await fetch("/api/services", { headers });
-  return res.ok;
-}
-
-function initApiKeyModal() {
-  const modal = document.getElementById("apiKeyModal");
-  const saveBtn = document.getElementById("apiKeySaveBtn");
-  const cancelBtn = document.getElementById("apiKeyCancelBtn");
-  const input = document.getElementById("apiKeyInput");
-  const err = document.getElementById("apiKeyError");
-  if (!modal || !saveBtn) return;
-
-  saveBtn.addEventListener("click", async () => {
-    const key = input?.value?.trim();
-    if (!key) {
-      if (err) {
-        err.textContent = "Enter the API key.";
-        err.classList.remove("hidden");
-      }
-      return;
-    }
-    sessionStorage.setItem("jarvis_api_key", key);
-    const ok = await verifyApiKey(key);
-    if (!ok) {
-      sessionStorage.removeItem("jarvis_api_key");
-      if (err) {
-        err.textContent = "That key was rejected. Check JARVIS_API_KEY on the PC.";
-        err.classList.remove("hidden");
-      }
-      return;
-    }
-    hideApiKeyModal();
-    refreshLanPanel();
-    window.showAriaToast?.("API key saved — reloading", "ok", 2500);
-    location.reload();
-  });
-  cancelBtn?.addEventListener("click", hideApiKeyModal);
-}
-
-let lanPrimaryUrl = "";
-
-async function refreshLanPanel() {
-  const line = document.getElementById("lanStatusLine");
-  const list = document.getElementById("lanUrlList");
-  const copyBtn = document.getElementById("lanCopyUrlBtn");
-  if (!line) return;
-  try {
-    const res = await fetch("/api/lan");
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.detail || `LAN status failed (${res.status})`);
-    jarvisLanIps = data.lan_ips || [];
-    jarvisApiKeyRequired = Boolean(data.api_key_required);
-    jarvisLocalhostKeyExempt = data.api_key_localhost_exempt !== false;
-    if (!data.lan_enabled) {
-      line.textContent = "Local only — run ./scripts/enable-lan.sh on the PC to allow LAN.";
-      if (list) list.innerHTML = "";
-      copyBtn?.classList.add("hidden");
-      return;
-    }
-    const urls = data.connect_urls || [];
-    lanPrimaryUrl = urls[0] || data.local_url || "";
-    line.textContent = data.api_key_required
-      ? "LAN on — API key required on other devices (not on this PC via 127.0.0.1)."
-      : "LAN on — set JARVIS_API_KEY before remote use.";
-    if (list) {
-      list.innerHTML = urls.length
-        ? urls.map((u) => `<code class="lan-url">${escapeHtml(u)}</code>`).join("")
-        : `<span class="muted">No LAN IP detected — use PC IP manually.</span>`;
-    }
-    copyBtn?.classList.toggle("hidden", !lanPrimaryUrl);
-  } catch (err) {
-    line.textContent = err.message || "LAN status unavailable.";
-    window.showAriaToast?.(err.message || "LAN status unavailable", "err", 4000);
-  }
-}
-
-function initLanPanel() {
-  document.getElementById("lanRefreshBtn")?.addEventListener("click", refreshLanPanel);
-  document.getElementById("lanCopyUrlBtn")?.addEventListener("click", async () => {
-    if (!lanPrimaryUrl) return;
-    try {
-      await navigator.clipboard.writeText(lanPrimaryUrl);
-      const st = document.getElementById("statusText");
-      if (st) st.textContent = "LAN URL copied";
-      window.showAriaToast?.("LAN URL copied", "ok", 2500);
-    } catch (_) {
-      prompt("Copy this URL:", lanPrimaryUrl);
-    }
-  });
-  refreshLanPanel();
-}
-
-async function initLanAccessGate() {
-  try {
-    const res = await fetch("/api/live");
-    const data = await res.json();
-    jarvisApiKeyRequired = Boolean(data.api_key_required);
-    jarvisLocalhostKeyExempt = data.api_key_localhost_exempt !== false;
-    try {
-      const lanRes = await fetch("/api/lan");
-      if (lanRes.ok) {
-        const lanData = await lanRes.json();
-        jarvisLanIps = lanData.lan_ips || [];
-      }
-    } catch (_) {}
-    const needsKey = mediaNeedsApiKey();
-    if (needsKey && !getStoredApiKey()) {
-      showApiKeyModal("");
-    }
-  } catch (_) {}
-}
-
-initApiKeyModal();
-initLanPanel();
-initLanAccessGate();
+// LAN / API key modal → lan_access.js (window.showApiKeyModal, window.mediaNeedsApiKey)
 
 // initHaPanel called after statusText is defined below
 const messagesEl = document.getElementById("messages");
@@ -722,7 +585,7 @@ async function appendAuthenticatedVideo(container, videoPath, videoName) {
     const warn = document.createElement("p");
     warn.className = "media-load-warn warn small";
     warn.innerHTML = 'Video needs your API key — <button type="button" class="ghost-btn small media-key-btn">Enter API key</button>';
-    warn.querySelector(".media-key-btn")?.addEventListener("click", () => showApiKeyModal(""));
+    warn.querySelector(".media-key-btn")?.addEventListener("click", () => window.showApiKeyModal?.(""));
     fig.appendChild(warn);
     return;
   }
@@ -2478,6 +2341,7 @@ document.getElementById("webcamBtn")?.addEventListener("click", async () => {
     }, "image/jpeg", 0.92);
   } catch (e) {
     showError(`Webcam unavailable: ${e.message || e}`);
+    window.showAriaToast?.(`Webcam unavailable: ${e.message || e}`, "err", 5000);
   }
 });
 
@@ -2538,7 +2402,13 @@ if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
     micBtn.classList.remove("listening");
     sendMessage(transcript);
   };
-  recognition.onerror = () => micBtn.classList.remove("listening");
+  recognition.onerror = (ev) => {
+    micBtn.classList.remove("listening");
+    const err = ev?.error || "mic error";
+    if (err !== "aborted" && err !== "no-speech") {
+      window.showAriaToast?.(`Mic: ${err}`, "err", 4000);
+    }
+  };
   recognition.onend = () => micBtn.classList.remove("listening");
 
   if (useBrowserMicStt()) {
