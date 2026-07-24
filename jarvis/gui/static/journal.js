@@ -401,11 +401,20 @@ async function postCollection(name, content, bulletType) {
 function bindWellnessExtras(day) {
   bujoContent?.querySelectorAll(".bujo-mood-btn").forEach((btn) => {
     btn.onclick = async () => {
-      const form = new FormData();
-      form.append("day", day);
-      form.append("mood", btn.dataset.mood);
-      await fetch("/api/journal/wellness", { method: "POST", body: form });
-      refreshBujo();
+      try {
+        const form = new FormData();
+        form.append("day", day);
+        form.append("mood", btn.dataset.mood);
+        const res = await fetch("/api/journal/wellness", { method: "POST", body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) {
+          journalNotify(data.message || data.error || `Mood save failed (${res.status})`);
+          return;
+        }
+        refreshBujo();
+      } catch (err) {
+        journalNotify(err?.message || "Mood save failed");
+      }
     };
   });
   document.getElementById("bujoGratitudeBtn")?.addEventListener("click", async () => {
@@ -413,15 +422,25 @@ function bindWellnessExtras(day) {
     const suffix = input?.value.trim();
     if (!suffix) return;
     const text = GRATITUDE_PREFIX + suffix.replace(/^i am grateful for\s+/i, "");
-    const form = new FormData();
-    form.append("day", day);
-    form.append("text", text);
-    await fetch("/api/journal/gratitude", { method: "POST", body: form });
-    if (input) {
-      input.value = "";
-      input.focus();
+    try {
+      const form = new FormData();
+      form.append("day", day);
+      form.append("text", text);
+      const res = await fetch("/api/journal/gratitude", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        journalNotify(data.message || data.error || `Gratitude save failed (${res.status})`);
+        return;
+      }
+      if (input) {
+        input.value = "";
+        input.focus();
+      }
+      journalNotify("Gratitude added", false);
+      refreshBujo();
+    } catch (err) {
+      journalNotify(err?.message || "Gratitude save failed");
     }
-    refreshBujo();
   });
   document.getElementById("bujoGratitudeInput")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") document.getElementById("bujoGratitudeBtn")?.click();

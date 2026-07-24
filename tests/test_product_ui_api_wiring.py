@@ -517,6 +517,8 @@ def test_command_palette_is_wired():
     assert "codingEmptyChatBtn" in Path("jarvis/gui/static/coding_panel.js").read_text(encoding="utf-8")
     assert "jobsEmptyChatBtn" in Path("jarvis/gui/static/modules/jobs.mjs").read_text(encoding="utf-8")
     assert "promptHistoryEmptyBtn" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
+    assert "Record failed" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
+    assert "Gratitude added" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "panel.focus" in Path("jarvis/gui/static/view_router.js").read_text(encoding="utf-8")
     assert "flyEmptySeasonalSearchBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert 'modal.dataset.retake === "1"' in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")

@@ -737,40 +737,72 @@ async function loadAudioPanel() {
     statusEl.textContent = "Recording…";
     setAudioBusy(true);
     playSpeakersBtn?.classList.add("hidden");
-    const form = new FormData();
-    form.append("duration", sec);
-    form.append("source", selectedInputSource());
-    const res = await fetch("/api/audio/record", { method: "POST", body: form });
-    await finishRecording(await res.json(), false);
-    setAudioBusy(false);
+    try {
+      const form = new FormData();
+      form.append("duration", sec);
+      form.append("source", selectedInputSource());
+      const res = await fetch("/api/audio/record", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        audioStatus(statusEl, data.message || data.error || `Record failed (${res.status})`, "err");
+        return;
+      }
+      await finishRecording(data, false);
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "Record failed", "err");
+    } finally {
+      setAudioBusy(false);
+    }
   });
 
   document.getElementById("audioRecordTranscribeBtn")?.addEventListener("click", async () => {
     const sec = document.getElementById("audioRecordSec")?.value || "5";
     statusEl.textContent = "Recording + transcribing…";
     playSpeakersBtn?.classList.add("hidden");
-    const form = new FormData();
-    form.append("duration", sec);
-    form.append("source", selectedInputSource());
-    form.append("model", selectedWhisperModel());
-    form.append("language", document.getElementById("audioWhisperLang")?.value || "en");
     setAudioBusy(true);
-    const res = await fetch("/api/audio/record-transcribe", { method: "POST", body: form });
-    await finishRecording(await res.json(), true);
-    setAudioBusy(false);
+    try {
+      const form = new FormData();
+      form.append("duration", sec);
+      form.append("source", selectedInputSource());
+      form.append("model", selectedWhisperModel());
+      form.append("language", document.getElementById("audioWhisperLang")?.value || "en");
+      const res = await fetch("/api/audio/record-transcribe", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        audioStatus(statusEl, data.message || data.error || `Record+transcribe failed (${res.status})`, "err");
+        return;
+      }
+      await finishRecording(data, true);
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "Record+transcribe failed", "err");
+    } finally {
+      setAudioBusy(false);
+    }
   });
 
   async function runVad(transcribe) {
     statusEl.textContent = transcribe ? "VAD recording + transcribing…" : "VAD recording…";
     playSpeakersBtn?.classList.add("hidden");
-    const form = new FormData();
-    form.append("max_duration", document.getElementById("audioVadMax")?.value || "30");
-    form.append("min_silence", document.getElementById("audioVadSilence")?.value || "0.8");
-    form.append("source", selectedInputSource());
-    form.append("transcribe", transcribe ? "1" : "0");
-    form.append("model", selectedWhisperModel());
-    const res = await fetch("/api/audio/record-vad", { method: "POST", body: form });
-    await finishRecording(await res.json(), transcribe);
+    setAudioBusy(true);
+    try {
+      const form = new FormData();
+      form.append("max_duration", document.getElementById("audioVadMax")?.value || "30");
+      form.append("min_silence", document.getElementById("audioVadSilence")?.value || "0.8");
+      form.append("source", selectedInputSource());
+      form.append("transcribe", transcribe ? "1" : "0");
+      form.append("model", selectedWhisperModel());
+      const res = await fetch("/api/audio/record-vad", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        audioStatus(statusEl, data.message || data.error || `VAD failed (${res.status})`, "err");
+        return;
+      }
+      await finishRecording(data, transcribe);
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "VAD recording failed", "err");
+    } finally {
+      setAudioBusy(false);
+    }
   }
 
   document.getElementById("audioVadBtn")?.addEventListener("click", () => runVad(false));
@@ -782,17 +814,23 @@ async function loadAudioPanel() {
     pttActive = true;
     pttBtn?.classList.add("active");
     statusEl.textContent = "Recording (hold)…";
-    const form = new FormData();
-    form.append("source", selectedInputSource());
-    const res = await fetch("/api/audio/record/ptt/start", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "PTT start failed", "err");
+    try {
+      const form = new FormData();
+      form.append("source", selectedInputSource());
+      const res = await fetch("/api/audio/record/ptt/start", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        audioStatus(statusEl, data.message || data.error || `PTT start failed (${res.status})`, "err");
+        pttActive = false;
+        pttBtn?.classList.remove("active");
+        return;
+      }
+      pttSessionId = data.session_id;
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "PTT start failed", "err");
       pttActive = false;
       pttBtn?.classList.remove("active");
-      return;
     }
-    pttSessionId = data.session_id;
   }
 
   async function pttStop(transcribe) {
@@ -800,13 +838,23 @@ async function loadAudioPanel() {
     pttActive = false;
     pttBtn?.classList.remove("active");
     statusEl.textContent = transcribe ? "Processing + transcribing…" : "Processing…";
-    const form = new FormData();
-    form.append("session_id", pttSessionId);
-    form.append("transcribe", transcribe ? "1" : "0");
-    form.append("model", selectedWhisperModel());
+    const sessionId = pttSessionId;
     pttSessionId = "";
-    const res = await fetch("/api/audio/record/ptt/stop", { method: "POST", body: form });
-    await finishRecording(await res.json(), transcribe);
+    try {
+      const form = new FormData();
+      form.append("session_id", sessionId);
+      form.append("transcribe", transcribe ? "1" : "0");
+      form.append("model", selectedWhisperModel());
+      const res = await fetch("/api/audio/record/ptt/stop", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        audioStatus(statusEl, data.message || data.error || `PTT stop failed (${res.status})`, "err");
+        return;
+      }
+      await finishRecording(data, transcribe);
+    } catch (err) {
+      audioStatus(statusEl, err?.message || "PTT stop failed", "err");
+    }
   }
 
   if (pttBtn) {
