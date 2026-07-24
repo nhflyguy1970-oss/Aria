@@ -278,7 +278,10 @@
     if (!body) return;
     const rows = sortedInventory();
     if (!rows.length) {
-      body.innerHTML = `<tr class="flytying-inv-empty"><td colspan="6" class="muted small">No materials yet.</td></tr>`;
+      body.innerHTML = `<tr class="flytying-inv-empty"><td colspan="6" class="muted small">No materials yet. Use the add row above, or <button type="button" class="ghost-btn tiny" id="flyEmptyScanBtn">Scan barcode</button>.</td></tr>`;
+      body.querySelector("#flyEmptyScanBtn")?.addEventListener("click", () => {
+        $("flytyingCameraScanBtn")?.click() || startCameraScan();
+      });
       return;
     }
     body.innerHTML = rows

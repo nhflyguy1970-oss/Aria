@@ -45,7 +45,15 @@
       list.innerHTML = "";
       const models = data.models || [];
       if (!models.length) {
-        list.innerHTML = "<li class='muted'>No models yet — generate or Hello cube</li>";
+        list.innerHTML =
+          "<li class='muted'>No models yet. <button type='button' class='ghost-btn tiny' id='makerEmptyHelloBtn'>Hello cube</button> or <button type='button' class='ghost-btn tiny' id='makerEmptyChatBtn'>ask Chat</button></li>";
+        list.querySelector("#makerEmptyHelloBtn")?.addEventListener("click", () => {
+          $("cadHelloCubeBtn")?.click();
+        });
+        list.querySelector("#makerEmptyChatBtn")?.addEventListener("click", () => {
+          window.switchToView?.("chat");
+          window.jarvisSendToChat?.("Generate a simple parametric CAD model: ");
+        });
       }
       for (const m of models) {
         const li = document.createElement("li");

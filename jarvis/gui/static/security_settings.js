@@ -35,7 +35,10 @@
         devices.innerHTML = list.length
           ? list.map((d) => `<li>${esc(d.label || d.id)} `
             + `<button type="button" class="ghost-btn tiny trusted-revoke" data-id="${esc(d.id)}">Revoke</button></li>`).join("")
-          : "<li class='muted'>No trusted devices</li>";
+          : "<li class='muted'>No trusted devices yet. Unlock with PIN once, then use <button type='button' class='ghost-btn tiny' id='securityEmptyPresenceBtn'>Presence</button> / face enroll if available.</li>";
+        devices.querySelector("#securityEmptyPresenceBtn")?.addEventListener("click", () => {
+          window.switchToView?.("presence");
+        });
         devices.querySelectorAll(".trusted-revoke").forEach((btn) => {
           btn.addEventListener("click", async () => {
             try {
