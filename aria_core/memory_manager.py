@@ -6,6 +6,7 @@ Core owns the API, observability, and write path for Cap Bus / future apps.
 
 from __future__ import annotations
 
+import threading
 import time
 import uuid
 from collections.abc import Callable
@@ -16,6 +17,7 @@ T = TypeVar("T")
 PUBLISHER = "aria_core.memory"
 MEMORY_VERSION = "2.0-phase7"
 
+_LOCK = threading.RLock()
 _HISTORY: list[dict[str, Any]] = []
 _HISTORY_LIMIT = 500
 _STATS: dict[str, int] = {
@@ -50,7 +52,8 @@ def _emit(name: str, **payload: Any) -> None:
 
 
 def _bump(key: str) -> None:
-    _STATS[key] = int(_STATS.get(key, 0)) + 1
+    with _LOCK:
+        _STATS[key] = int(_STATS.get(key, 0)) + 1
 
 
 def _record(op: str, **fields: Any) -> dict[str, Any]:
@@ -63,9 +66,10 @@ def _record(op: str, **fields: Any) -> dict[str, Any]:
         "content_len": fields.pop("content_len", None),
         **fields,
     }
-    _HISTORY.append(rec)
-    if len(_HISTORY) > _HISTORY_LIMIT:
-        del _HISTORY[: len(_HISTORY) - _HISTORY_LIMIT]
+    with _LOCK:
+        _HISTORY.append(rec)
+        if len(_HISTORY) > _HISTORY_LIMIT:
+            del _HISTORY[: len(_HISTORY) - _HISTORY_LIMIT]
     return dict(rec)
 
 
@@ -527,7 +531,8 @@ def rollback_memory(
 
 
 def memory_history(*, limit: int = 100, op: str = "") -> list[dict[str, Any]]:
-    items = list(_HISTORY)
+    with _LOCK:
+        items = list(_HISTORY)
     if op:
         items = [r for r in items if r.get("op") == op]
     # Never return private _content
@@ -574,13 +579,17 @@ def memory_statistics() -> dict[str, Any]:
         }
     except Exception as exc:
         store_stats = {"entry_count": None, "error": type(exc).__name__}
+    with _LOCK:
+        counters = dict(_STATS)
+        history_size = len(_HISTORY)
+        duplicates = _STATS.get("duplicates_detected", 0)
     return {
         "owner": "aria_core.memory",
         "version": MEMORY_VERSION,
-        "counters": dict(_STATS),
-        "history_size": len(_HISTORY),
+        "counters": counters,
+        "history_size": history_size,
         "store": store_stats,
-        "duplicates_detected": _STATS.get("duplicates_detected", 0),
+        "duplicates_detected": duplicates,
     }
 
 
@@ -621,12 +630,14 @@ def memory_health() -> dict[str, Any]:
 
 
 def clear_history() -> None:
-    _HISTORY.clear()
+    with _LOCK:
+        _HISTORY.clear()
 
 
 def reset_stats() -> None:
-    for k in _STATS:
-        _STATS[k] = 0
+    with _LOCK:
+        for k in _STATS:
+            _STATS[k] = 0
 
 
 def record_retrieval_decision(decision: dict[str, Any]) -> dict[str, Any]:

@@ -14,11 +14,15 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
 # Process counters (ids/counts only — never memory contents)
+_ENGINE_LOCK = threading.RLock()
 _METRICS: dict[str, Any] = {
     "shadow_calls": 0,
     "shadow_agree": 0,
@@ -153,14 +157,15 @@ def _record_ms(ms: float) -> None:
 def reset_for_tests() -> None:
     """Clear engine singleton and metrics (tests only)."""
     global _ENGINE, _LAST_COMPARE, _LAST_PRIMARY
-    _ENGINE = None
-    _LAST_COMPARE = None
-    _LAST_PRIMARY = None
-    for k in list(_METRICS.keys()):
-        if k == "shadow_ms_samples":
-            _METRICS[k] = []
-        else:
-            _METRICS[k] = 0
+    with _ENGINE_LOCK:
+        _ENGINE = None
+        _LAST_COMPARE = None
+        _LAST_PRIMARY = None
+        for k in list(_METRICS.keys()):
+            if k == "shadow_ms_samples":
+                _METRICS[k] = []
+            else:
+                _METRICS[k] = 0
 
 
 def _legacy_cleanup_marker(path: str) -> Path:
@@ -227,16 +232,30 @@ def get_engine() -> Any:
     global _ENGINE
     if _ENGINE is not None:
         return _ENGINE
-    from aria_acm.acm.api.engine import CognitiveEngine
+    with _ENGINE_LOCK:
+        if _ENGINE is not None:
+            return _ENGINE
+        from aria_acm.acm.api.engine import CognitiveEngine
 
-    path = persist_path()
-    _ENGINE = CognitiveEngine(
-        agent_id=os.getenv("ARIA_ACM_AGENT_ID", "aria").strip() or "aria",
-        persist_path=path,
-        auto_persist=auto_persist_enabled(),
-    )
-    _maybe_run_legacy_cleanup(_ENGINE, path)
-    return _ENGINE
+        path = persist_path()
+        _ENGINE = CognitiveEngine(
+            agent_id=os.getenv("ARIA_ACM_AGENT_ID", "aria").strip() or "aria",
+            persist_path=path,
+            auto_persist=auto_persist_enabled(),
+        )
+        _maybe_run_legacy_cleanup(_ENGINE, path)
+        return _ENGINE
+
+
+@contextmanager
+def engine_exclusive() -> Iterator[Any]:
+    """Serialize use of the process-wide CognitiveEngine singleton.
+
+    ACM's shared ``engine.context`` / store mutations are not safe for concurrent
+    Cap Bus callers; hold this lock for the full encode/cool/revise critical section.
+    """
+    with _ENGINE_LOCK:
+        yield get_engine()
 
 
 def normalize_answer(text: str) -> str:
@@ -548,8 +567,6 @@ def primary_remember(
     from aria_acm.acm.provenance import TRUSTED_USER_STATEMENT, TRUSTED_USER_TEACHING
 
     t0 = time.perf_counter()
-    engine = get_engine()
-    engine.context = ContextFrame()
     kind = "preference" if entry_type == "preference" else "experience"
     if entry_type == "identity" or (namespace == "profile" and "identity" in (tags or [])):
         kind = "identity"
@@ -561,13 +578,15 @@ def primary_remember(
     tag_set = {str(t).lower() for t in (tags or [])}
     auto = entry_type == "auto" or bool(tag_set & {"auto", "auto-extracted"})
     provenance = TRUSTED_USER_STATEMENT if auto else TRUSTED_USER_TEACHING
-    out = engine.encode(
-        content,
-        kind=kind,
-        pin=True,
-        context_tags=tuple(dict.fromkeys(context_tags)) or None,
-        provenance=provenance,
-    )
+    with engine_exclusive() as engine:
+        engine.context = ContextFrame()
+        out = engine.encode(
+            content,
+            kind=kind,
+            pin=True,
+            context_tags=tuple(dict.fromkeys(context_tags)) or None,
+            provenance=provenance,
+        )
     ms = (time.perf_counter() - t0) * 1000.0
     _record_ms(ms)
     _bump("primary_encode")
@@ -844,18 +863,18 @@ def primary_forget(
     query: str | None = None,
 ) -> dict[str, Any]:
     """Soft forget via cool_memory (never hard-delete Experiences)."""
-    engine = get_engine()
-    concept_id = entry_id
-    if entry_id and entry_id in engine.store.experiences:
-        exp = engine.store.experiences[entry_id]
-        concept_id = exp.concept_ids[0] if exp.concept_ids else None
-    if not concept_id and query:
-        view = engine.what_do_i_remember(query)
-        concept_id = str((view or {}).get("primary_concept_id") or "") or None
-    if not concept_id:
-        return {"ok": False, "cooled": False, "deleted": False, "reason": "no_concept"}
     t0 = time.perf_counter()
-    out = engine.cool_memory(str(concept_id), steps=1)
+    with engine_exclusive() as engine:
+        concept_id = entry_id
+        if entry_id and entry_id in engine.store.experiences:
+            exp = engine.store.experiences[entry_id]
+            concept_id = exp.concept_ids[0] if exp.concept_ids else None
+        if not concept_id and query:
+            view = engine.what_do_i_remember(query)
+            concept_id = str((view or {}).get("primary_concept_id") or "") or None
+        if not concept_id:
+            return {"ok": False, "cooled": False, "deleted": False, "reason": "no_concept"}
+        out = engine.cool_memory(str(concept_id), steps=1)
     ms = (time.perf_counter() - t0) * 1000.0
     _record_ms(ms)
     _bump("primary_cool")
@@ -876,12 +895,11 @@ def primary_correct(
     text: str,
 ) -> dict[str, Any]:
     """revise_experience — immutable lineage correction."""
-    engine = get_engine()
     eid = experience_id
     if not eid and query:
-        # encode new correction revises best match if we can locate prior
-        view = engine.what_do_i_remember(query)
-        eid = str((view or {}).get("experience_id") or "") or None
+        with engine_exclusive() as engine:
+            view = engine.what_do_i_remember(query)
+            eid = str((view or {}).get("experience_id") or "") or None
         if not eid:
             # fall through: encode as pinned preference/fact without revise link
             host = primary_remember(text, entry_type="fact", tags=["correction"])
@@ -892,7 +910,8 @@ def primary_correct(
     from aria_acm.acm.provenance import TRUSTED_USER_CORRECTION
 
     t0 = time.perf_counter()
-    out = engine.revise_experience(str(eid), text, provenance=TRUSTED_USER_CORRECTION)
+    with engine_exclusive() as engine:
+        out = engine.revise_experience(str(eid), text, provenance=TRUSTED_USER_CORRECTION)
     ms = (time.perf_counter() - t0) * 1000.0
     _record_ms(ms)
     _bump("primary_revise")

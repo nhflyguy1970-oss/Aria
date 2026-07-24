@@ -7,6 +7,7 @@ grammar / morphology / syntax — not a growing ad-hoc regex list in the router.
 
 from __future__ import annotations
 
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -165,6 +166,7 @@ class ReflexFeatures:
     object: str
 
 
+_LOCK = threading.RLock()
 _HISTORY: list[dict[str, Any]] = []
 _HISTORY_LIMIT = 500
 _STATS: dict[str, Any] = {
@@ -533,15 +535,17 @@ def _record(kind: str, **fields: Any) -> dict[str, Any]:
         "iso": time.strftime("%Y-%m-%dT%H:%M:%S"),
         **fields,
     }
-    _HISTORY.append(rec)
-    if len(_HISTORY) > _HISTORY_LIMIT:
-        del _HISTORY[: len(_HISTORY) - _HISTORY_LIMIT]
+    with _LOCK:
+        _HISTORY.append(rec)
+        if len(_HISTORY) > _HISTORY_LIMIT:
+            del _HISTORY[: len(_HISTORY) - _HISTORY_LIMIT]
     return rec
 
 
 def _bump_category(category: str) -> None:
-    by = _STATS["by_category"]
-    by[category] = int(by.get(category, 0)) + 1
+    with _LOCK:
+        by = _STATS["by_category"]
+        by[category] = int(by.get(category, 0)) + 1
 
 
 def evaluate(message: str) -> dict[str, Any] | None:
@@ -576,7 +580,8 @@ def try_reflex(
     t0 = time.perf_counter()
     if attachment:
         duration_ms = round((time.perf_counter() - t0) * 1000, 3)
-        _STATS["escalated"] = int(_STATS["escalated"]) + 1
+        with _LOCK:
+            _STATS["escalated"] = int(_STATS["escalated"]) + 1
         _emit("ReflexEscalated", reason="attachment", duration_ms=duration_ms)
         _emit("ReflexLatency", duration_ms=duration_ms, matched=False)
         _record("escalated", reason="attachment", duration_ms=duration_ms)
@@ -586,18 +591,21 @@ def try_reflex(
         hit = evaluate(message)
     except Exception as exc:
         duration_ms = round((time.perf_counter() - t0) * 1000, 3)
-        _STATS["failed"] = int(_STATS["failed"]) + 1
+        with _LOCK:
+            _STATS["failed"] = int(_STATS["failed"]) + 1
         _emit("ReflexFailed", error=type(exc).__name__, duration_ms=duration_ms)
         _emit("ReflexLatency", duration_ms=duration_ms, matched=False, failed=True)
         _record("failed", error=type(exc).__name__, duration_ms=duration_ms)
         return None
 
     duration_ms = round((time.perf_counter() - t0) * 1000, 3)
-    _STATS["latency_sum_ms"] = float(_STATS["latency_sum_ms"]) + duration_ms
-    _STATS["latency_count"] = int(_STATS["latency_count"]) + 1
+    with _LOCK:
+        _STATS["latency_sum_ms"] = float(_STATS["latency_sum_ms"]) + duration_ms
+        _STATS["latency_count"] = int(_STATS["latency_count"]) + 1
 
     if not hit:
-        _STATS["escalated"] = int(_STATS["escalated"]) + 1
+        with _LOCK:
+            _STATS["escalated"] = int(_STATS["escalated"]) + 1
         _emit("ReflexEscalated", reason="no_match", duration_ms=duration_ms)
         _emit("ReflexLatency", duration_ms=duration_ms, matched=False)
         _record(
@@ -605,7 +613,8 @@ def try_reflex(
         )
         return None
 
-    _STATS["matched"] = int(_STATS["matched"]) + 1
+    with _LOCK:
+        _STATS["matched"] = int(_STATS["matched"]) + 1
     _bump_category(hit["category"])
     _emit(
         "ReflexMatched",
@@ -655,74 +664,86 @@ def is_reflex(message: str, *, attachment: Any = None) -> bool:
 
 
 def mark_false_positive(*, pattern_id: str = "", category: str = "", note: str = "") -> None:
-    _STATS["false_positives"] = int(_STATS["false_positives"]) + 1
-    _FALSE_POS.append(
-        {"pattern_id": pattern_id, "category": category, "note": note, "ts": time.time()}
-    )
-    if len(_FALSE_POS) > 100:
-        del _FALSE_POS[: len(_FALSE_POS) - 100]
+    with _LOCK:
+        _STATS["false_positives"] = int(_STATS["false_positives"]) + 1
+        _FALSE_POS.append(
+            {"pattern_id": pattern_id, "category": category, "note": note, "ts": time.time()}
+        )
+        if len(_FALSE_POS) > 100:
+            del _FALSE_POS[: len(_FALSE_POS) - 100]
 
 
 def mark_false_negative(
     *, message_len: int = 0, expected_category: str = "", note: str = ""
 ) -> None:
-    _STATS["false_negatives"] = int(_STATS["false_negatives"]) + 1
-    _FALSE_NEG.append(
-        {
-            "message_len": message_len,
-            "expected_category": expected_category,
-            "note": note,
-            "ts": time.time(),
-        }
-    )
-    if len(_FALSE_NEG) > 100:
-        del _FALSE_NEG[: len(_FALSE_NEG) - 100]
+    with _LOCK:
+        _STATS["false_negatives"] = int(_STATS["false_negatives"]) + 1
+        _FALSE_NEG.append(
+            {
+                "message_len": message_len,
+                "expected_category": expected_category,
+                "note": note,
+                "ts": time.time(),
+            }
+        )
+        if len(_FALSE_NEG) > 100:
+            del _FALSE_NEG[: len(_FALSE_NEG) - 100]
 
 
 def reflex_history(*, limit: int = 100) -> list[dict[str, Any]]:
-    return list(_HISTORY[-limit:])
+    with _LOCK:
+        return list(_HISTORY[-limit:])
 
 
 def reflex_statistics() -> dict[str, Any]:
-    matched = int(_STATS["matched"])
-    escalated = int(_STATS["escalated"])
-    total = matched + escalated + int(_STATS["failed"])
-    lat_n = int(_STATS["latency_count"]) or 1
-    avg = round(float(_STATS["latency_sum_ms"]) / lat_n, 3)
+    with _LOCK:
+        matched = int(_STATS["matched"])
+        escalated = int(_STATS["escalated"])
+        failed = int(_STATS["failed"])
+        lat_n = int(_STATS["latency_count"]) or 1
+        avg = round(float(_STATS["latency_sum_ms"]) / lat_n, 3)
+        by_category = dict(_STATS["by_category"])
+        false_pos = int(_STATS["false_positives"])
+        false_neg = int(_STATS["false_negatives"])
+    total = matched + escalated + failed
     return {
         "owner": "aria_core.reflex",
         "version": REFLEX_VERSION,
         "matched": matched,
         "escalated": escalated,
-        "failed": int(_STATS["failed"]),
+        "failed": failed,
         "total": total,
         "hit_rate": round(100.0 * matched / total, 2) if total else 0.0,
         "avg_latency_ms": avg,
-        "by_category": dict(_STATS["by_category"]),
-        "false_positives": int(_STATS["false_positives"]),
-        "false_negatives": int(_STATS["false_negatives"]),
+        "by_category": by_category,
+        "false_positives": false_pos,
+        "false_negatives": false_neg,
         "pattern_count": len(_catalog()),
     }
 
 
 def reset_for_tests() -> None:
-    _HISTORY.clear()
-    _FALSE_POS.clear()
-    _FALSE_NEG.clear()
-    _STATS["matched"] = 0
-    _STATS["escalated"] = 0
-    _STATS["failed"] = 0
-    _STATS["by_category"] = {}
-    _STATS["latency_sum_ms"] = 0.0
-    _STATS["latency_count"] = 0
-    _STATS["false_positives"] = 0
-    _STATS["false_negatives"] = 0
+    with _LOCK:
+        _HISTORY.clear()
+        _FALSE_POS.clear()
+        _FALSE_NEG.clear()
+        _STATS["matched"] = 0
+        _STATS["escalated"] = 0
+        _STATS["failed"] = 0
+        _STATS["by_category"] = {}
+        _STATS["latency_sum_ms"] = 0.0
+        _STATS["latency_count"] = 0
+        _STATS["false_positives"] = 0
+        _STATS["false_negatives"] = 0
 
 
 def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
     stats = reflex_statistics()
     hist = reflex_history(limit=limit)
     top = sorted((stats.get("by_category") or {}).items(), key=lambda kv: kv[1], reverse=True)
+    with _LOCK:
+        false_pos = list(_FALSE_POS[-20:])
+        false_neg = list(_FALSE_NEG[-20:])
     return {
         "ok": True,
         "title": "Aria Core Reflex Layer",
@@ -737,8 +758,8 @@ def mission_control_panel(*, limit: int = 100) -> dict[str, Any]:
         "failed": stats["failed"],
         "bypassed": stats["matched"],
         "top_categories": [{"category": k, "count": v} for k, v in top[:12]],
-        "false_positives": list(_FALSE_POS[-20:]),
-        "false_negatives": list(_FALSE_NEG[-20:]),
+        "false_positives": false_pos,
+        "false_negatives": false_neg,
         "history": hist,
         "note": (
             "Pre-cognition reflexes. Matched requests bypass Cap Bus, Cognitive "

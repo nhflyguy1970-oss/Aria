@@ -147,6 +147,7 @@ class InProcessEventBus:
                 by_name[str(item.get("name"))] += 1
             pubs = dict(self._publishers)
             errors = self._handler_errors
+            ring_size = len(self._ring)
         lat_sorted = sorted(lat)
         p50 = lat_sorted[len(lat_sorted) // 2] if lat_sorted else 0.0
         return {
@@ -157,7 +158,7 @@ class InProcessEventBus:
             "latency_max_ms": round(max(lat_sorted), 3) if lat_sorted else 0.0,
             "by_name_in_ring": dict(sorted(by_name.items())),
             "by_publisher": pubs,
-            "ring_size": len(self._ring) if hasattr(self, "_ring") else 0,
+            "ring_size": ring_size,
             "uptime_s": round(elapsed, 1),
         }
 

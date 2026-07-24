@@ -11,6 +11,7 @@ multiple complementary organs and merge via the Response Composer.
 from __future__ import annotations
 
 import contextvars
+import threading
 import time
 import uuid
 from collections.abc import Callable
@@ -53,6 +54,7 @@ VERB_POLICY: dict[str, tuple[str, str]] = {
     "recover": ("runtime", "CapabilitySelected"),
 }
 
+_LOCK = threading.RLock()
 _HISTORY: list[dict[str, Any]] = []
 _HISTORY_LIMIT = 300
 _DEPTH: contextvars.ContextVar[int] = contextvars.ContextVar("aria_cognition_depth", default=0)
@@ -483,17 +485,20 @@ def _record(
         },
         "health": "ok" if ok else "error",
     }
-    _HISTORY.append(rec)
-    if len(_HISTORY) > _HISTORY_LIMIT:
-        del _HISTORY[: len(_HISTORY) - _HISTORY_LIMIT]
+    with _LOCK:
+        _HISTORY.append(rec)
+        if len(_HISTORY) > _HISTORY_LIMIT:
+            del _HISTORY[: len(_HISTORY) - _HISTORY_LIMIT]
 
 
 def recent_pipelines(*, limit: int = 50) -> list[dict[str, Any]]:
-    return list(_HISTORY[-limit:])
+    with _LOCK:
+        return list(_HISTORY[-limit:])
 
 
 def cognition_statistics() -> dict[str, Any]:
-    items = list(_HISTORY)
+    with _LOCK:
+        items = list(_HISTORY)
     by_cap: dict[str, int] = {}
     ok_n = sum(1 for r in items if r.get("ok"))
     lat = [float(r.get("duration_ms") or 0) for r in items]
@@ -514,7 +519,8 @@ def cognition_statistics() -> dict[str, Any]:
 
 
 def clear_history() -> None:
-    _HISTORY.clear()
+    with _LOCK:
+        _HISTORY.clear()
 
 
 def reset_for_tests() -> None:

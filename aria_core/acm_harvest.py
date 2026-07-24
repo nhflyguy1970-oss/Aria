@@ -464,20 +464,22 @@ def _process_batch(
             # Isolate ContextFrame so prior harvest tags do not bleed (literal ACM merge behavior).
             from aria_acm.acm.context.frame import ContextFrame
             from aria_acm.acm.provenance import TRUSTED_USER_TEACHING
+            from aria_core.acm_bridge import engine_exclusive
 
-            engine.context = ContextFrame()
-            result = engine.encode(
-                str(entry.get("content") or ""),
-                kind=kind,
-                pin=True,
-                context_tags=tags,
-                assent=False,
-                revises_id=revises_exp,
-                t_start=t_start,
-                # D046: harvested legacy entries are user-supplied autobiographical
-                # knowledge; legacy lineage is still stamped separately below.
-                provenance=TRUSTED_USER_TEACHING,
-            )
+            with engine_exclusive() as exclusive_engine:
+                exclusive_engine.context = ContextFrame()
+                result = exclusive_engine.encode(
+                    str(entry.get("content") or ""),
+                    kind=kind,
+                    pin=True,
+                    context_tags=tags,
+                    assent=False,
+                    revises_id=revises_exp,
+                    t_start=t_start,
+                    # D046: harvested legacy entries are user-supplied autobiographical
+                    # knowledge; legacy lineage is still stamped separately below.
+                    provenance=TRUSTED_USER_TEACHING,
+                )
         except Exception as exc:
             report.encode_failures += 1
             report.errors.append(f"encode:{legacy_id}:{type(exc).__name__}")

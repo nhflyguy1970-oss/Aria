@@ -7,6 +7,7 @@ Ownership moved to Aria Core; jarvis.learning_governor is a compat shim.
 from __future__ import annotations
 
 import os
+import threading
 import time
 import uuid
 from collections.abc import Callable
@@ -15,6 +16,7 @@ from typing import Any, TypeVar
 
 T = TypeVar("T")
 
+_LOCK = threading.RLock()
 _HISTORY: list[dict[str, Any]] = []
 _HISTORY_LIMIT = 500
 _AUDIT: list[dict[str, Any]] = []
@@ -151,7 +153,9 @@ def reject_learning(proposal: Proposal, *, reason: str = "") -> dict[str, Any]:
 
 def replay_learning(proposal_id: str) -> dict[str, Any]:
     """Replay = re-surface a history record (no organ rewrite in Phase 5)."""
-    for rec in reversed(_HISTORY):
+    with _LOCK:
+        snapshot = list(reversed(_HISTORY))
+    for rec in snapshot:
         if rec.get("proposal_id") == proposal_id or rec.get("id") == proposal_id:
             _emit_name(
                 "LearningReplayed",
@@ -167,32 +171,35 @@ def replay_learning(proposal_id: str) -> dict[str, Any]:
 
 def rollback_learning(proposal_id: str, *, reason: str = "") -> dict[str, Any]:
     """Mark rolled back in history only — does not mutate Memory/Knowledge organs."""
-    for rec in reversed(_HISTORY):
-        if rec.get("proposal_id") == proposal_id or rec.get("id") == proposal_id:
-            _emit_name(
-                "LearningRolledBack",
-                proposal_id=proposal_id,
-                kind=rec.get("kind"),
-                reason=reason,
-            )
-            rec["decision"] = "rolled_back"
-            rec["rollback_reason"] = reason
-            events = list(rec.get("events_published") or [])
-            events.append("LearningRolledBack")
-            rec["events_published"] = events
-            return {"ok": True, "record": dict(rec)}
+    with _LOCK:
+        for rec in reversed(_HISTORY):
+            if rec.get("proposal_id") == proposal_id or rec.get("id") == proposal_id:
+                _emit_name(
+                    "LearningRolledBack",
+                    proposal_id=proposal_id,
+                    kind=rec.get("kind"),
+                    reason=reason,
+                )
+                rec["decision"] = "rolled_back"
+                rec["rollback_reason"] = reason
+                events = list(rec.get("events_published") or [])
+                events.append("LearningRolledBack")
+                rec["events_published"] = events
+                return {"ok": True, "record": dict(rec)}
     return {"ok": False, "error": "not found", "proposal_id": proposal_id}
 
 
 def learning_history(*, limit: int = 100, decision: str = "") -> list[dict[str, Any]]:
-    items = list(_HISTORY)
+    with _LOCK:
+        items = list(_HISTORY)
     if decision:
         items = [r for r in items if r.get("decision") == decision]
     return items[-limit:]
 
 
 def learning_statistics() -> dict[str, Any]:
-    items = list(_HISTORY)
+    with _LOCK:
+        items = list(_HISTORY)
     by_decision: dict[str, int] = {}
     by_source: dict[str, int] = {}
     by_kind: dict[str, int] = {}
@@ -223,15 +230,18 @@ def learning_statistics() -> dict[str, Any]:
 
 
 def recent_audit(*, limit: int = 50) -> list[dict[str, Any]]:
-    return list(_AUDIT[-limit:])
+    with _LOCK:
+        return list(_AUDIT[-limit:])
 
 
 def clear_audit() -> None:
-    _AUDIT.clear()
+    with _LOCK:
+        _AUDIT.clear()
 
 
 def clear_history() -> None:
-    _HISTORY.clear()
+    with _LOCK:
+        _HISTORY.clear()
 
 
 def reset_for_tests() -> None:
@@ -272,17 +282,18 @@ def _record_audit(proposal: Proposal, *, ok: bool) -> None:
         "",
     ):
         return
-    _AUDIT.append(
-        {
-            "ts": time.time(),
-            "kind": proposal.kind,
-            "source": proposal.source,
-            "ok": ok,
-            "payload_keys": sorted(proposal.payload.keys()),
-        }
-    )
-    if len(_AUDIT) > _AUDIT_LIMIT:
-        del _AUDIT[: len(_AUDIT) - _AUDIT_LIMIT]
+    with _LOCK:
+        _AUDIT.append(
+            {
+                "ts": time.time(),
+                "kind": proposal.kind,
+                "source": proposal.source,
+                "ok": ok,
+                "payload_keys": sorted(proposal.payload.keys()),
+            }
+        )
+        if len(_AUDIT) > _AUDIT_LIMIT:
+            del _AUDIT[: len(_AUDIT) - _AUDIT_LIMIT]
 
 
 def _history_upsert(
@@ -316,14 +327,15 @@ def _history_upsert(
         "decided_at": time.time(),
     }
     # Replace pending with final decision when same proposal_id exists
-    for i, existing in enumerate(_HISTORY):
-        if existing.get("proposal_id") == proposal.proposal_id:
-            _HISTORY[i] = rec
-            break
-    else:
-        _HISTORY.append(rec)
-    if len(_HISTORY) > _HISTORY_LIMIT:
-        del _HISTORY[: len(_HISTORY) - _HISTORY_LIMIT]
+    with _LOCK:
+        for i, existing in enumerate(_HISTORY):
+            if existing.get("proposal_id") == proposal.proposal_id:
+                _HISTORY[i] = rec
+                break
+        else:
+            _HISTORY.append(rec)
+        if len(_HISTORY) > _HISTORY_LIMIT:
+            del _HISTORY[: len(_HISTORY) - _HISTORY_LIMIT]
     return dict(rec)
 
 
