@@ -230,9 +230,12 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ gcode_path: gcode, bed_confirmed: bed, filament_confirmed: fil }),
       });
-      if (log) log.textContent = data.message || `Queued ${data.job_id}`;
+      const msg = data.message || `Queued ${data.job_id}`;
+      if (log) log.textContent = msg;
+      window.showAriaToast?.(msg, "ok", 3000);
     } catch (e) {
       if (log) log.textContent = e.message;
+      window.showAriaToast?.(e.message || "Print failed", "err", 5000);
     }
   }
 
