@@ -159,7 +159,7 @@ UI control → fetch(/api/…) / Cap Bus / chat action
 | Item | Action |
 |------|--------|
 | `jarvis/gui/static/security.js` | **Deleted** (superseded by `security_settings.js`) |
-| Orphan `jarvis/api.py` | Still present (documented; not wired) |
+| Orphan `jarvis/api.py` | **Removed** (`e8ec4de`; live routes in `extensions/voice/api.py`) |
 
 ## Audit follow-up
 
