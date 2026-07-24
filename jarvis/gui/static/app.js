@@ -1706,9 +1706,16 @@ async function pollMediaJob(jobId, messageEl) {
         return;
       }
       setTimeout(tick, pollDelay());
-    } catch (_) {
+    } catch (err) {
       if (Date.now() - started < maxPollMs) setTimeout(tick, pollDelay());
-      else finishJob();
+      else {
+        finishJob();
+        window.showAriaToast?.(
+          `Media job polling failed: ${err?.message || err}`,
+          "err",
+          5000,
+        );
+      }
     }
   };
   tick();
