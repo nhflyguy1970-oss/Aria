@@ -1,0 +1,10 @@
+{
+  "slug": "install-ollama",
+  "name": "Install Ollama",
+  "description": "Install Ollama for local LLM inference.",
+  "tags": ["install", "ollama", "inference"],
+  "steps": [
+    {"type": "command", "title": "Install script", "command": "curl -fsSL https://ollama.com/install.sh | sh"},
+    {"type": "check", "title": "Verify", "command": "ollama --version"}
+  ]
+}

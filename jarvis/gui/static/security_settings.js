@@ -70,13 +70,19 @@
           ? `Gestures: ${g.mode || "off"} · floating panels ${g.floating_panels ? "on" : "off"}`
           : "Gestures: disabled — set JARVIS_GESTURES=1 to enable";
       }
-    } catch (_) {}
+    } catch (_) {
+      const gLine = $("securityGesturesLine");
+      if (gLine) gLine.textContent = "Gestures: status unavailable";
+    }
 
     try {
       const b = await fetchJson("/api/security/brain-mode");
       const bLine = $("securityBrainLine");
       if (bLine) bLine.textContent = `Brain mode: ${b.label || b.mode || "local"}`;
-    } catch (_) {}
+    } catch (_) {
+      const bLine = $("securityBrainLine");
+      if (bLine) bLine.textContent = "Brain mode: status unavailable";
+    }
   }
 
   function initSecuritySettings() {
@@ -104,8 +110,20 @@
       }
     });
     $("securityLockBtn")?.addEventListener("click", async () => {
-      await fetch("/api/security/lock", { method: "POST" });
-      window.jarvisShowLock?.();
+      const out = $("securityPinStatus");
+      try {
+        const res = await fetch("/api/security/lock", { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (out) out.textContent = data.message || "Lock failed";
+          window.showAriaToast?.(data.message || "Lock failed", "err");
+          return;
+        }
+        window.jarvisShowLock?.();
+      } catch (e) {
+        if (out) out.textContent = e.message || "Lock failed";
+        window.showAriaToast?.(e.message || "Lock failed", "err");
+      }
     });
     refreshSecurityPanel();
   }

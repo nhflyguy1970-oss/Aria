@@ -1,0 +1,11 @@
+{
+  "slug": "repair-mongodb",
+  "name": "Repair MongoDB",
+  "description": "Diagnose and restart the workstation MongoDB container/service.",
+  "tags": ["repair", "mongodb", "database"],
+  "steps": [
+    {"type": "check", "title": "Container status", "command": "docker ps -a --filter name=mongo --format '{{.Names}} {{.Status}}'"},
+    {"type": "command", "title": "Restart container", "command": "docker start ai-mongodb || docker restart ai-mongodb"},
+    {"type": "check", "title": "Port open", "command": "python3 -c \"import socket; s=socket.create_connection(('127.0.0.1',27017),2); s.close(); print('ok')\""}
+  ]
+}

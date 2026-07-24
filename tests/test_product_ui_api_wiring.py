@@ -54,6 +54,23 @@ def test_browser_status_exposes_agent_ready():
     assert "st.playwright && st.chromium" in src or "playwright && st.chromium" in src
 
 
+def test_dashboard_skills_and_maker_controls_are_wired():
+    from pathlib import Path
+
+    planner = Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    maker = Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
+    movie = Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "skillsWorkflowsRefreshBtn" in planner
+    assert "loadSkillsWorkflows" in planner
+    assert "cadIterateBtn" in maker and "cadClearBtn" in maker and "cadExportBtn" in maker
+    assert "settingsSpeakToggle" in movie
+    from jarvis.gui.server import app
+
+    paths = {getattr(route, "path", None) for route in app.routes}
+    for required in ("/api/skills", "/api/workflows", "/api/workflows/scan", "/api/upgrade/clear"):
+        assert required in paths, f"missing route {required}"
+
+
 def test_stop_playback_and_clear_tts_queue_do_not_raise():
     from jarvis.audio_device import stop_playback
     from jarvis.tts_playback_queue import clear_tts_queue

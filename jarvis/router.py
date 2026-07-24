@@ -1849,6 +1849,23 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
         }
         return _finalize_intent(intent, message, session)
 
+    # Explicit "run … skill" must beat keyword runtime/database heuristics.
+    if not attachment:
+        from jarvis.skill_database import parse_skill_run_query
+
+        skill_q, skill_confirm = parse_skill_run_query(message)
+        if skill_q:
+            return _finalize_intent(
+                {
+                    "action": "skill_run",
+                    "params": {"slug": skill_q, "confirm": skill_confirm},
+                    "thinking": "skill run",
+                    "route_handler": "Skills",
+                },
+                message,
+                session,
+            )
+
     # Reflex Layer (Phase 8) — before NLU / Cap Bus / Cognition / organs.
     if not attachment:
         from aria_core.reflex import try_reflex

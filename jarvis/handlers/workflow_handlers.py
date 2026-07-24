@@ -45,7 +45,7 @@ def workflow_scan(assistant, params: dict, message: str) -> dict:
     from jarvis.workflow_learning import auto_remember, remember_workflow, scan_action_log
 
     min_rep = int(params.get("min_repeats") or 0) or None
-    found = scan_action_log(min_repeats=min_rep)
+    found = scan_action_log(min_repeats_count=min_rep)
     if not found:
         return ok(
             "No repeated action sequences found yet. Need at least "

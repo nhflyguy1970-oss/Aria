@@ -122,11 +122,20 @@
 
   function initSpeakToggle() {
     const cb = $("speakRepliesToggle");
-    if (!cb) return;
-    cb.checked = speakRepliesEnabled();
-    cb.addEventListener("change", () => {
-      localStorage.setItem(LS.speakReplies, cb.checked ? "1" : "0");
-    });
+    const settingsCb = $("settingsSpeakToggle");
+    if (!cb && !settingsCb) return;
+    const enabled = speakRepliesEnabled();
+    if (cb) cb.checked = enabled;
+    if (settingsCb) settingsCb.checked = enabled;
+    const sync = (src) => {
+      const on = !!src.checked;
+      localStorage.setItem(LS.speakReplies, on ? "1" : "0");
+      if (cb && src !== cb) cb.checked = on;
+      if (settingsCb && src !== settingsCb) settingsCb.checked = on;
+      window.syncMuteButton?.();
+    };
+    cb?.addEventListener("change", () => sync(cb));
+    settingsCb?.addEventListener("change", () => sync(settingsCb));
   }
 
   window.jarvisMaybeSpeakReply = async function (text) {

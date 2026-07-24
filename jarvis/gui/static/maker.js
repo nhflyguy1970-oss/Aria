@@ -40,7 +40,11 @@
     try {
       const data = await engFetch("/api/engineering/models");
       list.innerHTML = "";
-      for (const m of data.models || []) {
+      const models = data.models || [];
+      if (!models.length) {
+        list.innerHTML = "<li class='muted'>No models yet — generate or Hello cube</li>";
+      }
+      for (const m of models) {
         const li = document.createElement("li");
         li.className = "planner-list-item";
         li.innerHTML = `<button type="button" class="ghost-btn small cad-model-btn" data-id="${esc(m.id)}">${esc(m.name || m.id)}</button> <span class="muted">${esc(m.backend || "")}</span>`;
@@ -49,7 +53,7 @@
       list.querySelectorAll(".cad-model-btn").forEach((btn) => {
         btn.addEventListener("click", () => selectModel(btn.dataset.id));
       });
-      if (!selectedModelId && data.models?.length) selectModel(data.models[0].id);
+      if (!selectedModelId && models.length) selectModel(models[0].id);
     } catch (e) {
       list.innerHTML = `<li class="muted">${esc(e.message)}</li>`;
     }
@@ -217,11 +221,65 @@
     }
   }
 
+  async function iterateCad() {
+    const prompt = $("cadIterateInput")?.value?.trim();
+    const log = $("cadGenLog");
+    if (!selectedModelId) {
+      if (log) log.textContent = "Select a model first";
+      return;
+    }
+    if (!prompt) return;
+    if (log) log.textContent = "Iterating…";
+    try {
+      const data = await engFetch("/api/engineering/edit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model_id: selectedModelId, prompt }),
+      });
+      if (log) log.textContent = data.message || "Iterate done";
+      await loadModels();
+      const mid = data.model?.id || data.model_id || selectedModelId;
+      if (mid) selectModel(mid);
+    } catch (e) {
+      if (log) log.textContent = e.message;
+      window.showAriaToast?.(`Iterate failed: ${e.message}`, "err");
+    }
+  }
+
+  async function clearGallery() {
+    const log = $("cadGenLog");
+    try {
+      const data = await engFetch("/api/engineering/models/clear", { method: "POST" });
+      selectedModelId = "";
+      if (log) log.textContent = data.message || "Gallery cleared";
+      await loadModels();
+      const wrap = $("cadViewer");
+      if (wrap) wrap.innerHTML = "";
+    } catch (e) {
+      if (log) log.textContent = e.message;
+      window.showAriaToast?.(`Clear failed: ${e.message}`, "err");
+    }
+  }
+
+  function exportSelected() {
+    const log = $("cadGenLog");
+    if (!selectedModelId) {
+      if (log) log.textContent = "Select a model to export";
+      window.showAriaToast?.("Select a model first", "warn");
+      return;
+    }
+    window.open(`/api/engineering/models/${encodeURIComponent(selectedModelId)}/stl`, "_blank");
+    if (log) log.textContent = `Downloading STL for ${selectedModelId}`;
+  }
+
   function initMakerLab() {
     $("cadRefreshBtn")?.addEventListener("click", () => { refreshCadStatus(); loadModels(); });
     $("cadGenerateBtn")?.addEventListener("click", generateCad);
     $("cadHelloCubeBtn")?.addEventListener("click", helloCube);
     $("cadSliceBtn")?.addEventListener("click", sliceSelected);
+    $("cadIterateBtn")?.addEventListener("click", iterateCad);
+    $("cadClearBtn")?.addEventListener("click", clearGallery);
+    $("cadExportBtn")?.addEventListener("click", exportSelected);
     $("printerRefreshBtn")?.addEventListener("click", refreshPrinter);
     $("printerAddBtn")?.addEventListener("click", addPrinter);
     $("printerDiscoverBtn")?.addEventListener("click", discoverPrinters);

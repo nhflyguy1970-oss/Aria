@@ -1,0 +1,12 @@
+{
+  "slug": "install-docker",
+  "name": "Install Docker",
+  "description": "Install Docker Engine on Debian/Ubuntu and verify the daemon.",
+  "tags": ["install", "docker", "ops"],
+  "steps": [
+    {"type": "note", "title": "Prereq", "text": "Requires sudo and an apt-based distro."},
+    {"type": "command", "title": "Install packages", "command": "sudo apt-get update && sudo apt-get install -y docker.io"},
+    {"type": "command", "title": "Enable service", "command": "sudo systemctl enable --now docker"},
+    {"type": "check", "title": "Verify", "command": "docker version"}
+  ]
+}

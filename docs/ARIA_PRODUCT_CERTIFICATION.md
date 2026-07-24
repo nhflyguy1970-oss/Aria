@@ -102,6 +102,11 @@ UI control → fetch(/api/…) / Cap Bus / chat action
 | `/api/mission-control/connection` | Not a platform tab | Aria `get_tab` → `runtime_connection_status` |
 | Browser “Playwright not installed” | UI required `agent_ready`; API lacked it | API `agent_ready` + UI fallback |
 | Mongo “up” + “container stopped” | Health TCP vs docker detail | Clearer detail string |
+| Dashboard Skills & workflows dead | No JS + missing `/api/skills` `/api/workflows` | Routes + `loadSkillsWorkflows` wiring |
+| Maker Iterate/Clear/Export dead | Buttons never bound | Bound to edit/clear/STL download |
+| Settings Speak replies dead | `settingsSpeakToggle` unwired | Synced with `speakRepliesToggle` |
+| Calendar/Planner/Flytying/Security silent fails | Missing ok checks / empty catches | Toasts + empty states |
+| Skill defaults / `skill_run` routing | Empty `skill_defaults`; NLU stole “run … skill” | Bundled defaults + router priority |
 
 ## Technical debt removed
 
@@ -109,6 +114,10 @@ UI control → fetch(/api/…) / Cap Bus / chat action
 |------|--------|
 | `jarvis/gui/static/security.js` | **Deleted** (superseded by `security_settings.js`) |
 | Orphan `jarvis/api.py` | Still present (documented; not wired) |
+
+## Audit follow-up
+
+[Audit dead UI / stubs](eb7159fd-6ed7-47ce-9439-cddd86030dc5) P1 findings addressed in this wave.
 
 ## Regression tests
 

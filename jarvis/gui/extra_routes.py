@@ -724,6 +724,13 @@ def register_routes(app, assistant):
 
         return {"ok": True, **wizard_status()}
 
+    @app.post("/api/upgrade/clear")
+    def upgrade_clear():
+        from jarvis.upgrade_wizard import clear_session, wizard_status
+
+        clear_session()
+        return {"ok": True, **wizard_status()}
+
     @app.post("/api/upgrade/propose")
     async def upgrade_propose(task: str = Form(...), max_steps: int = Form(4)):
         result = assistant._upgrade_wizard(
@@ -1685,20 +1692,37 @@ def register_routes(app, assistant):
         return {"log": git_util.log_oneline(limit=limit)}
 
     @app.post("/api/admin/backup")
-    def admin_backup():
+    async def admin_backup(request: Request):
         import subprocess
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        want_async = bool(body.get("async")) if isinstance(body, dict) else False
 
         script = Path(__file__).resolve().parent.parent.parent / "scripts" / "backup-data.sh"
         if not script.exists():
             return JSONResponse(
                 status_code=500, content={"ok": False, "message": "backup script missing"}
             )
-        proc = subprocess.run([str(script)], capture_output=True, text=True, timeout=120)
-        if proc.returncode != 0:
-            return JSONResponse(
-                status_code=500, content={"ok": False, "message": proc.stderr or proc.stdout}
-            )
-        return {"ok": True, "message": (proc.stdout or "").strip()}
+
+        def _run_backup() -> dict:
+            proc = subprocess.run([str(script)], capture_output=True, text=True, timeout=120)
+            if proc.returncode != 0:
+                return {"ok": False, "message": proc.stderr or proc.stdout}
+            return {"ok": True, "message": (proc.stdout or "").strip()}
+
+        if want_async:
+            from jarvis.coding_jobs import submit
+
+            job_id = submit("admin backup", _run_backup)
+            return {"ok": True, "pending": True, "job_id": job_id}
+
+        result = _run_backup()
+        if not result.get("ok"):
+            return JSONResponse(status_code=500, content=result)
+        return result
 
     @app.get("/api/chat/export/pdf")
     def chat_export_pdf(branch_id: str = ""):
@@ -2029,3 +2053,84 @@ def register_routes(app, assistant):
         from jarvis.jobs_center import snapshot
 
         return {"ok": True, **snapshot()}
+
+    @app.get("/api/skills")
+    def skills_list(q: str = ""):
+        from jarvis.skill_database import list_skills
+
+        skills = list_skills(query=q)
+        return {
+            "ok": True,
+            "skills": [
+                {
+                    "slug": s.get("slug"),
+                    "name": s.get("name"),
+                    "description": s.get("description"),
+                    "tags": s.get("tags") or [],
+                    "steps": len(s.get("steps") or []),
+                }
+                for s in skills
+            ],
+        }
+
+    @app.post("/api/skills/{slug}/run")
+    async def skills_run(slug: str, request: Request):
+        from jarvis.skill_database import run_skill
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        dry_run = True if body.get("dry_run") is None else bool(body.get("dry_run"))
+        result = run_skill(slug, dry_run=dry_run)
+        status = 200 if result.get("ok") else 404
+        return JSONResponse(status_code=status, content=result)
+
+    @app.get("/api/workflows")
+    def workflows_list(q: str = ""):
+        from jarvis.workflow_learning import ensure_demo_workflow, list_workflows
+
+        ensure_demo_workflow()
+        workflows = list_workflows(query=q)
+        return {
+            "ok": True,
+            "workflows": [
+                {
+                    "slug": w.get("slug"),
+                    "name": w.get("name"),
+                    "description": w.get("description"),
+                    "count": w.get("count", 1),
+                    "steps": len(w.get("steps") or []),
+                }
+                for w in workflows
+            ],
+        }
+
+    @app.post("/api/workflows/{slug}/run")
+    async def workflows_run(slug: str, request: Request):
+        from jarvis.workflow_learning import run_workflow
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        dry_run = True if body.get("dry_run") is None else bool(body.get("dry_run"))
+        result = run_workflow(slug, assistant=assistant, dry_run=dry_run)
+        status = 200 if result.get("ok") else 404
+        return JSONResponse(status_code=status, content=result)
+
+    @app.post("/api/workflows/scan")
+    async def workflows_scan(request: Request):
+        from jarvis.workflow_learning import scan_action_log
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        min_rep = body.get("min_repeats")
+        try:
+            min_rep_i = int(min_rep) if min_rep is not None else None
+        except (TypeError, ValueError):
+            min_rep_i = None
+        found = scan_action_log(min_repeats_count=min_rep_i)
+        return {"ok": True, "workflows": found, "count": len(found)}

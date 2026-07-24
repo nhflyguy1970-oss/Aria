@@ -64,16 +64,24 @@ function renderPlanner(data) {
   const alarmsEl = $("plannerAlarms");
   const eventsEl = $("plannerEvents");
   if (!tasksEl) return;
+  const tasks = data.tasks || [];
   tasksEl.innerHTML = "";
-  (data.tasks || []).forEach((t) => {
+  if (!tasks.length) {
+    tasksEl.innerHTML = "<li class='muted'>No tasks yet</li>";
+  }
+  tasks.forEach((t) => {
     const li = document.createElement("li");
     li.textContent = t.text;
     const btn = document.createElement("button");
     btn.className = "ghost-btn small";
     btn.textContent = "Done";
     btn.onclick = async () => {
-      await p0Fetch(`/api/planner/tasks/${encodeURIComponent(t.id)}/complete`, { method: "POST" });
-      loadPlanner();
+      try {
+        await p0Fetch(`/api/planner/tasks/${encodeURIComponent(t.id)}/complete`, { method: "POST" });
+        loadPlanner();
+      } catch (e) {
+        window.showAriaToast?.(`Task update failed: ${e.message}`, "err");
+      }
     };
     li.appendChild(btn);
     tasksEl.appendChild(li);
@@ -370,50 +378,119 @@ window.initPlanner = function initPlanner() {
   $("plannerAddTaskBtn")?.addEventListener("click", async () => {
     const text = $("plannerTaskInput")?.value?.trim();
     if (!text) return;
-    await p0Fetch("/api/planner/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
-    });
-    $("plannerTaskInput").value = "";
-    loadPlanner();
+    try {
+      await p0Fetch("/api/planner/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      $("plannerTaskInput").value = "";
+      loadPlanner();
+    } catch (e) {
+      window.showAriaToast?.(`Add task failed: ${e.message}`, "err");
+    }
   });
   $("plannerTimerBtn")?.addEventListener("click", async () => {
     const duration = $("plannerTimerInput")?.value?.trim();
     if (!duration) return;
-    await p0Fetch("/api/planner/timers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ duration }),
-    });
-    loadPlanner();
+    try {
+      await p0Fetch("/api/planner/timers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ duration }),
+      });
+      loadPlanner();
+    } catch (e) {
+      window.showAriaToast?.(`Timer failed: ${e.message}`, "err");
+    }
   });
   $("plannerPomodoroBtn")?.addEventListener("click", async () => {
-    await p0Fetch("/api/planner/timers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ duration: "25 minutes", label: "Pomodoro" }),
-    });
-    if ($("plannerTimerInput")) $("plannerTimerInput").value = "25 minutes";
-    loadPlanner();
-    window.showAriaToast?.("Pomodoro 25 min started", "ok");
+    try {
+      await p0Fetch("/api/planner/timers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ duration: "25 minutes", label: "Pomodoro" }),
+      });
+      if ($("plannerTimerInput")) $("plannerTimerInput").value = "25 minutes";
+      loadPlanner();
+      window.showAriaToast?.("Pomodoro 25 min started", "ok");
+    } catch (e) {
+      window.showAriaToast?.(`Pomodoro failed: ${e.message}`, "err");
+    }
   });
   $("plannerAlarmBtn")?.addEventListener("click", async () => {
     const time = $("plannerAlarmInput")?.value?.trim();
     if (!time) return;
-    await p0Fetch("/api/planner/alarms", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ time }),
-    });
-    loadPlanner();
+    try {
+      await p0Fetch("/api/planner/alarms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ time }),
+      });
+      loadPlanner();
+    } catch (e) {
+      window.showAriaToast?.(`Alarm failed: ${e.message}`, "err");
+    }
   });
 };
 
 window.initDashboard = function initDashboard() {
   loadDashboard();
   loadChecklist();
+  loadSkillsWorkflows();
 };
+
+async function loadSkillsWorkflows() {
+  const skillsEl = $("skillsList");
+  const workflowsEl = $("workflowsList");
+  if (!skillsEl && !workflowsEl) return;
+  try {
+    const [skillsData, wfData] = await Promise.all([
+      p0Fetch("/api/skills"),
+      p0Fetch("/api/workflows"),
+    ]);
+    if (skillsEl) {
+      const skills = skillsData.skills || [];
+      skillsEl.innerHTML = skills.length
+        ? skills
+            .map(
+              (s) =>
+                `<li><strong>${s.name || s.slug}</strong> <span class="muted">${s.description || ""}</span></li>`
+            )
+            .join("")
+        : "<li class='muted'>No skills installed</li>";
+    }
+    if (workflowsEl) {
+      const workflows = wfData.workflows || [];
+      workflowsEl.innerHTML = workflows.length
+        ? workflows
+            .map(
+              (w) =>
+                `<li><strong>${w.name || w.slug}</strong> <span class="muted">${w.count || 1}× · ${w.steps || 0} steps</span></li>`
+            )
+            .join("")
+        : "<li class='muted'>No learned workflows yet</li>";
+    }
+  } catch (e) {
+    if (skillsEl) skillsEl.innerHTML = `<li class='muted'>${e.message}</li>`;
+    window.showAriaToast?.(`Skills/workflows: ${e.message}`, "err");
+  }
+}
+
+async function scanWorkflowsFromActionLog() {
+  try {
+    const data = await p0Fetch("/api/workflows/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ min_repeats: 2 }),
+    });
+    const n = data.count ?? (data.workflows || []).length;
+    window.showAriaToast?.(n ? `Found ${n} workflow pattern(s)` : "No repeated sequences yet", n ? "ok" : "info");
+    await loadSkillsWorkflows();
+  } catch (e) {
+    window.showAriaToast?.(`Scan failed: ${e.message}`, "err");
+  }
+}
 
 window.showListeningOverlay = showListeningOverlay;
 window.jarvisStopSpeaking = async function () {
@@ -426,6 +503,8 @@ document.addEventListener("DOMContentLoaded", () => {
   $("toolConfirmYes")?.addEventListener("click", () => resolveToolConfirm(true));
   $("toolConfirmNo")?.addEventListener("click", () => resolveToolConfirm(false));
   $("checklistRunBtn")?.addEventListener("click", () => loadChecklist(true));
+  $("skillsWorkflowsRefreshBtn")?.addEventListener("click", () => loadSkillsWorkflows());
+  $("workflowsScanBtn")?.addEventListener("click", () => scanWorkflowsFromActionLog());
   $("audioStopBtn")?.addEventListener("click", () => window.jarvisStopSpeaking());
   startSystemMonitor();
   if (window.initProjects) window.initProjects();

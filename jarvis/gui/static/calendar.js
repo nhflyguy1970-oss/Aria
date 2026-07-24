@@ -35,7 +35,11 @@ function shiftMonth(mk, delta) {
 
 async function fetchJson(url, opts) {
   const res = await fetch(url, opts);
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.message || data.detail || res.statusText || "Request failed");
+  }
+  return data;
 }
 
 function renderHolidayLegend(holidays) {
@@ -109,9 +113,11 @@ function renderDayPanel(data) {
   const tasks = (data.tasks || []).filter((t) => t.status !== "done").map((t) =>
     `<li class="cal-item cal-item-task">☐ ${escapeHtml(t.content || "")}</li>`
   ).join("");
+  const hasItems = Boolean(holidays || work || ics || events || tasks);
 
   el.innerHTML = `
     <h3>${escapeHtml(data.title || data.day)}</h3>
+    ${hasItems ? "" : `<p class="muted">Nothing scheduled for this day.</p>`}
     ${holidays ? `<ul class="cal-day-list">${holidays}</ul>` : ""}
     ${work ? `<p class="cal-section-label">Work schedule</p><ul class="cal-day-list">${work}</ul>` : ""}
     ${ics ? `<p class="cal-section-label">External calendar</p><ul class="cal-day-list">${ics}</ul>` : ""}
@@ -142,8 +148,14 @@ function renderDayPanel(data) {
 
 async function loadCalendarDay(day) {
   calSelectedDay = day;
-  const data = await fetchJson(`/api/calendar/day?day=${encodeURIComponent(day)}`);
-  renderDayPanel(data);
+  try {
+    const data = await fetchJson(`/api/calendar/day?day=${encodeURIComponent(day)}`);
+    renderDayPanel(data);
+  } catch (e) {
+    const el = calEl("calendarDayPanel");
+    if (el) el.innerHTML = `<p class="muted">Could not load day: ${escapeHtml(e.message)}</p>`;
+    window.showAriaToast?.(`Calendar day failed: ${e.message}`, "err");
+  }
   document.querySelectorAll("#calendarGrid .bujo-cal-day[data-date]").forEach((btn) => {
     btn.classList.toggle("selected", btn.dataset.date === day);
   });
@@ -221,9 +233,17 @@ async function saveCalendarNote(day) {
   form.append("day", String(dayNum));
   form.append("note", note);
   form.append("month", calMonth);
-  await fetch("/api/journal/monthly/calendar-note", { method: "POST", body: form });
-  window.showAriaToast?.("Day note saved", "ok", 4000);
-  await loadCalendarMonth(calMonth);
+  try {
+    const res = await fetch("/api/journal/monthly/calendar-note", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.message || res.statusText || "Save failed");
+    }
+    window.showAriaToast?.("Day note saved", "ok", 4000);
+    await loadCalendarMonth(calMonth);
+  } catch (e) {
+    window.showAriaToast?.(`Could not save day note: ${e.message}`, "err", 5000);
+  }
 }
 
 function renderWorkScheduleEditor(sched) {

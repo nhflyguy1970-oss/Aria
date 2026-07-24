@@ -636,7 +636,7 @@
     const list = $("flytyingQueueList");
     if (!list) return;
     if (!_queue.length) {
-      list.innerHTML = "";
+      list.innerHTML = "<li class='muted small'>Queue empty — star a recipe or Add to queue</li>";
       return;
     }
     list.innerHTML =
@@ -663,7 +663,9 @@
       _favorites = new Set(data.favorites || []);
       loadRecipes();
       if (_selectedId === id) selectRecipe(id, { skipVideo: true });
-    } catch (_) {}
+    } catch (e) {
+      window.showAriaToast?.(`Favorite failed: ${e.message || e}`, "err");
+    }
   }
 
   async function addToQueue(id, name) {
@@ -676,7 +678,9 @@
       });
       _queue = data.queue || [];
       renderQueue();
-    } catch (_) {}
+    } catch (e) {
+      window.showAriaToast?.(`Queue failed: ${e.message || e}`, "err");
+    }
   }
 
   function updateCompareToolbar() {
