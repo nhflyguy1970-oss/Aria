@@ -3086,6 +3086,12 @@ document.getElementById("startupSkipBtn")?.addEventListener("click", () => {
 
 const modelsToggle = document.getElementById("modelsToggle");
 const modelsEditor = document.getElementById("modelsEditor");
+modelsToggle?.addEventListener("click", () => {
+  if (!modelsEditor) return;
+  const open = modelsEditor.classList.toggle("hidden") === false;
+  modelsToggle.setAttribute("aria-expanded", open ? "true" : "false");
+  if (open) window.loadModelSettings?.();
+});
 const modelSelects = {
   general: document.getElementById("modelGeneral"),
   coder: document.getElementById("modelCoder"),
@@ -3841,6 +3847,7 @@ document.getElementById("themeToggle")?.addEventListener("click", () => {
   }
   const btn = document.getElementById("themeToggle");
   if (btn) btn.textContent = on ? "Dark theme" : "Light theme";
+  window.showAriaToast?.(on ? "Light theme" : "Dark theme", "ok", 1800);
 });
 
 (function restoreAriaTheme() {

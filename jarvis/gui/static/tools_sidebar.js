@@ -35,7 +35,7 @@
     return "";
   }
 
-  async function refreshToolsSidebar() {
+  async function refreshToolsSidebar(opts = {}) {
     const list = document.getElementById("toolsStatusList");
     if (!list) return;
     try {
@@ -44,8 +44,11 @@
       if (!res.ok) throw new Error(data.message || res.statusText);
       const html = renderToolRows(data.tools);
       list.innerHTML = html || "<li class='muted'>No tool status</li>";
-    } catch (_) {
+    } catch (err) {
       list.innerHTML = "<li class='muted'>Could not load tools</li>";
+      if (opts.toast) {
+        window.showAriaToast?.(err?.message || "Could not load tools status", "err", 4000);
+      }
     }
   }
 
@@ -69,7 +72,7 @@
     refreshBrainMode();
     setInterval(refreshToolsSidebar, 30000);
     setInterval(refreshBrainMode, 30000);
-    document.getElementById("toolsRefreshBtn")?.addEventListener("click", refreshToolsSidebar);
+    document.getElementById("toolsRefreshBtn")?.addEventListener("click", () => refreshToolsSidebar({ toast: true }));
   }
 
   window.initToolsSidebar = initToolsSidebar;
