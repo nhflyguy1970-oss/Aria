@@ -141,13 +141,22 @@
 
   async function saveSettings() {
     const m = $("gestureModeSelect")?.value || "off";
-    await fetch("/api/security/gestures/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: m }),
-    });
-    mode = m;
-    refreshGpuMode();
+    try {
+      const res = await fetch("/api/security/gestures/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: m }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        throw new Error(data.message || data.detail || `Gesture mode save failed (${res.status})`);
+      }
+      mode = m;
+      refreshGpuMode();
+      window.showAriaToast?.(`Gesture mode: ${m}`, "ok", 2000);
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Could not save gesture mode", "err", 5000);
+    }
   }
 
   function cameraErrorHint(e) {
@@ -195,7 +204,9 @@
       await video.play();
       if ($("presenceStatus")) $("presenceStatus").textContent = "Camera on — fist drag · pinch click";
     } catch (e) {
-      if ($("presenceStatus")) $("presenceStatus").textContent = `Camera: ${cameraErrorHint(e)}`;
+      const msg = `Camera: ${cameraErrorHint(e)}`;
+      if ($("presenceStatus")) $("presenceStatus").textContent = msg;
+      window.showAriaToast?.(msg, "err", 6000);
     }
   }
 
