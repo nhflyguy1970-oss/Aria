@@ -484,13 +484,13 @@
         },
       },
       {
-        id: "act:vision-quality",
-        label: "Focus vision quality",
-        group: "System",
-        keywords: "vlm image model mode",
+        id: "act:ics-wizard",
+        label: "Focus calendar ICS import",
+        group: "Actions",
+        keywords: "ical feed subscribe calendar",
         run: () => {
-          goView("chat");
-          setTimeout(() => $("visionQualitySelect")?.focus(), 60);
+          goView("documents");
+          setTimeout(() => $("icsUrlInput")?.focus(), 80);
         },
       },
     ];

@@ -290,7 +290,8 @@ async function loadDashboard() {
     }
     startDashboardClock();
   } catch (e) {
-    $("dashboardBody") && ($("dashboardBody").textContent = e.message);
+    if ($("dashboardBody")) $("dashboardBody").textContent = e.message;
+    window.showAriaToast?.(e.message || "Dashboard load failed", "err", 5000);
   }
 }
 

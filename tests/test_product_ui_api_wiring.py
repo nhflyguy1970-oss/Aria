@@ -261,6 +261,7 @@ def test_command_palette_is_wired():
     assert "act:security" in js
     assert "act:webcam" in js
     assert "act:gallery" in js
+    assert "act:ics-wizard" in js
     assert "journalOpenCalendarBtn" in html
     assert "memoryOpenJournalBtn" in html
     assert "memoryOpenProjectsBtn" in html
