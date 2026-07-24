@@ -43,11 +43,11 @@ Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 Expand this matrix as each subsystem completes deep certification.
 
 ## Wave resume (2026-07-24 late)
-- FIXED & CERTIFIED: free_vram (+vramPreflight)/vision_settings/lan_access/git/chat_model/profile_controls/coding_quick/chat_media (+jarvisSendToChat)/crop_webcam/vision_drop extracts; Actions/Planner/Journal/skills/workflows empty-state CTAs; act:compare-images; uncensored restore + media-job resume + NSFW install poll toasts; cross-links Memory/Projects/Docs/Gallery/Maker/Fly tying/Video/Meme/Audio/Voice/Planner/Calendar/Browser/Security/Presence/Dashboard/Actions/Journal/MC↔Audit; dashboard AI suggestion chips; alert→toast modernization; skip-link + global focus-visible; palette expansions; health.mjs audio; modal aria-labelledby incl. crop/HA setup; visibility-aware Browser/MC/tools polling; Maker toastOnError. `app.js` ~2799 lines.
-- INTENTIONALLY DEFERRED: compare-mode attachment preview still in app.js (coupled to sendMessage); long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
+- FIXED & CERTIFIED: free_vram (+vramPreflight)/vision_settings/lan_access/git/chat_model/profile_controls/coding_quick/chat_media (+jarvisSendToChat)/crop_webcam/vision_drop/**attachment_compare** extracts; Actions/Planner/Journal/skills/workflows/MC activity/Documents empty-state CTAs; act:compare-images; uncensored restore + media-job resume + NSFW install + voice settings toasts; cross-links Memory/Projects/Docs/Gallery/Maker/Fly tying/Video/Meme/Audio/Voice/Planner/Calendar/Browser/Security/Presence/Dashboard/Actions/Journal/MC↔Audit; dashboard AI suggestion chips; alert→toast modernization; skip-link + global focus-visible; palette expansions; health.mjs audio; modal aria-labelledby incl. crop/HA setup; visibility-aware Browser/MC/tools polling; Maker toastOnError. `app.js` ~**2610** lines.
+- INTENTIONALLY DEFERRED: chat/stream/sendMessage still in app.js (core pipeline); long-duration soak; multi-monitor; Comfy/HA/voice deep soaks; exhaustive per-control matrix.
 - Verdict: **NO** — continue highest-priority silent-fail / extracts / soaks.
 
-**Next priorities:** compare-mode / chat-stream splits; long-duration memory-leak soak; multi-monitor native; Comfy/HA deep soaks; per-control matrix completion; remaining confirm() friction only where safe.
+**Next priorities:** chat-stream / media-job poll extracts; long-duration memory-leak soak; multi-monitor native; Comfy/HA deep soaks; per-control matrix completion; remaining confirm() friction only where safe.
 
 ## Earlier wave notes
 - FIXED & CERTIFIED: calendar↔journal/planner deep-links; module chips navigate+preferred_module; MC Dashboard→overview; projects create uses API slug; stop/cancel/memory/palette/security/journal-stats toasts; orphan browser.js removed; async backup + theme persist.

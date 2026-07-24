@@ -1106,7 +1106,7 @@ function finishSendUi() {
   fileInput?.removeAttribute("multiple");
   const fileInput2 = document.getElementById("fileInput2");
   if (fileInput2) fileInput2.value = "";
-  updateCompareButton();
+  window.updateCompareButton?.();
 }
 
 function updateProgressStatus(message) {
@@ -1975,211 +1975,8 @@ messageInput?.addEventListener("keydown", (e) => {
   }
 });
 
-function updateCompareButton() {
-  const btn = document.getElementById("compareModeBtn");
-  if (!btn) return;
-  const count = (pendingFile ? 1 : 0) + (pendingFile2 ? 1 : 0);
-  btn.classList.toggle("active", compareMode || Boolean(pendingFile2));
-  if (pendingFile2) {
-    btn.title = "Two images ready — send to compare";
-  } else if (compareMode) {
-    btn.title = count ? "Compare mode: add a second image" : "Compare mode: pick two images";
-  } else {
-    btn.title = "Compare two images (select both in one dialog)";
-  }
-}
-
-function enterCompareMode() {
-  compareMode = true;
-  updateCompareButton();
-  const fi = document.getElementById("fileInput");
-  if (!fi) return;
-  if (!pendingFile) {
-    fi.setAttribute("multiple", "");
-    fi.click();
-  } else if (!pendingFile2) {
-    document.getElementById("fileInput2")?.click();
-  }
-}
-
-function exitCompareMode() {
-  compareMode = false;
-  pendingFile2 = null;
-  document.getElementById("fileInput")?.removeAttribute("multiple");
-  updateCompareButton();
-  updateAttachmentPreview();
-}
-
-function updateAttachmentPreview() {
-  if (!attachmentPreview) return;
-  if (!pendingFile && !pendingFile2) {
-    attachmentPreview.classList.add("hidden");
-    updateCompareButton();
-    return;
-  }
-  attachmentPreview.classList.remove("hidden");
-  const parts = [];
-  [pendingFile, pendingFile2].filter(Boolean).forEach((f, i) => {
-    let preview = "";
-    if (isVisionAttachment(f)) {
-      preview = `<img src="${URL.createObjectURL(f)}" alt="" class="attach-thumb" /> `;
-    }
-    const label = pendingFile2 ? `Image ${i + 1}: ` : "";
-    parts.push(`${preview}${label}📎 ${escapeHtml(f.name)}`);
-  });
-  const dataBadge = pendingFile && isDataAttachment(pendingFile) && !pendingFile2
-    ? `<span class="compare-badge data-badge">Data file</span>`
-    : "";
-  const compareBadge = pendingFile2
-    ? `<span class="compare-badge">Compare · 2 images</span>`
-    : compareMode
-      ? `<span class="compare-badge warn">Compare · 1/2 — add second image</span>`
-      : "";
-  const addSecond = compareMode && pendingFile && !pendingFile2
-    ? `<button type="button" id="addSecondImgBtn" class="ghost-btn small">+ Add image 2</button>`
-    : "";
-  const cancelCompare = compareMode || pendingFile2
-    ? `<button type="button" id="cancelCompareBtn" class="ghost-btn small">Cancel compare</button>`
-    : "";
-  const isVideo = pendingFile && /^video\//i.test(pendingFile.type);
-  const isPdf = pendingFile && (pendingFile.type === "application/pdf" || /\.pdf$/i.test(pendingFile.name));
-  const isDoc = pendingFile && (/\.docx$/i.test(pendingFile.name)
-    || pendingFile.type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-  const docBadge = (isPdf || isDoc) && !pendingFile2
-    ? `<span class="compare-badge data-badge">Document · try “Summarize this warranty PDF”</span>`
-    : "";
-  const videoOpts = isVideo
-    ? `<label class="attach-opt">Frame at <input type="text" id="videoSecondInput" placeholder="0:45 or 12s" value="${escapeHtml(pendingVideoSecond)}" class="attach-mini-input" /></label>`
-    : "";
-  const pdfOpts = isPdf
-    ? `<label class="attach-opt">Page <input type="number" id="pdfPageInput" min="1" value="${escapeHtml(pendingPdfPage)}" class="attach-mini-input" title="For OCR/vision only" /></label>`
-    : "";
-  const cropBtn = pendingFile && isVisionAttachment(pendingFile) && !pendingFile2
-    ? `<button type="button" id="cropAttachBtn" class="ghost-btn small">Crop</button>`
-    : "";
-  attachmentPreview.innerHTML = `${dataBadge} ${docBadge} ${compareBadge} ${parts.join(" · ")} ${videoOpts} ${pdfOpts} ${addSecond} ${cropBtn} ${cancelCompare} <button type="button" aria-label="Remove">×</button>`;
-  document.getElementById("videoSecondInput")?.addEventListener("change", (e) => {
-    pendingVideoSecond = e.target.value;
-  });
-  document.getElementById("pdfPageInput")?.addEventListener("change", (e) => {
-    pendingPdfPage = e.target.value || "1";
-  });
-  attachmentPreview.querySelector("button[aria-label='Remove']")?.addEventListener("click", () => {
-    pendingFile = null;
-    pendingFile2 = null;
-    pendingCrop = null;
-    compareMode = false;
-    if (fileInput) fileInput.value = "";
-    const fi2 = document.getElementById("fileInput2");
-    if (fi2) fi2.value = "";
-    fileInput?.removeAttribute("multiple");
-    attachmentPreview.classList.add("hidden");
-    updateCompareButton();
-  });
-  document.getElementById("addSecondImgBtn")?.addEventListener("click", () => {
-    compareMode = true;
-    document.getElementById("fileInput2")?.click();
-  });
-  document.getElementById("cancelCompareBtn")?.addEventListener("click", () => {
-    exitCompareMode();
-  });
-  document.getElementById("cropAttachBtn")?.addEventListener("click", () => {
-    window.openCropModal?.();
-  });
-  updateCompareButton();
-}
-
-function assignAttachment(file, asSecond = false) {
-  if (!file) return;
-  if (asSecond || (compareMode && pendingFile)) {
-    if (!pendingFile) pendingFile = file;
-    else pendingFile2 = file;
-  } else if (compareMode) {
-    pendingFile = file;
-  } else {
-    pendingFile = file;
-    pendingFile2 = null;
-  }
-  updateAttachmentPreview();
-  if (isDataAttachment(pendingFile)) refreshDataChips();
-  else refreshVisionChips();
-}
-
-function assignMultipleAttachments(files) {
-  const imgs = files.filter((f) => isVisionAttachment(f) || /^image\//i.test(f.type));
-  if (!imgs.length) return;
-  compareMode = true;
-  pendingFile = imgs[0];
-  pendingFile2 = imgs.length >= 2 ? imgs[1] : null;
-  updateAttachmentPreview();
-  if (isDataAttachment(pendingFile)) refreshDataChips();
-  else refreshVisionChips();
-  if (compareMode && pendingFile && !pendingFile2) {
-    setTimeout(() => document.getElementById("fileInput2")?.click(), 250);
-  }
-}
-
-fileInput?.addEventListener("change", () => {
-  const files = fileInput.files ? Array.from(fileInput.files) : [];
-  fileInput?.removeAttribute("multiple");
-  if (!files.length) return;
-  if (files.length >= 2) {
-    assignMultipleAttachments(files);
-    fileInput.value = "";
-    return;
-  }
-  assignAttachment(files[0], compareMode && Boolean(pendingFile));
-  fileInput.value = "";
-});
-
-document.getElementById("fileInput2")?.addEventListener("change", (e) => {
-  const f = e.target.files[0];
-  if (f) {
-    compareMode = true;
-    assignAttachment(f, true);
-  }
-  e.target.value = "";
-});
-
-document.getElementById("compareModeBtn")?.addEventListener("click", () => {
-  if (pendingFile && pendingFile2) {
-    messageInput.value = "Compare these two images. Describe similarities and differences.";
-    messageInput.focus();
-    return;
-  }
-  enterCompareMode();
-});
-
-function refreshDataChips() {
-  if (!suggestionsEl || !dataChips.length) return;
-  if (!isDataAttachment(pendingFile)) return;
-  suggestionsEl.innerHTML = "";
-  dataChips.forEach((s) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "suggestion-chip data-chip";
-    chip.textContent = s;
-    chip.onclick = () => { messageInput.value = s; messageInput.focus(); };
-    suggestionsEl.appendChild(chip);
-  });
-}
-
-function refreshVisionChips() {
-  if (!suggestionsEl || !visionChips.length) return;
-  if (!pendingFile && !pendingFile2) return;
-  suggestionsEl.innerHTML = "";
-  const chips = pendingFile2
-    ? ["Compare these two images. Describe similarities and differences."]
-    : visionChips;
-  chips.forEach((s) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "suggestion-chip vision-chip";
-    chip.textContent = s;
-    chip.onclick = () => { messageInput.value = s; messageInput.focus(); };
-    suggestionsEl.appendChild(chip);
-  });
-}
+// Attachment compare / preview / chips → attachment_compare.js
+// (window.updateAttachmentPreview / assignAttachment / refresh*Chips / compare mode)
 
 // openCropModal / webcam → crop_webcam.js (window.openCropModal, window.captureWebcamAttachment)
 // initVisionDropPaste → vision_drop.js
@@ -2271,21 +2068,29 @@ window.sendMessage = sendMessage;
 window.showError = showError;
 window.isNativeApp = isNativeApp;
 window.loadHealth = loadHealth;
-window.assignAttachment = assignAttachment;
-window.updateAttachmentPreview = updateAttachmentPreview;
 window.isVisionAttachment = isVisionAttachment;
+window.isDataAttachment = isDataAttachment;
 window.jarvisAttach = {
   get pendingFile() { return pendingFile; },
+  set pendingFile(v) { pendingFile = v; },
   get pendingFile2() { return pendingFile2; },
+  set pendingFile2(v) { pendingFile2 = v; },
   get compareMode() { return compareMode; },
+  set compareMode(v) { compareMode = v; },
   get pendingCrop() { return pendingCrop; },
   set pendingCrop(v) { pendingCrop = v; },
+  get pendingVideoSecond() { return pendingVideoSecond; },
+  set pendingVideoSecond(v) { pendingVideoSecond = v; },
+  get pendingPdfPage() { return pendingPdfPage; },
+  set pendingPdfPage(v) { pendingPdfPage = v; },
+  get visionChips() { return visionChips; },
+  get dataChips() { return dataChips; },
   isVisionAttachment,
+  isDataAttachment,
   isTextEntryElement,
-  updateAttachmentPreview,
-  assignAttachment,
-  assignMultipleAttachments,
+  escapeHtml,
 };
+// Attachment methods filled by attachment_compare.js
 // loadVisionSettings → vision_settings.js
 Object.defineProperty(window, "activeBranchId", {
   get() { return _activeBranchId; },
@@ -2410,8 +2215,8 @@ async function loadSuggestions() {
       chip.onclick = () => { messageInput.value = String(s); messageInput.focus(); };
       suggestionsEl.appendChild(chip);
     });
-    if (isDataAttachment(pendingFile)) refreshDataChips();
-    else if (pendingFile || pendingFile2) refreshVisionChips();
+    if (isDataAttachment(pendingFile)) window.refreshDataChips?.();
+    else if (pendingFile || pendingFile2) window.refreshVisionChips?.();
     const ed = await loadEditorContext();
     if (ed?.fresh && ed.file) refreshEditorSuggestions(ed.file, ed.ctx?.has_selection);
   } catch (err) {

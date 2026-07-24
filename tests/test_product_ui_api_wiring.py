@@ -291,10 +291,12 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/chat_media.js").is_file()
     assert Path("jarvis/gui/static/crop_webcam.js").is_file()
     assert Path("jarvis/gui/static/vision_drop.js").is_file()
+    assert Path("jarvis/gui/static/attachment_compare.js").is_file()
     assert "coding_quick.js" in html
     assert "chat_media.js" in html
     assert "crop_webcam.js" in html
     assert "vision_drop.js" in html
+    assert "attachment_compare.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
@@ -312,8 +314,11 @@ def test_command_palette_is_wired():
     assert "async function openCropModal" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert 'getElementById("webcamBtn")' not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function initVisionDropPaste" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "function updateAttachmentPreview" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "updateAttachmentPreview," in Path("jarvis/gui/static/attachment_compare.js").read_text(encoding="utf-8")
+    assert "set pendingFile(v)" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "window.initVisionDropPaste" in Path("jarvis/gui/static/vision_drop.js").read_text(encoding="utf-8")
-    assert "assignMultipleAttachments" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "assignMultipleAttachments" in Path("jarvis/gui/static/attachment_compare.js").read_text(encoding="utf-8")
     assert "Could not resume media jobs" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "Lost contact while installing NSFW" in Path("jarvis/gui/static/image_engine.js").read_text(encoding="utf-8")
     assert "mcEmptyActivityDashBtn" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
