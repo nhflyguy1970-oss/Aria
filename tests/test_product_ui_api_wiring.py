@@ -130,6 +130,7 @@ def test_a11y_modal_esc_and_ux_debt_regressions():
     html = Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
     css = Path("jarvis/gui/static/style.css").read_text(encoding="utf-8")
     app_js = Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    modal = Path("jarvis/gui/static/modal_chrome.js").read_text(encoding="utf-8")
     voice = Path("jarvis/gui/static/voice_bar.js").read_text(encoding="utf-8")
     mc = Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
 
@@ -140,18 +141,33 @@ def test_a11y_modal_esc_and_ux_debt_regressions():
     assert 'aria-label="Detach smart home panel"' in html
     assert 'aria-label="Close image preview"' in html
     assert 'aria-label="PIN"' in html
+    assert "modal_chrome.js" in html
 
     assert "--muted: var(--text-muted)" in css
     assert "#memeEngineStatus.error" in css
+    assert "memory-item--flash" in css
 
-    assert "function initAriaModalChrome" in app_js
-    assert 'if (e.key === "Escape")' in app_js
+    assert "initAriaModalChrome" in modal
+    assert "window.initAriaModalChrome" in modal
+    assert "window.initAriaModalChrome?.()" in app_js
+    assert "function initAriaModalChrome" not in app_js
     assert "galleryGenerateBtn" in app_js
     assert 'aria-label="Delete' in app_js
+    assert "window.loadMemoryBrowser" in app_js
+    assert "window.closeImageLightbox" in app_js
 
     assert voice.count('data.event === "voice_state"') == 1
     assert 'data.detail === "cloud-live"' in voice
     assert 'switchMcTab("inference")' in mc
+
+
+def test_orphan_jarvis_api_py_removed():
+    from pathlib import Path
+
+    assert not Path("jarvis/api.py").exists(), "stale duplicate voice API must stay removed"
+    voice_ext = Path("jarvis/extensions/voice/api.py")
+    assert voice_ext.is_file()
+    assert "/api/voice/settings" in voice_ext.read_text(encoding="utf-8")
 
 
 def test_command_palette_is_wired():
@@ -172,6 +188,8 @@ def test_command_palette_is_wired():
     assert 'id: "search:memory"' in js
     assert "/api/knowledge/search" in js
     assert "fetchContentHits" in js
+    assert "memory-item--flash" in js
+    assert "Use model:" in js
     assert "command-palette-modal" in css
     assert "window.switchMcTab = switchMcTab" in mc
     assert Path("docs/ARIA_COMPETITIVE_ANALYSIS_V2.md").is_file()
@@ -181,6 +199,7 @@ def test_command_palette_is_wired():
     assert "planner_tasks" in cal
     assert "cal-open-planner" in cal
     assert "planner_tasks" in Path("jarvis/calendar_tab.py").read_text(encoding="utf-8")
+    assert Path("jarvis/gui/static/modal_chrome.js").is_file()
 
 
 def test_stop_playback_and_clear_tts_queue_do_not_raise():

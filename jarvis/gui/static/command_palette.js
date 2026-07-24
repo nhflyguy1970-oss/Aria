@@ -278,7 +278,26 @@
       },
     ];
 
-    commands = [...nav, ...mcTabs, ...actions, ...search];
+    const modelSelect = $("chatModelSelect");
+    const models = modelSelect
+      ? [...modelSelect.options]
+          .filter((o) => o.value)
+          .slice(0, 24)
+          .map((o) => ({
+            id: `model:${o.value}`,
+            label: `Use model: ${o.textContent || o.value}`,
+            group: "Models",
+            keywords: `ollama provider ${o.value}`,
+            hint: "Chat",
+            run: () => {
+              modelSelect.value = o.value;
+              modelSelect.dispatchEvent(new Event("change", { bubbles: true }));
+              window.showAriaToast?.(`Model: ${o.textContent || o.value}`, "ok");
+            },
+          }))
+      : [];
+
+    commands = [...nav, ...mcTabs, ...actions, ...search, ...models];
   }
 
   let contentHits = [];
@@ -303,17 +322,32 @@
   function openHit(hit) {
     const type = hit.source_type || "";
     const loc = String(hit.location || "");
+    const rawId = hit.raw?.id || (String(hit.title || "").match(/^(exp_|mem_|acm)/) ? hit.title : "");
     if (type === "conversation" || type.includes("memory") || loc.includes("acm") || loc === "memory" || loc === "profile") {
       goView("memory");
-      setTimeout(() => {
-        const q = (hit.excerpt || hit.title || "").slice(0, 40);
+      setTimeout(async () => {
+        const q = (hit.excerpt || hit.title || "").slice(0, 48);
         const el = $("memorySearch");
         if (el && q) {
           el.value = q;
           el.dispatchEvent(new Event("input", { bubbles: true }));
-          el.focus();
         }
-      }, 80);
+        try {
+          await window.loadMemoryBrowser?.();
+        } catch {
+          /* ignore */
+        }
+        if (rawId) {
+          const item = document.querySelector(`.memory-item[data-id="${CSS.escape(String(rawId))}"]`);
+          if (item) {
+            item.classList.add("memory-item--flash");
+            item.scrollIntoView({ block: "nearest", behavior: "smooth" });
+            setTimeout(() => item.classList.remove("memory-item--flash"), 2200);
+          }
+        } else {
+          el?.focus();
+        }
+      }, 100);
       return;
     }
     if (type === "notes" || type === "journal" || loc.includes("journal")) {

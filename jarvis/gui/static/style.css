@@ -4371,3 +4371,9 @@ body.light-theme .service-row--action:hover { background: rgba(0, 0, 0, 0.05); }
   font-size: 0.72rem;
   border-top: 1px solid var(--border);
 }
+
+.memory-item--flash {
+  outline: 2px solid var(--accent);
+  background: rgba(212, 160, 84, 0.14);
+  transition: background 0.3s ease, outline-color 0.3s ease;
+}

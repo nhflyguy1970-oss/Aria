@@ -17,7 +17,10 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 | Federated palette search (memory/docs content) | Search | Command palette | FIXED & CERTIFIED | Debounced `/api/knowledge/search` Results group |
 | Planner ↔ Calendar (today) | Cross-system | Calendar day panel | FIXED & CERTIFIED | Open planner tasks merge into today |
 | Knowledge memory strategy gate | Knowledge | unified_search | FIXED & CERTIFIED | Always search memory; ACM empty → local fallthrough |
-| God-app.js split | Architecture | app.js (~6k lines) | INTENTIONALLY DEFERRED | Inventory confirmed concentration risk |
+| God-app.js split | Architecture | app.js (~5.9k after extract) | INTENTIONALLY DEFERRED | Partial: `modal_chrome.js` extracted; further slices staged |
+| Orphan `jarvis/api.py` | Dead code | Voice API duplicate | REMOVED | Live routes live in `extensions/voice/api.py` |
+| Palette model switching | Models | Command palette Models group | FIXED & CERTIFIED | Reads `#chatModelSelect` options |
+| Memory hit deep-link | Search / Memory | Palette Results → memory list | FIXED & CERTIFIED | Search + scroll/flash when id matches |
 | Comfy full generate soak | Gallery | ComfyUI | INTENTIONALLY DEFERRED | Needs GPU long-run |
 | HA live scenes | Smart home | HA | INTENTIONALLY DEFERRED | HA often down on workstation |
 | Long-duration leak profile | Performance | Runtime | INTENTIONALLY DEFERRED | Hours soak not yet run this wave |

@@ -35,19 +35,19 @@ See `docs/ARIA_COMPETITIVE_ANALYSIS_V2.md`. Key adopted principle: unified find-
 | Tests | wiring suite + `test_product_cross_system_search.py` |
 | Live | Palette → knowledge search; Calendar today shows planner tasks |
 
-### Cross-system / knowledge (this continuation)
+### Architecture / debt (continuation)
 
-- Unified search always includes **memory** (registry `retrieval_available=false` no longer skips it)
-- Empty ACM authority search falls through to local MemoryStore
-- Calendar day merges open **Planner** tasks for today with jump-to-Planner control
+- Extracted Esc/focus modal chrome → `modal_chrome.js` (app.js ~6022 → ~5937 lines)
+- **Removed** stale orphan `jarvis/api.py` (duplicate of `extensions/voice/api.py`; never registered)
+- Palette: Models group + memory result deep-link/flash
 
 ## Remaining deferred (blocks YES)
 
-1. God-`app.js` modularization  
+1. Further god-`app.js` modularization (gallery/memory/chat slices)  
 2. Deep Comfy/HA/coding/voice-live soaks  
 3. Long-duration + multi-monitor certification  
 4. Full per-feature matrix completion for every control  
-5. Richer federated hit actions (deep-link exact memory id / journal bullet)  
+5. Exact ACM↔local memory id alignment for flash highlight when ids diverge  
 
 ## Verdict question
 
@@ -55,7 +55,7 @@ Would I proudly ship Aria today as a polished, modern, production-quality AI ope
 
 **NO**
 
-Evidence: discoverability and cross-system calendar/planner/knowledge improved, but architecture debt and deep soaks remain.
+Evidence: discoverability, cross-system calendar/planner/knowledge, and first architecture extraction improved, but major app.js debt and deep soaks remain.
 
 
 ## Complete product inventory (Phase 1)
