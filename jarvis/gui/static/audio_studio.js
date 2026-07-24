@@ -17,9 +17,15 @@ let activeAudioJobId = null;
 
 async function cancelAudioJob() {
   if (!activeAudioJobId) return;
+  const jobId = activeAudioJobId;
   try {
-    await fetch(`/api/audio/job/${encodeURIComponent(activeAudioJobId)}/cancel`, { method: "POST" });
-  } catch (_) {}
+    const res = await fetch(`/api/audio/job/${encodeURIComponent(jobId)}/cancel`, { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Cancel failed (${res.status})`);
+    window.showAriaToast?.("Audio job cancel requested", "ok", 2500);
+  } catch (err) {
+    window.showAriaToast?.(err.message || "Could not cancel audio job", "err", 5000);
+  }
 }
 
 async function pollAudioJob(jobId, statusEl, onDone, progressWrap, progressFill) {

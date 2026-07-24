@@ -353,22 +353,29 @@
     $("faceEnrollBtn")?.addEventListener("click", async () => {
       const video = $("presenceVideo");
       if (!video?.videoWidth) {
-        if ($("presenceStatus")) $("presenceStatus").textContent = "Start camera first — enroll needs a live frame";
+        const msg = "Start camera first — enroll needs a live frame";
+        if ($("presenceStatus")) $("presenceStatus").textContent = msg;
+        window.showAriaToast?.(msg, "warn", 3500);
         return;
       }
-      const c = document.createElement("canvas");
-      c.width = video.videoWidth;
-      c.height = video.videoHeight;
-      c.getContext("2d").drawImage(video, 0, 0);
-      const image = c.toDataURL("image/jpeg", 0.85);
-      const r = await fetch("/api/security/face/enroll", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image }),
-      });
-      const d = await r.json();
-      if ($("presenceStatus")) {
-        $("presenceStatus").textContent = d.ok ? "Face enrolled" : d.error || "Enroll failed";
+      try {
+        const c = document.createElement("canvas");
+        c.width = video.videoWidth;
+        c.height = video.videoHeight;
+        c.getContext("2d").drawImage(video, 0, 0);
+        const image = c.toDataURL("image/jpeg", 0.85);
+        const r = await fetch("/api/security/face/enroll", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image }),
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || !d.ok) throw new Error(d.error || d.message || d.detail || `Enroll failed (${r.status})`);
+        if ($("presenceStatus")) $("presenceStatus").textContent = "Face enrolled";
+        window.showAriaToast?.("Face enrolled", "ok", 3000);
+      } catch (err) {
+        if ($("presenceStatus")) $("presenceStatus").textContent = err.message || "Enroll failed";
+        window.showAriaToast?.(err.message || "Face enroll failed", "err", 5000);
       }
     });
     const s = document.createElement("script");
