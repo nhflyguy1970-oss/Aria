@@ -227,7 +227,8 @@ async function loadVideoGallery() {
     const data = await res.json();
     const videos = data.videos || [];
     if (!videos.length) {
-      grid.innerHTML = "<p class=\"muted\">No videos yet. Chat: “generate a video of …” or upload below.</p>";
+      grid.innerHTML = `<p class="muted">No videos yet. <button type="button" class="ghost-btn tiny" id="videoEmptyChatBtn">Ask Chat</button> or upload below.</p>`;
+      grid.querySelector("#videoEmptyChatBtn")?.addEventListener("click", () => { window.switchToView?.("chat"); window.jarvisSendToChat?.("Generate a video of "); });
       return;
     }
     grid.innerHTML = videos.map((v) => {
@@ -270,7 +271,8 @@ async function loadVideoGallery() {
           btn.closest(".video-gallery-item")?.remove();
           if (window.showAriaToast) window.showAriaToast(`Deleted ${name}`, "info");
           if (!grid.querySelector(".video-gallery-item")) {
-            grid.innerHTML = "<p class=\"muted\">No videos yet. Chat: “generate a video of …” or upload below.</p>";
+            grid.innerHTML = `<p class="muted">No videos yet. <button type="button" class="ghost-btn tiny" id="videoEmptyChatBtn">Ask Chat</button> or upload below.</p>`;
+      grid.querySelector("#videoEmptyChatBtn")?.addEventListener("click", () => { window.switchToView?.("chat"); window.jarvisSendToChat?.("Generate a video of "); });
           }
         } catch (e) {
           btn.disabled = false;

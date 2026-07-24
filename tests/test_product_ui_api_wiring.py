@@ -346,6 +346,7 @@ def test_command_palette_is_wired():
     assert "galleryEmptyPromptBtn" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
     assert "memeEmptyChatBtn" in Path("jarvis/gui/static/meme_studio.js").read_text(encoding="utf-8")
     assert "act:resume-media-jobs" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
+    assert "videoEmptyChatBtn" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")
     assert "Could not load voice settings" in Path("jarvis/gui/static/voice_bar.js").read_text(encoding="utf-8")
     assert "Media job resume failed" in Path("jarvis/gui/static/media_jobs.js").read_text(encoding="utf-8")
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
