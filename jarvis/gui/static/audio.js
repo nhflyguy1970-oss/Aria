@@ -55,7 +55,11 @@ function renderRecentList(items, emptyLabel, category = "") {
       ? ` <button type="button" class="ghost-btn tiny audio-empty-chat" data-prompt="Generate a song: ">Ask Chat</button>`
       : category === "generated"
         ? ` <button type="button" class="ghost-btn tiny audio-empty-chat" data-prompt="Speak this aloud: ">Ask Chat</button>`
-        : "";
+        : category === "recordings"
+          ? ` <button type="button" class="ghost-btn tiny" id="audioEmptyRecordBtn">Start recording</button>`
+          : category === "edited"
+            ? ` <button type="button" class="ghost-btn tiny" id="audioEmptyEditFocusBtn">Open editor</button>`
+            : "";
     return `<p class="audio-empty">${emptyLabel}${chatCta}</p>`;
   }
   return `<ul class="audio-recent">${items.map((f) =>
@@ -163,6 +167,16 @@ function bindRecentButtons(root) {
       window.switchToView?.("chat");
       window.jarvisSendToChat?.(btn.dataset.prompt || "Generate audio: ");
     };
+  });
+  document.getElementById("audioEmptyRecordBtn")?.addEventListener("click", () => {
+    document.getElementById("audioRecordBtn")?.focus();
+    document.getElementById("audioRecordBtn")?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    window.showAriaToast?.("Choose a mode, then press Record", "info", 3500);
+  });
+  document.getElementById("audioEmptyEditFocusBtn")?.addEventListener("click", () => {
+    const edit = document.getElementById("audioEditSection") || document.getElementById("audioTrimBtn") || document.querySelector(".audio-section h3");
+    (document.getElementById("audioTrimStart") || document.getElementById("audioEditBtn") || edit)?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    window.showAriaToast?.("Load a file into the player, then use edit tools", "info", 4000);
   });
   root.querySelectorAll(".audio-recent-del").forEach((btn) => {
     btn.onclick = async (e) => {

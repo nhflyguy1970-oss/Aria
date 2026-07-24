@@ -681,6 +681,7 @@ function ensureMcDelegates() {
       if (_mcRoutingLive) {
         if (_mcRoutingPoll) clearInterval(_mcRoutingPoll);
         _mcRoutingPoll = setInterval(() => {
+          if (document.hidden) return;
           if (_mcTab === "routing") renderMcTab("routing");
         }, 2000);
       } else if (_mcRoutingPoll) {

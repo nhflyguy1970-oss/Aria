@@ -437,7 +437,10 @@ function startSystemMonitor() {
   };
   tick();
   if (monitorTimer) clearInterval(monitorTimer);
-  monitorTimer = setInterval(tick, 5000);
+  monitorTimer = setInterval(() => {
+    if (document.hidden) return;
+    tick();
+  }, 5000);
 }
 
 function showListeningOverlay(show) {
@@ -597,8 +600,14 @@ async function scanWorkflowsFromActionLog() {
 window.showListeningOverlay = showListeningOverlay;
 window.jarvisStopSpeaking = async function () {
   try {
-    await fetch("/api/audio/stop", { method: "POST" });
-  } catch (_) {}
+    const res = await fetch("/api/audio/stop", { method: "POST" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      window.showAriaToast?.(data.message || `Stop failed (${res.status})`, "err", 4000);
+    }
+  } catch (e) {
+    window.showAriaToast?.(e?.message || "Could not stop audio", "err", 4000);
+  }
 };
 
 document.addEventListener("DOMContentLoaded", () => {

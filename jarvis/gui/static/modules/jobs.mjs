@@ -110,7 +110,10 @@ export function openJobCenter() {
   jobCenterModal.classList.remove("hidden");
   refreshJobCenter();
   if (jobCenterPollTimer) clearInterval(jobCenterPollTimer);
-  jobCenterPollTimer = setInterval(refreshJobCenter, 8000);
+  jobCenterPollTimer = setInterval(() => {
+    if (document.hidden) return;
+    refreshJobCenter();
+  }, 8000);
 }
 
 export function closeJobCenter() {
@@ -133,7 +136,10 @@ function initJobCenter() {
     if (e.target?.id === "jobCenterModal") closeJobCenter();
   });
   refreshJobCenterBadge();
-  setInterval(() => refreshJobCenterBadge(), 15000);
+  setInterval(() => {
+    if (document.hidden) return;
+    refreshJobCenterBadge();
+  }, 15000);
 }
 
 if (document.readyState === "loading") {

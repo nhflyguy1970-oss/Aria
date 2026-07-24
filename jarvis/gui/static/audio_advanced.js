@@ -345,7 +345,10 @@ function bindAdvanced(statusEl) {
       el.textContent = msg;
     }
     if (data.running && !wakewordPoll) {
-      wakewordPoll = setInterval(refreshWakewordStatus, 2000);
+      wakewordPoll = setInterval(() => {
+        if (document.hidden) return;
+        refreshWakewordStatus();
+      }, 2000);
     } else if (!data.running && wakewordPoll) {
       clearInterval(wakewordPoll);
       wakewordPoll = null;
@@ -386,7 +389,10 @@ async function startLiveRecord(statusEl) {
     return;
   }
   liveSessionId = data.session_id;
-  vuTimer = setInterval(() => pollLiveSession(statusEl), 400);
+  vuTimer = setInterval(() => {
+    if (document.hidden) return;
+    pollLiveSession(statusEl);
+  }, 400);
 }
 
 async function stopLiveRecord(statusEl) {

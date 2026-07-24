@@ -41,15 +41,10 @@ const sendBtn = document.getElementById("sendBtn");
 const stopChatBtn = document.getElementById("stopChatBtn");
 const fileInput = document.getElementById("fileInput");
 const attachmentPreview = document.getElementById("attachmentPreview");
-const suggestionsEl = document.getElementById("suggestions");
 const statusText = document.getElementById("statusText");
 
 window.initHaPanel?.();
 
-const editorContextPill = document.getElementById("editorContextPill");
-const editorPillText = document.getElementById("editorPillText");
-const editorContextCard = document.getElementById("editorContextCard");
-const editorContextLabel = document.getElementById("editorContextLabel");
 let _lastEditorFile = "";
 const clearBtn = document.getElementById("clearBtn");
 const micBtn = document.getElementById("micBtn");
@@ -544,7 +539,9 @@ window.jarvisAttach = {
   get pendingPdfPage() { return pendingPdfPage; },
   set pendingPdfPage(v) { pendingPdfPage = v; },
   get visionChips() { return visionChips; },
+  set visionChips(v) { visionChips = Array.isArray(v) ? v : []; },
   get dataChips() { return dataChips; },
+  set dataChips(v) { dataChips = Array.isArray(v) ? v : []; },
   isVisionAttachment,
   isDataAttachment,
   isTextEntryElement,
@@ -563,129 +560,8 @@ Object.defineProperty(window, "lastEditorFile", {
   configurable: true,
 });
 
-
-async function loadEditorContext() {
-  if (mediaWorkActive()) return null;
-  if (!editorContextPill && !editorContextCard) return null;
-  try {
-    const res = await fetch("/api/editor/context");
-    if (!res.ok) return null;
-    const data = await res.json();
-    const ctx = data.context || {};
-    const file = ctx.relative_file || "";
-    const fresh = Boolean(data.fresh && file);
-    const selLines = ctx.selection_lines || 0;
-    const selNote = ctx.has_selection ? ` · ${selLines} line${selLines === 1 ? "" : "s"} selected` : "";
-    const label = file ? `${file}${selNote}` : "";
-
-    if (editorContextPill && editorPillText) {
-      if (file) {
-        editorContextPill.classList.remove("hidden");
-        editorContextPill.classList.toggle("live", fresh);
-        editorContextPill.classList.toggle("stale", !fresh);
-        editorPillText.textContent = fresh ? `Cursor · ${file.split("/").pop()}${selNote}` : `Cursor (stale) · ${file.split("/").pop()}`;
-        editorContextPill.title = fresh
-          ? `Live from Cursor: ${label}`
-          : `Stale — focus Cursor or run ARIA: Push Editor Context Now`;
-      } else {
-        editorContextPill.classList.remove("hidden");
-        editorContextPill.classList.remove("live");
-        editorContextPill.classList.add("stale");
-        editorPillText.textContent = "Cursor · not synced";
-        editorContextPill.title =
-          "Install: ./scripts/install-cursor-extension.sh — then Reload Window in Cursor";
-      }
-    }
-
-    if (editorContextCard && editorContextLabel) {
-      if (file) {
-        editorContextCard.classList.remove("hidden");
-        editorContextCard.classList.toggle("live", fresh);
-        editorContextLabel.textContent = fresh ? `Cursor · ${label}` : `Cursor (stale) · ${file}`;
-        editorContextCard.title = editorContextPill?.title || label;
-      } else {
-        editorContextCard.classList.remove("hidden");
-        editorContextCard.classList.remove("live");
-        editorContextLabel.textContent = "Cursor: install extension";
-        editorContextCard.title =
-          "Run ./scripts/install-cursor-extension.sh then Reload Window in Cursor";
-      }
-    }
-
-    if (fresh && file !== _lastEditorFile) {
-      _lastEditorFile = file;
-      refreshEditorSuggestions(file, ctx.has_selection);
-    }
-    return { fresh, file, ctx };
-  } catch (_) {
-    return null;
-  }
-}
-
-window.loadEditorContext = loadEditorContext;
-
-let editorContextPollTimer = null;
-function scheduleEditorContextPoll() {
-  if (editorContextPollTimer) clearTimeout(editorContextPollTimer);
-  const delay = mediaWorkActive()
-    ? (isNativeApp() ? 45000 : 20000)
-    : (document.hidden ? 12000 : 4000);
-  editorContextPollTimer = setTimeout(async () => {
-    if (!mediaWorkActive()) await loadEditorContext();
-    scheduleEditorContextPoll();
-  }, delay);
-}
-
-function refreshEditorSuggestions(file, hasSelection) {
-  if (!suggestionsEl) return;
-  const base = [
-    "What can you do?",
-    hasSelection ? "fix selection" : `fix ${file}`,
-    hasSelection ? "explain selection" : `diagnose ${file}`,
-    `run tests for ${file}`,
-    `debug until tests pass for ${file}`,
-  ];
-  suggestionsEl.innerHTML = "";
-  base.forEach((text) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "suggestion-chip";
-    chip.textContent = text;
-    chip.onclick = () => {
-      messageInput.value = text;
-      messageInput.focus();
-    };
-    suggestionsEl.appendChild(chip);
-  });
-}
-
-// coding quick buttons → coding_quick.js (window.sendQuickCodingMessage)
-
-async function loadSuggestions() {
-  try {
-    const res = await fetch("/api/suggestions");
-    const data = await res.json();
-    visionChips = data.vision_chips || [];
-    dataChips = data.data_chips || [];
-    suggestionsEl.innerHTML = "";
-    data.suggestions.filter(Boolean).forEach((s) => {
-      const chip = document.createElement("button");
-      chip.className = "suggestion-chip";
-      chip.textContent = s;
-      chip.onclick = () => { messageInput.value = String(s); messageInput.focus(); };
-      suggestionsEl.appendChild(chip);
-    });
-    if (isDataAttachment(pendingFile)) window.refreshDataChips?.();
-    else if (pendingFile || pendingFile2) window.refreshVisionChips?.();
-    const ed = await loadEditorContext();
-    if (ed?.fresh && ed.file) refreshEditorSuggestions(ed.file, ed.ctx?.has_selection);
-  } catch (err) {
-    window.showAriaToast?.(err?.message || "Could not load suggestions", "err", 4000);
-  }
-}
-
+// Editor context pill/card + suggestion chips → editor_context.js
 // Health/live polling, GPU/audio status and service rendering → modules/health.mjs
-
 // image engine → image_engine.js
 
 
@@ -768,12 +644,12 @@ document.addEventListener("keydown", (e) => {
   }
 });
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) scheduleEditorContextPoll();
+  if (!document.hidden) window.scheduleEditorContextPoll?.();
 });
 // Define before startup_overlay.js invokes waitForServices → ariaPostStartup
 window.ariaPostStartup = function ariaPostStartup() {
   try { window.initAriaModalChrome?.(); } catch (_) {}
-  loadSuggestions();
+  window.loadSuggestions?.();
   Promise.resolve(window.loadHealth?.()).then(async () => {
     await window.restoreUncensoredSession?.();
     window.loadModelSettings?.();
@@ -803,7 +679,7 @@ window.ariaPostStartup = function ariaPostStartup() {
       if (document.hidden || mediaWorkActive()) return;
       window.loadCodingPanel?.();
     }, 90000);
-    scheduleEditorContextPoll();
+    window.scheduleEditorContextPoll?.();
   });
 };
 
