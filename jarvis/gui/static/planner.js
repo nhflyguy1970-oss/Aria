@@ -460,6 +460,13 @@ window.initDashboard = function initDashboard() {
   loadDashboard();
   loadChecklist();
   loadSkillsWorkflows();
+  const root = $("dashboardView");
+  if (root && root.dataset.dashCrossBound !== "1") {
+    root.dataset.dashCrossBound = "1";
+    $("dashboardOpenMcBtn")?.addEventListener("click", () => window.switchToView?.("workstation"));
+    $("dashboardOpenPlannerBtn")?.addEventListener("click", () => window.switchToView?.("planner"));
+    $("dashboardOpenJournalBtn")?.addEventListener("click", () => window.switchToView?.("journal"));
+  }
 };
 
 async function loadSkillsWorkflows() {

@@ -1711,6 +1711,10 @@ document.getElementById("journalOpenPlannerBtn")?.addEventListener("click", () =
   window.switchToView?.("planner");
 });
 
+document.getElementById("journalOpenMemoryBtn")?.addEventListener("click", () => {
+  window.switchToView?.("memory");
+});
+
 document.getElementById("journalPrintBtn")?.addEventListener("click", () => {
   const month = journalMonth?.value || new Date().toISOString().slice(0, 7);
   window.open(`/api/journal/print?month=${month}`, "_blank");

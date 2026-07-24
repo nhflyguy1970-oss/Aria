@@ -2905,26 +2905,9 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-function showGeneratedImage(path, name) {
-  if (!path) return;
-  addMessage("assistant", "", { type: "image_result", module: "image" });
-  const msg = document.querySelector(".message.assistant:last-child .msg-body");
-  setTimeout(() => appendGeneratedImage(msg, path, name), 600);
-}
+window.appendGeneratedImage = appendGeneratedImage;
 
-window.showGeneratedImage = showGeneratedImage;
-
-function showAudioPlayer(path, transcript) {
-  if (!path) return;
-  const url = `/api/audio/file?path=${encodeURIComponent(path)}`;
-  const name = path.split("/").pop();
-  let html = `<div class="chat-audio-block"><p class="chat-audio-label">${escapeHtml(name)}</p><audio controls src="${url}" class="chat-audio-player"></audio>`;
-  if (transcript) {
-    html += `<details class="chat-transcript-details"><summary>Transcript</summary><pre class="chat-transcript">${escapeHtml(transcript)}</pre></details>`;
-  }
-  html += "</div>";
-  addMessage("assistant", html, { type: "info" });
-}
+// showGeneratedImage / showAudioPlayer → chat_media.js
 
 window.jarvisSendToChat = (text) => {
   if (!text) return;

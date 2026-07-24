@@ -751,6 +751,8 @@
     sel.addEventListener("change", () => {
       window.loadActions?.(sel.value);
     });
+    $("actionsOpenChatBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
+    $("actionsOpenAuditBtn")?.addEventListener("click", () => window.switchToView?.("audit"));
   }
 
   window.loadActions = async function (moduleFilter) {
@@ -767,8 +769,9 @@
           + `${a.module ? `<code>${escapeHtml(a.module)}</code> ` : ""}`
           + `${escapeHtml((a.detail || "").slice(0, 80))}</li>`).join("")
         : "<li class='muted'>No actions logged yet.</li>";
-    } catch (_) {
+    } catch (err) {
       el.innerHTML = "<li>Could not load actions.</li>";
+      window.showAriaToast?.(err?.message || "Could not load actions", "err", 5000);
     }
   };
 

@@ -583,6 +583,9 @@ function initMemoryBrowser() {
   document.getElementById("memoryOpenProjectsBtn")?.addEventListener("click", () => {
     window.switchToView?.("projects");
   });
+  document.getElementById("memoryOpenBrowserBtn")?.addEventListener("click", () => {
+    window.switchToView?.("browser");
+  });
   document.getElementById("memoryExportBtn")?.addEventListener("click", async () => {
     try {
       const res = await fetch("/api/memory/export");

@@ -280,9 +280,20 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/free_vram.js").is_file()
     assert Path("jarvis/gui/static/profile_controls.js").is_file()
     assert Path("jarvis/gui/static/coding_quick.js").is_file()
+    assert Path("jarvis/gui/static/chat_media.js").is_file()
     assert "coding_quick.js" in html
+    assert "chat_media.js" in html
     assert "window.sendQuickCodingMessage" in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
+    assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "function showGeneratedImage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "function showAudioPlayer" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "window.appendGeneratedImage" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "journalOpenMemoryBtn" in html
+    assert "memoryOpenBrowserBtn" in html
+    assert "dashboardOpenMcBtn" in html
+    assert "actionsOpenChatBtn" in html
+    assert "Could not load actions" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "profile_controls.js" in html
     assert "Profile switch failed" in Path("jarvis/gui/static/profile_controls.js").read_text(encoding="utf-8")
     assert 'getElementById("profileSelect")' not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
