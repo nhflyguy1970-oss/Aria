@@ -2706,7 +2706,9 @@ async function loadSuggestions() {
     else if (pendingFile || pendingFile2) refreshVisionChips();
     const ed = await loadEditorContext();
     if (ed?.fresh && ed.file) refreshEditorSuggestions(ed.file, ed.ctx?.has_selection);
-  } catch (_) {}
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Could not load suggestions", "err", 4000);
+  }
 }
 
 async function freeJarvisVram(statusEl) {
