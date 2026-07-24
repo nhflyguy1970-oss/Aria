@@ -170,6 +170,8 @@ def test_a11y_modal_esc_and_ux_debt_regressions():
     assert "startup_overlay.js" in html
     assert "wakeword_chat.js" in html
     assert "chat_branches.js" in html
+    assert "video_sidebar.js" in html
+    assert "sidebar_chrome.js" in html
     assert "window.loadBranches" in Path("jarvis/gui/static/chat_branches.js").read_text(encoding="utf-8")
     assert "window.waitForServices" in Path("jarvis/gui/static/startup_overlay.js").read_text(encoding="utf-8")
     assert "window.ariaPostStartup" in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
