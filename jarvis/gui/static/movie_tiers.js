@@ -380,116 +380,7 @@
     });
   }
 
-  /* --- HA entity browser + scene composer (Tier 3 #25–26, Tier 4 #36) --- */
-  async function loadHaEntities() {
-    const list = $("haEntityList");
-    if (!list) return;
-    const domain = $("haDomainFilter")?.value || "light";
-    list.innerHTML = "<li class='muted'>Loading…</li>";
-    try {
-      const q = domain ? `?domain=${encodeURIComponent(domain)}&limit=60` : "?limit=60";
-      const data = await fetchJson(`/api/homeassistant/entities${q}`);
-      const ents = data.entities || [];
-      const isScene = domain === "scene";
-      list.innerHTML = ents.length
-        ? ents.map((e) => {
-          const id = e.entity_id || "";
-          const name = e.attributes?.friendly_name || id;
-          const st = e.state || "?";
-          const chatBtn = `<button type="button" class="ghost-btn tiny ha-ent-chat" data-eid="${escapeHtml(id)}" title="Insert in chat">Chat</button>`;
-          const actBtn = isScene
-            ? `<button type="button" class="ghost-btn tiny ha-ent-scene" data-eid="${escapeHtml(id)}">Activate</button>`
-            : `<button type="button" class="ghost-btn tiny ha-ent-toggle" data-eid="${escapeHtml(id)}">${escapeHtml(st)}</button>`;
-          return `<li><span>${escapeHtml(name)}</span><code>${escapeHtml(id)}</code>${actBtn}${chatBtn}</li>`;
-        }).join("")
-        : `<li class='muted'>No ${domain || "entities"} found — add integrations in HA.</li>`;
-      list.querySelectorAll(".ha-ent-toggle").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          try {
-            const res = await fetch("/api/homeassistant/toggle", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ entity_id: btn.dataset.eid, action: "toggle" }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (data.confirm_required) {
-              window.showToolConfirm?.(data);
-              return;
-            }
-            if (!res.ok || data.ok === false) {
-              throw new Error(data.message || data.detail || `Toggle failed (${res.status})`);
-            }
-            window.showAriaToast?.(`Toggled ${btn.dataset.eid}`, "ok", 2500);
-            loadHaEntities();
-          } catch (err) {
-            window.showAriaToast?.(err.message || "Toggle failed", "err", 5000);
-          }
-        });
-      });
-      list.querySelectorAll(".ha-ent-scene").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          try {
-            const res = await fetch("/api/homeassistant/scene", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ entity_id: btn.dataset.eid }),
-            });
-            const data = await res.json().catch(() => ({}));
-            if (data.confirm_required) {
-              window.showToolConfirm?.(data);
-              return;
-            }
-            if (!res.ok || data.ok === false) {
-              throw new Error(data.message || data.detail || `Scene failed (${res.status})`);
-            }
-            window.showAriaToast?.(`Activated ${btn.dataset.eid}`, "ok", 2500);
-            loadHaEntities();
-          } catch (err) {
-            window.showAriaToast?.(err.message || "Scene failed", "err", 5000);
-          }
-        });
-      });
-      list.querySelectorAll(".ha-ent-chat").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const input = $("messageInput");
-          if (input) {
-            input.value = `${isScene ? "activate scene" : "toggle"} ${btn.dataset.eid}`;
-            input.focus();
-          }
-        });
-      });
-    } catch (err) {
-      list.innerHTML = `<li class='muted'>Could not load entities: ${escapeHtml(err.message || "error")}</li>`;
-      window.showAriaToast?.(err.message || "Could not load HA entities", "err", 5000);
-    }
-  }
-
-  function initHaExtras() {
-    $("haDomainFilter")?.addEventListener("change", loadHaEntities);
-    $("haEntitiesRefreshBtn")?.addEventListener("click", loadHaEntities);
-    $("haSceneSaveBtn")?.addEventListener("click", async () => {
-      const scene = $("haSceneComposerInput")?.value?.trim();
-      if (!scene) return;
-      try {
-        const res = await fetch("/api/homeassistant/config", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ leave_scene: scene }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || data.ok === false) {
-          throw new Error(data.message || data.detail || `Save failed (${res.status})`);
-        }
-        if ($("haLeaveSceneInput")) $("haLeaveSceneInput").value = scene;
-        window.showAriaToast?.(`Leave scene set to ${scene}`, "ok", 3000);
-      } catch (err) {
-        window.showAriaToast?.(err.message || "Could not save leave scene", "err", 5000);
-      }
-    });
-    $("haSetupWizardBtn")?.addEventListener("click", () => $("haSetupModal")?.classList.remove("hidden"));
-    $("haSetupCloseBtn")?.addEventListener("click", () => $("haSetupModal")?.classList.add("hidden"));
-    loadHaEntities();
-  }
+  /* HA entity browser → ha_extras.js */
 
   /* --- Trust health (Tier 3 #30) --- */
   async function refreshTrustHealth() {
@@ -737,38 +628,7 @@
     $("settingsCloseBtn")?.addEventListener("click", () => modal?.classList.add("hidden"));
   }
 
-  /* --- Actions filter (Tier 4 #33) --- */
-  function initActionsFilter() {
-    const sel = $("actionsFilter");
-    if (!sel) return;
-    sel.addEventListener("change", () => {
-      window.loadActions?.(sel.value);
-    });
-    $("actionsOpenChatBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
-    $("actionsOpenAuditBtn")?.addEventListener("click", () => window.switchToView?.("audit"));
-    $("actionsOpenMcBtn")?.addEventListener("click", () => window.switchToView?.("workstation"));
-  }
-
-  window.loadActions = async function (moduleFilter) {
-    const el = $("actionsList");
-    if (!el) return;
-    const mod = moduleFilter ?? $("actionsFilter")?.value ?? "";
-    const q = mod ? `?module=${encodeURIComponent(mod)}` : "";
-    try {
-      const data = await fetchJson(`/api/actions${q}`);
-      const acts = data.actions || [];
-      el.innerHTML = acts.length
-        ? acts.map((a) => `<li><span class="act-time">${escapeHtml((a.time || "").slice(0, 19))}</span> `
-          + `<strong>${escapeHtml(a.action || a.event || "")}</strong> `
-          + `${a.module ? `<code>${escapeHtml(a.module)}</code> ` : ""}`
-          + `${escapeHtml((a.detail || "").slice(0, 80))}</li>`).join("")
-        : "<li class='muted'>No actions logged yet. <button type='button' class='ghost-btn tiny' id='actionsEmptyChatBtn'>Open Chat</button></li>";
-      el.querySelector("#actionsEmptyChatBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
-    } catch (err) {
-      el.innerHTML = "<li>Could not load actions.</li>";
-      window.showAriaToast?.(err?.message || "Could not load actions", "err", 5000);
-    }
-  };
+  /* Actions filter / loadActions → actions_view.js */
 
   /* documents → documents.js */
 
@@ -871,13 +731,11 @@
     initIntegrationsPanel();
     initChatMicPtt();
     initServiceRestart();
-    initHaExtras();
     initUpgradeRestart();
     initServerRestart();
     initJarvisBlue();
     initShortcuts();
     initSettingsModal();
-    initActionsFilter();
     initIcsWizard();
     initHud();
     $("wakePill")?.addEventListener("click", toggleWake);

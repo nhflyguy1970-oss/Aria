@@ -390,7 +390,16 @@ def test_command_palette_is_wired():
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat =" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
-    assert "actionsEmptyChatBtn" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "actionsEmptyChatBtn" in Path("jarvis/gui/static/actions_view.js").read_text(encoding="utf-8")
+    assert "ha_extras.js" in Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
+    assert "actions_view.js" in Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
+    assert "initHaExtras" in Path("jarvis/gui/static/ha_extras.js").read_text(encoding="utf-8")
+    assert "window.loadActions" in Path("jarvis/gui/static/actions_view.js").read_text(encoding="utf-8")
+    assert "function initHaExtras" not in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "window.loadActions" not in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "Retry load" in Path("jarvis/gui/static/coding_proposals.js").read_text(encoding="utf-8")
+    assert "Mic profile save failed" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
+    assert "Output sink save failed" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
     assert "plannerEmptyAddBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "plannerEmptyCalBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "skillsEmptyChatBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
@@ -489,7 +498,10 @@ def test_command_palette_is_wired():
     assert "memoryOpenBrowserBtn" in html
     assert "dashboardOpenMcBtn" in html
     assert "actionsOpenChatBtn" in html
-    assert "Could not load actions" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
+    assert "Could not load actions" in Path("jarvis/gui/static/actions_view.js").read_text(encoding="utf-8")
+    assert "actionsOpenMcBtn" in Path("jarvis/gui/static/actions_view.js").read_text(encoding="utf-8")
+    assert "leave_scene" in Path("jarvis/gui/static/ha_extras.js").read_text(encoding="utf-8")
+    assert "showToolConfirm" in Path("jarvis/gui/static/ha_extras.js").read_text(encoding="utf-8")
     assert "profile_controls.js" in html
     assert "Profile switch failed" in Path("jarvis/gui/static/profile_controls.js").read_text(encoding="utf-8")
     assert 'getElementById("profileSelect")' not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")

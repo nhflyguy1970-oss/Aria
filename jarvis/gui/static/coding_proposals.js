@@ -32,13 +32,16 @@ function mountDiffBlock(pre, diff, meta) {
       btn.textContent = "Loading…";
       try {
         const res = await fetch(`/api/proposals/${encodeURIComponent(meta.proposal_id)}`);
-        const data = await res.json();
-        if (data.ok && data.diff) {
-          pre.innerHTML = formatDiff(data.diff, { maxLines: 400 });
-          note.remove();
-        } else {
-          btn.textContent = "Could not load";
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false || !data.diff) {
+          const msg = data.message || data.detail || `Could not load full diff (${res.status || "?"})`;
+          btn.textContent = "Retry load";
+          btn.disabled = false;
+          window.showAriaToast?.(msg, "err", 4000);
+          return;
         }
+        pre.innerHTML = formatDiff(data.diff, { maxLines: 400 });
+        note.remove();
       } catch (err) {
         btn.textContent = "Retry load";
         btn.disabled = false;
@@ -175,15 +178,17 @@ function attachProposalExtras(bubble, meta, messageDiv) {
         btn.textContent = "Loading…";
         try {
           const res = await fetch(`/api/proposals/${encodeURIComponent(meta.proposal_id)}`);
-          const data = await res.json();
-          if (data.ok && data.diff) {
-            const pre = document.createElement("pre");
-            mountDiffBlock(pre, data.diff, { ...meta, diff_truncated: data.diff_truncated });
-            note.replaceWith(pre);
-          } else {
-            btn.textContent = "Could not load";
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.ok === false || !data.diff) {
+            const msg = data.message || data.detail || `Could not load diff (${res.status || "?"})`;
+            btn.textContent = "Retry load";
             btn.disabled = false;
+            window.showAriaToast?.(msg, "err", 4000);
+            return;
           }
+          const pre = document.createElement("pre");
+          mountDiffBlock(pre, data.diff, { ...meta, diff_truncated: data.diff_truncated });
+          note.replaceWith(pre);
         } catch (err) {
           btn.textContent = "Retry load";
           btn.disabled = false;

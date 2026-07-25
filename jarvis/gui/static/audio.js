@@ -185,22 +185,26 @@ function bindRecentButtons(root) {
       const category = btn.dataset.category || "";
       if (!path) return;
       if (!confirm(`Delete ${path.split("/").pop()}?`)) return;
-      const form = new FormData();
-      form.append("path", path);
-      form.append("category", category);
-      const res = await fetch("/api/audio/delete", { method: "POST", body: form });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) {
-        const msg = data.message || data.detail || "Delete failed";
-        window.showAriaToast?.(msg, "err", 5000);
-        return;
+      try {
+        const form = new FormData();
+        form.append("path", path);
+        form.append("category", category);
+        const res = await fetch("/api/audio/delete", { method: "POST", body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) {
+          const msg = data.message || data.detail || `Delete failed (${res.status})`;
+          window.showAriaToast?.(msg, "err", 5000);
+          return;
+        }
+        window.showAriaToast?.("Audio deleted", "ok", 2500);
+        if (audioLastPath === path) {
+          showPlayback("", null);
+          document.getElementById("audioWaveWrap")?.classList.add("hidden");
+        }
+        refreshRecentLists();
+      } catch (err) {
+        window.showAriaToast?.(err?.message || "Delete failed", "err", 5000);
       }
-      window.showAriaToast?.("Audio deleted", "ok", 2500);
-      if (audioLastPath === path) {
-        showPlayback("", null);
-        document.getElementById("audioWaveWrap")?.classList.add("hidden");
-      }
-      refreshRecentLists();
     };
   });
 }
@@ -650,16 +654,25 @@ async function loadAudioPanel() {
 
   document.getElementById("audioMicProfile")?.addEventListener("change", async () => {
     const profile = document.getElementById("audioMicProfile")?.value || "rear";
-    const form = new FormData();
-    form.append("profile", profile);
-    const res = await fetch("/api/audio/mic-profile", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "Profile failed", "err");
-      return;
+    try {
+      const form = new FormData();
+      form.append("profile", profile);
+      const res = await fetch("/api/audio/mic-profile", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || data.detail || `Mic profile save failed (${res.status})`;
+        audioStatus(statusEl, msg, "err");
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      audioStatus(statusEl, data.hint || `Profile: ${data.label}`, "ok");
+      window.showAriaToast?.(data.hint || `Mic profile: ${data.label || profile}`, "ok", 2000);
+      loadAudioPanel();
+    } catch (err) {
+      const msg = err?.message || "Mic profile save failed";
+      audioStatus(statusEl, msg, "err");
+      window.showAriaToast?.(msg, "err", 5000);
     }
-    audioStatus(statusEl, data.hint || `Profile: ${data.label}`, "ok");
-    loadAudioPanel();
   });
 
   document.getElementById("audioInputSource")?.addEventListener("change", async () => {
@@ -684,16 +697,26 @@ async function loadAudioPanel() {
   });
 
   document.getElementById("audioOutputSink")?.addEventListener("change", async () => {
-    const form = new FormData();
-    form.append("sink", selectedOutputSink());
-    const res = await fetch("/api/audio/output-sink", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "Output failed", "err");
-      return;
+    try {
+      const form = new FormData();
+      form.append("sink", selectedOutputSink());
+      const res = await fetch("/api/audio/output-sink", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || data.detail || `Output sink save failed (${res.status})`;
+        audioStatus(statusEl, msg, "err");
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      const okMsg = `Output saved: ${selectedOutputSink().split(".").pop()}`;
+      audioStatus(statusEl, okMsg, "ok");
+      window.showAriaToast?.(okMsg, "ok", 2000);
+      loadAudioPanel();
+    } catch (err) {
+      const msg = err?.message || "Output sink save failed";
+      audioStatus(statusEl, msg, "err");
+      window.showAriaToast?.(msg, "err", 5000);
     }
-    audioStatus(statusEl, `Output saved: ${selectedOutputSink().split(".").pop()}`, "ok");
-    loadAudioPanel();
   });
 
   document.getElementById("audioCaptureVolume")?.addEventListener("change", async () => {
@@ -722,26 +745,34 @@ async function loadAudioPanel() {
 
   document.getElementById("audioProbeBtn")?.addEventListener("click", async () => {
     statusEl.textContent = "Testing mic (speak now)…";
-    const form = new FormData();
-    form.append("duration", "2");
-    form.append("source", selectedInputSource());
-    const res = await fetch("/api/audio/probe-capture", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      audioStatus(statusEl, data.message || "Probe failed", "err");
-      return;
+    try {
+      const form = new FormData();
+      form.append("duration", "2");
+      form.append("source", selectedInputSource());
+      const res = await fetch("/api/audio/probe-capture", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || data.detail || `Probe failed (${res.status})`;
+        audioStatus(statusEl, msg, "err");
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      const ok = data.likely_ok;
+      const routeWarn = data.mic_routing?.routing_ok === false
+        ? ` — ${data.mic_routing.routing_hint}`
+        : "";
+      audioStatus(
+        statusEl,
+        ok
+          ? `Mic OK — peak ${data.peak_db?.toFixed(1)} dB (PipeWire ${data.pipewire_volume})`
+          : `Mic weak — peak ${data.peak_db?.toFixed(1)} dB.${routeWarn || " Check alsamixer Input Source and Mic Boost."}`,
+        ok ? "ok" : "warn"
+      );
+    } catch (err) {
+      const msg = err?.message || "Probe failed";
+      audioStatus(statusEl, msg, "err");
+      window.showAriaToast?.(msg, "err", 5000);
     }
-    const ok = data.likely_ok;
-    const routeWarn = data.mic_routing?.routing_ok === false
-      ? ` — ${data.mic_routing.routing_hint}`
-      : "";
-    audioStatus(
-      statusEl,
-      ok
-        ? `Mic OK — peak ${data.peak_db?.toFixed(1)} dB (PipeWire ${data.pipewire_volume})`
-        : `Mic weak — peak ${data.peak_db?.toFixed(1)} dB.${routeWarn || " Check alsamixer Input Source and Mic Boost."}`,
-      ok ? "ok" : "warn"
-    );
   });
 
   async function finishRecording(data, transcribed) {
