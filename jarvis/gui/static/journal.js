@@ -36,6 +36,28 @@ function showBujoLoading() {
   bujoContent.innerHTML = '<p class="bujo-loading" aria-busy="true">Loading…</p>';
 }
 
+function showBujoError(message, retryFn) {
+  if (!bujoContent) return;
+  bujoContent.innerHTML =
+    `<p class="bujo-empty" role="alert">${escapeHtml(message || "Could not load this view.")} `
+    + `<button type="button" class="ghost-btn tiny" id="bujoRetryBtn">Retry</button></p>`;
+  if (typeof retryFn === "function") {
+    document.getElementById("bujoRetryBtn")?.addEventListener("click", () => {
+      Promise.resolve(retryFn()).catch(() => {});
+    });
+  }
+  window.showAriaToast?.(message || "Could not load journal view", "err", 5000);
+}
+
+// Run an async BuJo view loader; never leave the panel stuck on the loading spinner.
+function bujoDispatch(fn, label) {
+  Promise.resolve()
+    .then(fn)
+    .catch((err) => {
+      showBujoError(err?.message || `Could not load ${label || "view"}.`, fn);
+    });
+}
+
 const nativeFetch = window.fetch.bind(window);
 
 async function journalPost(url, init = {}) {
@@ -1554,16 +1576,16 @@ function refreshBujo() {
     if (q) loadSearchResults(q);
     return;
   }
-  if (currentBujo === "daily") loadDaily();
-  else if (currentBujo === "weekly") loadWeekly();
-  else if (currentBujo === "monthly") loadMonthly();
-  else if (currentBujo === "habits") loadHabits();
-  else if (currentBujo === "wellness") loadWellness();
-  else if (currentBujo === "future") loadFuture();
-  else if (currentBujo === "index") loadIndex();
-  else if (currentBujo === "collections") loadCollections();
-  else if (currentBujo === "projects") loadProjects();
-  else if (currentBujo === "key") loadKey();
+  if (currentBujo === "daily") bujoDispatch(loadDaily, "daily log");
+  else if (currentBujo === "weekly") bujoDispatch(loadWeekly, "weekly review");
+  else if (currentBujo === "monthly") bujoDispatch(loadMonthly, "monthly log");
+  else if (currentBujo === "habits") bujoDispatch(loadHabits, "habits");
+  else if (currentBujo === "wellness") bujoDispatch(loadWellness, "wellness");
+  else if (currentBujo === "future") bujoDispatch(loadFuture, "future log");
+  else if (currentBujo === "index") bujoDispatch(loadIndex, "index");
+  else if (currentBujo === "collections") bujoDispatch(loadCollections, "collections");
+  else if (currentBujo === "projects") bujoDispatch(loadProjects, "projects");
+  else if (currentBujo === "key") bujoDispatch(loadKey, "key");
 }
 
 let projectJournalSlug = null;
@@ -1937,14 +1959,14 @@ journalImportEncFile?.addEventListener("change", async () => {
 if (journalDate) journalDate.value = new Date().toISOString().slice(0, 10);
 if (journalWeek) journalWeek.value = isoWeekValue();
 if (journalMonth) journalMonth.value = new Date().toISOString().slice(0, 7);
-journalDate?.addEventListener("change", () => { if (currentBujo === "daily") loadDaily(); });
-journalWeek?.addEventListener("change", () => { if (currentBujo === "weekly") loadWeekly(); });
+journalDate?.addEventListener("change", () => { if (currentBujo === "daily") bujoDispatch(loadDaily, "daily log"); });
+journalWeek?.addEventListener("change", () => { if (currentBujo === "weekly") bujoDispatch(loadWeekly, "weekly review"); });
 journalMonth?.addEventListener("change", () => {
   monthlySelectedDay = null;
-  if (currentBujo === "monthly") loadMonthly();
-  if (currentBujo === "habits") loadHabits();
-  if (currentBujo === "wellness") loadWellness();
-  if (currentBujo === "future") loadFuture();
+  if (currentBujo === "monthly") bujoDispatch(loadMonthly, "monthly log");
+  if (currentBujo === "habits") bujoDispatch(loadHabits, "habits");
+  if (currentBujo === "wellness") bujoDispatch(loadWellness, "wellness");
+  if (currentBujo === "future") bujoDispatch(loadFuture, "future log");
 });
 
 window.initJournal = () => {
