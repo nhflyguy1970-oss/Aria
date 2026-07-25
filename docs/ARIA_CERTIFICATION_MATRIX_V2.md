@@ -83,6 +83,13 @@ Expand this matrix as each subsystem completes deep certification.
 - Audio remount race; song GPU limits; fly-tying state/notes; presence calib POST; docs learn; meme bind guard
 - **NO** — resume: documents.js extract, long-duration/multi-monitor, Comfy/voice soaks, per-control matrix
 
+### Continuation (2026-07-25 midday)
+- FIXED & CERTIFIED: `ha_extras.js` (HA entity browser + scene composer) and `actions_view.js` (Actions log + filter) extracted from `movie_tiers.js` (35KB→trimmed); boots moved into new modules; verified live via CDP (Actions populated 50 rows, `loadHaEntities`/`loadActions`/`initHaExtras` all functions) with **no page reload**.
+- FIXED & CERTIFIED silent-fails: `coding_proposals.js` Load-full-diff / View-diff (res.ok gate, toast + re-enable on soft fail); `audio.js` mic-profile / output-sink / probe-capture / recent-delete (try/catch + res.ok + toast); `memory_browser.js` env-prefs save + profile retake/inline-edit (try/catch + res.ok); `audio_advanced.js` detect-language / diarize (busy reset in `finally`) / live-record start.
+- Regression: `tests/test_product_ui_api_wiring.py` extended for new modules + strings; 14/14 passing. JS `node --check` clean on all touched files. Commits `736d0cb`, `744e6d4` pushed.
+- INTENTIONALLY DEFERRED: `journal.js` / `flytying.js` further peels; full `movie_tiers.js` decomposition; long-duration (>60m) soak; multi-monitor DPI/dock; HA/Comfy live gen (services refused/off); phone layouts; `JARVIS_FIRST_RUN_MODELS` stays off (avoid surprise multi-GB pulls).
+- Verdict remains **NO** — next: residual silent-fail sweep in remaining media/studio modules, deeper cross-system AI surfacing, per-control matrix completion.
+
 ## Change log
 - 2026-07-24: app.js ~3035; free_vram + vision_settings + cross-links Gallery/Maker/Fly tying; audio_advanced toasts; matrix refreshed.
 - 2026-07-24: app.js ~3382 lines after media/coding/models/uncensored/startup/wakeword/chat_branches extracts; boot fixed (lastEditorFile); ship verdict still NO.
