@@ -8,7 +8,11 @@
 
   async function fetchJson(url, opts) {
     const res = await fetch(url, opts);
-    return res.json();
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.message || data.error || data.detail || `Request failed (${res.status})`);
+    }
+    return data;
   }
 
   function esc(s) {
@@ -95,13 +99,19 @@
       btn.addEventListener("click", async () => {
         btn.disabled = true;
         try {
-          const r = await fetchJson("/api/kasa/control", {
+          await fetchJson("/api/kasa/control", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ target: btn.dataset.target, action: btn.dataset.action }),
           });
-          if (!r.ok) window.showAriaToast?.(r.message || "Control failed", "err");
+          window.showAriaToast?.(
+            `${btn.dataset.action === "on" ? "On" : "Off"}: ${btn.dataset.target}`,
+            "ok",
+            2000,
+          );
           await refreshKasa();
+        } catch (err) {
+          window.showAriaToast?.(err?.message || "Kasa control failed", "err", 5000);
         } finally {
           btn.disabled = false;
         }

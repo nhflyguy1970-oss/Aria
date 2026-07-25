@@ -1297,31 +1297,33 @@ function showBulletPanel(id, kind) {
         closeBulletPanels();
         return;
       }
+      let out = { ok: true };
       if (go === "schedule") {
         const month = panel.querySelector(".bujo-panel-month")?.value;
         if (!month) return;
         const form = new FormData();
         form.append("month", month);
-        await fetch(`/api/journal/bullet/${id}/schedule`, { method: "POST", body: form });
+        out = await journalPost(`/api/journal/bullet/${id}/schedule`, { method: "POST", body: form });
       } else if (go === "nest") {
         const text = panel.querySelector(".bujo-panel-text")?.value.trim();
         if (!text) return;
         const form = new FormData();
         form.append("content", text);
-        await fetch(`/api/journal/bullet/${id}/child`, { method: "POST", body: form });
+        out = await journalPost(`/api/journal/bullet/${id}/child`, { method: "POST", body: form });
       } else if (go === "time") {
         const t = panel.querySelector(".bujo-panel-time")?.value;
         if (!t) return;
         const form = new FormData();
         form.append("time", t);
-        await fetch(`/api/journal/bullet/${id}/time`, { method: "POST", body: form });
+        out = await journalPost(`/api/journal/bullet/${id}/time`, { method: "POST", body: form });
       } else if (go === "edit") {
         const text = panel.querySelector(".bujo-panel-text")?.value.trim();
         if (!text) return;
         const form = new FormData();
         form.append("content", text);
-        await fetch(`/api/journal/bullet/${id}`, { method: "PATCH", body: form });
+        out = await journalPost(`/api/journal/bullet/${id}`, { method: "PATCH", body: form });
       }
+      if (!out.ok) return;
       closeBulletPanels();
       refreshBujo();
     };
@@ -1335,23 +1337,32 @@ function showBulletPanel(id, kind) {
         const q = searchInput.value.trim();
         const list = panel.querySelector(".bujo-link-results");
         if (!q || !list) return;
-        const res = await fetch(`/api/journal/search?q=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        list.innerHTML = (data.results || []).slice(0, 8).map((h) =>
-          `<li><button type="button" class="bujo-link-pick" data-to="${escapeHtml(h.id || "")}">
-            [${escapeHtml(h.section || "")}] ${escapeHtml(h.content || h.topic || "")}
-          </button></li>`
-        ).join("") || '<li class="bujo-empty">No matches</li>';
-        list.querySelectorAll(".bujo-link-pick").forEach((pick) => {
-          pick.onclick = async () => {
-            const form = new FormData();
-            form.append("to_id", pick.dataset.to);
-            form.append("label", "see also");
-            await fetch(`/api/journal/bullet/${id}/link`, { method: "POST", body: form });
-            closeBulletPanels();
-            refreshBujo();
-          };
-        });
+        try {
+          const res = await fetch(`/api/journal/search?q=${encodeURIComponent(q)}`);
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            list.innerHTML = '<li class="bujo-empty">Search failed</li>';
+            return;
+          }
+          list.innerHTML = (data.results || []).slice(0, 8).map((h) =>
+            `<li><button type="button" class="bujo-link-pick" data-to="${escapeHtml(h.id || "")}">
+              [${escapeHtml(h.section || "")}] ${escapeHtml(h.content || h.topic || "")}
+            </button></li>`
+          ).join("") || '<li class="bujo-empty">No matches</li>';
+          list.querySelectorAll(".bujo-link-pick").forEach((pick) => {
+            pick.onclick = async () => {
+              const form = new FormData();
+              form.append("to_id", pick.dataset.to);
+              form.append("label", "see also");
+              const out = await journalPost(`/api/journal/bullet/${id}/link`, { method: "POST", body: form });
+              if (!out.ok) return;
+              closeBulletPanels();
+              refreshBujo();
+            };
+          });
+        } catch (err) {
+          list.innerHTML = '<li class="bujo-empty">Search unavailable</li>';
+        }
       }, 250);
     };
     searchInput.focus();
@@ -1374,27 +1385,33 @@ function bindBulletActions() {
       if (btn.classList.contains("bujo-menu-toggle")) return;
       e.stopPropagation();
       const id = btn.dataset.id, act = btn.dataset.act;
-      if (act === "done") await fetch(`/api/journal/bullet/${id}/complete`, { method: "POST" });
-      else if (act === "del") await fetch(`/api/journal/bullet/${id}`, { method: "DELETE" });
-      else if (act === "remember") {
-        const res = await fetch(`/api/journal/bullet/${id}/remember`, { method: "POST" });
-        const data = await res.json();
+      let out = { ok: true };
+      if (act === "done") {
+        out = await journalPost(`/api/journal/bullet/${id}/complete`, { method: "POST" });
+      } else if (act === "del") {
+        out = await journalPost(`/api/journal/bullet/${id}`, { method: "DELETE" });
+      } else if (act === "remember") {
+        out = await journalPost(`/api/journal/bullet/${id}/remember`, { method: "POST" });
+        const data = out.body || {};
         journalNotify(
-          data.ok ? `Saved to memory (${data.namespace})` : (data.error || "Could not save"),
-          !data.ok
+          out.ok && data.ok !== false
+            ? `Saved to memory (${data.namespace || "journal"})`
+            : (data.error || data.message || "Could not save"),
+          !(out.ok && data.ok !== false)
         );
         return;
-      } else if (act === "cancel") await fetch(`/api/journal/bullet/${id}/cancel`, { method: "POST" });
-      else if (act === "migrate") {
+      } else if (act === "cancel") {
+        out = await journalPost(`/api/journal/bullet/${id}/cancel`, { method: "POST" });
+      } else if (act === "migrate") {
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
         const form = new FormData();
         form.append("target", tomorrow.toISOString().slice(0, 10));
-        await fetch(`/api/journal/bullet/${id}/migrate`, { method: "POST", body: form });
+        out = await journalPost(`/api/journal/bullet/${id}/migrate`, { method: "POST", body: form });
       } else if (act === "sig") {
         const form = new FormData();
         form.append("name", btn.dataset.sig);
-        await fetch(`/api/journal/bullet/${id}/signifier`, { method: "POST", body: form });
+        out = await journalPost(`/api/journal/bullet/${id}/signifier`, { method: "POST", body: form });
       } else if (act === "schedule") {
         showBulletPanel(id, "schedule");
         return;
@@ -1403,7 +1420,7 @@ function bindBulletActions() {
         const form = new FormData();
         form.append("day", day);
         form.append("duplicate", act === "thread-dup" ? "true" : "false");
-        await fetch(`/api/journal/bullet/${id}/thread`, { method: "POST", body: form });
+        out = await journalPost(`/api/journal/bullet/${id}/thread`, { method: "POST", body: form });
       } else if (act === "nest") {
         showBulletPanel(id, "nest");
         return;
@@ -1414,6 +1431,7 @@ function bindBulletActions() {
         showBulletPanel(id, "time");
         return;
       }
+      if (!out.ok) return;
       refreshBujo();
     };
   });

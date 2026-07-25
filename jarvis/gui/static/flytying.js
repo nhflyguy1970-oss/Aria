@@ -291,7 +291,7 @@
         const what = (item.what || item.name || "").trim();
         const actions = editing
           ? `<button type="button" class="ghost-btn tiny flytying-inv-save" data-id="${id}">Save</button> <button type="button" class="ghost-btn tiny flytying-inv-cancel">Cancel</button>`
-          : `<button type="button" class="ghost-btn tiny flytying-inv-edit" data-id="${id}">Edit</button> <button type="button" class="ghost-btn tiny flytying-inv-remove" data-id="${id}">×</button>`;
+          : `<button type="button" class="ghost-btn tiny flytying-inv-edit" data-id="${id}">Edit</button> <button type="button" class="ghost-btn tiny flytying-inv-remove" data-id="${id}" title="Remove material" aria-label="Remove material">×</button>`;
         return `<tr class="flytying-inv-row${editing ? " editing" : ""}" data-id="${id}">${renderInventoryCell(what, "what", item, editing)}${renderInventoryCell(item.color, "color", item, editing)}${renderInventoryCell(item.size, "size", item, editing)}${renderInventoryCell(item.brand, "brand", item, editing)}${renderInventoryCell(item.notes, "notes", item, editing)}<td class="flytying-inv-actions">${actions}</td></tr>`;
       })
       .join("");
@@ -580,7 +580,7 @@
       await video.play();
       setScanStatus("Point at UPC/EAN or QR on package…");
       const tick = async () => {
-        if (_scanBusy || !video.videoWidth || !_scanDetector) return;
+        if (document.hidden || _scanBusy || !video.videoWidth || !_scanDetector) return;
         _scanBusy = true;
         try {
           const codes = await _scanDetector.detect(video);
@@ -1022,7 +1022,7 @@
         const fav = isFavorite(id) ? " favorited" : "";
         const thumb = r.thumbnail ? imgTag(r.thumbnail, "flytying-recipe-thumb") : "";
         const qBadge = r.quality_score ? `<span class="flytying-q">${Math.round(r.quality_score)}</span>` : "";
-        return `<li class="flytying-recipe-item"><button type="button" class="flytying-fav-btn${fav}" data-id="${esc(id)}" title="Favorite">★</button><label class="flytying-cmp-check"><input type="checkbox" class="flytying-cmp-input" data-id="${esc(id)}" /></label><button type="button" class="flytying-recipe-btn${active}" data-id="${esc(id)}" data-name="${esc(r.name)}">${thumb}<span><span>${esc(r.name)}</span><span class="flytying-recipe-meta">${esc(r.type || "")} · ${r.steps_count || 0} steps ${esc(r.hook_size || "")} ${qBadge}</span></span></button></li>`;
+        return `<li class="flytying-recipe-item"><button type="button" class="flytying-fav-btn${fav}" data-id="${esc(id)}" title="${isFavorite(id) ? "Unfavorite" : "Favorite"}" aria-label="${isFavorite(id) ? "Unfavorite pattern" : "Favorite pattern"}">★</button><label class="flytying-cmp-check"><input type="checkbox" class="flytying-cmp-input" data-id="${esc(id)}" /></label><button type="button" class="flytying-recipe-btn${active}" data-id="${esc(id)}" data-name="${esc(r.name)}">${thumb}<span><span>${esc(r.name)}</span><span class="flytying-recipe-meta">${esc(r.type || "")} · ${r.steps_count || 0} steps ${esc(r.hook_size || "")} ${qBadge}</span></span></button></li>`;
       })
       .join("");
     const hasMore = _recipes.length < _recipeTotal;
@@ -1075,7 +1075,26 @@
         const filterNote = type ? ` No matches for type “${type}” — try All types.` : "";
         const restartNote =
           q && !type && !data.search_mode ? " Restart ARIA if this persists (fly tying API may be outdated)." : "";
-        list.innerHTML = `<li class="muted">No patterns found.${filterNote}${restartNote}</li>`;
+        list.innerHTML = `<li class="muted">No patterns found.${filterNote}${restartNote}
+          <button type="button" class="ghost-btn tiny" id="flyEmptyClearFiltersBtn">Clear filters</button>
+          <button type="button" class="ghost-btn tiny" id="flyEmptyBrowseAllBtn">Browse all patterns</button></li>`;
+        list.querySelector("#flyEmptyClearFiltersBtn")?.addEventListener("click", () => {
+          const typeSel = $("flytyingTypeFilter");
+          const search = $("flytyingSearch");
+          if (typeSel) typeSel.value = "";
+          if (search) search.value = "";
+          $("flytyingFavoritesOnly") && ($("flytyingFavoritesOnly").checked = false);
+          loadRecipes({ reset: true });
+        });
+        list.querySelector("#flyEmptyBrowseAllBtn")?.addEventListener("click", () => {
+          const typeSel = $("flytyingTypeFilter");
+          const search = $("flytyingSearch");
+          if (typeSel) typeSel.value = "";
+          if (search) search.value = "";
+          $("flytyingFavoritesOnly") && ($("flytyingFavoritesOnly").checked = false);
+          loadRecipes({ reset: true });
+          window.showAriaToast?.("Browsing all patterns", "info", 2500);
+        });
         if (hint) hint.textContent = q ? `0 results for “${q}”` : "";
         return;
       }

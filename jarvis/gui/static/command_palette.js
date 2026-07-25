@@ -780,7 +780,45 @@
           }))
       : [];
 
-    commands = [...nav, ...mcTabs, ...actions, ...search, ...models];
+    const profileSelect = $("profileSelect");
+    const profiles = profileSelect
+      ? [...profileSelect.options]
+          .filter((o) => o.value)
+          .slice(0, 16)
+          .map((o) => ({
+            id: `profile:${o.value}`,
+            label: `Config profile: ${o.textContent || o.value}`,
+            group: "Settings",
+            keywords: `profile config ${o.value}`,
+            hint: "Sidebar",
+            run: () => {
+              profileSelect.value = o.value;
+              profileSelect.dispatchEvent(new Event("change", { bubbles: true }));
+              window.showAriaToast?.(`Profile: ${o.textContent || o.value}`, "ok");
+            },
+          }))
+      : [];
+
+    const personalitySelect = $("personalitySelect");
+    const personalities = personalitySelect
+      ? [...personalitySelect.options]
+          .filter((o) => o.value)
+          .slice(0, 16)
+          .map((o) => ({
+            id: `personality:${o.value}`,
+            label: `Personality: ${o.textContent || o.value}`,
+            group: "Settings",
+            keywords: `personality tone style ${o.value}`,
+            hint: "Sidebar",
+            run: () => {
+              personalitySelect.value = o.value;
+              personalitySelect.dispatchEvent(new Event("change", { bubbles: true }));
+              window.showAriaToast?.(`Personality: ${o.textContent || o.value}`, "ok");
+            },
+          }))
+      : [];
+
+    commands = [...nav, ...mcTabs, ...actions, ...search, ...models, ...profiles, ...personalities];
   }
 
   let contentHits = [];

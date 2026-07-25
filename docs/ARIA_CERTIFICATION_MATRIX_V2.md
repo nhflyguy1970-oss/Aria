@@ -25,7 +25,10 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 | Cross-system Audio↔Voice | Cross-system | Audio / Voice headers | FIXED & CERTIFIED | Studio ↔ settings |
 | Cross-system Planner↔Calendar↔Journal | Cross-system | Planner / Calendar toolbars | FIXED & CERTIFIED | Header shortcuts + journal deep-links |
 | Cross-system Documents↔Memory/Calendar | Cross-system | Documents / Memory / Calendar | FIXED & CERTIFIED | Bidirectional; ICS owned by Calendar |
-| Long-duration leak profile | Performance | Runtime | FIXED & CERTIFIED | 15m soak 285/0 fails; harness + 60m in progress; multi-hour still optional extension |
+| Long-duration leak profile | Performance | Runtime | FIXED & CERTIFIED | 15m soak 285/0 fails; **60m soak 686/0 fails** (avg 35ms); multi-hour still optional extension |
+| Tool-confirm modal | Approvals | Chat + HA entities | FIXED & CERTIFIED | `showToolConfirm` wired from `chat_done` + HA toggle/scene |
+| Element-ID wiring guard | Shell / UX | CTAs across panels | FIXED & CERTIFIED | Typo IDs fixed; regression test pins HTML ids |
+| Decompile recovery | Platform | flags / browse / briefing | FIXED & CERTIFIED | UnboundLocal / `None(query)` crash paths removed |
 
 Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 

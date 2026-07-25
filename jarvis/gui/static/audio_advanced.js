@@ -125,11 +125,24 @@ function bindAdvanced(statusEl) {
 
   async function applyEq(preset) {
     const eqStatus = document.getElementById("audioEqStatus");
-    const form = new FormData();
-    form.append("preset", preset);
-    const res = await fetch("/api/audio/creative-eq", { method: "POST", body: form });
-    const data = await res.json();
-    if (eqStatus) eqStatus.textContent = data.ok ? `${preset} applied` : (data.message || "EQ failed");
+    try {
+      const form = new FormData();
+      form.append("preset", preset);
+      const res = await fetch("/api/audio/creative-eq", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || `EQ failed (${res.status})`;
+        if (eqStatus) eqStatus.textContent = msg;
+        window.showAriaToast?.(msg, "err", 4000);
+        return;
+      }
+      if (eqStatus) eqStatus.textContent = `${preset} applied`;
+      window.showAriaToast?.(`EQ: ${preset}`, "ok", 2000);
+    } catch (err) {
+      const msg = err?.message || "EQ failed";
+      if (eqStatus) eqStatus.textContent = msg;
+      window.showAriaToast?.(msg, "err", 4000);
+    }
   }
   document.getElementById("audioEqVoiceBtn")?.addEventListener("click", () => applyEq("voice"));
   document.getElementById("audioEqMusicBtn")?.addEventListener("click", () => applyEq("music"));
@@ -141,24 +154,35 @@ function bindAdvanced(statusEl) {
     const liveSel = document.getElementById("audioVstLiveSelect");
     try {
       const res = await fetch("/api/audio/vst/status");
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || `VST status failed (${res.status})`);
       if (playbackSel && data.playback_chain) playbackSel.value = data.playback_chain;
       if (liveSel && data.live?.selected) liveSel.value = data.live.selected;
       if (vstStatus) {
         const live = data.live?.selected && data.live.selected !== "off" ? `live=${data.live.selected}` : "live=off";
         vstStatus.textContent = `${live} · ffmpeg ${data.ffmpeg ? "ok" : "—"}${data.pedalboard ? " · VST3" : ""}`;
       }
-    } catch {
-      if (vstStatus) vstStatus.textContent = "";
+    } catch (err) {
+      if (vstStatus) vstStatus.textContent = err?.message || "VST status unavailable";
     }
   }
   loadVstStatus();
 
   document.getElementById("audioVstPlaybackSelect")?.addEventListener("change", async (e) => {
-    const form = new FormData();
-    form.append("chain", e.target.value);
-    await fetch("/api/audio/vst/playback-chain", { method: "POST", body: form });
-    loadVstStatus();
+    try {
+      const form = new FormData();
+      form.append("chain", e.target.value);
+      const res = await fetch("/api/audio/vst/playback-chain", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        window.showAriaToast?.(data.message || `Playback chain save failed (${res.status})`, "err", 4000);
+        return;
+      }
+      window.showAriaToast?.(`Playback chain: ${e.target.value}`, "ok", 2000);
+      loadVstStatus();
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Playback chain save failed", "err", 4000);
+    }
   });
 
   document.getElementById("audioVstProcessBtn")?.addEventListener("click", async () => {
@@ -167,47 +191,66 @@ function bindAdvanced(statusEl) {
     const vstStatus = document.getElementById("audioVstStatus");
     if (!path) {
       if (vstStatus) vstStatus.textContent = "No audio file selected";
+      window.showAriaToast?.("Select an audio file first", "warn", 3000);
       return;
     }
     setAudioBusy(true);
-    const form = new FormData();
-    form.append("path", path);
-    form.append("chain", chain === "flat" ? "voice" : chain);
-    const res = await fetch("/api/audio/vst/process", { method: "POST", body: form });
-    const data = await res.json();
-    setAudioBusy(false);
-    if (!data.ok) {
-      if (vstStatus) vstStatus.textContent = data.message || "Process failed";
-      return;
+    try {
+      const form = new FormData();
+      form.append("path", path);
+      form.append("chain", chain === "flat" ? "voice" : chain);
+      const res = await fetch("/api/audio/vst/process", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || `Process failed (${res.status})`;
+        if (vstStatus) vstStatus.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      showPlayback(data.audio_path, "");
+      if (vstStatus) vstStatus.textContent = `Processed → ${data.audio_path?.split("/").pop() || "done"}`;
+      window.showAriaToast?.("VST process complete", "ok", 2500);
+      loadVstStatus();
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "VST process failed", "err", 5000);
+    } finally {
+      setAudioBusy(false);
     }
-    showPlayback(data.audio_path, "");
-    if (vstStatus) vstStatus.textContent = `Processed → ${data.audio_path?.split("/").pop() || "done"}`;
-    loadVstStatus();
   });
 
   document.getElementById("audioVstLiveSelect")?.addEventListener("change", async (e) => {
     const vstStatus = document.getElementById("audioVstStatus");
-    const form = new FormData();
-    form.append("preset", e.target.value);
-    const res = await fetch("/api/audio/vst/live", { method: "POST", body: form });
-    const data = await res.json();
-    if (vstStatus) vstStatus.textContent = data.ok ? (data.message || "Live EQ updated") : (data.message || "Live EQ failed");
-    if (!data.ok) loadVstStatus();
+    try {
+      const form = new FormData();
+      form.append("preset", e.target.value);
+      const res = await fetch("/api/audio/vst/live", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      const ok = res.ok && data.ok !== false;
+      const msg = data.message || (ok ? "Live EQ updated" : `Live EQ failed (${res.status})`);
+      if (vstStatus) vstStatus.textContent = msg;
+      window.showAriaToast?.(msg, ok ? "ok" : "err", ok ? 2000 : 4000);
+      if (!ok) loadVstStatus();
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Live EQ failed", "err", 4000);
+      loadVstStatus();
+    }
   });
 
   document.getElementById("audioVstInstallBtn")?.addEventListener("click", async () => {
     const vstStatus = document.getElementById("audioVstStatus");
-    const form = new FormData();
-    form.append("preset", "off");
-    form.append("install", "1");
-    const res = await fetch("/api/audio/vst/live", { method: "POST", body: form });
-    const data = await res.json();
-    if (vstStatus) vstStatus.textContent = data.message || (data.ok ? "Installed" : "Install failed");
-    window.showAriaToast?.(
-      data.message || (data.ok ? "VST installed" : "VST install failed"),
-      data.ok ? "ok" : "err",
-      data.ok ? 2500 : 5000
-    );
+    try {
+      const form = new FormData();
+      form.append("preset", "off");
+      form.append("install", "1");
+      const res = await fetch("/api/audio/vst/live", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      const ok = res.ok && data.ok !== false;
+      const msg = data.message || (ok ? "Installed" : `Install failed (${res.status})`);
+      if (vstStatus) vstStatus.textContent = msg;
+      window.showAriaToast?.(msg, ok ? "ok" : "err", ok ? 2500 : 5000);
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "VST install failed", "err", 5000);
+    }
   });
 
   document.getElementById("audioDetectLangBtn")?.addEventListener("click", async () => {

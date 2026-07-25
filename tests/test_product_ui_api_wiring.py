@@ -300,6 +300,14 @@ def test_command_palette_is_wired():
     assert "act:server-whisper" in js
     assert "act:lan-copy" in js
     assert "act:open-actions" in js
+    assert "Config profile:" in js
+    assert "Personality:" in js
+    assert "flyEmptyClearFiltersBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
+    assert "document.hidden" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
+    assert 'aria-label="Remove material"' in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
+    assert "journalPost(`/api/journal/bullet/${id}/complete`" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
+    assert "Kasa control failed" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8")
+    assert "EQ: ${preset}" in Path("jarvis/gui/static/audio_advanced.js").read_text(encoding="utf-8")
     assert "act:stop-speaking" in js
     assert "act:lock-security" in js
     assert "act:pomodoro" in js
