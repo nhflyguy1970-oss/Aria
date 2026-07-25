@@ -308,6 +308,11 @@ def test_command_palette_is_wired():
     assert "journalPost(`/api/journal/bullet/${id}/complete`" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "Kasa control failed" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8")
     assert "EQ: ${preset}" in Path("jarvis/gui/static/audio_advanced.js").read_text(encoding="utf-8")
+    assert "data.ok === false" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "actionsOpenMcBtn" in Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
+    assert "Podcast mix complete" in Path("jarvis/gui/static/audio_studio.js").read_text(encoding="utf-8")
+    assert "Genre transform failed" in Path("jarvis/gui/static/audio_studio.js").read_text(encoding="utf-8")
+
     assert "act:stop-speaking" in js
     assert "act:lock-security" in js
     assert "act:pomodoro" in js

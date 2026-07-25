@@ -99,117 +99,143 @@ function bindSongStudio(statusEl) {
     const genre = document.getElementById("audioGenrePrompt")?.value.trim();
     if (!path || !genre) {
       jobUi.statusEl.textContent = "Pick a song file and enter a target genre";
+      window.showAriaToast?.("Pick a song file and enter a target genre", "warn", 3000);
       return;
     }
     setAudioBusy(true);
-    resetAudioJobProgress(jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
-    updateAudioJobProgress(0, "Starting genre transform…", jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
-    const form = new FormData();
-    form.append("path", path);
-    form.append("genre", genre);
-    form.append("duration", document.getElementById("audioGenreDur")?.value || "30");
-    form.append("async_job", "1");
-    const res = await fetch("/api/audio/song/genre", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      jobUi.statusEl.textContent = data.message || "Failed";
+    try {
+      resetAudioJobProgress(jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
+      updateAudioJobProgress(0, "Starting genre transform…", jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
+      const form = new FormData();
+      form.append("path", path);
+      form.append("genre", genre);
+      form.append("duration", document.getElementById("audioGenreDur")?.value || "30");
+      form.append("async_job", "1");
+      const res = await fetch("/api/audio/song/genre", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const msg = data.message || `Genre transform failed (${res.status})`;
+        jobUi.statusEl.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      await pollAudioJob(
+        data.job_id,
+        jobUi.statusEl,
+        (result) => {
+          if (result.audio_path) {
+            loadAudioIntoPlayer(result.audio_path, null);
+            refreshRecentLists();
+          }
+        },
+        jobUi.progressWrap,
+        jobUi.progressFill,
+      );
+    } catch (err) {
+      const msg = err?.message || "Genre transform failed";
+      jobUi.statusEl.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
+    } finally {
       setAudioBusy(false);
-      return;
     }
-    await pollAudioJob(
-      data.job_id,
-      jobUi.statusEl,
-      (result) => {
-        if (result.audio_path) {
-          loadAudioIntoPlayer(result.audio_path, null);
-          refreshRecentLists();
-        }
-        setAudioBusy(false);
-      },
-      jobUi.progressWrap,
-      jobUi.progressFill,
-    );
-    setAudioBusy(false);
   });
 
   songBtn?.addEventListener("click", async () => {
     const topic = document.getElementById("audioSongTopic")?.value.trim();
-    if (!topic) return;
-    setAudioBusy(true);
-    resetAudioJobProgress(jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
-    updateAudioJobProgress(0, "Starting full song…", jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
-    const form = new FormData();
-    form.append("topic", topic);
-    form.append("genre", document.getElementById("audioSongGenre")?.value || "pop");
-    form.append("mood", document.getElementById("audioSongMood")?.value || "uplifting");
-    form.append("duration", document.getElementById("audioSongDur")?.value || "30");
-    form.append("async_job", "1");
-    const res = await fetch("/api/audio/song/full", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      jobUi.statusEl.textContent = data.message || "Failed";
-      setAudioBusy(false);
+    if (!topic) {
+      window.showAriaToast?.("Enter a song topic first", "warn", 3000);
       return;
     }
-    await pollAudioJob(
-      data.job_id,
-      jobUi.statusEl,
-      (result) => {
-        if (result.audio_path) {
-          loadAudioIntoPlayer(result.audio_path, result.lyrics || null);
-          const summaryEl = document.getElementById("audioSummary");
-          if (summaryEl && result.lyrics) {
-            summaryEl.textContent = result.lyrics;
-            summaryEl.classList.remove("hidden");
+    setAudioBusy(true);
+    try {
+      resetAudioJobProgress(jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
+      updateAudioJobProgress(0, "Starting full song…", jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
+      const form = new FormData();
+      form.append("topic", topic);
+      form.append("genre", document.getElementById("audioSongGenre")?.value || "pop");
+      form.append("mood", document.getElementById("audioSongMood")?.value || "uplifting");
+      form.append("duration", document.getElementById("audioSongDur")?.value || "30");
+      form.append("async_job", "1");
+      const res = await fetch("/api/audio/song/full", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const msg = data.message || `Full song failed (${res.status})`;
+        jobUi.statusEl.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      await pollAudioJob(
+        data.job_id,
+        jobUi.statusEl,
+        (result) => {
+          if (result.audio_path) {
+            loadAudioIntoPlayer(result.audio_path, result.lyrics || null);
+            const summaryEl = document.getElementById("audioSummary");
+            if (summaryEl && result.lyrics) {
+              summaryEl.textContent = result.lyrics;
+              summaryEl.classList.remove("hidden");
+            }
+            refreshRecentLists();
           }
-          refreshRecentLists();
-        }
-        setAudioBusy(false);
-      },
-      jobUi.progressWrap,
-      jobUi.progressFill,
-    );
-    setAudioBusy(false);
+        },
+        jobUi.progressWrap,
+        jobUi.progressFill,
+      );
+    } catch (err) {
+      const msg = err?.message || "Full song failed";
+      jobUi.statusEl.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
+    } finally {
+      setAudioBusy(false);
+    }
   });
 
   voiceSongBtn?.addEventListener("click", async () => {
     const path = audioLastPath || document.getElementById("audioEditPath")?.value.trim();
     if (!path) {
       jobUi.statusEl.textContent = "Record your voice first";
+      window.showAriaToast?.("Record your voice first", "warn", 3000);
       return;
     }
     setAudioBusy(true);
-    resetAudioJobProgress(jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
-    updateAudioJobProgress(0, "Starting voice→song…", jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
-    const form = new FormData();
-    form.append("path", path);
-    form.append("lyrics", document.getElementById("audioVoiceLyrics")?.value.trim() || "");
-    form.append("title", document.getElementById("audioVoiceTitle")?.value.trim() || "");
-    form.append("style", document.getElementById("audioVoiceStyle")?.value.trim() || "pop ballad");
-    form.append("genre", document.getElementById("audioVoiceGenre")?.value || "pop");
-    form.append("duration", document.getElementById("audioVoiceDur")?.value || "30");
-    form.append("async_job", "1");
-    const res = await fetch("/api/audio/song/voice", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      jobUi.statusEl.textContent = data.message || "Failed";
+    try {
+      resetAudioJobProgress(jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
+      updateAudioJobProgress(0, "Starting voice→song…", jobUi.statusEl, jobUi.progressWrap, jobUi.progressFill);
+      const form = new FormData();
+      form.append("path", path);
+      form.append("lyrics", document.getElementById("audioVoiceLyrics")?.value.trim() || "");
+      form.append("title", document.getElementById("audioVoiceTitle")?.value.trim() || "");
+      form.append("style", document.getElementById("audioVoiceStyle")?.value.trim() || "pop ballad");
+      form.append("genre", document.getElementById("audioVoiceGenre")?.value || "pop");
+      form.append("duration", document.getElementById("audioVoiceDur")?.value || "30");
+      form.append("async_job", "1");
+      const res = await fetch("/api/audio/song/voice", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const msg = data.message || `Voice→song failed (${res.status})`;
+        jobUi.statusEl.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      await pollAudioJob(
+        data.job_id,
+        jobUi.statusEl,
+        (result) => {
+          if (result.audio_path) {
+            loadAudioIntoPlayer(result.audio_path, result.lyrics || null);
+            refreshRecentLists();
+          }
+        },
+        jobUi.progressWrap,
+        jobUi.progressFill,
+      );
+    } catch (err) {
+      const msg = err?.message || "Voice→song failed";
+      jobUi.statusEl.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
+    } finally {
       setAudioBusy(false);
-      return;
     }
-    await pollAudioJob(
-      data.job_id,
-      jobUi.statusEl,
-      (result) => {
-        if (result.audio_path) {
-          loadAudioIntoPlayer(result.audio_path, result.lyrics || null);
-          refreshRecentLists();
-        }
-        setAudioBusy(false);
-      },
-      jobUi.progressWrap,
-      jobUi.progressFill,
-    );
-    setAudioBusy(false);
   });
 
   document.getElementById("audioPodcastMixBtn")?.addEventListener("click", async () => {
@@ -218,25 +244,35 @@ function bindSongStudio(statusEl) {
     const status = document.getElementById("audioPodcastStatus");
     if (!backing) {
       if (status) status.textContent = "Enter a backing track path";
+      window.showAriaToast?.("Enter a backing track path", "warn", 3000);
       return;
     }
     if (status) status.textContent = "Mixing…";
-    const form = new FormData();
-    form.append("backing_path", backing);
-    if (vocal) form.append("vocal_path", vocal);
-    form.append("vocal_gain_db", document.getElementById("audioPodcastGain")?.value || "2");
-    form.append("title", "podcast_mix");
-    const res = await fetch("/api/audio/podcast/mix", { method: "POST", body: form });
-    const data = await res.json();
-    if (!res.ok || !data.ok) {
-      if (status) status.textContent = data.message || "Mix failed";
-      return;
-    }
-    if (status) status.textContent = data.message || "Mix complete";
-    if (data.audio_path) {
-      loadAudioIntoPlayer(data.audio_path, null);
-      refreshRecentLists();
-      if (window.jarvisNotify) window.jarvisNotify("Podcast mix ready", data.audio_path.split("/").pop());
+    try {
+      const form = new FormData();
+      form.append("backing_path", backing);
+      if (vocal) form.append("vocal_path", vocal);
+      form.append("vocal_gain_db", document.getElementById("audioPodcastGain")?.value || "2");
+      form.append("title", "podcast_mix");
+      const res = await fetch("/api/audio/podcast/mix", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const msg = data.message || "Mix failed";
+        if (status) status.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
+      if (status) status.textContent = data.message || "Mix complete";
+      window.showAriaToast?.(data.message || "Podcast mix complete", "ok", 3000);
+      if (data.audio_path) {
+        loadAudioIntoPlayer(data.audio_path, null);
+        refreshRecentLists();
+        if (window.jarvisNotify) window.jarvisNotify("Podcast mix ready", data.audio_path.split("/").pop());
+      }
+    } catch (err) {
+      const msg = err?.message || "Mix failed";
+      if (status) status.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
     }
   });
 
@@ -247,14 +283,23 @@ function bindSongStudio(statusEl) {
     const file = e.target.files?.[0];
     if (!file) return;
     statusEl.textContent = "Uploading…";
-    const form = new FormData();
-    form.append("file", file);
-    const res = await fetch("/api/audio/transcribe-upload", { method: "POST", body: form });
-    const data = await res.json();
-    if (data.ok && data.path) {
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/audio/transcribe-upload", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok || !data.path) {
+        const msg = data.message || `Upload failed (${res.status})`;
+        statusEl.textContent = msg;
+        window.showAriaToast?.(msg, "err", 5000);
+        return;
+      }
       document.getElementById("audioGenrePath").value = data.path;
       setAudioLastPath(data.path);
       statusEl.textContent = `Loaded: ${file.name}`;
+      window.showAriaToast?.(`Loaded: ${file.name}`, "ok", 2500);
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Upload failed", "err", 5000);
     }
   });
 

@@ -458,12 +458,17 @@ function bindWellnessExtras(day) {
 function bindLinkClicks() {
   bujoContent?.querySelectorAll(".bujo-link").forEach((btn) => {
     btn.onclick = async () => {
-      const res = await fetch(`/api/journal/bullet/${btn.dataset.link}/resolve`);
-      const data = await res.json();
-      if (data.ok && data.bullet?.location) {
-        navigateBujoPage(data.bullet.location);
-      } else if (data.ok) {
-        window.showAriaToast?.(data.bullet?.formatted || data.bullet?.content || "Linked bullet", "ok", 4000);
+      try {
+        const out = await journalPost(`/api/journal/bullet/${btn.dataset.link}/resolve`);
+        const data = out.body || {};
+        if (!out.ok || data.ok === false) return;
+        if (data.bullet?.location) {
+          navigateBujoPage(data.bullet.location);
+        } else {
+          window.showAriaToast?.(data.bullet?.formatted || data.bullet?.content || "Linked bullet", "ok", 4000);
+        }
+      } catch (err) {
+        journalNotify(err?.message || "Could not open linked bullet");
       }
     };
   });

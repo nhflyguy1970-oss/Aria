@@ -53,7 +53,7 @@
     try {
       const res = await fetch("/api/personality", { method: "POST", body: form });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || data.detail || `Personality update failed (${res.status})`);
+      if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Personality update failed (${res.status})`);
       const msg = `Personality: ${e.target.value}`;
       const st = statusEl();
       if (st) st.textContent = msg;

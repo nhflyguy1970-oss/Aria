@@ -7,7 +7,7 @@ function $(id) {
 async function p0Fetch(url, opts = {}) {
   const res = await fetch(url, opts);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || res.statusText);
+  if (!res.ok || data.ok === false) throw new Error(data.message || data.error || res.statusText || "Request failed");
   return data;
 }
 

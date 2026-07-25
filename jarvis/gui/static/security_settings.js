@@ -118,7 +118,7 @@
           body: JSON.stringify({ pin }),
         });
         const data = await res.json();
-        if (!res.ok) {
+        if (!res.ok || data.ok === false) {
           const msg = data.message || "Failed";
           if (out) out.textContent = msg;
           window.showAriaToast?.(msg, "err", 5000);

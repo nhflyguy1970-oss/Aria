@@ -746,6 +746,7 @@
     });
     $("actionsOpenChatBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
     $("actionsOpenAuditBtn")?.addEventListener("click", () => window.switchToView?.("audit"));
+    $("actionsOpenMcBtn")?.addEventListener("click", () => window.switchToView?.("workstation"));
   }
 
   window.loadActions = async function (moduleFilter) {
