@@ -13,8 +13,8 @@ def ok(message: str, module: str | None = "general", **extra) -> dict:
     return payload
 
 
-def err(message: str, module: str | None = "general") -> dict:
-    payload: dict = {"ok": False, "message": message}
+def err(message: str, module: str | None = "general", **extra) -> dict:
+    payload: dict = {"ok": False, "message": message, **extra}
     if module:
         payload["module"] = module
     return payload
