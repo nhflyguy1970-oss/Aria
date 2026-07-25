@@ -324,6 +324,12 @@ def test_command_palette_is_wired():
     assert "auditOpenActionsBtn" in html
     assert "Stream dropped" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
     assert "Could not start reply UI" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
+    assert "FIRST_PROGRESS_MS" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")
+    assert "showProviderRecovery" in Path("jarvis/gui/static/chat_progress.js").read_text(encoding="utf-8")
+    assert "View Diagnostics" in Path("jarvis/gui/static/chat_progress.js").read_text(encoding="utf-8")
+    assert "chat-recovery-actions" in Path("jarvis/gui/static/style.css").read_text(encoding="utf-8")
+    assert "health_state" in Path("jarvis/ollama_health.py").read_text(encoding="utf-8")
+    assert "refresh_inference_probe" in Path("jarvis/ollama_health.py").read_text(encoding="utf-8")
     assert "stopDashboardClock" in Path("jarvis/gui/static/view_router.js").read_text(encoding="utf-8")
     assert "audit-empty-run" in html
     assert "act:open-projects" in js

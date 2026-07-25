@@ -144,19 +144,21 @@ _health_refresh_lock = threading.Lock()
 
 def _build_health_lite() -> dict:
     from jarvis.media_jobs import busy_state
-    from jarvis.services import _http_ok
+    from jarvis.ollama_health import check_ollama
 
-    ollama_ok = False
-    try:
-        ollama_ok = _http_ok("http://127.0.0.1:11434/api/tags", timeout=1.5)
-    except Exception:
-        pass
+    # soft_probe=False: tags + cached probe only (no blocking generate on every poll)
+    ollama = check_ollama(soft_probe=False)
+    state = ollama.get("health_state") or "unavailable"
+    probe = ollama.get("probe") if isinstance(ollama.get("probe"), dict) else {}
+    detail = ollama.get("error") or (probe.get("detail") if probe else None)
     busy = busy_state()
     return {
-        "status": "ok",
+        "status": "ok" if state == "healthy" else ("degraded" if state == "degraded" else "unavailable"),
         "version": APP_VERSION,
         "jarvis_running": True,
-        "ready": ollama_ok,
+        "ready": state == "healthy",
+        "ollama_health": state,
+        "ollama_detail": detail,
         "uncensored": is_uncensored(),
         "busy": busy["busy"] or busy["pending"] > 0,
         "busy_job": busy.get("label") or "",
@@ -174,24 +176,19 @@ def _refresh_health_full_cache() -> None:
 
 
 def _live_payload() -> dict:
-    """Fast liveness probe — never blocks on ComfyUI/GPU probes."""
-    from jarvis.auth import api_key_enabled
-
-    ollama_ok = False
-    try:
-        from jarvis.services import _http_ok
-
-        ollama_ok = _http_ok("http://127.0.0.1:11434/api/tags", timeout=1.5)
-    except Exception:
-        pass
-    from jarvis.auth import localhost_key_exempt
+    """Fast liveness probe — never blocks on ComfyUI/GPU probes or generate."""
+    from jarvis.auth import api_key_enabled, localhost_key_exempt
     from jarvis.branding import branding_dict
+    from jarvis.ollama_health import check_ollama
 
+    ollama = check_ollama(soft_probe=False)
+    state = ollama.get("health_state") or "unavailable"
     return {
         "ok": True,
         "version": APP_VERSION,
         "ui_version": UI_VERSION,
-        "ready": ollama_ok,
+        "ready": state == "healthy",
+        "ollama_health": state,
         "uncensored": is_uncensored(),
         "api_key_required": api_key_enabled(),
         "api_key_localhost_exempt": localhost_key_exempt(),
@@ -212,9 +209,12 @@ def live():
 
 def _build_health_payload() -> dict:
     from jarvis.auth import api_key_enabled
+    from jarvis.ollama_health import check_ollama as _check_ollama
     from jarvis.sandbox import firejail_available, sandbox_enabled
     from jarvis.services import get_status
 
+    # Populate soft-probe cache (short timeout, TTL-cached) before assembling status.
+    ollama_probe = _check_ollama(soft_probe=True, force_probe=False)
     svc = get_status(force=True)
     gpu = detect_gpu()
     from jarvis.vram_guard import recommendations
@@ -234,13 +234,15 @@ def _build_health_payload() -> dict:
     audio = detect_devices()
     status = assistant.get_status()
     return {
-        "status": "ok" if svc.get("ready") else "starting",
+        "status": "ok" if svc.get("ready") else ("degraded" if ollama_probe.get("health_state") == "degraded" else "starting"),
         "version": APP_VERSION,
         "jarvis_running": True,
         "ready": svc.get("ready", False),
+        "ollama_health": ollama_probe.get("health_state") or svc.get("ollama_health") or "unavailable",
+        "ollama_detail": ollama_probe.get("error"),
         "services": svc.get("services", []),
         "comfyui_settings": svc.get("comfyui_settings", {}),
-        "ollama": svc.get("ollama", check_ollama()),
+        "ollama": svc.get("ollama", ollama_probe),
         "gpu": gpu,
         "resources": resources,
         "resource_status_line": resource_status_line(),

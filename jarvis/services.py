@@ -477,7 +477,34 @@ def get_status(*, force: bool = False) -> dict:
     if not force and _status_cache["data"] is not None and now - _status_cache["at"] < _STATUS_TTL:
         return _status_cache["data"]
     load_jarvis_env()
-    ollama = check_ollama()
+    ollama = check_ollama(soft_probe=False)
+    # Kick a cached soft probe off-request so we don't block status on a wedged generate.
+    try:
+        def _bg_probe():
+            try:
+                from jarvis.ollama_health import check_ollama as _co
+
+                _co(soft_probe=True, force_probe=False)
+            except Exception:
+                pass
+
+        threading.Thread(target=_bg_probe, name="ollama-health-probe", daemon=True).start()
+    except Exception:
+        pass
+    health_state = ollama.get("health_state") or ("healthy" if ollama.get("running") else "unavailable")
+    ollama_msg = {
+        "healthy": "ready",
+        "degraded": "degraded",
+        "unavailable": "offline",
+    }.get(health_state, "offline")
+    ollama_detail_parts = []
+    if ollama.get("running"):
+        ollama_detail_parts.append(f"{len(ollama.get('models', []))} models")
+    probe = ollama.get("probe") or {}
+    if health_state == "degraded" and probe.get("detail"):
+        ollama_detail_parts.append(str(probe["detail"])[:80])
+    elif health_state == "healthy" and probe.get("model"):
+        ollama_detail_parts.append(f"probe {probe.get('model')}")
     comfy = _comfy_healthy()
     from jarvis.config import piper_ready, piper_voice_label
 
@@ -496,11 +523,11 @@ def get_status(*, force: bool = False) -> dict:
         ServiceStatus(
             name="ollama",
             label="Ollama",
-            running=ollama["running"],
+            running=bool(ollama.get("running")),
             autostart=True,
             required=True,
-            message="ready" if ollama["running"] else "offline",
-            detail=f"{len(ollama.get('models', []))} models" if ollama["running"] else "",
+            message=ollama_msg,
+            detail=" · ".join(ollama_detail_parts),
         ),
         ServiceStatus(
             name="jarvis",
@@ -550,9 +577,10 @@ def get_status(*, force: bool = False) -> dict:
         _homeassistant_status(),
     ]
 
-    ready = ollama["running"]
+    ready = ollama.get("health_state") == "healthy"
     payload = {
         "ready": ready,
+        "ollama_health": ollama.get("health_state") or "unavailable",
         "services": [s.__dict__ for s in services],
         "boot_log": list(_boot_log[-20:]),
         "ollama": ollama,

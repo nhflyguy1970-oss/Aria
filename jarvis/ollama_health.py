@@ -3,10 +3,25 @@ import os
 import re
 import shutil
 import subprocess
+import threading
+import time
 import urllib.error
 import urllib.request
 
 _MLLAMA_SUPPORT: bool | None = None
+
+# Soft inference probe cache — tags alone cannot detect a wedged generate path.
+_probe_lock = threading.Lock()
+_probe_cache: dict = {
+    "at": 0.0,
+    "ok": None,  # True | False | None (never run)
+    "detail": "",
+    "model": "",
+    "elapsed_s": None,
+}
+_PROBE_TTL = float(os.getenv("JARVIS_OLLAMA_HEALTH_PROBE_TTL", "120"))
+_PROBE_TIMEOUT = float(os.getenv("JARVIS_OLLAMA_HEALTH_PROBE_TIMEOUT", "5"))
+_PROBE_NUM_PREDICT = int(os.getenv("JARVIS_OLLAMA_HEALTH_PROBE_TOKENS", "1"))
 
 
 def ollama_host() -> str:
@@ -57,14 +72,148 @@ def _list_via_http(host: str) -> tuple[list[str], str | None]:
         return [], str(e)
 
 
-def check_ollama() -> dict:
-    """Check if Ollama is reachable and which models are installed."""
+def _soft_generate_probe(host: str, model: str, *, timeout: float) -> dict:
+    """Cheap generate probe (1 token, short timeout). Never used on every health poll."""
+    body = json.dumps({
+        "model": model,
+        "prompt": "ping",
+        "stream": False,
+        "options": {"num_predict": max(1, _PROBE_NUM_PREDICT)},
+    }).encode()
+    req = urllib.request.Request(
+        f"{host}/api/generate",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    started = time.perf_counter()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode())
+        elapsed = round(time.perf_counter() - started, 3)
+        err = data.get("error")
+        if err:
+            return {"ok": False, "detail": str(err)[:160], "model": model, "elapsed_s": elapsed}
+        # A completed generate with no HTTP error counts as healthy even if the model
+        # returns an empty string for a 1-token ping.
+        return {"ok": True, "detail": "generate ok", "model": model, "elapsed_s": elapsed}
+    except TimeoutError:
+        return {
+            "ok": False,
+            "detail": f"generate timed out after {timeout:.0f}s (daemon may be wedged)",
+            "model": model,
+            "elapsed_s": round(time.perf_counter() - started, 3),
+        }
+    except Exception as exc:
+        # urlopen raises URLError on timeout on some Pythons
+        msg = str(exc)
+        if "timed out" in msg.lower() or "timeout" in msg.lower():
+            return {
+                "ok": False,
+                "detail": f"generate timed out after {timeout:.0f}s (daemon may be wedged)",
+                "model": model,
+                "elapsed_s": round(time.perf_counter() - started, 3),
+            }
+        return {
+            "ok": False,
+            "detail": msg[:160],
+            "model": model,
+            "elapsed_s": round(time.perf_counter() - started, 3),
+        }
+
+
+def _probe_model_for_health(installed: list[str]) -> str:
+    override = os.getenv("JARVIS_PROBE_OLLAMA_MODEL", "").strip()
+    if override:
+        return override
+    try:
+        from jarvis.llm import general_model
+
+        name = (general_model() or "").strip()
+        if name:
+            return name
+    except Exception:
+        pass
+    if installed:
+        return installed[0]
+    return os.getenv("JARVIS_GENERAL_MODEL", "qwen2.5:7b").strip() or "qwen2.5:7b"
+
+
+def refresh_inference_probe(
+    *,
+    host: str | None = None,
+    models: list[str] | None = None,
+    force: bool = False,
+) -> dict:
+    """Run or return cached soft generate probe. Safe to call from status endpoints."""
+    now = time.time()
+    with _probe_lock:
+        age = now - float(_probe_cache.get("at") or 0)
+        if (
+            not force
+            and _probe_cache.get("ok") is not None
+            and age < _PROBE_TTL
+        ):
+            return {
+                "ok": _probe_cache["ok"],
+                "detail": _probe_cache.get("detail") or "",
+                "model": _probe_cache.get("model") or "",
+                "elapsed_s": _probe_cache.get("elapsed_s"),
+                "cached": True,
+                "age_s": round(age, 1),
+            }
+
+    host = (host or ollama_host()).rstrip("/")
+    model = _probe_model_for_health(models or [])
+    result = _soft_generate_probe(host, model, timeout=_PROBE_TIMEOUT)
+    with _probe_lock:
+        _probe_cache["at"] = time.time()
+        _probe_cache["ok"] = bool(result.get("ok"))
+        _probe_cache["detail"] = result.get("detail") or ""
+        _probe_cache["model"] = result.get("model") or model
+        _probe_cache["elapsed_s"] = result.get("elapsed_s")
+    return {**result, "cached": False, "age_s": 0.0}
+
+
+def note_inference_success(model: str = "") -> None:
+    """Record a live chat/generate success so health can stay 'healthy' without re-probing."""
+    with _probe_lock:
+        _probe_cache["at"] = time.time()
+        _probe_cache["ok"] = True
+        _probe_cache["detail"] = "recent live inference ok"
+        if model:
+            _probe_cache["model"] = model
+        _probe_cache["elapsed_s"] = 0.0
+
+
+def note_inference_failure(detail: str = "", model: str = "") -> None:
+    """Record a live inference failure (timeout/wedge) for honest degraded health."""
+    with _probe_lock:
+        _probe_cache["at"] = time.time()
+        _probe_cache["ok"] = False
+        _probe_cache["detail"] = (detail or "live inference failed")[:160]
+        if model:
+            _probe_cache["model"] = model
+        _probe_cache["elapsed_s"] = None
+
+
+def check_ollama(*, soft_probe: bool = True, force_probe: bool = False) -> dict:
+    """Check Ollama reachability, installed models, and (optionally) generate liveness.
+
+    health_state:
+      - unavailable — tags/API unreachable
+      - degraded — API up but generate probe failing / wedged
+      - healthy — API up and generate probe succeeded (or recent live success)
+    Soft probes are cached (default 120s) and use a short timeout (default 5s).
+    """
     result = {
         "running": False,
         "host": ollama_host(),
         "models": [],
         "error": None,
         "source": None,
+        "health_state": "unavailable",
+        "probe": None,
     }
 
     for host in _hosts_to_try():
@@ -74,17 +223,57 @@ def check_ollama() -> dict:
             result["host"] = host
             result["models"] = models
             result["source"] = "http"
-            return result
+            break
         result["error"] = err
+    else:
+        cli_models = _list_via_cli()
+        if cli_models:
+            result["running"] = True
+            result["models"] = cli_models
+            result["source"] = "cli"
+            result["error"] = None
+        else:
+            result["health_state"] = "unavailable"
+            return result
 
-    cli_models = _list_via_cli()
-    if cli_models:
-        result["running"] = True
-        result["models"] = cli_models
-        result["source"] = "cli"
-        result["error"] = None
+    if not soft_probe and not force_probe:
+        # Tags-only path for ultra-fast polls: use last probe cache if present.
+        with _probe_lock:
+            cached_ok = _probe_cache.get("ok")
+            cached_detail = _probe_cache.get("detail") or ""
+            age = time.time() - float(_probe_cache.get("at") or 0)
+            probe_snap = {
+                "ok": cached_ok,
+                "detail": cached_detail,
+                "model": _probe_cache.get("model") or "",
+                "elapsed_s": _probe_cache.get("elapsed_s"),
+                "cached": True,
+                "age_s": round(age, 1) if _probe_cache.get("at") else None,
+            }
+        if cached_ok is True:
+            result["health_state"] = "healthy"
+        elif cached_ok is False:
+            result["health_state"] = "degraded"
+            result["error"] = cached_detail or "inference probe failed"
+        else:
+            # Reachable but never verified — do not advertise "ready".
+            result["health_state"] = "degraded"
+            result["error"] = "inference not verified yet"
+        result["probe"] = probe_snap
         return result
 
+    probe = refresh_inference_probe(
+        host=result["host"],
+        models=result["models"],
+        force=force_probe,
+    )
+    result["probe"] = probe
+    if probe.get("ok"):
+        result["health_state"] = "healthy"
+        result["error"] = None
+    else:
+        result["health_state"] = "degraded"
+        result["error"] = probe.get("detail") or "generate probe failed"
     return result
 
 

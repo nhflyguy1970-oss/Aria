@@ -1,6 +1,11 @@
 /** Chat send / stream pipeline — extracted from app.js. Load after app.js + chat_progress.js. */
 (function () {
-  const STREAM_IDLE_MS = 180000;
+  // Idle between stream chunks after first token/progress (media/coding may be slower).
+  const STREAM_IDLE_MS = Number(window.JARVIS_CHAT_STREAM_IDLE_MS) || 90000;
+  // Absolute wait for first meaningful progress (token / agent_step / done) — never hang on "Processing…".
+  const FIRST_PROGRESS_MS = Number(window.JARVIS_CHAT_FIRST_PROGRESS_MS) || 45000;
+  // Non-streaming POST overall timeout.
+  const NONSTREAM_MS = Number(window.JARVIS_CHAT_NONSTREAM_MS) || 120000;
 
   function chat() {
     return window.jarvisChat || {};
@@ -22,7 +27,12 @@
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         const name = typeof window.ariaName === "function" ? window.ariaName() : "ARIA";
-        reject(new Error(`${name} took too long to respond. Try again or check that Ollama is running.`));
+        const err = new Error(
+          `${name} stopped receiving tokens from the model provider. `
+          + "The provider may be wedged or overloaded.",
+        );
+        err.code = "STREAM_IDLE_TIMEOUT";
+        reject(err);
       }, idleMs);
       reader.read().then(
         (result) => { clearTimeout(timer); resolve(result); },
@@ -44,6 +54,18 @@
     if (!file) return false;
     if (file.size > 500000) return false;
     return /\.(txt|md|py|json|csv|log|yaml|yml|toml|xml|html|js|ts|tsx|jsx|sh|rs|go)$/i.test(file.name);
+  }
+
+  function providerTimeoutError(kind) {
+    const name = typeof window.ariaName === "function" ? window.ariaName() : "ARIA";
+    const err = new Error(
+      kind === "first"
+        ? `${name} did not receive a model response in time. `
+          + "Ollama may be offline, loading a large model, or stuck accepting requests without generating."
+        : `${name} stopped receiving tokens from the model provider.`,
+    );
+    err.code = kind === "first" ? "FIRST_PROGRESS_TIMEOUT" : "STREAM_IDLE_TIMEOUT";
+    return err;
   }
 
   async function sendMessage(text, forceNoStream = false, options = {}) {
@@ -87,6 +109,7 @@
     }
 
     c.chatStopRequested = false;
+    c.providerTimeout = null;
     c.activeStreamText = "";
     c.activeChatRequestId = crypto.randomUUID?.() || `req-${Date.now()}`;
     c.chatAbortController = new AbortController();
@@ -178,6 +201,8 @@
             : "";
         let full = "";
         let gotDone = false;
+        let gotProgress = false;
+        const streamStartedAt = Date.now();
 
         const res = await fetch("/api/chat", fetchOpts);
         if (!res.ok) {
@@ -196,7 +221,14 @@
               streamFinished = true;
               break;
             }
-            const { done, value } = await readStreamChunk(reader);
+            if (!gotProgress && Date.now() - streamStartedAt > FIRST_PROGRESS_MS) {
+              const terr = providerTimeoutError("first");
+              c.providerTimeout = terr;
+              try { c.chatAbortController?.abort?.(); } catch (_) {}
+              throw terr;
+            }
+            const idleForChunk = gotProgress ? STREAM_IDLE_MS : Math.max(5000, FIRST_PROGRESS_MS - (Date.now() - streamStartedAt));
+            const { done, value } = await readStreamChunk(reader, idleForChunk);
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split("\n");
@@ -211,7 +243,9 @@
                   body.innerHTML = `<p class="status-hint">${escapeHtml(event.message || "Processing…")}</p>`;
                   if (msgs) msgs.scrollTop = msgs.scrollHeight;
                 }
+                // Status alone does not count as model progress — avoids infinite "Processing…".
               } else if (event.type === "agent_step") {
+                gotProgress = true;
                 const label = `${event.action || "step"}: ${event.detail || ""}`;
                 window.updateProgressStatus?.(label);
                 if (body && !isNativeApp()) {
@@ -225,6 +259,7 @@
                   if (msgs) msgs.scrollTop = msgs.scrollHeight;
                 }
               } else if (event.type === "token") {
+                gotProgress = true;
                 window.updateProgressStatus?.("Generating…");
                 full += event.content;
                 c.activeStreamText = full;
@@ -232,6 +267,7 @@
                 syncMessageRawText?.(body, full);
                 if (msgs) msgs.scrollTop = msgs.scrollHeight;
               } else if (event.type === "done" || (event.ok && event.image_path)) {
+                gotProgress = true;
                 gotDone = true;
                 streamFinished = true;
                 typing.classList.remove("typing-msg");
@@ -290,7 +326,16 @@
           }
         }
       } else {
-        const res = await fetch("/api/chat", fetchOpts);
+        const nonStreamAbort = new AbortController();
+        const nonStreamTimer = setTimeout(() => nonStreamAbort.abort(), NONSTREAM_MS);
+        const linked = () => { try { nonStreamAbort.abort(); } catch (_) {} };
+        c.chatAbortController?.signal?.addEventListener?.("abort", linked, { once: true });
+        let res;
+        try {
+          res = await fetch("/api/chat", { ...fetchOpts, signal: nonStreamAbort.signal });
+        } finally {
+          clearTimeout(nonStreamTimer);
+        }
         const data = await parseJsonResponse(res);
         typing.remove();
         if (!res.ok || data.ok === false) {
@@ -301,6 +346,19 @@
       }
     } catch (e) {
       typing.remove();
+      const timed = c.providerTimeout || e;
+      const isProviderTimeout = timed?.code === "FIRST_PROGRESS_TIMEOUT" || timed?.code === "STREAM_IDLE_TIMEOUT"
+        || /did not receive a model|stopped receiving tokens|took too long|timed out/i.test(String(timed?.message || e?.message || e));
+      if (isProviderTimeout) {
+        c.providerTimeout = null;
+        try { c.chatAbortController?.abort?.(); } catch (_) {}
+        if (statusText) statusText.textContent = "Provider timeout";
+        window.showProviderRecovery?.(String(timed.message || e.message || e), {
+          retryText: text,
+          reason: timed.code || e.code || "PROVIDER_TIMEOUT",
+        });
+        return;
+      }
       if (c.chatStopRequested || e.name === "AbortError") {
         if ((c.activeStreamText || "").trim()) {
           window.addMessage?.("assistant", `${c.activeStreamText.trim()}\n\n*(stopped)*`, { type: "info" });

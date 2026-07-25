@@ -2823,6 +2823,36 @@ html.media-busy .sidebar .module-chip:not(.active) {
   line-height: 1.45;
   margin: 0;
 }
+.chat-recovery {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.15rem 0;
+}
+.chat-recovery-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+.chat-recovery-body {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.chat-recovery-meta {
+  margin: 0;
+  font-size: 0.75rem;
+}
+.chat-recovery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+.chat-recovery-primary {
+  border-color: var(--accent, #6b9fff);
+}
 .personality-select {
   width: 100%;
   max-width: 100%;

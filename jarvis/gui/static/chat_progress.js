@@ -37,6 +37,75 @@
     if (statusText) statusText.textContent = "Error";
   }
 
+  function showProviderRecovery(message, opts = {}) {
+    const retryText = opts.retryText || "";
+    const reason = opts.reason || "PROVIDER_TIMEOUT";
+    const wrap = document.createElement("div");
+    wrap.className = "chat-recovery";
+    wrap.setAttribute("role", "alert");
+    const title = document.createElement("p");
+    title.className = "chat-recovery-title";
+    title.textContent = "Model provider timed out";
+    const body = document.createElement("p");
+    body.className = "chat-recovery-body";
+    body.textContent = message || "The provider accepted the request but did not produce a response in time.";
+    const actions = document.createElement("div");
+    actions.className = "chat-recovery-actions";
+    const mkBtn = (label, onClick, primary) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = primary ? "ghost-btn small chat-recovery-primary" : "ghost-btn small";
+      b.textContent = label;
+      b.addEventListener("click", onClick);
+      return b;
+    };
+    actions.appendChild(mkBtn("Retry", () => {
+      if (retryText) window.sendMessage?.(retryText);
+      else document.getElementById("messageInput")?.focus();
+    }, true));
+    actions.appendChild(mkBtn("Stop", () => window.stopChat?.()));
+    actions.appendChild(mkBtn("Switch Model", () => {
+      window.switchToView?.("chat");
+      document.getElementById("modelsToggle")?.click?.();
+      window.openCommandPalette?.("model");
+      window.showAriaToast?.("Open Models or use the command palette to switch models", "info", 4000);
+    }));
+    actions.appendChild(mkBtn("Switch Provider", () => {
+      window.openCommandPalette?.("provider");
+      window.switchToView?.("audit");
+      window.showAriaToast?.("Check provider status under System / Mission Control", "info", 4000);
+    }));
+    actions.appendChild(mkBtn("View Diagnostics", () => {
+      window.switchToView?.("workstation");
+      setTimeout(() => {
+        document.querySelector('[data-mc-tab="diagnostics"], [data-tab="diagnostics"]')?.click?.();
+      }, 200);
+    }));
+    wrap.appendChild(title);
+    wrap.appendChild(body);
+    const meta = document.createElement("p");
+    meta.className = "chat-recovery-meta muted";
+    meta.textContent = `Reason: ${reason}`;
+    wrap.appendChild(meta);
+    wrap.appendChild(actions);
+    const msgs = document.getElementById("messages");
+    if (msgs) {
+      const row = document.createElement("div");
+      row.className = "message assistant";
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.appendChild(wrap);
+      row.appendChild(bubble);
+      msgs.appendChild(row);
+      msgs.scrollTop = msgs.scrollHeight;
+    } else {
+      showError(`${title.textContent}: ${body.textContent}`);
+    }
+    const { statusText } = els();
+    if (statusText) statusText.textContent = "Provider timeout — choose a recovery action";
+    window.showAriaToast?.("Model provider timed out — use Retry or Diagnostics", "err", 5000);
+  }
+
   function showProgress(label = "Thinking…") {
     const { progressBar, progressFill, progressText } = els();
     if (!progressBar) return;
@@ -128,6 +197,7 @@
   Object.assign(window, {
     progressLabel,
     showError,
+    showProviderRecovery,
     showProgress,
     hideProgress,
     setChatBusy,
