@@ -25,27 +25,37 @@ Status legend: `CERTIFIED` · `FIXED & CERTIFIED` · `INTENTIONALLY DEFERRED` ·
 | Cross-system Audio↔Voice | Cross-system | Audio / Voice headers | FIXED & CERTIFIED | Studio ↔ settings |
 | Cross-system Planner↔Calendar↔Journal | Cross-system | Planner / Calendar toolbars | FIXED & CERTIFIED | Header shortcuts + journal deep-links |
 | Cross-system Documents↔Memory/Calendar | Cross-system | Documents / Memory / Calendar | FIXED & CERTIFIED | Bidirectional; ICS owned by Calendar |
-| Long-duration leak profile | Performance | Runtime | FIXED & CERTIFIED | 15m soak 285/0 fails; **60m soak 686/0 fails** (avg 35ms); multi-hour still optional extension |
+| Long-duration leak profile | Performance | Runtime | FIXED & CERTIFIED | 15m 285/0; **60m A 686/0**; **60m B 1143/0** (avg ~22ms); multi-hour optional |
 | Tool-confirm modal | Approvals | Chat + HA entities | FIXED & CERTIFIED | `showToolConfirm` wired from `chat_done` + HA toggle/scene |
 | Element-ID wiring guard | Shell / UX | CTAs across panels | FIXED & CERTIFIED | Typo IDs fixed; regression test pins HTML ids |
 | Decompile recovery | Platform | flags / browse / briefing | FIXED & CERTIFIED | UnboundLocal / `None(query)` crash paths removed |
+| Song Studio feedback | Audio | genre / full / voice / podcast | FIXED & CERTIFIED | Toast + busy finally; false-success gated |
+| BuJo bullet mutations | Journal | edit/complete/delete/migrate | FIXED & CERTIFIED | `journalPost` success-gated refresh |
+| Palette profile/personality | Discoverability | Ctrl+K Settings group | FIXED & CERTIFIED | Mirrors model switcher pattern |
+| Actions → Mission Control | Cross-system | Actions toolbar | FIXED & CERTIFIED | `actionsOpenMcBtn` |
 
 Inventory detail: `docs/ARIA_GUI_INVENTORY_V2.md`
 
 Expand this matrix as each subsystem completes deep certification.
 
-## Wave resume (2026-07-24 late afternoon)
-- FIXED & CERTIFIED: non-blocking task nudge (replaced `confirm()`); prompt-history one-click delete + undo restore API; flytying export/print + cheatsheet/session gating; maker `ok:false` gate + printer empty CTA; voice duplex/STT/stop toasts; meme delete; upgrade propose gate; browser screenshot warn; audit install_key XSS; tools/projects empty CTAs; revoke/benchmark/cancel/install-poll gates; 9 broken element-ID wirings + STT `#listeningPartial`; tool-confirm modal wired into chat + HA entity actions; recovered Decompyle++ corruption (`p1–p5` flags, `web_browse`, `situational_briefing`, `notify_util`, `restart_flag`, `diff_util`, `service_policy`); chat busy-stuck + stream-drop toast; palette speak-replies/uncensored/server-Whisper/LAN/Actions; Audit→Actions; **60m soak 686 rounds / 0 fails** (avg 35ms); follow-on 60m soak running (`/tmp/aria_ui_soak_60m_b.log`).
-- INTENTIONALLY DEFERRED: multi-hour soak (>60m); multi-monitor DPI/dock; HA live (`:8123` refused); Comfy live gen; phone layouts; `JARVIS_FIRST_RUN_MODELS` default remains off (avoid surprise multi-GB pulls on GUI boot — enable via env/CLI intentionally).
+## Wave resume (2026-07-25 morning)
+- FIXED & CERTIFIED: audio EQ/VST toasts + busy cleanup; Kasa `fetchJson` ok-gate; BuJo bullet panel/actions via `journalPost`; flytying Clear/Browse empty CTAs + fav/remove aria-labels + hidden barcode poll; palette profile/personality; Song Studio genre/full/voice/podcast toasts; planner `p0Fetch` ok:false gate; PIN/personality/models ok:false gates; journal link resolve; Actions→MC; calendar work-schedule try/catch; capture-volume toasts; **60m soak B 1143 rounds / 0 fails**.
+- INTENTIONALLY DEFERRED: multi-hour soak (>60m); multi-monitor DPI/dock; HA live (`:8123` refused); Comfy live gen; phone layouts; `JARVIS_FIRST_RUN_MODELS` default off; large extracts (`journal.js` / `flytying.js` / `movie_tiers.js` HA peel) until next wave.
 - Verdict: **NO**
 
 **Resume priorities:**
-1. Collect `/tmp/aria_ui_soak_60m_b.log` when finished; optional multi-hour soak.
+1. Multi-monitor / DPI certification when dual display available.
 2. HA/Comfy live when those services are up.
-3. Multi-monitor / DPI certification.
-4. Remaining Decompyle++ style cleanup (modules import clean; headers stripped).
-5. First-run model pull progress in startup overlay (only if flag on).
-6. Exhaustive per-control matrix completion for residual panels.
+3. Peel HA entities + Actions from `movie_tiers.js` into dedicated modules.
+4. Optional multi-hour soak; residual silent-fail sweep on coding_proposals / remaining audio I/O.
+5. Exhaustive per-control matrix completion.
+
+## Wave resume (2026-07-24 late afternoon)
+- FIXED & CERTIFIED: non-blocking task nudge (replaced `confirm()`); prompt-history one-click delete + undo restore API; flytying export/print + cheatsheet/session gating; maker `ok:false` gate + printer empty CTA; voice duplex/STT/stop toasts; meme delete; upgrade propose gate; browser screenshot warn; audit install_key XSS; tools/projects empty CTAs; revoke/benchmark/cancel/install-poll gates; 9 broken element-ID wirings + STT `#listeningPartial`; tool-confirm modal wired into chat + HA entity actions; recovered Decompyle++ corruption (`p1–p5` flags, `web_browse`, `situational_briefing`, `notify_util`, `restart_flag`, `diff_util`, `service_policy`); chat busy-stuck + stream-drop toast; palette speak-replies/uncensored/server-Whisper/LAN/Actions; Audit→Actions; **60m soak 686 rounds / 0 fails** (avg 35ms); follow-on 60m soak B completed 1143/0.
+- INTENTIONALLY DEFERRED: multi-hour soak (>60m); multi-monitor DPI/dock; HA live (`:8123` refused); Comfy live gen; phone layouts; `JARVIS_FIRST_RUN_MODELS` default remains off (avoid surprise multi-GB pulls on GUI boot — enable via env/CLI intentionally).
+- Verdict: **NO**
+
+**Resume priorities:** see 2026-07-25 morning wave above.
 
 ## Wave resume (2026-07-24 evening++)
 - FIXED & CERTIFIED: journal migrate/index/habit/review/calendar-note/key/preset success gating; dashboard clock leak fixed; palette Stop speaking; Documents↔Journal + Planner→Documents + Dashboard→Calendar; audit empty CTA; icon aria-labels; **15m soak 285 rounds / 0 fails** (60m soak completed later with 0 fails).
