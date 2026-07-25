@@ -259,22 +259,29 @@ function bindAdvanced(statusEl) {
     const form = new FormData();
     form.append("path", path);
     statusEl.textContent = "Detecting language…";
-    const res = await fetch("/api/audio/detect-language", { method: "POST", body: form });
-    const data = await res.json();
-    if (!data.ok) {
-      const msg = data.error || "Detection failed";
-      if (typeof audioStatus === "function") audioStatus(statusEl, msg, "err");
+    try {
+      const res = await fetch("/api/audio/detect-language", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.error || data.message || `Detection failed (${res.status})`;
+        if (typeof audioStatus === "function") audioStatus(statusEl, msg, "err");
+        else {
+          statusEl.textContent = msg;
+          window.showAriaToast?.(msg, "err", 5000);
+        }
+        return;
+      }
+      const msg = `Detected: ${data.language} (${Math.round((data.probability || 0) * 100)}%)`;
+      if (typeof audioStatus === "function") audioStatus(statusEl, msg, "ok");
       else {
         statusEl.textContent = msg;
-        window.showAriaToast?.(msg, "err", 5000);
+        window.showAriaToast?.(msg, "ok", 2500);
       }
-      return;
-    }
-    const msg = `Detected: ${data.language} (${Math.round((data.probability || 0) * 100)}%)`;
-    if (typeof audioStatus === "function") audioStatus(statusEl, msg, "ok");
-    else {
-      statusEl.textContent = msg;
-      window.showAriaToast?.(msg, "ok", 2500);
+    } catch (err) {
+      const msg = err?.message || "Detection failed";
+      if (typeof audioStatus === "function") audioStatus(statusEl, msg, "err");
+      else statusEl.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
     }
   });
 
@@ -285,27 +292,35 @@ function bindAdvanced(statusEl) {
     statusEl.textContent = "Diarizing…";
     const form = new FormData();
     form.append("path", path);
-    const res = await fetch("/api/audio/diarize", { method: "POST", body: form });
-    const data = await res.json();
-    setAudioBusy(false);
-    if (!data.ok) {
-      const msg = data.message || "Diarize failed";
-      if (typeof audioStatus === "function") audioStatus(statusEl, msg, "err");
-      else {
-        statusEl.textContent = msg;
-        window.showAriaToast?.(msg, "err", 5000);
+    try {
+      const res = await fetch("/api/audio/diarize", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || data.error || `Diarize failed (${res.status})`;
+        if (typeof audioStatus === "function") audioStatus(statusEl, msg, "err");
+        else {
+          statusEl.textContent = msg;
+          window.showAriaToast?.(msg, "err", 5000);
+        }
+        return;
       }
-      return;
-    }
-    const text = data.transcript || (data.segments || []).map((s) =>
-      `${s.speaker} (${s.start}s): ${s.text || ""}`
-    ).join("\n");
-    showPlayback(path, text);
-    const okMsg = `Diarized (${data.engine})`;
-    if (typeof audioStatus === "function") audioStatus(statusEl, okMsg, "ok");
-    else {
-      statusEl.textContent = okMsg;
-      window.showAriaToast?.(okMsg, "ok", 2500);
+      const text = data.transcript || (data.segments || []).map((s) =>
+        `${s.speaker} (${s.start}s): ${s.text || ""}`
+      ).join("\n");
+      showPlayback(path, text);
+      const okMsg = `Diarized (${data.engine})`;
+      if (typeof audioStatus === "function") audioStatus(statusEl, okMsg, "ok");
+      else {
+        statusEl.textContent = okMsg;
+        window.showAriaToast?.(okMsg, "ok", 2500);
+      }
+    } catch (err) {
+      const msg = err?.message || "Diarize failed";
+      if (typeof audioStatus === "function") audioStatus(statusEl, msg, "err");
+      else statusEl.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
+    } finally {
+      setAudioBusy(false);
     }
   });
 
@@ -422,20 +437,27 @@ async function startLiveRecord(statusEl) {
   statusEl.textContent = "Live recording…";
   const form = new FormData();
   form.append("source", selectedInputSource());
-  const res = await fetch("/api/audio/record/live/start", { method: "POST", body: form });
-  const data = await res.json();
-  if (!data.ok) {
-    const msg = data.message || "Live start failed";
+  try {
+    const res = await fetch("/api/audio/record/live/start", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      const msg = data.message || `Live start failed (${res.status})`;
+      statusEl.textContent = msg;
+      window.showAriaToast?.(msg, "err", 5000);
+      setAudioBusy(false);
+      return;
+    }
+    liveSessionId = data.session_id;
+    vuTimer = setInterval(() => {
+      if (document.hidden) return;
+      pollLiveSession(statusEl);
+    }, 400);
+  } catch (err) {
+    const msg = err?.message || "Live start failed";
     statusEl.textContent = msg;
     window.showAriaToast?.(msg, "err", 5000);
     setAudioBusy(false);
-    return;
   }
-  liveSessionId = data.session_id;
-  vuTimer = setInterval(() => {
-    if (document.hidden) return;
-    pollLiveSession(statusEl);
-  }, 400);
 }
 
 async function stopLiveRecord(statusEl) {

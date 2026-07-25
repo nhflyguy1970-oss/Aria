@@ -233,17 +233,22 @@ async function saveEnvironmentPreferences() {
     const ta = field.querySelector("textarea");
     if (key && ta) preferences.push({ key, content: ta.value });
   });
-  const res = await fetch("/api/memory/environment/preferences", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ preferences }),
-  });
-  const data = await res.json();
-  if (!data.ok) {
-    window.showAriaToast?.(data.error || "Save failed", "err", 5000);
-    return;
+  try {
+    const res = await fetch("/api/memory/environment/preferences", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ preferences }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      window.showAriaToast?.(data.error || data.message || `Save failed (${res.status})`, "err", 5000);
+      return;
+    }
+    window.showAriaToast?.("Environment preferences saved", "ok", 2500);
+    loadMemoryBrowser();
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Could not save preferences", "err", 5000);
   }
-  loadMemoryBrowser();
 }
 
 function setKnowledgeResearchStatus(text, busy = false) {
@@ -730,28 +735,36 @@ function initMemoryBrowser() {
   });
   document.getElementById("profileRetakeBtn")?.addEventListener("click", async () => {
     if (!confirm("Replace your saved profile with new answers?")) return;
-    const res = await fetch("/api/profile/questionnaire/reset", { method: "POST" });
-    const data = await res.json();
-    if (!data.ok) {
-      window.showAriaToast?.("Could not reset profile", "err", 5000);
-      return;
+    try {
+      const res = await fetch("/api/profile/questionnaire/reset", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        window.showAriaToast?.(data.message || "Could not reset profile", "err", 5000);
+        return;
+      }
+      renderProfileForm(data.questions || []);
+      const modal = document.getElementById("profileModal");
+      if (modal) modal.dataset.retake = "1";
+      modal?.classList.remove("hidden");
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Could not reset profile", "err", 5000);
     }
-    renderProfileForm(data.questions || []);
-    const modal = document.getElementById("profileModal");
-    if (modal) modal.dataset.retake = "1";
-    modal?.classList.remove("hidden");
   });
   document.getElementById("profileInlineEditBtn")?.addEventListener("click", async () => {
-    const res = await fetch("/api/profile/questionnaire?edit=1");
-    const data = await res.json();
-    if (!data.ok || !(data.questions || []).length) {
-      window.showAriaToast?.("Could not load profile questions", "err", 5000);
-      return;
+    try {
+      const res = await fetch("/api/profile/questionnaire?edit=1");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false || !(data.questions || []).length) {
+        window.showAriaToast?.(data.message || "Could not load profile questions", "err", 5000);
+        return;
+      }
+      renderProfileForm(data.questions);
+      const modal = document.getElementById("profileModal");
+      if (modal) modal.dataset.retake = data.completed ? "1" : "";
+      modal?.classList.remove("hidden");
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Could not load profile questions", "err", 5000);
     }
-    renderProfileForm(data.questions);
-    const modal = document.getElementById("profileModal");
-    if (modal) modal.dataset.retake = data.completed ? "1" : "";
-    modal?.classList.remove("hidden");
   });
   document.getElementById("cheatsheetViewBtn")?.addEventListener("click", () => {
     const key = document.getElementById("cheatsheetSelect")?.value;
