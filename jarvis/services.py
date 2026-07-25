@@ -591,10 +591,10 @@ def get_status(*, force: bool = False) -> dict:
     return payload
 
 
-def check_ollama() -> dict:
+def check_ollama(**kwargs) -> dict:
     from jarvis.ollama_health import check_ollama as _check
 
-    return _check()
+    return _check(**kwargs)
 
 
 def ensure_services(*, pull_models: bool = False) -> dict:
