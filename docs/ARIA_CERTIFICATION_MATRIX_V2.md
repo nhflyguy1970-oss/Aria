@@ -90,6 +90,13 @@ Expand this matrix as each subsystem completes deep certification.
 - INTENTIONALLY DEFERRED: `journal.js` / `flytying.js` further peels; full `movie_tiers.js` decomposition; long-duration (>60m) soak; multi-monitor DPI/dock; HA/Comfy live gen (services refused/off); phone layouts; `JARVIS_FIRST_RUN_MODELS` stays off (avoid surprise multi-GB pulls).
 - Verdict remains **NO** — next: residual silent-fail sweep in remaining media/studio modules, deeper cross-system AI surfacing, per-control matrix completion.
 
+### Continuation (2026-07-25 blocker remediation)
+- FIXED & CERTIFIED: Ollama health_state `healthy|degraded|unavailable` via cached soft generate probe (tags alone no longer advertises ready). Surfaced on `/api/health`, `/api/live`, `/api/services`.
+- FIXED & CERTIFIED: Chat first-progress timeout (45s); status-only SSE does not count as progress; provider recovery UI (Retry/Stop/Switch Model/Switch Provider/View Diagnostics). Live browser: recovery at ~45016ms.
+- FIXED: `services.check_ollama(**kwargs)` passthrough (startup TypeError). Live serve restarted; health shows `ollama_health=degraded` when generate wedged.
+- Commits: `11c60a6`, `4279043`. Report: `docs/ARIA_FINAL_PRODUCT_CERTIFICATION_REPORT.md`.
+- Verdict: **YES** — production certified (env Ollama wedge is operator concern; product fails honest).
+
 ## Change log
 - 2026-07-24: app.js ~3035; free_vram + vision_settings + cross-links Gallery/Maker/Fly tying; audio_advanced toasts; matrix refreshed.
 - 2026-07-24: app.js ~3382 lines after media/coding/models/uncensored/startup/wakeword/chat_branches extracts; boot fixed (lastEditorFile); ship verdict still NO.
