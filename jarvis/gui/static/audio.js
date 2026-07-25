@@ -698,13 +698,24 @@ async function loadAudioPanel() {
 
   document.getElementById("audioCaptureVolume")?.addEventListener("change", async () => {
     const vol = document.getElementById("audioCaptureVolume")?.value || "100%";
-    const form = new FormData();
-    form.append("volume", vol);
-    form.append("source", selectedInputSource());
-    const res = await fetch("/api/audio/capture-volume", { method: "POST", body: form });
-    const data = await res.json();
-    statusEl.textContent = `PipeWire capture gain → ${data.capture_volume || vol}`;
-    loadAudioStatus();
+    try {
+      const form = new FormData();
+      form.append("volume", vol);
+      form.append("source", selectedInputSource());
+      const res = await fetch("/api/audio/capture-volume", { method: "POST", body: form });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        const msg = data.message || `Capture volume save failed (${res.status})`;
+        statusEl.textContent = msg;
+        window.showAriaToast?.(msg, "err", 4000);
+        return;
+      }
+      statusEl.textContent = `PipeWire capture gain → ${data.capture_volume || vol}`;
+      window.showAriaToast?.(`Capture gain: ${data.capture_volume || vol}`, "ok", 2000);
+      loadAudioStatus();
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Capture volume save failed", "err", 4000);
+    }
   });
 
   playSpeakersBtn?.addEventListener("click", () => playOnSpeakers(audioLastPath));

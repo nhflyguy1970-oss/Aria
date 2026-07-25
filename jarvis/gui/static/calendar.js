@@ -352,19 +352,23 @@ function collectWorkSchedule() {
 }
 
 async function saveWorkSchedule() {
-  const body = collectWorkSchedule();
-  const data = await fetchJson("/api/calendar/work-schedule", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!data.ok) {
-    window.showAriaToast?.("Save failed", "err", 5000);
-    return;
+  try {
+    const body = collectWorkSchedule();
+    const data = await fetchJson("/api/calendar/work-schedule", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!data.ok) {
+      window.showAriaToast?.(data.message || "Save failed", "err", 5000);
+      return;
+    }
+    calWorkSchedule = data;
+    window.showAriaToast?.("Work schedule saved", "ok", 4000);
+    if (calSelectedDay) await loadCalendarDay(calSelectedDay);
+  } catch (err) {
+    window.showAriaToast?.(err?.message || "Work schedule save failed", "err", 5000);
   }
-  calWorkSchedule = data;
-  window.showAriaToast?.("Work schedule saved", "ok", 4000);
-  if (calSelectedDay) await loadCalendarDay(calSelectedDay);
 }
 
 async function loadWorkSchedule() {

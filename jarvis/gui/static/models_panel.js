@@ -130,7 +130,7 @@ document.getElementById("saveModelsBtn")?.addEventListener("click", async () => 
     form.append("embed", modelSelects.embed?.value || "");
     const res = await fetch("/api/models/settings", { method: "POST", body: form });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.detail || `Save failed (${res.status})`);
+    if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Save failed (${res.status})`);
     if (data.settings) renderModelSettings({ ...data.settings, mode });
     const vq = document.getElementById("visionQualitySelect");
     if (vq) vq.value = "custom";
@@ -148,7 +148,7 @@ document.getElementById("refreshModelsBtn")?.addEventListener("click", async () 
   try {
     const res = await fetch("/api/models/refresh", { method: "POST" });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.detail || `Refresh failed (${res.status})`);
+    if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Refresh failed (${res.status})`);
     if (data.settings) {
       renderModelSettings({ ...data.settings, mode: document.getElementById("uncensoredToggle")?.checked ? "uncensored" : "standard" });
     }
@@ -166,7 +166,7 @@ document.getElementById("resetModelsBtn")?.addEventListener("click", async () =>
     form.append("mode", mode);
     const res = await fetch("/api/models/reset", { method: "POST", body: form });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.detail || `Reset failed (${res.status})`);
+    if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Reset failed (${res.status})`);
     if (data.settings) renderModelSettings({ ...data.settings, mode });
     (document.getElementById("statusText") || {}).textContent = "Models reset to optimized defaults";
     window.showAriaToast?.("Models reset to defaults", "ok", 2500);
@@ -185,7 +185,7 @@ async function applyPreset(preset) {
     form.append("mode", mode);
     const res = await fetch("/api/models/preset", { method: "POST", body: form });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.detail || `Preset failed (${res.status})`);
+    if (!res.ok || data.ok === false) throw new Error(data.message || data.detail || `Preset failed (${res.status})`);
     if (data.settings) {
       renderModelSettings({ ...data.settings, mode });
       (document.getElementById("statusText") || {}).textContent = `Applied ${preset} preset`;
