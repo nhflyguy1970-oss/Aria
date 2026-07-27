@@ -792,6 +792,16 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
     from jarvis.runtime_routing import is_runtime_routing_question, route_runtime_priority
     from jarvis.runtime_routing_trace import log_route_decision
 
+    if intent.get("needs_clarification") or intent.get("action") == "clarify":
+        ctype = intent.get("clarification_type") or "generic"
+        session.pending_clarification = {
+            "type": ctype,
+            "action": intent.get("action"),
+            "choices": intent.get("choices") or [],
+            "clarification_question": intent.get("clarification_question") or "",
+            "original_prompt": message,
+        }
+
     try:
         from jarvis.capability_routing import capability_for_action_and_message, role_for_capability
         from jarvis.routing_trace import record_capability, record_handler, record_intent
@@ -1360,10 +1370,12 @@ def _quick_route(
         return {"action": "journal_monthly", "params": {}, "thinking": "journal monthly"}
 
     if re.search(
-        r"\b(open tasks|journal tasks|what('s| is) on my (plate|list)|my todos?|to-?do list)\b",
+        r"\b(open tasks|journal tasks|what('s| is) on my (plate|list)|my todos?|to-?do list|things to do)\b",
         lower,
     ):
-        return {"action": "journal_open_tasks", "params": {}, "thinking": "journal tasks"}
+        from jarvis.journal_services import disambiguate_tasks_intent
+
+        return disambiguate_tasks_intent(message)
 
     if re.search(
         r"\b(journal reflect|reflect on my journal|monthly review|weekly review)\b", lower
@@ -1801,6 +1813,37 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
                 message,
                 session,
             )
+        if pending.get("type") == "tasks_destination":
+            if choice.isdigit():
+                idx = int(choice) - 1
+                choices = pending.get("choices", [])
+                if 0 <= idx < len(choices):
+                    choice = choices[idx]
+            cl = choice.lower().strip()
+            if cl.startswith("plan"):
+                return _finalize_intent(
+                    {"action": "planner_today", "params": {}, "thinking": "tasks→planner"},
+                    pending.get("original_prompt") or message,
+                    session,
+                )
+            if cl.startswith("journ") or cl.startswith("bujo") or cl.startswith("bullet"):
+                return _finalize_intent(
+                    {"action": "journal_open_tasks", "params": {}, "thinking": "tasks→journal"},
+                    pending.get("original_prompt") or message,
+                    session,
+                )
+            # Re-ask
+            session.pending_clarification = pending
+            return {
+                "action": "clarify",
+                "params": {},
+                "needs_clarification": True,
+                "clarification_question": pending.get("clarification_question")
+                or "Planner or Journal?",
+                "choices": pending.get("choices") or ["Planner", "Journal"],
+                "clarification_type": "tasks_destination",
+                "thinking": "tasks destination retry",
+            }
         if choice.isdigit():
             idx = int(choice) - 1
             choices = pending.get("choices", [])

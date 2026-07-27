@@ -82,7 +82,7 @@ def journal_routes() -> list[RouteRule]:
             "journal tasks",
             lambda m, lower, _s: bool(
                 re.search(
-                    r"\b(open tasks|journal tasks|what('s| is) on my (plate|list)|my todos?|to-?do list)\b",
+                    r"\b(journal tasks|journal todos?|bujo tasks|bullet journal tasks)\b",
                     lower,
                 )
             ),

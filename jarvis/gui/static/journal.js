@@ -307,6 +307,12 @@ function renderBulletMenu(b, showThread = false) {
   const openTask = b.type === "task" && b.status === "open";
   const items = [];
   if (openTask) {
+    if (b.planner_task_id) {
+      items.push(`<button type="button" class="bujo-act on" data-act="open-planner" data-id="${b.id}" data-pid="${escapeHtml(b.planner_task_id)}" title="Open linked Planner task">↗ in Planner</button>`);
+      items.push(`<button type="button" class="bujo-act" data-act="unlink-planner" data-id="${b.id}" title="Remove Planner link">unlink Planner</button>`);
+    } else {
+      items.push(`<button type="button" class="bujo-act" data-act="promote" data-id="${b.id}" title="Promote to Planner (actionable work)">↑ Planner</button>`);
+    }
     items.push(`<button type="button" class="bujo-act" data-act="schedule" data-id="${b.id}" title="Schedule to future log">&lt; schedule</button>`);
   }
   if (showThread && b.type === "task") {
@@ -325,7 +331,7 @@ function renderBulletMenu(b, showThread = false) {
   items.push(`<button type="button" class="bujo-act${sigs.includes("inspiration") ? " on" : ""}" data-act="sig" data-sig="inspiration" data-id="${b.id}" title="Inspiration">! inspiration</button>`);
   items.push(`<button type="button" class="bujo-act${sigs.includes("explore") ? " on" : ""}" data-act="sig" data-sig="explore" data-id="${b.id}" title="Explore">👁 explore</button>`);
   items.push(`<button type="button" class="bujo-act" data-act="remember" data-id="${b.id}" title="Save to memory">★ remember</button>`);
-    items.push(`<button type="button" class="bujo-act" data-act="del" data-id="${b.id}" title="Delete" aria-label="Delete entry">✕ delete</button>`);
+  items.push(`<button type="button" class="bujo-act" data-act="del" data-id="${b.id}" title="Delete" aria-label="Delete entry">✕ delete</button>`);
   return `<details class="bujo-menu">
     <summary class="bujo-act bujo-menu-toggle" title="More actions">⋯</summary>
     <div class="bujo-menu-panel">${items.join("")}</div>
@@ -340,13 +346,18 @@ function renderBulletItem(b, editable, showThread = false) {
   ).join(" ");
   const childHtml = b.children?.length ? renderBullets(b.children, editable, 1, showThread) : "";
   const openTask = b.type === "task" && b.status === "open";
+  const plannerBadge = b.planner_task_id
+    ? `<span class="bujo-planner-badge" title="Linked to Planner ${escapeHtml(b.planner_task_id)}">Planner</span>`
+    : "";
   return `
     <li class="bujo-item" data-id="${b.id}" ${draggable ? 'draggable="true"' : ""}>
       <span class="bujo-sym">${sym(b)}${sigPrefix(b)}</span>
       <span class="bujo-text${bulletTextClass(b)}" data-editable="${editable ? "1" : "0"}">${timeTag}${escapeHtml(b.content)}</span>
+      ${plannerBadge}
       ${links ? `<span class="bujo-links">${links}</span>` : ""}
       ${editable ? `<span class="bujo-actions">
         ${openTask ? `<button type="button" class="bujo-act" data-act="done" data-id="${b.id}" title="Complete" aria-label="Mark complete">×</button>` : ""}
+        ${openTask && !b.planner_task_id ? `<button type="button" class="bujo-act" data-act="promote" data-id="${b.id}" title="Promote to Planner" aria-label="Promote to Planner">↑</button>` : ""}
         ${openTask ? `<button type="button" class="bujo-act" data-act="migrate" data-id="${b.id}" title="Migrate to tomorrow" aria-label="Migrate to tomorrow">›</button>` : ""}
         ${renderBulletMenu(b, showThread)}
       </span>` : ""}
@@ -357,7 +368,10 @@ function renderBulletItem(b, editable, showThread = false) {
 function renderBullets(bullets, editable = true, depth = 0, showThread = false) {
   if (!bullets?.length) {
     if (depth === 0) {
-      return '<p class="bujo-empty">No entries yet. Start rapid log: type below and press <kbd>Enter</kbd>.</p>';
+      return `<div class="bujo-empty-state">
+        <p class="bujo-empty">This page is quiet — a good place to think.</p>
+        <p class="bujo-empty-hint">Rapid log below: one thought per line. Press <kbd>Enter</kbd> to capture. <kbd>W</kbd> for Writing Mode.</p>
+      </div>`;
     }
     return "";
   }
@@ -686,6 +700,26 @@ async function loadDaily() {
   bindAddRow();
   bindBulletActions();
   bindDayExtras(day);
+  // Soft memory / KG surface — non-interruptive, review-only
+  const seed = (data.bullets || []).map((b) => b.content).filter(Boolean).slice(0, 3).join(" ");
+  if (seed) {
+    fetch(`/api/journal/assist/memory?q=${encodeURIComponent(seed.slice(0, 80))}`)
+      .then((r) => r.json())
+      .then((mem) => {
+        const related = (mem.related || []).slice(0, 5);
+        if (!related.length || !bujoContent) return;
+        const box = document.createElement("aside");
+        box.className = "bujo-related-soft";
+        box.setAttribute("aria-label", "Related memory");
+        box.innerHTML = `<h4 class="bujo-related-title">Related</h4>
+          <ul>${related.map((r) =>
+            `<li><span class="bujo-related-kind">${escapeHtml(r.kind || "")}</span> ${escapeHtml(r.label || "")}</li>`
+          ).join("")}</ul>
+          <p class="muted bujo-related-hint">Surfaced for review — nothing linked automatically.</p>`;
+        bujoContent.appendChild(box);
+      })
+      .catch(() => {});
+  }
 }
 
 function renderCalendarHolidayLegend(holidays) {
@@ -947,7 +981,7 @@ async function loadHabits() {
     const num = d.split("-")[2];
     table += `<th>${parseInt(num, 10)}</th>`;
   });
-  table += `<th>Done</th><th>Streak</th></tr></thead><tbody>`;
+  table += `<th>Done</th><th>%</th><th>Streak</th><th>Best</th></tr></thead><tbody>`;
   habits.forEach((h) => {
     table += `<tr><td>${escapeHtml(h.name)}</td>`;
     days.forEach((d) => {
@@ -955,13 +989,16 @@ async function loadHabits() {
       table += `<td><button type="button" class="bujo-habit-cell${on ? " on" : ""}" data-hid="${escapeHtml(h.id)}" data-day="${d}" aria-label="Toggle ${h.name} on ${d}">${on ? "●" : "○"}</button></td>`;
     });
     table += `<td class="bujo-habit-count">${h.done_count || 0}</td>`;
-    table += `<td class="bujo-habit-streak" title="Consecutive days through today">${h.streak || 0}🔥</td></tr>`;
+    table += `<td class="bujo-habit-pct">${h.completion_pct != null ? h.completion_pct : "—"}%</td>`;
+    table += `<td class="bujo-habit-streak" title="Current streak">${h.streak || 0}</td>`;
+    table += `<td class="bujo-habit-longest" title="Longest streak">${h.longest_streak || 0}</td></tr>`;
   });
   table += "</tbody></table>";
 
+  const summary = data.summary || {};
   bujoContent.innerHTML = `
     <h3>Habit tracker · ${escapeHtml(month)}</h3>
-    <p class="bujo-cal-hint">Tap a cell to mark done · scroll horizontally on small screens</p>
+    <p class="bujo-cal-hint">Tap a cell to mark done · avg completion ${summary.avg_completion_pct ?? "—"}%</p>
     <div class="bujo-habit-scroll">${table}</div>
     <div class="bujo-add-index">
       <input type="text" id="habitName" placeholder="New habit name" />
@@ -1229,8 +1266,10 @@ async function loadSearchResults(q) {
     const res = await fetch(`/api/journal/search?q=${encodeURIComponent(q)}`);
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><p class="bujo-empty">Search failed.</p>`;
-      journalNotify(data.message || data.error || `Search failed (${res.status})`);
+      bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><div class="empty-state"><div class="empty-state-icon" aria-hidden="true">⌕</div><p class="empty-state-title">Search failed</p><p class="muted">${escapeHtml(data.message || data.error || `Server returned ${res.status}`)}</p><div class="empty-state-actions"><button type="button" class="apply-btn tiny" id="bujoSearchRetryBtn">Retry</button><button type="button" class="ghost-btn tiny" id="bujoSearchEmptyDailyBtn">Open daily log</button></div></div>`;
+      document.getElementById("bujoSearchRetryBtn")?.addEventListener("click", () => loadSearchResults(q));
+      document.getElementById("bujoSearchEmptyDailyBtn")?.addEventListener("click", () => setBujoTab("daily"));
+      journalNotify(data.message || data.error || `Search failed (${res.status}) — Retry or open daily log`);
       return;
     }
     const hits = data.results || [];
@@ -1368,7 +1407,7 @@ function showBulletPanel(id, kind) {
           const res = await fetch(`/api/journal/search?q=${encodeURIComponent(q)}`);
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
-            list.innerHTML = '<li class="bujo-empty">Search failed</li>';
+            list.innerHTML = '<li class="bujo-empty">Search failed — try again or clear the query</li>';
             return;
           }
           list.innerHTML = (data.results || []).slice(0, 8).map((h) =>
@@ -1426,6 +1465,29 @@ function bindBulletActions() {
             : (data.error || data.message || "Could not save"),
           !(out.ok && data.ok !== false)
         );
+        return;
+      } else if (act === "promote") {
+        out = await journalPost(`/api/journal/bullet/${id}/promote`, { method: "POST" });
+        const data = out.body || {};
+        if (out.ok && data.ok !== false) {
+          journalNotify(
+            data.already_linked
+              ? "Already linked to Planner"
+              : `Promoted to Planner (${data.planner_task_id || "ok"})`,
+            false
+          );
+          refreshBujo();
+        } else {
+          journalNotify(data.message || data.error || "Promote failed");
+        }
+        return;
+      } else if (act === "unlink-planner") {
+        out = await journalPost(`/api/journal/bullet/${id}/promote`, { method: "DELETE" });
+      } else if (act === "open-planner") {
+        const pid = btn.dataset.pid;
+        if (typeof window.showView === "function") window.showView("planner");
+        else document.querySelector('[data-view="planner"]')?.click();
+        journalNotify(pid ? `Planner task ${pid}` : "Opened Planner", false);
         return;
       } else if (act === "cancel") {
         out = await journalPost(`/api/journal/bullet/${id}/cancel`, { method: "POST" });
@@ -1717,32 +1779,26 @@ document.querySelectorAll(".bujo-tab").forEach((tab) => {
 document.getElementById("rapidLogBtn")?.addEventListener("click", async () => {
   const text = document.getElementById("rapidLogInput")?.value.trim();
   if (!text) return;
+  const section =
+    currentBujo === "weekly" || currentBujo === "monthly" || currentBujo === "future"
+      ? currentBujo
+      : "daily";
   try {
-    if (currentBujo === "future") {
-      const month = futureMonthValue();
-      const bulletType = document.getElementById("rapidType")?.value || "task";
-      let okCount = 0;
-      for (const line of text.split("\n")) {
-        const trimmed = line.trim();
-        if (!trimmed) continue;
-        const out = await postFuture(trimmed, bulletType, month);
-        if (!out.ok) return;
-        okCount += 1;
-      }
-      if (!okCount) {
-        journalNotify("Nothing to log");
-        return;
-      }
-    } else {
-      const form = new FormData();
-      form.append("text", text);
-      form.append("bullet_type", document.getElementById("rapidType")?.value || "task");
-      if (currentBujo === "daily" && journalDate?.value) form.append("day", journalDate.value);
-      const rapid = await journalPost("/api/journal/rapid", { method: "POST", body: form });
-      if (!rapid.ok) return;
+    const form = new FormData();
+    form.append("text", text);
+    form.append("bullet_type", document.getElementById("rapidType")?.value || "task");
+    form.append("section", section);
+    if (section === "daily" && journalDate?.value) form.append("day", journalDate.value);
+    if (section === "weekly" && journalWeek?.value) form.append("week", journalWeek.value);
+    if ((section === "monthly" || section === "future") && journalMonth?.value) {
+      form.append("month", section === "future" ? futureMonthValue() : journalMonth.value);
     }
+    const rapid = await journalPost("/api/journal/rapid", { method: "POST", body: form });
+    if (!rapid.ok) return;
     document.getElementById("rapidLogInput").value = "";
-    journalNotify("Rapid log saved", false);
+    const dest =
+      section === "weekly" ? "Weekly" : section === "monthly" ? "Monthly" : section === "future" ? "Future" : "Daily";
+    journalNotify(`Saved to ${dest}`, false);
     refreshBujo();
   } catch (err) {
     journalNotify(err?.message || "Rapid log failed");
@@ -1786,26 +1842,246 @@ document.getElementById("journalRedoBtn")?.addEventListener("click", async () =>
 
 document.getElementById("journalReflectBtn")?.addEventListener("click", async () => {
   try {
-    if (currentBujo === "monthly" || currentBujo === "weekly") {
-      const form = new FormData();
-      form.append("scope", currentBujo === "monthly" ? "month" : "week");
-      if (currentBujo === "monthly") form.append("month", journalMonth?.value || "");
-      else form.append("week", journalWeek?.value || "");
-      const out = await journalPost("/api/journal/reflect/review", { method: "POST", body: form });
-      if (!out.ok) return;
-      const data = out.body || {};
-      bujoContent.innerHTML = `<h3>Review reflection</h3><div class="bujo-reflect">${escapeHtml(data.reflection || "").replace(/\n/g, "<br>")}</div>`;
-      return;
-    }
-    const scope = currentBujo === "daily" ? "today" : "week";
+    let scope = "today";
+    if (currentBujo === "monthly") scope = "month";
+    else if (currentBujo === "weekly") scope = "week";
+    else if (currentBujo === "habits") scope = "habits";
+    else if (currentBujo === "wellness") scope = "gratitude";
     const form = new FormData();
     form.append("scope", scope);
-    const out = await journalPost("/api/journal/reflect", { method: "POST", body: form });
+    const out = await journalPost("/api/journal/assist/reflect", { method: "POST", body: form });
     if (!out.ok) return;
     const data = out.body || {};
-    bujoContent.innerHTML = `<h3>Reflection</h3><div class="bujo-reflect">${escapeHtml(data.reflection || "").replace(/\n/g, "<br>")}</div>`;
+    bujoContent.innerHTML = `<h3>Reflection · ${escapeHtml(scope)}</h3>
+      <p class="bujo-cal-hint">Generated on request — your journal was not changed.</p>
+      <div class="bujo-reflect">${escapeHtml(data.reflection || "").replace(/\n/g, "<br>")}</div>`;
   } catch (err) {
     journalNotify(err?.message || "Reflection failed");
+  }
+});
+
+document.getElementById("journalAssistPromoteBtn")?.addEventListener("click", async () => {
+  try {
+    const res = await fetch("/api/journal/assist/promote");
+    const data = await res.json();
+    const sug = data.suggestions || [];
+    if (!sug.length) {
+      journalNotify("No promotion suggestions right now", false);
+      return;
+    }
+    bujoContent.innerHTML = `<h3>Promotion assistant</h3>
+      <p class="bujo-cal-hint">Suggestions only — confirm to move. Journal stays the log; Planner holds actionable work.</p>
+      <ul class="bujo-assist-list">${sug.map((s) =>
+        `<li><strong>${escapeHtml(s.suggest)}</strong> — ${escapeHtml(s.content)}
+         <span class="muted">${escapeHtml(s.reason || "")}</span>
+         ${s.suggest === "planner" && s.bullet_id
+           ? `<button type="button" class="ghost-btn small bujo-confirm-promote" data-id="${escapeHtml(s.bullet_id)}">Promote</button>`
+           : ""}</li>`
+      ).join("")}</ul>`;
+    bujoContent.querySelectorAll(".bujo-confirm-promote").forEach((btn) => {
+      btn.onclick = async () => {
+        if (!confirm("Create a Planner task from this bullet?")) return;
+        const out = await journalPost(`/api/journal/bullet/${btn.dataset.id}/promote`, { method: "POST" });
+        journalNotify(out.ok ? "Promoted" : "Failed", !out.ok);
+        if (out.ok) refreshBujo();
+      };
+    });
+  } catch (err) {
+    journalNotify(err?.message || "Assist failed");
+  }
+});
+
+document.getElementById("journalMonthWizardBtn")?.addEventListener("click", async () => {
+  const month = journalMonth?.value || new Date().toISOString().slice(0, 7);
+  try {
+    const res = await fetch(`/api/journal/wizard/month-end?month=${encodeURIComponent(month)}`);
+    const data = await res.json();
+    const steps = (data.steps || []).map((s, i) => `<li>${i + 1}. ${escapeHtml(s)}</li>`).join("");
+    const open = (data.open_preview || []).map((t) =>
+      `<li>${escapeHtml(t.content)} <span class="muted">[${escapeHtml(t.section || "")}]</span></li>`
+    ).join("") || "<li class='muted'>No open bullets</li>";
+    const mig = (data.migration_suggestions || []).slice(0, 8).map((s) =>
+      `<li><strong>${escapeHtml(s.action)}</strong> → ${escapeHtml(String(s.target || "—"))}: ${escapeHtml(s.content)}
+       ${s.bullet_id && s.action === "carry_forward"
+         ? `<button type="button" class="ghost-btn small bujo-wiz-migrate" data-id="${escapeHtml(s.bullet_id)}" data-target="${escapeHtml(s.target || "")}">Migrate</button>`
+         : ""}</li>`
+    ).join("");
+    bujoContent.innerHTML = `<h3>Month-end wizard · ${escapeHtml(data.month || month)}</h3>
+      <p class="bujo-cal-hint">Guided review — confirm each change. Next month: ${escapeHtml(data.next_month || "")}</p>
+      <ol class="bujo-wiz-steps">${steps}</ol>
+      <h4>Open bullets (${data.open_count || 0})</h4><ul>${open}</ul>
+      <h4>AI migration suggestions</h4><ul class="bujo-assist-list">${mig || "<li class='muted'>None</li>"}</ul>
+      <button type="button" id="bujoWizReflect" class="ghost-btn small">AI monthly reflection</button>
+      <button type="button" id="bujoWizMigrateAll" class="apply-btn small">Run month migrate…</button>`;
+    bujoContent.querySelectorAll(".bujo-wiz-migrate").forEach((btn) => {
+      btn.onclick = async () => {
+        if (!confirm(`Migrate this bullet to ${btn.dataset.target}?`)) return;
+        const form = new FormData();
+        form.append("target", btn.dataset.target);
+        const out = await journalPost(`/api/journal/bullet/${btn.dataset.id}/migrate`, { method: "POST", body: form });
+        journalNotify(out.ok ? "Migrated" : "Failed", !out.ok);
+      };
+    });
+    document.getElementById("bujoWizReflect")?.addEventListener("click", () => {
+      document.getElementById("journalReflectBtn")?.click();
+    });
+    document.getElementById("bujoWizMigrateAll")?.addEventListener("click", () => {
+      document.getElementById("journalMigrateBtn")?.click();
+    });
+  } catch (err) {
+    journalNotify(err?.message || "Wizard failed");
+  }
+});
+
+document.getElementById("journalBackupBtn")?.addEventListener("click", async () => {
+  const out = await journalPost("/api/journal/backup", { method: "POST" });
+  if (out.ok) journalNotify(`Backup saved (${out.body?.bytes || 0} bytes)`, false);
+});
+
+document.getElementById("journalVoiceLogBtn")?.addEventListener("click", async () => {
+  const transcript = prompt("Paste or dictate voice transcript for Rapid Log:");
+  if (!transcript) return;
+  const form = new FormData();
+  form.append("transcript", transcript);
+  const out = await journalPost("/api/journal/assist/voice", { method: "POST", body: form });
+  if (!out.ok) return;
+  const text = out.body?.text || "";
+  if (!text) {
+    journalNotify("Nothing recognized");
+    return;
+  }
+  const accept = confirm(`Add this draft to Rapid Log?\n\n${text}`);
+  if (!accept) return;
+  const rapid = document.getElementById("rapidLogInput");
+  if (rapid) rapid.value = text;
+  document.getElementById("rapidLogBtn")?.click();
+});
+
+document.getElementById("journalVisionImportBtn")?.addEventListener("click", async () => {
+  const ocr = prompt("Paste OCR / notebook scan text to import:");
+  if (!ocr) return;
+  const form = new FormData();
+  form.append("ocr_text", ocr);
+  form.append("source", "scan");
+  form.append(
+    "section",
+    currentBujo === "weekly" || currentBujo === "monthly" || currentBujo === "future" ? currentBujo : "daily"
+  );
+  const out = await journalPost("/api/journal/assist/vision", { method: "POST", body: form });
+  if (!out.ok) return;
+  const text = out.body?.text || "";
+  if (!confirm(`Import these lines into ${out.body?.section || "daily"}?\n\n${text.slice(0, 400)}`)) return;
+  const rapid = document.getElementById("rapidLogInput");
+  if (rapid) rapid.value = text;
+  document.getElementById("rapidLogBtn")?.click();
+});
+
+/* —— Writing Mode + keyboard —— */
+let bujoWritingMode = false;
+let bujoWriteStarted = null;
+
+function updateBujoWordCount() {
+  const t = document.getElementById("rapidLogInput")?.value || "";
+  const words = t.trim() ? t.trim().split(/\s+/).length : 0;
+  const el = document.getElementById("bujoWordCount");
+  if (el) el.textContent = `${words} word${words === 1 ? "" : "s"}`;
+  const te = document.getElementById("bujoWriteTime");
+  if (te && bujoWriteStarted) {
+    const mins = Math.floor((Date.now() - bujoWriteStarted) / 60000);
+    te.textContent = mins ? `${mins}m` : "now";
+  }
+}
+
+function setBujoWritingMode(on) {
+  bujoWritingMode = !!on;
+  const view = document.getElementById("journalView");
+  view?.classList.toggle("bujo-writing-mode", bujoWritingMode);
+  document.getElementById("bujoWritingChrome")?.classList.toggle("hidden", !bujoWritingMode);
+  if (bujoWritingMode) {
+    bujoWriteStarted = Date.now();
+    updateBujoWordCount();
+    setTimeout(() => document.getElementById("rapidLogInput")?.focus(), 50);
+    journalNotify("Writing mode — Esc to exit", false);
+  } else {
+    bujoWriteStarted = null;
+  }
+}
+
+document.getElementById("journalWritingModeBtn")?.addEventListener("click", () => {
+  setBujoWritingMode(!bujoWritingMode);
+});
+document.getElementById("bujoExitWriting")?.addEventListener("click", () => setBujoWritingMode(false));
+
+document.getElementById("rapidLogInput")?.addEventListener("input", () => {
+  updateBujoWordCount();
+  if (document.getElementById("bujoTypewriter")?.checked) {
+    const el = document.getElementById("rapidLogInput");
+    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+});
+
+function showBujoShortcuts() {
+  const overlay = document.getElementById("bujoShortcutOverlay");
+  if (!overlay) return;
+  overlay.innerHTML = `<div class="bujo-shortcut-card">
+    <h3>Journal shortcuts</h3>
+    <ul>
+      <li><kbd>W</kbd> Writing mode</li>
+      <li><kbd>/</kbd> Focus search</li>
+      <li><kbd>?</kbd> This overlay</li>
+      <li><kbd>Esc</kbd> Exit writing / close</li>
+      <li><kbd>1</kbd>–<kbd>9</kbd> Jump tabs (when not typing)</li>
+      <li><kbd>Enter</kbd> Save rapid log line</li>
+      <li><kbd>Shift</kbd>+<kbd>Enter</kbd> New line in rapid log</li>
+    </ul>
+    <button type="button" class="ghost-btn small" id="bujoCloseShortcuts">Close</button>
+  </div>`;
+  overlay.classList.remove("hidden");
+  document.getElementById("bujoCloseShortcuts")?.addEventListener("click", () => overlay.classList.add("hidden"));
+}
+
+document.getElementById("journalShortcutsBtn")?.addEventListener("click", showBujoShortcuts);
+
+document.addEventListener("keydown", (e) => {
+  const view = document.getElementById("journalView");
+  if (!view || view.classList.contains("hidden")) return;
+  const tag = (e.target?.tagName || "").toLowerCase();
+  const typing = tag === "input" || tag === "textarea" || e.target?.isContentEditable;
+  if (e.key === "Escape") {
+    if (!document.getElementById("bujoShortcutOverlay")?.classList.contains("hidden")) {
+      document.getElementById("bujoShortcutOverlay")?.classList.add("hidden");
+      e.preventDefault();
+      return;
+    }
+    if (bujoWritingMode) {
+      setBujoWritingMode(false);
+      e.preventDefault();
+    }
+    return;
+  }
+  if (typing) return;
+  if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+    e.preventDefault();
+    showBujoShortcuts();
+    return;
+  }
+  if (e.key === "/" ) {
+    e.preventDefault();
+    journalSearch?.focus();
+    return;
+  }
+  if (e.key === "w" || e.key === "W") {
+    e.preventDefault();
+    setBujoWritingMode(!bujoWritingMode);
+    return;
+  }
+  if (e.key >= "1" && e.key <= "9") {
+    const tabs = [...document.querySelectorAll(".bujo-tab")];
+    const tab = tabs[parseInt(e.key, 10) - 1];
+    if (tab) {
+      e.preventDefault();
+      setBujoTab(tab.dataset.bujo);
+    }
   }
 });
 

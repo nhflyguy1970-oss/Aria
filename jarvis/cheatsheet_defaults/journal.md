@@ -26,12 +26,21 @@ Data file: **`data/journal/bullet_journal.json`** · Photos: **`data/journal/pho
 |---------|-------------|
 | "Log: • finish taxes" | Rapid log to today |
 | "Journal today" | Daily log with quote + reflections |
-| "What are my open tasks?" | Open tasks (daily/monthly/weekly/future/collections) |
+| "What are my open tasks?" / "My todos" | Asks **Planner or Journal?** when ambiguous |
+| "Journal tasks" / "Planner tasks" | Routes explicitly |
 | "Remember journal entry" | Save today to memory |
 | "Migrate journal month" | Move open monthly tasks to next month (monthly log or future) |
 | "Schedule finish taxes to 2026-08" | Schedule matching open task to future month |
 | "Thread report draft to today" | Migrate matching task to today's daily log |
 | "Run journal review" | AI summary after month/week checklist |
+
+## Promote to Planner
+
+Open task bullets: **↑** or menu → **↑ Planner**. Linked bullets show a **Planner** badge, **↗ in Planner**, and **unlink**. Journal stays the log; Planner holds actionable work.
+
+## Writing Mode
+
+Press **W** (or Writing mode) for a calm, distraction-free canvas. **Esc** exits. Shortcuts: `/` search, `?` overlay, `1`–`9` tabs.
 
 ## Daily page
 

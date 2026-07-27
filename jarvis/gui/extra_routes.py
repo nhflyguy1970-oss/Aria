@@ -283,9 +283,23 @@ def register_routes(app, assistant):
 
     @app.post("/api/journal/daily")
     async def journal_daily_add(
-        content: str = Form(...), bullet_type: str = Form("task"), day: str = Form("")
+        content: str = Form(...),
+        bullet_type: str = Form("task"),
+        day: str = Form(""),
+        time: str = Form(""),
     ):
-        return {"ok": True, "bullet": journal.daily_add(content, bullet_type, day=day or None)}
+        from jarvis.calendar_time import validate_time_hm
+
+        hm = None
+        if (time or "").strip():
+            try:
+                hm = validate_time_hm(time)
+            except ValueError as exc:
+                return JSONResponse(status_code=400, content={"ok": False, "message": str(exc)})
+        return {
+            "ok": True,
+            "bullet": journal.daily_add(content, bullet_type, day=day or None, time=hm),
+        }
 
     @app.get("/api/briefing")
     def morning_briefing_get(launch: bool = False, force: bool = False):
@@ -769,10 +783,99 @@ def register_routes(app, assistant):
 
     @app.post("/api/journal/rapid")
     async def journal_rapid(
-        text: str = Form(...), day: str = Form(""), bullet_type: str = Form("task")
+        text: str = Form(...),
+        day: str = Form(""),
+        bullet_type: str = Form("task"),
+        section: str = Form("daily"),
+        week: str = Form(""),
+        month: str = Form(""),
     ):
-        bullets = journal.parse_rapid_log(text, day=day or None, default_type=bullet_type or "task")
-        return {"ok": True, "bullets": bullets}
+        try:
+            bullets = journal.parse_rapid_log(
+                text,
+                day=day or None,
+                default_type=bullet_type or "task",
+                section=section or "daily",
+                week=week or None,
+                month=month or None,
+            )
+            return {"ok": True, "bullets": bullets, "section": section or "daily"}
+        except ValueError as e:
+            return JSONResponse(status_code=400, content={"ok": False, "message": str(e)})
+
+    @app.post("/api/journal/bullet/{bullet_id}/promote")
+    def journal_bullet_promote(bullet_id: str):
+        try:
+            result = journal.promote_to_planner(bullet_id)
+            return result
+        except ValueError as e:
+            return JSONResponse(status_code=400, content={"ok": False, "message": str(e)})
+
+    @app.delete("/api/journal/bullet/{bullet_id}/promote")
+    def journal_bullet_unlink_planner(bullet_id: str):
+        try:
+            return journal.unlink_planner(bullet_id)
+        except ValueError as e:
+            return JSONResponse(status_code=400, content={"ok": False, "message": str(e)})
+
+    @app.post("/api/journal/assist/reflect")
+    async def journal_assist_reflect(scope: str = Form("today")):
+        from jarvis.journal_services import reflect_assistant
+
+        return reflect_assistant(journal, scope)
+
+    @app.get("/api/journal/assist/promote")
+    def journal_assist_promote():
+        from jarvis.journal_services import promotion_assistant
+
+        return promotion_assistant(journal)
+
+    @app.get("/api/journal/assist/migrate")
+    def journal_assist_migrate(scope: str = "daily"):
+        from jarvis.journal_services import migration_assistant
+
+        return migration_assistant(journal, scope)
+
+    @app.get("/api/journal/assist/memory")
+    def journal_assist_memory(q: str = ""):
+        from jarvis.journal_services import memory_surface
+
+        return memory_surface(journal, q)
+
+    @app.post("/api/journal/assist/writing")
+    async def journal_assist_writing(text: str = Form(...), mode: str = Form("organize")):
+        from jarvis.journal_services import writing_assistant
+
+        return writing_assistant(text, mode)
+
+    @app.post("/api/journal/assist/voice")
+    async def journal_assist_voice(transcript: str = Form(...)):
+        from jarvis.journal_services import parse_voice_rapid_log
+
+        return parse_voice_rapid_log(transcript)
+
+    @app.post("/api/journal/assist/vision")
+    async def journal_assist_vision(
+        ocr_text: str = Form(...),
+        source: str = Form("scan"),
+        section: str = Form("daily"),
+    ):
+        from jarvis.journal_services import vision_import_preview
+
+        return vision_import_preview(ocr_text=ocr_text, source=source, section=section)
+
+    @app.get("/api/journal/wizard/month-end")
+    def journal_month_end_wizard(month: str = ""):
+        from jarvis.journal_services import month_end_wizard
+        from jarvis.modules.journal import _month_key
+
+        return month_end_wizard(journal, month or _month_key())
+
+    @app.post("/api/journal/backup")
+    def journal_backup():
+        from jarvis.journal_services import create_backup
+
+        return create_backup(journal)
 
     @app.get("/api/journal/collections/presets")
     def journal_collection_presets():
@@ -2146,3 +2249,12 @@ def register_routes(app, assistant):
             min_rep_i = None
         found = scan_action_log(min_repeats_count=min_rep_i)
         return {"ok": True, "workflows": found, "count": len(found)}
+
+    try:
+        from jarvis.intelligence.routes import register_intelligence_routes
+
+        register_intelligence_routes(app, assistant)
+    except Exception as exc:
+        import logging
+
+        logging.getLogger("jarvis.gui").warning("Intelligence routes not registered: %s", exc)

@@ -99,12 +99,14 @@ class BujoMixin:
 
     def _snapshot_for_undo(self) -> None:
         self._ensure_bujo_meta()
-        snap = copy.deepcopy({k: v for k, v in self._data.items() if k != "history"})
+        snap = copy.deepcopy({k: v for k, v in self._data.items() if k not in ("history", "redo")})
         hist = self._data.setdefault("history", [])
         if hist and hist[-1].get("data") == snap:
             return
         hist.append({"ts": datetime.now(timezone.utc).isoformat(), "data": snap})
         self._data["history"] = hist[-self.HISTORY_LIMIT :]
+        if hasattr(self, "_persist_history_sidecar"):
+            self._persist_history_sidecar()
 
     def undo(self) -> dict:
         self._ensure_bujo_meta()
@@ -427,25 +429,51 @@ class BujoMixin:
         self._save()
         return self.monthly_review_get(mk)
 
+    def day_events(self, month: str | None = None) -> dict[str, list[dict]]:
+        """Events (timed and untimed) grouped by date for calendar display."""
+        mk = month or _month_key()
+        prefix = f"{mk}-"
+        out: dict[str, list[dict]] = {}
+
+        def collect(bullets: list, day_str: str) -> None:
+            for b in bullets:
+                if b.get("type") == "event":
+                    out.setdefault(day_str, []).append({
+                        "id": b.get("id"),
+                        "time": b.get("time") or "",
+                        "content": b.get("content"),
+                        "duration_min": b.get("duration_min"),
+                        "all_day": not b.get("time"),
+                    })
+                collect(b.get("children", []), day_str)
+
+        for day_str, page in self._data.get("daily_log", {}).items():
+            if day_str.startswith(prefix):
+                collect(page.get("bullets", []), day_str)
+        for day_str in out:
+            out[day_str].sort(key=lambda e: (0 if e.get("time") else 1, e.get("time") or "99:99"))
+        return out
+
     def daily_timeline(self, day: str | None = None) -> dict:
-        """Timed events for a day — vertical schedule."""
+        """Events for a day — timed first, then untimed."""
         d = day or _today()
         page = self.daily_get(d, enrich=False)
         events: list[dict] = []
 
         def walk(bullets: list) -> None:
             for b in bullets:
-                if b.get("type") == "event" and b.get("time"):
+                if b.get("type") == "event":
                     events.append({
                         "id": b.get("id"),
-                        "time": b.get("time"),
+                        "time": b.get("time") or "",
                         "content": b.get("content", ""),
                         "duration_min": b.get("duration_min"),
+                        "all_day": not b.get("time"),
                     })
                 walk(b.get("children", []))
 
         walk(page.get("bullets", []))
-        events.sort(key=lambda e: e.get("time", ""))
+        events.sort(key=lambda e: (0 if e.get("time") else 1, e.get("time") or "99:99"))
         return {"day": d, "title": page.get("title", d), "events": events}
 
     def _default_weekly_review(self) -> dict:
@@ -567,30 +595,6 @@ Journal content:
 
 Summarize themes, priorities, and one encouraging next step."""
         return llm.ask(llm.general_model(), [{"role": "user", "content": prompt}])
-
-    def day_events(self, month: str | None = None) -> dict[str, list[dict]]:
-        """Events with times grouped by date for calendar display."""
-        mk = month or _month_key()
-        prefix = f"{mk}-"
-        out: dict[str, list[dict]] = {}
-
-        def collect(bullets: list, day_str: str) -> None:
-            for b in bullets:
-                if b.get("type") == "event" and b.get("time"):
-                    out.setdefault(day_str, []).append({
-                        "id": b.get("id"),
-                        "time": b.get("time"),
-                        "content": b.get("content"),
-                        "duration_min": b.get("duration_min"),
-                    })
-                collect(b.get("children", []), day_str)
-
-        for day_str, page in self._data.get("daily_log", {}).items():
-            if day_str.startswith(prefix):
-                collect(page.get("bullets", []), day_str)
-        for day_str in out:
-            out[day_str].sort(key=lambda e: e.get("time", ""))
-        return out
 
     def _index_page_label(self, page_type: str, key: str) -> str:
         if page_type == "daily":

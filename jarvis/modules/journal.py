@@ -129,6 +129,7 @@ class BulletJournal(BujoMixin):
         JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
         self._loaded_mtime = 0.0
         self._data = self._load()
+        self._load_history_sidecar()
         if self.path.exists():
             try:
                 self._loaded_mtime = self.path.stat().st_mtime
@@ -146,15 +147,70 @@ class BulletJournal(BujoMixin):
         if mtime <= self._loaded_mtime:
             return
         self._data = self._load()
+        self._load_history_sidecar()
         self._loaded_mtime = mtime
 
-    def _load(self) -> dict:
-        if self.path.exists():
+    def _history_path(self) -> Path:
+        return self.path.with_suffix(self.path.suffix + ".history")
+
+    def _load_history_sidecar(self) -> None:
+        """Load undo/redo from sidecar; migrate inline history out of the main store."""
+        hist_path = self._history_path()
+        if hist_path.exists():
             try:
-                return json.loads(self.path.read_text(encoding="utf-8"))
+                side = json.loads(hist_path.read_text(encoding="utf-8"))
+                if isinstance(side, dict):
+                    self._data["history"] = side.get("history") or []
+                    self._data["redo"] = side.get("redo") or []
+                    return
             except (json.JSONDecodeError, OSError):
                 pass
-        return self._empty()
+        # Legacy: history lived inside bullet_journal.json
+        if self._data.get("history") or self._data.get("redo"):
+            self._persist_history_sidecar()
+
+    def _persist_history_sidecar(self) -> None:
+        hist = self._data.get("history") or []
+        redo = self._data.get("redo") or []
+        # Cap size — full snapshots are heavy
+        limit = getattr(self, "HISTORY_LIMIT", 20)
+        hist = hist[-limit:]
+        redo = redo[-limit:]
+        self._data["history"] = hist
+        self._data["redo"] = redo
+        payload = {"history": hist, "redo": redo}
+        try:
+            from jarvis.live_data_guard import assert_live_write_allowed
+
+            assert_live_write_allowed(self._history_path())
+            self._history_path().write_text(
+                json.dumps(payload, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+
+    def _load(self) -> dict:
+        data = None
+        # Optional at-rest ciphertext beside plaintext path
+        enc_path = self.path.with_suffix(self.path.suffix + ".enc")
+        at_rest = (os.environ.get("JARVIS_JOURNAL_AT_REST_PASSWORD") or "").strip()
+        if at_rest and enc_path.exists():
+            try:
+                from jarvis.journal_crypto import decrypt_import
+
+                blob = json.loads(enc_path.read_text(encoding="utf-8"))
+                data = decrypt_import(blob, at_rest)
+            except Exception:
+                data = None
+        if data is None and self.path.exists():
+            try:
+                data = json.loads(self.path.read_text(encoding="utf-8"))
+            except (json.JSONDecodeError, OSError):
+                data = None
+        if not isinstance(data, dict):
+            data = self._empty()
+        return data
 
     def _empty(self) -> dict:
         return {
@@ -175,16 +231,22 @@ class BulletJournal(BujoMixin):
             "habits": {},
             "page_counter": 0,
             "history": [],
+            "redo": [],
         }
 
     def _save(self, *, skip_snapshot: bool = False) -> None:
         self._sync_from_disk_if_newer()
         self._ensure_bujo_meta()
-        current_clean = {k: v for k, v in self._data.items() if k != "history"}
+        # Snapshots exclude undo stacks
+        current_clean = {
+            k: v for k, v in self._data.items() if k not in ("history", "redo")
+        }
         if not skip_snapshot and self.path.exists():
             try:
                 prev = json.loads(self.path.read_text(encoding="utf-8"))
-                prev_clean = {k: v for k, v in prev.items() if k != "history"}
+                prev_clean = {
+                    k: v for k, v in prev.items() if k not in ("history", "redo")
+                }
                 if prev_clean != current_clean:
                     hist = self._data.setdefault("history", [])
                     hist.append(
@@ -200,10 +262,28 @@ class BulletJournal(BujoMixin):
         from jarvis.live_data_guard import assert_live_write_allowed
 
         assert_live_write_allowed(self.path)
+        # Never persist undo stacks inside the live journal file
+        disk_data = {
+            k: v for k, v in self._data.items() if k not in ("history", "redo")
+        }
         self.path.write_text(
-            json.dumps(self._data, indent=2, ensure_ascii=False),
+            json.dumps(disk_data, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
+        self._persist_history_sidecar()
+        at_rest = (os.environ.get("JARVIS_JOURNAL_AT_REST_PASSWORD") or "").strip()
+        if at_rest:
+            try:
+                from jarvis.journal_crypto import encrypt_export
+
+                enc_path = self.path.with_suffix(self.path.suffix + ".enc")
+                assert_live_write_allowed(enc_path)
+                enc_path.write_text(
+                    json.dumps(encrypt_export(disk_data, at_rest), indent=2),
+                    encoding="utf-8",
+                )
+            except Exception:
+                pass
         try:
             self._loaded_mtime = self.path.stat().st_mtime
         except OSError:
@@ -213,11 +293,18 @@ class BulletJournal(BujoMixin):
         return self._data.get("key", {})
 
     def export_all(self) -> dict:
-        return self._data
+        """Export journal content without undo history bloat."""
+        return {k: v for k, v in self._data.items() if k not in ("history", "redo")}
 
     def import_all(self, data: dict) -> None:
-        self._data = data
-        self._save()
+        if not isinstance(data, dict):
+            raise ValueError("Invalid journal import")
+        # Strip undo stacks from imports
+        clean = {k: v for k, v in data.items() if k not in ("history", "redo")}
+        self._data = {**self._empty(), **clean}
+        self._data["history"] = []
+        self._data["redo"] = []
+        self._save(skip_snapshot=True)
 
     # --- Index ---
     def index_add(self, topic: str, pages: list[str] | None = None) -> dict:
@@ -546,12 +633,15 @@ class BulletJournal(BujoMixin):
     ) -> dict:
         d = day or _today()
         page = self._ensure_daily(d)
-        parsed_time, body, _ = (
-            _parse_event_time(content) if bullet_type == "event" else (time, content, None)
-        )
-        if bullet_type == "event" and not time:
-            time = parsed_time
-            content = body
+        if bullet_type == "event":
+            parsed_time, body, _ = _parse_event_time(content)
+            if time:
+                # Explicit time wins; strip any leading HH:MM from content
+                if parsed_time:
+                    content = body
+            else:
+                time = parsed_time
+                content = body
         b = _new_bullet(
             content, bullet_type, signifiers=signifiers, location=f"daily:{d}", time=time
         )
@@ -744,18 +834,81 @@ class BulletJournal(BujoMixin):
 
         days_in = cal_mod.monthrange(y, m)[1]
         days = [f"{mk}-{d:02d}" for d in range(1, days_in + 1)]
+        today = _today()
         habits = self.habit_list()
         rows = []
         for h in habits:
             track = h.get("track", {})
+            stats = self._habit_stats(track, days, today=today)
             rows.append(
                 {
                     **h,
                     "days": {d: bool(track.get(d)) for d in days},
-                    "done_count": sum(1 for d in days if track.get(d)),
+                    "done_count": stats["done_count"],
+                    "streak": stats["streak"],
+                    "longest_streak": stats["longest_streak"],
+                    "completion_pct": stats["completion_pct"],
+                    "week_done": stats["week_done"],
+                    "week_total": stats["week_total"],
                 }
             )
-        return {"month": mk, "days": days, "habits": rows}
+        return {
+            "month": mk,
+            "days": days,
+            "habits": rows,
+            "summary": {
+                "habits": len(rows),
+                "avg_completion_pct": round(
+                    sum(r["completion_pct"] for r in rows) / max(1, len(rows)), 1
+                ),
+            },
+        }
+
+    @staticmethod
+    def _habit_stats(track: dict, month_days: list[str], *, today: str) -> dict:
+        """Compute streak / longest / completion for a habit track map."""
+        done_in_month = [d for d in month_days if track.get(d)]
+        done_count = len(done_in_month)
+        completion_pct = round(100.0 * done_count / max(1, len(month_days)), 1)
+
+        from datetime import timedelta
+
+        # Current streak ending at today (or yesterday if today not checked)
+        streak = 0
+        cursor = date.fromisoformat(today)
+        if not track.get(today):
+            cursor = cursor - timedelta(days=1)
+        while track.get(cursor.isoformat()) and streak < 4000:
+            streak += 1
+            cursor = cursor - timedelta(days=1)
+
+        # Longest streak across all tracked days
+        all_done = sorted(d for d, v in track.items() if v and re.match(r"^\d{4}-\d{2}-\d{2}$", d))
+        longest = 0
+        run = 0
+        prev = None
+        for d in all_done:
+            cur = date.fromisoformat(d)
+            if prev and (cur - prev).days == 1:
+                run += 1
+            else:
+                run = 1
+            longest = max(longest, run)
+            prev = cur
+
+        today_d = date.fromisoformat(today)
+        week_start = today_d - timedelta(days=today_d.weekday())
+        week_days = [(week_start + timedelta(days=i)).isoformat() for i in range(7)]
+        week_done = sum(1 for d in week_days if track.get(d))
+
+        return {
+            "done_count": done_count,
+            "streak": streak,
+            "longest_streak": max(longest, streak),
+            "completion_pct": completion_pct,
+            "week_done": week_done,
+            "week_total": 7,
+        }
 
     def bullet_remember_text(self, bullet_id: str) -> str | None:
         found = self._find_bullet(bullet_id)
@@ -1105,11 +1258,25 @@ class BulletJournal(BujoMixin):
         return "\n".join(lines)
 
     def parse_rapid_log(
-        self, text: str, day: str | None = None, *, default_type: str = "task"
+        self,
+        text: str,
+        day: str | None = None,
+        *,
+        default_type: str = "task",
+        section: str = "daily",
+        week: str | None = None,
+        month: str | None = None,
     ) -> list[dict]:
-        """Parse symbol-prefixed lines; indent with 2 spaces to nest under previous bullet."""
+        """Parse symbol-prefixed lines into the active BuJo section.
+
+        ``section`` is one of: daily | weekly | monthly | future.
+        Indent with 2 spaces to nest under the previous bullet.
+        """
         if default_type not in BULLET_TYPES:
             default_type = "task"
+        section = (section or "daily").lower().strip()
+        if section not in ("daily", "weekly", "monthly", "future"):
+            raise ValueError(f"Invalid rapid-log section: {section}")
         created: list[dict] = []
         parents: list[dict] = []
 
@@ -1154,6 +1321,15 @@ class BulletJournal(BujoMixin):
                 event_time, content, _ = _parse_event_time(content)
             return bullet_type, status, signifiers, content, event_time
 
+        def add_root(content: str, bullet_type: str, signifiers: list[str], event_time: str | None) -> dict:
+            if section == "weekly":
+                return self.weekly_add(content, bullet_type, week=week or _week_key(), signifiers=signifiers)
+            if section == "monthly":
+                return self.monthly_add(content, bullet_type, signifiers, month=month or _month_key())
+            if section == "future":
+                return self.future_add(month or _month_key(), content, bullet_type, signifiers)
+            return self.daily_add(content, bullet_type, signifiers, day=day, time=event_time)
+
         for raw_line in text.splitlines():
             if not raw_line.strip():
                 continue
@@ -1163,7 +1339,7 @@ class BulletJournal(BujoMixin):
             if not content:
                 continue
             if level == 0 or not parents:
-                b = self.daily_add(content, bullet_type, signifiers, day=day, time=event_time)
+                b = add_root(content, bullet_type, signifiers, event_time)
                 parents[:] = [b]
             else:
                 parent = parents[min(level - 1, len(parents) - 1)]
@@ -1175,7 +1351,7 @@ class BulletJournal(BujoMixin):
                     time=event_time,
                 )
                 if child is None:
-                    b = self.daily_add(content, bullet_type, signifiers, day=day, time=event_time)
+                    b = add_root(content, bullet_type, signifiers, event_time)
                     parents[:] = [b]
                 else:
                     b = child
@@ -1191,6 +1367,61 @@ class BulletJournal(BujoMixin):
                 self.bullet_update(b["id"], status=status)
             created.append(b)
         return created
+
+    def promote_to_planner(self, bullet_id: str) -> dict:
+        """Create a Planner task from a Journal bullet and link them (confirm at API layer)."""
+        from jarvis.planner_store import add_task, planner_enabled
+
+        if not planner_enabled():
+            raise ValueError("Planner is disabled")
+        found = self._find_bullet(bullet_id)
+        if not found:
+            raise ValueError("Bullet not found")
+        b, _, _ = found
+        if b.get("planner_task_id"):
+            return {
+                "ok": True,
+                "already_linked": True,
+                "bullet": b,
+                "planner_task_id": b["planner_task_id"],
+            }
+        text = (b.get("content") or "").strip()
+        if not text:
+            raise ValueError("Empty bullet cannot be promoted")
+        task = add_task(text)
+        try:
+            from jarvis.planner_store import _conn
+
+            with _conn() as conn:
+                conn.execute(
+                    "UPDATE tasks SET source = ?, due_date = COALESCE(due_date, ?) WHERE id = ?",
+                    ("journal", _today(), task["id"]),
+                )
+            task["source"] = "journal"
+            task["due_date"] = _today()
+        except Exception:
+            log = __import__("logging").getLogger("jarvis.journal")
+            log.debug("Could not set planner task source for %s", task.get("id"), exc_info=True)
+        b["planner_task_id"] = task["id"]
+        b["updated"] = datetime.now(timezone.utc).isoformat()
+        self._save()
+        return {"ok": True, "bullet": b, "task": task, "planner_task_id": task["id"]}
+
+    def unlink_planner(self, bullet_id: str) -> dict:
+        found = self._find_bullet(bullet_id)
+        if not found:
+            raise ValueError("Bullet not found")
+        b, _, _ = found
+        b.pop("planner_task_id", None)
+        b["updated"] = datetime.now(timezone.utc).isoformat()
+        self._save()
+        return {"ok": True, "bullet": b}
+
+    def bullet_planner_link(self, bullet_id: str) -> str | None:
+        found = self._find_bullet(bullet_id)
+        if not found:
+            return None
+        return found[0].get("planner_task_id")
 
     def ai_reflect(self, scope: str = "week") -> str:
         """AI-assisted journal reflection."""

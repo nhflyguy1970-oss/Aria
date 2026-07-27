@@ -94,6 +94,14 @@ def try_hint_route(message: str | None) -> dict[str, Any] | None:
         return _hit("planner_today")
 
     if re.search(
+        r"\b(open tasks|my todos?|to-?do list|things to do|what('s| is) on my (plate|list))\b",
+        lower,
+    ):
+        from jarvis.journal_services import disambiguate_tasks_intent
+
+        return disambiguate_tasks_intent(text)
+
+    if re.search(
         r"\b(?:plan my (?:day|week)|what should i do(?: today)?|"
         r"help (?:me )?organize my (?:day|week|schedule))\b",
         lower,
