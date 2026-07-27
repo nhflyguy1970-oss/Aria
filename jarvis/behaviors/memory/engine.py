@@ -221,8 +221,10 @@ class MemoryEngine:
 
     @classmethod
     def auto_remember(cls, ctx: MemoryContext, user_msg: str, assistant_msg: str) -> None:
+        """Smart/auto extraction stages Memory Candidates — never silent ACM identity writes."""
         from jarvis.config import load_auto_memory_mode, load_memory_namespace
         from jarvis.memory_context import filter_extracted_facts, should_extract_auto_memory
+        from jarvis.memory_services import propose_candidate
 
         mode = load_auto_memory_mode()
         if not should_extract_auto_memory(user_msg, assistant_msg, mode):
@@ -231,13 +233,24 @@ class MemoryEngine:
         if mode == "smart":
             facts = filter_extracted_facts(facts, user_msg)
         ns = ctx.session.memory_namespace or load_memory_namespace()
-        added = False
         for fact in facts[:2]:
-            if not ctx.memory.similar_exists(fact):
-                ctx.memory.add("auto", fact, tags=["auto-extracted"], namespace=ns)
-                added = True
-        if added:
-            ctx.refresh_system_prompt()
+            try:
+                if ctx.memory.similar_exists(fact):
+                    continue
+            except Exception:
+                pass
+            try:
+                propose_candidate(
+                    fact,
+                    source="chat_auto",
+                    entry_type="auto",
+                    namespace=ns,
+                    tags=["auto-extracted", "candidate"],
+                    evidence=(user_msg or "")[:160],
+                    confidence=0.45,
+                )
+            except Exception:
+                pass
 
     @classmethod
     def sync_project_namespace(cls, ctx: MemoryContext) -> str | None:

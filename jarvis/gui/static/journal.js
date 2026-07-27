@@ -1461,7 +1461,7 @@ function bindBulletActions() {
         const data = out.body || {};
         journalNotify(
           out.ok && data.ok !== false
-            ? `Saved to memory (${data.namespace || "journal"})`
+            ? (data.message || `Staged Memory Candidate (${data.namespace || "journal"})`)
             : (data.error || data.message || "Could not save"),
           !(out.ok && data.ok !== false)
         );

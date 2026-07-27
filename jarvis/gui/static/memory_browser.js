@@ -120,67 +120,57 @@ async function loadMemoryConflicts() {
   if (!box) return;
   try {
     const res = await fetch("/api/memory/conflicts");
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     const conflicts = data.conflicts || [];
     if (!conflicts.length) {
-      box.classList.add("hidden");
-      box.innerHTML = "";
+      box.innerHTML = `<p class="muted">No belief conflicts right now.</p>`;
       return;
     }
-    box.classList.remove("hidden");
-    box.innerHTML = `<h3>Possible conflicts (${conflicts.length})</h3>` + conflicts.map((c, i) => `
-      <div class="memory-conflict-item" data-keep="${window.escapeHtml(c.a.id)}" data-drop="${window.escapeHtml(c.b.id)}">
-        <div class="memory-conflict-pair"><strong>${window.escapeHtml(c.kind)}</strong> · score ${c.score}<br/>
-          A: ${window.escapeHtml(c.a.content)}<br/>
-          B: ${window.escapeHtml(c.b.content)}
+    box.innerHTML = conflicts.map((c, i) => {
+      const a = c.a || c.keep || {};
+      const b = c.b || c.drop || {};
+      const aId = a.id || c.keep_id || "";
+      const bId = b.id || c.drop_id || "";
+      return `<div class="memory-conflict-card">
+        <p class="muted">${window.escapeHtml(c.reason || "Conflicting beliefs")}</p>
+        <div class="memory-conflict-pair">
+          <div><strong>A</strong> ${window.escapeHtml(a.content || "")}</div>
+          <div><strong>B</strong> ${window.escapeHtml(b.content || "")}</div>
         </div>
         <div class="memory-conflict-actions">
-          <button type="button" class="apply-btn small memory-keep-a" data-i="${i}">Keep A</button>
-          <button type="button" class="apply-btn small memory-keep-b" data-i="${i}">Keep B</button>
+          <button type="button" class="ghost-btn small mem-keep-a" data-drop="${window.escapeHtml(bId)}">Keep A (cool B)</button>
+          <button type="button" class="ghost-btn small mem-keep-b" data-drop="${window.escapeHtml(aId)}">Keep B (cool A)</button>
         </div>
-      </div>`).join("");
-    box.querySelectorAll(".memory-keep-a").forEach((btn) => {
+      </div>`;
+    }).join("");
+    box.querySelectorAll(".mem-keep-a, .mem-keep-b").forEach((btn) => {
       btn.onclick = async () => {
-        const item = btn.closest(".memory-conflict-item");
-        try {
-          const res = await fetch("/api/memory/conflicts/resolve", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ keep_id: item.dataset.keep, drop_id: item.dataset.drop }),
-          });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || data.ok === false) {
-            throw new Error(data.message || data.detail || `Resolve failed (${res.status})`);
-          }
-          window.showAriaToast?.("Kept memory A", "ok", 2500);
-          loadMemoryBrowser();
-        } catch (err) {
-          window.showAriaToast?.(err.message || "Resolve failed", "err", 5000);
-        }
+        const drop = btn.dataset.drop;
+        if (!drop) return;
+        const ok = await memoryConfirm("Cool the other belief? Prefer Cool over erase.", "Resolve conflict");
+        if (!ok) return;
+        const res = await fetch("/api/memory/conflicts/resolve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ drop_id: drop }),
+        });
+        const data = await res.json().catch(() => ({}));
+        window.showAriaToast?.(data.ok ? "Conflict resolved" : (data.error || "Failed"), data.ok ? "ok" : "err", 3500);
+        loadMemoryBrowser();
       };
     });
-    box.querySelectorAll(".memory-keep-b").forEach((btn) => {
-      btn.onclick = async () => {
-        const item = btn.closest(".memory-conflict-item");
-        try {
-          const res = await fetch("/api/memory/conflicts/resolve", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ keep_id: item.dataset.drop, drop_id: item.dataset.keep }),
-          });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok || data.ok === false) {
-            throw new Error(data.message || data.detail || `Resolve failed (${res.status})`);
-          }
-          window.showAriaToast?.("Kept memory B", "ok", 2500);
-          loadMemoryBrowser();
-        } catch (err) {
-          window.showAriaToast?.(err.message || "Resolve failed", "err", 5000);
-        }
-      };
-    });
-  } catch (_) {
-    box.classList.add("hidden");
+    // Conflict coach
+    const coach = document.getElementById("memoryConflictCoach");
+    if (coach) {
+      fetch("/api/memory/conflict-coach").then((r) => r.json()).then((d) => {
+        const rows = d.conflicts || [];
+        coach.innerHTML = rows.slice(0, 3).map((x) =>
+          `<p><strong>Coach:</strong> ${window.escapeHtml(x.why || "")} — <em>${window.escapeHtml(x.recommendation || "")}</em></p>`
+        ).join("");
+      }).catch(() => {});
+    }
+  } catch (err) {
+    box.innerHTML = `<p class="muted">Conflicts unavailable</p>`;
   }
 }
 
@@ -471,39 +461,308 @@ async function loadProfileInlinePanel() {
   }
 }
 
-async function loadMemoryBrowser() {
-  await loadMemorySettings();
-  await loadEnvironmentPreferences();
-  await loadMemoryConflicts();
-  await loadMemoryTrustStatus();
-  await loadProfileInlinePanel();
+function closeMemoryDialog() {
+  document.getElementById("memoryDialog")?.classList.add("hidden");
+}
+
+function openMemoryDialog(title, bodyHtml, actions) {
+  const dlg = document.getElementById("memoryDialog");
+  const titleEl = document.getElementById("memoryDialogTitle");
+  const body = document.getElementById("memoryDialogBody");
+  const acts = document.getElementById("memoryDialogActions");
+  if (!dlg || !body || !acts) return Promise.resolve(null);
+  if (titleEl) titleEl.textContent = title;
+  body.innerHTML = bodyHtml;
+  acts.innerHTML = "";
+  dlg.classList.remove("hidden");
+  return new Promise((resolve) => {
+    (actions || []).forEach((a) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = a.primary ? "apply-btn small" : "ghost-btn small";
+      btn.textContent = a.label;
+      btn.onclick = () => {
+        if (a.keepOpen) {
+          resolve(a.value);
+          return;
+        }
+        closeMemoryDialog();
+        resolve(a.value);
+      };
+      acts.appendChild(btn);
+    });
+  });
+}
+
+function memoryConfirm(message, title = "Confirm") {
+  return openMemoryDialog(
+    title,
+    `<p>${window.escapeHtml(message)}</p>`,
+    [
+      { label: "Cancel", value: false },
+      { label: "Confirm", value: true, primary: true },
+    ],
+  );
+}
+
+function renderMemoryCard(e) {
+  const conf = e.confidence != null ? Math.round(Number(e.confidence) * 100) : null;
+  return `<article class="memory-cog-card" data-id="${window.escapeHtml(e.id || "")}" tabindex="0">
+    <header class="memory-cog-card-head">
+      <span class="memory-badge type-${window.escapeHtml(e.type || "fact")}">${window.escapeHtml(e.type || "fact")}</span>
+      <span class="memory-badge ns">${window.escapeHtml(e.namespace || "default")}</span>
+      ${conf != null ? `<span class="memory-conf">${conf}%</span>` : ""}
+    </header>
+    <h4 class="memory-cog-title">${window.escapeHtml(e.title || e.content || "")}</h4>
+    <p class="memory-why muted">${window.escapeHtml(e.why || "")}</p>
+    <p class="memory-prov muted">Source: ${window.escapeHtml(e.source || "memory")}
+      ${e.when_learned ? ` · learned ${window.escapeHtml(String(e.when_learned).slice(0, 10))}` : ""}</p>
+    <div class="memory-item-actions">
+      <button type="button" class="ghost-btn tiny memory-edit-btn" data-id="${window.escapeHtml(e.id || "")}">Edit</button>
+      <button type="button" class="ghost-btn tiny memory-correct-btn" data-id="${window.escapeHtml(e.id || "")}">Correct</button>
+      <button type="button" class="ghost-btn tiny memory-forget-btn" data-id="${window.escapeHtml(e.id || "")}">Forget</button>
+    </div>
+  </article>`;
+}
+
+async function loadCognitiveHome() {
   try {
-    const kRes = await fetch("/api/knowledge");
-    const kData = await kRes.json();
-    const kEl = document.getElementById("knowledgeTopicList");
-    if (kEl) {
-      const topics = kData.topics || [];
-      kEl.innerHTML = topics.length
-        ? topics.map((t) => `<li><strong>${window.escapeHtml(t.title || t.slug)}</strong> <code>${window.escapeHtml(t.slug || "")}</code></li>`).join("")
-        : `<li>No knowledge briefs yet. <button type="button" class="ghost-btn tiny" id="knowledgeEmptyChatBtn">Ask Chat</button> — say <em>learn about: …</em></li>`;
-      kEl.querySelector("#knowledgeEmptyChatBtn")?.addEventListener("click", () => {
-        window.switchToView?.("chat");
-        window.jarvisSendToChat?.("learn about: ");
+    const res = await fetch("/api/memory/home");
+    const home = await res.json();
+    if (!res.ok || !home.ok) return;
+
+    const safety = document.getElementById("memorySafetyBody");
+    if (safety) {
+      const s = home.safety || {};
+      safety.innerHTML = `<ul class="memory-health-list">
+        <li><strong>Authority:</strong> ${window.escapeHtml(s.source_of_truth || "acm")} ${s.primary ? "(PRIMARY)" : ""}</li>
+        <li>Fail-closed writes: ${s.fail_closed ? "yes" : "no"}</li>
+        <li>Candidates are not memory until Adopt</li>
+        <li>Legacy vault is forensic only</li>
+      </ul>`;
+    }
+    const health = document.getElementById("memoryHealthBody");
+    if (health) {
+      const h = home.health || {};
+      health.innerHTML = `<ul class="memory-health-list">
+        <li>Facing memories: ${h.total_facing ?? "—"}</li>
+        <li>Candidates pending: ${h.candidates_pending ?? 0}</li>
+        <li>Conflicts: ${h.conflicts ?? 0}</li>
+        <li class="muted">${window.escapeHtml(h.duplicates_hint || "")}</li>
+      </ul>`;
+    }
+    const sleep = document.getElementById("memorySleepBody");
+    if (sleep) {
+      const sl = home.sleep || {};
+      const outs = (sl.outcomes || []).map((o) => `<li>${window.escapeHtml(o.plain || "")}</li>`).join("");
+      sleep.innerHTML = `<p>${window.escapeHtml(sl.message || "")}</p><ul>${outs || "<li class='muted'>No recent sleep outcomes surfaced.</li>"}</ul>`;
+    }
+    const candList = document.getElementById("memoryCandidateList");
+    if (candList) {
+      const cands = (home.recent_learning || {}).candidates || [];
+      candList.innerHTML = cands.length
+        ? cands.map((c) => `<li class="memory-candidate-item" data-id="${window.escapeHtml(c.id)}">
+            <div><strong>${window.escapeHtml(c.source || "")}</strong> — ${window.escapeHtml(c.content || "")}</div>
+            <div class="memory-item-actions">
+              <button type="button" class="apply-btn tiny mem-adopt" data-id="${window.escapeHtml(c.id)}">Adopt</button>
+              <button type="button" class="ghost-btn tiny mem-dismiss" data-id="${window.escapeHtml(c.id)}">Dismiss</button>
+            </div>
+          </li>`).join("")
+        : `<li class="muted">No candidates. Journal ★ remember, Smart auto-memory, and imports stage here first.</li>`;
+      candList.querySelectorAll(".mem-adopt").forEach((btn) => {
+        btn.onclick = async () => {
+          const ok = await memoryConfirm("Adopt this into autobiographical memory (ACM)?", "Adopt");
+          if (!ok) return;
+          const r = await fetch(`/api/memory/candidates/${btn.dataset.id}/adopt`, { method: "POST" });
+          const d = await r.json().catch(() => ({}));
+          window.showAriaToast?.(d.ok ? "Adopted into ACM" : (d.error || "Failed"), d.ok ? "ok" : "err", 3500);
+          loadMemoryBrowser();
+        };
+      });
+      candList.querySelectorAll(".mem-dismiss").forEach((btn) => {
+        btn.onclick = async () => {
+          await fetch(`/api/memory/candidates/${btn.dataset.id}/dismiss`, { method: "POST" });
+          loadMemoryBrowser();
+        };
       });
     }
+    const changed = document.getElementById("memoryChangedBody");
+    if (changed) {
+      const recent = (home.what_changed || {}).recent || [];
+      changed.innerHTML = recent.map(renderMemoryCard).join("") || `<p class="muted">Nothing recent yet.</p>`;
+      bindMemoryCardActions(changed);
+    }
+    const beliefs = document.getElementById("memoryBeliefsBody");
+    if (beliefs) {
+      beliefs.innerHTML = (home.beliefs || []).map(renderMemoryCard).join("") || `<p class="muted">No beliefs projected yet.</p>`;
+      bindMemoryCardActions(beliefs);
+    }
   } catch (err) {
-    window.showAriaToast?.(err?.message || "Knowledge topics unavailable", "err", 4000);
+    window.showAriaToast?.(err?.message || "Memory Home unavailable", "err", 4000);
   }
-  try {
-    await loadKnowledgeResearchPanel();
-  } catch (err) {
-    window.showAriaToast?.(err?.message || "Research panel unavailable", "err", 4000);
+}
+
+function bindMemoryCardActions(root) {
+  root.querySelectorAll(".memory-forget-btn").forEach((btn) => {
+    btn.onclick = () => openForgetFlow(btn.dataset.id);
+  });
+  root.querySelectorAll(".memory-correct-btn").forEach((btn) => {
+    btn.onclick = () => openCorrectFlowFixed(btn.dataset.id);
+  });
+  root.querySelectorAll(".memory-edit-btn").forEach((btn) => {
+    btn.onclick = () => openEditMemoryDialog(btn.dataset.id, btn.closest(".memory-cog-card, .memory-item"));
+  });
+}
+
+async function openForgetFlow(id) {
+  if (!id) return;
+  const prev = await fetch(`/api/memory/${id}/forget-preview`).then((r) => r.json()).catch(() => ({}));
+  if (!prev.ok) {
+    window.showAriaToast?.(prev.error || "Preview failed", "err", 4000);
+    return;
   }
-  await loadCheatsheets(document.getElementById("cheatsheetSelect")?.value || "");
+  const entry = prev.entry || {};
+  const actionsHtml = (prev.actions || []).map((a) =>
+    `<button type="button" class="ghost-btn small forget-act" data-act="${window.escapeHtml(a.id)}"><strong>${window.escapeHtml(a.label)}</strong><br/><span class="muted">${window.escapeHtml(a.explanation)}</span></button>`
+  ).join("");
+  const related = (prev.related || []).map((r) => `<li>${window.escapeHtml(r.content || "")}</li>`).join("");
+  await openMemoryDialog(
+    "Safe forget",
+    `<p><strong>${window.escapeHtml(entry.content || "")}</strong></p>
+     <p class="muted">${window.escapeHtml(prev.message || "")}</p>
+     <div class="forget-actions">${actionsHtml}</div>
+     ${related ? `<h4>Related</h4><ul>${related}</ul>` : ""}
+     <label class="hidden" id="forgetCorrectWrap">Correction text<textarea id="forgetCorrectText" rows="3"></textarea></label>`,
+    [{ label: "Cancel", value: null }],
+  );
+  document.querySelectorAll(".forget-act").forEach((btn) => {
+    btn.onclick = async () => {
+      const act = btn.dataset.act;
+      let correction = "";
+      if (act === "correct") {
+        const wrap = document.getElementById("forgetCorrectWrap");
+        wrap?.classList.remove("hidden");
+        correction = document.getElementById("forgetCorrectText")?.value?.trim() || "";
+        if (!correction) {
+          window.showAriaToast?.("Enter correction text", "warn", 3000);
+          return;
+        }
+      }
+      const sure = await memoryConfirm(`Confirm ${act}? This changes what Aria believes.`, "Confirm forget");
+      if (!sure) return;
+      const res = await fetch(`/api/memory/${id}/forget`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: act, confirm: true, correction_text: correction }),
+      });
+      const data = await res.json().catch(() => ({}));
+      closeMemoryDialog();
+      window.showAriaToast?.(data.ok ? (data.message || "Done") : (data.error || "Failed"), data.ok ? "ok" : "err", 4000);
+      if (data.ok) loadMemoryBrowser();
+    };
+  });
+}
+
+async function openEditMemoryDialog(id, itemEl) {
+  const content = itemEl?.querySelector(".memory-cog-title, .memory-content")?.textContent || "";
+  const dlg = document.getElementById("memoryDialog");
+  const titleEl = document.getElementById("memoryDialogTitle");
+  const body = document.getElementById("memoryDialogBody");
+  const acts = document.getElementById("memoryDialogActions");
+  if (!dlg || !body) return;
+  titleEl.textContent = id ? "Edit memory" : "New memory";
+  body.innerHTML = `
+    <label>Content<textarea id="memEditContent" rows="5" class="memory-dialog-input">${window.escapeHtml(content)}</textarea></label>
+    <label>Type
+      <select id="memEditType">
+        <option value="fact">fact</option>
+        <option value="preference">preference</option>
+        <option value="project">project</option>
+        <option value="note">note</option>
+      </select>
+    </label>
+    <label>Namespace <input id="memEditNs" type="text" value="default" /></label>
+    <label>Tags <input id="memEditTags" type="text" placeholder="comma,separated" /></label>`;
+  acts.innerHTML = "";
+  dlg.classList.remove("hidden");
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "ghost-btn small";
+  cancel.textContent = "Cancel";
+  cancel.onclick = closeMemoryDialog;
+  const save = document.createElement("button");
+  save.type = "button";
+  save.className = "apply-btn small";
+  save.textContent = id ? "Save" : "Encode";
+  save.onclick = async () => {
+    const payload = {
+      content: document.getElementById("memEditContent")?.value?.trim(),
+      type: document.getElementById("memEditType")?.value || "fact",
+      namespace: document.getElementById("memEditNs")?.value?.trim() || "default",
+      tags: (document.getElementById("memEditTags")?.value || "").split(",").map((t) => t.trim()).filter(Boolean),
+    };
+    if (!payload.content) return;
+    try {
+      const res = await fetch(id ? `/api/memory/${id}` : "/api/memory", {
+        method: id ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || data.message || "Save failed");
+      closeMemoryDialog();
+      window.showAriaToast?.(id ? "Updated" : "Encoded into ACM", "ok", 2500);
+      loadMemoryBrowser();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Save failed", "err", 5000);
+    }
+  };
+  acts.append(cancel, save);
+}
+
+async function openCorrectFlowFixed(id) {
+  const dlg = document.getElementById("memoryDialog");
+  const body = document.getElementById("memoryDialogBody");
+  const acts = document.getElementById("memoryDialogActions");
+  const titleEl = document.getElementById("memoryDialogTitle");
+  if (!dlg || !body) return;
+  titleEl.textContent = "Correct belief";
+  body.innerHTML = `<p class="muted">Revise with lineage — old belief remains in history.</p>
+    <textarea id="memCorrectBody" rows="4" class="memory-dialog-input"></textarea>`;
+  acts.innerHTML = "";
+  dlg.classList.remove("hidden");
+  const cancel = document.createElement("button");
+  cancel.className = "ghost-btn small";
+  cancel.textContent = "Cancel";
+  cancel.onclick = closeMemoryDialog;
+  const go = document.createElement("button");
+  go.className = "apply-btn small";
+  go.textContent = "Correct";
+  go.onclick = async () => {
+    const text = document.getElementById("memCorrectBody")?.value?.trim();
+    if (!text) return;
+    const sure = await memoryConfirm("Apply correction?", "Confirm");
+    if (!sure) return;
+    const res = await fetch(`/api/memory/${id}/forget`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "correct", confirm: true, correction_text: text }),
+    });
+    const data = await res.json().catch(() => ({}));
+    closeMemoryDialog();
+    window.showAriaToast?.(data.ok ? "Corrected" : (data.error || "Failed"), data.ok ? "ok" : "err", 3500);
+    if (data.ok) loadMemoryBrowser();
+  };
+  acts.append(cancel, go);
+}
+
+async function loadMemoryListOnly() {
   const el = document.getElementById("memoryList");
   const statsEl = document.getElementById("memoryStats");
   const nsFilter = document.getElementById("memoryNsFilter");
   if (!el) return;
+  el.setAttribute("aria-busy", "true");
+  el.innerHTML = `<div class="memory-skeleton" aria-hidden="true"><div></div><div></div><div></div></div>`;
   const q = document.getElementById("memorySearch")?.value || "";
   const type = document.getElementById("memoryTypeFilter")?.value || "";
   const namespace = document.getElementById("memoryNsFilter")?.value || "";
@@ -511,87 +770,60 @@ async function loadMemoryBrowser() {
   if (q) params.set("q", q);
   if (type) params.set("type", type);
   if (namespace) params.set("namespace", namespace);
-  let data = {};
   try {
     const res = await fetch(`/api/memory/all?${params}`);
-    data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.message || data.detail || `Memory load failed (${res.status})`);
-  } catch (err) {
-    el.innerHTML = `<p class="memory-empty">${window.escapeHtml(err.message || "Memory load failed")}</p>`;
-    window.showAriaToast?.(err.message || "Memory load failed", "err", 5000);
-    return;
-  }
-  const stats = data.stats || {};
-  if (statsEl) {
-    const byType = stats.by_type
-      ? Object.entries(stats.by_type).map(([k, v]) => `${k}: ${v}`).join(" · ")
-      : "";
-    statsEl.textContent = `${stats.total || 0} memories${byType ? ` · ${byType}` : ""} · namespace: ${data.namespace || "default"}`;
-  }
-  if (nsFilter && stats.namespaces) {
-    const cur = nsFilter.value;
-    nsFilter.innerHTML = `<option value="">All namespaces</option>${stats.namespaces.map((n) =>
-      `<option value="${window.escapeHtml(n)}">${window.escapeHtml(n)}</option>`
-    ).join("")}`;
-    nsFilter.value = cur;
-  }
-  el.innerHTML = (data.entries || []).map((e) => `
-    <div class="memory-item" data-id="${window.escapeHtml(e.id)}">
-      <div class="memory-item-head">
-        <span class="memory-badge type-${window.escapeHtml(e.type)}">${window.escapeHtml(e.type)}</span>
-        <span class="memory-badge ns">${window.escapeHtml(e.namespace || "default")}</span>
-        ${(e.tags || []).map((t) => `<span class="memory-tag">${window.escapeHtml(t)}</span>`).join("")}
-      </div>
-      <p class="memory-content">${window.escapeHtml(e.content)}</p>
-      <div class="memory-item-actions">
-        <button type="button" class="memory-edit-btn" data-id="${window.escapeHtml(e.id)}">Edit</button>
-        <button type="button" class="memory-del-btn" data-id="${window.escapeHtml(e.id)}">Delete</button>
-      </div>
-    </div>`).join("") || `<p class="memory-empty">No memories stored. <button type="button" class="ghost-btn tiny" id="memoryEmptyChatBtn">Ask Chat</button> or import from the toolbar.</p>`;
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || `Load failed (${res.status})`);
+    const stats = data.stats || {};
+    if (statsEl) {
+      const byType = Object.entries(stats.by_type || {})
+        .filter(([k]) => !["strategy", "failure", "success"].includes(k))
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(" · ");
+      statsEl.textContent = `${stats.total || 0} · ${byType} · ACM PRIMARY`;
+    }
+    if (nsFilter && stats.namespaces) {
+      const cur = nsFilter.value;
+      nsFilter.innerHTML = `<option value="">All namespaces</option>${stats.namespaces
+        .filter((n) => n !== "cheatsheet")
+        .map((n) => `<option value="${window.escapeHtml(n)}">${window.escapeHtml(n)}</option>`)
+        .join("")}`;
+      nsFilter.value = cur;
+    }
+    const entries = (data.entries || []).filter((e) => !["strategy", "failure"].includes(e.type));
+    el.innerHTML = entries.map((e) => `
+      <div class="memory-item" data-id="${window.escapeHtml(e.id)}">
+        <div class="memory-item-head">
+          <span class="memory-badge type-${window.escapeHtml(e.type)}">${window.escapeHtml(e.type)}</span>
+          <span class="memory-badge ns">${window.escapeHtml(e.namespace || "default")}</span>
+        </div>
+        <p class="memory-content">${window.escapeHtml(e.content)}</p>
+        <div class="memory-item-actions">
+          <button type="button" class="memory-edit-btn ghost-btn tiny" data-id="${window.escapeHtml(e.id)}">Edit</button>
+          <button type="button" class="memory-forget-btn ghost-btn tiny" data-id="${window.escapeHtml(e.id)}">Forget</button>
+        </div>
+      </div>`).join("") || `<p class="memory-empty">No memories match. <button type="button" class="ghost-btn tiny" id="memoryEmptyChatBtn">Ask Chat</button></p>`;
     el.querySelector("#memoryEmptyChatBtn")?.addEventListener("click", () => {
       window.switchToView?.("chat");
       window.jarvisSendToChat?.("Remember that ");
     });
-  el.querySelectorAll(".memory-del-btn").forEach((btn) => {
-    btn.onclick = async () => {
-      const item = btn.closest(".memory-item");
-      const isCheatsheet = item?.querySelector(".memory-badge.ns")?.textContent === "cheatsheet";
-      const msg = isCheatsheet
-        ? "Delete this cheatsheet? Use Reset default to restore bundled text instead."
-        : "Delete this memory?";
-      if (!confirm(msg)) return;
-      try {
-        const res = await fetch(`/api/memory/${btn.dataset.id}`, { method: "DELETE" });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || data.detail || `Delete failed (${res.status})`);
-        window.showAriaToast?.("Memory deleted", "ok", 2500);
-        loadMemoryBrowser();
-      } catch (err) {
-        window.showAriaToast?.(err.message || "Delete failed", "err", 5000);
-      }
-    };
-  });
-  el.querySelectorAll(".memory-edit-btn").forEach((btn) => {
-    btn.onclick = async () => {
-      const item = btn.closest(".memory-item");
-      const content = item?.querySelector(".memory-content")?.textContent || "";
-      const next = prompt("Edit memory:", content);
-      if (next == null || next.trim() === content) return;
-      try {
-        const res = await fetch(`/api/memory/${btn.dataset.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: next.trim() }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || data.detail || `Update failed (${res.status})`);
-        window.showAriaToast?.("Memory updated", "ok", 2500);
-        loadMemoryBrowser();
-      } catch (err) {
-        window.showAriaToast?.(err.message || "Update failed", "err", 5000);
-      }
-    };
-  });
+    bindMemoryCardActions(el);
+  } catch (err) {
+    el.innerHTML = `<p class="memory-empty">${window.escapeHtml(err.message || "Failed")}</p>`;
+  } finally {
+    el.setAttribute("aria-busy", "false");
+  }
+}
+
+async function loadMemoryBrowser() {
+  await loadMemorySettings();
+  await loadEnvironmentPreferences();
+  await loadCognitiveHome();
+  await loadMemoryConflicts();
+  await loadMemoryTrustStatus();
+  await loadProfileInlinePanel();
+  await loadCheatsheets(document.getElementById("cheatsheetSelect")?.value || "");
+  await loadMemoryListOnly();
 }
 
 
@@ -599,24 +831,70 @@ function initMemoryBrowser() {
   document.getElementById("knowledgeResearchRunBtn")?.addEventListener("click", () => {
     runKnowledgeResearchNow();
   });
-  document.getElementById("memorySearch")?.addEventListener("input", () => loadMemoryBrowser());
-  document.getElementById("memoryTypeFilter")?.addEventListener("change", () => loadMemoryBrowser());
-  document.getElementById("memoryNsFilter")?.addEventListener("change", () => loadMemoryBrowser());
-  document.getElementById("memoryAddBtn")?.addEventListener("click", async () => {
-    const content = prompt("Memory to store:");
-    if (!content?.trim()) return;
-    try {
-      const res = await fetch("/api/memory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: content.trim(), type: "fact" }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || data.detail || `Save failed (${res.status})`);
-      window.showAriaToast?.("Memory saved", "ok", 2500);
-      loadMemoryBrowser();
-    } catch (err) {
-      window.showAriaToast?.(err.message || "Save failed", "err", 5000);
+  let searchTimer = null;
+  document.getElementById("memorySearch")?.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => loadMemoryListOnly(), 180);
+  });
+  document.getElementById("memoryTypeFilter")?.addEventListener("change", () => loadMemoryListOnly());
+  document.getElementById("memoryNsFilter")?.addEventListener("change", () => loadMemoryListOnly());
+  document.getElementById("memorySearchFocusBtn")?.addEventListener("click", () => {
+    document.getElementById("memoryBrowseSection")?.setAttribute("open", "");
+    document.getElementById("memorySearch")?.focus();
+  });
+  document.getElementById("memoryAddBtn")?.addEventListener("click", () => openEditMemoryDialog(null, null));
+  document.getElementById("memoryBriefingBtn")?.addEventListener("click", async () => {
+    const res = await fetch("/api/memory/briefing", { method: "POST" });
+    const data = await res.json().catch(() => ({}));
+    openMemoryDialog("Memory briefing", `<pre class="memory-briefing">${window.escapeHtml(data.briefing || "")}</pre>`, [
+      { label: "Close", value: true, primary: true },
+    ]);
+  });
+  document.getElementById("memoryAssistBtn")?.addEventListener("click", async () => {
+    const res = await fetch("/api/memory/assist");
+    const data = await res.json().catch(() => ({}));
+    const sug = (data.suggestions || []).map((s) => `<li>${window.escapeHtml(s.title || "")}</li>`).join("");
+    openMemoryDialog("Memory assistant", `<p class="muted">${window.escapeHtml(data.message || "")}</p><ul>${sug || "<li class='muted'>No suggestions</li>"}</ul>`, [
+      { label: "Close", value: true, primary: true },
+    ]);
+  });
+  document.getElementById("memoryShortcutsBtn")?.addEventListener("click", () => {
+    const o = document.getElementById("memoryShortcutOverlay");
+    if (!o) return;
+    o.innerHTML = `<div class="bujo-shortcut-card"><h3>Memory shortcuts</h3>
+      <ul><li><kbd>/</kbd> Search</li><li><kbd>N</kbd> New</li><li><kbd>?</kbd> Shortcuts</li><li><kbd>Esc</kbd> Close</li></ul>
+      <button type="button" class="ghost-btn small" id="memCloseShortcuts">Close</button></div>`;
+    o.classList.remove("hidden");
+    document.getElementById("memCloseShortcuts")?.addEventListener("click", () => o.classList.add("hidden"));
+  });
+  document.getElementById("memoryOpenKnowledgeBtn")?.addEventListener("click", () => {
+    window.switchToView?.("documents");
+    window.showAriaToast?.("Knowledge lives with Documents / research — not Memory.", "info", 4000);
+  });
+  document.getElementById("memoryOpenKnowledgeBtn2")?.addEventListener("click", () => {
+    document.getElementById("memoryOpenKnowledgeBtn")?.click();
+  });
+  document.addEventListener("keydown", (e) => {
+    const view = document.getElementById("memoryView");
+    if (!view || view.classList.contains("hidden")) return;
+    const tag = (e.target?.tagName || "").toLowerCase();
+    const typing = tag === "input" || tag === "textarea" || e.target?.isContentEditable;
+    if (e.key === "Escape") {
+      closeMemoryDialog();
+      document.getElementById("memoryShortcutOverlay")?.classList.add("hidden");
+      return;
+    }
+    if (typing) return;
+    if (e.key === "/") {
+      e.preventDefault();
+      document.getElementById("memoryBrowseSection")?.setAttribute("open", "");
+      document.getElementById("memorySearch")?.focus();
+    } else if (e.key === "n" || e.key === "N") {
+      e.preventDefault();
+      openEditMemoryDialog(null, null);
+    } else if (e.key === "?" || (e.shiftKey && e.key === "/")) {
+      e.preventDefault();
+      document.getElementById("memoryShortcutsBtn")?.click();
     }
   });
   document.getElementById("memoryOpenJournalBtn")?.addEventListener("click", () => {
@@ -642,7 +920,7 @@ function initMemoryBrowser() {
       a.download = `jarvis-memory-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(a.href);
-      window.showAriaToast?.("Memory exported", "ok", 2500);
+      window.showAriaToast?.("Memory exported (snapshot — ACM remains authority)", "ok", 2500);
     } catch (err) {
       window.showAriaToast?.(err.message || "Export failed", "err", 5000);
     }
@@ -652,31 +930,67 @@ function initMemoryBrowser() {
   importFile?.addEventListener("change", async () => {
     const file = importFile.files?.[0];
     if (!file) return;
+    let payload;
     try {
-      const payload = JSON.parse(await file.text());
-      const merge = confirm("Merge with existing memories? (Cancel = replace all)");
-      const res = await fetch("/api/memory/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, merge }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) {
-        throw new Error(data.error || data.message || data.detail || `Import failed (${res.status})`);
-      }
-      window.showAriaToast?.(`Imported ${data.added ?? 0} memories`, "ok", 3500);
-      loadMemoryBrowser();
-    } catch (e) {
-      window.showAriaToast?.(
-        e instanceof SyntaxError ? "Import failed: invalid JSON" : (e.message || "Import failed"),
-        "err",
-        5000,
-      );
+      payload = JSON.parse(await file.text());
+    } catch {
+      window.showAriaToast?.("Import failed: invalid JSON", "err", 5000);
+      importFile.value = "";
+      return;
     }
-    importFile.value = "";
+    const dlg = document.getElementById("memoryDialog");
+    const body = document.getElementById("memoryDialogBody");
+    const acts = document.getElementById("memoryDialogActions");
+    const titleEl = document.getElementById("memoryDialogTitle");
+    titleEl.textContent = "Import memory snapshot";
+    body.innerHTML = `<p>Choose carefully. <strong>Cancel aborts</strong> — it does not replace.</p>
+      <ul>
+        <li><strong>Merge</strong> — add entries alongside existing beliefs</li>
+        <li><strong>Replace</strong> — wipe projected store contents then import (dangerous)</li>
+        <li><strong>Cancel</strong> — do nothing</li>
+      </ul>`;
+    acts.innerHTML = "";
+    dlg.classList.remove("hidden");
+    const run = async (mode) => {
+      if (!mode) {
+        closeMemoryDialog();
+        importFile.value = "";
+        return;
+      }
+      const sure = mode === "replace"
+        ? await memoryConfirm("REPLACE all imported projection data? This is destructive.", "Confirm replace")
+        : true;
+      if (!sure) {
+        importFile.value = "";
+        return;
+      }
+      try {
+        const res = await fetch("/api/memory/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...payload, mode }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.ok === false) throw new Error(data.error || data.message || "Import failed");
+        closeMemoryDialog();
+        window.showAriaToast?.(data.message || `Imported ${data.added ?? 0}`, "ok", 3500);
+        loadMemoryBrowser();
+      } catch (e) {
+        window.showAriaToast?.(e.message || "Import failed", "err", 5000);
+      }
+      importFile.value = "";
+    };
+    [["Cancel", null], ["Merge", "merge"], ["Replace", "replace"]].forEach(([label, mode], i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = mode === "merge" ? "apply-btn small" : "ghost-btn small";
+      b.textContent = label;
+      b.onclick = () => run(mode);
+      acts.appendChild(b);
+    });
   });
   document.getElementById("memoryPruneBtn")?.addEventListener("click", async () => {
-    if (!confirm("Remove stale auto-extracted memories?")) return;
+    if (!(await memoryConfirm("Remove stale auto-extracted memories?", "Prune"))) return;
     try {
       const res = await fetch("/api/memory/prune", { method: "POST" });
       const data = await res.json().catch(() => ({}));
@@ -690,7 +1004,7 @@ function initMemoryBrowser() {
     }
   });
   document.getElementById("memoryScrubBtn")?.addEventListener("click", async () => {
-    if (!confirm("Remove test artifacts from memory (broken_calc, buy milk, stale checkpoints)?")) return;
+    if (!(await memoryConfirm("Remove test artifacts from memory?", "Scrub"))) return;
     try {
       const res = await fetch("/api/memory/trust/scrub", { method: "POST" });
       const data = await res.json().catch(() => ({}));
@@ -734,7 +1048,7 @@ function initMemoryBrowser() {
     }
   });
   document.getElementById("profileRetakeBtn")?.addEventListener("click", async () => {
-    if (!confirm("Replace your saved profile with new answers?")) return;
+    if (!(await memoryConfirm("Replace your saved profile with new answers?", "Update profile"))) return;
     try {
       const res = await fetch("/api/profile/questionnaire/reset", { method: "POST" });
       const data = await res.json().catch(() => ({}));
@@ -788,20 +1102,38 @@ function initMemoryBrowser() {
       const res = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}`);
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) throw new Error(data.message || data.detail || "Could not load cheatsheet");
-      const next = prompt("Edit cheatsheet (markdown):", data.cheatsheet?.content || "");
-      if (next == null || next.trim() === data.cheatsheet?.content) return;
-      const put = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: next.trim() }),
-      });
-      const putData = await put.json().catch(() => ({}));
-      if (!put.ok || putData.ok === false) {
-        throw new Error(putData.message || putData.detail || `Save failed (${put.status})`);
-      }
-      window.showAriaToast?.("Cheatsheet saved", "ok", 2500);
-      loadMemoryBrowser();
-      showCheatsheet(key);
+      const dlg = document.getElementById("memoryDialog");
+      const bodyEl = document.getElementById("memoryDialogBody");
+      const acts = document.getElementById("memoryDialogActions");
+      document.getElementById("memoryDialogTitle").textContent = `Edit ${key}`;
+      bodyEl.innerHTML = `<textarea id="cheatEditArea" rows="16" class="memory-dialog-input"></textarea>`;
+      document.getElementById("cheatEditArea").value = data.cheatsheet?.content || "";
+      acts.innerHTML = "";
+      dlg.classList.remove("hidden");
+      const cancel = document.createElement("button");
+      cancel.className = "ghost-btn small";
+      cancel.textContent = "Cancel";
+      cancel.onclick = closeMemoryDialog;
+      const save = document.createElement("button");
+      save.className = "apply-btn small";
+      save.textContent = "Save";
+      save.onclick = async () => {
+        const next = document.getElementById("cheatEditArea")?.value || "";
+        const put = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: next.trim() }),
+        });
+        const putData = await put.json().catch(() => ({}));
+        if (!put.ok || putData.ok === false) {
+          window.showAriaToast?.(putData.message || "Save failed", "err", 5000);
+          return;
+        }
+        closeMemoryDialog();
+        window.showAriaToast?.("Cheatsheet saved", "ok", 2500);
+        showCheatsheet(key);
+      };
+      acts.append(cancel, save);
     } catch (err) {
       window.showAriaToast?.(err.message || "Cheatsheet save failed", "err", 5000);
     }
@@ -812,7 +1144,7 @@ function initMemoryBrowser() {
       window.showAriaToast?.("Choose a cheatsheet first", "warn", 3000);
       return;
     }
-    if (!confirm(`Restore the default ${key} cheatsheet? Your edits will be lost.`)) return;
+    if (!(await memoryConfirm(`Restore the default ${key} cheatsheet? Your edits will be lost.`, "Reset cheatsheet"))) return;
     try {
       const res = await fetch(`/api/cheatsheets/${encodeURIComponent(key)}/reset`, { method: "POST" });
       const data = await res.json().catch(() => ({}));

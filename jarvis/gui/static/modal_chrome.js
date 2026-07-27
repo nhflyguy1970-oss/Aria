@@ -3,6 +3,8 @@
   function initAriaModalChrome() {
     /** Closable overlays (Esc). Lock screen is excluded — must unlock deliberately. */
     const MODAL_IDS = [
+    "memoryDialog",
+    "memoryShortcutOverlay",
       "commandPaletteModal",
       "imageLightbox",
       "videoLightbox",
@@ -22,6 +24,12 @@
       "cropModal",
       "flytyingScanModal",
       "flytyingNameBarcodeModal",
+      "whatsNewModal",
+      "dashCustomizeModal",
+      "activityCenterModal",
+      "workspaceLayoutsModal",
+      "workflowModal",
+      "splitPickerModal",
     ];
 
     function isOpen(el) {
@@ -66,6 +74,18 @@
       }
       if (el.id === "flytyingNameBarcodeModal") {
         window.closeFlytyingNameBarcodeModal?.();
+        return;
+      }
+      if (el.id === "whatsNewModal") {
+        window.dismissWhatsNew?.();
+        return;
+      }
+      if (el.id === "activityCenterModal") {
+        window.AriaActivity?.close?.();
+        return;
+      }
+      if (el.id === "workspaceLayoutsModal" || el.id === "workflowModal" || el.id === "splitPickerModal" || el.id === "dashCustomizeModal") {
+        el.classList.add("hidden");
         return;
       }
       el.classList.add("hidden");

@@ -1137,9 +1137,27 @@ def register_routes(app, assistant):
         text = journal.bullet_remember_text(bullet_id)
         if not text:
             return JSONResponse(status_code=404, content={"ok": False, "error": "bullet not found"})
+        from jarvis.memory_services import propose_candidate
+
         ns = assistant.session.memory_namespace or "default"
-        assistant.memory.add("fact", text, namespace=ns)
-        return {"ok": True, "text": text, "namespace": ns}
+        result = propose_candidate(
+            text,
+            source="journal",
+            entry_type="note",
+            namespace=ns,
+            tags=["journal", f"bullet:{bullet_id}"],
+            evidence=f"Journal bullet {bullet_id}",
+            confidence=0.7,
+        )
+        return {
+            "ok": True,
+            "candidate": True,
+            "requires_confirmation": True,
+            "text": text,
+            "namespace": ns,
+            **result,
+            "message": "Staged as a Memory Candidate — open Memory Home to Adopt.",
+        }
 
     @app.get("/api/journal/print")
     def journal_print_html(month: str = ""):

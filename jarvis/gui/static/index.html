@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0a0c10" />
   <meta name="application-name" content="ARIA" />
-  <meta name="jarvis-ui-version" content="5.16.73" />
+  <meta name="jarvis-ui-version" content="5.16.160" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>ARIA</title>
@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=5.16.89" />
+  <link rel="stylesheet" href="/static/style.css?v=5.16.160" />
   <script>
     (function () {
       var standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -46,8 +46,40 @@
         </div>
       </div>
 
+      <div class="sidebar-search-block" data-new-feature="search">
+        <div class="sidebar-search-wrap">
+          <svg class="sidebar-search-icon" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="m21 21-4.3-4.3"/>
+          </svg>
+          <input type="search" id="sidebarSearchInput" class="sidebar-search-input" placeholder="Search Aria… (Ctrl+Shift+F)" autocomplete="off" spellcheck="false" aria-label="Search views, settings, models, and tools" aria-controls="sidebarSearchResults" role="combobox" aria-expanded="false" />
+        </div>
+        <ul id="sidebarSearchResults" class="sidebar-search-results hidden" role="listbox" aria-label="Search results"></ul>
+      </div>
+
+      <div class="sidebar-section sidebar-section--favorites sidebar-section--pinned" data-section="favorites" data-new-feature="favorites">
+        <div class="sidebar-section-head-static">
+          <p class="sidebar-section-title">Favorites</p>
+        </div>
+        <div id="sidebarFavoritesList" class="sidebar-favorites-list" aria-label="Favorite views"></div>
+      </div>
+
+      <div class="sidebar-restart-block" data-new-feature="restart">
+        <button type="button" id="restartServerBtn" class="restart-server-btn" title="Restart API server">
+          <svg class="restart-server-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-2.6-6.4"/>
+            <polyline points="21 3 21 9 15 9"/>
+          </svg>
+          <span class="restart-server-label">Restart Server</span>
+        </button>
+        <div id="restartServerProgress" class="restart-server-progress hidden" aria-hidden="true">
+          <span class="restart-server-spinner" aria-hidden="true"></span>
+        </div>
+        <p id="restartServerStatus" class="restart-server-status muted small hidden" aria-live="polite"></p>
+      </div>
+
       <div class="sidebar-section sidebar-section--mode" data-section="mode">
-        <button type="button" class="sidebar-section-head" aria-expanded="true">
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
           <p class="sidebar-section-title">Mode</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body">
@@ -63,11 +95,11 @@
       </div>
 
       <div class="sidebar-section sidebar-section--capabilities" data-section="capabilities">
-        <button type="button" class="sidebar-section-head" aria-expanded="true">
-          <p class="sidebar-section-title">Capabilities</p><span class="section-chevron">▾</span>
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
+          <p class="sidebar-section-title">AI</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body">
-        <nav class="modules">
+        <nav class="modules" aria-label="AI capability modes">
           <div class="module-chip active" data-module="all"><span class="dot"></span> Unified</div>
           <div class="module-chip" data-module="coding"><span class="dot coding"></span> Coding</div>
           <div class="module-chip" data-module="general"><span class="dot general"></span> Chat</div>
@@ -83,9 +115,55 @@
         </div>
       </div>
 
+      <div class="sidebar-section sidebar-section--workspaces" data-section="workspaces">
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
+          <p class="sidebar-section-title">Workspaces</p><span class="section-chevron">▾</span>
+        </button>
+        <div class="sidebar-section-body ws-menu">
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="chat">Chat</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="dashboard">Dashboard</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="planner">Planner</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="calendar">Calendar</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="journal">Journal</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="memory">Memory</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="projects">Projects</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="documents">Documents</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="browser">Browser</button>
+        </div>
+      </div>
+
+      <div class="sidebar-section sidebar-section--media" data-section="video">
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
+          <p class="sidebar-section-title">Media</p><span class="section-chevron">▾</span>
+        </button>
+        <div class="sidebar-section-body">
+          <button type="button" class="ghost-btn small" data-view-jump="gallery">Gallery</button>
+          <button type="button" class="ghost-btn small" data-view-jump="video">Video</button>
+          <button type="button" class="ghost-btn small" data-view-jump="meme">Meme</button>
+          <button type="button" class="ghost-btn small" data-view-jump="audio">Audio</button>
+          <button type="button" id="openVideoStudioBtn" class="ghost-btn small">Open Video studio</button>
+          <button type="button" id="openVideoGalleryBtn" class="ghost-btn small">Video gallery</button>
+          <button type="button" id="sidebarVideoFreeVramBtn" class="ghost-btn small" title="Unload Ollama before AnimateDiff">Free VRAM</button>
+          <button type="button" id="openImageSettingsBtn" class="ghost-btn image-settings-btn" title="SD, SDXL, Flux checkpoints and GPU/CPU mode">
+            Image settings (SD / SDXL / Flux)
+          </button>
+          <p id="sidebarVideoStatus" class="muted small">AnimateDiff · Ken Burns · chat: “make a video…”</p>
+        </div>
+      </div>
+
+      <div class="sidebar-section sidebar-section--maker-nav" data-section="maker">
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
+          <p class="sidebar-section-title">Maker</p><span class="section-chevron">▾</span>
+        </button>
+        <div class="sidebar-section-body ws-menu">
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="maker">Maker lab</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="flytying">Fly tying</button>
+        </div>
+      </div>
+
       <div class="sidebar-section sidebar-section--services" data-section="services">
-        <button type="button" class="sidebar-section-head" aria-expanded="true">
-          <p class="sidebar-section-title">Services</p><span class="section-chevron">▾</span>
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
+          <p class="sidebar-section-title">System</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body">
         <div id="servicesPanel" class="services-panel">
@@ -100,30 +178,27 @@
             <span class="svc-dot" id="jobCenterSvcDot"></span> Background jobs <span id="jobCenterBadge" class="job-center-badge hidden" aria-hidden="true"></span>
           </button>
         </div>
-        <button type="button" id="openImageSettingsBtn" class="ghost-btn image-settings-btn" title="SD, SDXL, Flux checkpoints and GPU/CPU mode">
-          Image settings (SD / SDXL / Flux)
-        </button>
         </div>
       </div>
 
       <div class="sidebar-section sidebar-section--workstation" data-section="workstation">
-        <button type="button" class="sidebar-section-head" aria-expanded="true">
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
           <p class="sidebar-section-title">Mission Control</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body ws-menu">
-          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstation">Dashboard</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstation">Console</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="chat-status">Status</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationActivityList">Activity</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationConnection">Runtime Connection</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationInference">Models &amp; Services</button>
-          <button type="button" class="ghost-btn ws-menu-btn" onclick="document.querySelector('.view-tab[data-view=memory]')?.click()">Memory</button>
-          <button type="button" class="ghost-btn ws-menu-btn" onclick="document.querySelector('.view-tab[data-view=audit]')?.click()">Repair &amp; Logs</button>
-          <button type="button" class="ghost-btn ws-menu-btn" onclick="document.querySelector('.view-tab[data-view=actions]')?.click()">Report</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="memory">Memory</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="audit">Repair &amp; Logs</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="actions">Report</button>
         </div>
       </div>
 
       <div class="sidebar-section sidebar-section--integrations" data-section="integrations">
-        <button type="button" class="sidebar-section-head" aria-expanded="true">
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
           <p class="sidebar-section-title">Integrations</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body">
@@ -155,7 +230,7 @@
       </div>
 
       <div class="sidebar-section sidebar-section--tools" data-section="tools">
-        <button type="button" class="sidebar-section-head" aria-expanded="true">
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
           <p class="sidebar-section-title">Agent tools</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body">
@@ -164,22 +239,10 @@
         </div>
       </div>
 
-      <div class="sidebar-section sidebar-section--video" data-section="video">
-        <button type="button" class="sidebar-section-head" aria-expanded="true">
-          <p class="sidebar-section-title">Video</p><span class="section-chevron">▾</span>
-        </button>
-        <div class="sidebar-section-body">
-          <button type="button" id="openVideoStudioBtn" class="ghost-btn small">Open Video studio</button>
-          <button type="button" id="openVideoGalleryBtn" class="ghost-btn small">Video gallery</button>
-          <button type="button" id="sidebarVideoFreeVramBtn" class="ghost-btn small" title="Unload Ollama before AnimateDiff">Free VRAM</button>
-          <p id="sidebarVideoStatus" class="muted small">AnimateDiff · Ken Burns · chat: “make a video…”</p>
-        </div>
-      </div>
-
       <div class="sidebar-section sidebar-section--home" data-section="home">
         <div class="sidebar-section-head-row float-drag-head">
-          <button type="button" class="sidebar-section-head" aria-expanded="true">
-            <p class="sidebar-section-title">Smart home</p><span class="section-chevron">▾</span>
+          <button type="button" class="sidebar-section-head" aria-expanded="false">
+            <p class="sidebar-section-title">Smart Home</p><span class="section-chevron">▾</span>
           </button>
           <div class="sidebar-section-head-actions">
             <button type="button" id="haFloatBtn" class="ghost-btn tiny" title="Detach panel" aria-label="Detach smart home panel">⧉</button>
@@ -255,8 +318,8 @@
       </div>
 
       <div class="sidebar-section sidebar-section--settings" data-section="settings">
-        <button type="button" class="sidebar-section-head" aria-expanded="true">
-          <p class="sidebar-section-title">Chat &amp; data</p><span class="section-chevron">▾</span>
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
+          <p class="sidebar-section-title">Settings</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body">
           <select id="personalitySelect" class="personality-select" title="Chat personality">
@@ -279,16 +342,35 @@
             <button type="button" id="settingsBtn" class="ghost-btn small">Settings</button>
             <button type="button" id="shortcutsBtn" class="ghost-btn small">Shortcuts</button>
             <button type="button" id="commandPaletteBtn" class="ghost-btn small" title="Command palette (Ctrl+K)" aria-keyshortcuts="Control+K Meta+K">Commands</button>
+            <button type="button" id="whatsNewBtn" class="ghost-btn small" data-new-feature="whatsnew" title="Recently added features">What's New</button>
+            <button type="button" id="activityCenterBtn" class="ghost-btn small" title="Activity Center (Ctrl+Shift+A)">Activity <span id="activityCenterBadge" class="job-center-badge hidden" aria-hidden="true"></span></button>
+            <button type="button" id="workspaceLayoutsBtn" class="ghost-btn small" title="Workspace layouts (Ctrl+Shift+P)">Workspaces</button>
+            <button type="button" id="workflowOpenBtn" class="ghost-btn small" title="Record and replay workflows">Workflows</button>
             <button type="button" id="jobCenterBtn" class="ghost-btn small" title="Background jobs (media, coding, audio)">Job center</button>
             <button type="button" id="debugBundleBtn" class="ghost-btn small" title="Copy diagnostics for troubleshooting">Debug bundle</button>
             <button type="button" id="reloadUiBtn" class="ghost-btn small" title="Reload this window (Ctrl+Shift+R)">Reload UI</button>
             <button type="button" id="resetLayoutBtn" class="ghost-btn small" title="Expand all collapsed sidebar sections">Expand sidebar</button>
-            <button type="button" id="restartServerBtn" class="ghost-btn small" title="Restart API server. Or run: scripts/jarvis-ctl.sh restart">Restart server</button>
+            <button type="button" id="collapseSidebarBtn" class="ghost-btn small" title="Collapse all sidebar sections">Collapse all</button>
           </div>
           <div class="sidebar-btn-row sidebar-btn-row--compact">
             <button type="button" id="jarvisAliveToggle" class="ghost-btn small active">Life UI on</button>
             <button type="button" id="jarvisBlueToggle" class="ghost-btn small">HUD mode</button>
             <button type="button" id="themeToggle" class="light-theme-btn ghost-btn small">Light theme</button>
+            <button type="button" id="toggleDockBtn" class="ghost-btn small" title="Quick Access Dock under the header">Hide dock</button>
+            <button type="button" id="toggleStatusBarBtn" class="ghost-btn small" title="Bottom status bar">Hide status bar</button>
+            <button type="button" id="toggleMiniChatBtn" class="ghost-btn small" title="Floating mini chat">Hide mini chat</button>
+            <button type="button" id="splitViewToggleBtn" class="ghost-btn small" title="Split view (Ctrl+\)" aria-pressed="false">Split view</button>
+          </div>
+          <p class="sidebar-mini-label">Accent color</p>
+          <div class="accent-swatch-row" role="group" aria-label="Accent color">
+            <button type="button" class="accent-swatch accent-swatch--gold" data-accent="gold" title="Gold (default)" aria-label="Accent: Gold (default)" aria-pressed="true"></button>
+            <button type="button" class="accent-swatch accent-swatch--blue" data-accent="blue" title="Blue" aria-label="Accent: Blue" aria-pressed="false"></button>
+            <button type="button" class="accent-swatch accent-swatch--green" data-accent="green" title="Green" aria-label="Accent: Green" aria-pressed="false"></button>
+            <button type="button" class="accent-swatch accent-swatch--purple" data-accent="purple" title="Purple" aria-label="Accent: Purple" aria-pressed="false"></button>
+            <button type="button" class="accent-swatch accent-swatch--orange" data-accent="orange" title="Orange" aria-label="Accent: Orange" aria-pressed="false"></button>
+            <button type="button" class="accent-swatch accent-swatch--red" data-accent="red" title="Red" aria-label="Accent: Red" aria-pressed="false"></button>
+            <button type="button" class="accent-swatch accent-swatch--teal" data-accent="teal" title="Teal" aria-label="Accent: Teal" aria-pressed="false"></button>
+            <button type="button" class="accent-swatch accent-swatch--amber" data-accent="amber" title="Amber" aria-label="Accent: Amber" aria-pressed="false"></button>
           </div>
           <div class="sidebar-btn-row sidebar-btn-row--compact">
             <button type="button" id="exportChatBtn" class="ghost-btn small" title="Include memory snapshot">Export MD</button>
@@ -307,8 +389,8 @@
       </div>
 
       <div class="sidebar-section sidebar-section--coding" id="codingPanel" data-section="coding">
-        <button type="button" class="sidebar-section-head" aria-expanded="true">
-          <p class="sidebar-section-title">Coding</p><span class="section-chevron">▾</span>
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
+          <p class="sidebar-section-title">Developer</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body">
         <div id="editorContextCard" class="editor-context-card" title="Synced from Cursor extension">
@@ -404,7 +486,7 @@
       </div>
 
       <div class="sidebar-section sidebar-section--footer sidebar-footer" data-section="footer">
-        <button type="button" class="sidebar-section-head" aria-expanded="true">
+        <button type="button" class="sidebar-section-head" aria-expanded="false">
           <p class="sidebar-section-title">Tips</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body">
@@ -414,10 +496,13 @@
         <button type="button" id="hudToggleBtn" class="ghost-btn small">Mini HUD</button>
         </div>
       </div>
+      <div id="sidebarResizeHandle" class="sidebar-resize-handle" title="Drag to resize sidebar" aria-orientation="vertical" role="separator" aria-label="Resize sidebar"></div>
     </aside>
 
     <main id="mainContent" class="chat-panel" tabindex="-1">
-      <nav class="view-tabs">
+      <div id="quickDock" class="quick-dock hidden" role="toolbar" aria-label="Quick Access Dock" data-new-feature="dock"></div>
+      <nav class="view-tabs" aria-label="Primary views">
+        <button type="button" id="favoriteCurrentViewBtn" class="view-fav-pin" aria-pressed="false" aria-label="Pin current view to Favorites" title="Pin current view to Favorites (★)">★</button>
         <button type="button" class="view-tab active" data-view="chat">Chat</button>
         <button type="button" class="view-tab" data-view="dashboard">Dashboard</button>
         <button type="button" class="view-tab" data-view="workstation">Mission Control</button>
@@ -440,6 +525,13 @@
         <button type="button" class="view-tab" data-view="documents">Documents</button>
         <button type="button" class="view-tab" data-view="actions">Actions</button>
       </nav>
+
+      <div id="breadcrumbBar" class="breadcrumb-bar hidden" aria-label="Breadcrumb"></div>
+      <div id="splitViewBar" class="split-view-bar hidden" role="toolbar" aria-label="Split view controls">
+        <span id="splitViewLabel" class="split-view-label">Split</span>
+        <button type="button" id="splitViewSwapBtn" class="ghost-btn tiny" title="Swap panes">Swap</button>
+        <button type="button" id="splitViewCloseBtn" class="ghost-btn tiny" title="Exit split view">Exit split</button>
+      </div>
 
       <div id="globalWorldStateBar" class="global-world-state-bar" title="Open Mission Control">
         <span class="world-state-dot" aria-hidden="true"></span>
@@ -464,6 +556,12 @@
         </select>
         <button type="button" id="cloudLiveBtn" class="ghost-btn small" title="Cloud live voice (OpenAI/Gemini)">Cloud live</button>
         <button type="button" id="audioStopBtn" class="ghost-btn small" title="Stop speaking" aria-label="Stop speaking">Stop</button>
+      </div>
+
+      <div id="splitViewHost" class="split-view-host hidden" aria-label="Split view">
+        <div id="splitPaneLeft" class="split-pane"></div>
+        <div id="splitResizeHandle" class="split-resize-handle" role="separator" aria-orientation="vertical" aria-label="Resize split"></div>
+        <div id="splitPaneRight" class="split-pane"></div>
       </div>
 
       <div id="chatView" class="view-panel">
@@ -572,7 +670,7 @@
       </div>
       </div>
 
-      <div id="uncensoredAuthModal" class="crop-modal hidden" role="dialog" aria-labelledby="uncensoredAuthTitle">
+      <div id="uncensoredAuthModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="uncensoredAuthTitle">
         <div class="crop-modal-card profile-modal-card">
           <h3 id="uncensoredAuthTitle">Uncensored mode</h3>
           <p id="uncensoredAuthIntro" class="profile-modal-intro">Enter your password to enable uncensored mode.</p>
@@ -595,7 +693,7 @@
         </div>
       </div>
 
-      <div id="haTokenModal" class="crop-modal hidden" role="dialog" aria-labelledby="haTokenModalTitle">
+      <div id="haTokenModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="haTokenModalTitle">
         <div class="crop-modal-card profile-modal-card">
           <h3 id="haTokenModalTitle">Home Assistant token</h3>
           <p class="profile-modal-intro">
@@ -616,7 +714,7 @@
         </div>
       </div>
 
-      <div id="apiKeyModal" class="crop-modal hidden" role="dialog" aria-labelledby="apiKeyModalTitle">
+      <div id="apiKeyModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="apiKeyModalTitle">
         <div class="crop-modal-card profile-modal-card">
           <h3 id="apiKeyModalTitle">ARIA API key</h3>
           <p class="profile-modal-intro">
@@ -635,7 +733,7 @@
         </div>
       </div>
 
-      <div id="profileModal" class="crop-modal hidden" role="dialog" aria-labelledby="profileModalTitle">
+      <div id="profileModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
         <div class="crop-modal-card profile-modal-card">
           <h3 id="profileModalTitle">Help ARIA learn about you</h3>
           <p class="profile-modal-intro">Answers are saved to <strong>Memory</strong> so future chats feel personal. You can update them anytime from the Memory tab.</p>
@@ -647,7 +745,7 @@
         </div>
       </div>
 
-      <div id="branchTrimModal" class="crop-modal hidden" role="dialog" aria-labelledby="branchTrimTitle">
+      <div id="branchTrimModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="branchTrimTitle">
         <div class="crop-modal-card profile-modal-card">
           <h3 id="branchTrimTitle">Trim chat branches</h3>
           <p class="profile-modal-intro">Select branches to delete. <strong>Main</strong> is always kept.</p>
@@ -659,7 +757,7 @@
         </div>
       </div>
 
-      <div id="jobCenterModal" class="crop-modal hidden" role="dialog" aria-labelledby="jobCenterTitle">
+      <div id="jobCenterModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="jobCenterTitle">
         <div class="crop-modal-card profile-modal-card job-center-card">
           <h3 id="jobCenterTitle">Job center</h3>
           <p class="profile-modal-intro muted">Media, coding, and audio background work.</p>
@@ -672,7 +770,7 @@
         </div>
       </div>
 
-      <div id="upgradeWizardModal" class="crop-modal hidden" role="dialog" aria-labelledby="upgradeWizardTitle">
+      <div id="upgradeWizardModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="upgradeWizardTitle">
         <div class="crop-modal-card profile-modal-card upgrade-wizard-card">
           <h3 id="upgradeWizardTitle">Upgrade ARIA</h3>
           <p class="profile-modal-intro">
@@ -718,6 +816,7 @@
       <div id="journalView" class="view-panel hidden">
         <div class="bujo-header">
           <h2>Bullet Journal</h2>
+          <p class="muted tiny">Notes, thoughts, reflections · promote actionable items to <strong>Planner</strong> · scheduled commitments live in <strong>Calendar</strong></p>
           <div class="bujo-key" id="bujoKeyDynamic" aria-label="Symbol key"></div>
           <p class="bujo-key-hint">No special keys? Type <code>t:</code> task · <code>e:</code> event · <code>n:</code> note · or <code>O </code> before text · Rapid log: indent 2 spaces to nest.</p>
         </div>
@@ -733,153 +832,216 @@
           <button type="button" class="bujo-tab" data-bujo="projects">Projects</button>
           <button type="button" class="bujo-tab" data-bujo="key">Key</button>
         </nav>
-        <div id="bujoToolbar" class="bujo-toolbar">
+        <div id="bujoToolbar" class="bujo-toolbar" role="toolbar" aria-label="Journal tools">
           <input type="date" id="journalDate" />
           <input type="week" id="journalWeek" class="hidden" />
           <input type="month" id="journalMonth" class="hidden" />
-          <button type="button" id="journalOpenCalendarBtn" class="ghost-btn small" title="Open this day on the calendar">Calendar</button>
-          <button type="button" id="journalOpenPlannerBtn" class="ghost-btn small" title="Open Planner">Planner</button>
-          <button type="button" id="journalOpenMemoryBtn" class="ghost-btn small" title="Open Memory">Memory</button>
-          <button type="button" id="journalOpenDocumentsBtn" class="ghost-btn small" title="Open Documents">Documents</button>
-          <button type="button" id="journalOpenAudioBtn" class="ghost-btn small" title="Open Audio studio">Audio</button>
-          <input type="search" id="journalSearch" placeholder="Search journal…" />
+          <button type="button" id="journalWritingModeBtn" class="ghost-btn small" title="Distraction-free writing (W)">Writing mode</button>
+          <button type="button" id="journalOpenCalendarBtn" class="ghost-btn small" title="Calendar = scheduled commitments">Calendar</button>
+          <button type="button" id="journalOpenPlannerBtn" class="ghost-btn small" title="Planner = actionable work">Planner</button>
+          <button type="button" id="journalOpenMemoryBtn" class="ghost-btn small" title="Memory = lasting knowledge">Memory</button>
+          <input type="search" id="journalSearch" placeholder="Search journal… (/)" aria-label="Search journal" />
           <button type="button" id="journalSearchBtn" class="ghost-btn small">Search</button>
-          <button type="button" id="journalPrintBtn" class="ghost-btn small">Print month</button>
-          <button type="button" id="journalPdfBtn" class="ghost-btn small">Export PDF</button>
-          <button type="button" id="journalExportBtn" class="ghost-btn small">Export JSON</button>
-          <button type="button" id="journalExportEncBtn" class="ghost-btn small" title="Password-protected export">Export encrypted</button>
-          <button type="button" id="journalImportBtn" class="ghost-btn small">Import</button>
-          <button type="button" id="journalImportEncBtn" class="ghost-btn small" title="Import encrypted export">Import encrypted</button>
+          <button type="button" id="journalReflectBtn" class="ghost-btn small" title="AI reflection (you start it)">Reflect</button>
+          <button type="button" id="journalAssistPromoteBtn" class="ghost-btn small" title="Suggest promotions — confirm each">Promote assist</button>
+          <button type="button" id="journalMonthWizardBtn" class="ghost-btn small" title="Month-end review wizard">Month-end</button>
+          <details class="bujo-more-menu">
+            <summary class="ghost-btn small">More</summary>
+            <div class="bujo-more-panel">
+              <button type="button" id="journalOpenDocumentsBtn" class="ghost-btn small">Documents</button>
+              <button type="button" id="journalOpenAudioBtn" class="ghost-btn small">Audio</button>
+              <button type="button" id="journalPrintBtn" class="ghost-btn small">Print month</button>
+              <button type="button" id="journalPdfBtn" class="ghost-btn small">Export PDF</button>
+              <button type="button" id="journalExportBtn" class="ghost-btn small">Export JSON</button>
+              <button type="button" id="journalExportEncBtn" class="ghost-btn small">Export encrypted</button>
+              <button type="button" id="journalImportBtn" class="ghost-btn small">Import</button>
+              <button type="button" id="journalImportEncBtn" class="ghost-btn small">Import encrypted</button>
+              <button type="button" id="journalBackupBtn" class="ghost-btn small">Backup now</button>
+              <button type="button" id="journalVoiceLogBtn" class="ghost-btn small" title="Voice → rapid log draft">Voice log</button>
+              <button type="button" id="journalVisionImportBtn" class="ghost-btn small" title="Paste OCR / scan text">Vision import</button>
+              <button type="button" id="journalShortcutsBtn" class="ghost-btn small">Shortcuts (?)</button>
+              <button type="button" id="journalUndoBtn" class="ghost-btn small">Undo</button>
+              <button type="button" id="journalRedoBtn" class="ghost-btn small">Redo</button>
+              <select id="journalMigrateDest" class="bujo-migrate-dest" aria-label="Month migrate destination">
+                <option value="monthly">Migrate → monthly</option>
+                <option value="future">Migrate → future</option>
+              </select>
+              <button type="button" id="journalMigrateBtn" class="ghost-btn small">Migrate month</button>
+            </div>
+          </details>
           <input type="file" id="journalImportFile" accept="application/json,.json" hidden />
           <input type="file" id="journalImportEncFile" accept="application/json,.json" hidden />
-          <button type="button" id="journalUndoBtn" class="ghost-btn small" title="Undo last change">Undo</button>
-          <button type="button" id="journalRedoBtn" class="ghost-btn small" title="Redo">Redo</button>
-          <button type="button" id="journalReflectBtn" class="ghost-btn small">AI Reflect</button>
-          <select id="journalMigrateDest" class="bujo-migrate-dest" aria-label="Month migrate destination">
-            <option value="monthly">Migrate → monthly</option>
-            <option value="future">Migrate → future</option>
-          </select>
-          <button type="button" id="journalMigrateBtn" class="ghost-btn small">Migrate month</button>
         </div>
         <p id="journalStats" class="journal-stats"></p>
+        <p class="bujo-role-hint muted">Journal = thoughts &amp; rapid log · Planner = actionable work · Calendar = commitments</p>
         <div id="bujoContent" class="bujo-content"></div>
         <div class="bujo-rapid">
           <textarea id="rapidLogInput" rows="3" placeholder="Rapid log — one line per entry. Indent 2 spaces to nest under the previous line."></textarea>
           <div class="bujo-rapid-actions">
-            <select id="rapidType">
+            <select id="rapidType" aria-label="Default bullet type">
               <option value="task">• Task</option>
               <option value="event">○ Event</option>
               <option value="note">— Note</option>
             </select>
             <button type="button" id="rapidLogBtn" class="apply-btn small">Add</button>
+            <label class="bujo-typewriter-toggle" title="Typewriter scroll">
+              <input type="checkbox" id="bujoTypewriter" /> Typewriter
+            </label>
           </div>
         </div>
+        <div id="bujoWritingChrome" class="bujo-writing-chrome hidden" aria-hidden="true">
+          <span id="bujoWordCount" class="bujo-word-count">0 words</span>
+          <span id="bujoWriteTime" class="bujo-write-time"></span>
+          <button type="button" id="bujoExitWriting" class="ghost-btn small">Exit writing (Esc)</button>
+        </div>
+        <div id="bujoShortcutOverlay" class="bujo-shortcut-overlay hidden" role="dialog" aria-label="Journal shortcuts"></div>
       </div>
 
       <div id="memoryView" class="view-panel hidden">
-        <div class="memory-header">
-          <h2>Memory Browser</h2>
-          <div class="memory-settings" id="memorySettings">
+        <div class="memory-home" id="memoryHome">
+          <header class="memory-home-header">
+            <div>
+              <h2>Memory</h2>
+              <p class="memory-home-tagline muted">What Aria knows about you — autobiographical cognition (ACM), not a note database.</p>
+            </div>
+            <div class="memory-home-actions">
+              <button type="button" id="memorySearchFocusBtn" class="ghost-btn small" title="Search (/)">Search</button>
+              <button type="button" id="memoryAddBtn" class="apply-btn small" title="New memory (N)">New</button>
+              <button type="button" id="memoryBriefingBtn" class="ghost-btn small">Briefing</button>
+              <button type="button" id="memoryAssistBtn" class="ghost-btn small">Assist</button>
+              <button type="button" id="memoryShortcutsBtn" class="ghost-btn small">?</button>
+            </div>
+          </header>
+
+          <div class="memory-settings memory-settings-compact" id="memorySettings">
             <label class="memory-setting">
               Auto-memory
               <select id="memoryAutoMode" aria-label="Auto-memory mode">
-                <option value="smart">Smart</option>
+                <option value="smart">Smart → candidates</option>
                 <option value="explicit">Explicit only</option>
                 <option value="off">Off</option>
               </select>
             </label>
-            <label class="memory-setting">
-              <input type="checkbox" id="memoryBrainMode" checked /> Brain learning
-            </label>
-            <label class="memory-setting">
-              <input type="checkbox" id="memoryAutoJournalLearn" checked /> Auto-learn from journal
-            </label>
-            <label class="memory-setting">
-              <input type="checkbox" id="memoryAutoDocumentLearn" checked /> Auto-learn from documents
-            </label>
-            <label class="memory-setting">
-              <input type="checkbox" id="memoryAutoCheckpoint" checked /> Auto-checkpoint on exit
-            </label>
-            <label class="memory-setting">
-              <input type="checkbox" id="memoryAutoNamespace" checked /> Per-repo namespace
-            </label>
-            <label class="memory-setting">
-              <input type="checkbox" id="memoryInPrompt" checked /> Profile in system prompt
-            </label>
+            <label class="memory-setting"><input type="checkbox" id="memoryBrainMode" checked /> Brain learning</label>
+            <label class="memory-setting"><input type="checkbox" id="memoryAutoJournalLearn" checked /> Journal → candidates</label>
+            <label class="memory-setting"><input type="checkbox" id="memoryAutoDocumentLearn" checked /> Docs → candidates</label>
+            <label class="memory-setting"><input type="checkbox" id="memoryAutoCheckpoint" checked /> Auto-checkpoint</label>
+            <label class="memory-setting"><input type="checkbox" id="memoryAutoNamespace" checked /> Per-repo namespace</label>
+            <label class="memory-setting"><input type="checkbox" id="memoryInPrompt" checked /> Profile in prompt</label>
             <button type="button" id="profileRetakeBtn" class="ghost-btn small">Update profile</button>
           </div>
-          <div id="profileInlinePanel" class="profile-inline-panel">
-            <h3 class="memory-subheading">About you</h3>
-            <p class="muted profile-inline-intro">Profile questionnaire answers — used to personalize chat.</p>
-            <div id="profileInlineContent" class="profile-inline-content muted">Loading profile…</div>
-            <button type="button" id="profileInlineEditBtn" class="ghost-btn small">Edit answers</button>
+
+          <div class="memory-home-grid">
+            <section class="memory-panel" id="memoryAboutPanel" aria-labelledby="memoryAboutTitle">
+              <h3 id="memoryAboutTitle">About you</h3>
+              <div id="profileInlinePanel" class="profile-inline-panel">
+                <div id="profileInlineContent" class="profile-inline-content muted">Loading…</div>
+                <button type="button" id="profileInlineEditBtn" class="ghost-btn small">Edit answers</button>
+              </div>
+            </section>
+
+            <section class="memory-panel" id="memorySafetyPanel">
+              <h3>Safety &amp; authority</h3>
+              <div id="memorySafetyBody" class="muted">Loading…</div>
+            </section>
+
+            <section class="memory-panel" id="memoryHealthPanel">
+              <h3>Memory health</h3>
+              <div id="memoryHealthBody" class="muted">Loading…</div>
+              <p id="memoryTrustStatus" class="memory-stats memory-trust-status"></p>
+            </section>
+
+            <section class="memory-panel" id="memorySleepPanel">
+              <h3>Sleep &amp; consolidation</h3>
+              <div id="memorySleepBody" class="muted">Loading…</div>
+            </section>
+
+            <section class="memory-panel memory-panel-wide" id="memoryCandidatesPanel">
+              <h3>Memory candidates <span class="muted">(review before they become beliefs)</span></h3>
+              <ul id="memoryCandidateList" class="memory-candidate-list muted"></ul>
+            </section>
+
+            <section class="memory-panel memory-panel-wide" id="memoryConflictsPanel">
+              <h3>Conflicts</h3>
+              <div id="memoryConflicts" class="memory-conflicts" aria-live="polite"></div>
+              <div id="memoryConflictCoach" class="muted"></div>
+            </section>
+
+            <section class="memory-panel memory-panel-wide" id="memoryChangedPanel">
+              <h3>What changed</h3>
+              <div id="memoryChangedBody" class="memory-card-grid"></div>
+            </section>
+
+            <section class="memory-panel memory-panel-wide" id="memoryBeliefsPanel">
+              <h3>What Aria believes</h3>
+              <div id="memoryBeliefsBody" class="memory-card-grid"></div>
+            </section>
           </div>
-          <div id="memoryConflicts" class="memory-conflicts hidden" aria-live="polite"></div>
+
           <div class="env-prefs-panel" id="envPrefsPanel">
             <h3>Stack preferences</h3>
-            <p class="env-prefs-intro muted">How ARIA should assume you work — saved to memory. Machine specs below refresh automatically.</p>
+            <p class="env-prefs-intro muted">How Aria should assume you work — adopted into memory when you save.</p>
             <div id="envPrefsForm" class="env-prefs-form"></div>
             <div class="env-prefs-actions">
               <button type="button" id="envPrefsSaveBtn" class="apply-btn small">Save preferences</button>
-              <button type="button" id="envMachineSyncBtn" class="ghost-btn small" title="Refresh CPU, GPU, Ollama models, Docker">Refresh machine facts</button>
+              <button type="button" id="envMachineSyncBtn" class="ghost-btn small">Refresh machine facts</button>
             </div>
           </div>
-          <div class="cheatsheet-panel">
-            <label for="cheatsheetSelect">Cheatsheets</label>
-            <select id="cheatsheetSelect" aria-label="Select cheatsheet">
-              <option value="">— choose —</option>
-            </select>
-            <button type="button" id="cheatsheetViewBtn" class="apply-btn small">View</button>
-            <button type="button" id="cheatsheetEditBtn" class="ghost-btn small">Edit</button>
-            <button type="button" id="cheatsheetResetBtn" class="ghost-btn small">Reset default</button>
-            <pre id="cheatsheetContent" class="cheatsheet-content hidden"></pre>
-          </div>
-          <div class="memory-toolbar">
-            <input type="search" id="memorySearch" placeholder="Search memories…" />
-            <select id="memoryTypeFilter" aria-label="Filter by type">
-              <option value="">All types</option>
-              <option value="fact">fact</option>
-              <option value="preference">preference</option>
-              <option value="project">project</option>
-              <option value="auto">auto</option>
-              <option value="note">note</option>
-              <option value="strategy">strategy</option>
-              <option value="failure">failure</option>
-            </select>
-            <select id="memoryNsFilter" aria-label="Filter by namespace">
-              <option value="">All namespaces</option>
-            </select>
-            <button type="button" id="memoryAddBtn" class="apply-btn small">Add</button>
-            <button type="button" id="memoryOpenJournalBtn" class="ghost-btn small" title="Open Bullet Journal">Journal</button>
-            <button type="button" id="memoryOpenProjectsBtn" class="ghost-btn small" title="Open Projects">Projects</button>
-            <button type="button" id="memoryOpenBrowserBtn" class="ghost-btn small" title="Open Browser agent">Browser</button>
-            <button type="button" id="memoryOpenDocumentsBtn" class="ghost-btn small" title="Open Documents">Documents</button>
-            <button type="button" id="memoryExportBtn" class="apply-btn small">Export</button>
-            <button type="button" id="memoryImportBtn" class="apply-btn small">Import</button>
-            <input type="file" id="memoryImportFile" accept="application/json,.json" hidden />
-            <button type="button" id="memoryPruneBtn" class="apply-btn small">Prune stale</button>
-            <button type="button" id="memoryScrubBtn" class="apply-btn small" title="Remove test artifacts (broken_calc, buy milk, etc.)">Scrub test junk</button>
-          </div>
-          <div id="nightlyLearningPanel" class="knowledge-panel nightly-learning-panel">
-            <h3 class="memory-subheading">Nightly research briefs</h3>
-            <p class="muted knowledge-panel-hint">Automated digests — stack, general intel, and personal interests.</p>
-            <p id="knowledgeResearchTopics" class="muted knowledge-research-topics"></p>
-            <ul id="knowledgeResearchList" class="knowledge-topic-list muted"></ul>
-            <div class="knowledge-research-actions">
-              <button type="button" id="knowledgeResearchRunBtn" class="ghost-btn small">Run research now</button>
-              <button type="button" id="knowledgeResearchJobsBtn" class="ghost-btn small hidden" title="Open background job progress">View job progress</button>
+
+          <details class="memory-advanced" id="memoryBrowseSection">
+            <summary>Browse &amp; tools</summary>
+            <div class="cheatsheet-panel">
+              <label for="cheatsheetSelect">Cheatsheets</label>
+              <select id="cheatsheetSelect" aria-label="Select cheatsheet"><option value="">— choose —</option></select>
+              <button type="button" id="cheatsheetViewBtn" class="apply-btn small">View</button>
+              <button type="button" id="cheatsheetEditBtn" class="ghost-btn small">Edit</button>
+              <button type="button" id="cheatsheetResetBtn" class="ghost-btn small">Reset default</button>
+              <pre id="cheatsheetContent" class="cheatsheet-content hidden"></pre>
             </div>
-            <p id="knowledgeResearchStatus" class="knowledge-research-status muted" aria-live="polite"></p>
+            <div class="memory-toolbar">
+              <input type="search" id="memorySearch" placeholder="Search memories… (/)" aria-label="Search memories" />
+              <select id="memoryTypeFilter" aria-label="Filter by type">
+                <option value="">All types</option>
+                <option value="fact">fact</option>
+                <option value="preference">preference</option>
+                <option value="project">project</option>
+                <option value="auto">auto</option>
+                <option value="note">note</option>
+              </select>
+              <select id="memoryNsFilter" aria-label="Filter by namespace">
+                <option value="">All namespaces</option>
+              </select>
+              <button type="button" id="memoryOpenJournalBtn" class="ghost-btn small">Journal</button>
+              <button type="button" id="memoryOpenProjectsBtn" class="ghost-btn small">Projects</button>
+              <button type="button" id="memoryOpenBrowserBtn" class="ghost-btn small">Browser</button>
+              <button type="button" id="memoryOpenDocumentsBtn" class="ghost-btn small">Documents</button>
+              <button type="button" id="memoryOpenKnowledgeBtn" class="ghost-btn small" title="Knowledge is separate from Memory">Knowledge</button>
+              <button type="button" id="memoryExportBtn" class="apply-btn small">Export</button>
+              <button type="button" id="memoryImportBtn" class="apply-btn small">Import</button>
+              <input type="file" id="memoryImportFile" accept="application/json,.json" hidden />
+              <button type="button" id="memoryPruneBtn" class="ghost-btn small">Prune stale</button>
+              <button type="button" id="memoryScrubBtn" class="ghost-btn small">Scrub test junk</button>
+            </div>
+            <p id="memoryStats" class="memory-stats"></p>
+            <div id="memoryList" class="memory-list" aria-busy="false"></div>
+          </details>
+
+          <aside class="memory-knowledge-sep muted">
+            <strong>Knowledge separation:</strong> Memory = autobiography about you.
+            Knowledge / research / RAG / documents are separate — adopt into Memory only after review.
+            <button type="button" id="memoryOpenKnowledgeBtn2" class="ghost-btn tiny">Open Knowledge</button>
+          </aside>
+        </div>
+
+        <!-- Dialogs -->
+        <div id="memoryDialog" class="memory-dialog hidden" role="dialog" aria-modal="true" aria-labelledby="memoryDialogTitle">
+          <div class="memory-dialog-card">
+            <h3 id="memoryDialogTitle">Memory</h3>
+            <div id="memoryDialogBody"></div>
+            <div class="memory-dialog-actions" id="memoryDialogActions"></div>
           </div>
-          <h3 class="memory-subheading">Stored memories</h3>
-          <p id="memoryStats" class="memory-stats"></p>
-          <p id="memoryTrustStatus" class="memory-stats memory-trust-status"></p>
         </div>
-        <div id="knowledgePanel" class="knowledge-panel">
-          <h3>Knowledge topics</h3>
-          <ul id="knowledgeTopicList" class="knowledge-topic-list muted"></ul>
-        </div>
-        <div id="memoryList" class="memory-list"></div>
+        <div id="memoryShortcutOverlay" class="bujo-shortcut-overlay hidden" role="dialog" aria-label="Memory shortcuts"></div>
       </div>
 
       <div id="galleryView" class="view-panel hidden">
@@ -1177,40 +1339,55 @@
 
       <div id="plannerView" class="view-panel hidden">
         <div class="planner-header">
-          <h2>Planner</h2>
-          <button type="button" id="plannerOpenCalendarBtn" class="ghost-btn small" title="Open Calendar">Calendar</button>
-          <button type="button" id="plannerOpenJournalBtn" class="ghost-btn small" title="Open Bullet Journal">Journal</button>
-          <button type="button" id="plannerOpenDocumentsBtn" class="ghost-btn small" title="Open Documents">Documents</button>
+          <div>
+            <h2>Planner</h2>
+            <p class="muted planner-role-hint">Today’s actionable work · <button type="button" class="ghost-btn tiny" id="plannerOpenJournalBtn" title="Notes, reflections, logs">Journal</button> for notes · <button type="button" class="ghost-btn tiny" id="plannerOpenCalendarBtn" title="Scheduled commitments">Calendar</button> for commitments · <button type="button" class="ghost-btn tiny" id="plannerOpenDocumentsBtn">Documents</button></p>
+          </div>
+          <div class="planner-header-actions">
+            <label class="planner-ha-focus muted" title="When starting Focus Session, try Home Assistant Focus scene">
+              <input type="checkbox" id="plannerHaFocusPref" /> HA Focus mode
+            </label>
+            <span class="muted tiny" title="Keyboard: N new task, P Pomodoro, F focus, T triage, U undo">Shortcuts: N · P · F · T · U</span>
+          </div>
         </div>
-        <p id="plannerStatus" class="muted"></p>
+        <section id="plannerDailyFocus" class="planner-daily-focus" aria-label="Daily Focus"></section>
+        <p id="plannerStatus" class="muted" aria-live="polite"></p>
         <div class="planner-grid">
-          <section>
-            <h3>Tasks</h3>
+          <section aria-labelledby="plannerTasksHeading">
+            <h3 id="plannerTasksHeading">Tasks</h3>
+            <p class="muted tiny">Capture today’s doable work. Promote from Journal when a note becomes actionable.</p>
             <div class="planner-add-row">
-              <input type="text" id="plannerTaskInput" placeholder="Add task…" />
+              <input type="text" id="plannerTaskInput" placeholder="Add task… (Enter)" aria-label="New planner task" />
               <button type="button" id="plannerAddTaskBtn" class="ghost-btn small">Add</button>
+              <button type="button" id="plannerPromoteFromJournalBtn" class="ghost-btn small" title="Ask Aria to promote a Journal item">From Journal</button>
             </div>
             <ul id="plannerTasks" class="planner-list"></ul>
           </section>
-          <section>
-            <h3>Timers</h3>
+          <section aria-labelledby="plannerTimersHeading">
+            <h3 id="plannerTimersHeading">Timers</h3>
             <div class="planner-add-row">
-              <input type="text" id="plannerTimerInput" placeholder="e.g. 10 minutes" />
+              <input type="text" id="plannerTimerInput" placeholder="e.g. 10 minutes" aria-label="Timer duration" />
             <button type="button" id="plannerTimerBtn" class="ghost-btn small">Start</button>
-            <button type="button" id="plannerPomodoroBtn" class="ghost-btn small" title="Ada-style 25 min focus timer">Pomodoro</button>
+            <button type="button" id="plannerPomodoroBtn" class="ghost-btn small" title="25 min focus timer (with optional HA Focus scene)">Focus 25m</button>
           </div>
             <ul id="plannerTimers" class="planner-list"></ul>
           </section>
-          <section>
-            <h3>Alarms</h3>
+          <section aria-labelledby="plannerAlarmsHeading">
+            <h3 id="plannerAlarmsHeading">Alarms</h3>
             <div class="planner-add-row">
-              <input type="text" id="plannerAlarmInput" placeholder="e.g. 7am" />
+              <input type="text" id="plannerAlarmInput" placeholder="e.g. 7am" aria-label="Alarm time" />
               <button type="button" id="plannerAlarmBtn" class="ghost-btn small">Set</button>
             </div>
             <ul id="plannerAlarms" class="planner-list"></ul>
           </section>
-          <section>
-            <h3>Today</h3>
+          <section aria-labelledby="plannerEventsHeading">
+            <h3 id="plannerEventsHeading">Today</h3>
+            <p class="muted tiny">Lightweight day events. Use Calendar for full commitments.</p>
+            <div class="planner-add-row">
+              <input type="text" id="plannerEventTitle" placeholder="Event title" aria-label="Event title" />
+              <input type="text" id="plannerEventTime" placeholder="e.g. 3pm" aria-label="Event time" />
+              <button type="button" id="plannerAddEventBtn" class="ghost-btn small">Add</button>
+            </div>
             <ul id="plannerEvents" class="planner-list"></ul>
           </section>
         </div>
@@ -1219,16 +1396,32 @@
       <div id="calendarView" class="view-panel hidden">
         <div class="calendar-header">
           <h2>Calendar</h2>
-          <p class="muted">Month view — click a day for appointments, tasks, and notes.</p>
+          <p class="muted">Scheduled commitments · use <button type="button" class="ghost-btn tiny" id="calendarHintPlannerBtn">Planner</button> for today’s actionable work · <button type="button" class="ghost-btn tiny" id="calendarHintJournalBtn">Journal</button> for notes</p>
           <div class="calendar-toolbar">
-            <button type="button" id="calendarPrevBtn" class="ghost-btn small">← Prev</button>
+            <button type="button" id="calendarPrevBtn" class="ghost-btn small" aria-label="Previous">← Prev</button>
             <strong id="calendarMonthLabel">—</strong>
-            <button type="button" id="calendarNextBtn" class="ghost-btn small">Next →</button>
-            <button type="button" id="calendarTodayBtn" class="ghost-btn small">Today</button>
+            <button type="button" id="calendarNextBtn" class="ghost-btn small" aria-label="Next">Next →</button>
+            <button type="button" id="calendarTodayBtn" class="ghost-btn small" title="Jump to today (T)">Today</button>
+            <span class="cal-view-tabs" role="toolbar" aria-label="Calendar views">
+              <button type="button" class="ghost-btn tiny active" data-cal-view="month" aria-pressed="true">Month</button>
+              <button type="button" class="ghost-btn tiny" data-cal-view="week" aria-pressed="false">Week</button>
+              <button type="button" class="ghost-btn tiny" data-cal-view="agenda" aria-pressed="false">Agenda</button>
+              <button type="button" class="ghost-btn tiny" data-cal-view="timeline" aria-pressed="false">Timeline</button>
+            </span>
+            <select id="calendarFilter" class="personality-select" aria-label="Filter by source">
+              <option value="all">All sources</option>
+              <option value="journal">Journal</option>
+              <option value="planner">Planner</option>
+              <option value="ics">ICS</option>
+              <option value="work">Work</option>
+              <option value="holiday">Holidays</option>
+            </select>
+            <input type="search" id="calendarSearch" class="audio-path-input" placeholder="Search events…" aria-label="Search calendar" />
             <button type="button" id="calendarOpenPlannerBtn" class="ghost-btn small" title="Open Planner">Planner</button>
             <button type="button" id="calendarOpenJournalBtn" class="ghost-btn small" title="Open Bullet Journal">Journal</button>
             <button type="button" id="calendarOpenDocumentsBtn" class="ghost-btn small" title="Open Documents">Documents</button>
           </div>
+          <p class="muted tiny">Shortcuts: ← → day · T today · N new · 1–4 views</p>
         </div>
         <div id="calendarHolidayLegend" class="calendar-holiday-legend"></div>
         <div id="calendarGrid" class="calendar-grid calendar-month-stage" role="grid" aria-label="Month calendar">
@@ -1250,6 +1443,15 @@
               <div class="sidebar-btn-row">
                 <button type="button" id="calendarIcsTestBtn" class="ghost-btn small">Test</button>
                 <button type="button" id="calendarIcsSaveBtn" class="apply-btn small">Save</button>
+                <button type="button" id="calendarIcsRefreshBtn" class="ghost-btn small">Refresh</button>
+              </div>
+            </details>
+            <details class="calendar-details">
+              <summary>AI &amp; Home</summary>
+              <div class="sidebar-btn-row">
+                <button type="button" id="calendarVisionBtn" class="ghost-btn small">Vision import</button>
+                <button type="button" id="calendarMemoryBtn" class="ghost-btn small">Memory dates</button>
+                <button type="button" id="calendarHaMeetingBtn" class="ghost-btn small">HA Meeting mode</button>
               </div>
             </details>
           </aside>
@@ -1599,7 +1801,7 @@
         <div class="audit-header">
           <div>
             <h2>System Audit</h2>
-            <p id="auditStatusLine" class="muted" aria-live="polite">14-phase whole-system health check — hardware, OS, network, security, plus Jarvis stack.</p>
+            <p id="auditStatusLine" class="muted" aria-live="polite">14-phase whole-system health check — hardware, OS, network, security, plus the Aria stack.</p>
           </div>
           <div class="audit-header-actions">
             <button type="button" id="auditOpenMcBtn" class="ghost-btn small" title="Open Mission Control">Mission Control</button>
@@ -1701,15 +1903,20 @@
         <div class="crop-modal-card profile-modal-card">
           <h3 id="shortcutsModalTitle">Keyboard shortcuts</h3>
           <ul class="shortcuts-list">
-            <li><kbd>Ctrl</kbd>+<kbd>K</kbd> — command palette (navigate, search knowledge, or ask Aria)</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — send (in textarea: <kbd>Shift</kbd>+<kbd>Ctrl</kbd>+<kbd>Enter</kbd>)</li>
-            <li><kbd>Enter</kbd> — send from chat box (Shift+Enter for newline)</li>
-            <li><kbd>Ctrl</kbd>+<kbd>L</kbd> — clear chat (when not typing in a field)</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> — reload UI (native window)</li>
-            <li><kbd>Ctrl</kbd>+<kbd>/</kbd> — this panel</li>
-            <li><kbd>Esc</kbd> — close modals</li>
-            <li>Hold mic / PTT — local Whisper transcribe</li>
-            <li>World-state bar — Mission Control (or HA setup / API key when offline)</li>
+            <li><kbd>Ctrl</kbd>+<kbd>K</kbd> — command palette (context-aware + knowledge search)</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> — sidebar search</li>
+            <li><kbd>Ctrl</kbd>+<kbd>1</kbd>…<kbd>9</kbd> — jump Favorites / primary views</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Ctrl</kbd>+<kbd>Tab</kbd> — cycle views</li>
+            <li><kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> — back / forward in view history</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> — workspace layouts</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> — Activity Center</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> — floating mini chat</li>
+            <li><kbd>Ctrl</kbd>+<kbd>\</kbd> — split view</li>
+            <li><kbd>Ctrl</kbd>+<kbd>,</kbd> — settings · <kbd>Ctrl</kbd>+<kbd>/</kbd> — this panel</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — send · <kbd>Ctrl</kbd>+<kbd>L</kbd> — clear chat</li>
+            <li><kbd>Esc</kbd> — close modals · Right-click — context menus</li>
+            <li><strong>Planner</strong> (when open): <kbd>N</kbd> new task · <kbd>P</kbd> Focus 25m · <kbd>F</kbd> focus session · <kbd>T</kbd> Plan My Day · <kbd>U</kbd> undo</li>
+            <li><strong>Calendar</strong> (when open): <kbd>←</kbd>/<kbd>→</kbd> day · <kbd>T</kbd> today · <kbd>N</kbd> new · <kbd>1</kbd>–<kbd>4</kbd> month/week/agenda/timeline</li>
           </ul>
           <button type="button" id="shortcutsCloseBtn" class="ghost-btn">Close</button>
         </div>
@@ -1724,7 +1931,92 @@
           </div>
           <ul id="commandPaletteList" class="command-palette-list" role="listbox" aria-label="Commands"></ul>
           <p id="commandPaletteEmpty" class="command-palette-empty muted hidden">No matching commands</p>
-          <p class="command-palette-footer muted">↑↓ navigate · Enter run · Esc close</p>
+          <p class="command-palette-footer muted">↑↓ navigate · Enter run · pin with ★ · Esc close</p>
+        </div>
+      </div>
+
+      <div id="whatsNewModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="whatsNewTitle">
+        <div class="crop-modal-card profile-modal-card whats-new-card">
+          <h3 id="whatsNewTitle">What's New in Aria</h3>
+          <p class="muted">GUI modernization highlights — navigation, suggestions, and polish.</p>
+          <ul id="whatsNewList" class="whats-new-list"></ul>
+          <div class="sidebar-btn-row">
+            <button type="button" id="whatsNewDismissBtn" class="apply-btn small">Got it</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="ariaSoftTip" class="aria-soft-tip hidden" role="status" aria-live="polite"></div>
+
+      <div id="dashCustomizeModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="dashCustomizeTitle">
+        <div class="crop-modal-card profile-modal-card">
+          <h3 id="dashCustomizeTitle">Customize dashboard</h3>
+          <p class="muted">Choose which cards appear and their order.</p>
+          <div id="dashCustomizeList" class="dash-customize-list"></div>
+          <div class="sidebar-btn-row">
+            <button type="button" id="dashCustomizeSaveBtn" class="apply-btn small">Save layout</button>
+            <button type="button" id="dashCustomizeResetBtn" class="ghost-btn small">Reset</button>
+            <button type="button" id="dashCustomizeCloseBtn" class="ghost-btn small">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="activityCenterModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="activityCenterTitle">
+        <div class="crop-modal-card profile-modal-card activity-center-card">
+          <h3 id="activityCenterTitle">Activity Center</h3>
+          <p class="muted">Notifications, jobs, warnings, and system events.</p>
+          <div class="activity-toolbar">
+            <input type="search" id="activitySearchInput" class="audio-path-input" placeholder="Filter activity…" autocomplete="off" />
+            <button type="button" class="ghost-btn tiny active" data-activity-filter="all">All</button>
+            <button type="button" class="ghost-btn tiny" data-activity-filter="job">Jobs</button>
+            <button type="button" class="ghost-btn tiny" data-activity-filter="err">Errors</button>
+            <button type="button" class="ghost-btn tiny" data-activity-filter="warn">Warnings</button>
+          </div>
+          <ul id="activityCenterList" class="activity-center-list"></ul>
+          <div class="sidebar-btn-row">
+            <button type="button" id="activityMarkReadBtn" class="ghost-btn small">Mark read</button>
+            <button type="button" id="activityClearBtn" class="ghost-btn small">Clear</button>
+            <button type="button" id="activityCenterCloseBtn" class="ghost-btn small">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="workspaceLayoutsModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="workspaceLayoutsTitle">
+        <div class="crop-modal-card profile-modal-card">
+          <h3 id="workspaceLayoutsTitle">Workspace layouts</h3>
+          <p class="muted">Switch presets instantly, or save your current layout.</p>
+          <div id="workspaceSwitcherList" class="workspace-switcher-list"></div>
+          <div class="planner-add-row">
+            <input type="text" id="workspaceNameInput" class="audio-path-input" placeholder="Name current layout…" />
+            <button type="button" id="workspaceSaveBtn" class="apply-btn small">Save</button>
+          </div>
+          <button type="button" id="workspaceLayoutsCloseBtn" class="ghost-btn small">Close</button>
+        </div>
+      </div>
+
+      <div id="workflowModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="workflowTitle">
+        <div class="crop-modal-card profile-modal-card">
+          <h3 id="workflowTitle">Workflow recorder</h3>
+          <p class="muted">Record a path through Aria, then replay it in one click.</p>
+          <p id="workflowBuffer" class="muted small">No steps yet</p>
+          <div class="sidebar-btn-row">
+            <button type="button" id="workflowRecordBtn" class="ghost-btn small">Record workflow</button>
+          </div>
+          <div class="planner-add-row">
+            <input type="text" id="workflowNameInput" class="audio-path-input" placeholder="Morning Routine…" />
+            <button type="button" id="workflowSaveBtn" class="apply-btn small">Save</button>
+          </div>
+          <div id="workflowList" class="workflow-list"></div>
+          <button type="button" id="workflowCloseBtn" class="ghost-btn small">Close</button>
+        </div>
+      </div>
+
+      <div id="splitPickerModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="splitPickerTitle">
+        <div class="crop-modal-card profile-modal-card">
+          <h3 id="splitPickerTitle">Split with…</h3>
+          <p class="muted">Choose a second view to open beside the current one.</p>
+          <div id="splitPickerList" class="split-picker-list sidebar-btn-row"></div>
+          <button type="button" id="splitPickerCloseBtn" class="ghost-btn small">Cancel</button>
         </div>
       </div>
 
@@ -1748,6 +2040,51 @@
       </div>
     </main>
   </div>
+
+  <footer id="ariaStatusBar" class="aria-status-bar" role="status" aria-label="System status" data-new-feature="statusbar">
+    <button type="button" id="statusSegProviderWrap" class="status-seg-wrap" title="Provider health — click for Mission Control · Inference">
+      <span id="statusSegProvider" class="status-seg">—</span>
+    </button>
+    <button type="button" id="statusSegModelWrap" class="status-seg-wrap" title="Active chat model — click for model settings">
+      <span id="statusSegModel" class="status-seg">—</span>
+    </button>
+    <span class="status-seg-wrap" title="Compute mode">
+      <span id="statusSegGpu" class="status-seg">—</span>
+    </span>
+    <button type="button" id="statusSegJobsWrap" class="status-seg-wrap" title="Background jobs — click to open Job center">
+      <span id="statusSegJobs" class="status-seg">idle</span>
+    </button>
+    <button type="button" id="statusSegActivityWrap" class="status-seg-wrap" title="Activity Center — alerts and notifications">
+      <span id="statusSegActivity" class="status-seg">quiet</span>
+    </button>
+    <span class="status-bar-spacer"></span>
+    <span class="status-seg-wrap status-seg-version" title="Aria version">
+      <span id="statusSegVersion" class="status-seg">—</span>
+    </span>
+  </footer>
+
+  <button type="button" id="miniChatFab" class="mini-chat-fab" title="Mini chat (Ctrl+Shift+M)" aria-label="Open mini chat">✦</button>
+  <div id="miniChatPanel" class="mini-chat-panel hidden" role="dialog" aria-label="Mini chat">
+    <div class="mini-chat-head">
+      <strong>Quick Aria</strong>
+      <div class="mini-chat-head-actions">
+        <button type="button" id="miniChatDockBtn" class="ghost-btn tiny" title="Open full Chat">Dock</button>
+        <button type="button" id="miniChatCloseBtn" class="ghost-btn tiny" aria-label="Close">×</button>
+      </div>
+    </div>
+    <div class="mini-chat-quick">
+      <button type="button" class="ghost-btn tiny" data-mini-prompt="Summarize this page for me.">Summarize</button>
+      <button type="button" class="ghost-btn tiny" data-mini-prompt="What do you remember about me?">Memory</button>
+      <button type="button" class="ghost-btn tiny" data-mini-prompt="Translate to English: ">Translate</button>
+      <button type="button" class="ghost-btn tiny" data-mini-prompt="Explain this code: ">Explain code</button>
+    </div>
+    <div id="miniChatLog" class="mini-chat-log"></div>
+    <div class="mini-chat-compose">
+      <textarea id="miniChatInput" rows="2" placeholder="Ask Aria…"></textarea>
+      <button type="button" id="miniChatSendBtn" class="apply-btn small">Send</button>
+    </div>
+  </div>
+
   <div id="imageLightbox" class="image-lightbox hidden" role="dialog" aria-label="Image preview">
     <button type="button" id="imageLightboxClose" class="image-lightbox-close" title="Close (Esc)" aria-label="Close image preview">×</button>
     <div class="image-lightbox-card">
@@ -1808,14 +2145,14 @@
   <script src="/static/lock_screen.js?v=5.16.102"></script>
   <script src="/static/audio_studio.js?v=5.16.101"></script>
   <script src="/static/audio_advanced.js?v=1.5.4"></script>
-  <script src="/static/audio.js?v=5.16.129"></script>
-  <script src="/static/journal.js?v=5.16.129"></script>
-  <script src="/static/video_studio.js?v=5.16.118"></script>
+  <script src="/static/audio.js?v=5.16.160"></script>
+  <script src="/static/journal.js?v=5.16.160"></script>
+  <script src="/static/video_studio.js?v=5.16.160"></script>
   <script src="/static/meme_studio.js?v=1.1.5"></script>
   <script src="/static/smarthome.js?v=5.16.73"></script>
   <script src="/static/chat_sessions.js?v=5.16.72"></script>
   <script src="/static/documents.js?v=1.0.6"></script>
-  <script src="/static/movie_tiers.js?v=5.16.130"></script>
+  <script src="/static/movie_tiers.js?v=5.16.140"></script>
   <script src="/static/ha_extras.js?v=1.0.0"></script>
   <script src="/static/actions_view.js?v=1.0.0"></script>
   <script src="/static/gemini_live.js?v=5.16.70"></script>
@@ -1823,25 +2160,44 @@
   <script src="/static/jarvis_ambient.js?v=1.2.0"></script>
   <script type="module" src="/static/modules/jobs.mjs?v=5.16.73"></script>
   <script type="module" src="/static/modules/health.mjs?v=5.16.72"></script>
-  <script src="/static/planner.js?v=5.16.106"></script>
+  <script src="/static/planner.js?v=5.16.170"></script>
+  <script src="/static/planner_live.js?v=1.0.0"></script>
   <script src="/static/mission_control.js?v=1.0.15"></script>
-  <script src="/static/calendar.js?v=5.16.90"></script>
+  <script src="/static/calendar.js?v=5.17.0"></script>
   <script src="/static/flytying.js?v=5.16.106"></script>
 
   <script src="/static/projects.js?v=5.16.93"></script>
   <script src="/static/vendor/three/three.min.js"></script>
   <script src="/static/vendor/three/STLLoader.js"></script>
   <script src="/static/maker.js?v=5.16.120"></script>
-  <script src="/static/browser_panel.js?v=5.16.93"></script>
+  <script src="/static/browser_panel.js?v=5.16.160"></script>
   <script src="/static/presence.js?v=5.16.104"></script>
-  <script src="/static/security_settings.js?v=5.16.106"></script>
+  <script src="/static/security_settings.js?v=5.16.160"></script>
   <script src="/static/tools_sidebar.js?v=5.16.103"></script>
   <script src="/static/floating_panels.js?v=5.16.71"></script>
   <script src="/static/world_state_hud.js?v=5.16.73"></script>
-  <script src="/static/audit.js?v=5.16.99"></script>
+  <script src="/static/audit.js?v=5.16.160"></script>
   <script src="/static/voice_tab.js?v=5.16.90"></script>
-  <script src="/static/modal_chrome.js?v=1.0.2"></script>
-  <script src="/static/command_palette.js?v=1.0.30"></script>
+  <script src="/static/ui_prefs.js?v=1.1.0"></script>
+  <script src="/static/sidebar_favorites.js?v=1.0.1"></script>
+  <script src="/static/discoverability.js?v=1.2.0"></script>
+  <script src="/static/sidebar_search.js?v=1.0.0"></script>
+  <script src="/static/quick_dock.js?v=1.0.0"></script>
+  <script src="/static/breadcrumbs.js?v=1.0.0"></script>
+  <script src="/static/status_bar.js?v=1.1.0"></script>
+  <script src="/static/context_menus.js?v=1.1.1"></script>
+  <script src="/static/dashboard_widgets.js?v=1.0.1"></script>
+  <script src="/static/collapsible_panels.js?v=1.0.0"></script>
+  <script src="/static/global_history.js?v=1.0.0"></script>
+  <script src="/static/activity_center.js?v=1.0.1"></script>
+  <script src="/static/workspace_layouts.js?v=1.0.1"></script>
+  <script src="/static/split_view.js?v=1.0.1"></script>
+  <script src="/static/mini_chat.js?v=1.0.0"></script>
+  <script src="/static/keyboard_nav.js?v=1.0.0"></script>
+  <script src="/static/workflow_recorder.js?v=1.0.0"></script>
+  <script src="/static/smart_welcome.js?v=1.1.0"></script>
+  <script src="/static/modal_chrome.js?v=1.1.0"></script>
+  <script src="/static/command_palette.js?v=1.1.0"></script>
   <script src="/static/ha_panel.js?v=1.0.3"></script>
   <script src="/static/upgrade_wizard.js?v=1.0.3"></script>
   <script src="/static/image_engine.js?v=1.0.4"></script>
@@ -1850,7 +2206,7 @@
   <script src="/static/media_urls.js?v=1.0.0"></script>
   <script src="/static/vision_settings.js?v=1.0.0"></script>
   <script src="/static/free_vram.js?v=1.0.1"></script>
-  <script src="/static/view_router.js?v=1.0.1"></script>
+  <script src="/static/view_router.js?v=1.1.0"></script>
   <script src="/static/chat_format.js?v=1.0.0"></script>
   <script src="/static/branding.js?v=1.0.0"></script>
   <script src="/static/chat_meta.js?v=1.0.0"></script>
@@ -1858,10 +2214,11 @@
   <script src="/static/chat_attach.js?v=1.0.0"></script>
   <script src="/static/chat_input.js?v=1.0.0"></script>
   <script src="/static/chat_controls.js?v=1.0.0"></script>
-  <script src="/static/app.js?v=5.16.159"></script>
+  <script src="/static/app.js?v=5.16.160"></script>
   <script src="/static/editor_context.js?v=1.0.0"></script>
+  <script src="/static/chat_suggestions.js?v=1.1.0"></script>
   <script src="/static/chat_export.js?v=1.0.0"></script>
-  <script src="/static/chat_progress.js?v=1.0.1"></script>
+  <script src="/static/chat_progress.js?v=1.1.0"></script>
   <script src="/static/chat_messages.js?v=1.0.0"></script>
   <script src="/static/chat_send.js?v=1.0.2"></script>
   <script src="/static/chat_images.js?v=1.0.1"></script>
@@ -1882,13 +2239,13 @@
   <script src="/static/chat_branches.js?v=1.0.3"></script>
   <script src="/static/profile_controls.js?v=1.0.1"></script>
   <script src="/static/video_sidebar.js?v=1.0.0"></script>
-  <script src="/static/sidebar_chrome.js?v=1.0.0"></script>
+  <script src="/static/sidebar_chrome.js?v=1.0.1"></script>
   <script src="/static/notify.js?v=1.0.0"></script>
   <script src="/static/git_panel.js?v=1.0.0"></script>
   <script src="/static/chat_model_select.js?v=1.0.0"></script>
-  <script src="/static/theme.js?v=1.0.0"></script>
+  <script src="/static/theme.js?v=1.1.0"></script>
   <script src="/static/coding_panel.js?v=1.0.2"></script>
   <script src="/static/gallery_view.js?v=1.0.9"></script>
-  <script src="/static/memory_browser.js?v=1.0.14"></script>
+  <script src="/static/memory_browser.js?v=2.0.0"></script>
 </body>
 </html>

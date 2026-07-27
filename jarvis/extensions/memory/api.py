@@ -225,27 +225,147 @@ def register_routes(app, assistant) -> None:
 
     @app.delete("/api/memory/{entry_id}")
     def memory_delete_id(entry_id: str):
+        """Legacy delete path — prefer POST /forget with cool|erase + confirm."""
         if entry_id.isdigit():
             ok = assistant.memory.delete(int(entry_id))
         else:
             ok = assistant.memory.delete_id(entry_id)
         if ok:
             assistant.refresh_system_prompt()
-        return {"ok": ok}
+        return {"ok": ok, "deprecated": True, "hint": "Use POST /api/memory/{id}/forget with confirm"}
+
+    @app.get("/api/memory/{entry_id}/forget-preview")
+    def memory_forget_preview(entry_id: str):
+        from jarvis.memory_services import forget_preview
+
+        return forget_preview(assistant.memory, entry_id)
+
+    @app.post("/api/memory/{entry_id}/forget")
+    async def memory_forget_execute(entry_id: str, request: Request):
+        from jarvis.memory_services import forget_execute
+
+        body = await request.json()
+        result = forget_execute(
+            assistant.memory,
+            entry_id,
+            action=str(body.get("action") or "cool"),
+            confirm=bool(body.get("confirm")),
+            correction_text=str(body.get("correction_text") or ""),
+        )
+        if result.get("ok"):
+            assistant.refresh_system_prompt()
+        status = 400 if not result.get("ok") else 200
+        return JSONResponse(status_code=status, content=result)
+
+    @app.get("/api/memory/home")
+    def memory_home():
+        from jarvis.memory_services import build_memory_home
+
+        return build_memory_home(assistant.memory, assistant)
+
+    @app.get("/api/memory/candidates")
+    def memory_candidates_list(status: str = "pending"):
+        from jarvis.memory_services import list_candidates
+
+        return list_candidates(status=status)
+
+    @app.post("/api/memory/candidates")
+    async def memory_candidates_propose(request: Request):
+        from jarvis.memory_services import propose_candidate
+
+        body = await request.json()
+        try:
+            return propose_candidate(
+                str(body.get("content") or ""),
+                source=str(body.get("source") or "manual"),
+                entry_type=str(body.get("type") or "fact"),
+                namespace=str(body.get("namespace") or assistant.session.memory_namespace),
+                tags=body.get("tags") or [],
+                evidence=str(body.get("evidence") or ""),
+                confidence=float(body.get("confidence") or 0.5),
+            )
+        except ValueError as e:
+            return JSONResponse(status_code=400, content={"ok": False, "error": str(e)})
+
+    @app.post("/api/memory/candidates/{candidate_id}/adopt")
+    def memory_candidates_adopt(candidate_id: str):
+        from jarvis.memory_services import adopt_candidate
+
+        result = adopt_candidate(assistant.memory, candidate_id)
+        if result.get("ok"):
+            assistant.refresh_system_prompt()
+        status = 400 if not result.get("ok") else 200
+        return JSONResponse(status_code=status, content=result)
+
+    @app.post("/api/memory/candidates/{candidate_id}/dismiss")
+    def memory_candidates_dismiss(candidate_id: str):
+        from jarvis.memory_services import dismiss_candidate
+
+        result = dismiss_candidate(candidate_id)
+        status = 400 if not result.get("ok") else 200
+        return JSONResponse(status_code=status, content=result)
+
+    @app.get("/api/memory/assist")
+    def memory_assist():
+        from jarvis.memory_services import memory_assistant
+
+        return memory_assistant(assistant.memory)
+
+    @app.post("/api/memory/briefing")
+    def memory_briefing_post():
+        from jarvis.memory_services import memory_briefing
+
+        return memory_briefing(assistant.memory)
+
+    @app.get("/api/memory/conflict-coach")
+    def memory_conflict_coach():
+        from jarvis.memory_services import conflict_coach
+
+        return conflict_coach(assistant.memory)
+
+    @app.get("/api/memory/associate")
+    def memory_associate(q: str = ""):
+        from jarvis.memory_services import associative_recall
+
+        return associative_recall(assistant.memory, q)
 
     @app.get("/api/memory/export")
     def memory_export():
-        return assistant.memory.export_data()
+        data = assistant.memory.export_data()
+        if isinstance(data, dict):
+            data = {**data, "source_of_truth": "acm", "note": "Export is a snapshot; ACM PRIMARY remains authority."}
+        return data
 
     @app.post("/api/memory/import")
     async def memory_import(request: Request):
         body = await request.json()
-        merge = body.get("merge", True) is not False
+        # Require explicit mode — never infer replace from Cancel
+        mode = (body.get("mode") or "").strip().lower()
+        if mode not in ("merge", "replace"):
+            # Back-compat: merge flag only if mode omitted AND merge is explicitly bool
+            if "mode" not in body and "merge" in body:
+                mode = "merge" if body.get("merge") is not False else ""
+            if mode not in ("merge", "replace"):
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "ok": False,
+                        "error": "Import requires mode: 'merge' or 'replace'. Cancel means abort.",
+                        "requires_confirmation": True,
+                    },
+                )
+        merge = mode == "merge"
         try:
             added = assistant.memory.import_data(body, merge=merge)
         except ValueError as e:
             return JSONResponse(status_code=400, content={"ok": False, "error": str(e)})
-        return {"ok": True, "added": added}
+        assistant.refresh_system_prompt()
+        return {
+            "ok": True,
+            "added": added,
+            "mode": mode,
+            "message": f"Import {mode} complete. Review Memory Home — ACM PRIMARY remains authority.",
+        }
 
     @app.post("/api/memory/prune")
     def memory_prune():
