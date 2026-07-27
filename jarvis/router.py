@@ -1110,6 +1110,24 @@ def _quick_route(
                     "params": {"path": path, "question": message},
                     "thinking": "document question",
                 }
+            if act == "learn":
+                return {
+                    "action": "learn_from_document",
+                    "params": {"path": path},
+                    "thinking": "learn from document → candidates",
+                }
+            if act == "ingest":
+                return {
+                    "action": "ingest_document",
+                    "params": {"path": path},
+                    "thinking": "ingest document",
+                }
+            if act == "vision":
+                return {
+                    "action": "document_summarize",
+                    "params": {"path": path},
+                    "thinking": "document vision/ocr path",
+                }
             return {
                 "action": "document_summarize",
                 "params": {"path": path},
@@ -1344,6 +1362,58 @@ def _quick_route(
             "action": "document_search",
             "params": {"query": message},
             "thinking": "document library search",
+        }
+
+    if re.search(
+        r"\b(what did i learn from (?:documents?|files?|pdfs?|the library)|"
+        r"what have you learned from (?:documents?|my files?)|document learning recall)\b",
+        lower,
+    ):
+        return {
+            "action": "document_learn_recall",
+            "params": {},
+            "thinking": "document learning recall",
+        }
+
+    if re.search(
+        r"\b(learn from|study (?:this|the)|read and learn|memorize (?:this|the)|"
+        r"teach yourself from)\b",
+        lower,
+    ) and (
+        re.search(r"\b(document|pdf|docx|file|warranty|manual|library)\b", lower)
+        or session.last_document_path
+        or _document_path_in_message(message)
+    ):
+        return {
+            "action": "learn_from_document",
+            "params": {"path": _document_path_in_message(message) or ""},
+            "thinking": "learn from document → memory candidates",
+        }
+
+    if re.search(
+        r"\b(ingest|add to (?:my )?(?:document )?library|index (?:this|the) (?:doc|document|file))\b",
+        lower,
+    ):
+        return {
+            "action": "ingest_document",
+            "params": {"path": _document_path_in_message(message) or ""},
+            "thinking": "ingest document into library",
+        }
+
+    if re.search(r"\b(document briefing|brief(?:ing)? (?:my )?documents?)\b", lower):
+        return {
+            "action": "document_briefing",
+            "params": {},
+            "thinking": "document briefing",
+        }
+
+    if re.search(r"\bask (?:my )?(?:documents?|library|files?)\b", lower) or re.search(
+        r"\b(search project documents?|project document search)\b", lower
+    ):
+        return {
+            "action": "document_ask_library",
+            "params": {"question": message, "mode": "project" if "project" in lower else "library"},
+            "thinking": "ask document library with citations",
         }
 
     doc_path = _document_path_in_message(message)

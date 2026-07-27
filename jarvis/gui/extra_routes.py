@@ -325,10 +325,93 @@ def register_routes(app, assistant):
         return {"ok": True, "show": True, "enabled": briefing_enabled(), **briefing}
 
     @app.get("/api/documents")
-    def documents_list():
-        from jarvis.document_pipeline import list_library_documents
+    def documents_list(limit: int = 50, offset: int = 0, q: str = ""):
+        from jarvis.document_services import list_library_enriched
 
-        return {"ok": True, "documents": list_library_documents()}
+        docs = list_library_enriched(limit=min(max(limit, 1), 200), offset=max(offset, 0), q=q)
+        return {"ok": True, "documents": docs, "count": len(docs)}
+
+    @app.get("/api/documents/home")
+    def documents_home_api():
+        from jarvis.document_services import documents_home
+
+        return documents_home()
+
+    @app.get("/api/documents/health")
+    def documents_health_api():
+        from jarvis.document_services import index_health
+
+        return index_health()
+
+    @app.get("/api/documents/preview")
+    def documents_preview(path: str = ""):
+        from jarvis.document_services import preview_document
+
+        if not (path or "").strip():
+            return JSONResponse(status_code=400, content={"ok": False, "message": "path required"})
+        return preview_document(path)
+
+    @app.get("/api/documents/briefing")
+    def documents_briefing_api():
+        from jarvis.document_services import document_briefing
+
+        return document_briefing()
+
+    @app.get("/api/documents/project-pack")
+    def documents_project_pack(slug: str = ""):
+        from jarvis.document_services import project_retrieval_pack
+
+        return project_retrieval_pack(slug or None)
+
+    @app.post("/api/documents/ask")
+    async def documents_ask(request: Request):
+        from jarvis.document_services import ask_with_sources
+
+        body = await request.json()
+        return ask_with_sources(
+            (body.get("question") or "").strip(),
+            mode=(body.get("mode") or "library").strip(),
+            paths=body.get("paths") or None,
+            folder=(body.get("folder") or "").strip(),
+        )
+
+    @app.post("/api/documents/upload")
+    async def documents_upload(request: Request):
+        from jarvis.document_services import save_upload
+
+        form = await request.form()
+        upload = form.get("file")
+        if upload is None:
+            return JSONResponse(status_code=400, content={"ok": False, "message": "file required"})
+        filename = getattr(upload, "filename", None) or "upload.bin"
+        content = await upload.read()
+        result = save_upload(filename, content)
+        status = 200 if result.get("ok") else 400
+        return JSONResponse(status_code=status, content=result)
+
+    @app.post("/api/documents/import-folder")
+    async def documents_import_folder(request: Request):
+        from jarvis.document_services import import_folder
+
+        body = await request.json()
+        return import_folder((body.get("path") or "").strip())
+
+    @app.post("/api/documents/classify")
+    async def documents_classify(request: Request):
+        from jarvis.document_services import classify_document, preview_document
+
+        body = await request.json()
+        path = (body.get("path") or "").strip()
+        if path:
+            prev = preview_document(path)
+            if not prev.get("ok"):
+                return prev
+            doc = prev["document"]
+            return {"ok": True, "suggestion": doc.get("suggestion"), "document": doc}
+        return {
+            "ok": True,
+            "suggestion": classify_document(body.get("title") or "", body.get("text") or ""),
+        }
 
     @app.post("/api/briefing/dismiss")
     def morning_briefing_dismiss():
@@ -540,30 +623,24 @@ def register_routes(app, assistant):
         return {"ok": True, **env_snapshot()}
 
     @app.get("/api/documents/search")
-    def documents_search(q: str = "", limit: int = 5):
-        from jarvis.documents_rag import format_hits_markdown, search
+    def documents_search(q: str = "", limit: int = 8, project: int = 0):
+        from jarvis.document_services import search_library
 
         query = (q or "").strip()
         if not query:
             return JSONResponse(status_code=400, content={"ok": False, "message": "q required"})
-        hits = search(query, limit=min(limit, 10))
-        return {
-            "ok": True,
-            "query": query,
-            "hits": hits,
-            "markdown": format_hits_markdown(query, hits),
-        }
+        return search_library(query, limit=min(limit, 20), project_scope=bool(project))
 
     @app.post("/api/documents/reindex")
     def documents_reindex():
-        from jarvis.documents_rag import build_index
+        from jarvis.document_services import rebuild_search_index
 
-        chunks = build_index(force=True)
-        return {"ok": True, "chunks": len(chunks)}
+        return rebuild_search_index(force=True)
 
     @app.post("/api/documents/learn")
     async def documents_learn(request: Request):
-        from jarvis.document_learning import learn_from_file, learn_from_text, learn_from_url
+        """Stage Memory candidates from a document — never silent ACM writes."""
+        from jarvis.document_services import stage_learn_candidates
 
         try:
             body = await request.json()
@@ -571,29 +648,14 @@ def register_routes(app, assistant):
             body = {}
         if not isinstance(body, dict):
             body = {}
-        store = assistant.memory
-        url = (body.get("url") or "").strip()
-        if url:
-            result = learn_from_url(store, url)
-            if result.ok:
-                assistant.refresh_system_prompt()
-            return {"ok": result.ok, "message": result.message, "lessons": result.lessons}
-        text = (body.get("text") or "").strip()
-        if text:
-            result = learn_from_text(store, text, title=(body.get("title") or "OCR document"))
-            if result.ok:
-                assistant.refresh_system_prompt()
-            return {"ok": result.ok, "message": result.message, "lessons": result.lessons}
-        path = (body.get("path") or "").strip()
-        if not path:
-            return JSONResponse(
-                status_code=400,
-                content={"ok": False, "message": "path, url, or text required"},
-            )
-        result = learn_from_file(store, path)
-        if result.ok:
-            assistant.refresh_system_prompt()
-        return {"ok": result.ok, "message": result.message, "lessons": result.lessons}
+        result = stage_learn_candidates(
+            (body.get("path") or "").strip(),
+            url=(body.get("url") or "").strip(),
+            text=(body.get("text") or "").strip(),
+            title=(body.get("title") or "").strip(),
+        )
+        status = 200 if result.get("ok") else 400
+        return JSONResponse(status_code=status, content=result)
 
     @app.post("/api/automation/inbound")
     async def automation_inbound(request: Request):

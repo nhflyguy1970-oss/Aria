@@ -17,6 +17,8 @@ _KNOWLEDGE_ACTIONS: dict[str, tuple[Any, bool]] = {
     "document_summarize": (KnowledgeEngine.document_summarize, False),
     "document_query": (KnowledgeEngine.document_query, False),
     "document_search": (KnowledgeEngine.document_search, False),
+    "document_briefing": (KnowledgeEngine.document_briefing, True),
+    "document_ask_library": (KnowledgeEngine.document_ask_library, False),
     "learn_about": (KnowledgeEngine.learn_about, False),
     "learn_remember": (KnowledgeEngine.learn_remember, False),
     "ingest_document": (KnowledgeEngine.ingest_document, False),

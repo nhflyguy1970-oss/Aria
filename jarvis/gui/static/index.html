@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=5.17.0" />
+  <link rel="stylesheet" href="/static/style.css?v=5.17.1" />
   <script>
     (function () {
       var standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -1261,26 +1261,75 @@
       </div>
 
       <div id="documentsView" class="view-panel hidden">
-        <h2>Document library</h2>
-        <p class="muted">Files in <code>data/documents/</code> — semantic search in chat.</p>
-        <div class="documents-toolbar">
-          <input type="search" id="documentsSearchInput" class="audio-path-input" placeholder="Search library…" />
-          <button type="button" id="documentsSearchBtn" class="ghost-btn small">Search</button>
-          <button type="button" id="documentsReindexBtn" class="ghost-btn small">Reindex RAG</button>
-          <button type="button" id="documentsOpenMemoryBtn" class="ghost-btn small" title="Open Memory">Memory</button>
-          <button type="button" id="documentsOpenJournalBtn" class="ghost-btn small" title="Open Bullet Journal">Journal</button>
-          <button type="button" id="documentsOpenCalendarBtn" class="ghost-btn small" title="Open Calendar">Calendar</button>
-          <button type="button" id="documentsOpenChatBtn" class="ghost-btn small" title="Open Chat">Chat</button>
-          <button type="button" id="documentsOpenProjectsBtn" class="ghost-btn small" title="Open Projects">Projects</button>
+        <div class="docs-shell">
+          <header class="docs-shell-header">
+            <div>
+              <h2>Documents</h2>
+              <p class="muted docs-tagline">Personal document intelligence — local files, grounded search, Memory candidates. Not Drive, SharePoint, or Notion.</p>
+              <p class="muted tiny">Documents = library · Knowledge = extracted briefs · Memory = autobiography · Search index = retrieval</p>
+            </div>
+            <div class="docs-shell-actions">
+              <button type="button" id="documentsHelpBtn" class="ghost-btn tiny" title="Shortcuts">?</button>
+            </div>
+          </header>
+          <div class="docs-layout">
+            <aside class="docs-sidebar" aria-label="Library">
+              <div class="docs-dropzone" id="documentsDropzone" tabindex="0" role="button" aria-label="Drop files to upload">
+                <p><strong>Drop files</strong> or
+                  <label class="ghost-btn tiny docs-upload-label">Upload<input type="file" id="documentsFileInput" class="hidden" multiple accept=".pdf,.docx,.txt,.md,.html,.csv,.xlsx,.pptx,.json,.yml,.yaml,.py,.js,.ts" /></label>
+                </p>
+                <div class="planner-add-row">
+                  <input type="text" id="documentsFolderInput" placeholder="Import folder path…" aria-label="Folder path" />
+                  <button type="button" id="documentsImportFolderBtn" class="ghost-btn tiny">Import</button>
+                </div>
+                <p id="documentsImportStatus" class="muted tiny" aria-live="polite"></p>
+              </div>
+              <div class="planner-add-row">
+                <input type="search" id="documentsSearchInput" placeholder="Search library… (/)" aria-label="Search documents" />
+                <button type="button" id="documentsSearchBtn" class="ghost-btn small">Search</button>
+              </div>
+              <div class="docs-quick-row">
+                <button type="button" id="documentsRebuildBtn" class="ghost-btn tiny">Rebuild Search Index</button>
+                <button type="button" id="documentsBriefingBtn" class="ghost-btn tiny">Briefing</button>
+                <button type="button" id="documentsAskBtn" class="ghost-btn tiny">Ask Aria</button>
+                <button type="button" id="documentsClearSearchBtn" class="ghost-btn tiny">Clear</button>
+              </div>
+              <p id="documentsIndexStatus" class="muted tiny"></p>
+              <ul id="documentsList" class="docs-list" role="listbox" aria-label="Documents"></ul>
+              <ul id="documentsSearchResults" class="docs-list hidden" role="listbox" aria-label="Search results"></ul>
+            </aside>
+            <main id="documentsHome" class="docs-home" aria-live="polite">
+              <div class="docs-skeleton" aria-busy="true"><div></div><div></div><div></div></div>
+            </main>
+          </div>
         </div>
-        <p id="documentsIndexStatus" class="muted"></p>
-        <ul id="documentsList" class="documents-list"></ul>
-        <ul id="documentsSearchResults" class="documents-list hidden"></ul>
-        <div class="ics-wizard">
-          <h3>Calendar ICS</h3>
-          <p class="muted">Subscribe to Google/Outlook ICS feeds from Calendar — one place for external calendars.</p>
-          <button type="button" id="documentsOpenIcsBtn" class="ghost-btn small">Open Calendar ICS settings</button>
-        </div>
+        <dialog id="documentsAskDialog" class="docs-dialog">
+          <form method="dialog" class="docs-dialog-card" id="documentsAskForm">
+            <h3>Ask with sources</h3>
+            <label>Scope
+              <select id="documentsAskMode">
+                <option value="library">Entire library</option>
+                <option value="project">Active project</option>
+                <option value="document">Selected document</option>
+              </select>
+            </label>
+            <label>Question
+              <textarea id="documentsAskQuestion" rows="3" placeholder="What does the warranty cover?"></textarea>
+            </label>
+            <div class="docs-dialog-actions">
+              <button type="submit" value="cancel" class="ghost-btn">Cancel</button>
+              <button type="button" id="documentsAskSubmit" class="apply-btn">Ask</button>
+            </div>
+            <pre id="documentsAskAnswer" class="docs-briefing hidden"></pre>
+          </form>
+        </dialog>
+        <dialog id="documentsBriefingDialog" class="docs-dialog">
+          <form method="dialog" class="docs-dialog-card">
+            <h3>Document briefing</h3>
+            <pre id="documentsBriefingBody" class="docs-briefing"></pre>
+            <div class="docs-dialog-actions"><button type="submit" class="ghost-btn">Close</button></div>
+          </form>
+        </dialog>
       </div>
 
       <div id="dashboardView" class="view-panel hidden">
@@ -2169,7 +2218,7 @@
   <script src="/static/meme_studio.js?v=1.1.5"></script>
   <script src="/static/smarthome.js?v=5.16.73"></script>
   <script src="/static/chat_sessions.js?v=5.16.72"></script>
-  <script src="/static/documents.js?v=1.0.6"></script>
+  <script src="/static/documents.js?v=2.0.0"></script>
   <script src="/static/movie_tiers.js?v=5.16.140"></script>
   <script src="/static/ha_extras.js?v=1.0.0"></script>
   <script src="/static/actions_view.js?v=1.0.0"></script>

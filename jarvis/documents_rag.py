@@ -9,13 +9,15 @@ from pathlib import Path
 
 from jarvis import llm
 from jarvis.config import DATA_DIR
-from jarvis.document_pipeline import DOCUMENTS_DIR, parse_document
+from jarvis.document_pipeline import DOCUMENT_EXTENSIONS, DOCUMENTS_DIR, parse_document
 
 log = logging.getLogger("jarvis.documents_rag")
 
 INDEX_FILE = DATA_DIR / "documents_index.json"
 MAX_CHUNK = 1200
 SIMILARITY_THRESHOLD = 0.22
+# Parity with document_pipeline.DOCUMENT_EXTENSIONS
+INDEX_EXTENSIONS = frozenset(DOCUMENT_EXTENSIONS)
 
 
 def _chunks(text: str, source: str, title: str) -> list[dict]:
@@ -34,7 +36,9 @@ def _latest_document_mtime() -> float:
     for path in DOCUMENTS_DIR.rglob("*"):
         if not path.is_file() or path.name.startswith("."):
             continue
-        if path.suffix.lower() not in (".pdf", ".docx"):
+        if path.suffix.lower() not in INDEX_EXTENSIONS:
+            continue
+        if ".cache" in path.parts:
             continue
         try:
             latest = max(latest, path.stat().st_mtime)
@@ -82,9 +86,9 @@ def _build_index_impl(*, force: bool = False) -> list[dict]:
         INDEX_FILE.write_text("[]", encoding="utf-8")
         return []
     for path in sorted(DOCUMENTS_DIR.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in (".pdf", ".docx"):
+        if not path.is_file() or path.suffix.lower() not in INDEX_EXTENSIONS:
             continue
-        if path.name.startswith("."):
+        if path.name.startswith(".") or ".cache" in path.parts:
             continue
         try:
             doc = parse_document(path)
@@ -158,31 +162,98 @@ def _search_impl(query: str, limit: int = 5) -> list[dict]:
     return _keyword_search(query, chunks, limit)
 
 
-def context_for_query(query: str, limit: int = 4) -> tuple[str, list[str]]:
+def _hits_to_citations(hits: list[dict], *, why: str = "Matched library search") -> list[dict]:
+    citations = []
+    for i, h in enumerate(hits, 1):
+        citations.append(
+            {
+                "id": f"doc-{i}",
+                "title": h.get("title") or h.get("source") or "document",
+                "source": h.get("source") or "",
+                "excerpt": (h.get("text") or "")[:280].strip(),
+                "why": why,
+                "score": h.get("score"),
+            }
+        )
+    return citations
+
+
+def search_with_citations(
+    query: str,
+    *,
+    limit: int = 8,
+    project_scope: bool = False,
+) -> dict:
+    hits = search(query, limit=limit)
+    if project_scope:
+        try:
+            from jarvis.active_project import coding_root_for_slug, get_active_slug
+
+            slug = get_active_slug()
+            root = coding_root_for_slug(slug) if slug else None
+            if slug:
+                filtered = []
+                for h in hits:
+                    src = (h.get("source") or "").lower()
+                    title = (h.get("title") or "").lower()
+                    if slug in src or slug in title:
+                        filtered.append(h)
+                    elif root and str(root).lower() in src:
+                        filtered.append(h)
+                if filtered:
+                    hits = filtered
+        except Exception:
+            pass
+    citations = _hits_to_citations(
+        hits,
+        why="Project-scoped match" if project_scope else "Library relevance match",
+    )
+    return {
+        "query": query,
+        "hits": hits,
+        "citations": citations,
+        "markdown": format_hits_markdown(query, hits, citations=citations),
+    }
+
+
+def context_for_query(query: str, limit: int = 4) -> tuple[str, list[str], list[dict]]:
+    """Return (context, warnings, citations). Citations always accompany retrieval."""
     warnings: list[str] = []
     chunks = _load_index()
     if not chunks:
-        warnings.append("Document library is empty — add PDFs/DOCX under data/documents/.")
-        return "", warnings
+        warnings.append(
+            "Document library is empty — upload files in Documents or drop into data/documents/."
+        )
+        return "", warnings, []
     if not llm.embed_available():
         warnings.append("Embed model offline — using keyword document search.")
     hits = search(query, limit=limit)
     if not hits:
-        return "", warnings
-    ctx = "Document library:\n" + "\n---\n".join(
-        f"[{h.get('title') or h['source']}]\n{h['text']}" for h in hits
-    )
-    return ctx, warnings
+        return "", warnings, []
+    citations = _hits_to_citations(hits)
+    lines = ["Document library (cite [doc-N] when used):"]
+    for c in citations:
+        hit = next((h for h in hits if (h.get("source") or "") == c["source"]), None)
+        text = (hit or hits[0]).get("text") or c.get("excerpt") or ""
+        lines.append(f"[{c['id']}] {c['title']} ({c['source']})\n{text[:800]}")
+    return "\n\n".join(lines), warnings, citations
 
 
-def format_hits_markdown(query: str, hits: list[dict]) -> str:
+def format_hits_markdown(query: str, hits: list[dict], *, citations: list[dict] | None = None) -> str:
     if not hits:
         return f"No document library matches for **{query}**."
-    lines = [f"**Document search:** _{query}_", ""]
-    for h in hits:
-        title = h.get("title") or h.get("source", "document")
-        excerpt = (h.get("text") or "")[:400].strip()
-        lines.append(f"- **{title}** — {excerpt}…")
+    cites = citations or _hits_to_citations(hits)
+    lines = [f"**Document search:** _{query}_", "", "**Sources**"]
+    for c in cites:
+        excerpt = (c.get("excerpt") or "")[:400].strip()
+        lines.append(f"- **[{c['id']}] {c.get('title')}** — {excerpt}…")
+        if c.get("why"):
+            lines.append(f"  - Why: {c['why']}")
+        src = c.get("source") or ""
+        if src:
+            lines.append(f"  - Path: `{src}`")
     lines.append("")
-    lines.append("_Attach a file or say **summarize** with a path for full Q&A._")
+    lines.append(
+        "_Say **summarize** / **ask** with a path, or open Documents for Preview / Learn (candidates)._"
+    )
     return "\n".join(lines)

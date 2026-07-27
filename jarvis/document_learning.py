@@ -446,13 +446,54 @@ def _store_lessons(memory, facts: list[str], *, title: str, source_type: str) ->
     return stored
 
 
+def _stage_lesson_candidates(
+    facts: list[str],
+    *,
+    title: str,
+    source_type: str,
+    path: str = "",
+) -> list[dict]:
+    """Stage Memory candidates — never encode ACM autobiography from Documents."""
+    from jarvis.memory_services import propose_candidate
+
+    ns = "default"
+    try:
+        from jarvis.active_project import get_active_slug
+
+        slug = (get_active_slug() or "").strip()
+        if slug:
+            ns = slug
+    except Exception:
+        pass
+    out: list[dict] = []
+    src_tag = f"doc-source:{_slugify(title)[:32]}"
+    for fact in facts:
+        cand = propose_candidate(
+            fact,
+            source="document",
+            entry_type="fact",
+            namespace=ns,
+            tags=[DOCUMENT_LEARN_TAG, src_tag, f"doc-type:{source_type}"],
+            evidence=f"From document: {title}" + (f" ({path})" if path else ""),
+            confidence=0.55,
+        )
+        out.append(cand.get("candidate") or cand)
+    return out
+
+
 def learn_from_document(
     memory,
     doc: ParsedDocument,
     *,
     source_type: str = "file",
     url: str = "",
+    encode: bool = False,
 ) -> LearnResult:
+    """Learn from a document.
+
+    Default: stage Memory candidates only (ACM constitution).
+    encode=True is reserved for explicit adopt flows — not used by Documents UI.
+    """
     warn = low_text_warning(doc)
     if warn and doc.char_count < 40:
         return LearnResult(
@@ -475,7 +516,19 @@ def learn_from_document(
             url=url,
         )
 
-    lessons = _store_lessons(memory, facts, title=doc.title, source_type=source_type)
+    if encode:
+        lessons = _store_lessons(memory, facts, title=doc.title, source_type=source_type)
+        msg = f"Learned **{len(lessons)}** lesson(s) from **{doc.title}**."
+    else:
+        candidates = _stage_lesson_candidates(
+            facts, title=doc.title, source_type=source_type, path=doc.path
+        )
+        lessons = [str(c.get("content") or "") for c in candidates]
+        msg = (
+            f"Staged **{len(candidates)}** Memory candidate(s) from **{doc.title}**. "
+            "Review in Memory → Adopt. Documents never write autobiography directly."
+        )
+
     sid = _register_source(
         title=doc.title,
         path=doc.path,
@@ -491,7 +544,7 @@ def learn_from_document(
         doc.path,
         source_type,
         lessons=lessons,
-        message=f"Learned **{len(lessons)}** lesson(s) from **{doc.title}**.",
+        message=msg,
         url=url,
         source_id=sid,
     )

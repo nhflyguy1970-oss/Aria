@@ -540,12 +540,12 @@
       },
       {
         id: "act:documents-reindex",
-        label: "Reindex documents RAG",
+        label: "Rebuild document search index",
         group: "System",
-        keywords: "library pdf chunks",
+        keywords: "library pdf chunks rag",
         run: () => {
           goView("documents");
-          setTimeout(() => $("documentsReindexBtn")?.click(), 80);
+          setTimeout(() => $("documentsRebuildBtn")?.click(), 80);
         },
       },
       {

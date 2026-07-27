@@ -71,7 +71,7 @@ class KnowledgeOperations:
 
     @classmethod
     def document_search(cls, ctx, params: dict, message: str) -> dict:
-        from jarvis.documents_rag import format_hits_markdown, search
+        from jarvis.document_services import search_library
 
         query = (params.get("query") or message or "").strip()
         for prefix in (
@@ -81,9 +81,40 @@ class KnowledgeOperations:
             query = re.sub(prefix, "", query, flags=re.I).strip()
         if not query:
             return _err("Say what to search for, e.g. **search documents warranty coverage**.", module="document")
-        hits = search(query, limit=5)
+        result = search_library(query, limit=5, project_scope=False)
         ctx.session.note_module("document")
-        return _ok(format_hits_markdown(query, hits), module="document", type="document_search", hits=hits)
+        return _ok(
+            result.get("markdown") or "No matches.",
+            module="document",
+            type="document_search",
+            hits=result.get("hits") or [],
+            citations=result.get("citations") or [],
+        )
+
+    @classmethod
+    def document_briefing(cls, ctx, params: dict, message: str) -> dict:
+        from jarvis.document_services import document_briefing
+
+        result = document_briefing()
+        if not result.get("ok"):
+            return _err(result.get("message") or "Briefing failed", module="document")
+        return _ok(result.get("briefing") or result.get("message"), module="document", **{k: v for k, v in result.items() if k not in ("briefing", "message", "ok")})
+
+    @classmethod
+    def document_ask_library(cls, ctx, params: dict, message: str) -> dict:
+        from jarvis.document_services import ask_with_sources
+
+        question = (params.get("question") or message or "").strip()
+        mode = (params.get("mode") or "library").strip()
+        result = ask_with_sources(question, mode=mode)
+        if not result.get("ok"):
+            return _err(result.get("message") or "No answer", module="document")
+        return _ok(
+            result.get("message") or result.get("answer"),
+            module="document",
+            citations=result.get("citations") or [],
+            type="document_ask",
+        )
 
     @classmethod
     def learn_about(cls, ctx, params: dict, message: str) -> dict:
@@ -238,11 +269,10 @@ class KnowledgeOperations:
             if not result.ok:
                 return _err(result.message, module="memory")
             ctx.session.note_document(result.path)
-            ctx.refresh_system_prompt()
             body = result.message + "\n\n" + format_learnings_markdown(
                 [{"content": x} for x in result.lessons]
             )
-            return _ok(body, module="memory", lessons=result.lessons)
+            return _ok(body, module="memory", lessons=result.lessons, candidates=True)
 
         text = (params.get("text") or "").strip()
         if text:
@@ -250,11 +280,10 @@ class KnowledgeOperations:
             result = learn_from_text(ctx.memory, text, title=title)
             if not result.ok:
                 return _err(result.message, module="memory")
-            ctx.refresh_system_prompt()
             body = result.message + "\n\n" + format_learnings_markdown(
                 [{"content": x} for x in result.lessons]
             )
-            return _ok(body, module="memory", lessons=result.lessons)
+            return _ok(body, module="memory", lessons=result.lessons, candidates=True)
 
         path = cls._resolve_learning_path(ctx, params, message)
         use_ocr = bool(params.get("ocr"))
@@ -268,11 +297,10 @@ class KnowledgeOperations:
             result = learn_from_text(ctx.memory, ocr_text, title=Path(path).stem)
             if not result.ok:
                 return _err(result.message, module="memory")
-            ctx.refresh_system_prompt()
             body = result.message + "\n\n" + format_learnings_markdown(
                 [{"content": x} for x in result.lessons]
             )
-            return _ok(body, module="memory", lessons=result.lessons)
+            return _ok(body, module="memory", lessons=result.lessons, candidates=True)
 
         if not path:
             return _err(
@@ -290,11 +318,11 @@ class KnowledgeOperations:
             return _err(result.message, module="memory")
 
         ctx.session.note_document(result.path)
-        ctx.refresh_system_prompt()
+        # Candidates only — do not refresh ACM prompt
         body = result.message + "\n\n" + format_learnings_markdown(
             [{"content": x} for x in result.lessons]
         )
-        return _ok(body, module="memory", lessons=result.lessons)
+        return _ok(body, module="memory", lessons=result.lessons, candidates=True)
 
     @classmethod
     def learn_from_url(cls, ctx, params: dict, message: str) -> dict:
@@ -311,11 +339,10 @@ class KnowledgeOperations:
         if not result.ok:
             return _err(result.message, module="memory")
         ctx.session.note_document(result.path)
-        ctx.refresh_system_prompt()
         body = result.message + "\n\n" + format_learnings_markdown(
             [{"content": x} for x in result.lessons]
         )
-        return _ok(body, module="memory", lessons=result.lessons)
+        return _ok(body, module="memory", lessons=result.lessons, candidates=True)
 
     @classmethod
     def document_learn_recall(cls, ctx, params: dict, message: str) -> dict:

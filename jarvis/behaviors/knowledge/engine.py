@@ -54,10 +54,29 @@ class KnowledgeEngine(KnowledgeOperations):
 
             from jarvis.documents_rag import context_for_query as library_context
 
-            lib_ctx, lib_warnings = library_context(message)
+            lib_ctx, lib_warnings, lib_citations = library_context(message)
             warnings.extend(lib_warnings)
             if lib_ctx:
                 parts.append(lib_ctx)
+            for c in lib_citations or []:
+                citations.append(
+                    {
+                        "id": c.get("id"),
+                        "title": c.get("title"),
+                        "source": c.get("source"),
+                        "excerpt": c.get("excerpt"),
+                        "why": c.get("why") or "Document library retrieval",
+                        "kind": "document",
+                    }
+                )
+            if lib_citations:
+                # Visible citation block so retrieval is never silent
+                cite_lines = ["Retrieved document sources (always shown):"]
+                for c in lib_citations:
+                    cite_lines.append(
+                        f"- [{c.get('id')}] {c.get('title')} — {(c.get('excerpt') or '')[:120]}"
+                    )
+                parts.append("\n".join(cite_lines))
 
         from jarvis import web_search
         from jarvis.profiles import web_search_disabled

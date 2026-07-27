@@ -16,7 +16,24 @@ from typing import Any
 
 log = logging.getLogger("jarvis")
 
-DOCUMENT_EXTENSIONS = {".pdf", ".docx", ".txt", ".md", ".markdown", ".html", ".htm"}
+DOCUMENT_EXTENSIONS = {
+    ".pdf",
+    ".docx",
+    ".txt",
+    ".md",
+    ".markdown",
+    ".html",
+    ".htm",
+    ".csv",
+    ".xlsx",
+    ".pptx",
+    ".py",
+    ".js",
+    ".ts",
+    ".json",
+    ".yml",
+    ".yaml",
+}
 TEXT_EXTENSIONS = {".txt", ".md", ".markdown"}
 HTML_EXTENSIONS = {".html", ".htm"}
 DOCUMENTS_DIR = Path(__file__).resolve().parent.parent / "data" / "documents"
@@ -374,6 +391,20 @@ def parse_document(path: str | Path, *, use_cache: bool = True) -> ParsedDocumen
         parsed = _extract_text_file(p)
     elif suffix in HTML_EXTENSIONS:
         parsed = _extract_html_file(p)
+    elif suffix in {".csv", ".xlsx", ".pptx", ".py", ".js", ".ts", ".json", ".yml", ".yaml"}:
+        from jarvis.intelligence.document_intel import parse_extended
+
+        ext = parse_extended(p)
+        if not ext.get("ok"):
+            raise ValueError(ext.get("error") or "extended parse failed")
+        parsed = ParsedDocument(
+            path=str(p),
+            title=str(ext.get("title") or p.stem),
+            pages=list(ext.get("pages") or [""]),
+            page_count=int(ext.get("page_count") or max(1, len(ext.get("pages") or []))),
+            char_count=int(ext.get("char_count") or 0),
+            source=str(ext.get("source") or "extended"),
+        )
     else:
         raise ValueError(f"Unsupported document type: {suffix}")
 
