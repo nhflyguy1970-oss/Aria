@@ -105,7 +105,42 @@ def discover_project_slugs() -> list[str]:
     return sorted(s for s in slugs if s and s != "default")
 
 
+def _git_repo_root_for_slug(slug: str) -> Path | None:
+    """Prefer the project's registered git_path — never silently fall back to Aria."""
+    try:
+        from jarvis.project_registry import get_project
+
+        meta = get_project(slug) or {}
+        git_path = str(meta.get("git_path") or "").strip()
+        if git_path:
+            p = Path(git_path).expanduser().resolve()
+            if p.is_dir() and (p / ".git").exists():
+                return p
+            if p.is_dir():
+                try:
+                    proc = subprocess.run(
+                        ["git", "-C", str(p), "rev-parse", "--show-toplevel"],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if proc.returncode == 0:
+                        return Path(proc.stdout.strip())
+                except (OSError, subprocess.TimeoutExpired):
+                    pass
+                return p
+        from jarvis.active_project import coding_root_for_slug
+
+        root = coding_root_for_slug(slug)
+        if root and root.is_dir():
+            return root
+    except Exception as exc:
+        log.debug("git root for %s: %s", slug, exc)
+    return None
+
+
 def _git_repo_root() -> Path | None:
+    """Legacy fallback — Aria repo only when no project context."""
     try:
         proc = subprocess.run(
             ["git", "-C", str(PROJECT_ROOT), "rev-parse", "--show-toplevel"],
@@ -120,8 +155,12 @@ def _git_repo_root() -> Path | None:
     return PROJECT_ROOT if (PROJECT_ROOT / ".git").exists() else None
 
 
-def _git_activity(day: str, *, root: Path | None = None) -> str:
-    repo = root or _git_repo_root()
+def _git_activity(day: str, *, root: Path | None = None, slug: str = "") -> str:
+    repo = root
+    if repo is None and slug:
+        repo = _git_repo_root_for_slug(slug)
+    if repo is None and not slug:
+        repo = _git_repo_root()
     if not repo:
         return ""
     since = f"{day} 00:00:00"
@@ -180,7 +219,7 @@ def _format_actions(rows: list[dict]) -> str:
 def gather_daily_context(slug: str, day: str | None = None) -> str:
     d = day or _today()
     parts = [f"Project: {slug}", f"Date: {d}"]
-    git = _git_activity(d)
+    git = _git_activity(d, slug=slug)
     if git:
         parts.append(git)
     actions = _format_actions(_actions_today(d))

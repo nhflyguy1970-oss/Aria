@@ -54,6 +54,17 @@ def _write_meta(slug: str, meta: dict[str, Any]) -> None:
     meta_path(slug).write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
 
+def _identity_fields(slug: str) -> dict[str, str]:
+    """Canonical namespaces — one slug is the single authority."""
+    s = _slugify(slug)
+    return {
+        "memory_namespace": s,
+        "knowledge_namespace": f"project:{s}",
+        "checkpoint_namespace": s,
+        "journal_slug": s,
+    }
+
+
 def create_project(title: str | None, *, description: str = "", git_path: str | None = None) -> dict[str, Any]:
     slug = _slugify(title)
     if meta_path(slug).is_file():
@@ -70,8 +81,10 @@ def create_project(title: str | None, *, description: str = "", git_path: str | 
         "description": str(description or "").strip(),
         "created": now,
         "updated": now,
+        "last_opened": "",
         "archived": False,
         "git_path": git_path,
+        **_identity_fields(slug),
     }
     _write_meta(slug, meta)
     try:
@@ -80,7 +93,7 @@ def create_project(title: str | None, *, description: str = "", git_path: str | 
         ProjectJournal(slug).ensure(title=meta["title"])
     except Exception:
         pass
-    return meta
+    return get_project(slug) or meta
 
 
 def get_project(slug: str | None) -> dict[str, Any] | None:
@@ -88,6 +101,21 @@ def get_project(slug: str | None) -> dict[str, Any] | None:
     if not path.is_file():
         return None
     meta = _read_meta(path)
+    s = _slugify(slug)
+    # Migrate legacy metas to unified identity (preserve existing projects)
+    dirty = False
+    for k, v in _identity_fields(s).items():
+        if meta.get(k) != v:
+            meta[k] = v
+            dirty = True
+    if "last_opened" not in meta:
+        meta["last_opened"] = ""
+        dirty = True
+    if dirty:
+        try:
+            _write_meta(s, {k: v for k, v in meta.items() if k != "paths"})
+        except Exception:
+            pass
     meta["paths"] = {
         "root": str(project_dir(slug)),
         "cad": str(project_dir(slug) / "cad"),
@@ -95,6 +123,41 @@ def get_project(slug: str | None) -> dict[str, Any] | None:
         "browser": str(project_dir(slug) / "browser"),
     }
     return meta
+
+
+def touch_project_opened(slug: str) -> bool:
+    meta = get_project(slug)
+    if not meta:
+        return False
+    meta["last_opened"] = _now()
+    _write_meta(slug, {k: v for k, v in meta.items() if k != "paths"})
+    return True
+
+
+def update_project(
+    slug: str,
+    *,
+    title: str | None = None,
+    description: str | None = None,
+    git_path: str | None = None,
+) -> dict[str, Any] | None:
+    meta = get_project(slug)
+    if not meta:
+        return None
+    if title is not None:
+        meta["title"] = str(title).strip() or meta.get("title") or slug
+    if description is not None:
+        meta["description"] = str(description).strip()
+    if git_path is not None:
+        meta["git_path"] = str(git_path).strip() or None
+    meta.update(_identity_fields(slug))
+    _write_meta(slug, {k: v for k, v in meta.items() if k != "paths"})
+    return get_project(slug)
+
+
+def rename_project(slug: str, new_title: str) -> dict[str, Any] | None:
+    """Rename display title only — slug remains the identity authority."""
+    return update_project(slug, title=new_title)
 
 
 def list_projects(*, include_archived: bool = False) -> list[dict[str, Any]]:

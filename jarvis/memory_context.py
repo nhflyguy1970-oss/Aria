@@ -37,7 +37,24 @@ GENERIC_AUTO_PATTERNS = (
 
 
 def detect_project_namespace(root: Path | None = None) -> str:
-    """Slug from git repo name or project folder."""
+    """Prefer active project slug (unified identity); else git folder name."""
+    try:
+        from jarvis.active_project import get_active_slug
+
+        active = (get_active_slug() or "").strip()
+        if active:
+            return active
+    except Exception:
+        pass
+    if root is None:
+        try:
+            from jarvis.active_project import coding_root_for_slug, get_active_slug
+
+            cr = coding_root_for_slug(get_active_slug())
+            if cr:
+                root = cr
+        except Exception:
+            pass
     base = (root or PROJECT_ROOT).resolve()
     try:
         r = subprocess.run(
@@ -48,6 +65,16 @@ def detect_project_namespace(root: Path | None = None) -> str:
         )
         if r.returncode == 0:
             base = Path(r.stdout.strip())
+            # If this git root matches a registered project, use its slug
+            try:
+                from jarvis.project_registry import list_projects
+
+                for meta in list_projects(include_archived=True):
+                    gp = str(meta.get("git_path") or "").strip()
+                    if gp and Path(gp).expanduser().resolve() == base:
+                        return str(meta.get("slug") or base.name)
+            except Exception:
+                pass
     except (OSError, subprocess.TimeoutExpired):
         pass
     name = re.sub(r"[^\w-]+", "-", base.name.lower()).strip("-")

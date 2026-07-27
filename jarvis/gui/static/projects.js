@@ -1,4 +1,4 @@
-/** P2 project workspace UI */
+/** Projects — Workspace Identity Layer (not a PM tool) */
 
 function $(id) {
   return document.getElementById(id);
@@ -7,81 +7,391 @@ function $(id) {
 async function p2Fetch(url, opts = {}) {
   const res = await fetch(url, opts);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || res.statusText);
+  if (!res.ok) throw new Error(data.message || res.statusText || "Request failed");
   return data;
 }
 
-async function loadProjects() {
+function esc(s) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+let projectsState = { home: null, filter: "", selected: "" };
+let projectsShortcutsBound = false;
+
+function effectsChecklist(effects) {
+  if (!effects) return "";
+  const rows = [
+    ["Coding Root", effects.coding_root],
+    ["Memory Namespace", effects.memory_namespace],
+    ["Knowledge Namespace", effects.knowledge_namespace],
+    ["Browser Session", effects.browser_session],
+    ["Current Checkpoint", effects.checkpoint],
+    ["Git Repository", effects.git_repository],
+    ["Active Workspace", effects.workspace],
+  ];
+  return `<ul class="proj-effects" aria-label="Active workspace effects">${rows
+    .map(
+      ([label, val]) =>
+        `<li><span class="proj-effect-check" aria-hidden="true">✓</span> <strong>${esc(label)}</strong> <code>${esc(val || "—")}</code></li>`
+    )
+    .join("")}</ul>`;
+}
+
+function renderProjectList(home) {
   const list = $("projectsList");
-  const activeEl = $("projectsActive");
   if (!list) return;
-  try {
-    const data = await p2Fetch("/api/projects");
-    if (activeEl) {
-      activeEl.textContent = data.active
-        ? `Active: ${data.active}`
-        : "No active project — pick one or create below.";
-    }
-    list.innerHTML = "";
-    for (const p of data.projects || []) {
-      const li = document.createElement("li");
-      li.className = "planner-list-item";
-      const isActive = p.slug === data.active;
-      const title = document.createElement("strong");
-      title.textContent = p.title || p.slug || "Untitled project";
-      const slug = document.createElement("span");
-      slug.className = "muted";
-      slug.textContent = ` (${p.slug || "?"})`;
-      li.append(title, slug);
-      if (isActive) {
-        const active = document.createElement("span");
-        active.className = "ok";
-        active.textContent = " active";
-        li.append(active);
-      }
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "ghost-btn tiny";
-      btn.textContent = isActive ? "Active" : "Switch";
-      btn.disabled = isActive;
-      btn.addEventListener("click", async () => {
-        try {
-          await p2Fetch("/api/projects/switch", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slug: p.slug }),
-          });
-          loadProjects();
-          window.showAriaToast?.(`Project: ${p.slug}`, "ok", 2500);
-        } catch (err) {
-          window.showAriaToast?.(err.message || "Switch failed", "err", 5000);
+  const active = home.active || "";
+  const q = (projectsState.filter || "").toLowerCase();
+  let projects = home.projects || [];
+  if (q) {
+    projects = projects.filter((p) =>
+      `${p.title || ""} ${p.slug || ""} ${p.description || ""}`.toLowerCase().includes(q)
+    );
+  }
+  if (!projects.length) {
+    list.innerHTML = `<li class="muted proj-empty">No projects yet.
+      <button type="button" class="ghost-btn tiny" id="projectsEmptyCreateBtn">Create</button>
+      or ask Chat: <em>create project named …</em></li>`;
+    list.querySelector("#projectsEmptyCreateBtn")?.addEventListener("click", () => {
+      $("projectsTitleInput")?.focus();
+    });
+    return;
+  }
+  list.innerHTML = "";
+  for (const p of projects) {
+    const li = document.createElement("li");
+    li.className = `proj-list-item${p.slug === active ? " is-active" : ""}${p.slug === projectsState.selected ? " is-selected" : ""}`;
+    li.tabIndex = 0;
+    li.dataset.slug = p.slug;
+    li.innerHTML = `<div class="proj-list-main">
+        <strong>${esc(p.title || p.slug)}</strong>
+        <span class="muted">(${esc(p.slug)})</span>
+        ${p.slug === active ? '<span class="ok proj-badge">active</span>' : ""}
+        ${p.archived ? '<span class="warn proj-badge">archived</span>' : ""}
+      </div>
+      <div class="proj-list-meta muted">${esc(p.git_path || p.description || "workspace")}</div>`;
+    li.addEventListener("click", () => selectProject(p.slug));
+    li.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") selectProject(p.slug);
+    });
+    list.appendChild(li);
+  }
+}
+
+async function selectProject(slug) {
+  projectsState.selected = slug;
+  await loadProjectHome(slug);
+}
+
+async function switchTo(slug) {
+  const data = await p2Fetch("/api/projects/switch", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ slug }),
+  });
+  const msg = data.message || `Project: ${slug}`;
+  window.showAriaToast?.(msg.split("\n")[0].replace(/\*\*/g, ""), data.ok === false ? "warn" : "ok", 4500);
+  await loadProjectHome(slug);
+  return data;
+}
+
+function renderHome(home) {
+  const root = $("projectsHome");
+  if (!root) return;
+  projectsState.home = home;
+
+  const activeEl = $("projectsActive");
+  if (activeEl) {
+    activeEl.textContent = home.active
+      ? `Active workspace: ${home.active}`
+      : "No active project — pick one or create below.";
+  }
+
+  renderProjectList(home);
+
+  const p = home.project;
+  if (!p) {
+    root.innerHTML = `<div class="proj-empty-home">
+      <p class="muted">Select or create a project to enter its workspace room — coding, memory, journal, knowledge, and AI in one identity.</p>
+      ${effectsChecklist(home.effects)}
+    </div>`;
+    return;
+  }
+
+  const id = home.identity || {};
+  const today = home.today || {};
+  const coding = home.coding || {};
+  const ai = home.ai_context || {};
+  const journal = home.journal || {};
+  const memory = home.memory || {};
+  const knowledge = home.knowledge || {};
+  const isActive = home.is_active;
+
+  root.innerHTML = `
+    <header class="proj-home-header">
+      <div>
+        <h3 class="proj-home-title">${esc(p.title || p.slug)}</h3>
+        <p class="muted proj-home-tagline">Workspace identity — not a task board. One slug, one room.</p>
+      </div>
+      <div class="proj-home-actions">
+        ${
+          isActive
+            ? `<button type="button" class="ghost-btn small" disabled>Active</button>`
+            : `<button type="button" class="apply-btn small" data-act="switch">Switch here</button>`
         }
+        <button type="button" class="apply-btn small" data-act="continue">Continue Project</button>
+        <button type="button" class="ghost-btn small" data-act="briefing">Briefing</button>
+      </div>
+    </header>
+
+    <section class="proj-panel proj-effects-panel" aria-label="What switching does">
+      <h4>Active effects</h4>
+      <p class="muted tiny">Switching projects updates every subsystem below.</p>
+      ${effectsChecklist(home.effects)}
+    </section>
+
+    <div class="proj-home-grid">
+      <section class="proj-panel">
+        <h4>Project</h4>
+        <dl class="proj-dl">
+          <dt>Name</dt><dd>${esc(p.title || p.slug)}</dd>
+          <dt>Slug</dt><dd><code>${esc(p.slug)}</code></dd>
+          <dt>Status</dt><dd>${p.archived ? "archived" : "active"}</dd>
+          <dt>Description</dt><dd>${esc(p.description || "—")}</dd>
+          <dt>Git</dt><dd><code>${esc(p.git_path || "—")}</code></dd>
+          <dt>Workspace</dt><dd><code>${esc((p.paths && p.paths.root) || id.workspace_root || "—")}</code></dd>
+          <dt>Created</dt><dd>${esc(p.created || "—")}</dd>
+          <dt>Last opened</dt><dd>${esc(p.last_opened || "—")}</dd>
+        </dl>
+        ${(home.recent_activity || []).length ? `<p class="muted tiny">${(home.recent_activity || []).map(esc).join(" · ")}</p>` : ""}
+      </section>
+
+      <section class="proj-panel">
+        <h4>Continue working</h4>
+        <div class="proj-continue-grid">
+          ${(home.continue_working || [])
+            .map(
+              (a) =>
+                `<button type="button" class="ghost-btn small" data-continue="${esc(a.id)}" data-view="${esc(a.view || "")}" data-tab="${esc(a.tab || "")}">${esc(a.label)}</button>`
+            )
+            .join("")}
+        </div>
+      </section>
+
+      <section class="proj-panel">
+        <h4>Today's workspace</h4>
+        <p><strong>Journal</strong> ${esc(today.journal_preview || "—")}</p>
+        <p><strong>Commits</strong></p>
+        <ul class="proj-mini-list">${
+          (today.recent_commits || []).length
+            ? (today.recent_commits || []).map((c) => `<li><code>${esc(c)}</code></li>`).join("")
+            : "<li class='muted'>None today</li>"
+        }</ul>
+        <p><strong>Open files</strong> ${(today.open_files || []).map(esc).join(", ") || "—"}</p>
+        <p><strong>Memories</strong></p>
+        <ul class="proj-mini-list">${
+          (today.recent_memories || []).length
+            ? (today.recent_memories || []).map((m) => `<li>${esc(m)}</li>`).join("")
+            : "<li class='muted'>None</li>"
+        }</ul>
+        ${(today.pending_candidates || []).length
+          ? `<p><strong>Candidates</strong> ${today.pending_candidates.length} pending — <button type="button" class="ghost-btn tiny" data-view="memory">Review in Memory</button></p>`
+          : ""}
+      </section>
+
+      <section class="proj-panel">
+        <h4>Coding</h4>
+        <dl class="proj-dl">
+          <dt>Repository</dt><dd><code>${esc(coding.repository)}</code></dd>
+          <dt>Branch</dt><dd>${esc(coding.branch)}</dd>
+          <dt>Status</dt><dd><pre class="proj-pre">${esc(coding.git_status)}</pre></dd>
+          <dt>Coding root</dt><dd><code>${esc(coding.coding_root)}</code></dd>
+          <dt>Knowledge index</dt><dd>${esc(coding.knowledge_index)}</dd>
+          <dt>Workspace session</dt><dd><code>${esc(coding.workspace_session)}</code></dd>
+        </dl>
+      </section>
+
+      <section class="proj-panel">
+        <h4>AI context</h4>
+        <p><strong>Checkpoint</strong></p>
+        <pre class="proj-pre">${esc(ai.checkpoint)}</pre>
+        <p class="muted tiny">Memory NS <code>${esc(ai.memory_namespace)}</code> · Knowledge <code>${esc(ai.knowledge_namespace)}</code></p>
+        <button type="button" class="ghost-btn tiny" data-view="memory">Open Memory</button>
+      </section>
+
+      <section class="proj-panel">
+        <h4>Journal</h4>
+        <p>${journal.today_bullets || 0} bullet(s) today · ${journal.day_count || 0} day(s) total</p>
+        <p class="muted tiny">Recent: ${(journal.recent_days || []).slice(0, 5).map(esc).join(", ") || "—"}</p>
+        <button type="button" class="ghost-btn small" data-continue="journal" data-view="journal" data-tab="projects">Open project journal</button>
+      </section>
+
+      <section class="proj-panel">
+        <h4>Memory</h4>
+        <p>Namespace <code>${esc(memory.namespace || id.memory_namespace)}</code></p>
+        <ul class="proj-mini-list">${
+          (memory.recent_memories || []).length
+            ? (memory.recent_memories || []).map((m) => `<li>${esc(m)}</li>`).join("")
+            : "<li class='muted'>Deep-link into Memory Browser — not duplicated here.</li>"
+        }</ul>
+        <button type="button" class="ghost-btn small" data-view="memory">Open Memory</button>
+      </section>
+
+      <section class="proj-panel">
+        <h4>Knowledge</h4>
+        <p>NS <code>${esc(knowledge.namespace)}</code> · ${esc(knowledge.coverage)}</p>
+        <ul class="proj-mini-list">${
+          (knowledge.indexed_repositories || []).length
+            ? (knowledge.indexed_repositories || [])
+                .map((r) => `<li><code>${esc(r.path)}</code> ${r.dirty ? "(dirty)" : ""}</li>`)
+                .join("")
+            : "<li class='muted'>No indexed repo yet — import git or index from Documents.</li>"
+        }</ul>
+        <button type="button" class="ghost-btn small" data-view="documents">Open Documents</button>
+      </section>
+    </div>
+
+    <section class="proj-panel proj-quick">
+      <h4>Quick actions</h4>
+      <div class="proj-continue-grid">
+        ${(home.quick_actions || [])
+          .map((a) => `<button type="button" class="ghost-btn small" data-quick="${esc(a.id)}">${esc(a.label)}</button>`)
+          .join("")}
+      </div>
+    </section>
+
+    <dialog id="projectsBriefingDialog" class="proj-dialog">
+      <form method="dialog" class="proj-dialog-card">
+        <h3>Project briefing</h3>
+        <pre class="proj-briefing" id="projectsBriefingBody"></pre>
+        <div class="proj-dialog-actions">
+          <button type="submit" class="ghost-btn">Close</button>
+        </div>
+      </form>
+    </dialog>
+
+    <p class="muted tiny proj-shortcuts">Shortcuts: <kbd>/</kbd> search · <kbd>N</kbd> new · <kbd>?</kbd> help · <kbd>Esc</kbd> cancel</p>
+  `;
+
+  root.querySelector("[data-act=switch]")?.addEventListener("click", () => switchTo(p.slug).catch(toastErr));
+  root.querySelector("[data-act=continue]")?.addEventListener("click", () => continueProject(p.slug));
+  root.querySelector("[data-act=briefing]")?.addEventListener("click", () => showBriefing(p.slug));
+
+  root.querySelectorAll("[data-continue], [data-view]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const view = btn.getAttribute("data-view");
+      const tab = btn.getAttribute("data-tab");
+      const cont = btn.getAttribute("data-continue");
+      if (cont === "journal" || (view === "journal" && tab === "projects")) {
+        window.openProjectJournal?.(p.slug);
+        return;
+      }
+      if (view) window.switchToView?.(view);
+    });
+  });
+
+  root.querySelectorAll("[data-quick]").forEach((btn) => {
+    btn.addEventListener("click", () => handleQuick(btn.getAttribute("data-quick"), p));
+  });
+}
+
+function toastErr(err) {
+  window.showAriaToast?.(err.message || String(err), "err", 5000);
+}
+
+async function continueProject(slug) {
+  try {
+    const data = await p2Fetch("/api/projects/continue", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug }),
+    });
+    window.showAriaToast?.(data.message?.split("\n")[0]?.replace(/\*\*/g, "") || "Continued", "ok", 4000);
+    await loadProjectHome(slug);
+  } catch (e) {
+    toastErr(e);
+  }
+}
+
+async function showBriefing(slug) {
+  try {
+    const data = await p2Fetch("/api/projects/briefing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug }),
+    });
+    const dlg = $("projectsBriefingDialog");
+    const body = $("projectsBriefingBody");
+    if (body) body.textContent = data.briefing || data.message || "";
+    dlg?.showModal?.();
+  } catch (e) {
+    toastErr(e);
+  }
+}
+
+async function handleQuick(id, p) {
+  try {
+    if (id === "archive") {
+      await p2Fetch(`/api/projects/${encodeURIComponent(p.slug)}/archive`, { method: "POST" });
+      window.showAriaToast?.("Archived", "ok", 2500);
+      await loadProjectHome("");
+    } else if (id === "restore") {
+      await p2Fetch(`/api/projects/${encodeURIComponent(p.slug)}/restore`, { method: "POST" });
+      window.showAriaToast?.("Restored", "ok", 2500);
+      await loadProjectHome(p.slug);
+    } else if (id === "rename") {
+      const title = prompt("New display name (slug stays the same):", p.title || p.slug);
+      if (!title) return;
+      await p2Fetch(`/api/projects/${encodeURIComponent(p.slug)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
       });
-      li.appendChild(document.createElement("br"));
-      li.appendChild(btn);
-      list.appendChild(li);
-    }
-    if (!(data.projects || []).length) {
-      list.innerHTML =
-        '<li class="muted">No projects yet. <button type="button" class="ghost-btn tiny" id="projectsEmptyCreateBtn">Create project</button> or <button type="button" class="ghost-btn tiny" id="projectsEmptyChatBtn">ask Chat</button></li>';
-      list.querySelector("#projectsEmptyCreateBtn")?.addEventListener("click", () => {
-        $("projectsTitleInput")?.focus();
-      });
-      list.querySelector("#projectsEmptyChatBtn")?.addEventListener("click", () => {
-        window.switchToView?.("chat");
-        window.jarvisSendToChat?.("Create a new project named ");
-      });
+      await loadProjectHome(p.slug);
+    } else if (id === "export") {
+      const data = await p2Fetch(`/api/projects/${encodeURIComponent(p.slug)}/export`);
+      const blob = new Blob([JSON.stringify(data.export, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${p.slug}-project-export.json`;
+      a.click();
+    } else if (id === "open_folder") {
+      window.showAriaToast?.(p.paths?.root || p.slug, "info", 4000);
+    } else if (id === "import") {
+      $("projectsGitInput")?.focus();
+    } else if (id === "briefing") {
+      await showBriefing(p.slug);
+    } else if (id === "continue") {
+      await continueProject(p.slug);
+    } else if (id === "create") {
+      $("projectsTitleInput")?.focus();
     }
   } catch (e) {
-    if (list) {
-      list.replaceChildren();
-      const error = document.createElement("li");
-      error.className = "muted";
-      error.textContent = e.message || "Could not load projects";
-      list.appendChild(error);
-    }
-    window.showAriaToast?.(e.message || "Could not load projects", "err", 5000);
+    toastErr(e);
   }
+}
+
+async function loadProjectHome(slug) {
+  const homeEl = $("projectsHome");
+  if (homeEl) homeEl.innerHTML = `<div class="proj-skeleton" aria-busy="true"><div></div><div></div><div></div></div>`;
+  try {
+    const q = slug ? `?slug=${encodeURIComponent(slug)}` : "";
+    const home = await p2Fetch(`/api/projects/home${q}`);
+    if (!slug && home.active) projectsState.selected = home.active;
+    else if (slug) projectsState.selected = slug;
+    renderHome(home);
+  } catch (e) {
+    if (homeEl) homeEl.innerHTML = `<p class="muted">${esc(e.message)}</p>`;
+    toastErr(e);
+  }
+}
+
+async function loadProjects() {
+  await loadProjectHome(projectsState.selected || "");
 }
 
 async function maybeProjectPicker() {
@@ -103,35 +413,86 @@ async function maybeProjectPicker() {
       btn.textContent = `${p.title} (${p.slug})`;
       btn.addEventListener("click", async () => {
         try {
-          await p2Fetch("/api/projects/switch", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ slug: p.slug }),
-          });
+          await switchTo(p.slug);
           modal.classList.add("hidden");
           sessionStorage.setItem("jarvisProjectPickerDone", "1");
-          window.showAriaToast?.(`Active project: ${p.title || p.slug}`, "ok", 3000);
-          loadProjects();
         } catch (err) {
-          window.showAriaToast?.(err.message || "Could not switch project", "err", 5000);
+          toastErr(err);
         }
       });
       pickList.appendChild(btn);
     }
     modal.classList.remove("hidden");
   } catch (err) {
-    window.showAriaToast?.(err.message || "Could not load project picker", "err", 5000);
+    toastErr(err);
   }
+}
+
+function showProjectsHelp() {
+  window.showAriaToast?.(
+    "Projects shortcuts: / search · N new · Enter select · Esc close · ? help. Chat: switch/list/continue/briefing project.",
+    "info",
+    6000
+  );
+}
+
+function bindProjectsShortcuts() {
+  if (projectsShortcutsBound) return;
+  projectsShortcutsBound = true;
+  document.addEventListener("keydown", (e) => {
+    const view = $("projectsView");
+    if (!view || view.classList.contains("hidden")) return;
+    const tag = (e.target && e.target.tagName) || "";
+    if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) {
+      if (e.key === "Escape") {
+        e.target.blur();
+        $("projectsHelpDialog")?.close?.();
+      }
+      if (e.key === "Enter" && e.ctrlKey && e.target.id === "projectsTitleInput") {
+        e.preventDefault();
+        $("projectsCreateBtn")?.click();
+      }
+      return;
+    }
+    if (e.key === "/" && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      $("projectsSearchInput")?.focus();
+    } else if (e.key === "n" || e.key === "N") {
+      e.preventDefault();
+      $("projectsTitleInput")?.focus();
+    } else if (e.key === "?") {
+      e.preventDefault();
+      showProjectsHelp();
+    } else if (e.key === "Escape") {
+      $("projectPickerModal")?.classList.add("hidden");
+      $("projectsBriefingDialog")?.close?.();
+    } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      const items = [...document.querySelectorAll("#projectsList .proj-list-item")];
+      if (!items.length) return;
+      e.preventDefault();
+      const idx = items.findIndex((el) => el.classList.contains("is-selected"));
+      const next = e.key === "ArrowDown" ? Math.min(items.length - 1, idx + 1) : Math.max(0, idx <= 0 ? 0 : idx - 1);
+      const slug = items[next]?.dataset.slug;
+      if (slug) selectProject(slug);
+    }
+  });
 }
 
 window.initProjects = function initProjects() {
   const root = $("projectsView");
-  if (!root || root.dataset.bound === "1") return;
+  if (!root) return;
+  if (root.dataset.bound === "1") {
+    loadProjects();
+    return;
+  }
   root.dataset.bound = "1";
-  loadProjects();
-  $("projectsOpenMemoryBtn")?.addEventListener("click", () => window.switchToView?.("memory"));
-  $("projectsOpenCodingBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
-  $("projectsOpenDocumentsBtn")?.addEventListener("click", () => window.switchToView?.("documents"));
+  bindProjectsShortcuts();
+
+  $("projectsSearchInput")?.addEventListener("input", (e) => {
+    projectsState.filter = e.target.value || "";
+    if (projectsState.home) renderProjectList(projectsState.home);
+  });
+
   $("projectsCreateBtn")?.addEventListener("click", async () => {
     const title = $("projectsTitleInput")?.value?.trim();
     if (!title) {
@@ -143,41 +504,51 @@ window.initProjects = function initProjects() {
       const created = await p2Fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({
+          title,
+          description: $("projectsDescInput")?.value?.trim() || "",
+        }),
       });
       $("projectsTitleInput").value = "";
-      const slug = created?.project?.slug || created?.slug;
+      if ($("projectsDescInput")) $("projectsDescInput").value = "";
+      const slug = created?.project?.slug;
       if (!slug) throw new Error("Create succeeded but no project slug returned");
-      await p2Fetch("/api/projects/switch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug }),
-      });
       window.showAriaToast?.(`Active project: ${created?.project?.title || title}`, "ok", 3500);
-      loadProjects();
+      await loadProjectHome(slug);
     } catch (err) {
-      window.showAriaToast?.(err.message || "Could not create project", "err", 5000);
+      toastErr(err);
     }
   });
+
   $("projectsImportBtn")?.addEventListener("click", async () => {
     const path = $("projectsGitInput")?.value?.trim();
     if (!path) return;
     try {
-      await p2Fetch("/api/projects/import-git", {
+      const data = await p2Fetch("/api/projects/import-git", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path }),
       });
       $("projectsGitInput").value = "";
-      window.showAriaToast?.("Project imported", "ok", 3500);
-      loadProjects();
+      window.showAriaToast?.("Repository imported as workspace", "ok", 3500);
+      await loadProjectHome(data.project?.slug || "");
     } catch (err) {
-      window.showAriaToast?.(err.message || "Import failed", "err", 5000);
+      toastErr(err);
     }
   });
+
+  $("projectsHelpBtn")?.addEventListener("click", showProjectsHelp);
   $("projectPickerSkipBtn")?.addEventListener("click", () => {
     $("projectPickerModal")?.classList.add("hidden");
     sessionStorage.setItem("jarvisProjectPickerDone", "1");
   });
+
+  loadProjects();
   maybeProjectPicker();
+};
+
+window.openProjectHome = function openProjectHome(slug) {
+  window.switchToView?.("projects");
+  projectsState.selected = slug || "";
+  setTimeout(() => loadProjectHome(slug || ""), 50);
 };

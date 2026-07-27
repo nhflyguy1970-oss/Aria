@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=5.16.160" />
+  <link rel="stylesheet" href="/static/style.css?v=5.17.0" />
   <script>
     (function () {
       var standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -1623,22 +1623,40 @@
       </div>
 
       <div id="projectsView" class="view-panel hidden">
-        <h2>Projects</h2>
-        <p id="projectsActive" class="muted">Loading…</p>
-        <div class="planner-add-row">
-          <button type="button" id="projectsOpenMemoryBtn" class="ghost-btn small">Memory</button>
-          <button type="button" id="projectsOpenCodingBtn" class="ghost-btn small">Chat / Coding</button>
-          <button type="button" id="projectsOpenDocumentsBtn" class="ghost-btn small">Documents</button>
+        <div class="proj-shell">
+          <header class="proj-shell-header">
+            <div>
+              <h2>Projects</h2>
+              <p class="muted proj-tagline">Workspace identity layer — one slug connects coding, memory, journal, knowledge, browser, and AI. Not a task tracker.</p>
+              <p id="projectsActive" class="muted">Loading…</p>
+            </div>
+            <div class="proj-shell-actions">
+              <button type="button" id="projectsHelpBtn" class="ghost-btn tiny" title="Shortcuts">?</button>
+            </div>
+          </header>
+          <div class="proj-layout">
+            <aside class="proj-sidebar" aria-label="Project list">
+              <div class="planner-add-row">
+                <input type="search" id="projectsSearchInput" placeholder="Search projects… (/)" aria-label="Search projects" />
+              </div>
+              <div class="planner-add-row">
+                <input type="text" id="projectsTitleInput" placeholder="New project name… (N)" aria-label="New project name" />
+                <button type="button" id="projectsCreateBtn" class="apply-btn small">Create</button>
+              </div>
+              <div class="planner-add-row">
+                <input type="text" id="projectsDescInput" placeholder="Optional description…" aria-label="Description" />
+              </div>
+              <div class="planner-add-row">
+                <input type="text" id="projectsGitInput" placeholder="Import git repo path…" aria-label="Git path" />
+                <button type="button" id="projectsImportBtn" class="ghost-btn small">Import</button>
+              </div>
+              <ul id="projectsList" class="proj-list" role="listbox" aria-label="Projects"></ul>
+            </aside>
+            <main id="projectsHome" class="proj-home" aria-live="polite">
+              <div class="proj-skeleton" aria-busy="true"><div></div><div></div><div></div></div>
+            </main>
+          </div>
         </div>
-        <div class="planner-add-row">
-          <input type="text" id="projectsTitleInput" placeholder="New project name…" />
-          <button type="button" id="projectsCreateBtn" class="ghost-btn small">Create</button>
-        </div>
-        <div class="planner-add-row">
-          <input type="text" id="projectsGitInput" placeholder="Import git repo path…" />
-          <button type="button" id="projectsImportBtn" class="ghost-btn small">Import</button>
-        </div>
-        <ul id="projectsList" class="planner-list"></ul>
       </div>
 
       <div id="makerView" class="view-panel hidden">
@@ -2146,7 +2164,7 @@
   <script src="/static/audio_studio.js?v=5.16.101"></script>
   <script src="/static/audio_advanced.js?v=1.5.4"></script>
   <script src="/static/audio.js?v=5.16.160"></script>
-  <script src="/static/journal.js?v=5.16.160"></script>
+  <script src="/static/journal.js?v=5.17.0"></script>
   <script src="/static/video_studio.js?v=5.16.160"></script>
   <script src="/static/meme_studio.js?v=1.1.5"></script>
   <script src="/static/smarthome.js?v=5.16.73"></script>
@@ -2166,7 +2184,7 @@
   <script src="/static/calendar.js?v=5.17.0"></script>
   <script src="/static/flytying.js?v=5.16.106"></script>
 
-  <script src="/static/projects.js?v=5.16.93"></script>
+  <script src="/static/projects.js?v=5.17.0"></script>
   <script src="/static/vendor/three/three.min.js"></script>
   <script src="/static/vendor/three/STLLoader.js"></script>
   <script src="/static/maker.js?v=5.16.120"></script>

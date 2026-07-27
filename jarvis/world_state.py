@@ -31,14 +31,19 @@ def jarvis_persona_enabled() -> bool:
 
 
 def _active_project() -> dict[str, Any]:
-    from jarvis.active_project import get_active_project, get_active_slug
+    from jarvis.active_project import get_active_project, get_active_slug, identity_for_slug
 
     slug = get_active_slug()
     meta = get_active_project() or {}
+    identity = identity_for_slug(slug)
     return {
         "slug": slug,
-        "name": meta.get("name") or slug or "",
+        "name": meta.get("title") or meta.get("name") or slug or "",
         "title": meta.get("title") or meta.get("name") or slug or "",
+        "coding_root": identity.get("coding_root") or "",
+        "memory_namespace": identity.get("memory_namespace") or "default",
+        "knowledge_namespace": identity.get("knowledge_namespace") or "",
+        "git_path": identity.get("git_path") or "",
     }
 
 

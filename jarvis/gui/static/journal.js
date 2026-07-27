@@ -1749,7 +1749,31 @@ async function loadProjects() {
     bindBulletActions();
     bindLinkClicks();
   }
+
+  const openWorkspace = document.createElement("button");
+  openWorkspace.type = "button";
+  openWorkspace.className = "ghost-btn tiny";
+  openWorkspace.textContent = projectJournalSlug
+    ? `Open ${projectJournalSlug} in Projects`
+    : "Open Projects workspace";
+  openWorkspace.addEventListener("click", () => {
+    if (window.openProjectHome) window.openProjectHome(projectJournalSlug || "");
+    else window.switchToView?.("projects");
+  });
+  bujoContent.querySelector(".bujo-cal-hint")?.append(" · ", openWorkspace);
 }
+
+window.openProjectJournal = function openProjectJournal(slug) {
+  window.switchToView?.("journal");
+  projectJournalSlug = slug || projectJournalSlug;
+  setTimeout(() => {
+    if (typeof setBujoTab === "function") setBujoTab("projects");
+    else {
+      currentBujo = "projects";
+      if (typeof refreshBujo === "function") refreshBujo();
+    }
+  }, 80);
+};
 
 function setBujoTab(name) {
   currentBujo = name;

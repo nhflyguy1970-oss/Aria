@@ -5925,3 +5925,77 @@ body:not(.has-status-bar) .mini-chat-panel { bottom: 4rem; }
 @media (max-width: 640px) {
   .cal-week-grid { grid-template-columns: 1fr; }
 }
+
+/* —— Projects workspace home —— */
+#projectsView { overflow: auto; }
+.proj-shell { padding: 1rem 1.25rem 2rem; height: 100%; box-sizing: border-box; }
+.proj-shell-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+.proj-tagline { max-width: 40rem; margin: 0.25rem 0 0.35rem; font-size: 0.85rem; }
+.proj-layout {
+  display: grid; grid-template-columns: minmax(14rem, 18rem) 1fr; gap: 1rem; margin-top: 0.75rem;
+  min-height: 0;
+}
+.proj-sidebar {
+  border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem;
+  background: var(--surface2); max-height: calc(100vh - 10rem); overflow: auto;
+}
+.proj-list { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+.proj-list-item {
+  padding: 0.55rem 0.65rem; border-radius: 8px; border: 1px solid transparent;
+  cursor: pointer; margin-bottom: 0.35rem; transition: border-color 0.15s, background 0.15s;
+}
+.proj-list-item:hover, .proj-list-item:focus-visible {
+  border-color: var(--border); background: var(--bg-elevated); outline: none;
+}
+.proj-list-item.is-selected { border-color: var(--accent, #5b8); background: var(--bg-elevated); }
+.proj-list-item.is-active .proj-badge.ok { color: var(--ok, #3a8); }
+.proj-list-meta { font-size: 0.72rem; margin-top: 0.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proj-badge { font-size: 0.7rem; margin-left: 0.35rem; }
+.proj-home { min-width: 0; }
+.proj-home-header { display: flex; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; align-items: flex-start; }
+.proj-home-title { margin: 0; font-size: 1.25rem; }
+.proj-home-tagline { margin: 0.2rem 0 0; font-size: 0.8rem; }
+.proj-home-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.proj-home-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.85rem; margin: 0.85rem 0;
+}
+.proj-panel {
+  border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem;
+  background: var(--surface2);
+}
+.proj-panel h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.proj-effects-panel { margin-top: 0.75rem; }
+.proj-effects { list-style: none; margin: 0.35rem 0 0; padding: 0; font-size: 0.82rem; }
+.proj-effects li { margin: 0.25rem 0; display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: baseline; }
+.proj-effect-check { color: var(--ok, #3a8); }
+.proj-dl { display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.25rem 0.65rem; margin: 0; font-size: 0.82rem; }
+.proj-dl dt { color: var(--muted); }
+.proj-dl dd { margin: 0; overflow-wrap: anywhere; }
+.proj-continue-grid { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.proj-mini-list { margin: 0.25rem 0 0.5rem; padding-left: 1.1rem; font-size: 0.82rem; }
+.proj-pre {
+  white-space: pre-wrap; font-size: 0.75rem; max-height: 8rem; overflow: auto;
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 6px; padding: 0.4rem 0.5rem; margin: 0.25rem 0;
+}
+.proj-skeleton div {
+  height: 3rem; margin: 0.45rem 0; border-radius: 8px;
+  background: linear-gradient(90deg, var(--surface2), var(--bg-elevated), var(--surface2));
+  background-size: 200% 100%; animation: projSkel 1.2s ease infinite;
+}
+@keyframes projSkel { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+.proj-dialog { border: none; background: transparent; max-width: 40rem; }
+.proj-dialog-card {
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 1rem 1.15rem;
+}
+.proj-briefing { white-space: pre-wrap; font-size: 0.82rem; max-height: 50vh; overflow: auto; }
+.proj-dialog-actions { display: flex; justify-content: flex-end; margin-top: 0.75rem; }
+.proj-shortcuts { margin-top: 0.75rem; }
+.proj-shortcuts kbd {
+  font-size: 0.7rem; border: 1px solid var(--border); border-radius: 4px; padding: 0.05rem 0.3rem;
+  background: var(--bg-elevated);
+}
+@media (max-width: 900px) {
+  .proj-layout { grid-template-columns: 1fr; }
+  .proj-sidebar { max-height: none; }
+}

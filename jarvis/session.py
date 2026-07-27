@@ -17,8 +17,11 @@ class SessionContext:
     last_module: str = "general"
     last_briefing_headlines: list[dict[str, str]] = field(default_factory=list)
     last_coding_mode: str = ""
+    coding_root: str = ""
     chat_model: str = ""
     memory_namespace: str = "default"
+    knowledge_namespace: str = ""
+    project_slug: str = ""
     recent_files: list[str] = field(default_factory=list)
     pending_clarification: dict | None = None
 
@@ -66,6 +69,15 @@ class SessionContext:
 
     def note_memory_namespace(self, namespace: str) -> None:
         self.memory_namespace = (namespace or "default").strip() or "default"
+
+    def note_knowledge_namespace(self, namespace: str) -> None:
+        self.knowledge_namespace = (namespace or "").strip()
+
+    def note_project_slug(self, slug: str) -> None:
+        self.project_slug = (slug or "").strip()
+
+    def note_coding_root(self, path: str) -> None:
+        self.coding_root = (path or "").strip()
 
     def note_coding_mode(self, mode: str) -> None:
         if mode:
@@ -126,10 +138,16 @@ class SessionContext:
             parts.append(f"last_proposal={self.last_proposal_id}")
         if self.last_coding_mode:
             parts.append(f"last_coding_mode={self.last_coding_mode}")
+        if self.coding_root:
+            parts.append(f"coding_root={self.coding_root}")
+        if self.project_slug:
+            parts.append(f"project={self.project_slug}")
         if self.recent_files:
             parts.append(f"recent_files={', '.join(self.recent_files[:5])}")
         if self.memory_namespace and self.memory_namespace != "default":
             parts.append(f"memory_ns={self.memory_namespace}")
+        if self.knowledge_namespace:
+            parts.append(f"knowledge_ns={self.knowledge_namespace}")
         if self.chat_model:
             parts.append(f"chat_model={self.chat_model}")
         if self.last_briefing_headlines:
@@ -149,6 +167,9 @@ class SessionContext:
         self.last_search_query = ""
         self.last_briefing_headlines = []
         self.last_coding_mode = ""
+        self.coding_root = ""
+        self.knowledge_namespace = ""
+        self.project_slug = ""
         self.recent_files.clear()
         self.pending_clarification = None
 
@@ -165,8 +186,11 @@ class SessionContext:
             "last_briefing_headlines": list(self.last_briefing_headlines),
             "last_module": self.last_module,
             "last_coding_mode": self.last_coding_mode,
+            "coding_root": self.coding_root,
             "chat_model": self.chat_model,
             "memory_namespace": self.memory_namespace,
+            "knowledge_namespace": self.knowledge_namespace,
+            "project_slug": self.project_slug,
             "recent_files": list(self.recent_files),
             "pending_clarification": self.pending_clarification,
         }
@@ -187,8 +211,11 @@ class SessionContext:
             last_briefing_headlines=list(data.get("last_briefing_headlines") or []),
             last_module=data.get("last_module", "general"),
             last_coding_mode=data.get("last_coding_mode", ""),
+            coding_root=data.get("coding_root", ""),
             chat_model=data.get("chat_model", ""),
             memory_namespace=data.get("memory_namespace", "default"),
+            knowledge_namespace=data.get("knowledge_namespace", ""),
+            project_slug=data.get("project_slug", ""),
             recent_files=list(data.get("recent_files") or []),
             pending_clarification=data.get("pending_clarification"),
         )
