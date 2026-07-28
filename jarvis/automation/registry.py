@@ -135,18 +135,21 @@ ACTIONS: dict[str, dict[str, Any]] = {
         "ai_explain": "Replays a sequence Aria learned from your usage.",
     },
     "workflow_dag_run": {
-        "name": "Run workflow DAG",
-        "description": "Execute a multi-step workflow pipeline",
-        "permissions": ["workflows"],
-        "arguments": {"workflow_id": {"type": "string", "required": True}},
-        "version": 1,
+        "name": "Run pipeline (DAG)",
+        "description": "Execute a multi-step Automation pipeline (workflow DAG)",
+        "permissions": ["workflows", "pipelines"],
+        "arguments": {
+            "workflow_id": {"type": "string", "required": True},
+            "variables": {"type": "object", "required": False},
+        },
+        "version": 2,
         "category": "workflows",
         "confirmation": True,
-        "estimated_duration_sec": 60,
+        "estimated_duration_sec": 90,
         "retry": True,
         "activity": True,
         "job": True,
-        "ai_explain": "Runs a DAG of automation steps.",
+        "ai_explain": "Runs a saved multi-step pipeline under Automation. Schedule via Rules; observe via Activity and Job Center.",
     },
     # Experimental — registered but gated
     "agent_step": {

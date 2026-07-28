@@ -9,6 +9,10 @@ def register_automation_product_routes(app, assistant) -> None:
     from fastapi import Request
     from fastapi.responses import JSONResponse
 
+    from jarvis.automation.pipeline_routes import register_pipeline_routes
+
+    register_pipeline_routes(app, assistant)
+
     @app.get("/api/automation/home")
     def automation_home():
         from jarvis.automation.home import home_snapshot

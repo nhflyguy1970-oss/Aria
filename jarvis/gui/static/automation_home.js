@@ -4,6 +4,11 @@
 
   let home = null;
   let editingRuleId = "";
+  let editingRuleParams = {};
+  let lastPipeRun = null;
+  let editingPipeline = null;
+  let nlDraft = null;
+  let pipeFilter = { q: "", sort: "name", fav: false };
 
   function $(id) {
     return document.getElementById(id);
@@ -97,8 +102,80 @@
         <button type="button" class="ghost-btn tiny" data-wf-act="dry" data-slug="${slug}">Dry run</button>
         <button type="button" class="apply-btn tiny" data-wf-act="run" data-slug="${slug}">Run</button>
         <button type="button" class="ghost-btn tiny" data-wf-act="schedule" data-slug="${slug}">Schedule</button>
-        <button type="button" class="ghost-btn tiny" data-wf-act="promote" data-slug="${slug}">Promote</button>
+        <button type="button" class="ghost-btn tiny" data-wf-act="promote-dag" data-slug="${slug}">→ Pipeline</button>
+        <button type="button" class="ghost-btn tiny" data-wf-act="promote" data-slug="${slug}">→ Rule</button>
       </div></div>`;
+  }
+
+  function templateRow(t) {
+    const id = typeof t === "string" ? t : t.id;
+    const name = typeof t === "string" ? t : t.name || t.id;
+    const desc = typeof t === "string" ? "" : t.description || "";
+    const tags = typeof t === "string" ? "" : (t.tags || []).join(", ");
+    return `<div class="auto-row"><div><strong>Template: ${esc(name)}</strong>
+      <p class="muted tiny">${esc(desc)}${tags ? " · " + esc(tags) : ""}</p></div>
+      <div class="auto-row-actions">
+        <button type="button" class="ghost-btn tiny" data-tpl="${esc(id)}">Create</button>
+      </div></div>`;
+  }
+
+  function dagRow(d) {
+    const id = esc(d.id);
+    return `<div class="auto-row" data-pipe="${id}">
+      <div><strong>${esc(d.name || d.id)}</strong>
+        <span class="muted tiny"> · v${esc(d.version || 1)} · ${esc(d.step_count || 0)} steps
+        ${d.favorite ? " · ★" : ""} · ${esc((d.tags || []).join(", "))}</span>
+        <p class="muted tiny">${esc(d.description || "")}</p></div>
+      <div class="auto-row-actions">
+        <button type="button" class="ghost-btn tiny" data-dag-act="dry" data-id="${id}">Dry run</button>
+        <button type="button" class="apply-btn tiny" data-dag-act="run" data-id="${id}">Run</button>
+        <button type="button" class="ghost-btn tiny" data-dag-act="inspect" data-id="${id}">Inspect</button>
+        <button type="button" class="ghost-btn tiny" data-dag-act="edit" data-id="${id}">Edit</button>
+        <button type="button" class="ghost-btn tiny" data-dag-act="schedule" data-id="${id}">Schedule</button>
+        <button type="button" class="ghost-btn tiny" data-dag-act="fav" data-id="${id}">★</button>
+        <button type="button" class="ghost-btn tiny" data-dag-act="dup" data-id="${id}">Dup</button>
+        <button type="button" class="ghost-btn tiny" data-dag-act="del" data-id="${id}">Delete</button>
+      </div></div>`;
+  }
+
+  function pipeRunRow(r) {
+    return `<div class="auto-row" data-pipe-run="${esc(r.id)}">
+      <div><strong>${esc(r.name)}</strong>
+        <span class="muted tiny"> · ${esc(r.status)} · ${esc(r.elapsed_ms || 0)}ms · ${esc(r.trigger || "")}</span></div>
+      <div class="auto-row-actions">
+        <button type="button" class="ghost-btn tiny" data-pipe-run-open="${esc(r.id)}">Details</button>
+      </div></div>`;
+  }
+
+  function renderPipelines(data) {
+    const tpls = data.templates || [];
+    let dags = data.workflow_dags || [];
+    const q = (pipeFilter.q || "").toLowerCase();
+    if (q) {
+      dags = dags.filter(
+        (d) =>
+          (d.name || "").toLowerCase().includes(q) ||
+          (d.description || "").toLowerCase().includes(q) ||
+          (d.id || "").toLowerCase().includes(q) ||
+          (d.tags || []).join(" ").toLowerCase().includes(q),
+      );
+    }
+    if (pipeFilter.fav) dags = dags.filter((d) => d.favorite);
+    const sort = pipeFilter.sort || "name";
+    dags = [...dags].sort((a, b) => {
+      if (sort === "usage") return (b.usage_count || 0) - (a.usage_count || 0);
+      if (sort === "recent") return (b.last_run_at || b.updated_at || 0) - (a.last_run_at || a.updated_at || 0);
+      if (sort === "updated") return (b.updated_at || 0) - (a.updated_at || 0);
+      return String(a.name || "").localeCompare(String(b.name || ""));
+    });
+    $("autoTemplatesList").innerHTML = [
+      ...tpls.map(templateRow),
+      ...dags.map(dagRow),
+    ].join("") || `<p class="muted">No templates or pipelines yet.</p>`;
+    const runs = data.pipeline_runs || [];
+    $("autoPipeRunsList").innerHTML = runs.length
+      ? `<p class="muted tiny">Recent pipeline runs</p>` + runs.map(pipeRunRow).join("")
+      : `<p class="muted tiny">No pipeline runs yet.</p>`;
   }
 
   function sugRow(s) {
@@ -134,14 +211,7 @@
     $("autoLearnedList").innerHTML = (data.learned_workflows || []).length
       ? data.learned_workflows.map(learnedRow).join("")
       : `<p class="muted">No learned workflows.</p>`;
-    const tpls = data.templates || [];
-    const dags = data.workflow_dags || [];
-    $("autoTemplatesList").innerHTML = [
-      ...tpls.map((t) => `<div class="auto-row"><div><strong>Template: ${esc(t)}</strong></div>
-        <button type="button" class="ghost-btn tiny" data-tpl="${esc(t)}">Create</button></div>`),
-      ...dags.map((d) => `<div class="auto-row"><div><strong>${esc(d.name || d.id)}</strong></div>
-        <button type="button" class="ghost-btn tiny" data-dag-run="${esc(d.id)}">Run</button></div>`),
-    ].join("") || `<p class="muted">No templates.</p>`;
+    renderPipelines(data);
 
     const wh = data.health?.webhook || {};
     $("autoWebhookPanel").innerHTML = `<p>${esc(wh.message || "")}</p>
@@ -167,6 +237,7 @@
 
   function openRuleEditor(rule) {
     editingRuleId = rule?.id || "";
+    editingRuleParams = { ...(rule?.params || {}) };
     $("autoRuleName").value = rule?.name || "";
     $("autoRuleKind").value = rule?.kind || "interval";
     $("autoRuleExpr").value = rule?.expression || "3600";
@@ -180,7 +251,10 @@
   function previewRule() {
     const p = $("autoRulePreview");
     if (!p) return;
-    p.textContent = `${$("autoRuleKind").value} · ${$("autoRuleExpr").value} · ${$("autoRuleAction").value} · enabled=${$("autoRuleEnabled").checked}`;
+    const paramsHint = Object.keys(editingRuleParams || {}).length
+      ? ` · params=${JSON.stringify(editingRuleParams)}`
+      : "";
+    p.textContent = `${$("autoRuleKind").value} · ${$("autoRuleExpr").value} · ${$("autoRuleAction").value} · enabled=${$("autoRuleEnabled").checked}${paramsHint}`;
   }
 
   async function saveRule() {
@@ -192,7 +266,7 @@
       action: $("autoRuleAction").value,
       condition: $("autoRuleCondition").value,
       enabled: $("autoRuleEnabled").checked,
-      params: {},
+      params: { ...editingRuleParams },
     };
     const data = await api("/api/automation/rules", { method: "POST", body: JSON.stringify(body) });
     window.showAriaToast?.("Rule saved", "ok", 2000);
@@ -234,6 +308,153 @@
     ingestActivity(data.activity);
     window.showAriaToast?.(dry ? "Workflow dry run" : "Workflow finished", data.ok ? "ok" : "err", 3000);
     await refresh();
+  }
+
+  function openRunInspector(run) {
+    lastPipeRun = run;
+    if (!run) return;
+    $("autoPipeRunTitle").textContent = `Pipeline run: ${run.name || run.id}`;
+    $("autoPipeRunMeta").textContent = [
+      `status=${run.status}`,
+      `id=${run.run_id || run.id}`,
+      `job=${run.job_id || "—"}`,
+      `corr=${run.correlation_id || "—"}`,
+      `${run.elapsed_ms || 0}ms`,
+      run.dry_run ? "dry-run" : "executed",
+      run.trigger || "",
+    ].join(" · ");
+    $("autoPipeRunSummary").innerHTML = `<p><strong>Success:</strong> ${esc(run.success_summary || "—")}</p>
+      <p><strong>Failure:</strong> ${esc(run.failure_summary || "—")}</p>`;
+    $("autoPipeRunVars").textContent = JSON.stringify(run.variables || {}, null, 2);
+    renderRunSteps();
+    $("autoPipeRunModal")?.classList.remove("hidden");
+    $("autoPipeRunModal")?.focus?.();
+    announce("Pipeline run details opened");
+  }
+
+  function renderRunSteps() {
+    const run = lastPipeRun;
+    if (!run) return;
+    const q = ($("autoPipeRunFilter")?.value || "").toLowerCase();
+    const st = $("autoPipeRunStatusFilter")?.value || "";
+    const rows = (run.log || []).filter((r) => {
+      if (q && !`${r.name} ${r.step} ${r.action} ${r.error || ""}`.toLowerCase().includes(q)) return false;
+      if (st === "ok" && !(r.ok && !r.skipped)) return false;
+      if (st === "fail" && r.ok) return false;
+      if (st === "skip" && !r.skipped) return false;
+      if (st === "retry" && !r.retry) return false;
+      return true;
+    });
+    $("autoPipeRunSteps").innerHTML = rows
+      .map((r) => {
+        const cls = r.skipped ? "auto-step-skip" : r.ok ? "auto-step-ok" : "auto-step-fail";
+        return `<div class="auto-row ${cls}" tabindex="0" data-expand="1">
+          <div><strong>${esc(r.name || r.step)}</strong>
+            <span class="muted tiny"> · ${esc(r.action || "")} · attempts=${esc(r.attempts || 1)}
+            ${r.skipped ? " · skipped" : ""} ${r.retry ? " · retry" : ""} ${r.ok ? " · ok" : " · fail"}</span>
+            <div class="auto-step-detail"><pre>${esc(JSON.stringify(r.result || r.error || r, null, 2))}</pre></div>
+          </div></div>`;
+      })
+      .join("") || `<p class="muted">No matching steps.</p>`;
+  }
+
+  async function runPipeline(id, dry) {
+    const data = await api(`/api/automation/pipelines/${encodeURIComponent(id)}/run`, {
+      method: "POST",
+      body: JSON.stringify({ dry_run: !!dry, confirm: !dry, trigger: "manual" }),
+    });
+    ingestActivity(data.activity);
+    openRunInspector(data);
+    window.showAriaToast?.(
+      dry ? `Dry run: ${data.status}` : `Pipeline: ${data.status}`,
+      data.ok || data.status === "dry_run" ? "ok" : "err",
+      3500,
+    );
+    await refresh();
+    return data;
+  }
+
+  async function openPipelineEditor(id) {
+    const data = await api(`/api/automation/pipelines/${encodeURIComponent(id)}`);
+    editingPipeline = data.pipeline;
+    $("autoPipeEditName").value = editingPipeline.name || "";
+    $("autoPipeEditDesc").value = editingPipeline.description || "";
+    $("autoPipeEditTags").value = (editingPipeline.tags || []).join(", ");
+    $("autoPipeEditEntry").value = editingPipeline.entry || "";
+    $("autoPipeJson").value = JSON.stringify(editingPipeline, null, 2);
+    renderFormSteps();
+    $("autoPipeEditValidation").textContent = (data.validation?.errors || []).join("; ") ||
+      ((data.validation?.warnings || []).length ? "Warnings: " + data.validation.warnings.join("; ") : "Valid");
+    showPipeTab("form");
+    $("autoPipeEditModal")?.classList.remove("hidden");
+  }
+
+  function renderFormSteps() {
+    const steps = editingPipeline?.steps || [];
+    $("autoPipeFormSteps").innerHTML = steps
+      .map(
+        (s, i) => `<div class="auto-row"><div>
+        <strong>${esc(s.name || s.id)}</strong>
+        <span class="muted tiny"> · ${esc(s.action)} · retries=${esc(s.retries || 0)}
+        · when=${esc(s.when || "—")} · timeout=${esc(s.timeout_sec || "—")}</span>
+        <label class="muted tiny">Action <input data-step-field="action" data-i="${i}" class="audio-path-input" value="${esc(s.action)}" /></label>
+        <label class="muted tiny">When <input data-step-field="when" data-i="${i}" class="audio-path-input" value="${esc(s.when || "")}" /></label>
+      </div></div>`,
+      )
+      .join("") || `<p class="muted">No steps — edit JSON.</p>`;
+    $("autoPipeFormSteps")?.querySelectorAll("[data-step-field]")?.forEach((el) => {
+      el.addEventListener("change", () => {
+        const i = Number(el.dataset.i);
+        const field = el.dataset.stepField;
+        if (editingPipeline?.steps?.[i]) editingPipeline.steps[i][field] = el.value;
+        $("autoPipeJson").value = JSON.stringify(editingPipeline, null, 2);
+      });
+    });
+  }
+
+  function showPipeTab(which) {
+    const form = $("autoPipeFormSteps");
+    const json = $("autoPipeJson");
+    const canvas = $("autoPipeCanvas");
+    form.hidden = which !== "form";
+    json.hidden = which !== "json";
+    canvas.hidden = which !== "canvas";
+    $("autoPipeTabForm")?.setAttribute("aria-selected", which === "form" ? "true" : "false");
+    $("autoPipeTabJson")?.setAttribute("aria-selected", which === "json" ? "true" : "false");
+    $("autoPipeTabCanvas")?.setAttribute("aria-selected", which === "canvas" ? "true" : "false");
+  }
+
+  async function loadCanvas() {
+    if (!editingPipeline?.id) return;
+    const data = await api(`/api/automation/pipelines/${encodeURIComponent(editingPipeline.id)}/canvas`);
+    $("autoPipeCanvas").innerHTML =
+      `<p class="muted tiny">${esc(data.note || "")}</p>` +
+      (data.nodes || [])
+        .map(
+          (n) =>
+            `<span class="auto-pipe-node ${n.entry ? "is-entry" : ""}" title="${esc(n.action)}">${esc(n.label)}</span>`,
+        )
+        .join("") +
+      `<p class="muted tiny">Edges: ${(data.edges || []).map((e) => `${e.from}→${e.to}(${e.kind})`).join(", ") || "none"}</p>`;
+  }
+
+  async function promoteLearnedToDag(slug) {
+    const data = await api("/api/automation/pipelines/promote-learned", {
+      method: "POST",
+      body: JSON.stringify({ slug }),
+    });
+    if (!data.ok) {
+      window.showAriaToast?.(data.error || "Promote failed", "err", 3000);
+      return;
+    }
+    if (!window.confirm?.("Review draft and save as pipeline? Nothing runs automatically.")) return;
+    const saved = await api("/api/automation/pipelines/nl/save", {
+      method: "POST",
+      body: JSON.stringify({ confirm: true, draft: data.draft }),
+    });
+    window.showAriaToast?.("Pipeline draft saved — edit and schedule in Automation", "ok", 3500);
+    await refresh();
+    if (saved.pipeline?.id) await openPipelineEditor(saved.pipeline.id);
   }
 
   function bind() {
@@ -357,6 +578,7 @@
           kind: "interval",
           expression: "86400",
           action: "skill_run",
+          params: { slug },
           enabled: false,
         });
         $("autoRuleAction").value = "skill_run";
@@ -369,12 +591,14 @@
       const slug = btn.dataset.slug;
       if (btn.dataset.wfAct === "dry") await runLearned(slug, true);
       else if (btn.dataset.wfAct === "run") await runLearned(slug, false);
+      else if (btn.dataset.wfAct === "promote-dag") await promoteLearnedToDag(slug);
       else if (btn.dataset.wfAct === "schedule" || btn.dataset.wfAct === "promote") {
         openRuleEditor({
           name: `Learned: ${slug}`,
           kind: "interval",
           expression: "86400",
           action: "workflow_learned_run",
+          params: { slug },
           enabled: false,
         });
       }
@@ -400,23 +624,198 @@
     $("autoTemplatesList")?.addEventListener("click", async (ev) => {
       const tpl = ev.target.closest("[data-tpl]");
       if (tpl) {
-        await api("/api/intelligence/workflows/from-template", {
+        const data = await api("/api/automation/pipelines/from-template", {
           method: "POST",
           body: JSON.stringify({ template: tpl.dataset.tpl }),
         });
-        window.showAriaToast?.("DAG created from template", "ok", 2500);
+        window.showAriaToast?.(data.reused ? "Reused existing pipeline" : "Pipeline created from template", "ok", 2500);
         refresh();
+        return;
       }
-      const dag = ev.target.closest("[data-dag-run]");
-      if (dag) {
-        const data = await api(`/api/intelligence/workflows/${encodeURIComponent(dag.dataset.dagRun)}/run`, {
+      const btn = ev.target.closest("[data-dag-act]");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const act = btn.dataset.dagAct;
+      if (act === "dry") await runPipeline(id, true);
+      else if (act === "run") await runPipeline(id, false);
+      else if (act === "inspect") {
+        const last = await api(`/api/automation/pipelines/${encodeURIComponent(id)}/last-run`);
+        if (last.run) openRunInspector(last.run);
+        else {
+          const expl = await api(`/api/automation/pipelines/${encodeURIComponent(id)}/explain`);
+          openRunInspector({
+            name: expl.name,
+            status: "inspect",
+            log: (expl.steps || []).map((s) => ({
+              step: s.id,
+              name: s.name,
+              action: s.action,
+              ok: true,
+              result: s.action_meta,
+            })),
+            variables: expl.variables || {},
+            success_summary: expl.summary,
+          });
+        }
+      } else if (act === "edit") await openPipelineEditor(id);
+      else if (act === "schedule") {
+        openRuleEditor({
+          name: `Pipeline: ${id}`,
+          kind: "interval",
+          expression: "86400",
+          action: "workflow_dag_run",
+          params: { workflow_id: id },
+          enabled: false,
+        });
+        $("autoRuleAction").value = "workflow_dag_run";
+      } else if (act === "fav") {
+        await api(`/api/automation/pipelines/${encodeURIComponent(id)}/favorite`, {
+          method: "POST",
+          body: JSON.stringify({ favorite: true }),
+        });
+        refresh();
+      } else if (act === "dup") {
+        await api(`/api/automation/pipelines/${encodeURIComponent(id)}/duplicate`, {
           method: "POST",
           body: "{}",
         });
-        window.showAriaToast?.(data.ok ? "DAG finished" : "DAG failed", data.ok ? "ok" : "err", 3000);
+        refresh();
+      } else if (act === "del") {
+        if (!window.confirm?.("Delete this pipeline?")) return;
+        await api(`/api/automation/pipelines/${encodeURIComponent(id)}`, { method: "DELETE" });
         refresh();
       }
     });
+
+    $("autoPipeRunsList")?.addEventListener("click", async (ev) => {
+      const btn = ev.target.closest("[data-pipe-run-open]");
+      if (!btn) return;
+      const data = await api(`/api/automation/pipeline-runs/${encodeURIComponent(btn.dataset.pipeRunOpen)}`);
+      if (data.run) openRunInspector(data.run);
+    });
+
+    $("autoPipeSearch")?.addEventListener("input", () => {
+      pipeFilter.q = $("autoPipeSearch").value || "";
+      if (home) renderPipelines(home);
+    });
+    $("autoPipeSort")?.addEventListener("change", () => {
+      pipeFilter.sort = $("autoPipeSort").value || "name";
+      if (home) renderPipelines(home);
+    });
+    $("autoPipeFavOnly")?.addEventListener("change", () => {
+      pipeFilter.fav = !!$("autoPipeFavOnly").checked;
+      if (home) renderPipelines(home);
+    });
+    $("autoPipeExportBtn")?.addEventListener("click", async () => {
+      const data = await api("/api/automation/pipelines/export", { method: "POST", body: "{}" });
+      await navigator.clipboard?.writeText(JSON.stringify(data, null, 2));
+      window.showAriaToast?.(`Exported ${data.count || 0} pipelines`, "ok", 2500);
+    });
+    $("autoPipeNlBtn")?.addEventListener("click", () => {
+      nlDraft = null;
+      $("autoPipeNlText").value = "";
+      $("autoPipeNlPreview").textContent = "";
+      $("autoPipeNlSaveBtn").disabled = true;
+      $("autoPipeNlModal")?.classList.remove("hidden");
+    });
+    $("autoPipeNlDraftBtn")?.addEventListener("click", async () => {
+      const data = await api("/api/automation/pipelines/nl", {
+        method: "POST",
+        body: JSON.stringify({ text: $("autoPipeNlText").value }),
+      });
+      nlDraft = data.draft;
+      $("autoPipeNlPreview").textContent = data.preview || data.explanation || "";
+      $("autoPipeNlSaveBtn").disabled = !data.ok;
+    });
+    $("autoPipeNlSaveBtn")?.addEventListener("click", async () => {
+      if (!nlDraft) return;
+      await api("/api/automation/pipelines/nl/save", {
+        method: "POST",
+        body: JSON.stringify({ confirm: true, draft: nlDraft }),
+      });
+      $("autoPipeNlModal")?.classList.add("hidden");
+      window.showAriaToast?.("Draft saved — review in Pipelines", "ok", 3000);
+      refresh();
+    });
+    $("autoPipeNlCloseBtn")?.addEventListener("click", () => $("autoPipeNlModal")?.classList.add("hidden"));
+
+    $("autoPipeRunFilter")?.addEventListener("input", renderRunSteps);
+    $("autoPipeRunStatusFilter")?.addEventListener("change", renderRunSteps);
+    $("autoPipeRunSteps")?.addEventListener("click", (ev) => {
+      const row = ev.target.closest(".auto-row[data-expand]");
+      if (row) row.classList.toggle("is-open");
+    });
+    $("autoPipeRunCloseBtn")?.addEventListener("click", () => $("autoPipeRunModal")?.classList.add("hidden"));
+    $("autoPipeRunJobsBtn")?.addEventListener("click", () => {
+      $("autoPipeRunModal")?.classList.add("hidden");
+      window.switchToView?.("jobs") || window.AriaActions?.goView?.("jobs");
+    });
+    $("autoPipeRunActivityBtn")?.addEventListener("click", () => {
+      window.AriaActivity?.open?.();
+    });
+    $("autoPipeRunRetryBtn")?.addEventListener("click", async () => {
+      const run = lastPipeRun;
+      if (!run?.pipeline_id && !run?.workflow_id) return;
+      const failed = (run.log || []).find((r) => !r.ok && !r.skipped);
+      const pid = run.pipeline_id || run.workflow_id;
+      const data = await api(`/api/automation/pipelines/${encodeURIComponent(pid)}/run`, {
+        method: "POST",
+        body: JSON.stringify({ confirm: true, from_step: failed?.step || null, trigger: "retry" }),
+      });
+      ingestActivity(data.activity);
+      openRunInspector(data);
+      refresh();
+    });
+
+    $("autoPipeTabForm")?.addEventListener("click", () => showPipeTab("form"));
+    $("autoPipeTabJson")?.addEventListener("click", () => {
+      showPipeTab("json");
+    });
+    $("autoPipeTabCanvas")?.addEventListener("click", async () => {
+      showPipeTab("canvas");
+      await loadCanvas();
+    });
+    $("autoPipeEditValidateBtn")?.addEventListener("click", async () => {
+      try {
+        editingPipeline = JSON.parse($("autoPipeJson").value);
+      } catch (e) {
+        $("autoPipeEditValidation").textContent = "Invalid JSON: " + e.message;
+        return;
+      }
+      const data = await api("/api/automation/pipelines", {
+        method: "POST",
+        body: JSON.stringify({ ...editingPipeline, bump_version: false }),
+      });
+      $("autoPipeEditValidation").textContent =
+        (data.validation?.errors || []).join("; ") ||
+        ((data.validation?.warnings || []).length ? "Warnings: " + data.validation.warnings.join("; ") : "Valid");
+    });
+    $("autoPipeEditSaveBtn")?.addEventListener("click", async () => {
+      try {
+        const fromJson = JSON.parse($("autoPipeJson").value);
+        editingPipeline = {
+          ...fromJson,
+          name: $("autoPipeEditName").value || fromJson.name,
+          description: $("autoPipeEditDesc").value || "",
+          tags: ($("autoPipeEditTags").value || "")
+            .split(",")
+            .map((t) => t.trim())
+            .filter(Boolean),
+          entry: $("autoPipeEditEntry").value || fromJson.entry,
+        };
+      } catch (e) {
+        window.showAriaToast?.(e.message, "err", 3000);
+        return;
+      }
+      await api("/api/automation/pipelines", {
+        method: "POST",
+        body: JSON.stringify({ ...editingPipeline, bump_version: true }),
+      });
+      $("autoPipeEditModal")?.classList.add("hidden");
+      window.showAriaToast?.("Pipeline saved", "ok", 2500);
+      refresh();
+    });
+    $("autoPipeEditCloseBtn")?.addEventListener("click", () => $("autoPipeEditModal")?.classList.add("hidden"));
 
     $("autoRuleSaveBtn")?.addEventListener("click", () => saveRule().catch((e) => window.showAriaToast?.(e.message, "err")));
     $("autoRuleDryBtn")?.addEventListener("click", async () => {
@@ -460,6 +859,9 @@
     },
     refresh,
     openRuleEditor,
+    openRunInspector,
+    runPipeline,
+    openPipelineEditor,
   };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);

@@ -1516,8 +1516,22 @@
             <div id="autoLearnedList" class="auto-list"></div>
           </section>
           <section class="auto-card" aria-labelledby="autoTplTitle">
-            <h3 id="autoTplTitle">Templates &amp; DAGs</h3>
-            <div id="autoTemplatesList" class="auto-list"></div>
+            <h3 id="autoTplTitle">Pipelines (DAGs)</h3>
+            <p class="muted tiny">Multi-step execution pipelines inside Automation — not View Paths or learned sequences.</p>
+            <div class="auto-pipe-toolbar" role="toolbar" aria-label="Pipeline tools">
+              <input type="search" id="autoPipeSearch" class="audio-path-input" placeholder="Search pipelines…" aria-label="Search pipelines" />
+              <select id="autoPipeSort" aria-label="Sort pipelines">
+                <option value="name">Name</option>
+                <option value="updated">Updated</option>
+                <option value="recent">Recent runs</option>
+                <option value="usage">Usage</option>
+              </select>
+              <label class="tiny"><input type="checkbox" id="autoPipeFavOnly" /> Favorites</label>
+              <button type="button" class="ghost-btn tiny" id="autoPipeNlBtn">NL draft</button>
+              <button type="button" class="ghost-btn tiny" id="autoPipeExportBtn">Export</button>
+            </div>
+            <div id="autoTemplatesList" class="auto-list" aria-label="Templates and pipelines"></div>
+            <div id="autoPipeRunsList" class="auto-list" aria-label="Recent pipeline runs"></div>
           </section>
           <section class="auto-card" aria-labelledby="autoWhTitle">
             <h3 id="autoWhTitle">Webhook &amp; health</h3>
@@ -2345,6 +2359,71 @@
             <button type="button" id="autoWebhookTestBtn" class="ghost-btn small">Test config</button>
             <button type="button" id="autoWebhookHaBtn" class="ghost-btn small">Open Smart Home</button>
             <button type="button" id="autoWebhookCloseBtn" class="ghost-btn small">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="autoPipeRunModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="autoPipeRunTitle">
+        <div class="crop-modal-card profile-modal-card auto-pipe-modal">
+          <h3 id="autoPipeRunTitle">Pipeline run details</h3>
+          <p id="autoPipeRunMeta" class="muted tiny"></p>
+          <div class="auto-pipe-run-filters">
+            <input type="search" id="autoPipeRunFilter" class="audio-path-input" placeholder="Filter steps…" aria-label="Filter run steps" />
+            <select id="autoPipeRunStatusFilter" aria-label="Filter by status">
+              <option value="">All</option>
+              <option value="ok">Succeeded</option>
+              <option value="fail">Failed</option>
+              <option value="skip">Skipped</option>
+              <option value="retry">Retries</option>
+            </select>
+          </div>
+          <div id="autoPipeRunSummary" class="muted"></div>
+          <div id="autoPipeRunSteps" class="auto-list auto-pipe-steps" tabindex="0" aria-label="Step execution log"></div>
+          <pre id="autoPipeRunVars" class="auto-pipe-vars muted tiny" aria-label="Variables"></pre>
+          <div class="sidebar-btn-row">
+            <button type="button" id="autoPipeRunRetryBtn" class="ghost-btn small">Retry from failed</button>
+            <button type="button" id="autoPipeRunJobsBtn" class="ghost-btn small">Job Center</button>
+            <button type="button" id="autoPipeRunActivityBtn" class="ghost-btn small">Activity</button>
+            <button type="button" id="autoPipeRunCloseBtn" class="ghost-btn small">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="autoPipeEditModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="autoPipeEditTitle">
+        <div class="crop-modal-card profile-modal-card auto-pipe-modal">
+          <h3 id="autoPipeEditTitle">Pipeline editor</h3>
+          <p class="muted tiny">JSON + form — not a visual canvas product. Pipelines stay under Automation.</p>
+          <label class="muted">Name <input type="text" id="autoPipeEditName" class="audio-path-input" /></label>
+          <label class="muted">Description <input type="text" id="autoPipeEditDesc" class="audio-path-input" /></label>
+          <label class="muted">Tags <input type="text" id="autoPipeEditTags" class="audio-path-input" placeholder="daily, documents" /></label>
+          <label class="muted">Entry step <input type="text" id="autoPipeEditEntry" class="audio-path-input" /></label>
+          <div class="auto-pipe-edit-tabs" role="tablist">
+            <button type="button" class="ghost-btn tiny" role="tab" id="autoPipeTabForm" aria-selected="true">Form steps</button>
+            <button type="button" class="ghost-btn tiny" role="tab" id="autoPipeTabJson" aria-selected="false">JSON</button>
+            <button type="button" class="ghost-btn tiny" role="tab" id="autoPipeTabCanvas" aria-selected="false">Canvas</button>
+          </div>
+          <div id="autoPipeFormSteps" class="auto-list" role="tabpanel"></div>
+          <textarea id="autoPipeJson" class="auto-pipe-json" rows="14" aria-label="Pipeline JSON" hidden></textarea>
+          <div id="autoPipeCanvas" class="auto-pipe-canvas" hidden aria-label="Read-only pipeline canvas"></div>
+          <p id="autoPipeEditValidation" class="muted tiny" role="status"></p>
+          <div class="sidebar-btn-row">
+            <button type="button" id="autoPipeEditValidateBtn" class="ghost-btn small">Validate</button>
+            <button type="button" id="autoPipeEditSaveBtn" class="apply-btn small">Save</button>
+            <button type="button" id="autoPipeEditCloseBtn" class="ghost-btn small">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="autoPipeNlModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="autoPipeNlTitle">
+        <div class="crop-modal-card profile-modal-card">
+          <h3 id="autoPipeNlTitle">Natural language → pipeline draft</h3>
+          <p class="muted">Creates a reviewable draft only — never auto-saves or auto-runs.</p>
+          <textarea id="autoPipeNlText" class="auto-pipe-json" rows="4" placeholder="Create a morning workflow…" aria-label="Pipeline request"></textarea>
+          <pre id="autoPipeNlPreview" class="muted tiny"></pre>
+          <div class="sidebar-btn-row">
+            <button type="button" id="autoPipeNlDraftBtn" class="ghost-btn small">Draft</button>
+            <button type="button" id="autoPipeNlSaveBtn" class="apply-btn small" disabled>Save draft</button>
+            <button type="button" id="autoPipeNlCloseBtn" class="ghost-btn small">Close</button>
           </div>
         </div>
       </div>

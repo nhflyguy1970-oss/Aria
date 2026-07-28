@@ -92,6 +92,34 @@ def snapshot(*, recent_limit: int = 12) -> dict[str, Any]:
     except Exception:
         pass
 
+    automation_jobs: list[dict] = []
+    automation_busy = False
+    try:
+        from jarvis.automation.pipelines.jobs import busy as pipe_busy
+        from jarvis.automation.pipelines.jobs import list_jobs as list_pipe_jobs
+
+        automation_busy = bool(pipe_busy())
+        for job in list_pipe_jobs(limit=8):
+            row = {
+                "id": job.get("id"),
+                "queue": "automation",
+                "label": job.get("label") or "Pipeline",
+                "pct": job.get("pct", 0),
+                "message": job.get("message") or "",
+                "done": bool(job.get("done")),
+                "error": job.get("error") or "",
+                "started": job.get("started", 0),
+                "kind": "pipeline",
+                "status": job.get("status"),
+                "pipeline_id": job.get("pipeline_id"),
+                "run_id": job.get("run_id"),
+                "cancelled": bool(job.get("cancelled")),
+            }
+            automation_jobs.append(row)
+            recent.append(row)
+    except Exception:
+        pass
+
     any_busy = bool(
         media.get("busy")
         or media.get("pending", 0) > 0
@@ -99,7 +127,10 @@ def snapshot(*, recent_limit: int = 12) -> dict[str, Any]:
         or coding.get("pending", 0) > 0
         or audio.get("busy")
         or audio.get("active_count", 0) > 0
+        or automation_busy
     )
+
+    recent.sort(key=lambda j: j.get("started") or 0, reverse=True)
 
     return {
         "ok": True,
@@ -110,5 +141,6 @@ def snapshot(*, recent_limit: int = 12) -> dict[str, Any]:
         "audio": audio,
         "comfyui_settings_jobs": comfy,
         "agent_jobs": agent_jobs,
+        "automation_jobs": automation_jobs,
         "recent": recent[:recent_limit],
     }

@@ -212,6 +212,28 @@
         A().goView("automation");
         return true;
       }),
+      mk("act:pipelines-list", "List pipelines (DAGs)", "Actions", "pipeline dag workflow automation", () => {
+        A().goView("automation");
+        return true;
+      }),
+      mk("act:pipelines-nl", "Draft pipeline from text", "Actions", "natural language pipeline draft", () => {
+        A().goView("automation");
+        setTimeout(() => document.getElementById("autoPipeNlBtn")?.click(), 250);
+        return true;
+      }),
+      mk("act:pipelines-history", "Pipeline run history", "Actions", "pipeline runs failures history", async () => {
+        A().goView("automation");
+        try {
+          const res = await fetch("/api/automation/pipeline-runs?limit=1");
+          const data = await res.json();
+          const run = (data.runs || [])[0];
+          if (run) window.AriaAutomationHome?.openRunInspector?.(run);
+          else window.showAriaToast?.("No pipeline runs yet", "warn");
+        } catch (e) {
+          window.showAriaToast?.(e.message || "Failed", "err");
+        }
+        return true;
+      }),
       mk("act:view-paths", "Open View Paths", "Actions", "navigation shortcuts macro ui path recorder", () => A().shell.workflows()),
       mk("act:workspaces", "Workspace layouts", "Actions", "coding writing layout", () => A().shell.workspaces()),
       mk("act:split", "Toggle split view", "Actions", "dual pane", () => A().shell.split()),

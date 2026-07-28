@@ -1,21 +1,34 @@
-"""Reusable workflow DAG engine — steps, conditions, retries, logging."""
+"""Reusable workflow DAG engine — thin compatibility layer over Automation Pipelines.
+
+Prefer jarvis.automation.pipelines for new code. This module keeps existing imports working.
+"""
 
 from __future__ import annotations
 
-import json
-import logging
-import time
-import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from jarvis.config import DATA_DIR
-from jarvis.automation.paths import WORKFLOW_DAGS_DIR, ensure_dirs
-
-log = logging.getLogger("jarvis.intelligence.workflow")
+from jarvis.automation.paths import WORKFLOW_DAGS_DIR
+from jarvis.automation.pipelines.storage import (
+    create_from_template as _create_from_template,
+)
+from jarvis.automation.pipelines.storage import get_pipeline, list_pipelines, save_pipeline
+from jarvis.automation.pipelines.templates import TEMPLATES as _PIPE_TEMPLATES
 
 WORKFLOW_DIR = WORKFLOW_DAGS_DIR
+
+# Back-compat template key list for APIs that expect TEMPLATES dict of raw defs
+TEMPLATES: dict[str, dict[str, Any]] = {
+    tid: {
+        "name": t["name"],
+        "tags": t.get("tags") or [],
+        "entry": t.get("entry"),
+        "steps": t.get("steps") or [],
+        "description": t.get("description") or "",
+    }
+    for tid, t in _PIPE_TEMPLATES.items()
+}
 
 
 @dataclass
@@ -24,12 +37,13 @@ class WorkflowStep:
     name: str
     action: str
     params: dict[str, Any] = field(default_factory=dict)
-    next: list[str] = field(default_factory=list)  # unconditional next
+    next: list[str] = field(default_factory=list)
     on_success: list[str] = field(default_factory=list)
     on_failure: list[str] = field(default_factory=list)
     retries: int = 0
     retry_delay_sec: float = 0.5
-    when: str = ""  # optional expression: "vars.x == true"
+    when: str = ""
+    timeout_sec: float | None = None
 
 
 @dataclass
@@ -41,29 +55,6 @@ class WorkflowDef:
     entry: str = ""
     variables: dict[str, Any] = field(default_factory=dict)
     tags: list[str] = field(default_factory=list)
-
-
-TEMPLATES: dict[str, dict[str, Any]] = {
-    "morning_routine": {
-        "name": "Morning Routine",
-        "tags": ["daily"],
-        "entry": "brief",
-        "steps": [
-            {"id": "brief", "name": "Briefing", "action": "builtin:log", "params": {"msg": "morning"}, "on_success": ["memory"]},
-            {"id": "memory", "name": "Consolidate memory", "action": "memory_consolidate", "on_success": ["health"]},
-            {"id": "health", "name": "Health check", "action": "builtin:log", "params": {"msg": "health ok"}},
-        ],
-    },
-    "doc_ingest": {
-        "name": "Document Ingest Pipeline",
-        "tags": ["documents"],
-        "entry": "index",
-        "steps": [
-            {"id": "index", "name": "Reindex documents", "action": "documents_reindex", "on_success": ["graph"]},
-            {"id": "graph", "name": "Update knowledge graph", "action": "graph_ingest_note", "params": {"text": "Document library refreshed"}},
-        ],
-    },
-}
 
 
 def _step_from_dict(d: dict[str, Any]) -> WorkflowStep:
@@ -78,28 +69,16 @@ def _step_from_dict(d: dict[str, Any]) -> WorkflowStep:
         retries=int(d.get("retries") or 0),
         retry_delay_sec=float(d.get("retry_delay_sec") or 0.5),
         when=str(d.get("when") or ""),
+        timeout_sec=float(d["timeout_sec"]) if d.get("timeout_sec") else None,
     )
 
 
 def workflow_from_template(template_id: str, *, name: str | None = None) -> WorkflowDef:
-    tpl = TEMPLATES.get(template_id)
-    if not tpl:
-        raise KeyError(template_id)
-    wid = uuid.uuid4().hex[:10]
-    steps = [_step_from_dict(s) for s in tpl["steps"]]
-    return WorkflowDef(
-        id=wid,
-        name=name or str(tpl["name"]),
-        steps=steps,
-        entry=str(tpl.get("entry") or steps[0].id),
-        tags=list(tpl.get("tags") or []),
-    )
+    data = _create_from_template(template_id, name=name)
+    return load_workflow(data["id"])
 
 
 def save_workflow(wf: WorkflowDef) -> Path:
-    ensure_dirs()
-    WORKFLOW_DIR.mkdir(parents=True, exist_ok=True)
-    path = WORKFLOW_DIR / f"{wf.id}.json"
     payload = {
         "id": wf.id,
         "name": wf.name,
@@ -109,19 +88,14 @@ def save_workflow(wf: WorkflowDef) -> Path:
         "tags": wf.tags,
         "steps": [asdict(s) for s in wf.steps],
     }
-    try:
-        from jarvis.live_data_guard import assert_live_write_allowed
-
-        assert_live_write_allowed(path)
-    except Exception:
-        pass
-    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    return path
+    saved = save_pipeline(payload, bump_version=False)
+    return WORKFLOW_DIR / f"{saved['id']}.json"
 
 
 def load_workflow(workflow_id: str) -> WorkflowDef:
-    path = WORKFLOW_DIR / f"{workflow_id}.json"
-    data = json.loads(path.read_text(encoding="utf-8"))
+    data = get_pipeline(workflow_id)
+    if not data:
+        raise FileNotFoundError(workflow_id)
     return WorkflowDef(
         id=data["id"],
         name=data.get("name") or data["id"],
@@ -134,79 +108,7 @@ def load_workflow(workflow_id: str) -> WorkflowDef:
 
 
 def list_workflows() -> list[dict[str, Any]]:
-    WORKFLOW_DIR.mkdir(parents=True, exist_ok=True)
-    out = []
-    for p in sorted(WORKFLOW_DIR.glob("*.json")):
-        try:
-            data = json.loads(p.read_text(encoding="utf-8"))
-            out.append(
-                {
-                    "id": data.get("id"),
-                    "name": data.get("name"),
-                    "version": data.get("version"),
-                    "tags": data.get("tags") or [],
-                    "path": str(p),
-                }
-            )
-        except Exception:
-            continue
-    return out
-
-
-def _eval_when(expr: str, variables: dict[str, Any]) -> bool:
-    if not expr.strip():
-        return True
-    # Extremely small safe evaluator: "vars.key" truthiness or == comparisons
-    e = expr.strip()
-    if e.startswith("vars."):
-        key = e[5:].split()[0]
-        return bool(variables.get(key))
-    if "==" in e:
-        left, right = [x.strip() for x in e.split("==", 1)]
-        lv = variables.get(left.replace("vars.", "")) if left.startswith("vars.") else left.strip("'\"")
-        rv = right.strip().strip("'\"")
-        if rv in ("true", "True"):
-            rv = True
-        if rv in ("false", "False"):
-            rv = False
-        return str(lv) == str(rv)
-    return True
-
-
-def _builtin(action: str, params: dict[str, Any], variables: dict[str, Any]) -> dict[str, Any]:
-    if action == "builtin:log":
-        msg = params.get("msg") or params.get("message") or ""
-        log.info("workflow log: %s", msg)
-        return {"ok": True, "message": str(msg)}
-    if action == "builtin:set":
-        for k, v in params.items():
-            variables[k] = v
-        return {"ok": True, "variables": dict(variables)}
-    if action == "builtin:fail":
-        return {"ok": False, "error": params.get("error") or "forced failure"}
-    if action == "memory_consolidate":
-        from jarvis.intelligence.memory_platform import consolidate_memories
-
-        return consolidate_memories()
-    if action == "documents_reindex":
-        try:
-            from jarvis import documents_rag
-
-            documents_rag.build_index(force=True)
-            return {"ok": True}
-        except Exception as exc:
-            return {"ok": False, "error": str(exc)}
-    if action == "graph_ingest_note":
-        from jarvis.intelligence.knowledge_graph import ingest_text
-
-        return ingest_text(
-            str(params.get("text") or "workflow note"),
-            namespace=str(params.get("namespace") or "default"),
-            source="automation",
-            confidence=0.6,
-            explicit=True,
-        )
-    return {"ok": False, "error": f"unknown action {action}"}
+    return list_pipelines()
 
 
 def run_workflow(
@@ -214,74 +116,53 @@ def run_workflow(
     *,
     variables: dict[str, Any] | None = None,
     action_runner: Callable[[str, dict[str, Any]], dict[str, Any]] | None = None,
+    dry_run: bool = False,
+    approve_experimental: bool = False,
+    from_step: str | None = None,
+    trigger: str = "api",
+    emit_bridges: bool = True,
 ) -> dict[str, Any]:
-    wf = load_workflow(workflow_id)
-    steps = {s.id: s for s in wf.steps}
-    vars_ = dict(wf.variables)
-    if variables:
-        vars_.update(variables)
-    current = wf.entry or (wf.steps[0].id if wf.steps else "")
-    run_id = uuid.uuid4().hex[:12]
-    log_rows: list[dict[str, Any]] = []
-    visited: set[str] = set()
-    started = time.time()
+    """Run via Automation Pipelines engine. action_runner kept for rare custom injectors."""
+    if action_runner is not None:
+        # Legacy path: inject custom runner by temporarily wrapping execute
+        from jarvis.automation.pipelines import actions as act_mod
 
-    while current:
-        if current in visited:
-            log_rows.append({"step": current, "ok": False, "error": "cycle detected"})
-            break
-        visited.add(current)
-        step = steps.get(current)
-        if not step:
-            log_rows.append({"step": current, "ok": False, "error": "missing step"})
-            break
-        if not _eval_when(step.when, vars_):
-            log_rows.append({"step": current, "ok": True, "skipped": True, "reason": "when"})
-            nxt = (step.next or step.on_success or [None])[0]
-            current = nxt
-            continue
+        original = act_mod.execute_action
 
-        attempt = 0
-        result: dict[str, Any] = {"ok": False}
-        while attempt <= step.retries:
-            attempt += 1
+        def _wrapped(action, params, variables, *, dry_run=False, approve_experimental=False):
+            if dry_run or action.startswith("builtin:"):
+                return original(
+                    action, params, variables, dry_run=dry_run, approve_experimental=approve_experimental
+                )
             try:
-                if action_runner and not step.action.startswith("builtin:"):
-                    result = action_runner(step.action, {**step.params, **{"variables": vars_}})
-                else:
-                    result = _builtin(step.action, step.params, vars_)
+                return action_runner(action, {**params, "variables": variables})
             except Exception as exc:
-                result = {"ok": False, "error": str(exc)}
-            if result.get("ok"):
-                break
-            if attempt <= step.retries:
-                time.sleep(step.retry_delay_sec)
+                return {"ok": False, "error": str(exc)}
 
-        log_rows.append(
-            {
-                "step": step.id,
-                "name": step.name,
-                "ok": bool(result.get("ok")),
-                "attempts": attempt,
-                "result": {k: v for k, v in result.items() if k != "variables"},
-            }
-        )
-        if result.get("ok"):
-            nxt_list = step.on_success or step.next
-        else:
-            nxt_list = step.on_failure or []
-            if not nxt_list:
-                break
-        current = nxt_list[0] if nxt_list else None
+        act_mod.execute_action = _wrapped  # type: ignore[assignment]
+        try:
+            from jarvis.automation.pipelines.engine import run_pipeline
 
-    ok = all(r.get("ok") or r.get("skipped") for r in log_rows) and bool(log_rows)
-    return {
-        "ok": ok,
-        "run_id": run_id,
-        "workflow_id": wf.id,
-        "name": wf.name,
-        "version": wf.version,
-        "variables": vars_,
-        "log": log_rows,
-        "elapsed_ms": int((time.time() - started) * 1000),
-    }
+            return run_pipeline(
+                workflow_id,
+                variables=variables,
+                dry_run=dry_run,
+                approve_experimental=approve_experimental,
+                from_step=from_step,
+                trigger=trigger,
+                emit_bridges=emit_bridges,
+            )
+        finally:
+            act_mod.execute_action = original  # type: ignore[assignment]
+
+    from jarvis.automation.pipelines.engine import run_pipeline
+
+    return run_pipeline(
+        workflow_id,
+        variables=variables,
+        dry_run=dry_run,
+        approve_experimental=approve_experimental,
+        from_step=from_step,
+        trigger=trigger,
+        emit_bridges=emit_bridges,
+    )

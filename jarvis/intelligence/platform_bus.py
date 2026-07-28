@@ -157,7 +157,6 @@ def bootstrap_platform(*, start_automation: bool = True) -> dict[str, Any]:
 
     from jarvis.intelligence.connectors import bootstrap_default_connectors
     from jarvis.intelligence.plugin_sdk import create_example_plugin, load_all
-    from jarvis.intelligence.workflow_engine import save_workflow, workflow_from_template
 
     if os.getenv("JARVIS_DISABLE_INTEL_BOOTSTRAP", "").strip().lower() in ("1", "true", "yes"):
         return {"ok": True, "skipped": True}
@@ -172,17 +171,15 @@ def bootstrap_platform(*, start_automation: bool = True) -> dict[str, Any]:
 
     plugins = load_all()
 
-    # Ensure default workflow templates exist on disk once
+    # Ensure default pipeline templates exist on disk once (reuse by name — no spam)
     saved_wf = []
     try:
-        from jarvis.intelligence.workflow_engine import list_workflows
+        from jarvis.automation.pipelines.storage import create_from_template
 
-        existing = {w.get("name") for w in list_workflows()}
-        for tid in ("morning_routine", "doc_ingest"):
-            wf = workflow_from_template(tid)
-            if wf.name not in existing:
-                save_workflow(wf)
-                saved_wf.append(wf.id)
+        for tid in ("morning_routine", "doc_ingest", "evening_wrap"):
+            wf = create_from_template(tid)
+            if not wf.get("reused"):
+                saved_wf.append(wf["id"])
     except Exception as exc:
         log.debug("workflow bootstrap: %s", exc)
 

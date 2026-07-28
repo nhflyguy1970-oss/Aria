@@ -96,9 +96,13 @@ Automation Home uses labelled regions, live status, keyboard shortcuts, focusabl
 
 `tests/test_automation_product.py` — execution honesty, migration isolation, registry, home snapshot, NL draft, suggestions, API wiring.
 
+`tests/test_workflow_dag_pipelines.py` — Pipelines (DAG) CRUD, dry-run, history, Job Center, NL, promote, experimental gates.
+
+See also: [WORKFLOW_DAG_IMPLEMENTATION.md](./WORKFLOW_DAG_IMPLEMENTATION.md).
+
 ## Roadmap
 
 - Richer cron (`*/5`)
 - inotify watches
-- Visual DAG editor (deferred — not Zapier)
+- Pipeline canvas remains read-only (not an n8n clone)
 - Budgeted agent steps behind approvals

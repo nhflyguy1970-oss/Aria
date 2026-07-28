@@ -70,13 +70,19 @@ def _learned() -> list[dict[str, Any]]:
         return []
 
 
-def _dags() -> list[dict[str, Any]]:
+def _dags() -> dict[str, Any]:
     try:
-        from jarvis.intelligence.workflow_engine import TEMPLATES, list_workflows
+        from jarvis.automation.pipelines.runs import list_pipeline_runs
+        from jarvis.automation.pipelines.storage import list_pipelines, list_templates, recent_pipelines
 
-        return {"workflows": list_workflows(), "templates": list(TEMPLATES.keys())}
+        return {
+            "workflows": list_pipelines(sort="updated"),
+            "templates": list_templates(),
+            "recent": recent_pipelines(6),
+            "recent_runs": list_pipeline_runs(limit=10),
+        }
     except Exception:
-        return {"workflows": [], "templates": []}
+        return {"workflows": [], "templates": [], "recent": [], "recent_runs": []}
 
 
 def _suggestions() -> list[dict[str, Any]]:
@@ -159,6 +165,8 @@ def home_snapshot() -> dict[str, Any]:
         "learned_workflows": _learned(),
         "workflow_dags": dags.get("workflows") or [],
         "templates": dags.get("templates") or [],
+        "pipeline_recent": dags.get("recent") or [],
+        "pipeline_runs": dags.get("recent_runs") or [],
         "suggestions": _suggestions(),
         "actions": list_actions(include_experimental=False),
         "muted": _muted(),
@@ -184,7 +192,18 @@ def search_automation(q: str, *, limit: int = 40) -> dict[str, Any]:
     for d in snap["workflow_dags"]:
         add("workflow_dag", d.get("name") or d.get("id"), {"id": d.get("id")})
     for t in snap["templates"]:
-        add("template", str(t), {"template": t})
+        tid = t.get("id") if isinstance(t, dict) else t
+        title = t.get("name") if isinstance(t, dict) else str(t)
+        add(
+            "template",
+            str(title),
+            {
+                "template": tid,
+                "description": (t.get("description") if isinstance(t, dict) else ""),
+            },
+        )
+    for run in snap.get("pipeline_runs") or []:
+        add("pipeline_run", run.get("name") or run.get("id"), {"id": run.get("id"), "status": run.get("status")})
     for run in snap["recent_runs"]:
         add("run", run.get("name") or run.get("id"), {"id": run.get("id"), "status": run.get("status")})
     for sug in snap["suggestions"]:

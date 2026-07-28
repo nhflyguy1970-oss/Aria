@@ -204,6 +204,20 @@ def _default_run(rule: AutomationRule, *, dry_run: bool = False) -> dict[str, An
         }
 
     if dry_run:
+        if rule.action == "workflow_dag_run":
+            from jarvis.automation.pipelines.engine import run_pipeline
+
+            wid = (rule.params or {}).get("workflow_id") or (rule.params or {}).get("pipeline_id")
+            if not wid:
+                return {"ok": False, "error": "workflow_id required", "status": FAILED}
+            return run_pipeline(
+                str(wid),
+                variables=dict((rule.params or {}).get("variables") or {}),
+                dry_run=True,
+                trigger="rule-dry-run",
+                emit_bridges=True,
+                correlation_id=f"rule:{rule.id}",
+            )
         return {
             "ok": True,
             "dry_run": True,
@@ -262,6 +276,43 @@ def _default_run(rule: AutomationRule, *, dry_run: bool = False) -> dict[str, An
                 return {"ok": True, "result": dispatch("overnight_summary", None)}
             except Exception:
                 return {"ok": False, "error": str(exc)}
+
+    if rule.action == "skill_run":
+        from jarvis.skill_database import run_skill
+
+        slug = (rule.params or {}).get("slug")
+        if not slug:
+            return {"ok": False, "error": "slug required", "status": FAILED}
+        return run_skill(str(slug), dry_run=False)
+
+    if rule.action == "workflow_learned_run":
+        from jarvis.workflow_learning import run_workflow as run_learned
+
+        slug = (rule.params or {}).get("slug")
+        if not slug:
+            return {"ok": False, "error": "slug required", "status": FAILED}
+        return run_learned(str(slug), assistant=None, dry_run=False)
+
+    if rule.action == "workflow_dag_run":
+        from jarvis.automation.pipelines.engine import run_pipeline
+
+        wid = (rule.params or {}).get("workflow_id") or (rule.params or {}).get("pipeline_id")
+        if not wid:
+            return {"ok": False, "error": "workflow_id required", "status": FAILED}
+        vars_ = dict((rule.params or {}).get("variables") or {})
+        return run_pipeline(
+            str(wid),
+            variables=vars_,
+            dry_run=False,
+            trigger="rule",
+            emit_bridges=True,
+            correlation_id=f"rule:{rule.id}",
+        )
+
+    if rule.action in ("ha_scene", "journal_log"):
+        from jarvis.automation.pipelines.actions import execute_action
+
+        return execute_action(rule.action, dict(rule.params or {}), {})
 
     meta = get_action(rule.action)
     if meta and meta.get("experimental"):

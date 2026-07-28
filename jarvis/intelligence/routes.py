@@ -182,18 +182,22 @@ def register_intelligence_routes(app, assistant: Any = None) -> None:
 
     @app.get("/api/intelligence/workflows")
     def intelligence_workflows():
-        from jarvis.intelligence.workflow_engine import TEMPLATES, list_workflows
+        from jarvis.automation.pipelines.storage import list_pipelines, list_templates
 
-        return {"ok": True, "workflows": list_workflows(), "templates": list(TEMPLATES.keys())}
+        return {
+            "ok": True,
+            "workflows": list_pipelines(),
+            "templates": [t["id"] for t in list_templates()],
+            "template_meta": list_templates(),
+        }
 
     @app.post("/api/intelligence/workflows/from-template")
     async def intelligence_workflows_from_template(request: Request):
         body = await request.json()
-        from jarvis.intelligence.workflow_engine import save_workflow, workflow_from_template
+        from jarvis.automation.pipelines.storage import create_from_template
 
-        wf = workflow_from_template(str(body.get("template") or "morning_routine"), name=body.get("name"))
-        path = save_workflow(wf)
-        return {"ok": True, "id": wf.id, "path": str(path), "name": wf.name}
+        wf = create_from_template(str(body.get("template") or "morning_routine"), name=body.get("name"))
+        return {"ok": True, "id": wf["id"], "path": f"automation_product/workflow_dags/{wf['id']}.json", "name": wf["name"], "reused": bool(wf.get("reused"))}
 
     @app.post("/api/intelligence/workflows/{workflow_id}/run")
     async def intelligence_workflows_run(workflow_id: str, request: Request):
@@ -202,9 +206,17 @@ def register_intelligence_routes(app, assistant: Any = None) -> None:
             body = await request.json()
         except Exception:
             body = {}
-        from jarvis.intelligence.workflow_engine import run_workflow
+        from jarvis.automation.pipelines.engine import run_pipeline
 
-        return run_workflow(workflow_id, variables=body.get("variables"))
+        return run_pipeline(
+            workflow_id,
+            variables=body.get("variables") if isinstance(body.get("variables"), dict) else {},
+            dry_run=bool(body.get("dry_run")),
+            approve_experimental=bool(body.get("approve_experimental")),
+            from_step=body.get("from_step"),
+            trigger=str(body.get("trigger") or "api"),
+            emit_bridges=True,
+        )
 
     @app.get("/api/intelligence/plugins")
     def intelligence_plugins():
