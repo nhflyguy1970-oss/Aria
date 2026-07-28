@@ -234,6 +234,18 @@
         }
         return true;
       }),
+      mk("act:specialists-propose", "Propose specialist team", "Actions", "specialists multi-agent team research", () => {
+        window.AriaSpecialists?.openPropose?.();
+        return true;
+      }),
+      mk("act:specialists-gallery", "Specialist gallery", "Actions", "roles coder writer vision", () => {
+        window.AriaSpecialists?.openGallery?.();
+        return true;
+      }),
+      mk("act:specialists-history", "Specialist team history", "Actions", "team runs inspect", () => {
+        window.AriaSpecialists?.openHistory?.();
+        return true;
+      }),
       mk("act:view-paths", "Open View Paths", "Actions", "navigation shortcuts macro ui path recorder", () => A().shell.workflows()),
       mk("act:workspaces", "Workspace layouts", "Actions", "coding writing layout", () => A().shell.workspaces()),
       mk("act:split", "Toggle split view", "Actions", "dual pane", () => A().shell.split()),

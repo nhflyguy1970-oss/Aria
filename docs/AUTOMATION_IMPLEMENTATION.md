@@ -98,7 +98,7 @@ Automation Home uses labelled regions, live status, keyboard shortcuts, focusabl
 
 `tests/test_workflow_dag_pipelines.py` — Pipelines (DAG) CRUD, dry-run, history, Job Center, NL, promote, experimental gates.
 
-See also: [WORKFLOW_DAG_IMPLEMENTATION.md](./WORKFLOW_DAG_IMPLEMENTATION.md).
+See also: [WORKFLOW_DAG_IMPLEMENTATION.md](./WORKFLOW_DAG_IMPLEMENTATION.md) and [MULTI_AGENT_IMPLEMENTATION.md](./MULTI_AGENT_IMPLEMENTATION.md) (Specialist Teams).
 
 ## Roadmap
 

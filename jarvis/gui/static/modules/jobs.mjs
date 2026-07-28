@@ -36,6 +36,8 @@ export async function cancelJobByQueue(queue, jobId) {
     media: `/api/media/job/${encodeURIComponent(jobId)}/cancel`,
     coding: `/api/coding/job/${encodeURIComponent(jobId)}/cancel`,
     audio: `/api/audio/job/${encodeURIComponent(jobId)}/cancel`,
+    specialists: `/api/specialists/jobs/${encodeURIComponent(jobId)}/cancel`,
+    agent: `/api/specialists/jobs/${encodeURIComponent(jobId)}/cancel`,
   };
   const url = paths[queue];
   if (!url) return false;
@@ -59,6 +61,12 @@ export function renderJobCenter(data) {
   }
   if (audio.busy || audio.active_count) {
     parts.push(`Audio: ${audio.active_count || 0} active`);
+  }
+  const specialists = data.specialist_jobs || [];
+  const agents = data.agent_jobs || [];
+  const teamBusy = specialists.some((j) => !j.done) || agents.some((j) => !j.done);
+  if (teamBusy) {
+    parts.push(`Specialists: running`);
   }
   jobCenterSummary.textContent = parts.length
     ? parts.join(" · ")

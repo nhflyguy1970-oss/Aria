@@ -153,18 +153,23 @@ ACTIONS: dict[str, dict[str, Any]] = {
     },
     # Experimental — registered but gated
     "agent_step": {
-        "name": "Agent step (experimental)",
-        "description": "Run a bounded agent step with approval",
+        "name": "Specialist Team step",
+        "description": "Run an approved Specialist Team (not unbounded agents)",
         "permissions": ["agents", "approval"],
-        "arguments": {"prompt": {"type": "string", "required": True}, "budget": {"type": "number"}},
-        "version": 1,
+        "arguments": {
+            "prompt": {"type": "string", "required": True},
+            "budget": {"type": "number"},
+            "specialists": {"type": "array"},
+            "approve_writes": {"type": "boolean"},
+        },
+        "version": 2,
         "category": "experimental",
         "confirmation": True,
         "estimated_duration_sec": 120,
         "retry": False,
         "activity": True,
         "job": True,
-        "ai_explain": "Experimental agent action — requires approval and budget.",
+        "ai_explain": "Schedules an approved Specialist Team run via Automation — confirm required.",
         "experimental": True,
     },
     "vision_analyze": {

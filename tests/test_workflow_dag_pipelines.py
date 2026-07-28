@@ -271,8 +271,11 @@ def test_experimental_agent_requires_approval(pipe_env):
 
     denied = execute_action("agent_step", {"prompt": "hi", "budget": 1}, {}, approve_experimental=False)
     assert denied.get("permission_required")
-    ok = execute_action("agent_step", {"prompt": "hi", "budget": 1}, {}, approve_experimental=True)
-    assert ok.get("ok")
+    # Approved path runs Specialist Team (may be partial if organs missing) — not a silent stub
+    ok = execute_action("agent_step", {"prompt": "research aria memory", "budget": 1}, {}, approve_experimental=True)
+    assert "result" in ok or ok.get("ok") is not None
+    if ok.get("ok"):
+        assert (ok.get("result") or {}).get("mode") == "specialist_team"
 
 
 def test_ui_and_docs_wiring():

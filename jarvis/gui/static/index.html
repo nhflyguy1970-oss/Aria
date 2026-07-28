@@ -1476,6 +1476,9 @@
             <button type="button" id="autoPauseBtn" class="ghost-btn small">Pause all</button>
             <button type="button" id="autoResumeBtn" class="ghost-btn small">Resume</button>
             <button type="button" id="autoNewRuleBtn" class="apply-btn small">New rule</button>
+            <button type="button" id="specProposeBtn" class="ghost-btn small">Specialist team</button>
+            <button type="button" id="specGalleryBtn" class="ghost-btn small">Specialists</button>
+            <button type="button" id="specHistoryBtn" class="ghost-btn small">Team history</button>
             <button type="button" id="autoViewPathsBtn" class="ghost-btn small">View Paths</button>
             <button type="button" id="autoWebhookBtn" class="ghost-btn small">Webhook</button>
             <button type="button" id="autoExportBtn" class="ghost-btn small">Export</button>
@@ -1532,6 +1535,16 @@
             </div>
             <div id="autoTemplatesList" class="auto-list" aria-label="Templates and pipelines"></div>
             <div id="autoPipeRunsList" class="auto-list" aria-label="Recent pipeline runs"></div>
+          </section>
+          <section class="auto-card" aria-labelledby="specCardTitle">
+            <h3 id="specCardTitle">Specialist Teams</h3>
+            <p class="muted tiny">Orchestrates Aria organs (Coder, Research, Vision…) — propose → confirm → run. Not a standalone agent framework.</p>
+            <div class="sidebar-btn-row">
+              <button type="button" class="apply-btn tiny" id="specCardProposeBtn">Propose team</button>
+              <button type="button" class="ghost-btn tiny" id="specCardGalleryBtn">Gallery</button>
+              <button type="button" class="ghost-btn tiny" id="specCardHistoryBtn">History</button>
+            </div>
+            <p id="specLive" class="visually-hidden" role="status" aria-live="polite"></p>
           </section>
           <section class="auto-card" aria-labelledby="autoWhTitle">
             <h3 id="autoWhTitle">Webhook &amp; health</h3>
@@ -2428,6 +2441,57 @@
         </div>
       </div>
 
+      <div id="specProposeModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="specProposeTitle">
+        <div class="crop-modal-card profile-modal-card auto-pipe-modal">
+          <h3 id="specProposeTitle">Propose Specialist Team</h3>
+          <p class="muted tiny">Review the team, then confirm. Never auto-runs.</p>
+          <label class="muted">Goal <textarea id="specGoal" class="auto-pipe-json" rows="3" aria-label="Specialist team goal"></textarea></label>
+          <label class="muted tiny"><input type="checkbox" id="specUseLlm" /> LLM-assisted composition</label>
+          <label class="muted tiny"><input type="checkbox" id="specApproveWrites" /> Approve write specialists (coder)</label>
+          <label class="muted tiny"><input type="checkbox" id="specParallel" /> Parallel read-only specialists</label>
+          <label class="muted tiny"><input type="checkbox" id="specCritic" /> Single critic revision loop</label>
+          <pre id="specProposalPreview" class="muted tiny"></pre>
+          <div class="sidebar-btn-row">
+            <button type="button" id="specDraftBtn" class="ghost-btn small">Propose</button>
+            <button type="button" id="specConfirmBtn" class="apply-btn small" disabled>Confirm &amp; run</button>
+            <button type="button" id="specProposeCloseBtn" class="ghost-btn small">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="specGalleryModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="specGalleryTitle">
+        <div class="crop-modal-card profile-modal-card auto-pipe-modal">
+          <h3 id="specGalleryTitle">Specialist gallery</h3>
+          <div id="specGalleryList" class="auto-list" tabindex="0"></div>
+          <button type="button" id="specGalleryCloseBtn" class="ghost-btn small">Close</button>
+        </div>
+      </div>
+
+      <div id="specHistoryModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="specHistoryTitle">
+        <div class="crop-modal-card profile-modal-card auto-pipe-modal">
+          <h3 id="specHistoryTitle">Specialist team history</h3>
+          <div id="specHistoryList" class="auto-list" tabindex="0"></div>
+          <button type="button" id="specHistoryCloseBtn" class="ghost-btn small">Close</button>
+        </div>
+      </div>
+
+      <div id="specRunModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="specRunTitle">
+        <div class="crop-modal-card profile-modal-card auto-pipe-modal">
+          <h3 id="specRunTitle">Specialist run details</h3>
+          <p id="specRunMeta" class="muted tiny"></p>
+          <input type="search" id="specRunFilter" class="audio-path-input" placeholder="Filter steps…" aria-label="Filter specialist steps" />
+          <pre id="specRunSynthesis" class="auto-pipe-vars" aria-label="Synthesis"></pre>
+          <div id="specRunSteps" class="auto-list auto-pipe-steps" tabindex="0" aria-label="Specialist steps"></div>
+          <pre id="specRunScratch" class="auto-pipe-vars muted tiny" aria-label="Scratchpad"></pre>
+          <div class="sidebar-btn-row">
+            <button type="button" id="specRunExportBtn" class="ghost-btn small">Export</button>
+            <button type="button" id="specRunJobsBtn" class="ghost-btn small">Job Center</button>
+            <button type="button" id="specRunActivityBtn" class="ghost-btn small">Activity</button>
+            <button type="button" id="specRunCloseBtn" class="ghost-btn small">Close</button>
+          </div>
+        </div>
+      </div>
+
       <div id="splitPickerModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="splitPickerTitle">
         <div class="crop-modal-card profile-modal-card">
           <h3 id="splitPickerTitle">Split with…</h3>
@@ -2613,6 +2677,7 @@
   <script src="/static/keyboard_nav.js?v=1.0.0"></script>
   <script src="/static/workflow_recorder.js?v=2.0.0"></script>
   <script src="/static/automation_home.js?v=1.0.0"></script>
+  <script src="/static/specialists_home.js?v=1.0.0"></script>
   <script src="/static/smart_welcome.js?v=1.1.0"></script>
   <script src="/static/modal_chrome.js?v=1.1.0"></script>
   <script src="/static/aria_dialogs.js?v=1.0.0"></script>

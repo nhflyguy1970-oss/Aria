@@ -281,21 +281,42 @@ def _execute_registry(action: str, params: dict[str, Any], variables: dict[str, 
 def _execute_agent_step(params: dict[str, Any], variables: dict[str, Any], *, approve: bool) -> dict[str, Any]:
     if not approve:
         return {"ok": False, "permission_required": True, "error": "agent_step requires approval"}
-    prompt = str(params.get("prompt") or "")
+    prompt = str(params.get("prompt") or variables.get("goal") or "")
     budget = float(params.get("budget") or 1)
     if budget <= 0:
         return {"ok": False, "error": "budget must be > 0"}
-    # Bounded stub: record intent, do not spawn unbounded agents
-    log.info("pipeline agent_step approved budget=%s prompt=%s", budget, prompt[:120])
-    variables["last_agent_prompt"] = prompt[:200]
-    return {
-        "ok": True,
-        "result": {
-            "mode": "bounded_stub",
-            "prompt": prompt[:200],
-            "budget": budget,
-            "message": "Agent step recorded (bounded; no autonomous loop).",
+    if not prompt:
+        return {"ok": False, "error": "prompt required"}
+    # Approved Specialist Team run — never silent
+    from jarvis.specialists.engine import run_team
+
+    team = params.get("specialists") or params.get("team")
+    result = run_team(
+        None,  # assistant optional for read-heavy teams
+        prompt,
+        specialists=list(team) if isinstance(team, list) else None,
+        confirm=True,
+        budget={
+            "require_confirm": False,
+            "max_specialists": min(6, int(budget) + 2),
+            "max_runtime_sec": float(params.get("timeout") or 180),
         },
+        trigger="automation",
+        emit_bridges=True,
+        approve_writes=bool(params.get("approve_writes")),
+    )
+    variables["last_agent_run_id"] = result.get("run_id")
+    return {
+        "ok": bool(result.get("ok")),
+        "result": {
+            "mode": "specialist_team",
+            "run_id": result.get("run_id"),
+            "status": result.get("status"),
+            "job_id": result.get("job_id"),
+            "summary": (result.get("synthesis") or result.get("summary") or "")[:500],
+            "team": result.get("team"),
+        },
+        "error": None if result.get("ok") else (result.get("error") or result.get("status")),
     }
 
 

@@ -73,20 +73,42 @@ def list_jobs(*, status: str | None = None) -> list[CheckpointedJob]:
 def start_agent_job(
     assistant: Any, goal: str, *, roles: list[str] | None = None
 ) -> CheckpointedJob:
-    job = CheckpointedJob(id=uuid.uuid4().hex[:12], kind="agent_chain", goal=goal, status="running")
-    job.checkpoint = {"roles": roles or [], "step": 0}
+    job = CheckpointedJob(id=uuid.uuid4().hex[:12], kind="specialist_team", goal=goal, status="running")
+    job.checkpoint = {"roles": roles or [], "step": 0, "resumable": False}
     save_job(job)
 
     def _run() -> None:
         try:
-            from jarvis.agents.coordinator import run_agent_chain
+            from jarvis.specialists.composer import map_roles_to_specialists
+            from jarvis.specialists.engine import run_team
 
-            result = run_agent_chain(assistant, goal, roles=roles, stop_on_error=False)
-            job.status = "completed" if result.get("ok") else "failed"
+            result = run_team(
+                assistant,
+                goal,
+                roles=roles,
+                specialists=map_roles_to_specialists(roles) if roles else None,
+                confirm=True,
+                stop_on_error=False,
+                budget={"require_confirm": False},
+                trigger="agent_job",
+                emit_bridges=True,
+                approve_writes=True,
+            )
+            st = result.get("status") or ("completed" if result.get("ok") else "failed")
+            # Map to checkpoint statuses
+            if st == "succeeded":
+                job.status = "completed"
+            elif st == "partial_success":
+                job.status = "completed"
+                job.message = "partial_success"
+            else:
+                job.status = "failed" if st != "cancelled" else "cancelled"
             job.progress = 1.0
-            job.message = result.get("summary") or "done"
+            job.message = result.get("summary") or result.get("synthesis") or job.message or st
             job.result = result
             job.checkpoint["step"] = len(result.get("steps") or [])
+            job.checkpoint["run_id"] = result.get("run_id")
+            job.checkpoint["resumable"] = False  # honest: full re-run only
             save_job(job)
         except Exception as exc:
             job.status = "failed"
@@ -102,7 +124,7 @@ def start_agent_job(
 
 
 def resume_incomplete_jobs(assistant: Any) -> list[str]:
-    """Resume jobs that were running when Aria last stopped."""
+    """Re-run jobs left in running state. Honest: not mid-step resume — full re-execution."""
     resumed: list[str] = []
     for job in list_jobs(status="running"):
         if job.id in _threads:
@@ -110,21 +132,32 @@ def resume_incomplete_jobs(assistant: Any) -> list[str]:
 
         def _run(existing: CheckpointedJob = job) -> None:
             try:
-                from jarvis.agents.coordinator import run_agent_chain
+                from jarvis.specialists.composer import map_roles_to_specialists
+                from jarvis.specialists.engine import run_team
 
                 roles = existing.checkpoint.get("roles")
                 role_list = roles if isinstance(roles, list) else None
-                result = run_agent_chain(
+                result = run_team(
                     assistant,
                     existing.goal,
                     roles=role_list,
+                    specialists=map_roles_to_specialists(role_list) if role_list else None,
+                    confirm=True,
                     stop_on_error=False,
+                    budget={"require_confirm": False},
+                    trigger="agent_job_resume",
+                    emit_bridges=True,
+                    approve_writes=True,
                 )
                 existing.status = "completed" if result.get("ok") else "failed"
                 existing.progress = 1.0
-                existing.message = result.get("summary") or "done"
+                existing.message = (
+                    (result.get("summary") or result.get("synthesis") or "done")
+                    + " (full re-run after restart — not mid-step checkpoint)"
+                )
                 existing.result = result
                 existing.checkpoint["step"] = len(result.get("steps") or [])
+                existing.checkpoint["resumable"] = False
                 save_job(existing)
             except Exception as exc:
                 existing.status = "failed"

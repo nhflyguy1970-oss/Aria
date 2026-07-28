@@ -2608,6 +2608,9 @@ def register_routes(app, assistant):
         from jarvis.automation.product_routes import register_automation_product_routes
 
         register_automation_product_routes(app, assistant)
+        from jarvis.specialists.routes import register_specialist_routes
+
+        register_specialist_routes(app, assistant)
     except Exception as exc:
         import logging
 

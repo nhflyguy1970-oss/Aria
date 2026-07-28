@@ -134,9 +134,29 @@ def intelligent_query(
         result["parts"]["reasoning"] = reason(q, assistant=assistant, use_rag=False)
 
     if use_agents and assistant is not None:
-        from jarvis.intelligence.multi_agent import run_multi_agent
+        from jarvis.specialists.engine import run_team
 
-        result["parts"]["agents"] = run_multi_agent(assistant, q, stop_on_error=False, max_agents=4)
+        agents = run_team(
+            assistant,
+            q,
+            confirm=True,
+            stop_on_error=False,
+            budget={"require_confirm": False, "max_specialists": 4},
+            trigger="intelligent_query",
+            emit_bridges=True,
+            approve_writes=False,
+        )
+        result["parts"]["agents"] = {
+            "ok": agents.get("ok"),
+            "status": agents.get("status"),
+            "run_id": agents.get("run_id"),
+            "job_id": agents.get("job_id"),
+            "team": agents.get("team"),
+            "summary": agents.get("synthesis") or agents.get("summary"),
+            "activity": agents.get("activity"),
+            "inspect": f"/api/specialists/runs/{agents.get('run_id')}",
+            "steps": agents.get("steps"),
+        }
 
     # Compose answer scaffold
     citations = (result["parts"].get("rag") or {}).get("citations") or []

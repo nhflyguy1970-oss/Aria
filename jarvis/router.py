@@ -2017,6 +2017,22 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
                 session,
             )
 
+    # Specialist Team propose / confirm / history
+    if not attachment:
+        from jarvis.handlers.specialists_handlers import parse_specialists_intent
+
+        spec_intent = parse_specialists_intent(message)
+        if spec_intent:
+            return _finalize_intent(
+                {
+                    **spec_intent,
+                    "thinking": "specialists",
+                    "route_handler": "Specialists",
+                },
+                message,
+                session,
+            )
+
     # Explicit workflow run (parity with skills)
     if not attachment:
         from jarvis.workflow_learning import parse_workflow_run_query
