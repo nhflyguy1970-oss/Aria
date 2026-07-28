@@ -259,12 +259,28 @@
       }
     }
     if (data.ok && window.jarvisNotify && !window.mediaWorkActive?.()) {
-      if (hasVideo) window.jarvisNotify("Video ready", (text || data.message || "Clip generated").slice(0, 120));
-      else if (hasImage && data.module === "image" && !isNativeApp()) {
-        window.jarvisNotify("Image ready", (text || data.message || "Image generated").slice(0, 120));
-      } else if (data.module === "coding" && (data.proposal_id || data.agent_steps?.length)) {
-        window.jarvisNotify("Coding task done", (text || data.message || "Finished").slice(0, 120));
+      window.__ariaActivitySuppressNotify = true;
+      try {
+        if (hasVideo) window.jarvisNotify("Video ready", (text || data.message || "Clip generated").slice(0, 120));
+        else if (hasImage && data.module === "image" && !isNativeApp()) {
+          window.jarvisNotify("Image ready", (text || data.message || "Image generated").slice(0, 120));
+        } else if (data.module === "coding" && (data.proposal_id || data.agent_steps?.length)) {
+          window.jarvisNotify("Coding task done", (text || data.message || "Finished").slice(0, 120));
+        }
+      } finally {
+        window.__ariaActivitySuppressNotify = false;
       }
+    }
+    if (data.ok) {
+      const P = window.AriaActivityProducers;
+      if (hasImage && data.module === "image") P?.gallery?.complete?.(text || data.message || "Image generated");
+      if (hasVideo) P?.gallery?.complete?.(text || data.message || "Video generated");
+      if (data.module === "coding") P?.coding?.applied?.(text || data.message || "Coding finished");
+      if (data.module === "vision" || data.vision) P?.vision?.complete?.(text || "Vision analysis complete");
+    } else if (!data.ok) {
+      const P = window.AriaActivityProducers;
+      if (data.module === "image" || data.module === "video") P?.gallery?.failed?.(data.message || "Generation failed");
+      if (data.module === "coding") P?.coding?.rejected?.(data.message || "Coding failed");
     }
     if (hasImage && data.module === "image" && window.galleryViewVisible?.() && !isNativeApp()) {
       setTimeout(() => { if (window.galleryViewVisible?.()) window.loadGallery?.(); }, 800);

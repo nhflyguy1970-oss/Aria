@@ -26,7 +26,19 @@
   }
 
   function toast(msg, kind) {
-    window.showAriaToast?.(String(msg || "").replace(/\*\*/g, ""), kind || "ok", 4000);
+    const text = String(msg || "").replace(/\*\*/g, "");
+    const P = window.AriaActivityProducers?.documents;
+    if (kind === "err" || kind === "error" || kind === "warn" || kind === "warning") {
+      // Activity toast bridge will record warn/err; avoid duplicate producer publish
+      window.showAriaToast?.(text, kind, 4000);
+      return;
+    }
+    window.showAriaToast?.(text, kind || "ok", 4000);
+    if (!P) return;
+    if (/index|rebuild/i.test(text)) P.indexing(text);
+    else if (/import|upload/i.test(text)) P.import(text);
+    else if (/ocr/i.test(text)) P.ocr(text);
+    else P.complete(text);
   }
 
   function healthLine(h) {

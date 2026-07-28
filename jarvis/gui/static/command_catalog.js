@@ -169,7 +169,19 @@
 
   function registerShell() {
     reg([
-      mk("act:activity", "Open Activity Center", "Actions", "notifications jobs alerts", () => A().shell.activity()),
+      mk("act:activity", "Open Activity Center", "Actions", "notifications jobs alerts inbox events unread", () => A().shell.activity()),
+      mk("act:activity-whats-wrong", "What's wrong? (Activity summary)", "Actions", "unread failures diagnose aria inbox", () => {
+        if (window.AriaActivityActions?.whatsWrong) return window.AriaActivityActions.whatsWrong();
+        return A().shell.activity();
+      }, { mode: "ask" }),
+      mk("act:activity-unread", "Activity: show unread", "Actions", "filter unread alerts", () => {
+        window.AriaActivityStore?.setFilter?.("unread");
+        return A().shell.activity();
+      }),
+      mk("act:activity-errors", "Activity: show errors", "Actions", "filter errors failures", () => {
+        window.AriaActivityStore?.setFilter?.("err");
+        return A().shell.activity();
+      }),
       mk("act:workspaces", "Workspace layouts", "Actions", "coding writing layout", () => A().shell.workspaces()),
       mk("act:split", "Toggle split view", "Actions", "dual pane", () => A().shell.split()),
       mk("act:mini-chat", "Toggle mini chat", "Actions", "floating assistant", () => A().shell.miniChat()),

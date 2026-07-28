@@ -12,6 +12,14 @@
 
   function toast(msg, kind) {
     window.showAriaToast?.(msg, kind || "info", 3500);
+    const P = window.AriaActivityProducers?.connections;
+    if (!P) return;
+    const text = String(msg || "");
+    if (kind === "err" || kind === "error" || kind === "warn" || kind === "warning") return;
+    if (/import/i.test(text)) P.import(text);
+    else if (/merge/i.test(text)) P.merge(text);
+    else if (/repair/i.test(text)) P.repair(text);
+    else if (/review/i.test(text)) P.review(text);
   }
 
   function esc(s) {

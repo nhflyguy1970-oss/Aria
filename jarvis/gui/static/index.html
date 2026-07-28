@@ -347,7 +347,7 @@
             <button type="button" id="activityCenterBtn" class="ghost-btn small" title="Activity Center (Ctrl+Shift+A)">Activity <span id="activityCenterBadge" class="job-center-badge hidden" aria-hidden="true"></span></button>
             <button type="button" id="workspaceLayoutsBtn" class="ghost-btn small" title="Workspace layouts (Ctrl+Shift+P)">Workspaces</button>
             <button type="button" id="workflowOpenBtn" class="ghost-btn small" title="Record and replay workflows">Workflows</button>
-            <button type="button" id="jobCenterBtn" class="ghost-btn small" title="Background jobs (media, coding, audio)">Job center</button>
+            <button type="button" id="jobCenterBtn" class="ghost-btn small" title="Job Center — live background work (media, coding, audio). Alerts live in Activity Center.">Job center</button>
             <button type="button" id="debugBundleBtn" class="ghost-btn small" title="Copy diagnostics for troubleshooting">Debug bundle</button>
             <button type="button" id="reloadUiBtn" class="ghost-btn small" title="Reload this window (Ctrl+Shift+R)">Reload UI</button>
             <button type="button" id="resetLayoutBtn" class="ghost-btn small" title="Expand all collapsed sidebar sections">Expand sidebar</button>
@@ -2171,18 +2171,33 @@
       <div id="activityCenterModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="activityCenterTitle">
         <div class="crop-modal-card profile-modal-card activity-center-card">
           <h3 id="activityCenterTitle">Activity Center</h3>
-          <p class="muted">Notifications, jobs, warnings, and system events.</p>
-          <div class="activity-toolbar">
-            <input type="search" id="activitySearchInput" class="audio-path-input" placeholder="Filter activity…" autocomplete="off" />
+          <p class="muted">Durable OS event inbox — alerts stay until you resolve them. <strong>Job Center</strong> = live work · <strong>Mission Control</strong> = health.</p>
+          <p id="activityUnreadSummary" class="activity-unread-summary muted" aria-live="polite"></p>
+          <div id="activityCorrelation" class="activity-correlation hidden" aria-label="Correlated incidents"></div>
+          <p id="activitySyncStatus" class="muted tiny hidden" role="status"></p>
+          <div class="activity-toolbar" role="toolbar" aria-label="Activity filters">
+            <input type="search" id="activitySearchInput" class="audio-path-input" placeholder="Filter activity… (/)" autocomplete="off" aria-label="Filter activity" />
             <button type="button" class="ghost-btn tiny active" data-activity-filter="all">All</button>
+            <button type="button" class="ghost-btn tiny" data-activity-filter="unread">Unread</button>
+            <button type="button" class="ghost-btn tiny" data-activity-filter="pinned">Pinned</button>
             <button type="button" class="ghost-btn tiny" data-activity-filter="job">Jobs</button>
             <button type="button" class="ghost-btn tiny" data-activity-filter="err">Errors</button>
             <button type="button" class="ghost-btn tiny" data-activity-filter="warn">Warnings</button>
+            <button type="button" class="ghost-btn tiny" data-activity-filter="success">Done</button>
           </div>
-          <ul id="activityCenterList" class="activity-center-list"></ul>
-          <div class="sidebar-btn-row">
-            <button type="button" id="activityMarkReadBtn" class="ghost-btn small">Mark read</button>
-            <button type="button" id="activityClearBtn" class="ghost-btn small">Clear</button>
+          <div id="activityHelp" class="activity-help muted hidden" role="region" aria-label="Activity help">
+            <p><strong>Keys:</strong> ↑↓ move · Enter open · M read · U unread · P pin · Delete dismiss · / search · Ctrl+Z undo · ? help · Esc close</p>
+          </div>
+          <ul id="activityCenterList" class="activity-center-list" role="listbox" aria-label="Activity events" tabindex="0"></ul>
+          <p id="activityCenterLive" class="visually-hidden" role="status" aria-live="polite"></p>
+          <p id="activityResultCount" class="muted tiny"></p>
+          <div class="sidebar-btn-row activity-footer-actions">
+            <button type="button" id="activitySummarizeBtn" class="apply-btn small" title="Ask Aria about unread">What’s wrong?</button>
+            <button type="button" id="activityMarkReadBtn" class="ghost-btn small">Mark all read</button>
+            <button type="button" id="activityClearReadBtn" class="ghost-btn small">Clear read</button>
+            <button type="button" id="activityClearBtn" class="ghost-btn small">Clear all</button>
+            <button type="button" id="activityUndoBtn" class="ghost-btn small">Undo</button>
+            <button type="button" id="activityExportBtn" class="ghost-btn small">Export</button>
             <button type="button" id="activityCenterCloseBtn" class="ghost-btn small">Close</button>
           </div>
         </div>
@@ -2261,7 +2276,7 @@
     <button type="button" id="statusSegJobsWrap" class="status-seg-wrap" title="Background jobs — click to open Job center">
       <span id="statusSegJobs" class="status-seg">idle</span>
     </button>
-    <button type="button" id="statusSegActivityWrap" class="status-seg-wrap" title="Activity Center — alerts and notifications">
+    <button type="button" id="statusSegActivityWrap" class="status-seg-wrap" title="Activity Center — durable OS event inbox (not Job Center)">
       <span id="statusSegActivity" class="status-seg">quiet</span>
     </button>
     <span class="status-bar-spacer"></span>
@@ -2397,7 +2412,6 @@
   <script src="/static/dashboard_widgets.js?v=1.0.1"></script>
   <script src="/static/collapsible_panels.js?v=1.0.0"></script>
   <script src="/static/global_history.js?v=1.0.0"></script>
-  <script src="/static/activity_center.js?v=1.0.1"></script>
   <script src="/static/workspace_layouts.js?v=1.0.1"></script>
   <script src="/static/split_view.js?v=1.0.1"></script>
   <script src="/static/mini_chat.js?v=1.1.0"></script>
@@ -2408,6 +2422,10 @@
   <script src="/static/aria_dialogs.js?v=1.0.0"></script>
   <script src="/static/command_registry.js?v=1.0.0"></script>
   <script src="/static/aria_actions.js?v=1.0.0"></script>
+  <script src="/static/activity_store.js?v=1.0.0"></script>
+  <script src="/static/activity_actions.js?v=1.0.0"></script>
+  <script src="/static/activity_center.js?v=2.0.0"></script>
+  <script src="/static/activity_producers.js?v=1.0.0"></script>
   <script src="/static/command_catalog.js?v=1.0.0"></script>
   <script src="/static/command_palette.js?v=2.0.0"></script>
   <script src="/static/ha_panel.js?v=1.0.3"></script>

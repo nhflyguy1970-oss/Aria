@@ -156,6 +156,8 @@ async function loadMemoryConflicts() {
         });
         const data = await res.json().catch(() => ({}));
         window.showAriaToast?.(data.ok ? "Conflict resolved" : (data.error || "Failed"), data.ok ? "ok" : "err", 3500);
+        if (data.ok) window.AriaActivityProducers?.memory?.repair?.("Memory conflict resolved");
+        else window.AriaActivityProducers?.memory?.conflict?.(data.error || "Memory conflict");
         loadMemoryBrowser();
       };
     });
