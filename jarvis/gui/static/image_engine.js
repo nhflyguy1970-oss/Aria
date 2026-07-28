@@ -298,6 +298,24 @@ document.getElementById("openImageSettingsBtn")?.addEventListener("click", () =>
   document.getElementById("imageEnginePanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
+function setEngineLevel(level) {
+  const simple = document.getElementById("imageEngineSimpleBlock");
+  const advanced = document.getElementById("imageEngineAdvancedBlock");
+  const expert = document.getElementById("imageEngineExpertBlock");
+  const btns = {
+    simple: document.getElementById("imageEngineSimpleBtn"),
+    advanced: document.getElementById("imageEngineAdvancedBtn"),
+    expert: document.getElementById("imageEngineExpertBtn"),
+  };
+  simple?.classList.toggle("hidden", false);
+  advanced?.classList.toggle("hidden", level === "simple");
+  expert?.classList.toggle("hidden", level !== "expert");
+  Object.entries(btns).forEach(([k, el]) => el?.setAttribute("aria-pressed", k === level ? "true" : "false"));
+}
+document.getElementById("imageEngineSimpleBtn")?.addEventListener("click", () => setEngineLevel("simple"));
+document.getElementById("imageEngineAdvancedBtn")?.addEventListener("click", () => setEngineLevel("advanced"));
+document.getElementById("imageEngineExpertBtn")?.addEventListener("click", () => setEngineLevel("expert"));
+
   window.pollComfySettingsJob = pollComfySettingsJob;
   window.syncComfySettings = syncComfySettings;
   window.loadComfyMode = loadComfyMode;

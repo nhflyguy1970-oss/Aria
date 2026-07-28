@@ -1130,11 +1130,90 @@
 
         <section id="galleryGenerateSection" class="image-engine-panel" aria-label="Generation">
           <h3>Generation</h3>
-          <p class="muted small">Stays in Gallery — progress is shared with Job Center (not a Chat hop).</p>
+          <p class="muted small">Stays in Gallery — same shared Image Generation pipeline as Chat / MCP / Automation.</p>
           <div class="planner-add-row image-engine-generate-row">
             <input type="text" id="galleryPromptInput" class="audio-path-input" placeholder="Describe an image to generate…" aria-label="Image generation prompt" />
             <button type="button" id="galleryGenerateBtn" class="apply-btn small">Generate</button>
+            <button type="button" id="galleryCancelGenBtn" class="ghost-btn small hidden" aria-label="Cancel generation">Cancel</button>
           </div>
+          <div class="planner-add-row" style="flex-wrap:wrap;gap:0.5rem;align-items:center">
+            <label class="muted tiny"><input type="checkbox" id="galleryEnhanceToggle" checked /> Enhance prompt</label>
+            <label class="muted tiny">Preset
+              <select id="galleryStylePreset" class="personality-select" aria-label="Generation preset">
+                <option value="">— none —</option>
+              </select>
+            </label>
+            <label class="muted tiny">Aspect
+              <select id="galleryAspectSelect" class="personality-select" aria-label="Aspect ratio">
+                <option value="square">Square</option>
+                <option value="portrait">Portrait</option>
+                <option value="landscape">Landscape</option>
+              </select>
+            </label>
+            <button type="button" id="galleryEnhancePreviewBtn" class="ghost-btn tiny">Preview enhance</button>
+            <button type="button" id="galleryAdvancedToggle" class="ghost-btn tiny" aria-expanded="false">Advanced</button>
+            <button type="button" id="galleryGenAnotherBtn" class="ghost-btn tiny" title="Reuse last settings with a new seed">Generate another</button>
+          </div>
+          <div id="galleryEnhancePreview" class="muted small hidden" role="region" aria-label="Enhanced prompt preview"></div>
+          <div id="galleryAdvancedParams" class="image-engine-grid hidden" aria-hidden="true">
+            <label class="image-engine-field image-engine-field-wide">
+              <span>Negative prompt</span>
+              <input type="text" id="galleryNegativeInput" class="audio-path-input" placeholder="What to avoid…" aria-label="Negative prompt" />
+            </label>
+            <label class="image-engine-field image-engine-field-wide">
+              <span>Enhanced prompt (editable)</span>
+              <textarea id="galleryEnhancedInput" class="audio-path-input" rows="2" placeholder="After preview, edit what is sent to the model…" aria-label="Enhanced prompt"></textarea>
+            </label>
+            <label class="image-engine-field">
+              <span>Seed</span>
+              <input type="number" id="gallerySeedInput" class="audio-path-input" placeholder="random" aria-label="Seed" />
+            </label>
+            <label class="muted tiny"><input type="checkbox" id="galleryRandomSeed" checked /> Random seed</label>
+            <label class="image-engine-field">
+              <span>Steps</span>
+              <input type="number" id="galleryStepsInput" class="audio-path-input" min="1" max="80" placeholder="auto" aria-label="Steps" />
+            </label>
+            <label class="image-engine-field">
+              <span>CFG</span>
+              <input type="number" id="galleryCfgInput" class="audio-path-input" min="0" max="30" step="0.5" placeholder="auto" aria-label="CFG" />
+            </label>
+            <label class="image-engine-field">
+              <span>Sampler</span>
+              <select id="gallerySamplerSelect" class="personality-select" aria-label="Sampler">
+                <option value="">Default</option>
+                <option value="dpmpp_2m">dpmpp_2m</option>
+                <option value="euler">euler</option>
+                <option value="euler_ancestral">euler_ancestral</option>
+                <option value="ddim">ddim</option>
+              </select>
+            </label>
+            <label class="image-engine-field">
+              <span>Scheduler</span>
+              <select id="gallerySchedulerSelect" class="personality-select" aria-label="Scheduler">
+                <option value="">Default</option>
+                <option value="karras">karras</option>
+                <option value="normal">normal</option>
+                <option value="simple">simple</option>
+              </select>
+            </label>
+            <label class="image-engine-field">
+              <span>Variations (max 4)</span>
+              <input type="number" id="galleryVariationsInput" class="audio-path-input" min="1" max="4" value="1" aria-label="Variations count" />
+            </label>
+            <label class="image-engine-field">
+              <span>Width</span>
+              <input type="number" id="galleryWidthInput" class="audio-path-input" placeholder="auto" aria-label="Width" />
+            </label>
+            <label class="image-engine-field">
+              <span>Height</span>
+              <input type="number" id="galleryHeightInput" class="audio-path-input" placeholder="auto" aria-label="Height" />
+            </label>
+          </div>
+          <p id="galleryMcLink" class="muted tiny">
+            Engine health:
+            <button type="button" class="ghost-btn tiny" id="galleryOpenMcBtn">Mission Control</button>
+            <button type="button" class="ghost-btn tiny" id="galleryOpenJobsBtn">Job Center</button>
+          </p>
         </section>
 
         <section id="imageEnginePanel" class="image-engine-panel" aria-label="Image Engine settings">
@@ -1144,21 +1223,20 @@
               <p class="image-engine-sub">Settings — ComfyUI checkpoints · SD / SDXL / Flux</p>
               <p id="galleryLastGood" class="image-engine-hint muted">Last good settings…</p>
             </div>
-            <a id="openComfyUiLink" class="ghost-btn small" href="http://127.0.0.1:8188" target="_blank" rel="noopener">Open ComfyUI ↗</a>
+            <div class="ha-actions">
+              <button type="button" id="imageEngineSimpleBtn" class="ghost-btn tiny" aria-pressed="true">Simple</button>
+              <button type="button" id="imageEngineAdvancedBtn" class="ghost-btn tiny" aria-pressed="false">Advanced</button>
+              <button type="button" id="imageEngineExpertBtn" class="ghost-btn tiny" aria-pressed="false">Expert</button>
+              <a id="openComfyUiLink" class="ghost-btn small" href="http://127.0.0.1:8188" target="_blank" rel="noopener">Open ComfyUI ↗</a>
+            </div>
           </div>
-          <div class="image-engine-grid">
+          <div id="imageEngineSimpleBlock" class="image-engine-grid">
             <label class="image-engine-field">
               <span>Preset model</span>
               <select id="galleryCheckpointSelect" class="personality-select">
                 <option value="flux">Flux Schnell (best prompts)</option>
                 <option value="quality">SDXL 1.0 (quality)</option>
                 <option value="fast">SDXL Turbo (fast)</option>
-              </select>
-            </label>
-            <label class="image-engine-field">
-              <span>Installed checkpoint</span>
-              <select id="galleryCheckpointFileSelect" class="personality-select">
-                <option value="__preset__">Use preset above</option>
               </select>
             </label>
             <label class="image-engine-field">
@@ -1169,10 +1247,22 @@
                 <option value="cpu">CPU only</option>
               </select>
             </label>
+          </div>
+          <div id="imageEngineAdvancedBlock" class="image-engine-grid hidden">
+            <label class="image-engine-field">
+              <span>Installed checkpoint</span>
+              <select id="galleryCheckpointFileSelect" class="personality-select">
+                <option value="__preset__">Use preset above</option>
+              </select>
+            </label>
             <label class="image-engine-field image-engine-field-wide">
               <span>Custom workflow JSON (optional)</span>
               <input type="text" id="galleryWorkflowInput" class="audio-path-input" placeholder="/path/to/workflow.json" />
             </label>
+          </div>
+          <div id="imageEngineExpertBlock" class="muted small hidden">
+            Expert: workflow node graphs stay in ComfyUI. Aria owns prompt → queue → PNG via one pipeline.
+            Use Mission Control for VRAM / ComfyUI restart.
           </div>
           <p id="imageEngineUncensoredBanner" class="image-engine-uncensored hidden"></p>
           <p id="imageEngineStatus" class="image-engine-status muted">Loading…</p>

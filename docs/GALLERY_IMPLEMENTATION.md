@@ -10,11 +10,15 @@ Gallery is Aria’s **local AI image product**. Operators generate, browse, orga
 
 | Gallery owns | Does not own |
 |--------------|--------------|
-| Image generation (ComfyUI via shared media jobs) | Video Studio (motion) |
-| Generated stills library | Meme Studio |
-| Editing (upscale / inpaint / img2img) | Documents / Memory / Chat |
-| Prompt history, search, collections | Mission Control (health) |
-| Optional Vision metadata | Cloud sync / Google Photos |
+| Generated stills library | Image Generation engine (prompt→PNG pipeline) |
+| Editing (upscale / inpaint / img2img) | Video Studio (motion) |
+| Prompt history, search, collections | Meme Studio |
+| Optional Vision metadata | Documents / Memory / Chat |
+| Stay-in-Gallery generate *UI* (calls shared engine) | Mission Control (health) |
+| Soft delete / restricted visibility | Cloud sync / Google Photos |
+
+Generation itself is owned by **Image Generation** (`jarvis/image_generation/`) —
+Gallery is the primary surface that enqueues the shared `generate_image` job.
 
 ## Architecture
 

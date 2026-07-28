@@ -15,6 +15,8 @@
     items: [],
     jobStatus: "",
     tab: "library",
+    activeJobId: null,
+    lastParams: null,
   };
 
   function $(id) {
@@ -43,19 +45,28 @@
   }
 
   async function pollGalleryJob(jobId) {
+    state.activeJobId = jobId;
+    $("galleryCancelGenBtn")?.classList.remove("hidden");
     const res = await fetch(`/api/media/job/${encodeURIComponent(jobId)}`);
     const data = await res.json();
     if (!data.ok) throw new Error(data.message || "Job not found");
     const label = data.message || (data.done ? "Done" : "Working…");
     const pct = data.pct != null ? ` (${data.pct}%)` : "";
-    setGenStatus(`${label}${pct}`);
+    const eta = data.eta_sec != null ? ` · ~${data.eta_sec}s` : "";
+    const q = data.queue_position != null ? ` · queue #${data.queue_position}` : "";
+    setGenStatus(`${label}${pct}${eta}${q}`);
     if (!data.done) {
       await new Promise((r) => setTimeout(r, 1200));
       return pollGalleryJob(jobId);
     }
+    state.activeJobId = null;
+    $("galleryCancelGenBtn")?.classList.add("hidden");
     if (data.cancelled) throw new Error("Cancelled");
     if (!data.result?.ok) {
-      throw new Error(data.error || data.result?.message || "Job failed");
+      const msg = data.error || data.result?.message || "Job failed";
+      const actions = data.result?.actions || data.result?.hint;
+      if (actions) setGenStatus(`${msg} — ${typeof actions === "string" ? actions : "See recovery options"}`, "err");
+      throw new Error(msg);
     }
     return data.result;
   }
@@ -353,27 +364,202 @@
     }
   }
 
-  async function generateInGallery() {
+  function collectGenParams() {
+    const prompt = $("galleryPromptInput")?.value?.trim() || "";
+    const params = {
+      prompt,
+      enhance: !!$("galleryEnhanceToggle")?.checked,
+      aspect_ratio: $("galleryAspectSelect")?.value || "square",
+      style_preset: $("galleryStylePreset")?.value || "",
+      negative: $("galleryNegativeInput")?.value?.trim() || "",
+      enhanced_prompt: $("galleryEnhancedInput")?.value?.trim() || "",
+      steps: $("galleryStepsInput")?.value || "",
+      cfg: $("galleryCfgInput")?.value || "",
+      sampler: $("gallerySamplerSelect")?.value || "",
+      scheduler: $("gallerySchedulerSelect")?.value || "",
+      variations: $("galleryVariationsInput")?.value || "1",
+      width: $("galleryWidthInput")?.value || "",
+      height: $("galleryHeightInput")?.value || "",
+    };
+    if ($("galleryRandomSeed")?.checked) {
+      params.random_seed = true;
+    } else if ($("gallerySeedInput")?.value) {
+      params.seed = $("gallerySeedInput").value;
+    }
+    return params;
+  }
+
+  async function loadPresets() {
+    const sel = $("galleryStylePreset");
+    if (!sel) return;
+    try {
+      const res = await fetch("/api/image-generation/presets");
+      const data = await res.json();
+      if (!data.ok) return;
+      const cur = sel.value;
+      sel.innerHTML = `<option value="">— none —</option>`;
+      for (const p of data.items || []) {
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = p.title || p.id;
+        sel.appendChild(opt);
+      }
+      if (cur) sel.value = cur;
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function previewEnhance() {
     const prompt = $("galleryPromptInput")?.value?.trim();
     if (!prompt) {
+      window.showAriaToast?.("Enter a prompt first", "warn");
+      return;
+    }
+    const box = $("galleryEnhancePreview");
+    try {
+      const res = await fetch("/api/image-generation/enhance-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          enhance: !!$("galleryEnhanceToggle")?.checked,
+          negative: $("galleryNegativeInput")?.value || "",
+        }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || "Preview failed");
+      if (box) {
+        box.classList.remove("hidden");
+        box.innerHTML = `<strong>Original:</strong> ${esc(data.original)}<br/><strong>Enhanced:</strong> ${esc(data.enhanced)}`
+          + (data.negative ? `<br/><strong>Negative:</strong> ${esc(data.negative)}` : "");
+      }
+      if ($("galleryEnhancedInput") && data.enhanced) $("galleryEnhancedInput").value = data.enhanced;
+      if ($("galleryNegativeInput") && data.negative && !$("galleryNegativeInput").value) {
+        $("galleryNegativeInput").value = data.negative;
+      }
+      $("galleryAdvancedParams")?.classList.remove("hidden");
+    } catch (e) {
+      window.showAriaToast?.(e.message || "Enhance preview failed", "err");
+    }
+  }
+
+  async function cancelActiveJob() {
+    const id = state.activeJobId;
+    if (!id) return;
+    try {
+      await fetch(`/api/media/job/${encodeURIComponent(id)}/cancel`, { method: "POST" });
+      setGenStatus("Cancelling…", "err");
+    } catch (e) {
+      setGenStatus(e.message || "Cancel failed", "err");
+    }
+  }
+
+  async function generateInGallery(opts = {}) {
+    const params = opts.params || collectGenParams();
+    if (!params.prompt) {
       window.showAriaToast?.("Enter an image description first", "warn");
       $("galleryPromptInput")?.focus();
       return;
     }
+    const proceed = (await window.vramPreflight?.("generate_image")) !== false;
+    if (!proceed) return;
     const btn = $("galleryGenerateBtn");
     if (btn) btn.disabled = true;
     setGenStatus("Queuing generation…");
+    state.lastParams = { ...params };
     try {
-      const result = await runQueued("/api/gallery/generate", { prompt });
+      const result = await runQueued("/api/gallery/generate", params);
       const name = result.image_name || result.image_path?.split("/").pop() || "image";
-      setGenStatus(`Generated ${name}`, "ok");
+      const seedMsg = result.seed != null ? ` · seed ${result.seed}` : "";
+      setGenStatus(`Generated ${name}${seedMsg}`, "ok");
+      if (result.seed != null && $("gallerySeedInput")) $("gallerySeedInput").value = String(result.seed);
       window.jarvisNotify?.("Image ready", name);
       loadGallery({ reset: true });
     } catch (err) {
       setGenStatus(err.message || "Generation failed", "err");
+      showRecovery(err.message || "");
     } finally {
       if (btn) btn.disabled = false;
+      state.activeJobId = null;
+      $("galleryCancelGenBtn")?.classList.add("hidden");
     }
+  }
+
+  async function showRecovery(error) {
+    try {
+      const res = await fetch("/api/image-generation/recovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error }),
+      });
+      const data = await res.json();
+      if (!data.actions?.length) return;
+      const el = $("galleryJobStatus");
+      if (!el) return;
+      const wrap = document.createElement("span");
+      wrap.className = "gallery-recovery-actions";
+      for (const a of data.actions.slice(0, 4)) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "ghost-btn tiny";
+        b.textContent = a.label;
+        b.addEventListener("click", async () => {
+          if (a.view) {
+            window.switchToView?.(a.view === "mission-control" ? "mission" : a.view);
+            return;
+          }
+          if (a.action === "retry" && a.device) {
+            try {
+              if (window.postComfySettings) {
+                await window.postComfySettings({ mode: a.device === "cpu" ? "cpu" : "gpu" });
+              } else {
+                const form = new FormData();
+                form.append("mode", a.device === "cpu" ? "cpu" : "gpu");
+                await fetch("/api/comfyui/settings", { method: "POST", body: form });
+              }
+            } catch { /* ignore */ }
+            generateInGallery({ params: state.lastParams });
+          } else if (a.action === "restart_comfyui") {
+            try {
+              if (window.postComfySettings) await window.postComfySettings({ mode: "auto" });
+            } catch { /* ignore */ }
+          }
+        });
+        wrap.appendChild(b);
+        wrap.appendChild(document.createTextNode(" "));
+      }
+      el.appendChild(document.createTextNode(" "));
+      el.appendChild(wrap);
+    } catch { /* ignore */ }
+  }
+
+  async function generateAnother() {
+    let params = state.lastParams;
+    if (!params) {
+      try {
+        const res = await fetch("/api/image-generation/last-settings");
+        const data = await res.json();
+        if (data.prompt) {
+          params = {
+            prompt: data.prompt,
+            negative: data.negative || "",
+            enhanced_prompt: data.enhanced || "",
+            enhance: data.enhance,
+            steps: data.steps,
+            cfg: data.cfg,
+            random_seed: true,
+          };
+          if ($("galleryPromptInput")) $("galleryPromptInput").value = data.prompt;
+        }
+      } catch { /* ignore */ }
+    }
+    if (!params?.prompt) {
+      window.showAriaToast?.("Nothing to regenerate yet", "warn");
+      return;
+    }
+    params = { ...params, random_seed: true, seed: undefined };
+    return generateInGallery({ params });
   }
 
   function moveFocus(delta) {
@@ -419,7 +605,20 @@
     if (root?.dataset.galleryBound === "1") return;
     if (root) root.dataset.galleryBound = "1";
 
-    $("galleryGenerateBtn")?.addEventListener("click", generateInGallery);
+    $("galleryGenerateBtn")?.addEventListener("click", () => generateInGallery());
+    $("galleryCancelGenBtn")?.addEventListener("click", cancelActiveJob);
+    $("galleryEnhancePreviewBtn")?.addEventListener("click", previewEnhance);
+    $("galleryGenAnotherBtn")?.addEventListener("click", generateAnother);
+    $("galleryAdvancedToggle")?.addEventListener("click", () => {
+      const adv = $("galleryAdvancedParams");
+      if (!adv) return;
+      const open = adv.classList.toggle("hidden") === false;
+      $("galleryAdvancedToggle")?.setAttribute("aria-expanded", open ? "true" : "false");
+      adv.setAttribute("aria-hidden", open ? "false" : "true");
+    });
+    $("galleryOpenMcBtn")?.addEventListener("click", () => window.switchToView?.("mission") || window.switchToView?.("mission-control"));
+    $("galleryOpenJobsBtn")?.addEventListener("click", () => window.jarvisJobs?.openJobCenter?.() || window.switchToView?.("jobs"));
+    loadPresets();
     $("galleryPromptInput")?.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
@@ -533,6 +732,9 @@
   window.loadPromptHistory = loadPromptHistory;
   window.initGalleryView = initGalleryView;
   window.pollGalleryJob = pollGalleryJob;
+  window.galleryGenerateInGallery = generateInGallery;
+  window.galleryGenerateAnother = generateAnother;
+  window.galleryFocusPrompt = () => $("galleryPromptInput")?.focus();
   window.openGalleryHome = function () {
     window.switchToView?.("gallery");
     initGalleryView();

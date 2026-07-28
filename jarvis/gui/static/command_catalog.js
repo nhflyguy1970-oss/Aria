@@ -142,6 +142,12 @@
         shortcut: "Ctrl+Shift+G",
       }),
       mk("act:generate-image", "Generate image (Gallery)", "AI", "comfy create stay in gallery", () => {
+        const prompt = document.getElementById("galleryPromptInput")?.value?.trim();
+        if (!prompt) {
+          A().gallery.focusPrompt();
+          window.showAriaToast?.("Enter an image description first", "warn");
+          return;
+        }
         A().gallery.generate();
       }, { mode: "ask" }),
       mk("act:gallery-search", "Focus gallery search", "Gallery", "find caption prompt", () => {

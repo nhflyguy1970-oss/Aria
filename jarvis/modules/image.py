@@ -286,6 +286,7 @@ class ImageEngine:
         self.last_enhanced_prompt: str = ""
         self.last_negative_prompt: str = ""
         self.last_image: str = ""
+        self.last_seed: int | None = None
 
     def prepare_prompt(self, prompt: str) -> dict[str, str]:
         """Expand any casual request into model-appropriate prompts."""
@@ -332,12 +333,30 @@ class ImageEngine:
         prepared = self.prepare_prompt(prompt)
         return prepared["positive"]
 
-    def generate(self, prompt: str, output: str | None = None, *, enhance: bool | None = None, negative_prompt: str | None = None) -> str:
-        """Generate image via ComfyUI (primary on Linux)."""
+    def generate(
+        self,
+        prompt: str,
+        output: str | None = None,
+        *,
+        enhance: bool | None = None,
+        negative_prompt: str | None = None,
+        enhanced_prompt: str | None = None,
+        seed: int | None = None,
+        steps: int | None = None,
+        cfg: float | None = None,
+        sampler: str | None = None,
+        scheduler: str | None = None,
+        width: int | None = None,
+        height: int | None = None,
+        checkpoint: str | None = None,
+        workflow: str | None = None,
+    ) -> str:
+        """Generate image via ComfyUI (primary on Linux). Honors operator params end-to-end."""
         prompt = normalize_image_prompt(prompt)
         self.last_prompt = prompt
         self.last_enhanced_prompt = prompt
         self.last_negative_prompt = negative_prompt or BASE_NEGATIVE
+        self.last_seed = seed
         IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
         if output:
@@ -350,27 +369,50 @@ class ImageEngine:
         family = _active_model_family()
         pos_prompt = prompt
         neg_prompt = negative_prompt if negative_prompt is not None else _default_negative(family)
-        if use_enhance and negative_prompt is None:
-            prepared = self.prepare_prompt(prompt)
-            pos_prompt = prepared["positive"]
-            neg_prompt = prepared.get("negative") or _default_negative(family)
+
+        # Operator-edited enhanced prompt wins over silent re-enhance
+        if enhanced_prompt and str(enhanced_prompt).strip():
+            pos_prompt = str(enhanced_prompt).strip()
             self.last_enhanced_prompt = pos_prompt
             self.last_negative_prompt = neg_prompt
-        elif negative_prompt is not None:
+        elif use_enhance:
+            prepared = self.prepare_prompt(prompt)
+            pos_prompt = prepared["positive"]
+            if not (negative_prompt or "").strip():
+                neg_prompt = prepared.get("negative") or _default_negative(family)
+            else:
+                neg_prompt = negative_prompt
+            self.last_enhanced_prompt = pos_prompt
+            self.last_negative_prompt = neg_prompt
+        else:
             self.last_enhanced_prompt = pos_prompt
             self.last_negative_prompt = neg_prompt
 
         from jarvis import comfyui
 
-        width, height = _scene_dimensions(prompt)
+        if width and height:
+            w, h = int(width), int(height)
+        else:
+            w, h = _scene_dimensions(prompt)
         from jarvis.cache_state import invalidate_gallery
 
         result = comfyui.generate(
             pos_prompt,
-            width=width,
-            height=height,
+            width=w,
+            height=h,
             negative_prompt=neg_prompt,
+            checkpoint=checkpoint,
+            seed=seed,
+            steps=steps,
+            cfg=cfg,
+            sampler=sampler,
+            scheduler=scheduler,
+            workflow=workflow,
         )
+        try:
+            self.last_seed = getattr(comfyui.generate, "last_seed", seed)
+        except Exception:
+            self.last_seed = seed
         if not result.startswith("ERROR:") and Path(result).suffix.lower() in IMAGE_EXTENSIONS:
             src = Path(result)
             if dest and src.resolve() != dest.resolve():

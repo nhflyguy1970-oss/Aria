@@ -59,14 +59,13 @@ def handle_jarvis_mcp_tool(name: str, arguments: dict) -> dict[str, Any]:
         return {"ok": ok, "scene": scene}
 
     if name == "jarvis_generate_image":
+        from jarvis.image_generation.engine import submit_generation
+
         prompt = (arguments.get("prompt") or "").strip()
         if not prompt:
             return {"ok": False, "message": "prompt required"}
-        return assistant._enqueue_media(
-            "generate_image",
-            {"prompt": prompt},
-            prompt,
-        )
+        # Same shared pipeline as Gallery / Chat — optional operator params honored
+        return submit_generation(assistant, dict(arguments or {}), message=prompt, source="mcp")
 
     if name == "jarvis_chat":
         message = (arguments.get("message") or "").strip()

@@ -22,14 +22,67 @@ class MediaHandler:
 
     def generate_image(self, params: dict, message: str) -> dict:
         raise_if_cancelled()
+        from jarvis.image_generation.params import normalize_params
         from jarvis.modules.image import normalize_image_prompt
 
-        prompt = normalize_image_prompt(params.get("prompt") or message or "")
+        raw = dict(params or {})
+        if message and not raw.get("prompt"):
+            raw["prompt"] = message
+        norm = normalize_params(raw, message=message)
+        prompt = normalize_image_prompt(norm.get("prompt") or "")
+        if not prompt:
+            return err("Prompt required", module="image")
 
-        result = self.a.image.generate(prompt)
-        if result.startswith("ERROR:"):
-            return err(result, module="image")
+        # Device preference is configuration (Image Engine / Mission Control), not a fork.
+        # Recovery "Retry on CPU" sets mode via services API before re-enqueue.
 
+        enhance = norm.get("enhance")
+        negative = norm.get("negative") or ""
+        # Empty string means operator cleared negative; absent means use engine default
+        if "negative" not in raw and "negative_prompt" not in raw:
+            negative_arg = None
+        else:
+            negative_arg = negative
+
+        enhanced_override = str(raw.get("enhanced_prompt") or raw.get("enhanced") or "").strip() or None
+        n = int(norm.get("variations") or 1)
+        paths: list[str] = []
+        last_seed = norm.get("seed")
+        strength = str(norm.get("variation_strength") or "minor").lower()
+
+        for i in range(n):
+            raise_if_cancelled()
+            seed = norm.get("seed")
+            if i > 0:
+                # Variations: new seed unless reuse; minor/major tweak prompt lightly
+                seed = None
+                if strength == "major" and i == 1:
+                    # Keep same params, random seed only
+                    pass
+            result = self.a.image.generate(
+                prompt,
+                enhance=enhance,
+                negative_prompt=negative_arg,
+                enhanced_prompt=enhanced_override,
+                seed=seed,
+                steps=norm.get("steps"),
+                cfg=norm.get("cfg"),
+                sampler=norm.get("sampler"),
+                scheduler=norm.get("scheduler"),
+                width=norm.get("width"),
+                height=norm.get("height"),
+                checkpoint=norm.get("checkpoint"),
+                workflow=norm.get("workflow"),
+            )
+            if result.startswith("ERROR:"):
+                from jarvis.image_generation.fallback import recovery_options
+
+                rec = recovery_options(result)
+                return err(result, module="image", **{k: v for k, v in rec.items() if k != "ok"})
+            paths.append(result)
+            last_seed = getattr(self.a.image, "last_seed", seed)
+
+        result = paths[-1]
         from jarvis.comfyui_settings import checkpoint_label
         from jarvis.prompt_history import add_entry
 
@@ -43,7 +96,8 @@ class MediaHandler:
 
         name = Path(result).name
         enhanced = self.a.image.last_enhanced_prompt
-        negative = self.a.image.last_negative_prompt
+        negative_out = self.a.image.last_negative_prompt
+        seed_str = "" if last_seed is None else str(last_seed)
         try:
             from jarvis.config import is_uncensored
             from jarvis.gallery_product.metadata import mark_generation
@@ -55,24 +109,56 @@ class MediaHandler:
                 project = get_active_slug() or ""
             except Exception:
                 project = ""
-            mark_generation(
-                name,
-                prompt=prompt,
-                enhanced=enhanced or "",
-                negative=negative or "",
-                checkpoint=checkpoint_label(),
-                uncensored=is_uncensored(),
-                project=project,
+            for p in paths:
+                mark_generation(
+                    Path(p).name,
+                    prompt=prompt,
+                    enhanced=enhanced or "",
+                    negative=negative_out or "",
+                    checkpoint=checkpoint_label(),
+                    uncensored=is_uncensored(),
+                    project=project,
+                    seed=seed_str,
+                )
+        except Exception:
+            pass
+
+        try:
+            from jarvis.image_generation.engine import save_last_settings
+
+            save_last_settings(
+                {
+                    "prompt": prompt,
+                    "enhanced": enhanced or "",
+                    "negative": negative_out or "",
+                    "seed": last_seed,
+                    "steps": norm.get("steps"),
+                    "cfg": norm.get("cfg"),
+                    "sampler": norm.get("sampler"),
+                    "scheduler": norm.get("scheduler"),
+                    "width": norm.get("width"),
+                    "height": norm.get("height"),
+                    "checkpoint": norm.get("checkpoint") or checkpoint_label(),
+                    "workflow": norm.get("workflow"),
+                    "enhance": enhance,
+                    "image": result,
+                    "style_preset": norm.get("style_preset"),
+                }
             )
         except Exception:
             pass
+
         self.a.session.note_image(result)
 
         msg = f"Here's your image — **{prompt[:80]}**"
+        if len(paths) > 1:
+            msg = f"Generated {len(paths)} images — **{prompt[:80]}**"
         if enhanced:
             msg += f"\n\n**Prompt sent to {checkpoint_label()}:**\n{enhanced}"
-        if negative and negative != BASE_NEGATIVE:
-            msg += f"\n\n**Avoiding:** {negative[:300]}"
+        if negative_out and negative_out != BASE_NEGATIVE:
+            msg += f"\n\n**Avoiding:** {negative_out[:300]}"
+        if seed_str:
+            msg += f"\n\n**Seed:** `{seed_str}`"
         return ok(
             msg,
             module="image",
@@ -80,7 +166,11 @@ class MediaHandler:
             output_path=result,
             image_path=result,
             image_name=name,
+            image_paths=paths if len(paths) > 1 else None,
             enhanced_prompt=enhanced,
+            negative_prompt=negative_out,
+            seed=last_seed,
+            recovery=None,
         )
 
     def generate_video(self, params: dict, message: str) -> dict:

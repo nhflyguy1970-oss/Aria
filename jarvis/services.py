@@ -313,14 +313,23 @@ def ensure_comfyui_nvidia(*, block: bool = True, timeout: float = 120) -> bool:
     if _comfy_healthy():
         return True
     return ensure_comfyui(timeout=timeout, block=block, on_demand=True)
-    from jarvis.comfyui_settings import auto_fallback_enabled, mark_runtime_cpu_fallback
 
-    if not auto_fallback_enabled():
+
+def fallback_comfyui_to_cpu(*, timeout: float = 120) -> bool:
+    """Restart ComfyUI in CPU mode after a GPU failure. Safe to call repeatedly."""
+    try:
+        from jarvis.comfyui_settings import auto_fallback_enabled, mark_runtime_cpu_fallback
+
+        if not auto_fallback_enabled():
+            _log("ComfyUI: GPU failed — auto fallback disabled (mode is not auto)")
+            return False
+        mark_runtime_cpu_fallback()
+        _log("ComfyUI: GPU failed — switching to CPU and retrying")
+        _stop_comfyui()
+        return ensure_comfyui(block=True, timeout=timeout, on_demand=True)
+    except Exception as exc:
+        _log(f"ComfyUI: CPU fallback failed: {exc}")
         return False
-    mark_runtime_cpu_fallback()
-    _log("ComfyUI: GPU failed — switching to CPU and retrying")
-    _stop_comfyui()
-    return ensure_comfyui(block=True, timeout=120)
 
 
 def set_comfyui_mode(mode: str) -> dict:

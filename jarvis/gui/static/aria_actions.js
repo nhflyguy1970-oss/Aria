@@ -284,7 +284,19 @@
       generate: () => {
         window.openGalleryHome?.() || goView("gallery");
         focusAfter("gallery", "galleryPromptInput");
-        setTimeout(() => document.getElementById("galleryGenerateBtn")?.click(), 50);
+        setTimeout(() => {
+          const prompt = document.getElementById("galleryPromptInput")?.value?.trim();
+          if (!prompt) {
+            document.getElementById("galleryPromptInput")?.focus();
+            toast("Enter an image description, then Generate", "warn");
+            return;
+          }
+          if (typeof window.galleryGenerateInGallery === "function") {
+            window.galleryGenerateInGallery();
+          } else {
+            document.getElementById("galleryGenerateBtn")?.click();
+          }
+        }, 80);
       },
     },
 
@@ -356,7 +368,14 @@
       upgrade: () => invoke("upgradeWizardBtn", "Upgrade wizard") || openModal("upgradeWizardModal", "Upgrade wizard"),
       haSetup: () => invoke("haSetupBtn", "HA setup") || openModal("haSetupModal", "HA setup"),
       haTest: () => invoke("haTestBtn", "HA test"),
-      imageEngine: () => invoke("imageEngineBtn", "Image engine") || openModal("imageEngineModal", "Image engine"),
+      imageEngine: () => {
+        window.openGalleryHome?.() || goView("gallery");
+        setTimeout(() => {
+          document.getElementById("imageEnginePanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          document.getElementById("galleryCheckpointSelect")?.focus();
+        }, 80);
+        return true;
+      },
       apiKeys: () => invoke("apiKeysBtn", "API keys") || openModal("apiKeyModal", "API keys"),
       gitStatus: () => invoke("gitRefreshBtn", "Git status"),
       pullModels: () => invoke("pullMissingBtn", "Pull missing models") || invoke("pullModelsBtn", "Pull models"),

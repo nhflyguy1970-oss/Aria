@@ -47,10 +47,13 @@ def register_routes(app, assistant) -> None:
         from jarvis.gallery_product.generate import submit_generate
 
         body = await request.json()
-        prompt = str(body.get("prompt") or "").strip()
-        result = submit_generate(assistant, prompt, negative=str(body.get("negative") or ""))
+        result = submit_generate(assistant, **{k: v for k, v in body.items() if k != "source"})
         if result.get("ok"):
-            emit_gallery_event("gallery_generate_queued", prompt[:120], job_id=result.get("job_id"))
+            emit_gallery_event(
+                "gallery_generate_queued",
+                str(body.get("prompt") or "")[:120],
+                job_id=result.get("job_id"),
+            )
         return result
 
     @app.post("/api/gallery/variation")

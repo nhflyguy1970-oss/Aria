@@ -115,9 +115,16 @@ def _patch_workflow_generation(
     negative_prompt: str,
     width: int,
     height: int,
+    seed: int | None = None,
+    steps: int | None = None,
+    cfg: float | None = None,
+    sampler: str | None = None,
+    scheduler: str | None = None,
 ) -> dict:
-    """Patch custom workflow prompts, latent size, and randomize all seeds."""
+    """Patch custom workflow prompts, latent size, and seeds/sampler overrides."""
     wf = copy.deepcopy(wf)
+    use_seed = int(seed) if seed is not None else _random_seed()
+    _patch_workflow_generation.last_seed = use_seed  # type: ignore[attr-defined]
     for node in wf.values():
         if not isinstance(node, dict):
             continue
@@ -129,9 +136,17 @@ def _patch_workflow_generation(
         if class_type == "CLIPTextEncode" and title == "Negative":
             inputs["text"] = negative_prompt or DEFAULT_NEGATIVE
         if class_type == "KSampler":
-            inputs["seed"] = _random_seed()
+            inputs["seed"] = use_seed
+            if steps is not None:
+                inputs["steps"] = int(steps)
+            if cfg is not None:
+                inputs["cfg"] = float(cfg)
+            if sampler:
+                inputs["sampler_name"] = sampler
+            if scheduler:
+                inputs["scheduler"] = scheduler
         if class_type == "RandomNoise":
-            inputs["noise_seed"] = _random_seed()
+            inputs["noise_seed"] = use_seed
         if class_type == "EmptyLatentImage":
             inputs["width"] = width
             inputs["height"] = height
@@ -144,23 +159,43 @@ def _workflow(
     height: int = 1024,
     negative_prompt: str = "",
     checkpoint: str | None = None,
+    *,
+    seed: int | None = None,
+    steps: int | None = None,
+    cfg: float | None = None,
+    sampler: str | None = None,
+    scheduler: str | None = None,
+    workflow: str | None = None,
 ) -> dict:
     from jarvis.comfyui_settings import effective_workflow_path
 
-    wf_path = effective_workflow_path()
+    wf_path = (workflow or "").strip() or effective_workflow_path()
     if wf_path and Path(wf_path).exists():
         wf = json.loads(Path(wf_path).read_text(encoding="utf-8"))
-        return _patch_workflow_generation(
+        patched = _patch_workflow_generation(
             wf,
             prompt=prompt,
             negative_prompt=negative_prompt or DEFAULT_NEGATIVE,
             width=width,
             height=height,
+            seed=seed,
+            steps=steps,
+            cfg=cfg,
+            sampler=sampler,
+            scheduler=scheduler,
         )
+        _workflow.last_seed = getattr(_patch_workflow_generation, "last_seed", seed)  # type: ignore[attr-defined]
+        return patched
 
     ckpt = _find_checkpoint(checkpoint)
-    steps, cfg, sampler_name, scheduler = _sampler_settings(ckpt)
-    seed = _random_seed()
+    d_steps, d_cfg, d_sampler, d_scheduler = _sampler_settings(ckpt)
+    use_steps = int(steps) if steps is not None else d_steps
+    use_cfg = float(cfg) if cfg is not None else d_cfg
+    use_sampler = sampler or d_sampler
+    use_scheduler = scheduler or d_scheduler
+    use_seed = int(seed) if seed is not None else _random_seed()
+    # Stash for callers that want last seed
+    _workflow.last_seed = use_seed  # type: ignore[attr-defined]
     if _is_flux_checkpoint(ckpt):
         negative = negative_prompt.strip()
     else:
@@ -170,11 +205,11 @@ def _workflow(
         "3": {
             "class_type": "KSampler",
             "inputs": {
-                "seed": seed,
-                "steps": steps,
-                "cfg": cfg,
-                "sampler_name": sampler_name,
-                "scheduler": scheduler,
+                "seed": use_seed,
+                "steps": use_steps,
+                "cfg": use_cfg,
+                "sampler_name": use_sampler,
+                "scheduler": use_scheduler,
                 "denoise": 1,
                 "model": ["4", 0],
                 "positive": ["6", 0],
@@ -409,6 +444,13 @@ def _generate_once(
     height: int = 1024,
     negative_prompt: str = "",
     checkpoint: str | None = None,
+    *,
+    seed: int | None = None,
+    steps: int | None = None,
+    cfg: float | None = None,
+    sampler: str | None = None,
+    scheduler: str | None = None,
+    workflow: str | None = None,
 ) -> str:
     from jarvis.vram_guard import prepare_for_comfyui
 
@@ -424,7 +466,21 @@ def _generate_once(
             "~/ComfyUI/venv/bin/python ~/ComfyUI/main.py --listen 127.0.0.1 --port 8188"
         )
 
-    return run_workflow(_workflow(prompt, width, height, negative_prompt, checkpoint=checkpoint))
+    return run_workflow(
+        _workflow(
+            prompt,
+            width,
+            height,
+            negative_prompt,
+            checkpoint=checkpoint,
+            seed=seed,
+            steps=steps,
+            cfg=cfg,
+            sampler=sampler,
+            scheduler=scheduler,
+            workflow=workflow,
+        )
+    )
 
 
 def generate(
@@ -433,27 +489,79 @@ def generate(
     height: int = 1024,
     negative_prompt: str = "",
     checkpoint: str | None = None,
+    *,
+    seed: int | None = None,
+    steps: int | None = None,
+    cfg: float | None = None,
+    sampler: str | None = None,
+    scheduler: str | None = None,
+    workflow: str | None = None,
 ) -> str:
-    result = _generate_once(prompt, width, height, negative_prompt, checkpoint=checkpoint)
+    result = _generate_once(
+        prompt,
+        width,
+        height,
+        negative_prompt,
+        checkpoint=checkpoint,
+        seed=seed,
+        steps=steps,
+        cfg=cfg,
+        sampler=sampler,
+        scheduler=scheduler,
+        workflow=workflow,
+    )
+    # Expose last seed used (from workflow build)
+    try:
+        generate.last_seed = getattr(_workflow, "last_seed", seed)  # type: ignore[attr-defined]
+    except Exception:
+        generate.last_seed = seed  # type: ignore[attr-defined]
+
     if not _is_gpu_failure(result):
         return result
 
     from jarvis.comfyui_settings import auto_fallback_enabled, effective_cpu_mode
-    from jarvis.services import fallback_comfyui_to_cpu
 
     if auto_fallback_enabled() and not effective_cpu_mode():
-        if fallback_comfyui_to_cpu():
-            retry = _generate_once(prompt, width, height, negative_prompt, checkpoint=checkpoint)
+        try:
+            from jarvis.services import fallback_comfyui_to_cpu
+        except ImportError:
+            fallback_comfyui_to_cpu = None  # type: ignore[assignment]
+        ok = False
+        try:
+            ok = bool(fallback_comfyui_to_cpu and fallback_comfyui_to_cpu())
+        except Exception as exc:
+            return (
+                f"{result} (CPU fallback error: {exc}). "
+                "Open Mission Control or switch Image Engine to CPU."
+            )
+        if ok:
+            retry = _generate_once(
+                prompt,
+                width,
+                height,
+                negative_prompt,
+                checkpoint=checkpoint,
+                seed=seed,
+                steps=steps,
+                cfg=cfg,
+                sampler=sampler,
+                scheduler=scheduler,
+                workflow=workflow,
+            )
             if not retry.startswith("ERROR:"):
                 return retry
             if _is_gpu_failure(retry):
                 return (
                     "ERROR: GPU and CPU image generation both failed. "
-                    "Check data/logs/comfyui.log or switch to CPU in the sidebar."
+                    "Check data/logs/comfyui.log, free VRAM, or open Mission Control."
                 )
             return retry
+        return (
+            f"{result} (auto CPU fallback failed to restart ComfyUI). "
+            "Open Mission Control or switch Image Engine to CPU."
+        )
 
     if auto_fallback_enabled():
-        return result + " (auto CPU fallback failed to restart ComfyUI)"
+        return result + " (already on CPU — check ComfyUI logs or Mission Control)"
 
-    return result + " Switch ComfyUI to CPU or Auto (GPU → CPU) in the sidebar under Image engine."
+    return result + " Switch ComfyUI to CPU or Auto (GPU → CPU) in Image Engine, or open Mission Control."

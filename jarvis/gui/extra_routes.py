@@ -24,8 +24,10 @@ def register_routes(app, assistant):
 
     # Gallery product routes must register before /api/gallery/{name}
     from jarvis.gallery_product.api import register_routes as register_gallery_product
+    from jarvis.image_generation.api import register_routes as register_image_generation
 
     register_gallery_product(app, assistant)
+    register_image_generation(app, assistant)
 
     @app.get("/api/journal")
     def journal_all():
