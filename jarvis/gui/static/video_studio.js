@@ -1,5 +1,13 @@
 /** Video studio — keyframe checkpoints, gallery, upload, trim, frame analysis. */
 
+function escapeHtml(s) {
+  if (typeof window.escapeHtml === "function") return window.escapeHtml(s);
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/"/g, "&quot;");
+}
+
 function videoStudioResolveUrl(pathOrName, { playback = true } = {}) {
   const file = (pathOrName || "").split(/[/\\]/).pop();
   if (!file) return "";
@@ -107,6 +115,10 @@ async function loadVideoSettings() {
     const fps = document.getElementById("videoFpsInput");
     if (dur) dur.value = s.duration_sec ?? 4;
     if (fps) fps.value = s.fps ?? 8;
+    const wEl = document.getElementById("videoWidthInput");
+    const hEl = document.getElementById("videoHeightInput");
+    if (wEl && s.width) wEl.value = s.width;
+    if (hEl && s.height) hEl.value = s.height;
     if (engineSel && s.engine) engineSel.value = s.engine;
     if (adFrames) adFrames.value = s.animatediff_frames ?? 16;
     if (presetSel && s.keyframe_preset) presetSel.value = s.keyframe_preset;
@@ -197,10 +209,14 @@ async function saveVideoSettings() {
   const fps = document.getElementById("videoFpsInput")?.value;
   const engine = document.getElementById("videoEngineSelect")?.value;
   const adFrames = document.getElementById("videoAdFramesInput")?.value;
+  const width = document.getElementById("videoWidthInput")?.value;
+  const height = document.getElementById("videoHeightInput")?.value;
   if (dur) form.append("duration_sec", dur);
   if (fps) form.append("fps", fps);
   if (engine) form.append("engine", engine);
   if (adFrames) form.append("animatediff_frames", adFrames);
+  if (width) form.append("width", width);
+  if (height) form.append("height", height);
   await postVideoSettings(form);
 }
 
@@ -232,15 +248,24 @@ async function loadVideoGallery() {
     const data = await res.json();
     const videos = data.videos || [];
     if (!videos.length) {
-      grid.innerHTML = `<p class="muted">No videos yet. <button type="button" class="ghost-btn tiny" id="videoEmptyChatBtn">Ask Chat</button> or upload below.</p>`;
-      grid.querySelector("#videoEmptyChatBtn")?.addEventListener("click", () => { window.switchToView?.("chat"); window.jarvisSendToChat?.("Generate a video of "); });
+      grid.innerHTML = `<p class="muted">No videos yet. <button type="button" class="ghost-btn tiny" id="videoEmptyPromptBtn">Focus prompt</button> — generate stays in Video Studio.</p>`;
+      grid.querySelector("#videoEmptyPromptBtn")?.addEventListener("click", () => document.getElementById("videoPromptInput")?.focus());
       return;
     }
     grid.innerHTML = videos.map((v) => {
+      if (v.restricted || v.thumb_blocked) {
+        return `<div class="video-gallery-item restricted" data-video-name="${escapeHtml(v.name)}">
+          <p class="video-item-name">Restricted</p>
+          <p class="muted tiny">${escapeHtml(v.preview_message || "Created in uncensored mode")}</p>
+        </div>`;
+      }
+      const metaBits = [v.method, v.engine, v.seed != null ? `seed ${v.seed}` : "", v.duration != null ? `${v.duration}s` : ""]
+        .filter(Boolean).join(" · ");
       return `<div class="video-gallery-item" data-path="${escapeHtml(v.path)}" data-video-name="${escapeHtml(v.name)}">
         <button type="button" class="gallery-del video-del" data-name="${escapeHtml(v.name)}" title="Delete video" aria-label="Delete video">×</button>
         <video preload="metadata" class="video-thumb clickable-video" title="Click to open player"></video>
         <p class="video-item-name">${escapeHtml(v.name)}</p>
+        ${metaBits ? `<p class="muted tiny">${escapeHtml(metaBits)}</p>` : ""}
         <button type="button" class="ghost-btn small video-analyze-btn" data-path="${escapeHtml(v.path)}">Analyze frame</button>
         <button type="button" class="ghost-btn small video-trim-btn" data-path="${escapeHtml(v.path)}">Trim</button>
       </div>`;
@@ -276,8 +301,8 @@ async function loadVideoGallery() {
           btn.closest(".video-gallery-item")?.remove();
           if (window.showAriaToast) window.showAriaToast(`Deleted ${name}`, "info");
           if (!grid.querySelector(".video-gallery-item")) {
-            grid.innerHTML = `<p class="muted">No videos yet. <button type="button" class="ghost-btn tiny" id="videoEmptyChatBtn">Ask Chat</button> or upload below.</p>`;
-      grid.querySelector("#videoEmptyChatBtn")?.addEventListener("click", () => { window.switchToView?.("chat"); window.jarvisSendToChat?.("Generate a video of "); });
+            grid.innerHTML = `<p class="muted">No videos yet. <button type="button" class="ghost-btn tiny" id="videoEmptyPromptBtn">Focus prompt</button></p>`;
+            grid.querySelector("#videoEmptyPromptBtn")?.addEventListener("click", () => document.getElementById("videoPromptInput")?.focus());
           }
         } catch (e) {
           btn.disabled = false;
@@ -292,8 +317,13 @@ async function loadVideoGallery() {
       btn.addEventListener("click", () => trimVideoPrompt(btn.dataset.path));
     });
   } catch (err) {
-    grid.innerHTML = "<p class=\"muted\">Failed to load videos</p>";
-    window.showAriaToast?.(err?.message || "Failed to load videos", "err", 5000);
+    grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon" aria-hidden="true">▶</div><p class="empty-state-title">Couldn’t load videos</p><p class="muted">${String(err?.message || "Network or server error").slice(0, 160)}</p><div class="empty-state-actions"><button type="button" class="apply-btn small" id="videoGalleryRetryBtn">Retry</button><button type="button" class="ghost-btn small" id="videoGalleryChatBtn">Ask Aria</button></div></div>`;
+    document.getElementById("videoGalleryRetryBtn")?.addEventListener("click", () => loadVideoGallery());
+    document.getElementById("videoGalleryChatBtn")?.addEventListener("click", () => {
+      window.switchToView?.("chat");
+      setTimeout(() => window.jarvisSendToChat?.("Help me troubleshoot the video gallery"), 80);
+    });
+    window.showAriaToast?.(err?.message || "Failed to load videos — Retry from the gallery", "err", 5000);
   }
 }
 
@@ -489,50 +519,279 @@ document.getElementById("videoEngineInstallNsfwBtn")?.addEventListener("click", 
   }
 });
 
-document.getElementById("videoGenHintBtn")?.addEventListener("click", () => {
-  if (typeof window.jarvisSendToChat === "function") {
-    window.jarvisSendToChat("generate a video of ");
-  }
-});
 document.getElementById("videoOpenGalleryBtn")?.addEventListener("click", () => {
   window.switchToView?.("gallery");
 });
 document.getElementById("videoOpenMemeBtn")?.addEventListener("click", () => {
   window.switchToView?.("meme");
 });
+document.getElementById("videoOpenMcBtn")?.addEventListener("click", () => {
+  window.switchToView?.("mission") || window.switchToView?.("mission-control");
+});
+
+let videoActiveJobId = null;
+let videoLastParams = null;
+
+function setVideoJobStatus(msg, tone) {
+  const el = document.getElementById("videoJobStatus");
+  if (el) {
+    el.textContent = msg || "";
+    el.classList.toggle("warn", tone === "err");
+  }
+  if (msg && tone) window.showAriaToast?.(msg, tone === "err" ? "err" : tone === "ok" ? "ok" : "info", 3500);
+}
+
+async function pollVideoMediaJob(jobId) {
+  videoActiveJobId = jobId;
+  document.getElementById("videoCancelGenBtn")?.classList.remove("hidden");
+  document.getElementById("storyboardCancelBtn")?.classList.remove("hidden");
+  const res = await fetch(`/api/media/job/${encodeURIComponent(jobId)}`);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.message || "Job not found");
+  const label = data.message || (data.done ? "Done" : "Working…");
+  const pct = data.pct != null ? ` (${data.pct}%)` : "";
+  setVideoJobStatus(`${label}${pct}`);
+  const sb = document.getElementById("storyboardStatus");
+  if (sb && document.activeElement?.id?.includes("storyboard")) sb.textContent = `${label}${pct}`;
+  if (!data.done) {
+    await new Promise((r) => setTimeout(r, 1500));
+    return pollVideoMediaJob(jobId);
+  }
+  videoActiveJobId = null;
+  document.getElementById("videoCancelGenBtn")?.classList.add("hidden");
+  document.getElementById("storyboardCancelBtn")?.classList.add("hidden");
+  if (data.cancelled) throw new Error("Cancelled");
+  if (!data.result?.ok) throw new Error(data.error || data.result?.message || "Job failed");
+  return data.result;
+}
+
+function collectVideoParams() {
+  const prompt = document.getElementById("videoPromptInput")?.value?.trim() || "";
+  const params = {
+    prompt,
+    enhance: !!document.getElementById("videoEnhanceToggle")?.checked,
+    style_preset: document.getElementById("videoStylePreset")?.value || "",
+    duration: document.getElementById("videoDurationInput")?.value || "",
+    fps: document.getElementById("videoFpsInput")?.value || "",
+    width: document.getElementById("videoWidthInput")?.value || "",
+    height: document.getElementById("videoHeightInput")?.value || "",
+    engine: document.getElementById("videoEngineSelect")?.value || "auto",
+    negative: document.getElementById("videoNegativeInput")?.value?.trim() || "",
+    enhanced_prompt: document.getElementById("videoEnhancedInput")?.value?.trim() || "",
+    frames: document.getElementById("videoAdFramesInput")?.value || "",
+    motion_strength: document.getElementById("videoMotionStrength")?.value || "",
+    keyframe_preset: document.getElementById("videoCheckpointSelect")?.value || "",
+  };
+  const fileCkpt = document.getElementById("videoCheckpointFileSelect")?.value;
+  if (fileCkpt && fileCkpt !== "__preset__") params.checkpoint = fileCkpt;
+  if (document.getElementById("videoRandomSeed")?.checked) params.random_seed = true;
+  else if (document.getElementById("videoSeedInput")?.value) params.seed = document.getElementById("videoSeedInput").value;
+  return params;
+}
+
+async function loadVideoPresets() {
+  const sel = document.getElementById("videoStylePreset");
+  if (!sel) return;
+  try {
+    const res = await fetch("/api/video-generation/presets");
+    const data = await res.json();
+    if (!data.ok) return;
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">— none —</option>`;
+    for (const p of data.items || []) {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.title || p.id;
+      sel.appendChild(opt);
+    }
+    if (cur) sel.value = cur;
+  } catch { /* ignore */ }
+}
+
+async function previewVideoEnhance() {
+  const prompt = document.getElementById("videoPromptInput")?.value?.trim();
+  if (!prompt) {
+    window.showAriaToast?.("Enter a prompt first", "warn");
+    return;
+  }
+  const box = document.getElementById("videoEnhancePreview");
+  try {
+    const res = await fetch("/api/video-generation/enhance-preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        prompt,
+        enhance: !!document.getElementById("videoEnhanceToggle")?.checked,
+        negative: document.getElementById("videoNegativeInput")?.value || "",
+      }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.message || "Preview failed");
+    if (box) {
+      box.classList.remove("hidden");
+      box.innerHTML = `<strong>Original:</strong> ${escapeHtml(data.original)}<br/><strong>Enhanced:</strong> ${escapeHtml(data.enhanced)}`
+        + (data.negative ? `<br/><strong>Negative:</strong> ${escapeHtml(data.negative)}` : "");
+    }
+    const enh = document.getElementById("videoEnhancedInput");
+    if (enh && data.enhanced) enh.value = data.enhanced;
+    document.getElementById("videoAdvancedParams")?.classList.remove("hidden");
+  } catch (e) {
+    window.showAriaToast?.(e.message || "Enhance preview failed", "err");
+  }
+}
+
+async function showVideoRecovery(error) {
+  try {
+    const res = await fetch("/api/video-generation/recovery", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error }),
+    });
+    const data = await res.json();
+    const el = document.getElementById("videoJobStatus");
+    if (!el || !data.actions?.length) return;
+    const wrap = document.createElement("span");
+    wrap.className = "gallery-recovery-actions";
+    for (const a of data.actions.slice(0, 5)) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "ghost-btn tiny";
+      b.textContent = a.label;
+      b.addEventListener("click", async () => {
+        if (a.view) {
+          window.switchToView?.(a.view === "mission-control" ? "mission" : a.view);
+          return;
+        }
+        if (a.action === "free_vram") {
+          await window.freeJarvisVram?.();
+          return;
+        }
+        if (a.action === "retry") {
+          const params = { ...(videoLastParams || {}) };
+          if (a.engine) params.engine = a.engine;
+          if (a.frames) params.frames = a.frames;
+          if (a.duration) params.duration = a.duration;
+          videoGenerateInStudio({ params });
+        }
+      });
+      wrap.appendChild(b);
+      wrap.appendChild(document.createTextNode(" "));
+    }
+    el.appendChild(document.createTextNode(" "));
+    el.appendChild(wrap);
+  } catch { /* ignore */ }
+}
+
+async function videoGenerateInStudio(opts = {}) {
+  const params = opts.params || collectVideoParams();
+  if (!params.prompt) {
+    window.showAriaToast?.("Enter a video description first", "warn");
+    document.getElementById("videoPromptInput")?.focus();
+    return;
+  }
+  const proceed = (await window.vramPreflight?.("generate_video")) !== false;
+  if (!proceed) return;
+  const btn = document.getElementById("videoGenerateBtn");
+  if (btn) btn.disabled = true;
+  setVideoJobStatus("Queuing video…");
+  videoLastParams = { ...params };
+  try {
+    const res = await fetch("/api/video-generation/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...params, source: "studio" }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.ok === false) throw new Error(data.message || "Queue failed");
+    const result = data.pending && data.job_id ? await pollVideoMediaJob(data.job_id) : data;
+    const name = result.video_name || result.video_path?.split(/[/\\]/).pop() || "video";
+    const method = result.generation_method ? ` · ${result.generation_method}` : "";
+    setVideoJobStatus(`Generated ${name}${method}`, "ok");
+    if (result.seed != null && document.getElementById("videoSeedInput")) {
+      document.getElementById("videoSeedInput").value = String(result.seed);
+    }
+    window.jarvisNotify?.("Video ready", name);
+    loadVideoGallery();
+  } catch (err) {
+    setVideoJobStatus(err.message || "Generation failed", "err");
+    showVideoRecovery(err.message || "");
+  } finally {
+    if (btn) btn.disabled = false;
+    videoActiveJobId = null;
+    document.getElementById("videoCancelGenBtn")?.classList.add("hidden");
+  }
+}
+
+async function videoGenerateAnother() {
+  let params = videoLastParams;
+  if (!params) {
+    try {
+      const res = await fetch("/api/video-generation/last-settings");
+      const data = await res.json();
+      if (data.prompt) {
+        params = { prompt: data.prompt, negative: data.negative || "", enhanced_prompt: data.enhanced || "", random_seed: true };
+        if (document.getElementById("videoPromptInput")) document.getElementById("videoPromptInput").value = data.prompt;
+      }
+    } catch { /* ignore */ }
+  }
+  if (!params?.prompt) {
+    window.showAriaToast?.("Nothing to regenerate yet", "warn");
+    return;
+  }
+  return videoGenerateInStudio({ params: { ...params, random_seed: true } });
+}
+
+async function cancelVideoJob() {
+  const id = videoActiveJobId;
+  if (!id) return;
+  await fetch(`/api/media/job/${encodeURIComponent(id)}/cancel`, { method: "POST" }).catch(() => {});
+  setVideoJobStatus("Cancelling…", "err");
+}
+
+function setVideoUiLevel(level) {
+  const adv = document.getElementById("videoAdvancedParams");
+  const exp = document.getElementById("videoExpertParams");
+  adv?.classList.toggle("hidden", level === "simple");
+  exp?.classList.toggle("hidden", level !== "expert");
+  adv?.setAttribute("aria-hidden", level === "simple" ? "true" : "false");
+  exp?.setAttribute("aria-hidden", level === "expert" ? "false" : "true");
+  document.getElementById("videoSimpleBtn")?.setAttribute("aria-pressed", level === "simple" ? "true" : "false");
+  document.getElementById("videoExpertBtn")?.setAttribute("aria-pressed", level === "expert" ? "true" : "false");
+  document.getElementById("videoAdvancedToggle")?.setAttribute("aria-expanded", level !== "simple" ? "true" : "false");
+}
+
+document.getElementById("videoGenerateBtn")?.addEventListener("click", () => videoGenerateInStudio());
+document.getElementById("videoCancelGenBtn")?.addEventListener("click", cancelVideoJob);
+document.getElementById("storyboardCancelBtn")?.addEventListener("click", cancelVideoJob);
+document.getElementById("videoEnhancePreviewBtn")?.addEventListener("click", previewVideoEnhance);
+document.getElementById("videoGenAnotherBtn")?.addEventListener("click", videoGenerateAnother);
+document.getElementById("videoAdvancedToggle")?.addEventListener("click", () => {
+  const open = document.getElementById("videoAdvancedParams")?.classList.toggle("hidden") === false;
+  setVideoUiLevel(open ? "advanced" : "simple");
+});
+document.getElementById("videoSimpleBtn")?.addEventListener("click", () => setVideoUiLevel("simple"));
+document.getElementById("videoExpertBtn")?.addEventListener("click", () => setVideoUiLevel("expert"));
+document.getElementById("videoPromptInput")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    videoGenerateInStudio();
+  }
+});
+loadVideoPresets();
 
 async function pollStoryboardJob(jobId, statusEl) {
   if (!jobId) return;
-  const tick = async () => {
-    try {
-      const res = await fetch(`/api/coding/job/${encodeURIComponent(jobId)}`);
-      const data = await res.json();
-      if (!data.ok) {
-        if (statusEl) statusEl.textContent = data.message || "Storyboard job not found";
-        return;
-      }
-      if (statusEl) statusEl.textContent = data.message || "Building storyboard…";
-      if (data.done) {
-        const result = data.result || {};
-        if (result.ok && result.video_path) {
-          const url = resolveVideoUrlForStudio(result.video_path);
-          if (statusEl) {
-            statusEl.innerHTML = `Ready: <a href="${escapeHtml(url)}" target="_blank" rel="noopener">${escapeHtml(result.video_path.split(/[/\\]/).pop())}</a>`;
-          }
-          loadVideoGallery();
-        } else if (statusEl) {
-          statusEl.textContent = data.error || result.message || "Storyboard failed";
-        }
-        return;
-      }
-      setTimeout(tick, 1500);
-    } catch (e) {
-      const msg = String(e.message || e);
-      if (statusEl) statusEl.textContent = msg;
-      window.showAriaToast?.(msg, "err", 5000);
-    }
-  };
-  tick();
+  try {
+    const result = await pollVideoMediaJob(jobId);
+    const name = result.video_name || result.video_path?.split(/[/\\]/).pop() || "storyboard";
+    if (statusEl) statusEl.textContent = `Ready: ${name}`;
+    window.showAriaToast?.(`Storyboard ready: ${name}`, "ok");
+    loadVideoGallery();
+  } catch (e) {
+    const msg = String(e.message || e);
+    if (statusEl) statusEl.textContent = msg;
+    window.showAriaToast?.(msg, "err", 5000);
+  }
 }
 
 document.getElementById("storyboardBuildBtn")?.addEventListener("click", async () => {
@@ -548,10 +807,12 @@ document.getElementById("storyboardBuildBtn")?.addEventListener("click", async (
   if (btn) btn.disabled = true;
   if (statusEl) statusEl.textContent = "Queueing storyboard…";
   try {
-    const form = new FormData();
-    form.append("paths", paths);
-    form.append("sec_per_slide", "3.5");
-    const res = await fetch("/api/video/storyboard", { method: "POST", body: form });
+    const sec = document.getElementById("storyboardSecInput")?.value || "3.5";
+    const res = await fetch("/api/video/storyboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paths, sec_per_slide: Number(sec) || 3.5 }),
+    });
     const data = await res.json();
     if (!res.ok || !data.ok) {
       const msg = data.message || "Could not queue storyboard";
@@ -562,7 +823,7 @@ document.getElementById("storyboardBuildBtn")?.addEventListener("click", async (
     const queued = data.message || "Storyboard queued…";
     if (statusEl) statusEl.textContent = queued;
     window.showAriaToast?.(queued, "ok", 2500);
-    pollStoryboardJob(data.job_id, statusEl);
+    await pollStoryboardJob(data.job_id, statusEl);
   } catch (e) {
     const msg = String(e.message || e);
     if (statusEl) statusEl.textContent = msg;
@@ -573,3 +834,9 @@ document.getElementById("storyboardBuildBtn")?.addEventListener("click", async (
 });
 
 window.loadVideoGallery = loadVideoGallery;
+window.videoGenerateInStudio = videoGenerateInStudio;
+window.videoGenerateAnother = videoGenerateAnother;
+window.openVideoStudio = function () {
+  window.switchToView?.("video");
+  loadVideoGallery();
+};

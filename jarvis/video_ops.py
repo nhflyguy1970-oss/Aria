@@ -277,6 +277,7 @@ def image_to_motion_video(
     fps: int = 8,
     width: int = 768,
     height: int = 768,
+    zoom_end: float = 1.25,
 ) -> str:
     """Ken-burns style motion clip from a still image (low VRAM)."""
     src = resolve_storyboard_image(image_path)
@@ -289,12 +290,13 @@ def image_to_motion_video(
     duration = min(max(2.0, float(duration)), 12.0)
     fps = min(max(6, int(fps)), 16)
     frames = int(duration * fps)
+    z_end = max(1.05, min(1.5, float(zoom_end or 1.25)))
     stamp = time.strftime("%Y%m%d_%H%M%S")
     out = VIDEO_OUTPUT_DIR / f"motion_{src.stem}_{stamp}.mp4"
     vf = (
         f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
         f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,"
-        f"zoompan=z='min(zoom+0.0012,1.25)':d={frames}:"
+        f"zoompan=z='min(zoom+0.0012,{z_end})':d={frames}:"
         f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={width}x{height},fps={fps}"
     )
     cmd = [

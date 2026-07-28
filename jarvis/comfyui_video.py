@@ -18,6 +18,7 @@ log = logging.getLogger("jarvis")
 _last_method = "ken_burns"
 _last_fallback_reason = ""
 _last_clip_plan: dict = {}
+_last_seed: int | None = None
 
 
 def last_generation_method() -> str:
@@ -32,6 +33,10 @@ def last_clip_plan() -> dict:
     return dict(_last_clip_plan)
 
 
+def last_seed() -> int | None:
+    return _last_seed
+
+
 def generate_motion_clip(
     prompt: str,
     *,
@@ -40,19 +45,27 @@ def generate_motion_clip(
     height: int | None = None,
     duration: float | None = None,
     fps: int | None = None,
+    engine: str | None = None,
+    seed: int | None = None,
+    frames: int | None = None,
+    checkpoint: str | None = None,
+    animatediff_checkpoint: str | None = None,
+    motion_strength: float | None = None,
 ) -> tuple[str, str, str]:
     """
     Generate a motion clip.
     Returns (video_path, keyframe_path, method) or (ERROR:..., "", method).
     method is 'animatediff' or 'ken_burns'.
     """
-    global _last_method, _last_fallback_reason, _last_clip_plan
+    global _last_method, _last_fallback_reason, _last_clip_plan, _last_seed
 
     from jarvis.services import ensure_comfyui_nvidia
 
     ensure_comfyui_nvidia(block=True, timeout=120)
 
-    engine = effective_engine()
+    use_engine = (engine or "").strip().lower() or effective_engine()
+    if use_engine not in ("auto", "animatediff", "ken_burns"):
+        use_engine = "auto"
     dur = duration if duration is not None else effective_duration()
     frame_fps = fps if fps is not None else effective_fps()
     w, h = effective_size()
@@ -60,11 +73,12 @@ def generate_motion_clip(
         w = min(int(width), 1024)
     if height:
         h = min(int(height), 1024)
+    _last_seed = seed
 
-    try_animatediff = should_try_animatediff(engine)
+    try_animatediff = should_try_animatediff(use_engine)
     from jarvis.resource_router import should_prefer_ken_burns
 
-    if should_prefer_ken_burns() and engine == "auto":
+    if should_prefer_ken_burns() and use_engine == "auto":
         try_animatediff = False
         _last_fallback_reason = "Ollama models still on GPU — using Ken Burns to avoid OOM"
     if try_animatediff:
@@ -73,29 +87,41 @@ def generate_motion_clip(
         from jarvis.video_settings import plan_animatediff_clip
 
         plan = plan_animatediff_clip(dur, frame_fps, width=width, height=height)
+        if frames is not None:
+            plan = dict(plan)
+            plan["frames"] = max(8, min(int(frames), int(plan.get("frames") or frames)))
+            plan["actual_duration_sec"] = round(plan["frames"] / max(1, plan.get("fps") or frame_fps), 2)
         _last_clip_plan = plan
         ad_w, ad_h = plan["width"], plan["height"]
-        frames = plan["frames"]
+        use_frames = plan["frames"]
         frame_fps = plan["fps"]
 
         log.info(
             "AnimateDiff attempt: %dx%d, %d frames @ %d fps (~%.1fs target %.1fs, engine=%s)",
             ad_w,
             ad_h,
-            frames,
+            use_frames,
             frame_fps,
             plan["actual_duration_sec"],
             plan["target_duration_sec"],
-            engine,
+            use_engine,
         )
         result, _ = generate_animatediff(
             prompt,
             negative_prompt=negative_prompt,
             width=ad_w,
             height=ad_h,
-            frames=frames,
+            frames=use_frames,
             fps=frame_fps,
+            seed=seed,
+            checkpoint=animatediff_checkpoint,
         )
+        try:
+            from jarvis import comfyui_animatediff as ad_mod
+
+            _last_seed = getattr(ad_mod.generate, "last_seed", seed)
+        except Exception:
+            pass
         if not result.startswith("ERROR:"):
             _last_method = "animatediff"
             _last_fallback_reason = ""
@@ -104,27 +130,28 @@ def generate_motion_clip(
         reason = result[6:].strip() if result.startswith("ERROR:") else result
         log.warning("AnimateDiff failed: %s", reason)
         if (
-            engine != "animatediff"
+            use_engine != "animatediff"
             and is_low_vram(10240)
             and _looks_like_vram_failure(result)
-            and frames > 8
+            and use_frames > 8
         ):
             log.info("Retrying AnimateDiff at 8 frames after VRAM failure")
-            retry_frames = 8
             result, _ = generate_animatediff(
                 prompt,
                 negative_prompt=negative_prompt,
                 width=ad_w,
                 height=ad_h,
-                frames=retry_frames,
+                frames=8,
                 fps=frame_fps,
+                seed=seed,
+                checkpoint=animatediff_checkpoint,
             )
             if not result.startswith("ERROR:"):
                 _last_method = "animatediff"
                 _last_fallback_reason = "retried at 8 frames"
                 return result, "", "animatediff"
 
-        if engine == "animatediff":
+        if use_engine == "animatediff":
             _last_method = "animatediff"
             _last_fallback_reason = ""
             return result, "", "animatediff"
@@ -140,6 +167,9 @@ def generate_motion_clip(
         height=h,
         duration=dur,
         fps=frame_fps,
+        seed=seed,
+        checkpoint=checkpoint,
+        motion_strength=motion_strength,
     )
     _last_method = "ken_burns"
     _last_clip_plan = {
@@ -152,6 +182,10 @@ def generate_motion_clip(
         "truncated": False,
         "engine": "ken_burns",
     }
+    try:
+        _last_seed = getattr(comfyui.generate, "last_seed", seed)
+    except Exception:
+        _last_seed = seed
     if video.startswith("ERROR:"):
         return video, keyframe, "ken_burns"
     return video, keyframe, "ken_burns"
@@ -173,6 +207,9 @@ def generate_ken_burns_clip(
     height: int | None = None,
     duration: float | None = None,
     fps: int | None = None,
+    seed: int | None = None,
+    checkpoint: str | None = None,
+    motion_strength: float | None = None,
 ) -> tuple[str, str]:
     """Generate keyframe via ComfyUI then ffmpeg Ken Burns clip."""
     from jarvis.video_ops import image_to_motion_video
@@ -191,13 +228,14 @@ def generate_ken_burns_clip(
     dur = duration if duration is not None else effective_duration()
     frame_fps = fps if fps is not None else effective_fps()
 
-    ckpt = resolve_keyframe_checkpoint()
+    ckpt = checkpoint or resolve_keyframe_checkpoint()
     keyframe = comfyui.generate(
         prompt,
         width=w,
         height=h,
         negative_prompt=negative_prompt,
         checkpoint=ckpt,
+        seed=seed,
     )
     if keyframe.startswith("ERROR:"):
         return keyframe, ""
@@ -208,6 +246,7 @@ def generate_ken_burns_clip(
         fps=frame_fps,
         width=w,
         height=h,
+        zoom_end=1.0 + (0.25 if motion_strength is None else max(0.05, min(0.5, float(motion_strength)))),
     )
     if video.startswith("ERROR:"):
         return video, keyframe

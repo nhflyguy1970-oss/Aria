@@ -286,6 +286,9 @@
     if (hasImage && data.module === "image" && window.galleryViewVisible?.() && !isNativeApp()) {
       setTimeout(() => { if (window.galleryViewVisible?.()) window.loadGallery?.(); }, 800);
     }
+    if ((hasVideo || data.module === "video") && typeof window.loadVideoGallery === "function") {
+      setTimeout(() => window.loadVideoGallery?.(), 800);
+    }
 
     // Browser Chat bridge — open Browser with shared URL/goal prefill (never fake success)
     if (data.open_view === "browser" || (data.module === "browser" && (data.prefill_url || data.prefill_goal || data.url))) {

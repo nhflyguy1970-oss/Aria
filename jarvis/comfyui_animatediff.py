@@ -193,6 +193,7 @@ def _animatediff_workflow(
     fps: int = 8,
     checkpoint: str | None = None,
     motion: str | None = None,
+    seed: int | None = None,
 ) -> dict | None:
     ckpt = checkpoint or resolve_checkpoint()
     motion_name = motion or motion_module_name()
@@ -210,7 +211,8 @@ def _animatediff_workflow(
     cfg = float(os.getenv("JARVIS_ANIMATEDIFF_CFG", "7.0"))
     sampler = os.getenv("JARVIS_ANIMATEDIFF_SAMPLER", "euler")
     scheduler = os.getenv("JARVIS_ANIMATEDIFF_SCHEDULER", "normal")
-    seed = int(time.time()) % (2**32)
+    use_seed = int(seed) if seed is not None else int(time.time()) % (2**32)
+    _animatediff_workflow.last_seed = use_seed  # type: ignore[attr-defined]
     negative = negative_prompt.strip() or DEFAULT_NEGATIVE
     frames = max(8, min(int(frames), int(os.getenv("JARVIS_ANIMATEDIFF_MAX_FRAMES", "128"))))
 
@@ -261,7 +263,7 @@ def _animatediff_workflow(
         "7": {
             "class_type": "KSampler",
             "inputs": {
-                "seed": seed,
+                "seed": use_seed,
                 "steps": steps,
                 "cfg": cfg,
                 "sampler_name": sampler,
@@ -286,6 +288,8 @@ def generate(
     height: int = 512,
     frames: int = 16,
     fps: int = 8,
+    seed: int | None = None,
+    checkpoint: str | None = None,
 ) -> tuple[str, str]:
     """
     Run AnimateDiff workflow.
@@ -313,9 +317,15 @@ def generate(
         height=height,
         frames=frames,
         fps=fps,
+        seed=seed,
+        checkpoint=checkpoint,
     )
     if not wf:
         return "ERROR: Could not build AnimateDiff workflow — missing ComfyUI nodes", ""
+    try:
+        generate.last_seed = getattr(_animatediff_workflow, "last_seed", seed)  # type: ignore[attr-defined]
+    except Exception:
+        generate.last_seed = seed  # type: ignore[attr-defined]
 
     timeout = int(os.getenv("JARVIS_ANIMATEDIFF_TIMEOUT", "600"))
     result = comfyui.run_workflow(wf, filename_prefix="jarvis_ad", timeout_sec=timeout)

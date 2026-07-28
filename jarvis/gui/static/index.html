@@ -1333,42 +1333,73 @@
       </div>
 
       <div id="videoView" class="view-panel hidden">
-        <section class="image-engine-panel">
+        <section id="videoGenerateSection" class="image-engine-panel" aria-label="Video generation">
           <div class="image-engine-header">
             <div>
               <h2>Video Studio</h2>
-              <p class="image-engine-sub">AnimateDiff (real motion) or Ken Burns fallback · safe / uncensored follows global toggle</p>
+              <p class="image-engine-sub">Stay-in-Studio generation · AnimateDiff or Ken Burns · shared media queue</p>
             </div>
-            <button type="button" id="videoGenHintBtn" class="ghost-btn small">Generate in chat</button>
             <button type="button" id="videoOpenGalleryBtn" class="ghost-btn small" title="Open Gallery">Gallery</button>
             <button type="button" id="videoOpenMemeBtn" class="ghost-btn small" title="Open Meme Studio">Meme</button>
+            <button type="button" id="videoOpenMcBtn" class="ghost-btn small" title="Mission Control">Mission Control</button>
           </div>
-          <div class="storyboard-panel">
-            <p class="nav-label">Storyboard (Ken Burns)</p>
-            <p class="muted">Comma-separated gallery paths or filenames under data/generated/</p>
-            <input type="text" id="storyboardPathsInput" class="audio-path-input" placeholder="image_a.png, image_b.png" />
-            <button type="button" id="storyboardBuildBtn" class="ghost-btn small">Build storyboard</button>
-            <p id="storyboardStatus" class="muted"></p>
+          <div class="planner-add-row image-engine-generate-row">
+            <input type="text" id="videoPromptInput" class="audio-path-input" placeholder="Describe a motion clip…" aria-label="Video generation prompt" />
+            <button type="button" id="videoGenerateBtn" class="apply-btn small">Generate</button>
+            <button type="button" id="videoCancelGenBtn" class="ghost-btn small hidden" aria-label="Cancel generation">Cancel</button>
           </div>
-          <div class="image-engine-grid">
+          <div class="planner-add-row" style="flex-wrap:wrap;gap:0.5rem;align-items:center">
+            <label class="muted tiny"><input type="checkbox" id="videoEnhanceToggle" checked /> Enhance prompt</label>
+            <label class="muted tiny">Preset
+              <select id="videoStylePreset" class="personality-select" aria-label="Video generation preset">
+                <option value="">— none —</option>
+              </select>
+            </label>
+            <label class="muted tiny">Duration
+              <input type="number" id="videoDurationInput" class="audio-path-input" min="2" max="12" step="1" value="4" aria-label="Clip duration seconds" style="width:4rem" />
+            </label>
+            <button type="button" id="videoEnhancePreviewBtn" class="ghost-btn tiny">Preview enhance</button>
+            <button type="button" id="videoAdvancedToggle" class="ghost-btn tiny" aria-expanded="false">Advanced</button>
+            <button type="button" id="videoGenAnotherBtn" class="ghost-btn tiny">Generate another</button>
+            <button type="button" id="videoSimpleBtn" class="ghost-btn tiny" aria-pressed="true">Simple</button>
+            <button type="button" id="videoExpertBtn" class="ghost-btn tiny" aria-pressed="false">Expert</button>
+          </div>
+          <div id="videoEnhancePreview" class="muted small hidden" role="region" aria-label="Enhanced prompt preview" aria-live="polite"></div>
+          <div id="videoAdvancedParams" class="image-engine-grid hidden" aria-hidden="true">
             <label class="image-engine-field">
               <span>Motion engine</span>
               <select id="videoEngineSelect" class="personality-select">
-                <option value="auto">Auto (AnimateDiff → Ken Burns fallback)</option>
+                <option value="auto">Auto (AnimateDiff → Ken Burns)</option>
                 <option value="animatediff">AnimateDiff only</option>
                 <option value="ken_burns">Ken Burns only</option>
               </select>
             </label>
             <label class="image-engine-field">
-              <span>Max AnimateDiff frames (12GB: up to 64)</span>
-              <input type="number" id="videoAdFramesInput" class="audio-path-input" min="8" max="96" step="1" value="64" />
+              <span>FPS</span>
+              <input type="number" id="videoFpsInput" class="audio-path-input" min="6" max="16" step="1" value="8" />
+            </label>
+            <label class="image-engine-field">
+              <span>Width</span>
+              <input type="number" id="videoWidthInput" class="audio-path-input" min="256" max="1024" step="64" value="768" aria-label="Width" />
+            </label>
+            <label class="image-engine-field">
+              <span>Height</span>
+              <input type="number" id="videoHeightInput" class="audio-path-input" min="256" max="1024" step="64" value="768" aria-label="Height" />
+            </label>
+            <label class="image-engine-field image-engine-field-wide">
+              <span>Negative prompt</span>
+              <input type="text" id="videoNegativeInput" class="audio-path-input" placeholder="What to avoid…" aria-label="Negative prompt" />
+            </label>
+            <label class="image-engine-field image-engine-field-wide">
+              <span>Enhanced prompt (editable)</span>
+              <textarea id="videoEnhancedInput" class="audio-path-input" rows="2" placeholder="Edit what is sent to the model…" aria-label="Enhanced prompt"></textarea>
             </label>
             <label class="image-engine-field">
               <span>Keyframe preset</span>
               <select id="videoCheckpointSelect" class="personality-select">
-                <option value="flux">Flux Schnell (best prompts)</option>
-                <option value="quality">SDXL 1.0 (quality)</option>
-                <option value="fast">SDXL Turbo (fast)</option>
+                <option value="flux">Flux Schnell</option>
+                <option value="quality">SDXL 1.0</option>
+                <option value="fast">SDXL Turbo</option>
               </select>
             </label>
             <label class="image-engine-field">
@@ -1377,19 +1408,23 @@
                 <option value="__preset__">Use preset above</option>
               </select>
             </label>
+          </div>
+          <div id="videoExpertParams" class="image-engine-grid hidden" aria-hidden="true">
             <label class="image-engine-field">
-              <span>Clip length (sec)</span>
-              <input type="number" id="videoDurationInput" class="audio-path-input" min="2" max="12" step="1" value="4" />
+              <span>Max AnimateDiff frames</span>
+              <input type="number" id="videoAdFramesInput" class="audio-path-input" min="8" max="96" step="1" value="64" />
             </label>
             <label class="image-engine-field">
-              <span>FPS</span>
-              <input type="number" id="videoFpsInput" class="audio-path-input" min="6" max="16" step="1" value="8" />
+              <span>Seed</span>
+              <input type="number" id="videoSeedInput" class="audio-path-input" placeholder="random" aria-label="Seed" />
             </label>
-            <label class="image-engine-field image-engine-field-wide">
-              <span>Upload video</span>
-              <input type="file" id="videoUploadInput" accept="video/*" />
+            <label class="muted tiny"><input type="checkbox" id="videoRandomSeed" checked /> Random seed</label>
+            <label class="image-engine-field">
+              <span>Motion strength</span>
+              <input type="number" id="videoMotionStrength" class="audio-path-input" min="0.05" max="0.5" step="0.05" value="0.25" aria-label="Motion strength" />
             </label>
           </div>
+          <p id="videoJobStatus" class="muted" role="status" aria-live="polite"></p>
           <p id="videoEngineUncensoredBanner" class="image-engine-uncensored hidden"></p>
           <p id="videoEngineStatus" class="image-engine-status muted">Loading…</p>
           <button type="button" id="videoFreeVramBtn" class="ghost-btn small vram-free-btn" title="Unload Ollama from GPU before AnimateDiff">Free VRAM before video</button>
@@ -1397,9 +1432,26 @@
           <button type="button" id="videoEngineInstallAdBtn" class="ghost-btn small hidden">Install AnimateDiff (~2 GB)</button>
           <button type="button" id="videoEngineInstallNsfwBtn" class="ghost-btn small hidden">Install NSFW checkpoints</button>
           <button type="button" id="videoSettingsSaveBtn" class="ghost-btn small">Save clip settings</button>
+          <div class="storyboard-panel">
+            <p class="nav-label">Storyboard (Ken Burns · media queue)</p>
+            <p class="muted">Comma-separated gallery paths or filenames under data/generated/</p>
+            <div class="planner-add-row">
+              <input type="text" id="storyboardPathsInput" class="audio-path-input" placeholder="image_a.png, image_b.png" aria-label="Storyboard image paths" />
+              <label class="muted tiny">Sec/slide
+                <input type="number" id="storyboardSecInput" class="audio-path-input" min="1" max="8" step="0.5" value="3.5" style="width:4rem" aria-label="Seconds per slide" />
+              </label>
+              <button type="button" id="storyboardBuildBtn" class="ghost-btn small">Build storyboard</button>
+              <button type="button" id="storyboardCancelBtn" class="ghost-btn small hidden">Cancel</button>
+            </div>
+            <p id="storyboardStatus" class="muted" role="status" aria-live="polite"></p>
+          </div>
+          <label class="image-engine-field image-engine-field-wide">
+            <span>Upload video</span>
+            <input type="file" id="videoUploadInput" accept="video/*" />
+          </label>
         </section>
         <h2>Video library</h2>
-        <div id="videoGalleryGrid" class="video-gallery-grid"></div>
+        <div id="videoGalleryGrid" class="video-gallery-grid" role="list" aria-label="Generated videos"></div>
       </div>
 
       <div id="memeView" class="view-panel hidden">

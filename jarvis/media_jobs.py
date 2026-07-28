@@ -35,6 +35,7 @@ _recovered = False
 QUEUED_ACTIONS = frozenset({
     "generate_image",
     "generate_video",
+    "storyboard_video",
     "generate_meme",
     "upscale_image",
     "inpaint_image",
@@ -44,6 +45,7 @@ QUEUED_ACTIONS = frozenset({
 ACTION_LABELS = {
     "generate_image": "Image generation",
     "generate_video": "Video render",
+    "storyboard_video": "Storyboard video",
     "generate_meme": "Meme generation",
     "upscale_image": "Image upscale",
     "inpaint_image": "Inpaint region",
@@ -53,6 +55,7 @@ ACTION_LABELS = {
 ACTION_MODULES = {
     "generate_image": "image",
     "generate_video": "video",
+    "storyboard_video": "video",
     "generate_meme": "meme",
     "upscale_image": "image",
     "inpaint_image": "image",
@@ -62,6 +65,7 @@ ACTION_MODULES = {
 ETA_HINTS = {
     "generate_image": "typically 30–90 seconds",
     "generate_video": "typically 3–10 minutes",
+    "storyboard_video": "typically 1–5 minutes",
     "generate_meme": "typically 30–90 seconds",
     "upscale_image": "usually under 10 seconds",
     "inpaint_image": "typically 30–120 seconds",
@@ -399,6 +403,7 @@ def submit_assistant_action(assistant, action: str, params: dict, message: str) 
     runners = {
         "generate_image": lambda: handler.generate_image(params, message),
         "generate_video": lambda: handler.generate_video(params, message),
+        "storyboard_video": lambda: handler.storyboard_video(params, message),
         "generate_meme": lambda: handler.generate_meme(params, message),
         "upscale_image": lambda: handler.upscale_image(params, message),
         "inpaint_image": lambda: handler.inpaint_image(params, message),

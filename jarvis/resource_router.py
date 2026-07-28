@@ -20,6 +20,7 @@ _HEAVY_ACTIONS = frozenset(
     {
         "generate_image",
         "generate_video",
+        "storyboard_video",
         "generate_meme",
         "upscale_image",
         "inpaint_image",
@@ -162,7 +163,7 @@ def preflight(action: str = "video") -> dict[str, Any]:
     tips = recommendations()[:5]
     adjustments: list[str] = []
     suggested: dict[str, Any] = {}
-    is_video = action in ("video", "generate_video")
+    is_video = action in ("video", "generate_video", "storyboard_video")
     is_image = action in ("generate_image", "image")
 
     if snap["low_vram"]:

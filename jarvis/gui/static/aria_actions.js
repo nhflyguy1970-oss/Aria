@@ -303,7 +303,24 @@
     video: {
       open: () => goView("video"),
       studio: () => invoke("openVideoStudioBtn", "Video studio") || goView("video"),
-      storyboard: () => focusAfter("video", "videoStoryboardInput"),
+      storyboard: () => focusAfter("video", "storyboardPathsInput"),
+      generate: () => {
+        window.openVideoStudio?.() || goView("video");
+        focusAfter("video", "videoPromptInput");
+        setTimeout(() => {
+          const prompt = document.getElementById("videoPromptInput")?.value?.trim();
+          if (!prompt) {
+            document.getElementById("videoPromptInput")?.focus();
+            toast("Enter a video description, then Generate", "warn");
+            return;
+          }
+          if (typeof window.videoGenerateInStudio === "function") {
+            window.videoGenerateInStudio();
+          } else {
+            document.getElementById("videoGenerateBtn")?.click();
+          }
+        }, 80);
+      },
     },
 
     audio: {

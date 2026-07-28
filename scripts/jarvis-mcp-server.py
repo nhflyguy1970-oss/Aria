@@ -157,6 +157,12 @@ def jarvis_generate_image(prompt: str) -> str:
 
 
 @mcp.tool()
+def jarvis_generate_video(prompt: str) -> str:
+    """Queue a video generation job via the shared Video Generation pipeline (returns job_id)."""
+    return _run_domain("jarvis_generate_video", prompt=prompt)
+
+
+@mcp.tool()
 def jarvis_chat(message: str) -> str:
     """Send a message to Jarvis chat (full router)."""
     return _run_domain("jarvis_chat", message=message)

@@ -221,6 +221,7 @@ _DOMAIN_MCP_TOOLS = frozenset({
     "jarvis_ha_toggle",
     "jarvis_ha_scene",
     "jarvis_generate_image",
+    "jarvis_generate_video",
     "jarvis_chat",
 })
 

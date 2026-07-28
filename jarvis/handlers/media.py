@@ -175,25 +175,63 @@ class MediaHandler:
 
     def generate_video(self, params: dict, message: str) -> dict:
         raise_if_cancelled()
-        prompt = params.get("prompt") or message
-        prompt = (
+        from jarvis.video_generation.params import normalize_params
+
+        raw = dict(params or {})
+        if message and not raw.get("prompt"):
+            raw["prompt"] = message
+        # Strip chat prefixes when prompt came from NL
+        prompt_raw = raw.get("prompt") or message or ""
+        prompt_raw = (
             re.sub(
                 r"^(please\s+)?(create|generate|make)\s+(an?\s+)?(video|clip|animation|movie)\s+(of\s+)?",
                 "",
-                prompt,
+                str(prompt_raw),
                 flags=re.I,
             ).strip()
-            or prompt
+            or str(prompt_raw)
         )
+        raw["prompt"] = prompt_raw
+        norm = normalize_params(raw, message=prompt_raw)
+        prompt = norm.get("prompt") or ""
+        if not prompt:
+            return err("Prompt required", module="video")
 
-        result = self.a.video.generate(prompt)
+        enhance = norm.get("enhance")
+        if "negative" not in raw and "negative_prompt" not in raw:
+            negative_arg = None
+        else:
+            negative_arg = norm.get("negative") or ""
+        enhanced_override = str(raw.get("enhanced_prompt") or raw.get("enhanced") or "").strip() or None
+
+        result = self.a.video.generate(
+            prompt,
+            enhance=enhance,
+            negative_prompt=negative_arg,
+            enhanced_prompt=enhanced_override,
+            engine=norm.get("engine"),
+            seed=norm.get("seed"),
+            duration=norm.get("duration"),
+            fps=norm.get("fps"),
+            width=norm.get("width"),
+            height=norm.get("height"),
+            frames=norm.get("frames"),
+            checkpoint=norm.get("checkpoint"),
+            animatediff_checkpoint=norm.get("animatediff_checkpoint"),
+            motion_strength=norm.get("motion_strength"),
+        )
         if result.startswith("ERROR:"):
-            return err(result, module="video")
+            from jarvis.video_generation.fallback import recovery_options
+
+            rec = recovery_options(result)
+            return err(result, module="video", **{k: v for k, v in rec.items() if k != "ok"})
 
         name = Path(result).name
         enhanced = self.a.video.last_enhanced_prompt
         method = self.a.video.last_method
         plan = self.a.video.last_clip_plan or {}
+        last_seed = getattr(self.a.video, "last_seed", None)
+        seed_str = "" if last_seed is None else str(last_seed)
         msg = f"Here's your video — **{prompt[:80]}**"
         if method == "animatediff":
             from jarvis.comfyui_animatediff import resolve_checkpoint
@@ -220,11 +258,67 @@ class MediaHandler:
         if enhanced:
             label = "Prompt" if method == "animatediff" else "Keyframe prompt"
             msg += f"\n\n**{label}:**\n{enhanced}"
+        if seed_str:
+            msg += f"\n\n**Seed:** `{seed_str}`"
         ckpt_label = ""
         if method != "animatediff":
             from jarvis.video_settings import keyframe_checkpoint_label
 
             ckpt_label = keyframe_checkpoint_label()
+
+        try:
+            from jarvis.config import is_uncensored
+            from jarvis.video_generation.metadata import mark_generation
+
+            project = ""
+            try:
+                from jarvis.active_project import get_active_slug
+
+                project = get_active_slug() or ""
+            except Exception:
+                project = ""
+            mark_generation(
+                name,
+                prompt=prompt,
+                enhanced=enhanced or "",
+                negative=self.a.video.last_negative_prompt or "",
+                engine=norm.get("engine") or "auto",
+                method=method or "",
+                seed=seed_str,
+                duration=norm.get("duration") or plan.get("actual_duration_sec"),
+                fps=norm.get("fps") or plan.get("fps"),
+                width=norm.get("width") or plan.get("width"),
+                height=norm.get("height") or plan.get("height"),
+                uncensored=is_uncensored(),
+                project=project,
+                clip_plan=plan,
+            )
+        except Exception:
+            pass
+
+        try:
+            from jarvis.video_generation.engine import save_last_settings
+
+            save_last_settings(
+                {
+                    "prompt": prompt,
+                    "enhanced": enhanced or "",
+                    "negative": self.a.video.last_negative_prompt or "",
+                    "seed": last_seed,
+                    "engine": norm.get("engine"),
+                    "duration": norm.get("duration"),
+                    "fps": norm.get("fps"),
+                    "width": norm.get("width"),
+                    "height": norm.get("height"),
+                    "frames": norm.get("frames"),
+                    "method": method,
+                    "video": result,
+                    "style_preset": norm.get("style_preset"),
+                }
+            )
+        except Exception:
+            pass
+
         return ok(
             msg,
             module="video",
@@ -234,8 +328,74 @@ class MediaHandler:
             video_name=name,
             keyframe_path=self.a.video.last_keyframe,
             enhanced_prompt=enhanced,
+            negative_prompt=self.a.video.last_negative_prompt,
             checkpoint_label=ckpt_label,
             generation_method=method,
+            seed=last_seed,
+            clip_plan=plan,
+        )
+
+    def storyboard_video(self, params: dict, message: str) -> dict:
+        raise_if_cancelled()
+        from jarvis.cache_state import invalidate_video_gallery
+        from jarvis.config import DATA_DIR
+        from jarvis.video_ops import resolve_storyboard_image, storyboard_ken_burns
+
+        paths = params.get("paths") or []
+        if isinstance(paths, str):
+            paths = [p.strip() for p in paths.split(",") if p.strip()]
+        resolved: list[str] = []
+        for p in paths:
+            path = Path(p)
+            if not path.is_absolute():
+                path = (DATA_DIR / "generated" / Path(p).name).resolve()
+            allowed = resolve_storyboard_image(path)
+            if allowed is not None:
+                resolved.append(str(allowed))
+        if not resolved:
+            return err("No valid image paths for storyboard", module="video")
+        try:
+            sec = float(params.get("sec_per_slide") or 3.5)
+        except (TypeError, ValueError):
+            sec = 3.5
+        width = params.get("width")
+        height = params.get("height")
+        kwargs: dict = {"sec_per_slide": sec}
+        if width:
+            kwargs["width"] = int(width)
+        if height:
+            kwargs["height"] = int(height)
+        result = storyboard_ken_burns(resolved, **kwargs)
+        if result.startswith("ERROR:"):
+            from jarvis.video_generation.fallback import recovery_options
+
+            rec = recovery_options(result)
+            return err(result, module="video", **{k: v for k, v in rec.items() if k != "ok"})
+        invalidate_video_gallery()
+        name = Path(result).name
+        try:
+            from jarvis.config import is_uncensored
+            from jarvis.video_generation.metadata import mark_generation
+
+            mark_generation(
+                name,
+                prompt=f"storyboard ({len(resolved)} slides)",
+                method="storyboard_ken_burns",
+                engine="ken_burns",
+                duration=sec * len(resolved),
+                uncensored=is_uncensored(),
+            )
+        except Exception:
+            pass
+        return ok(
+            f"Storyboard video ready: `{name}`",
+            module="video",
+            type="video_result",
+            video_path=result,
+            output_path=result,
+            video_name=name,
+            generation_method="storyboard_ken_burns",
+            stay_in_studio=True,
         )
 
     def generate_meme(self, params: dict, message: str) -> dict:

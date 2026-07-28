@@ -67,6 +67,14 @@ def handle_jarvis_mcp_tool(name: str, arguments: dict) -> dict[str, Any]:
         # Same shared pipeline as Gallery / Chat — optional operator params honored
         return submit_generation(assistant, dict(arguments or {}), message=prompt, source="mcp")
 
+    if name == "jarvis_generate_video":
+        from jarvis.video_generation.engine import submit_video
+
+        prompt = (arguments.get("prompt") or "").strip()
+        if not prompt:
+            return {"ok": False, "message": "prompt required"}
+        return submit_video(assistant, dict(arguments or {}), message=prompt, source="mcp")
+
     if name == "jarvis_chat":
         message = (arguments.get("message") or "").strip()
         if not message:

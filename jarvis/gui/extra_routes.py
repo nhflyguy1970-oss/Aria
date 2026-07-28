@@ -25,9 +25,11 @@ def register_routes(app, assistant):
     # Gallery product routes must register before /api/gallery/{name}
     from jarvis.gallery_product.api import register_routes as register_gallery_product
     from jarvis.image_generation.api import register_routes as register_image_generation
+    from jarvis.video_generation.api import register_routes as register_video_generation
 
     register_gallery_product(app, assistant)
     register_image_generation(app, assistant)
+    register_video_generation(app, assistant)
 
     @app.get("/api/journal")
     def journal_all():
@@ -1551,11 +1553,18 @@ def register_routes(app, assistant):
     def video_gallery_list():
         cached = get_video_gallery_cache()
         if cached is not None:
-            return {"videos": cached}
-        from jarvis.video_ops import list_videos
+            videos = cached
+        else:
+            from jarvis.video_ops import list_videos
 
-        videos = list_videos(50)
-        set_video_gallery_cache(videos)
+            videos = list_videos(50)
+            set_video_gallery_cache(videos)
+        try:
+            from jarvis.video_generation.metadata import apply_visibility
+
+            videos = [apply_visibility(dict(v) if isinstance(v, dict) else {"name": v}) for v in videos]
+        except Exception:
+            pass
         return {"videos": videos}
 
     @app.get("/api/video-gallery/{name}")
@@ -1563,6 +1572,22 @@ def register_routes(app, assistant):
         from jarvis.video_ops import VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR, ensure_webm
 
         safe = Path(name).name
+        try:
+            from jarvis.video_generation.metadata import is_restricted_for_viewer
+
+            if is_restricted_for_viewer(safe):
+                # Serve placeholder — do not expose restricted media
+                from jarvis.config import DATA_DIR
+
+                placeholder = DATA_DIR / "gallery_product" / "restricted_placeholder.png"
+                if placeholder.is_file():
+                    return FileResponse(placeholder, media_type="image/png")
+                return JSONResponse(
+                    status_code=403,
+                    content={"ok": False, "restricted": True, "message": "Restricted video"},
+                )
+        except Exception:
+            pass
         for root in (VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR):
             path = (root / safe).resolve()
             if (
@@ -2193,42 +2218,45 @@ def register_routes(app, assistant):
         return {"ok": ok, "scene": scene}
 
     @app.post("/api/video/storyboard")
-    async def video_storyboard(paths: str = Form(...), sec_per_slide: float = Form(3.5)):
-        from jarvis.coding_jobs import submit
-        from jarvis.config import DATA_DIR
-        from jarvis.video_ops import resolve_storyboard_image
+    async def video_storyboard(request: Request):
+        """Storyboard via shared Video Generation media queue (not coding_jobs)."""
+        from jarvis.video_generation.engine import submit_storyboard
 
-        raw = [p.strip() for p in paths.split(",") if p.strip()]
-        resolved: list[str] = []
-        for p in raw:
-            path = Path(p)
-            if not path.is_absolute():
-                path = (DATA_DIR / "generated" / Path(p).name).resolve()
-            allowed = resolve_storyboard_image(path)
-            if allowed is not None:
-                resolved.append(str(allowed))
+        ctype = (request.headers.get("content-type") or "").lower()
+        if "application/json" in ctype:
+            body = await request.json()
+            paths = body.get("paths") or body.get("path") or ""
+            if isinstance(paths, list):
+                path_str = ",".join(str(p) for p in paths)
+                path_list = [str(p) for p in paths]
+            else:
+                path_str = str(paths)
+                path_list = [p.strip() for p in path_str.split(",") if p.strip()]
+            sec = body.get("sec_per_slide", 3.5)
+            width = body.get("width")
+            height = body.get("height")
+        else:
+            form = await request.form()
+            path_str = str(form.get("paths") or "")
+            path_list = [p.strip() for p in path_str.split(",") if p.strip()]
+            try:
+                sec = float(form.get("sec_per_slide") or 3.5)
+            except (TypeError, ValueError):
+                sec = 3.5
+            width = form.get("width")
+            height = form.get("height")
 
-        if not resolved:
-            return JSONResponse(
-                status_code=400, content={"ok": False, "message": "No valid image paths"}
-            )
-
-        def _run() -> dict:
-            from jarvis.video_ops import storyboard_ken_burns
-
-            result = storyboard_ken_burns(resolved, sec_per_slide=sec_per_slide)
-            if result.startswith("ERROR:"):
-                return {"ok": False, "message": result, "module": "video"}
-            return {
-                "ok": True,
-                "message": f"Storyboard video ready: `{Path(result).name}`",
-                "video_path": result,
-                "module": "video",
-                "type": "video",
-            }
-
-        job_id = submit("Storyboard video", _run)
-        return {"ok": True, "job_id": job_id, "pending": True, "message": "Storyboard queued"}
+        result = submit_storyboard(
+            assistant,
+            {
+                "paths": path_list,
+                "sec_per_slide": sec,
+                "width": width,
+                "height": height,
+            },
+            source="studio",
+        )
+        return result
 
     @app.get("/api/registry/actions")
     def actions_registry():

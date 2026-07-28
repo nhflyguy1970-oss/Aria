@@ -154,7 +154,17 @@
         A().gallery.open();
         setTimeout(() => document.getElementById("gallerySearchInput")?.focus(), 80);
       }),
-      mk("act:video-studio", "Open Video Studio", "Actions", "animate movie", () => A().video.studio()),
+      mk("act:video-studio", "Open Video Studio", "Actions", "animate movie", () => window.openVideoStudio?.() || A().video.studio()),
+      mk("act:generate-video", "Generate video (Studio)", "AI", "animatediff ken burns motion", () => {
+        const prompt = document.getElementById("videoPromptInput")?.value?.trim();
+        if (!prompt) {
+          A().video.studio();
+          setTimeout(() => document.getElementById("videoPromptInput")?.focus(), 80);
+          window.showAriaToast?.("Enter a video description first", "warn");
+          return;
+        }
+        A().video.generate();
+      }, { mode: "ask" }),
       mk("act:video-storyboard", "Focus video storyboard", "Actions", "shots", () => A().video.storyboard()),
       mk("act:audio-studio", "Open Audio studio", "Actions", "music podcast genre song whisper", () => A().audio.open()),
       mk("act:meme-studio", "Open Meme Studio", "Actions", "captions funny", () => A().meme.open()),
