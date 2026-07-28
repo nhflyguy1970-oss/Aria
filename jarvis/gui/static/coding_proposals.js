@@ -215,21 +215,69 @@ function attachProposalExtras(bubble, meta, messageDiv) {
       rollbackBtn.onclick = () => window.runUpgradeAction?.("rollback", "", messageDiv);
       actions.append(verifyBtn, applyBtn, rollbackBtn);
     } else {
+      const briefBtn = document.createElement("button");
+      briefBtn.className = "ghost-btn";
+      briefBtn.textContent = "Quality brief";
+      briefBtn.onclick = async () => {
+        try {
+          const res = await fetch(`/api/coding/proposals/${encodeURIComponent(meta.proposal_id)}/brief`);
+          const brief = await res.json();
+          if (!res.ok || brief.ok === false) throw new Error(brief.error || brief.message || "Brief failed");
+          const el = document.createElement("div");
+          el.className = "coding-brief";
+          el.innerHTML = `<strong>Risk ${brief.estimated_risk}</strong> · confidence ${brief.confidence_label}`
+            + (brief.breaking_change_warning ? " · <span class=\"warn\">breaking-change warning</span>" : "")
+            + `<br>Files: ${(brief.files_affected || []).join(", ")}`
+            + `<br>Verify: ${(brief.suggested_verification_steps || []).slice(0, 3).join("; ")}`;
+          actions.insertAdjacentElement("beforebegin", el);
+        } catch (err) {
+          window.showAriaToast?.(err?.message || "Brief failed", "err", 4000);
+        }
+      };
       const applyBtn = document.createElement("button");
       applyBtn.className = "apply-btn";
       const verifyFailed = meta.verify_ok === false;
       applyBtn.textContent = verifyFailed
         ? "Apply anyway (tests failed in preview)"
         : (meta.syntax_ok === false ? "Apply anyway" : "Apply changes");
-      applyBtn.onclick = () => {
+      applyBtn.onclick = async () => {
         if (verifyFailed && !confirm("Pre-apply pytest failed. Apply these changes anyway?")) return;
+        try {
+          const res = await fetch(`/api/coding/proposals/${encodeURIComponent(meta.proposal_id)}/brief`);
+          const brief = await res.json().catch(() => null);
+          if (brief?.ok !== false && brief?.estimated_risk === "high") {
+            const ok = confirm(
+              `High-risk proposal (${brief.confidence_label} confidence).\nFiles: ${(brief.files_affected || []).join(", ")}\nApply anyway?`
+            );
+            if (!ok) return;
+          }
+        } catch {
+          /* brief optional */
+        }
         applyProposal(meta.proposal_id, messageDiv, meta.syntax_ok === false);
       };
       const rejectBtn = document.createElement("button");
       rejectBtn.className = "reject-btn";
       rejectBtn.textContent = "Dismiss";
       rejectBtn.onclick = () => window.sendMessage?.("don't apply that");
-      actions.append(applyBtn, rejectBtn);
+      const exportBtn = document.createElement("button");
+      exportBtn.className = "ghost-btn";
+      exportBtn.textContent = "Export patch";
+      exportBtn.onclick = async () => {
+        try {
+          const res = await fetch(`/api/coding/proposals/${encodeURIComponent(meta.proposal_id)}/export`);
+          const data = await res.json();
+          const blob = new Blob([data.patch || ""], { type: "text/x-diff" });
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(blob);
+          a.download = data.filename || `aria-${meta.proposal_id}.patch`;
+          a.click();
+          URL.revokeObjectURL(a.href);
+        } catch (err) {
+          window.showAriaToast?.(err?.message || "Export failed", "err", 4000);
+        }
+      };
+      actions.append(briefBtn, applyBtn, rejectBtn, exportBtn);
     }
     bubble.appendChild(actions);
   }
@@ -286,9 +334,21 @@ async function applyProposal(proposalId, messageEl, force = false) {
       module: data.module || "coding",
       type: "applied",
       show_undo: true,
+      verify_offer: data.verify_offer,
     });
     messageEl?.querySelector?.(".proposal-actions")?.remove();
     messageEl?.querySelector?.(".diff-block")?.remove();
+    if (data.verify_offer) {
+      const verifyBtn = document.createElement("button");
+      verifyBtn.className = "apply-btn";
+      verifyBtn.textContent = "Verify…";
+      verifyBtn.onclick = () => window.AriaCodingVerify?.show?.(data.verify_offer);
+      const wrap = document.createElement("div");
+      wrap.className = "proposal-actions";
+      wrap.appendChild(verifyBtn);
+      messageEl?.querySelector?.(".message-bubble")?.appendChild(wrap)
+        || messageEl?.appendChild(wrap);
+    }
   } catch (e) {
     window.addMessage?.("assistant", `Failed to apply changes: ${e?.message || e}`);
     window.showAriaToast?.(e?.message || "Failed to apply changes", "err", 5000);

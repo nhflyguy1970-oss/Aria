@@ -66,6 +66,7 @@ def perform_undo_apply(assistant) -> dict:
         backups = [{"path": assistant.last_apply_path, "backup": assistant.last_apply_backup}]
     if not backups:
         return _err("Nothing to undo.")
+    last_pid = getattr(assistant, "last_applied_proposal_id", "") or ""
     restored = []
     deleted = []
     for item in backups:
@@ -98,6 +99,14 @@ def perform_undo_apply(assistant) -> dict:
     assistant.last_apply_path = None
     if not restored and not deleted:
         return _err("Could not restore — backup files missing.")
+    if last_pid:
+        try:
+            from jarvis.coding_product.history import update_status
+
+            update_status(last_pid, "undone", verification_status="undone")
+        except Exception:
+            pass
+        assistant.last_applied_proposal_id = ""
     parts = []
     if restored:
         parts.append("Restored:\n" + "\n".join(f"- `{p}`" for p in restored))
@@ -138,6 +147,7 @@ class JarvisAssistant:
         self.last_apply_backup: str | None = None
         self.last_apply_path: str | None = None
         self.last_apply_backups: list[dict] = []
+        self.last_applied_proposal_id: str = ""
         self._request_lock = threading.Lock()
         UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         from jarvis.cheatsheets import seed_cheatsheets
@@ -1363,7 +1373,15 @@ class JarvisAssistant:
         self._persist_proposals()
         self.last_apply_backup = self.last_apply_backups[-1]["backup"]
         self.last_apply_path = self.last_apply_backups[-1]["path"]
+        self.last_applied_proposal_id = pid
         self.session.last_proposal_id = ""
+        try:
+            from jarvis.coding_product.history import record_proposal, update_status
+
+            record_proposal(pid, proposal, status="applied")
+            update_status(pid, "applied", verification_status="pending_operator")
+        except Exception:
+            pass
         is_create = proposal.get("mode") == "create"
         msg = "Done — applied changes to:\n" + "\n".join(f"- **{p}**" for p in applied)
         if (
@@ -1419,7 +1437,21 @@ class JarvisAssistant:
                 note=proposal.get("explanation", "")[:120],
             )
 
-        return _ok(msg, module="coding", type="applied", show_undo=True)
+        verify_offer = None
+        try:
+            from jarvis.coding_product.verify_workflow import build_verify_offer
+
+            verify_offer = build_verify_offer(
+                applied_paths=applied,
+                base=self.coding._base(),
+                proposal_id=pid,
+            )
+        except Exception:
+            verify_offer = None
+        extra = {"type": "applied", "show_undo": True, "proposal_id": pid}
+        if verify_offer:
+            extra["verify_offer"] = verify_offer
+        return _ok(msg, module="coding", **extra)
 
     def _apply_proposal_nl(self, params: dict, message: str) -> dict:
         return self.apply_proposal(params.get("proposal_id"))
@@ -1427,8 +1459,15 @@ class JarvisAssistant:
     def _dismiss_proposal(self, params: dict, message: str) -> dict:
         pid = self.session.last_proposal_id
         if pid and pid in self.pending_proposals:
-            self.pending_proposals.pop(pid, None)
+            prop = self.pending_proposals.pop(pid, None)
             self._persist_proposals()
+            try:
+                from jarvis.coding_product.history import record_proposal
+
+                if prop:
+                    record_proposal(pid, prop, status="rejected")
+            except Exception:
+                pass
         self.session.last_proposal_id = ""
         return _ok("Okay, I won't apply those changes.", module="coding")
 
@@ -1745,6 +1784,15 @@ class JarvisAssistant:
         if task_id:
             self.task_manager.set_proposal(task_id, proposal_id)
         payload["_diag_summary"] = diag_summary
+        try:
+            from jarvis.coding_product.brief import build_quality_brief
+            from jarvis.coding_product.history import record_proposal
+
+            brief = build_quality_brief(payload, base_path=str(self.coding._base()))
+            payload["_quality_brief"] = brief
+            record_proposal(proposal_id, payload, status="pending")
+        except Exception:
+            pass
         return proposal_id, payload
 
     def _proposal_response_extra(self, files: list[dict]) -> dict:

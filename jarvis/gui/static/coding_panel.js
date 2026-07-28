@@ -88,6 +88,26 @@ async function loadCodingPanel() {
   const toolsEl = document.getElementById("codingTools");
   const tasksEl = document.getElementById("codingTasks");
   if (!toolsEl) return;
+  const banner = document.getElementById("codingRootBanner");
+  if (banner) {
+    try {
+      const gRes = await fetch("/api/coding/guardrails");
+      if (gRes.ok) {
+        const g = await gRes.json();
+        const proj = g.active_project?.title || g.active_project?.slug || "—";
+        const root = g.write_target || g.coding_root || "—";
+        const branch = g.repository?.branch ? ` · ${g.repository.branch}` : "";
+        banner.textContent = `Project: ${proj} → ${root}${branch}`;
+        banner.classList.toggle("coding-root-banner--warn", g.severity === "warn");
+        banner.classList.toggle("coding-root-banner--error", g.severity === "error");
+        if (g.severity === "error") {
+          banner.title = (g.warnings || []).map((w) => w.message).join("\n");
+        }
+      }
+    } catch {
+      banner.textContent = "Coding root: unavailable";
+    }
+  }
   const ed = await window.loadEditorContext?.();
   const lspPath = document.getElementById("lspPath");
   if (lspPath && ed?.file && !lspPath.value.trim()) {

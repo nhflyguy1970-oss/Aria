@@ -81,6 +81,51 @@ export function renderJobCenter(data) {
     const pct = job.done ? 100 : (job.pct || 0);
     li.innerHTML = `<strong>[${escapeHtml(job.queue)}]</strong> ${escapeHtml(job.label || job.id)}<br>`
       + `<span class="muted">${escapeHtml(job.message || "")}</span> · ${pct}%`;
+    if (job.queue === "coding") {
+      const links = document.createElement("div");
+      links.className = "job-coding-links";
+      const add = (label, fn) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "ghost-btn tiny";
+        b.textContent = label;
+        b.addEventListener("click", fn);
+        links.appendChild(b);
+      };
+      add("Coding Home", () => {
+        closeJobCenter();
+        window.openCodingHome?.("jobs");
+      });
+      if (job.proposal_id) {
+        add("Proposal", () => {
+          closeJobCenter();
+          window.openCodingHome?.("proposals");
+          setTimeout(() => window.showAriaToast?.(`Proposal ${job.proposal_id}`, "ok", 3000), 200);
+        });
+      }
+      add("Chat", () => {
+        closeJobCenter();
+        window.switchToView?.("chat");
+      });
+      add("Verify", () => {
+        closeJobCenter();
+        window.AriaCodingVerify?.promptLast?.();
+      });
+      add("Undo", async () => {
+        try {
+          const res = await fetch("/api/undo-apply", { method: "POST" });
+          const data = await res.json().catch(() => ({}));
+          window.showAriaToast?.(data.message || (res.ok ? "Undone" : "Undo failed"), res.ok ? "ok" : "err", 3500);
+        } catch (err) {
+          window.showAriaToast?.(err?.message || "Undo failed", "err", 4000);
+        }
+      });
+      add("Project", () => {
+        closeJobCenter();
+        window.switchToView?.("projects");
+      });
+      li.appendChild(links);
+    }
     if (!job.done && job.id) {
       const btn = document.createElement("button");
       btn.type = "button";

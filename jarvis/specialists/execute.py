@@ -119,22 +119,60 @@ def _call(assistant: Any, action: str, params: dict[str, Any], goal: str) -> dic
 
 
 def _run_coder(assistant: Any, goal: str, params: dict[str, Any]) -> dict[str, Any]:
-    # Prefer CodingAgent when available
+    """Delegate to the real CodingAgent (Path base) — never a shallow read stub."""
     try:
         from jarvis.coding_agent import CodingAgent
 
-        agent = CodingAgent(assistant)
-        # Use a bounded diagnose/read oriented call if API exists
-        run = getattr(agent, "run", None) or getattr(agent, "plan_and_run", None)
-        if callable(run):
-            out = run(goal)
-            if isinstance(out, dict):
-                out.setdefault("action", "coding_agent")
-                out.setdefault("ok", bool(out.get("ok", True)))
-                return out
-            return {"ok": True, "message": str(out)[:2000], "action": "coding_agent"}
+        base = assistant.coding._base()
+        agent = CodingAgent(base, max_steps=int(params.get("max_steps") or 4))
+        path = (params.get("path") or "").strip() or None
+        mode = (params.get("mode") or "agent").strip() or "agent"
+        diagnose_only = bool(params.get("diagnose_only") or params.get("diagnose"))
+        if diagnose_only and path:
+            result = agent.diagnose(path, task=goal)
+        else:
+            result = agent.run(goal, path=path, mode=mode)
+        if not result.ok:
+            return {
+                "ok": False,
+                "message": result.message or "CodingAgent failed",
+                "action": "coding_agent",
+                "delegated": True,
+                "diagnose_only": bool(result.diagnose_only),
+            }
+        if result.diagnose_only or not result.files:
+            return {
+                "ok": True,
+                "message": result.message or result.explanation or "Diagnosis complete",
+                "action": "coding_agent",
+                "delegated": True,
+                "diagnose_only": True,
+                "explanation": result.explanation,
+                "steps": [
+                    {"step": s.step, "action": s.action, "detail": s.detail, "ok": s.ok}
+                    for s in (result.steps or [])
+                ],
+            }
+        proposal_id, payload = assistant._store_agent_proposal(
+            result.files,
+            mode=mode,
+            explanation=result.explanation or goal[:200],
+        )
+        return {
+            "ok": True,
+            "message": result.message or f"Proposal `{proposal_id}` ready for review.",
+            "action": "coding_agent",
+            "delegated": True,
+            "proposal_id": proposal_id,
+            "type": "proposal",
+            "diff": result.diff,
+            "syntax_ok": payload.get("syntax_ok"),
+            "quality_brief": payload.get("_quality_brief"),
+            "explanation": result.explanation,
+            "auto_applied": False,
+        }
     except Exception as exc:
-        log.debug("CodingAgent unavailable: %s", exc)
+        log.warning("CodingAgent specialist path failed: %s", exc)
 
     # Fallback: coding_read then optional diagnose via call_action
     read = _call(assistant, "coding_read", params, goal)
@@ -147,7 +185,7 @@ def _run_coder(assistant: Any, goal: str, params: dict[str, Any]) -> dict[str, A
         "action": "coding_read",
         "data": read,
         "delegated": False,
-        "note": "CodingAgent not available; used coding_read.",
+        "note": "CodingAgent failed; used coding_read fallback.",
     }
 
 

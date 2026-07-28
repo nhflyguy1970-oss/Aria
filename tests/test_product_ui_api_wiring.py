@@ -388,6 +388,7 @@ def test_command_palette_is_wired():
     assert Path("jarvis/gui/static/attachment_compare.js").is_file()
     assert Path("jarvis/gui/static/media_jobs.js").is_file()
     assert Path("jarvis/gui/static/coding_jobs.js").is_file()
+    assert Path("jarvis/gui/static/coding_home.js").is_file()
     assert Path("jarvis/gui/static/media_urls.js").is_file()
     assert Path("jarvis/gui/static/coding_proposals.js").is_file()
     assert Path("jarvis/gui/static/chat_images.js").is_file()
@@ -403,6 +404,7 @@ def test_command_palette_is_wired():
     assert "attachment_compare.js" in html
     assert "media_jobs.js" in html
     assert "coding_jobs.js" in html
+    assert "coding_home.js" in html
     assert "media_urls.js" in html
     assert "coding_proposals.js" in html
     assert "chat_images.js" in html

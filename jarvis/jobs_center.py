@@ -25,6 +25,20 @@ def _sanitize_job(job: dict, *, queue: str) -> dict:
         if isinstance(res, dict):
             out["result_ok"] = res.get("ok")
             out["result_message"] = (res.get("message") or "")[:200]
+            if res.get("proposal_id"):
+                out["proposal_id"] = res["proposal_id"]
+            if res.get("type"):
+                out["result_type"] = res["type"]
+    if queue == "coding":
+        try:
+            from jarvis.coding_product.job_links import enrich_coding_job
+
+            enriched = enrich_coding_job({**job, **out})
+            out["deep_links"] = enriched.get("deep_links")
+            if enriched.get("proposal_id"):
+                out["proposal_id"] = enriched["proposal_id"]
+        except Exception:
+            pass
     return out
 
 

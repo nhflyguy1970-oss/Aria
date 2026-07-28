@@ -1,7 +1,7 @@
 /** Primary view router — extracted from app.js. */
 (function () {
   const VIEW_PANELS = [
-    "chatView", "dashboardView", "automationView", "workstationView", "modelsView", "plannerView", "calendarView", "flytyingView", "projectsView",
+    "chatView", "dashboardView", "automationView", "workstationView", "modelsView", "codingView", "plannerView", "calendarView", "flytyingView", "projectsView",
     "makerView", "browserView", "securityView", "presenceView", "auditView", "voiceView", "audioView", "journalView",
     "memoryView", "galleryView", "videoView", "memeView", "documentsView", "connectionsView", "actionsView",
   ];
@@ -30,6 +30,7 @@
     if (view === "automation" && window.initAutomation) window.initAutomation();
     if (view === "workstation" && window.initWorkstation) window.initWorkstation();
     if (view === "models" && window.initModelsHome) window.initModelsHome();
+    if (view === "coding" && window.initCodingHome) window.initCodingHome();
     if (view === "planner" && window.initPlanner) window.initPlanner();
     if (view === "calendar" && window.initCalendar) window.initCalendar();
     if (view === "flytying" && window.initFlytying) window.initFlytying();

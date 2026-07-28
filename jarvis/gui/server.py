@@ -1617,6 +1617,167 @@ def coding_status():
     return {"ok": True, **job_stats(), "recent": list_recent(5)}
 
 
+@app.get("/api/coding/home")
+def coding_home_api():
+    from jarvis.coding_product.home import coding_home_snapshot
+
+    return coding_home_snapshot(assistant)
+
+
+@app.get("/api/coding/guardrails")
+def coding_guardrails_api():
+    from jarvis.coding_product.guardrails import assess_coding_root
+
+    return assess_coding_root(assistant)
+
+
+@app.get("/api/coding/proposals/history")
+def coding_proposal_history(
+    q: str = "",
+    status: str = "",
+    bookmarked: str = "",
+    limit: int = 50,
+    offset: int = 0,
+):
+    from jarvis.coding_product.history import list_history
+
+    return list_history(
+        query=q,
+        status=status,
+        bookmarked_only=bookmarked.lower() in ("1", "true", "yes"),
+        limit=limit,
+        offset=offset,
+    )
+
+
+@app.get("/api/coding/proposals/{proposal_id}/brief")
+def coding_proposal_brief(proposal_id: str):
+    from jarvis.coding_product.brief import brief_for_id
+
+    return brief_for_id(assistant, proposal_id)
+
+
+@app.get("/api/coding/proposals/{proposal_id}/export")
+def coding_proposal_export(proposal_id: str):
+    from jarvis.coding_product.history import export_patch
+
+    return export_patch(proposal_id)
+
+
+@app.post("/api/coding/proposals/{proposal_id}/restore")
+def coding_proposal_restore(proposal_id: str):
+    from jarvis.coding_product.history import restore_to_pending
+
+    return restore_to_pending(assistant, proposal_id)
+
+
+@app.post("/api/coding/proposals/{proposal_id}/bookmark")
+async def coding_proposal_bookmark(proposal_id: str, bookmarked: str = Form("true")):
+    from jarvis.coding_product.history import set_bookmark
+
+    row = set_bookmark(proposal_id, bookmarked.lower() in ("1", "true", "yes"))
+    if not row:
+        return JSONResponse(status_code=404, content={"ok": False, "message": "Not found"})
+    return {"ok": True, "item": row}
+
+
+@app.post("/api/coding/verify")
+async def coding_verify_api(
+    actions: str = Form("syntax,tests"),
+    paths: str = Form(""),
+    approved: str = Form("false"),
+    proposal_id: str = Form(""),
+):
+    from jarvis.coding_product.history import update_status
+    from jarvis.coding_product.verify_workflow import run_verify
+
+    action_list = [a.strip() for a in (actions or "").split(",") if a.strip()]
+    path_list = [p.strip() for p in (paths or "").split(",") if p.strip()]
+    out = run_verify(
+        assistant,
+        actions=action_list,
+        paths=path_list or None,
+        approved=approved.lower() in ("1", "true", "yes"),
+    )
+    if proposal_id and out.get("verification_status"):
+        try:
+            update_status(proposal_id, "applied", verification_status=out["verification_status"])
+        except Exception:
+            pass
+    return out
+
+
+@app.get("/api/coding/verify/offer")
+def coding_verify_offer(proposal_id: str = ""):
+    from jarvis.coding_product.verify_workflow import build_verify_offer
+
+    paths = []
+    for b in getattr(assistant, "last_apply_backups", None) or []:
+        if b.get("path"):
+            paths.append(b["path"])
+    return build_verify_offer(
+        applied_paths=paths,
+        base=assistant.coding._base(),
+        proposal_id=proposal_id,
+    )
+
+
+@app.get("/api/coding/preferences")
+def coding_preferences_get():
+    from jarvis.coding_product.preferences import preference_suggestions
+
+    return preference_suggestions()
+
+
+@app.post("/api/coding/preferences")
+async def coding_preferences_set(request: Request):
+    from jarvis.coding_product.preferences import preference_suggestions, save_preferences
+
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if isinstance(body, dict) and body:
+        save_preferences(body)
+    return preference_suggestions()
+
+
+@app.post("/api/coding/vision-fix")
+async def coding_vision_fix(
+    path: str = Form(...),
+    hint: str = Form(""),
+    propose: str = Form("true"),
+):
+    from jarvis.async_util import run_sync
+    from jarvis.coding_product.vision_fix import vision_bugfix
+
+    return await run_sync(
+        vision_bugfix,
+        assistant,
+        image_path=path,
+        hint=hint,
+        propose=propose.lower() in ("1", "true", "yes"),
+    )
+
+
+@app.post("/api/coding/spec-to-code")
+async def coding_spec_to_code(
+    document_path: str = Form(""),
+    document_id: str = Form(""),
+    query: str = Form(""),
+):
+    from jarvis.async_util import run_sync
+    from jarvis.coding_product.spec_to_code import spec_to_proposal
+
+    return await run_sync(
+        spec_to_proposal,
+        assistant,
+        document_path=document_path,
+        document_id=document_id,
+        query=query,
+    )
+
+
 @app.post("/api/coding/job/{job_id}/cancel")
 def coding_job_cancel(job_id: str):
     from jarvis.coding_jobs import cancel_job

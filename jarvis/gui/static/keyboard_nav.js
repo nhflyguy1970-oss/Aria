@@ -3,7 +3,7 @@
   "use strict";
 
   const VIEW_ORDER = [
-    "chat", "dashboard", "workstation", "models", "planner", "calendar",
+    "chat", "dashboard", "workstation", "models", "coding", "planner", "calendar",
     "memory", "documents", "connections", "gallery", "projects", "maker", "journal",
   ];
 
@@ -144,6 +144,13 @@
       if (mod && e.shiftKey && (e.key === "." || e.code === "Period")) {
         e.preventDefault();
         window.openModelsHome?.() || window.switchToView?.("models");
+        return;
+      }
+
+      // Ctrl+Shift+C — Coding Home
+      if (mod && e.shiftKey && e.key.toLowerCase() === "c") {
+        e.preventDefault();
+        window.openCodingHome?.() || window.switchToView?.("coding");
         return;
       }
 

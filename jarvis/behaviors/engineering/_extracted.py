@@ -308,17 +308,11 @@ class EngineeringOperations:
 
         diff = make_diff(content, new_code)
         files = [{"path": path, "code": new_code}]
-        diag_dicts, diag_summary = ctx._check_proposal_syntax(files)
-        proposal_id = str(uuid.uuid4())[:8]
-        syntax_ok = not any(d.get("severity") == "error" for d in diag_dicts)
-        ctx.pending_proposals[proposal_id] = {
-            "path": path, "code": new_code, "mode": mode,
-            "files": files, "diagnostics": diag_dicts,
-            "syntax_ok": syntax_ok, "explanation": explanation,
-        }
-        ctx._persist_proposals()
-        ctx.session.note_proposal(proposal_id)
-        ctx.session.note_file(path)
+        proposal_id, payload = ctx._store_agent_proposal(
+            files, mode=mode, explanation=explanation or ""
+        )
+        diag_summary = payload.get("_diag_summary") or ""
+        syntax_ok = payload.get("syntax_ok", True)
 
         extra = ctx._proposal_response_extra(files)
         verb = "fixes" if mode == "fix" else "improvements"
@@ -337,8 +331,9 @@ class EngineeringOperations:
             proposal_id=proposal_id,
             path=path,
             diff=diff,
+            quality_brief=payload.get("_quality_brief"),
             explanation=explanation,
-            diagnostics=diag_dicts,
+            diagnostics=payload.get("diagnostics") or [],
             syntax_ok=syntax_ok,
             **extra,
         )
@@ -540,18 +535,14 @@ class EngineeringOperations:
 
         diff = make_diff(content, new_code)
         files = [{"path": path, "code": new_code}]
-        diag_dicts, diag_summary = ctx._check_proposal_syntax(files)
-        syntax_ok = not any(d.get("severity") == "error" for d in diag_dicts)
         tests_ok = ctx._tests_verify_ok(verify)
 
-        proposal_id = str(uuid.uuid4())[:8]
-        ctx.pending_proposals[proposal_id] = {
-            "path": path, "code": new_code, "mode": "fix",
-            "files": files, "diagnostics": diag_dicts,
-            "syntax_ok": syntax_ok, "explanation": explanation,
-        }
-        ctx._persist_proposals()
-        ctx.session.note_proposal(proposal_id)
+        proposal_id, payload = ctx._store_agent_proposal(
+            files, mode="fix", explanation=explanation or ""
+        )
+        diag_dicts = payload.get("diagnostics") or []
+        diag_summary = payload.get("_diag_summary") or ""
+        syntax_ok = payload.get("syntax_ok", True)
 
         extra = ctx._proposal_response_extra(files)
         status = "Tests pass in verify." if tests_ok else "Tests still failing — review diff or try again."
@@ -577,6 +568,7 @@ class EngineeringOperations:
             "explanation": explanation,
             "diagnostics": diag_dicts,
             "syntax_ok": syntax_ok,
+            "quality_brief": payload.get("_quality_brief"),
             "agent_steps": [
                 {"step": 1, "action": "pytest", "detail": "failures loaded", "ok": False},
             ],

@@ -393,9 +393,12 @@
 
       <div class="sidebar-section sidebar-section--coding" id="codingPanel" data-section="coding">
         <button type="button" class="sidebar-section-head" aria-expanded="false">
-          <p class="sidebar-section-title">Developer</p><span class="section-chevron">▾</span>
+          <p class="sidebar-section-title">Coding tools</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body">
+        <p class="muted tiny">Developer drawer — LSP, Git, quick actions. Full product: Coding Home.</p>
+        <button type="button" id="codingHomeOpenBtn" class="apply-btn small" title="Open Coding Home (Ctrl+Shift+C)">Open Coding Home</button>
+        <div id="codingRootBanner" class="coding-root-banner muted tiny" role="status">Coding root: …</div>
         <div id="editorContextCard" class="editor-context-card" title="Synced from Cursor extension">
           <span class="editor-context-dot" aria-hidden="true"></span>
           <span id="editorContextLabel" class="editor-context-label">Cursor: checking…</span>
@@ -515,6 +518,7 @@
         <button type="button" class="view-tab" data-view="automation">Automation</button>
         <button type="button" class="view-tab" data-view="workstation">Mission Control</button>
         <button type="button" class="view-tab" data-view="models">Models</button>
+        <button type="button" class="view-tab" data-view="coding">Coding</button>
         <button type="button" class="view-tab" data-view="planner">Planner</button>
         <button type="button" class="view-tab" data-view="calendar">Calendar</button>
         <button type="button" class="view-tab" data-view="flytying">Fly tying</button>
@@ -1632,6 +1636,23 @@
         <div id="modelsHomeBody" class="mc-tab-body models-home-body" role="tabpanel" tabindex="0"></div>
       </div>
 
+      <div id="codingView" class="view-panel hidden">
+        <div class="mc-page-header">
+          <h2>Coding</h2>
+          <p class="muted">Propose → Review → Apply → Undo → Verify. Projects identify workspaces; Job Center tracks execution; Models configures the coding model.</p>
+          <div class="mc-toolbar">
+            <button type="button" id="codingHomeRefreshBtn" class="ghost-btn small">Refresh</button>
+            <button type="button" id="codingOpenProjectsBtn" class="ghost-btn small" title="Workspace identity">Projects</button>
+            <button type="button" id="codingOpenJobsBtn" class="ghost-btn small" title="Live coding jobs">Job Center</button>
+            <button type="button" id="codingOpenModelsBtn" class="ghost-btn small" title="Coding model role">Models</button>
+            <span class="muted tiny" title="Keyboard shortcut">Ctrl+Shift+C</span>
+            <span id="codingHomeStatus" class="muted" aria-live="polite"></span>
+          </div>
+          <nav id="codingHomeTabs" class="mc-tab-nav" aria-label="Coding sections"></nav>
+        </div>
+        <div id="codingHomeBody" class="mc-tab-body coding-home-body" role="tabpanel" tabindex="0"></div>
+      </div>
+
       <div id="plannerView" class="view-panel hidden">
         <div class="planner-header">
           <div>
@@ -2673,6 +2694,7 @@
   <script src="/static/mission_control.js?v=1.1.0"></script>
   <script src="/static/mission_control_ux.js?v=1.0.0"></script>
   <script src="/static/models_home.js?v=1.0.0"></script>
+  <script src="/static/coding_home.js?v=1.0.0"></script>
   <script src="/static/calendar.js?v=5.17.0"></script>
   <script src="/static/flytying.js?v=5.16.106"></script>
 

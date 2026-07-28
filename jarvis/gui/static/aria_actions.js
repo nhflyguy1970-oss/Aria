@@ -251,12 +251,29 @@
       open: () => goView("projects"),
       create: () => focusAfter("projects", "projectsTitleInput"),
       codingMode: () => {
+        if (window.openCodingHome) {
+          window.openCodingHome();
+          return true;
+        }
         goView("chat");
         setTimeout(() => {
           const chip = document.querySelector('.module-chip[data-module="coding"]');
           if (chip) chip.click();
           else toast("Coding mode chip unavailable", "warn");
         }, 80);
+        return true;
+      },
+    },
+
+    coding: {
+      open: () => window.openCodingHome?.() || goView("coding"),
+      history: () => window.openCodingHome?.("history") || goView("coding"),
+      verify: () => window.AriaCodingVerify?.promptLast?.() || false,
+      undo: () => {
+        fetch("/api/undo-apply", { method: "POST" })
+          .then((r) => r.json())
+          .then((d) => toast(d.message || "Undo", d.ok === false ? "err" : "ok"))
+          .catch((e) => toast(e.message || "Undo failed", "err"));
         return true;
       },
     },
@@ -364,6 +381,7 @@
         return invoke("modelsHomeOpenBtn", "Models Home");
       },
       modelsHome: () => window.openModelsHome?.() || goView("models"),
+      codingHome: () => window.openCodingHome?.() || goView("coding"),
       warmRouter: () => invoke("routerWarmBtn", "Warm router") || askAria("Warm the model router"),
     },
 
