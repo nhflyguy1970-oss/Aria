@@ -285,6 +285,20 @@
     if (hasImage && data.module === "image" && window.galleryViewVisible?.() && !isNativeApp()) {
       setTimeout(() => { if (window.galleryViewVisible?.()) window.loadGallery?.(); }, 800);
     }
+
+    // Browser Chat bridge — open Browser with shared URL/goal prefill (never fake success)
+    if (data.open_view === "browser" || (data.module === "browser" && (data.prefill_url || data.prefill_goal || data.url))) {
+      window.__browserPrefill = {
+        url: data.prefill_url || data.url || "",
+        goal: data.prefill_goal || data.goal || "",
+        message: data.message || "",
+      };
+      try {
+        window.showView?.("browser");
+        window.refreshBrowserPanel?.();
+        window.refreshBrowserHome?.();
+      } catch (_) { /* ignore */ }
+    }
   }
 
   Object.assign(window, { handleDone, showChatWarnings });

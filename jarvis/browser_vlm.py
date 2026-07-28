@@ -31,6 +31,7 @@ def _parse_vlm_json(raw: str) -> dict[str, Any] | None:
         m = re.search(r"\{\s*\"action\"\s*:", text)
         if m:
             start = m.start()
+            end = text.rfind("}") + 1
     if start < 0:
         return None
     try:
@@ -40,12 +41,11 @@ def _parse_vlm_json(raw: str) -> dict[str, Any] | None:
 
 
 def vlm_plan_click(screenshot_path: str, goal: str, *, assistant=None) -> dict[str, Any]:
-    """Ask vision model what to click on the screenshot."""
     path = Path(screenshot_path)
     if not path.is_file():
         return {"ok": False, "error": f"Screenshot missing: {path}"}
 
-    from jarvis.browser_vram import prepare_for_browser_vlm
+    from jarvis.browser_product.vision_support import prepare_for_browser_vlm
 
     prepare_for_browser_vlm()
 
@@ -58,27 +58,31 @@ def vlm_plan_click(screenshot_path: str, goal: str, *, assistant=None) -> dict[s
             vision = get_assistant().vision
 
         prompt = _VLM_PROMPT.format(goal=goal[:400])
+        # Prefer vision role; task stays describe for model_store compatibility
         raw = vision.analyze(prompt, str(path), task="describe")
-        if raw.startswith("ERROR:"):
+        if isinstance(raw, str) and raw.startswith("ERROR:"):
             return {"ok": False, "error": raw}
-        plan = _parse_vlm_json(raw)
+        plan = _parse_vlm_json(str(raw))
         if not plan:
-            return {"ok": False, "error": "Vision model did not return valid JSON", "raw": raw[:300]}
-        return {"ok": True, "plan": plan, "raw": raw[:500]}
+            return {"ok": False, "error": "Vision model did not return valid JSON", "raw": str(raw)[:300]}
+        return {"ok": True, "plan": plan, "raw": str(raw)[:500]}
     except Exception as exc:
         log.warning("VLM plan failed: %s", exc)
         return {"ok": False, "error": str(exc)}
 
 
 def vlm_click_at(x: int, y: int) -> dict[str, Any]:
-    from jarvis.browser_agent import _PAGE, _agent_paused
+    from jarvis.browser_product.session import append_step, get_page, is_paused
 
-    if _agent_paused():
+    if is_paused():
         return {"ok": False, "message": "Agent paused"}
-    if not _PAGE:
+    page = get_page()
+    if not page:
         return {"ok": False, "message": "No browser page"}
     try:
-        _PAGE.mouse.click(int(x), int(y))
+        page.mouse.click(int(x), int(y))
+        append_step("vlm_click", f"{x},{y}")
         return {"ok": True, "x": x, "y": y}
     except Exception as exc:
+        append_step("vlm_click", str(exc), ok=False)
         return {"ok": False, "message": str(exc)}

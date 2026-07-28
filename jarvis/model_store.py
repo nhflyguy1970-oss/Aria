@@ -23,6 +23,7 @@ CANONICAL_ROLES = (
     "reflection",
     "learning",
     "vision",
+    "browser_vision",
     "image",
     "embedding",
 )
@@ -53,6 +54,7 @@ ROLE_LABELS = {
     "reflection": "Reflection",
     "learning": "Learning extraction",
     "vision": "Vision",
+    "browser_vision": "Browser vision",
     "image": "Image generation",
     "embedding": "Embeddings",
     "general": "Chat (legacy)",
@@ -86,6 +88,7 @@ OPTIMIZED_STANDARD = _with_legacy_aliases(
         "reflection": "qwen2.5:7b",
         "learning": "qwen2.5-coder:1.5b-base",
         "vision": "moondream:latest",
+        "browser_vision": "moondream:latest",
         "image": "comfyui",
         "embedding": "nomic-embed-text",
     }
@@ -107,6 +110,7 @@ OPTIMIZED_UNCENSORED = _with_legacy_aliases(
         "reflection": "dolphin-mistral:latest",
         "learning": "qwen2.5-coder:1.5b-base",
         "vision": "moondream:latest",
+        "browser_vision": "moondream:latest",
         "image": "comfyui",
         "embedding": "nomic-embed-text",
     }
@@ -129,6 +133,7 @@ FAST_STANDARD = _with_legacy_aliases(
         "reflection": "qwen2.5:7b",
         "learning": "qwen2.5-coder:1.5b-base",
         "vision": "moondream:latest",
+        "browser_vision": "moondream:latest",
         "image": "comfyui",
         "embedding": "nomic-embed-text",
     }
@@ -150,6 +155,7 @@ FAST_UNCENSORED = _with_legacy_aliases(
         "reflection": "dolphin-mistral:latest",
         "learning": "qwen2.5-coder:1.5b-base",
         "vision": "moondream:latest",
+        "browser_vision": "moondream:latest",
         "image": "comfyui",
         "embedding": "nomic-embed-text",
     }
@@ -189,6 +195,9 @@ FALLBACK_PRIORITY = {
     "learning": ["qwen2.5-coder:1.5b-base", "qwen3:1.7b"],
     "vision": [
         "llava:13b", "moondream:latest", "moondream", "llama3.2-vision:11b",
+    ],
+    "browser_vision": [
+        "moondream:latest", "moondream", "llava:13b", "llama3.2-vision:11b",
     ],
     "image": [
         "comfyui",

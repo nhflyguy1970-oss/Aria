@@ -37,6 +37,7 @@
     if (view === "projects" && window.initProjects) window.initProjects();
     if (view === "maker" && window.initMakerLab) window.initMakerLab();
     if (view === "browser" && window.initBrowserPanel) window.initBrowserPanel();
+    if (view === "browser" && window.initBrowserHome) window.initBrowserHome();
     if (view !== "browser" && window.stopBrowserPanelPoll) window.stopBrowserPanelPoll();
     if (view === "security" && window.initSecurity) { window.initSecurity(); window.refreshToolsSidebar?.(); }
     if (view === "presence" && window.initPresence) window.initPresence();

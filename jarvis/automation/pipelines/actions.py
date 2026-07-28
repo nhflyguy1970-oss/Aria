@@ -118,6 +118,8 @@ def execute_action(
         return _execute_agent_step(p, variables, approve=approve_experimental)
     if action == "vision_analyze":
         return _execute_vision(p, variables, approve=approve_experimental)
+    if action == "browser_read":
+        return _execute_browser_read(p, variables, approve=approve_experimental)
 
     return _execute_registry(action, p, variables)
 
@@ -266,14 +268,54 @@ def _execute_registry(action: str, params: dict[str, Any], variables: dict[str, 
             nested_vars = {**variables, "_pipeline_depth": int(variables.get("_pipeline_depth", 0)) + 1}
             return run_pipeline(str(wid), variables=nested_vars, dry_run=False, emit_bridges=False)
 
-        if action == "browser_read":
+        return {"ok": False, "error": f"no pipeline handler for action {action}"}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def _execute_browser_read(params: dict[str, Any], variables: dict[str, Any], *, approve: bool) -> dict[str, Any]:
+    """Allowlisted Browser navigate+extract — never silent; requires experimental approval."""
+    if not approve:
+        return {
+            "ok": False,
+            "permission_required": True,
+            "error": "Browser step requires explicit approval (approve_experimental)",
+        }
+    url = str(params.get("url") or variables.get("url") or "").strip()
+    if not url:
+        return {"ok": False, "error": "url required"}
+    try:
+        from jarvis import browser_agent as ba
+
+        nav = ba.navigate(url, allow_risky=bool(params.get("allow_risky")))
+        if not nav.get("ok"):
             return {
                 "ok": False,
-                "permission_required": True,
-                "error": "Browser step requires explicit approval context",
+                "error": nav.get("message") or nav.get("error") or "Navigation failed",
+                "recovery": nav.get("recovery"),
+                "result": nav,
             }
+        from jarvis.browser_product.session import extract_text
 
-        return {"ok": False, "error": f"no pipeline handler for action {action}"}
+        ext = extract_text(limit=int(params.get("limit") or 4000))
+        if not ext.get("ok"):
+            return {
+                "ok": False,
+                "error": ext.get("message") or "Extract failed after navigation",
+                "result": {"navigate": nav, "extract": ext},
+            }
+        variables["browser_url"] = ext.get("url") or url
+        variables["browser_title"] = ext.get("title") or ""
+        variables["browser_text"] = (ext.get("text") or "")[:4000]
+        return {
+            "ok": True,
+            "result": {
+                "url": variables["browser_url"],
+                "title": variables["browser_title"],
+                "text": variables["browser_text"],
+                "chars": len(ext.get("text") or ""),
+            },
+        }
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
 

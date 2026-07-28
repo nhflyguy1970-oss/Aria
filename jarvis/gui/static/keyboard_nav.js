@@ -154,6 +154,13 @@
         return;
       }
 
+      // Ctrl+Shift+B — Browser Home
+      if (mod && e.shiftKey && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        window.openBrowserHome?.() || window.switchToView?.("browser");
+        return;
+      }
+
       // Ctrl+Shift+K — mini chat
       if (mod && e.shiftKey && e.key.toLowerCase() === "k") {
         e.preventDefault();

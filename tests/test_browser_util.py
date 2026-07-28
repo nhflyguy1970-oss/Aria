@@ -1,7 +1,11 @@
-"""Test stub — decompiled original replaced for collection."""
-import pytest
+"""Browser util coverage."""
 
-pytestmark = pytest.mark.skip(reason="decompiled test pending rewrite")
+from __future__ import annotations
 
-def test_decompile_stub():
-    pass
+from jarvis.browser_util import browser_candidates
+
+
+def test_browser_candidates_nonempty():
+    names = browser_candidates()
+    assert isinstance(names, list)
+    assert len(names) >= 1

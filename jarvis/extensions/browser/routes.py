@@ -7,6 +7,18 @@ import re
 from jarvis.router_table import RouteRule
 
 
+def _search_browse_query(message: str) -> str:
+    text = (message or "").strip()
+    m = re.search(
+        r"(?:search (?:the )?web for|find)\s+(.+?)(?:\s+and\s+(?:open|browse).*)?$",
+        text,
+        re.I,
+    )
+    if m:
+        return m.group(1).strip(" .")
+    return text
+
+
 def browser_routes() -> list[RouteRule]:
     return [
         RouteRule(
@@ -27,9 +39,9 @@ def browser_routes() -> list[RouteRule]:
             12,
             "search browse",
             lambda m, lower, _s: bool(
-                re.search(r"\b(search (the )?web for|find .+ under \$?\d+ on )\b", lower)
+                re.search(r"\b(search (the )?web for|find .+ and (open|browse))\b", lower)
             ),
-            lambda m: {"query": m.strip()},
+            lambda m: {"query": _search_browse_query(m)},
         ),
         RouteRule(
             "browser_takeover",
@@ -46,5 +58,18 @@ def browser_routes() -> list[RouteRule]:
                 or re.search(r"\bbrowser agent\b", lower)
             ),
             lambda m: {"goal": m.strip()},
+        ),
+        RouteRule(
+            "browser_summarize",
+            9,
+            "summarize page",
+            lambda m, lower, _s: bool(re.search(r"\bsummarize (this |the )?page\b", lower)),
+        ),
+        RouteRule(
+            "browser_voice",
+            7,
+            "voice browser",
+            lambda m, lower, _s: bool(re.search(r"\b(pause|resume|stop) (the )?browser\b", lower)),
+            lambda m: {"text": m.strip()},
         ),
     ]

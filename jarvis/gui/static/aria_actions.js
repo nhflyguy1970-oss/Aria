@@ -298,10 +298,13 @@
     },
 
     browser: {
-      open: () => goView("browser"),
+      open: () => window.openBrowserHome?.() || goView("browser"),
       focusUrl: () => focusAfter("browser", "browserUrlInput"),
       focusTask: () => focusAfter("browser", "browserGoalInput") || focusAfter("browser", "browserTaskInput"),
-      research: () => askAria("Help me research a topic. Ask what I want to look up and how deep to go."),
+      research: () => {
+        window.openBrowserHome?.("research");
+        return askAria("Help me research a topic. Ask what I want to look up and how deep to go.");
+      },
     },
 
     voice: {

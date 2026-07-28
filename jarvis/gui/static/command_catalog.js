@@ -26,7 +26,7 @@
       ["flytying", "Fly tying", "flies patterns"],
       ["projects", "Projects", "repos"],
       ["maker", "Maker lab", "cad stl print"],
-      ["browser", "Browser agent", "playwright web"],
+      ["browser", "Browser", "playwright web agent ctrl+shift+b"],
       ["security", "Security", "pin auth"],
       ["presence", "Presence", "location"],
       ["audit", "System / audit", "logs repair"],
@@ -151,6 +151,10 @@
       mk("act:open-projects", "Open Projects", "Actions", "repos workspace coding", () => A().projects.open()),
       mk("act:browser-url", "Focus browser URL", "Actions", "playwright navigate web", () => A().browser.focusUrl()),
       mk("act:browser-task", "Focus browser agent task", "Actions", "playwright goal run", () => A().browser.focusTask()),
+      mk("act:browser-home", "Open Browser Home", "Browser", "playwright session history bookmarks ctrl+shift+b", () => window.openBrowserHome?.() || A().goView("browser"), {
+        hint: "Ctrl+Shift+B",
+        shortcut: "Ctrl+Shift+B",
+      }),
       mk("act:resume-media-jobs", "Resume pending media jobs", "Actions", "queue retry", () => A().system.resumeMedia()),
     ]);
   }
