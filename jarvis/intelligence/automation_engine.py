@@ -344,6 +344,36 @@ def run_rule(rule_id: str, *, dry_run: bool = False) -> dict[str, Any]:
                 "reason": "Automation engine paused",
                 "cancelled": True,
             }
+        # Mission Control health gate — never run dangerous work while unhealthy
+        if not dry_run:
+            try:
+                from jarvis.mission_control_ops.automation_gate import evaluate_health_gate
+
+                gate = evaluate_health_gate(params=rule.params, rule_name=rule.name)
+                if gate.get("action") in ("skip", "delay", "pause") and not gate.get("ok", True):
+                    return {
+                        "ok": False,
+                        "status": gate.get("status") or SKIPPED,
+                        "reason": gate.get("reason"),
+                        "skipped": True,
+                        "health_gate": gate,
+                        "result": normalize_result(
+                            {
+                                "ok": False,
+                                "skipped": True,
+                                "why": gate.get("reason"),
+                                "status": gate.get("status") or SKIPPED,
+                            },
+                            dry_run=False,
+                        ),
+                    }
+                # warn mode continues but attaches health_gate
+                _gate_warn = gate if gate.get("action") == "warn" else None
+            except Exception as exc:
+                log.debug("health gate skipped: %s", exc)
+                _gate_warn = None
+        else:
+            _gate_warn = None
         runner = _runner or (lambda r: _default_run(r, dry_run=dry_run))
         try:
             if _runner and dry_run:
@@ -373,12 +403,16 @@ def run_rule(rule_id: str, *, dry_run: bool = False) -> dict[str, Any]:
                 normalized["run"] = pub.get("run")
             except Exception as exc:
                 log.debug("activity bridge skipped: %s", exc)
-            return {
+            out = {
                 "ok": normalized["ok"],
                 "status": normalized["status"],
                 "rule": asdict(rule),
                 "result": normalized,
             }
+            if _gate_warn:
+                out["health_gate"] = _gate_warn
+                out["warning"] = _gate_warn.get("warning") or _gate_warn.get("reason")
+            return out
         except Exception as exc:
             rule.last_run = time.time()
             rule.last_status = f"error: {exc}"

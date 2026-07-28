@@ -35,6 +35,23 @@ def _webhook_status() -> dict[str, Any]:
         return {"configured": False, "url": "", "message": str(exc)}
 
 
+def _mc_gate_status() -> dict[str, Any]:
+    """Mission Control health visibility for Automation Home."""
+    try:
+        from jarvis.mission_control_ops.automation_gate import get_infrastructure_health
+
+        h = get_infrastructure_health()
+        return {
+            "ok": bool(h.get("ok")),
+            "overall": h.get("overall"),
+            "severity": h.get("severity"),
+            "reason": h.get("reason"),
+            "policy": "Rules may set params.health_gate = warn|skip|delay|pause|off",
+        }
+    except Exception as exc:
+        return {"ok": True, "overall": "unknown", "reason": str(exc), "policy": "auto"}
+
+
 def _engine_status() -> dict[str, Any]:
     try:
         from jarvis.intelligence.automation_engine import status
@@ -156,6 +173,7 @@ def home_snapshot() -> dict[str, Any]:
             "engine": "running" if eng.get("running") else "stopped",
             "webhook": _webhook_status(),
             "failures": len(failures),
+            "mission_control_gate": _mc_gate_status(),
         },
         "rules": {"enabled": enabled, "disabled": disabled, "all": rules},
         "upcoming": upcoming[:20],

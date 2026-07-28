@@ -8,6 +8,8 @@
 
   function switchToView(view) {
     if (!view) return;
+    // Compatibility: mission → workstation (view id migration)
+    if (view === "mission") view = "workstation";
     const splitOn = !!window.AriaSplitView?.getState?.()?.enabled;
     document.querySelectorAll(".view-tab").forEach((t) => {
       if (splitOn) {

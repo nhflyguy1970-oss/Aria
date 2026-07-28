@@ -59,7 +59,7 @@ OVERVIEW_MARKDOWN = (
 def test_collect_mission_control_shape(mock_collect):
     data = collect_mission_control(record_metrics=False)
     assert data.get("ok") is True
-    assert data.get("title") == "AI Platform Mission Control"
+    assert data.get("title") == "Mission Control"
     assert data.get("owner") == "aiplatform"
     for key in (
         "overview",

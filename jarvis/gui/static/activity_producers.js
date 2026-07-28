@@ -106,6 +106,8 @@
       health: (msg) => emit("mission", "health", "warning", "Mission Control health", msg, "mission"),
       warning: (msg) => emit("mission", "warning", "warning", "System warning", msg, "mission"),
       recovery: (msg) => emit("mission", "recovery", "info", "Recovery action", msg, "recovery", { read: true }),
+      critical: (msg, fix) => emit("mission", "critical_health", "error", "Mission Control · critical health", msg, fix || "mc:recovery"),
+      verified: (msg) => emit("mission", "verification", "success", "Post-repair verification", msg, "mc:overview", { read: true }),
     },
     providers: {
       offline: (msg) => emit("providers", "offline", "error", "Provider offline", msg, "providers"),
@@ -176,7 +178,7 @@
   async function pollProviders() {
     if (document.hidden) return;
     try {
-      const res = await fetch("/api/mission/overview", { cache: "no-store" });
+      const res = await fetch("/api/mission-control/health", { cache: "no-store" });
       if (!res.ok) {
         // soft fallback
         const r2 = await fetch("/api/status", { cache: "no-store" }).catch(() => null);
@@ -192,19 +194,15 @@
         return;
       }
       const data = await res.json().catch(() => ({}));
-      const inf = data.inference || data.overview?.inference || {};
-      const up = inf.ollama_running;
-      if (up === false && seen.ollamaUp !== false) {
-        Producers.providers.offline(`Inference provider down · ${inf.provider || "ollama"}`);
-        Producers.mission.health("Inference unhealthy — check Mission Control");
-      } else if (up === true && seen.ollamaUp === false) {
-        Producers.providers.recovered(`Inference recovered · ${inf.current_model || ""}`.trim());
-      }
-      if (typeof up === "boolean") seen.ollamaUp = up;
-
-      const adv = data.advisor || {};
-      if (adv.healthy === false && Array.isArray(adv.recommendations) && adv.recommendations.length) {
-        Producers.mission.warning(String(adv.headline || adv.recommendations[0] || "Mission Control warnings").slice(0, 200));
+      if (data.dangerous || data.overall === "critical" || data.severity === "critical") {
+        const msg = String((data.critical_issues && data.critical_issues[0]) || data.reason || "Critical infrastructure health").slice(0, 200);
+        const key = `mc_crit_${msg}`;
+        if (seen[key] !== true) {
+          seen[key] = true;
+          Producers.mission.critical(msg, "mc:recovery");
+        }
+      } else if (data.ok === false || data.overall === "degraded") {
+        Producers.mission.health(String(data.reason || "Mission Control degraded").slice(0, 200));
       }
     } catch {
       /* offline */

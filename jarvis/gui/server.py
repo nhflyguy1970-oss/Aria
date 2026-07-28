@@ -411,6 +411,95 @@ def mission_control_api():
     return collect_mission_control()
 
 
+@app.get("/api/mission/overview")
+@app.get("/api/mission-control/health")
+def mission_control_health():
+    """Compact health for Activity producers, Automation, and status surfaces."""
+    from jarvis.mission_control import health_summary
+
+    return health_summary()
+
+
+@app.get("/api/mission-control/health-brief")
+def mission_control_health_brief():
+    from jarvis.mission_control import collect_mission_control
+
+    snap = collect_mission_control(record_metrics=False)
+    return {"ok": True, "health_brief": snap.get("health_brief"), "predictive_warnings": snap.get("predictive_warnings")}
+
+
+@app.post("/api/mission-control/inference/action")
+def mission_control_inference_action(body: dict | None = None):
+    from jarvis.mission_control_ops.inference_actions import run_inference_action
+
+    body = body or {}
+    return run_inference_action(
+        str(body.get("action") or ""),
+        confirmed=bool(body.get("confirmed")),
+        model=str(body.get("model") or ""),
+        provider=str(body.get("provider") or ""),
+        actor=str(body.get("actor") or "operator"),
+    )
+
+
+@app.get("/api/mission-control/inference/audit")
+def mission_control_inference_audit(limit: int = 50):
+    from jarvis.mission_control_ops.inference_actions import list_audit
+
+    return {"ok": True, "entries": list_audit(limit=min(limit, 200))}
+
+
+@app.post("/api/mission-control/verify")
+def mission_control_verify(body: dict | None = None):
+    from jarvis.mission_control_ops.verification import verify_after_repair
+
+    body = body or {}
+    return verify_after_repair(previous=body.get("previous") if isinstance(body.get("previous"), dict) else None)
+
+
+@app.get("/api/mission-control/activity-correlation")
+def mission_control_activity_correlation(limit: int = 50):
+    from jarvis.mission_control_ops.activity_bridge import list_correlated_events
+
+    return {"ok": True, "events": list_correlated_events(limit=min(limit, 100))}
+
+
+@app.get("/api/mission-control/automation-gate")
+def mission_control_automation_gate(mode: str = "auto"):
+    from jarvis.mission_control_ops.automation_gate import evaluate_health_gate
+
+    return evaluate_health_gate(mode=mode)
+
+
+@app.get("/api/mission-control/platform-link")
+def mission_control_platform_link():
+    from jarvis.mission_control_ops.enrich import platform_mission_control_link
+
+    return {"ok": True, **platform_mission_control_link()}
+
+
+@app.get("/api/mission-control/stream")
+async def mission_control_stream():
+    """SSE health stream — polling-compatible companion (incremental heartbeats)."""
+    import asyncio
+    import json
+
+    from fastapi.responses import StreamingResponse
+
+    async def gen():
+        from jarvis.mission_control import health_summary
+
+        while True:
+            try:
+                payload = health_summary()
+            except Exception as exc:
+                payload = {"ok": False, "error": str(exc)}
+            yield f"event: health\ndata: {json.dumps(payload)}\n\n"
+            await asyncio.sleep(8)
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
+
+
 @app.get("/api/mission-control/activity/export")
 def mission_control_activity_export(limit: int = 200):
     from fastapi.responses import PlainTextResponse

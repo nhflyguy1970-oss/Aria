@@ -20,7 +20,7 @@
   }
 
   function goMc(tab) {
-    if (!goView("workstation")) return false;
+    if (!goView("workstation") && !goView("mission")) return false;
     setTimeout(() => {
       if (typeof window.switchMcTab === "function") window.switchMcTab(tab);
       else toast(`Mission Control tab unavailable: ${tab}`);

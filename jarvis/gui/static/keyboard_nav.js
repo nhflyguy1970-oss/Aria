@@ -133,8 +133,15 @@
         return;
       }
 
-      // Ctrl+Shift+M — mini chat
+      // Ctrl+Shift+M — Mission Control
       if (mod && e.shiftKey && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        window.AriaActions?.goMc?.("overview") || window.switchToView?.("workstation");
+        return;
+      }
+
+      // Ctrl+Shift+K — mini chat
+      if (mod && e.shiftKey && e.key.toLowerCase() === "k") {
         e.preventDefault();
         window.AriaMiniChat?.toggle?.();
         return;

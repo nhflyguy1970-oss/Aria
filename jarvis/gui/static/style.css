@@ -4433,10 +4433,16 @@ body.light-theme .service-row--action:hover { background: rgba(0, 0, 0, 0.05); }
 
 /* Mission Control console */
 .mc-page-header { margin-bottom: 0.75rem; }
-.mc-toolbar { display: flex; gap: 0.5rem; align-items: center; margin: 0.5rem 0; }
-.mc-tab-nav { display: flex; flex-wrap: wrap; gap: 0.35rem; margin: 0.75rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+.mc-toolbar { display: flex; gap: 0.5rem; align-items: center; margin: 0.5rem 0; flex-wrap: wrap; }
+.mc-tab-nav { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.75rem 0 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; }
+.mc-tab-group { display: flex; flex-direction: column; gap: 0.35rem; }
+.mc-tab-group__label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.mc-tab-group__tabs { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.mc-tab-group__toggle { align-self: flex-start; }
+.mc-experimental-note { width: 100%; margin: 0 0 0.25rem; }
 .mc-tab { background: transparent; border: 1px solid var(--border); color: var(--text); padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.78rem; cursor: pointer; }
-.mc-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(212, 160, 84, 0.1); }
+.mc-tab.active, .mc-tab[aria-selected="true"] { border-color: var(--accent); color: var(--accent); background: rgba(212, 160, 84, 0.1); }
+.mc-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .mc-tab-body { min-height: 200px; }
 .mc-hero { display: flex; flex-wrap: wrap; gap: 1rem; padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 8px; background: rgba(212, 160, 84, 0.08); border: 1px solid var(--border); }
 .mc-hero-stat { display: flex; flex-direction: column; min-width: 100px; }
@@ -4448,6 +4454,29 @@ body.light-theme .service-row--action:hover { background: rgba(0, 0, 0, 0.05); }
 .mc-badge { font-size: 0.72rem; padding: 0.1rem 0.4rem; border-radius: 4px; margin-left: 0.25rem; }
 .mc-badge--ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
 .mc-badge--down { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+.mc-badge--info { background: rgba(96, 165, 250, 0.2); color: #93c5fd; }
+.mc-health-brief { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; padding: 1rem 1.1rem; margin-bottom: 1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--panel); }
+.mc-health-brief__kicker { margin: 0; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted, #94a3b8); }
+.mc-health-brief__overall { margin: 0.15rem 0 0.5rem; font-size: 1.35rem; }
+.mc-health-brief__meta { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.5rem 1rem; margin: 0.75rem 0; }
+.mc-health-brief__meta dt { font-size: 0.7rem; color: var(--muted, #94a3b8); }
+.mc-health-brief__meta dd { margin: 0; font-size: 0.88rem; }
+.mc-health-brief__cta { display: flex; flex-direction: column; gap: 0.4rem; min-width: 160px; }
+.mc-sev--ok { border-color: rgba(34, 197, 94, 0.45); }
+.mc-sev--warn { border-color: rgba(250, 204, 21, 0.55); }
+.mc-sev--critical { border-color: rgba(248, 113, 113, 0.65); }
+.mc-sev--info { border-color: rgba(96, 165, 250, 0.45); }
+.mc-advisor-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.5rem; }
+.mc-mini-charts, .mc-product-bridge { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; align-items: center; }
+.mc-mini-chart { display: flex; flex-direction: column; gap: 0.2rem; min-width: 110px; padding: 0.5rem 0.65rem; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.mc-spark { color: var(--accent); }
+.mc-empty { padding: 1.25rem; border: 1px dashed var(--border); border-radius: 8px; text-align: left; }
+.mc-empty h3 { margin: 0 0 0.35rem; font-size: 0.95rem; }
+.mc-predict { padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
+.mc-predict:last-child { border-bottom: none; }
+.mc-inference-actions, .mc-recovery-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem; align-items: center; }
+.mc-platform-link { border-style: dashed; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 .mc-route-ok td { background: rgba(34, 197, 94, 0.08); }
 .mc-route-fallback td { background: rgba(250, 204, 21, 0.12); }
 .mc-route-slow td { background: rgba(251, 146, 60, 0.12); }

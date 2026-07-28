@@ -17,7 +17,8 @@
     const views = [
       ["chat", "Chat", "conversation ai"],
       ["dashboard", "Dashboard", "home overview"],
-      ["workstation", "Mission Control", "mc operator acm"],
+      ["workstation", "Mission Control", "mc operator acm health ctrl+shift+m"],
+      ["mission", "Mission Control", "mc operator health infrastructure"],
       ["planner", "Planner", "tasks todo"],
       ["calendar", "Calendar", "schedule"],
       ["flytying", "Fly tying", "flies patterns"],
@@ -49,17 +50,40 @@
   }
 
   function registerMissionControl() {
-    const tabs = [
-      "overview", "routing", "timeline", "intent_analytics", "release", "connection",
-      "applications", "inference", "memory", "knowledge", "databases", "hardware",
-      "jobs", "activity", "performance", "settings", "recovery",
-    ];
+    const labels = {
+      overview: "Overview",
+      routing: "Routing",
+      timeline: "Timeline",
+      intent_analytics: "Intent Analytics",
+      release: "Release",
+      connection: "Connection",
+      applications: "Applications",
+      inference: "Inference",
+      memory: "Memory",
+      knowledge: "Knowledge",
+      databases: "Databases",
+      hardware: "Hardware",
+      jobs: "Queue Snapshot",
+      activity: "Operations Event Log",
+      performance: "Performance",
+      settings: "Settings",
+      recovery: "Recovery",
+    };
+    const tabs = Object.keys(labels);
     reg(tabs.map((tab) =>
-      mk(`mc:${tab}`, `Mission Control · ${tab.replace(/_/g, " ")}`, "Mission Control", `mc ${tab}`, () => A().goMc(tab), {
+      mk(`mc:${tab}`, `Mission Control · ${labels[tab]}`, "Mission Control", `mc ${tab} ${labels[tab]}`, () => A().goMc(tab), {
         mode: "system",
-        hint: "MC",
+        hint: tab === "overview" ? "Ctrl+Shift+M" : "MC",
+        shortcut: tab === "overview" ? "Ctrl+Shift+M" : undefined,
       })
     ));
+    reg([
+      mk("mc:open", "Open Mission Control", "Mission Control", "health infrastructure console workstation mission", () => A().goMc("overview"), {
+        mode: "system",
+        hint: "Ctrl+Shift+M",
+        shortcut: "Ctrl+Shift+M",
+      }),
+    ]);
   }
 
   function registerChatActions() {

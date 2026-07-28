@@ -20,15 +20,34 @@ const MC_TABS = [
   "recovery",
 ];
 
-let _mcData = null;
-let _mcTab = "overview";
-let _mcPoll = null;
-let _mcRoutingLive = false;
-let _mcRoutingPoll = null;
-let _mcRoutingFilter = "";
-let _mcRoutingSearch = "";
+/** Shared with mission_control_ux.js via window (let bindings are not cross-script). */
+window._mcData = window._mcData || null;
+window._mcTab = window._mcTab || "overview";
+window._mcPoll = window._mcPoll || null;
+window._mcRoutingLive = false;
+window._mcRoutingPoll = null;
+window._mcRoutingFilter = "";
+window._mcRoutingSearch = "";
 /** Monotonic token so slow async tab loads cannot overwrite a newer tab. */
 let _mcRenderGen = 0;
+// Compat aliases used throughout this file
+var _mcData = window._mcData;
+var _mcTab = window._mcTab;
+var _mcPoll = window._mcPoll;
+var _mcRoutingLive = window._mcRoutingLive;
+var _mcRoutingPoll = window._mcRoutingPoll;
+var _mcRoutingFilter = window._mcRoutingFilter;
+var _mcRoutingSearch = window._mcRoutingSearch;
+
+function mcSyncGlobals() {
+  window._mcData = _mcData;
+  window._mcTab = _mcTab;
+  window._mcPoll = _mcPoll;
+  window._mcRoutingLive = _mcRoutingLive;
+  window._mcRoutingPoll = _mcRoutingPoll;
+  window._mcRoutingFilter = _mcRoutingFilter;
+  window._mcRoutingSearch = _mcRoutingSearch;
+}
 
 function mc$(id) {
   // Accept both "id" and "#id" — many call sites use CSS-selector style.
@@ -550,7 +569,7 @@ async function renderMcTab(tab) {
     let html = "";
     try {
       const conn = await mcFetch("/api/runtime/connection");
-      html = renderConnection(conn);
+      html = (window.renderConnection || renderConnection)(conn);
     } catch (e) {
       html = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
@@ -615,16 +634,16 @@ async function renderMcTab(tab) {
   let html = "";
   switch (tab) {
     case "overview":
-      html = renderOverview(_mcData);
+      html = (window.renderOverview || renderOverview)(_mcData);
       break;
     case "applications":
-      html = renderApplications(_mcData);
+      html = (window.renderApplications || renderApplications)(_mcData);
       break;
     case "inference":
-      html = renderInference(_mcData);
+      html = (window.renderInference || renderInference)(_mcData);
       break;
     case "memory":
-      html = renderMemory(_mcData);
+      html = (window.renderMemory || renderMemory)(_mcData);
       break;
     case "knowledge":
       html = renderKnowledge(_mcData);
@@ -636,19 +655,19 @@ async function renderMcTab(tab) {
       html = renderHardware(_mcData);
       break;
     case "jobs":
-      html = renderJobs(_mcData);
+      html = (window.renderJobs || renderJobs)(_mcData);
       break;
     case "activity":
-      html = await renderActivity(_mcData);
+      html = await (window.renderActivity || renderActivity)(_mcData);
       break;
     case "performance":
-      html = renderPerformance(_mcData);
+      html = (window.renderPerformance || renderPerformance)(_mcData);
       break;
     case "settings":
       html = renderSettings(_mcData);
       break;
     case "recovery":
-      html = renderRecovery(_mcData);
+      html = (window.renderRecovery || renderRecovery)(_mcData);
       break;
     default:
       html = "<p class='muted'>Unknown tab</p>";
@@ -796,6 +815,7 @@ function wireMcTabActions() {
 
 function switchMcTab(tab) {
   _mcTab = tab;
+  mcSyncGlobals();
   document.querySelectorAll(".mc-tab").forEach((el) => {
     el.classList.toggle("active", el.dataset.mcTab === tab);
   });
@@ -813,6 +833,8 @@ async function loadMissionControl() {
     } catch (_) {
       _mcData.connections = { backend: "unavailable", health: "error", node_count: 0, relationship_count: 0 };
     }
+    if (window._mcTab && window._mcTab !== _mcTab) _mcTab = window._mcTab;
+    mcSyncGlobals();
     if (status) status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
     switchMcTab(_mcTab);
   } catch (e) {
@@ -821,6 +843,7 @@ async function loadMissionControl() {
 }
 
 function initMissionControl() {
+  if (window._mcTab) _mcTab = window._mcTab;
   const nav = mc$("mcTabNav");
   if (nav && !nav.dataset.wired) {
     nav.dataset.wired = "1";
@@ -857,7 +880,27 @@ function initMissionControl() {
 }
 
 window.initWorkstation = initMissionControl;
+window.initMissionControl = initMissionControl;
 window.switchMcTab = switchMcTab;
+window.loadMissionControl = loadMissionControl;
+window.renderOverview = renderOverview;
+window.renderJobs = renderJobs;
+window.renderActivity = renderActivity;
+window.renderInference = renderInference;
+window.renderPerformance = renderPerformance;
+window.renderRecovery = renderRecovery;
+window.renderApplications = renderApplications;
+window.renderMemory = renderMemory;
+window.renderConnection = renderConnection;
+window.renderMcTab = renderMcTab;
+window.mcFetch = mcFetch;
+window.mcCard = mcCard;
+window.mcGrid = mcGrid;
+window.mcBadge = mcBadge;
+window.mcEsc = mcEsc;
+window.renderRoutingOverviewCard = renderRoutingOverviewCard;
+window.renderNotifications = renderNotifications;
+window.renderOperationalAdvisor = renderOperationalAdvisor;
 
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll("[data-ws-nav]").forEach((btn) => {

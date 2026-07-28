@@ -187,11 +187,11 @@
           <p class="sidebar-section-title">Mission Control</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body ws-menu">
-          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstation">Console</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstation">Overview</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="chat-status">Status</button>
-          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationActivityList">Activity</button>
-          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationConnection">Runtime Connection</button>
-          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationInference">Models &amp; Services</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationActivityList">Operations Event Log</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationConnection">Connection</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationInference">Inference</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="memory">Memory</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="audit">Repair &amp; Logs</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="actions">Report</button>
@@ -359,7 +359,7 @@
             <button type="button" id="themeToggle" class="light-theme-btn ghost-btn small">Light theme</button>
             <button type="button" id="toggleDockBtn" class="ghost-btn small" title="Quick Access Dock under the header">Hide dock</button>
             <button type="button" id="toggleStatusBarBtn" class="ghost-btn small" title="Bottom status bar">Hide status bar</button>
-            <button type="button" id="toggleMiniChatBtn" class="ghost-btn small" title="Floating mini chat">Hide mini chat</button>
+            <button type="button" id="toggleMiniChatBtn" class="ghost-btn small" title="Floating mini chat (Ctrl+Shift+K)">Hide mini chat</button>
             <button type="button" id="splitViewToggleBtn" class="ghost-btn small" title="Split view (Ctrl+\)" aria-pressed="false">Split view</button>
           </div>
           <p class="sidebar-mini-label">Accent color</p>
@@ -1592,20 +1592,23 @@
         </section>
       </div>
 
-      <div id="workstationView" class="view-panel hidden">
+      <div id="workstationView" class="view-panel hidden" data-view-alias="mission">
         <div class="mc-page-header">
-          <h2>AI Platform Mission Control</h2>
-          <p class="muted">Operational console — runtime, services, applications, health, and activity.</p>
+          <h2>Mission Control</h2>
+          <p class="muted">Infrastructure health console — providers, runtime, hardware, recovery, routing, and performance. Not Job Center or Activity Center.</p>
           <div class="mc-toolbar">
             <button type="button" id="mcRefreshBtn" class="ghost-btn small">Refresh</button>
+            <button type="button" id="mcOpenJobCenterBtn" class="ghost-btn small" title="Open Job Center">Open Job Center</button>
+            <button type="button" id="mcOpenActivityCenterBtn" class="ghost-btn small" title="Open Activity Center">Open Activity Center</button>
             <button type="button" id="mcOpenChatBtn" class="ghost-btn small" title="Open Chat">Chat</button>
             <button type="button" id="mcOpenAuditBtn" class="ghost-btn small" title="Open System audit">Audit</button>
             <button type="button" id="mcOpenDashboardBtn" class="ghost-btn small" title="Open Dashboard">Dashboard</button>
-            <span id="mcLoadStatus" class="muted"></span>
+            <span class="muted tiny" title="Keyboard shortcut">Ctrl+Shift+M</span>
+            <span id="mcLoadStatus" class="muted" aria-live="polite"></span>
           </div>
           <nav id="mcTabNav" class="mc-tab-nav" aria-label="Mission Control sections"></nav>
         </div>
-        <div id="mcTabBody" class="mc-tab-body"></div>
+        <div id="mcTabBody" class="mc-tab-body" role="tabpanel" tabindex="0"></div>
       </div>
 
       <div id="plannerView" class="view-panel hidden">
@@ -2201,7 +2204,8 @@
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> — Activity Center</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> — Automation Home</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> — View Paths (navigation shortcuts)</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> — floating mini chat</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> — Mission Control</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> — floating mini chat</li>
             <li><kbd>Ctrl</kbd>+<kbd>\</kbd> — split view</li>
             <li><kbd>Ctrl</kbd>+<kbd>,</kbd> — settings · <kbd>Ctrl</kbd>+<kbd>/</kbd> — this panel</li>
             <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — send · <kbd>Ctrl</kbd>+<kbd>L</kbd> — clear chat</li>
@@ -2544,7 +2548,7 @@
     </span>
   </footer>
 
-  <button type="button" id="miniChatFab" class="mini-chat-fab" title="Mini chat (Ctrl+Shift+M)" aria-label="Open mini chat">✦</button>
+  <button type="button" id="miniChatFab" class="mini-chat-fab" title="Mini chat (Ctrl+Shift+K)" aria-label="Open mini chat">✦</button>
   <div id="miniChatPanel" class="mini-chat-panel hidden" role="dialog" aria-label="Mini chat">
     <div class="mini-chat-head">
       <strong>Quick Aria</strong>
@@ -2644,7 +2648,8 @@
   <script type="module" src="/static/modules/health.mjs?v=5.16.72"></script>
   <script src="/static/planner.js?v=5.16.170"></script>
   <script src="/static/planner_live.js?v=1.0.0"></script>
-  <script src="/static/mission_control.js?v=1.0.15"></script>
+  <script src="/static/mission_control.js?v=1.1.0"></script>
+  <script src="/static/mission_control_ux.js?v=1.0.0"></script>
   <script src="/static/calendar.js?v=5.17.0"></script>
   <script src="/static/flytying.js?v=5.16.106"></script>
 
