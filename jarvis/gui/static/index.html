@@ -558,8 +558,8 @@
           <span class="voice-bar-label">Voice idle</span>
         </div>
         <span id="voiceBarMode" class="voice-bar-mode muted" title="Duplex mode"></span>
-        <button type="button" id="voiceMuteBtn" class="ghost-btn small voice-mute-btn" title="Mute read-aloud">Mute TTS</button>
-        <select id="duplexModeSelect" class="ghost-btn small" title="Duplex voice mode">
+        <button type="button" id="voiceMuteBtn" class="ghost-btn small voice-mute-btn" title="Mute speak replies" aria-pressed="false">Mute</button>
+        <select id="duplexModeSelect" class="ghost-btn small" title="Duplex voice mode" aria-label="Duplex mode">
           <option value="off">Duplex off</option>
           <option value="half" selected>Half duplex</option>
           <option value="full">Full duplex</option>
@@ -2384,17 +2384,34 @@
           <label>TTS chunk chars
             <input type="number" id="voiceTabChunkChars" class="audio-path-input small-num" value="220" min="40" max="600" />
           </label>
+          <label>Speak replies
+            <input type="checkbox" id="voiceTabSpeakReplies" />
+          </label>
+          <label>Server Whisper (mic)
+            <input type="checkbox" id="voiceTabServerWhisper" checked />
+          </label>
           <label>Interrupt on speak
             <input type="checkbox" id="voiceTabInterrupt" />
           </label>
           <label>Chunk sentences
             <input type="checkbox" id="voiceTabChunkSentences" checked />
           </label>
+          <label>Profile
+            <select id="voiceTabProfileSelect" class="personality-select" aria-label="Voice profile">
+              <option value="">— none —</option>
+            </select>
+          </label>
+          <button type="button" id="voiceTabActivateProfileBtn" class="ghost-btn small">Apply profile</button>
           <button type="button" id="voiceTabSaveBtn" class="ghost-btn small">Save settings</button>
           <button type="button" id="voiceTabRefreshBtn" class="ghost-btn small">Refresh</button>
+          <button type="button" id="voiceTabRecoveryBtn" class="ghost-btn small" title="Run recovery advisor">Recovery</button>
           <button type="button" id="routerWarmBtn" class="ghost-btn small" title="Warm FunctionGemma router">Warm router</button>
           <button type="button" id="voiceSmokeBtn" class="ghost-btn small" title="Run voice smoke checks">Voice smoke</button>
           <span id="routerStatusPill" class="muted small">Router: …</span>
+        </div>
+        <div class="voice-tab-recovery">
+          <h3 class="life-subheading">Recovery</h3>
+          <p id="voiceTabRecovery" class="muted">Click Recovery to diagnose mic, Whisper, Piper, and Cloud Live.</p>
         </div>
         <div class="voice-tab-cloud">
           <h3 class="life-subheading">Cloud live</h3>
@@ -2435,9 +2452,9 @@
       <div id="settingsModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
         <div class="crop-modal-card profile-modal-card">
           <h3 id="settingsModalTitle">Voice &amp; chat settings</h3>
-          <label class="toggle-row"><span>Speak replies (auto TTS)</span><input type="checkbox" id="settingsSpeakToggle" /><span class="toggle-slider"></span></label>
-          <label class="toggle-row"><span>Chat mic → server Whisper</span><input type="checkbox" id="serverWhisperToggle" checked /><span class="toggle-slider"></span></label>
-          <p class="muted">Wake word STT defaults to <code>small</code> via env. Audio tab has full Whisper + Sound Blaster controls.</p>
+          <label class="toggle-row"><span>Speak replies</span><input type="checkbox" id="settingsSpeakToggle" /><span class="toggle-slider"></span></label>
+          <label class="toggle-row"><span>Server Whisper (mic works without browser STT)</span><input type="checkbox" id="serverWhisperToggle" checked /><span class="toggle-slider"></span></label>
+          <p class="muted">One Voice pipeline for PTT, wake, Cloud Live, and Chat. Mute and Speak replies are the same preference. Audio Studio is for production audio.</p>
           <button type="button" id="settingsCloseBtn" class="ghost-btn">Close</button>
         </div>
       </div>
@@ -2457,6 +2474,8 @@
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> — View Paths (navigation shortcuts)</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> — Mission Control</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>.</kbd> — Models Home</li>
+            <li><kbd>Space</kbd> (hold on mic) — push-to-talk / server Whisper</li>
+            <li>Voice strip — Mute / Speak replies, Stop, Duplex, Cloud Live</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> — floating mini chat</li>
             <li><kbd>Ctrl</kbd>+<kbd>\</kbd> — split view</li>
             <li><kbd>Ctrl</kbd>+<kbd>,</kbd> — settings · <kbd>Ctrl</kbd>+<kbd>/</kbd> — this panel</li>

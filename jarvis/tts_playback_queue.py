@@ -99,3 +99,13 @@ def wait_tts_idle(timeout: float | None = 30.0) -> bool:
 
 def tts_queue_busy() -> bool:
     return not _IDLE.is_set()
+
+
+def get_queue_status() -> dict:
+    with _PENDING_LOCK:
+        pending = _PENDING
+    return {
+        "pending": pending,
+        "busy": tts_queue_busy(),
+        "idle": _IDLE.is_set(),
+    }

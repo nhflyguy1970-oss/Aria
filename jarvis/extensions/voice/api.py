@@ -10,18 +10,18 @@ def register_routes(app, assistant) -> None:
     @app.get("/api/voice/settings")
     def voice_settings_get():
         from jarvis.stt import stt_status
-        from jarvis.voice_settings import load_voice_settings
+        from jarvis.voice_product.settings import load_unified_settings
 
-        return {"ok": True, **load_voice_settings(), "stt": stt_status()}
+        return {"ok": True, **load_unified_settings(), "stt": stt_status()}
 
     @app.post("/api/voice/settings")
     async def voice_settings_set(request: Request):
         from jarvis.stt import stt_status
-        from jarvis.voice_settings import load_voice_settings, save_voice_settings
+        from jarvis.voice_product.settings import load_unified_settings, save_unified_settings
 
         body = await request.json()
-        before = load_voice_settings().get("stt_backend")
-        saved = save_voice_settings(body)
+        before = load_unified_settings().get("stt_backend")
+        saved = save_unified_settings(body)
         note = ""
         if before != saved.get("stt_backend") and (body.get("stt_backend") or "").strip().lower() == "realtimestt":
             note = "RealTimeSTT not ready — kept Whisper"

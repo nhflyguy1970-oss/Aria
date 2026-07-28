@@ -60,3 +60,45 @@ def emit_memory_updated(*, action: str, entry_id: str | None = None) -> None:
 
 def emit_ha_state_changed(*, entity_id: str, state: str | None = None) -> None:
     emit("ha_state_changed", entity_id=entity_id, state=state)
+
+
+def emit_voice_state(state: str, *, detail: str = "", **extra) -> None:
+    """Publish voice state on the in-process bus and WebSocket hub."""
+    try:
+        from jarvis.voice_product.status_bus import set_voice_state
+
+        set_voice_state(
+            state,
+            detail=detail,
+            partial=str(extra.get("partial") or ""),
+            cloud_session=str(extra.get("cloud_session") or ""),
+            error=str(extra.get("error") or ""),
+            publish=True,
+        )
+        return
+    except Exception:
+        pass
+    emit("voice_state", state=state, detail=detail, **extra)
+    try:
+        from jarvis.ws_hub import publish as ws_publish
+
+        ws_publish("voice_state", state=state, detail=detail, **extra)
+    except Exception:
+        pass
+
+
+def emit_stt_partial(text: str, *, final: bool = False) -> None:
+    try:
+        from jarvis.voice_product.status_bus import emit_stt_partial as bus_partial
+
+        bus_partial(text, final=final)
+        return
+    except Exception:
+        pass
+    emit("stt_partial", text=text, final=final)
+    try:
+        from jarvis.ws_hub import publish as ws_publish
+
+        ws_publish("stt_partial", text=text, final=final)
+    except Exception:
+        pass

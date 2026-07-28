@@ -326,6 +326,15 @@ def apply_system_default() -> str:
     return "; ".join(msgs) if msgs else "no audio server found"
 
 
+def playback_active() -> bool:
+    """True when a tracked play_file subprocess is still running."""
+    with _PLAYBACK_LOCK:
+        proc = _PLAYBACK_PROC
+    if proc is None:
+        return False
+    return proc.poll() is None
+
+
 def stop_playback() -> None:
     """Interrupt in-progress pw-play/paplay/aplay started by play_file."""
     global _PLAYBACK_PROC

@@ -122,25 +122,85 @@
     }
   }
 
-  /* --- Speak replies (Tier 1 #2) --- */
+  /* --- Speak replies (Tier 1 #2) — unified Voice settings store --- */
+  let _speakRepliesCache = false;
+  let _serverWhisperCache = true;
+
   function speakRepliesEnabled() {
-    return localStorage.getItem(LS.speakReplies) === "1";
+    return !!_speakRepliesCache;
+  }
+
+  async function loadUnifiedVoicePrefs() {
+    try {
+      const data = await fetchJson("/api/voice/settings");
+      _speakRepliesCache = !!data.speak_replies;
+      _serverWhisperCache = data.server_whisper !== false;
+      // Migrate one-time from localStorage if server never set
+      const lsSpeak = localStorage.getItem(LS.speakReplies);
+      const lsWhisper = localStorage.getItem(LS.serverWhisper);
+      const patch = {};
+      if (lsSpeak !== null && data.speak_replies == null) {
+        patch.speak_replies = lsSpeak === "1";
+      }
+      if (lsWhisper === "0" && data.server_whisper !== false) {
+        /* keep server default */
+      }
+      if (Object.keys(patch).length) {
+        await fetch("/api/voice/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+        if (patch.speak_replies != null) _speakRepliesCache = !!patch.speak_replies;
+      }
+    } catch (_) {
+      _speakRepliesCache = localStorage.getItem(LS.speakReplies) === "1";
+      _serverWhisperCache = localStorage.getItem(LS.serverWhisper) !== "0";
+    }
+  }
+
+  async function persistSpeakReplies(on) {
+    _speakRepliesCache = !!on;
+    localStorage.setItem(LS.speakReplies, on ? "1" : "0");
+    try {
+      await fetch("/api/voice/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ speak_replies: !!on }),
+      });
+    } catch (_) {}
+  }
+
+  async function persistServerWhisper(on) {
+    _serverWhisperCache = !!on;
+    localStorage.setItem(LS.serverWhisper, on ? "1" : "0");
+    try {
+      await fetch("/api/voice/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ server_whisper: !!on }),
+      });
+    } catch (_) {}
+    window.jarvisRebindChatMic?.();
   }
 
   function initSpeakToggle() {
     const cb = $("speakRepliesToggle");
     const settingsCb = $("settingsSpeakToggle");
     if (!cb && !settingsCb) return;
-    const enabled = speakRepliesEnabled();
-    if (cb) cb.checked = enabled;
-    if (settingsCb) settingsCb.checked = enabled;
     const sync = (src) => {
       const on = !!src.checked;
-      localStorage.setItem(LS.speakReplies, on ? "1" : "0");
+      persistSpeakReplies(on);
       if (cb && src !== cb) cb.checked = on;
       if (settingsCb && src !== settingsCb) settingsCb.checked = on;
       window.syncMuteButton?.();
     };
+    loadUnifiedVoicePrefs().then(() => {
+      const enabled = speakRepliesEnabled();
+      if (cb) cb.checked = enabled;
+      if (settingsCb) settingsCb.checked = enabled;
+      window.syncMuteButton?.();
+    });
     cb?.addEventListener("change", () => sync(cb));
     settingsCb?.addEventListener("change", () => sync(settingsCb));
   }
@@ -159,6 +219,9 @@
       window.showAriaToast?.(err.message || "Could not speak reply", "err", 4000);
     }
   };
+
+  window.jarvisSpeakRepliesEnabled = speakRepliesEnabled;
+  window.jarvisUseServerWhisper = () => !!_serverWhisperCache;
 
   /* --- Collapsible sidebar (Tier 1 #5, Tier 4 #40 mobile accordion) --- */
   function initCollapsibleSections() {
@@ -268,19 +331,23 @@
   let pttActive = false;
 
   function useServerWhisper() {
+    if (typeof window.jarvisUseServerWhisper === "function") return window.jarvisUseServerWhisper();
     return localStorage.getItem(LS.serverWhisper) !== "0";
   }
 
   async function chatMicDown() {
     if (!useServerWhisper()) return false;
     try {
+      window.setVoiceBarState?.("listening");
       const form = new FormData();
       form.append("source", "default");
       const data = await fetchJson("/api/audio/record/ptt/start", { method: "POST", body: form });
       if (data.ok) { pttSession = data.session_id; pttActive = true; return true; }
       window.showAriaToast?.(data.message || data.error || "Could not start push-to-talk", "err", 4000);
+      window.setVoiceBarState?.("idle");
     } catch (err) {
       window.showAriaToast?.(err.message || "Could not start push-to-talk", "err", 4000);
+      window.setVoiceBarState?.("idle");
     }
     return false;
   }
@@ -292,10 +359,27 @@
     form.append("session_id", pttSession);
     form.append("transcribe", "1");
     try {
+      window.setVoiceBarState?.("thinking");
       const data = await fetchJson("/api/audio/record/ptt/stop", { method: "POST", body: form });
       pttSession = null;
       if (data.transcript) {
         const text = data.transcript.trim();
+        // Prefer shared utterance pipeline when intent routing is desired
+        try {
+          const routeRes = await fetch(`/api/voice/intent/preview?q=${encodeURIComponent(text)}`);
+          const routeData = await routeRes.json().catch(() => ({}));
+          if (routeData.route) {
+            const utt = await fetch("/api/voice/utterance", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text, source: "ptt", speak: true }),
+            }).then((r) => r.json());
+            if (utt.navigate) window.switchToView?.(utt.navigate);
+            if (utt.reply) window.showAriaToast?.(utt.reply, "ok", 2500);
+            window.setVoiceBarState?.("idle");
+            return;
+          }
+        } catch (_) {}
         if (text && typeof window.sendMessage === "function") {
           window.sendMessage(text);
         } else {
@@ -306,8 +390,10 @@
           }
         }
       }
+      window.setVoiceBarState?.("idle");
     } catch (err) {
       window.showAriaToast?.(err.message || "Push-to-talk failed", "err", 5000);
+      window.setVoiceBarState?.("idle");
     }
   }
 
@@ -315,9 +401,29 @@
     const mic = $("micBtn");
     const ptt = $("pttBtn");
     const cb = $("serverWhisperToggle");
+    const bindMicHold = () => {
+      if (!mic || mic.dataset.serverPttBound === "1") return;
+      if (!useServerWhisper()) return;
+      mic.dataset.serverPttBound = "1";
+      mic.disabled = false;
+      mic.title = "Hold for local Whisper (server) — works without browser STT";
+      let holding = false;
+      mic.addEventListener("mousedown", async (e) => {
+        if (e.button !== 0) return;
+        if (!useServerWhisper()) return;
+        holding = await chatMicDown();
+        if (holding) mic.classList.add("listening");
+      });
+      mic.addEventListener("mouseup", () => {
+        if (holding) { mic.classList.remove("listening"); chatMicUp(); holding = false; }
+      });
+    };
     if (cb) {
       cb.checked = useServerWhisper();
-      cb.addEventListener("change", () => localStorage.setItem(LS.serverWhisper, cb.checked ? "1" : "0"));
+      cb.addEventListener("change", () => {
+        persistServerWhisper(cb.checked);
+        bindMicHold();
+      });
     }
     if (ptt) {
       ptt.addEventListener("mousedown", async () => {
@@ -327,18 +433,8 @@
       ptt.addEventListener("mouseup", () => { ptt.classList.remove("listening"); chatMicUp(); });
       ptt.addEventListener("mouseleave", () => { if (pttActive) { ptt.classList.remove("listening"); chatMicUp(); } });
     }
-    if (mic && useServerWhisper()) {
-      mic.title = "Hold for local Whisper (server)";
-      let holding = false;
-      mic.addEventListener("mousedown", async (e) => {
-        if (e.button !== 0) return;
-        holding = await chatMicDown();
-        if (holding) mic.classList.add("listening");
-      });
-      mic.addEventListener("mouseup", () => {
-        if (holding) { mic.classList.remove("listening"); chatMicUp(); holding = false; }
-      });
-    }
+    bindMicHold();
+    window.jarvisRebindChatMic = bindMicHold;
   }
 
   /* --- Service restart (Tier 3 #27) --- */

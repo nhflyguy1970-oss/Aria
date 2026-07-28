@@ -170,6 +170,14 @@ def enrich_snapshot(data: dict[str, Any] | None) -> dict[str, Any]:
         "latency": _series_stub("latency", (snap.get("routing_stats") or {}).get("average_latency_ms")),
         "queue_depth": _series_stub("queue", (snap.get("overview") or {}).get("active_jobs") or (snap.get("jobs") or {}).get("active_count")),
     }
+    try:
+        from jarvis.voice_product.mission_bridge import voice_mission_panel
+
+        snap["voice"] = voice_mission_panel()
+        vq = (snap["voice"].get("queue") or {}).get("pending")
+        snap["perf_series"]["voice_queue"] = _series_stub("voice_queue", vq)
+    except Exception:
+        snap["voice"] = {"product": "Voice", "state": "unknown"}
     return snap
 
 

@@ -28,18 +28,34 @@ def test_tts_stream_chunks():
     assert all(len(c) <= 40 for c in chunks)
 
 
-def test_cloud_live_openai_session_mock():
+def test_cloud_live_openai_rejected_without_webrtc():
+    from jarvis.cloud_live_voice import start_live_session
+
+    with patch(
+        "jarvis.cloud_live_voice.cloud_live_status",
+        return_value={"available": True, "provider": "openai_realtime", "openai_key": True},
+    ):
+        out = start_live_session(provider="openai_realtime")
+    assert out.get("ok") is False
+    assert "WebRTC" in (out.get("message") or "")
+
+
+def test_cloud_live_gemini_session_mock():
     from jarvis.cloud_live_voice import start_live_session
 
     fake = {
         "ok": True,
-        "provider": "openai_realtime",
-        "client_secret": "ek_test",
-        "model": "gpt-4o-realtime-preview",
+        "provider": "gemini_live",
+        "model": "models/gemini-test",
+        "bridge_ws": "/ws/gemini-live/abc",
     }
-    with patch("jarvis.cloud_live_voice.cloud_live_status", return_value={"available": True, "provider": "openai_realtime", "openai_key": True}):
-        with patch("jarvis.cloud_live_voice._create_openai_realtime_session", return_value=fake):
-            out = start_live_session()
+    with patch(
+        "jarvis.cloud_live_voice.cloud_live_status",
+        return_value={"available": True, "provider": "gemini_live"},
+    ):
+        with patch("jarvis.cloud_live_voice._create_gemini_live_session", return_value=fake):
+            out = start_live_session(provider="gemini_live")
     assert out.get("ok") is True
-    assert out.get("client_secret") == "ek_test"
+    assert out.get("provider") == "gemini_live"
     assert out.get("session_id")
+    assert out.get("bridge_ws")

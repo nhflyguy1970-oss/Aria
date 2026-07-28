@@ -59,12 +59,18 @@
   function bindMic() {
     const micBtn = $("micBtn");
     if (!micBtn) return;
-    if (!("webkitSpeechRecognition" in window || "SpeechRecognition" in window)) {
-      micBtn.title = "Voice not supported in this browser";
-      micBtn.disabled = true;
+    const hasBrowserStt = "webkitSpeechRecognition" in window || "SpeechRecognition" in window;
+    const useBrowserMicStt = () =>
+      (typeof window.jarvisUseServerWhisper === "function"
+        ? !window.jarvisUseServerWhisper()
+        : localStorage.getItem("jarvis_chat_server_whisper") === "0");
+
+    // Never disable mic when server Whisper can run — PTT is bound in movie_tiers.js
+    micBtn.disabled = false;
+    if (!hasBrowserStt) {
+      micBtn.title = "Hold for server Whisper (browser STT unavailable)";
       return;
     }
-    const useBrowserMicStt = () => localStorage.getItem("jarvis_chat_server_whisper") === "0";
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
@@ -96,8 +102,9 @@
           recognition.start();
         }
       });
+      micBtn.title = "Click for browser speech recognition";
     } else {
-      micBtn.title = micBtn.title || "Hold for server Whisper (see Settings)";
+      micBtn.title = "Hold for server Whisper (see Settings)";
     }
   }
 

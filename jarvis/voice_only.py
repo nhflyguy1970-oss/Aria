@@ -43,8 +43,8 @@ def speak_max_chars() -> int:
 
 
 def speak_text(text: str, *, assistant=None) -> str:
-    """Generate Piper audio and play through the default sink."""
-    from jarvis.events import emit_voice_state
+    """Generate Piper audio via the shared Voice engine."""
+    from jarvis.voice_product.engine import speak_text as engine_speak
 
     cleaned = strip_for_speech(text)
     if not cleaned:
@@ -52,19 +52,11 @@ def speak_text(text: str, *, assistant=None) -> str:
     limit = speak_max_chars()
     if len(cleaned) > limit:
         cleaned = cleaned[: limit - 3].rstrip() + "…"
-    emit_voice_state("speaking", detail="voice-only")
-    try:
-        if assistant is None:
-            from jarvis.assistant_instance import get_assistant
-
-            assistant = get_assistant()
-        path = assistant.audio.generate(cleaned, auto_play=True)
-        if str(path).startswith("ERROR"):
-            log.warning("TTS failed: %s", path)
-            return ""
-        return str(path)
-    finally:
-        emit_voice_state("idle")
+    result = engine_speak(cleaned, assistant=assistant, force=True, source="cli", queue=True)
+    if not result.get("ok"):
+        log.warning("TTS failed: %s", result.get("message"))
+        return ""
+    return str(result.get("audio_path") or "")
 
 
 def voice_chat_processor(message: str, voice: bool = True, *, assistant=None) -> dict[str, Any]:
@@ -168,15 +160,10 @@ def _handle_confirm_followup(text: str, assistant) -> bool:
 
 
 def process_utterance(text: str, *, assistant=None) -> dict[str, Any]:
-    from jarvis.assistant_instance import get_assistant
+    """Delegate to the shared Voice engine (same pipeline as PTT / API / wake)."""
+    from jarvis.voice_product.engine import process_utterance as engine_process
 
-    assistant = assistant or get_assistant()
-    cleaned = (text or "").strip()
-    if not cleaned:
-        return {"ok": False, "message": "Empty transcript"}
-    if _handle_confirm_followup(cleaned, assistant):
-        return {"ok": True, "message": "confirmation handled"}
-    return voice_chat_processor(cleaned, voice=True, assistant=assistant)
+    return engine_process(text, assistant=assistant, source="cli")
 
 
 def run_ptt_loop(*, assistant=None) -> None:

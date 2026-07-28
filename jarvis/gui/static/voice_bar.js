@@ -141,7 +141,10 @@ function syncMuteButton() {
   const speakCb = document.getElementById("speakRepliesToggle");
   if (speakCb) _voiceMuted = !speakCb.checked;
   if (!btn) return;
-  btn.textContent = _voiceMuted ? "Muted" : "Speak on";
+  // Coherent Speak model: Mute / Speak on (not inverted "Speak on" when unmuted)
+  btn.textContent = _voiceMuted ? "Speak replies" : "Mute";
+  btn.title = _voiceMuted ? "Enable speak replies" : "Mute speak replies";
+  btn.setAttribute("aria-pressed", _voiceMuted ? "true" : "false");
   btn.classList.toggle("active", _voiceMuted);
   if (_voiceMuted) setVoiceBarState("muted");
 }
@@ -420,7 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
       _voiceMuted = !_voiceMuted;
     }
     syncMuteButton();
-    showToast(_voiceMuted ? "Auto-speak muted" : "Auto-speak on", "info");
+    showToast(_voiceMuted ? "Speak replies muted" : "Speak replies on", "info");
   });
 
   document.getElementById("speakRepliesToggle")?.addEventListener("change", syncMuteButton);

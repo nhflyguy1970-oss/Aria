@@ -78,6 +78,7 @@ def cloud_live_status() -> dict[str, Any]:
         )
     enabled = cloud_live_voice_enabled()
     provider = _preferred_provider(openai=openai_raw, gemini=gemini_raw) if enabled else ""
+    # OpenAI Realtime is never preferred until WebRTC client exists
     if provider == "openai_realtime" and not OPENAI_WEBRTC_CLIENT_READY:
         if gemini:
             provider = "gemini_live"
@@ -85,16 +86,16 @@ def cloud_live_status() -> dict[str, Any]:
             provider = ""
     key_hint = ""
     if enabled and not provider:
-        if openai_raw and not openai:
-            key_hint = " OpenAI key must start with sk- (Integrations → re-save)."
+        if openai_raw and not openai and not gemini:
+            key_hint = " OpenAI key present but WebRTC client is not ready — add a Gemini key."
         elif gemini_raw and not gemini:
             key_hint = " Gemini key looks invalid — re-save from Google AI Studio."
         elif gemini_key_warning:
             key_hint = gemini_key_warning
-        elif openai and OPENAI_WEBRTC_CLIENT_READY and gemini:
-            key_hint = " OpenAI Realtime needs a WebRTC client — add a Gemini key."
+        elif openai and not OPENAI_WEBRTC_CLIENT_READY and not gemini:
+            key_hint = " OpenAI Realtime needs a WebRTC client — add a Gemini API key for Cloud Live."
         else:
-            key_hint = " Add a Gemini or OpenAI API key in Integrations."
+            key_hint = " Add a Gemini API key in Integrations."
     available = bool(enabled and provider)
     if available:
         message = f"Cloud live ready ({provider.replace('_', ' ')})"
@@ -102,17 +103,21 @@ def cloud_live_status() -> dict[str, Any]:
         message = "Cloud live voice disabled — set JARVIS_CLOUD_LIVE_VOICE=1 and add API keys."
     else:
         message = f"Cloud live voice not configured.{key_hint}".strip()
+    active = sum(1 for s in _SESSIONS.values() if s.get("status") == "active")
     return {
         "available": available,
         "enabled": enabled,
         "provider": provider,
         "message": message,
         "openai_configured": openai_raw,
-        "openai_usable": openai,
+        "openai_usable": openai and OPENAI_WEBRTC_CLIENT_READY,
+        "openai_hidden": not OPENAI_WEBRTC_CLIENT_READY,
         "gemini_configured": gemini_raw,
         "gemini_usable": gemini,
         "webrtc_client": OPENAI_WEBRTC_CLIENT_READY,
+        "providers_shown": ["gemini_live"] if OPENAI_WEBRTC_CLIENT_READY is False else ["gemini_live", "openai_realtime"],
         "active_sessions": len(_SESSIONS),
+        "active": active,
     }
 
 
@@ -207,6 +212,12 @@ def get_live_session(session_id: str) -> dict[str, Any] | None:
 def mark_session_active(session_id: str) -> None:
     if session_id in _SESSIONS:
         _SESSIONS[session_id]["status"] = "active"
+        try:
+            from jarvis.events import emit_voice_state
+
+            emit_voice_state("cloud-live", detail="cloud-live", cloud_session=session_id)
+        except Exception:
+            pass
 
 
 def end_live_session(session_id: str) -> dict[str, Any]:

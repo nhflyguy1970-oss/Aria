@@ -37,7 +37,9 @@ def before_listen() -> None:
     if duplex_mode() == "full":
         return
     from jarvis.audio_device import stop_playback
+    from jarvis.tts_playback_queue import clear_tts_queue
 
+    clear_tts_queue()
     stop_playback()
 
 
@@ -47,7 +49,9 @@ def on_wake_during_playback() -> bool:
     if mode == "off":
         return False
     from jarvis.audio_device import stop_playback
+    from jarvis.tts_playback_queue import clear_tts_queue
 
+    clear_tts_queue()
     stop_playback()
     if mode == "half":
         try:
@@ -66,11 +70,15 @@ def maybe_barge_in(peak_db: float | None = None, speech_threshold_db: float | No
     if duplex_mode() != "full":
         return False
     from jarvis.audio_device import playback_active, stop_playback
+    from jarvis.tts_playback_queue import clear_tts_queue
 
     if not playback_active():
-        return False
-    if peak_db is not None and speech_threshold_db is not None and peak_db < speech_threshold_db:
-        return False
+        # Still allow interrupt of queued TTS
+        from jarvis.tts_playback_queue import tts_queue_busy
+
+        if not tts_queue_busy():
+            return False
+    clear_tts_queue()
     stop_playback()
     try:
         from jarvis.assistant_instance import get_assistant

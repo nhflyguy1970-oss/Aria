@@ -26,10 +26,12 @@ def register_routes(app, assistant):
     from jarvis.gallery_product.api import register_routes as register_gallery_product
     from jarvis.image_generation.api import register_routes as register_image_generation
     from jarvis.video_generation.api import register_routes as register_video_generation
+    from jarvis.voice_product.api import register_routes as register_voice_product
 
     register_gallery_product(app, assistant)
     register_image_generation(app, assistant)
     register_video_generation(app, assistant)
+    register_voice_product(app, assistant)
 
     @app.get("/api/journal")
     def journal_all():

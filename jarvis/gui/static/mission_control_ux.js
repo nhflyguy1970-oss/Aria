@@ -585,9 +585,22 @@
   }
 
   function voiceSummary() {
+    const v = window._mcData?.voice || {};
     const b = window._mcData?.health_brief || {};
-    const text = `Mission Control health is ${b.overall || "unknown"}. Severity ${b.severity || "unknown"}. ${b.recommended_action || ""} Next: ${b.next_step || ""}`;
+    const issues = (v.errors || v.recovery?.issues || []).slice(0, 3).map((i) => i.message || i.code).join("; ");
+    const text = v.product
+      ? `Voice is ${v.state || "unknown"}. Whisper ${v.whisper ? "ok" : "missing"}; Piper ${v.piper ? "ok" : "missing"}. Cloud Live ${v.cloud_live?.available ? "ready" : "off"}. ${issues || "No voice warnings."}`
+      : `Mission Control health is ${b.overall || "unknown"}. Severity ${b.severity || "unknown"}. ${b.recommended_action || ""} Next: ${b.next_step || ""}`;
     window.showAriaToast?.(text, "info", 8000);
+    // Prefer shared Voice engine when available
+    if (typeof window.jarvisMaybeSpeakReply === "function" && window.jarvisSpeakRepliesEnabled?.()) {
+      fetch("/api/voice/speak", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, force: true, source: "mission_control" }),
+      }).catch(() => {});
+      return;
+    }
     if (window.speechSynthesis && window.SpeechSynthesisUtterance) {
       const u = new SpeechSynthesisUtterance(text);
       window.speechSynthesis.speak(u);

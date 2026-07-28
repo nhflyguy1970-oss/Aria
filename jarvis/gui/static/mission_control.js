@@ -115,6 +115,21 @@ function renderOverview(d) {
   const ov = d.overview || {};
   const phase = (ov.phase || {}).phase || "?";
   const advisor = ov.operational_advisor || d.operational_advisor || {};
+  const voice = d.voice || {};
+  const voiceCard = voice.product
+    ? mcCard(
+        "Voice",
+        `<p>State: <strong>${mcEsc(voice.state || "idle")}</strong></p>
+         <p>Whisper ${mcBadge(!!voice.whisper, "ok", "missing")} · Piper ${mcBadge(!!voice.piper, "ok", "missing")}</p>
+         <p>Cloud Live: ${mcEsc(voice.cloud_live?.provider || (voice.cloud_live?.available ? "ready" : "off"))} · sessions ${voice.cloud_live?.active_sessions ?? 0}</p>
+         <p>Duplex: ${mcEsc(voice.duplex || "—")} · queue ${voice.queue?.pending ?? 0}</p>
+         <p class="mc-actions">
+           <button type="button" class="ghost-btn small" data-mc-action="voice_summary">Voice summary</button>
+           <a class="ghost-btn small" href="#voice" data-mc-nav="voice">Open Voice</a>
+           <a class="ghost-btn small" href="/api/voice/recovery" target="_blank">Recovery</a>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -131,7 +146,8 @@ function renderOverview(d) {
       mcCard("Hardware", `<p>GPU: ${mcEsc(ov.gpu || "—")}</p><p>RAM free: ${ov.ram_available_gb ?? "—"} GB</p><p>VRAM free: ${ov.free_vram_mb ?? "—"} MB</p><p>Load: ${ov.cpu_load ?? "—"}</p>`),
       mcCard("Attention", (ov.needs_attention || []).map((n) => `<p>• ${mcEsc(n)}</p>`).join("") || "<p class='muted'>All clear</p>"),
       renderRoutingOverviewCard(d.routing_stats),
-    ])}
+      voiceCard,
+    ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;
 }

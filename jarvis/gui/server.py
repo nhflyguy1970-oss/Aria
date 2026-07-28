@@ -2072,13 +2072,30 @@ async def audio_set_output_sink(sink: str = Form("")):
     }
 
 
+@app.post("/api/audio/speak")
+async def audio_speak(text: str = Form(...)):
+    """Generate TTS via the shared Voice engine (queued, interruptible)."""
+    from jarvis.voice_product.engine import speak_text
+
+    result = speak_text(text.strip(), assistant=assistant, force=True, source="chat")
+    if not result.get("ok"):
+        return JSONResponse(status_code=400, content=result)
+    return {
+        "ok": True,
+        "message": f"Playing on {assistant.audio.devices.get('name', 'Creative')}",
+        "audio_path": result.get("audio_path"),
+        "paths": result.get("paths"),
+        "queued": result.get("queued"),
+        "devices": assistant.audio.get_devices(),
+    }
+
+
 @app.post("/api/audio/stop")
 async def audio_stop():
     """Stop TTS / playback immediately (UI Stop / interrupt speak)."""
-    from jarvis.tts_playback_queue import clear_tts_queue
+    from jarvis.voice_product.engine import stop_speaking
 
-    clear_tts_queue()
-    return {"ok": True, "stopped": True}
+    return stop_speaking()
 
 
 @app.post("/api/audio/transcribe")
@@ -2160,20 +2177,6 @@ async def audio_delete_post(path: str = Form(...), category: str = Form("")):
     if result.startswith("ERROR:"):
         return JSONResponse(status_code=400, content={"ok": False, "message": result})
     return {"ok": True, "deleted": result, "message": "File deleted"}
-
-
-@app.post("/api/audio/speak")
-async def audio_speak(text: str = Form(...)):
-    """Generate TTS and play through Creative Sound Blaster."""
-    result = assistant.audio.generate(text.strip())
-    if result.startswith("ERROR:"):
-        return JSONResponse(status_code=400, content={"ok": False, "message": result})
-    return {
-        "ok": True,
-        "message": f"Playing on {assistant.audio.devices.get('name', 'Creative')}",
-        "audio_path": result,
-        "devices": assistant.audio.get_devices(),
-    }
 
 
 @app.post("/api/audio/play")
@@ -2286,18 +2289,37 @@ async def audio_record_vad(
 
 @app.post("/api/audio/record/ptt/start")
 async def audio_ptt_start(source: str = Form("")):
+    from jarvis.voice_product.engine import begin_listen
+
+    begin_listen(source="ptt")
+    # Full duplex: attempt barge-in if user starts PTT while speaking
+    try:
+        from jarvis.voice_duplex import maybe_barge_in
+
+        maybe_barge_in()
+    except Exception:
+        pass
     session_id, path_or_err = assistant.audio.record_ptt_start(source=source or None)
     if not session_id:
+        from jarvis.events import emit_voice_state
+
+        emit_voice_state("idle", detail="ptt-failed")
         return JSONResponse(status_code=400, content={"ok": False, "message": path_or_err})
     return {"ok": True, "session_id": session_id, "expected_path": path_or_err}
 
 
 @app.post("/api/audio/record/ptt/stop")
 async def audio_ptt_stop(
-    session_id: str = Form(...), transcribe: str = Form("0"), model: str = Form("")
+    session_id: str = Form(...),
+    transcribe: str = Form("0"),
+    model: str = Form(""),
+    process: str = Form("0"),
 ):
+    from jarvis.events import emit_voice_state
+
     result = assistant.audio.record_ptt_stop(session_id.strip())
     if result.startswith("ERROR:"):
+        emit_voice_state("idle", detail="ptt-error")
         return JSONResponse(status_code=400, content={"ok": False, "message": result})
     from jarvis.audio_device import measure_peak_db
 
@@ -2310,11 +2332,23 @@ async def audio_ptt_stop(
         "message": "Push-to-talk recording saved",
     }
     if transcribe.lower() in ("1", "true", "yes"):
+        emit_voice_state("thinking", detail="ptt-stt")
         text = assistant.audio.transcribe(result, model=model or None)
         if text.startswith("ERROR:"):
             payload["transcript_error"] = text
+            emit_voice_state("idle", detail="ptt-stt-error")
         else:
             payload["transcript"] = text
+            if process.lower() in ("1", "true", "yes") and text.strip():
+                from jarvis.voice_product.engine import process_utterance
+
+                payload["pipeline"] = process_utterance(
+                    text.strip(), assistant=assistant, source="ptt"
+                )
+            else:
+                emit_voice_state("idle", detail="ptt")
+    else:
+        emit_voice_state("idle", detail="ptt")
     return payload
 
 

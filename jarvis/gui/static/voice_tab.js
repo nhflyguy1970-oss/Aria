@@ -1,4 +1,4 @@
-/** Voice tab — settings, duplex, cloud live, cheatsheet */
+/** Voice tab — settings, duplex, profiles, recovery, cloud live, cheatsheet */
 
 function $(id) {
   return document.getElementById(id);
@@ -31,6 +31,60 @@ async function loadVoiceCheatsheet(key) {
   }
 }
 
+async function loadVoiceProfiles() {
+  const sel = $("voiceTabProfileSelect");
+  if (!sel) return;
+  try {
+    const data = await fetch("/api/voice/profiles").then((r) => r.json());
+    const active = data.active || "";
+    sel.innerHTML = '<option value="">— none —</option>';
+    (data.profiles || []).forEach((p) => {
+      const opt = document.createElement("option");
+      opt.value = p.id;
+      opt.textContent = p.name + (p.builtin ? "" : " *");
+      if (p.id === active) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  } catch (_) {}
+}
+
+async function loadVoiceRecovery() {
+  const el = $("voiceTabRecovery");
+  if (!el) return;
+  try {
+    const data = await fetch("/api/voice/recovery").then((r) => r.json());
+    const issues = data.issues || [];
+    if (!issues.length) {
+      el.textContent = `Healthy: ${(data.healthy || []).join(", ") || "ok"}`;
+      return;
+    }
+    el.innerHTML = issues
+      .map((i) => {
+        const acts = (i.actions || [])
+          .map(
+            (a) =>
+              `<button type="button" class="ghost-btn tiny voice-recovery-act" data-action="${a.id}">${a.label}</button>`,
+          )
+          .join(" ");
+        return `<div class="voice-recovery-issue"><strong>${i.code}</strong> — ${i.message} ${acts}</div>`;
+      })
+      .join("");
+    el.querySelectorAll(".voice-recovery-act").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        await fetch("/api/voice/recovery/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: btn.dataset.action }),
+        });
+        window.showAriaToast?.(`Recovery: ${btn.dataset.action}`, "ok");
+        loadVoiceRecovery();
+      });
+    });
+  } catch (e) {
+    el.textContent = e.message || "Recovery unavailable";
+  }
+}
+
 async function loadVoiceTab() {
   const status = $("voiceTabStatus");
   const model = $("voiceTabModel");
@@ -38,30 +92,34 @@ async function loadVoiceTab() {
   const cloudDetail = $("voiceTabCloudDetail");
   if (!status) return;
   try {
-    const [settings, duplex, cloudSt] = await Promise.all([
+    const [settings, duplex, cloudSt, product] = await Promise.all([
       fetch("/api/voice/settings").then((r) => r.json()).catch(() => ({})),
       fetch("/api/voice/duplex").then((r) => r.json()).catch(() => ({})),
       fetch("/api/voice/cloud-live/status").then((r) => r.json()).catch(() => ({})),
+      fetch("/api/voice/product").then((r) => r.json()).catch(() => ({})),
     ]);
-    status.textContent = `Duplex: ${duplex.mode || settings.duplex_mode || "off"} · STT: ${settings.stt_backend || "whisper"}`;
+    const state = product.state?.state || "idle";
+    status.textContent = `State: ${state} · Duplex: ${duplex.mode || settings.duplex_mode || "off"} · STT: ${settings.stt_backend || "whisper"}`;
     status.title = duplex.help || "";
     if (model) {
-      model.textContent = settings.tts_model || settings.model || "default TTS";
+      model.textContent = `TTS engine: ${settings.tts_engine || "piper"}`;
       model.title = `chunk ${settings.tts_chunk_max_chars || 220} chars · target ${settings.tts_latency_target_ms || "?"}ms`;
     }
     const cloudMsg = cloudSt.message || (cloudSt.available ? "Cloud live available" : "Cloud live unavailable");
-    if (cloud) cloud.textContent = cloudMsg;
+    if (cloud) cloud.textContent = cloudMsg + (cloudSt.openai_hidden ? " · OpenAI Realtime hidden (no WebRTC)" : "");
     if (cloudDetail) {
-      cloudDetail.textContent = cloudSt.active
+      const active = (cloudSt.active || 0) > 0 || (cloudSt.active_sessions || 0) > 0;
+      cloudDetail.textContent = active
         ? "Cloud live session is active."
         : cloudSt.available
-          ? "Cloud live ready — click Toggle or use the header Cloud live button."
+          ? "Gemini Live ready — click Toggle or use the header Cloud live button."
           : cloudMsg;
     }
     const cloudBtn = $("voiceTabCloudBtn");
     if (cloudBtn) {
-      cloudBtn.textContent = cloudSt.active ? "Stop cloud live" : "Start cloud live";
-      cloudBtn.disabled = cloudSt.available === false && !cloudSt.active;
+      const active = (cloudSt.active || 0) > 0;
+      cloudBtn.textContent = active ? "Stop cloud live" : "Start cloud live";
+      cloudBtn.disabled = cloudSt.available === false && !active;
     }
 
     const duplexSel = $("voiceTabDuplexSelect");
@@ -74,7 +132,12 @@ async function loadVoiceTab() {
     if (interrupt) interrupt.checked = Boolean(settings.interrupt_on_speak);
     const chunkSent = $("voiceTabChunkSentences");
     if (chunkSent) chunkSent.checked = settings.speak_chunk_sentences !== false;
+    const speak = $("voiceTabSpeakReplies");
+    if (speak) speak.checked = Boolean(settings.speak_replies);
+    const sw = $("voiceTabServerWhisper");
+    if (sw) sw.checked = settings.server_whisper !== false;
 
+    await loadVoiceProfiles();
     await loadVoiceCheatsheet();
     window.jarvisRefreshVoiceUi?.();
   } catch (e) {
@@ -89,6 +152,7 @@ window.initVoiceTab = function initVoiceTab() {
   root.dataset.bound = "1";
   loadVoiceTab();
   $("voiceTabRefreshBtn")?.addEventListener("click", loadVoiceTab);
+  $("voiceTabRecoveryBtn")?.addEventListener("click", loadVoiceRecovery);
   $("voiceOpenAudioBtn")?.addEventListener("click", () => window.switchToView?.("audio"));
   $("voiceOpenPresenceBtn")?.addEventListener("click", () => window.switchToView?.("presence"));
   $("voiceTabDuplexSelect")?.addEventListener("change", async (ev) => {
@@ -109,6 +173,35 @@ window.initVoiceTab = function initVoiceTab() {
       window.showAriaToast?.(err.message || "STT save failed", "err", 5000);
     }
   });
+  $("voiceTabSpeakReplies")?.addEventListener("change", async (ev) => {
+    await saveVoiceTabSetting({ speak_replies: !!ev.target.checked });
+    const cb = $("speakRepliesToggle");
+    if (cb) {
+      cb.checked = !!ev.target.checked;
+      cb.dispatchEvent(new Event("change"));
+    }
+  });
+  $("voiceTabServerWhisper")?.addEventListener("change", async (ev) => {
+    await saveVoiceTabSetting({ server_whisper: !!ev.target.checked });
+    const cb = $("serverWhisperToggle");
+    if (cb) {
+      cb.checked = !!ev.target.checked;
+      cb.dispatchEvent(new Event("change"));
+    }
+  });
+  $("voiceTabActivateProfileBtn")?.addEventListener("click", async () => {
+    const id = $("voiceTabProfileSelect")?.value;
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/voice/profiles/${encodeURIComponent(id)}/activate`, { method: "POST" });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || "Activate failed");
+      window.showAriaToast?.(`Profile: ${data.profile?.name || id}`, "ok");
+      loadVoiceTab();
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Profile activate failed", "err", 5000);
+    }
+  });
   $("voiceTabSaveBtn")?.addEventListener("click", async () => {
     const patch = {
       duplex_mode: $("voiceTabDuplexSelect")?.value,
@@ -116,6 +209,8 @@ window.initVoiceTab = function initVoiceTab() {
       tts_chunk_max_chars: parseInt($("voiceTabChunkChars")?.value || "220", 10),
       interrupt_on_speak: Boolean($("voiceTabInterrupt")?.checked),
       speak_chunk_sentences: Boolean($("voiceTabChunkSentences")?.checked),
+      speak_replies: Boolean($("voiceTabSpeakReplies")?.checked),
+      server_whisper: Boolean($("voiceTabServerWhisper")?.checked),
     };
     try {
       await saveVoiceTabSetting(patch);
@@ -131,5 +226,14 @@ window.initVoiceTab = function initVoiceTab() {
   });
   $("voiceTabCheatsheetSelect")?.addEventListener("change", (ev) => {
     loadVoiceCheatsheet(ev.target.value);
+  });
+
+  // Live status from WS
+  window.addEventListener("jarvis-ws", (ev) => {
+    const data = ev.detail || {};
+    if (data.event === "voice_state" && $("voiceTabStatus")) {
+      const cur = $("voiceTabStatus").textContent || "";
+      $("voiceTabStatus").textContent = cur.replace(/^State:\s*\w+/, `State: ${data.state || "idle"}`);
+    }
   });
 };
