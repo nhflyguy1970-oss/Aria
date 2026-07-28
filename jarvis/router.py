@@ -2001,6 +2001,42 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
                 session,
             )
 
+    # Automation Home / pause / failures — first-class with skills
+    if not attachment:
+        from jarvis.handlers.automation_handlers import parse_automation_intent
+
+        auto_intent = parse_automation_intent(message)
+        if auto_intent:
+            return _finalize_intent(
+                {
+                    **auto_intent,
+                    "thinking": "automation",
+                    "route_handler": "Automation",
+                },
+                message,
+                session,
+            )
+
+    # Explicit workflow run (parity with skills)
+    if not attachment:
+        from jarvis.workflow_learning import parse_workflow_run_query
+
+        try:
+            wf_slug, wf_confirm = parse_workflow_run_query(message)
+        except Exception:
+            wf_slug, wf_confirm = "", False
+        if wf_slug:
+            return _finalize_intent(
+                {
+                    "action": "workflow_run",
+                    "params": {"slug": wf_slug, "confirm": wf_confirm},
+                    "thinking": "workflow run",
+                    "route_handler": "Workflows",
+                },
+                message,
+                session,
+            )
+
     # Reflex Layer (Phase 8) — before NLU / Cap Bus / Cognition / organs.
     if not attachment:
         from aria_core.reflex import try_reflex

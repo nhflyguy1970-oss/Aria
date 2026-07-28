@@ -119,6 +119,20 @@
         return;
       }
 
+      // Ctrl+Shift+O — Automation Home (orchestration)
+      if (mod && e.shiftKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        window.switchToView?.("automation");
+        return;
+      }
+
+      // Ctrl+Shift+V — View Paths
+      if (mod && e.shiftKey && e.key.toLowerCase() === "v") {
+        e.preventDefault();
+        window.AriaViewPaths?.openModal?.() || window.AriaWorkflows?.openModal?.();
+        return;
+      }
+
       // Ctrl+Shift+M — mini chat
       if (mod && e.shiftKey && e.key.toLowerCase() === "m") {
         e.preventDefault();

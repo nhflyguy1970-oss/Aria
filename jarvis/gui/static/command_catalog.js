@@ -36,6 +36,7 @@
       ["meme", "Meme studio", "captions"],
       ["documents", "Documents", "files pdf"],
       ["connections", "Connections", "knowledge graph relationships entities"],
+      ["automation", "Automation", "rules schedules skills workflows orchestration"],
       ["actions", "Actions / report", "checklist"],
     ];
     reg(views.map(([id, label, keywords]) =>
@@ -182,10 +183,40 @@
         window.AriaActivityStore?.setFilter?.("err");
         return A().shell.activity();
       }),
+      mk("act:automation-home", "Open Automation Home", "Actions", "automation rules schedules orchestration", () => A().goView("automation")),
+      mk("act:automation-status", "Automation status", "Actions", "scheduled engine pause", () => {
+        A().goView("automation");
+        return true;
+      }),
+      mk("act:automation-failures", "Automation: recent failures", "Actions", "failed runs", () => {
+        A().goView("automation");
+        return true;
+      }),
+      mk("act:automation-pause", "Pause automations", "Actions", "pause travel", async () => {
+        await fetch("/api/automation/pause", { method: "POST", body: JSON.stringify({ paused: true }), headers: { "Content-Type": "application/json" } });
+        window.showAriaToast?.("Automations paused", "warn");
+        return true;
+      }),
+      mk("act:automation-resume", "Resume automations", "Actions", "resume engine", async () => {
+        await fetch("/api/automation/pause", { method: "POST", body: JSON.stringify({ paused: false }), headers: { "Content-Type": "application/json" } });
+        await fetch("/api/automation/engine/start", { method: "POST", body: "{}" });
+        window.showAriaToast?.("Automations resumed", "ok");
+        return true;
+      }),
+      mk("act:automation-webhook", "Webhook status", "Actions", "home assistant inbound secret", () => {
+        A().goView("automation");
+        setTimeout(() => document.getElementById("autoWebhookBtn")?.click(), 200);
+        return true;
+      }),
+      mk("act:automation-suggestions", "Learned automation suggestions", "Actions", "propose approve", () => {
+        A().goView("automation");
+        return true;
+      }),
+      mk("act:view-paths", "Open View Paths", "Actions", "navigation shortcuts macro ui path recorder", () => A().shell.workflows()),
       mk("act:workspaces", "Workspace layouts", "Actions", "coding writing layout", () => A().shell.workspaces()),
       mk("act:split", "Toggle split view", "Actions", "dual pane", () => A().shell.split()),
       mk("act:mini-chat", "Toggle mini chat", "Actions", "floating assistant", () => A().shell.miniChat()),
-      mk("act:workflows", "Workflow recorder", "Actions", "macro routine", () => A().shell.workflows()),
+      mk("act:workflows", "Open View Paths (navigation shortcuts)", "Actions", "view paths macro routine workflow recorder", () => A().shell.workflows()),
     ]);
   }
 
@@ -336,7 +367,9 @@
       mkCtx("workspace", "Workspace layouts", "coding writing", () => A().shell.workspaces(), "Global"),
       mkCtx("split", "Toggle split view", "dual pane", () => A().shell.split(), "Global"),
       mkCtx("mini", "Toggle mini chat", "floating assistant", () => A().shell.miniChat(), "Global"),
-      mkCtx("workflow", "Workflow recorder", "macro routine", () => A().shell.workflows(), "Global"),
+      mkCtx("workflow", "Automation & workflows…", "rules skills learned view paths templates", () => A().goView("automation"), "Global"),
+      mkCtx("view-paths", "Open View Paths", "navigation shortcuts", () => A().shell.workflows(), "Global"),
+      mkCtx("automation", "Open Automation Home", "rules schedules", () => A().goView("automation"), "Global"),
     ];
     const ids = new Set(page.map((c) => c.id));
     reg([...page, ...globalCtx.filter((c) => !ids.has(c.id))]);

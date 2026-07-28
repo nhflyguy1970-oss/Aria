@@ -576,13 +576,39 @@ async function loadSkillsWorkflows() {
         ? skills
             .map(
               (s) =>
-                `<li><strong>${s.name || s.slug}</strong> <span class="muted">${s.description || ""}</span></li>`
+                `<li class="auto-dash-row"><strong>${s.name || s.slug}</strong> <span class="muted">${s.description || ""}</span>
+                <span class="auto-row-actions">
+                  <button type="button" class="ghost-btn tiny" data-dash-skill-dry="${s.slug}">Dry run</button>
+                  <button type="button" class="apply-btn tiny" data-dash-skill-run="${s.slug}">Run</button>
+                </span></li>`
             )
             .join("")
-        : "<li class='muted'>No skills installed — use Chat to teach Aria a skill, or open <button type='button' class='ghost-btn tiny' id='skillsEmptyChatBtn'>Chat</button></li>";
-      skillsEl.querySelector("#skillsEmptyChatBtn")?.addEventListener("click", () => {
-        window.switchToView?.("chat");
-        window.jarvisSendToChat?.("Help me create a reusable skill for ");
+        : "<li class='muted'>No skills installed — open <button type='button' class='ghost-btn tiny' id='skillsEmptyAutoBtn'>Automation Home</button> or Chat to teach a skill.</li>";
+      skillsEl.querySelector("#skillsEmptyAutoBtn")?.addEventListener("click", () => window.switchToView?.("automation"));
+      skillsEl.querySelectorAll("[data-dash-skill-dry]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const res = await fetch(`/api/automation/skills/${encodeURIComponent(btn.dataset.dashSkillDry)}/run`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dry_run: true }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (data.activity) window.AriaActivity?.publish?.(data.activity);
+          window.showAriaToast?.(data.ok ? "Skill dry run done" : (data.message || "Failed"), data.ok ? "ok" : "err", 3000);
+        });
+      });
+      skillsEl.querySelectorAll("[data-dash-skill-run]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!window.confirm?.("Run this skill for real?")) return;
+          const res = await fetch(`/api/automation/skills/${encodeURIComponent(btn.dataset.dashSkillRun)}/run`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dry_run: false, confirm: true }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (data.activity) window.AriaActivity?.publish?.(data.activity);
+          window.showAriaToast?.(data.ok ? "Skill finished" : (data.message || "Failed"), data.ok ? "ok" : "err", 3000);
+        });
       });
     }
     if (workflowsEl) {
@@ -591,7 +617,12 @@ async function loadSkillsWorkflows() {
         ? workflows
             .map(
               (w) =>
-                `<li><strong>${w.name || w.slug}</strong> <span class="muted">${w.count || 1}× · ${w.steps || 0} steps</span></li>`
+                `<li class="auto-dash-row"><strong>${w.name || w.slug}</strong> <span class="muted">${w.count || 1}× · ${w.steps || 0} steps</span>
+                <span class="auto-row-actions">
+                  <button type="button" class="ghost-btn tiny" data-dash-wf-dry="${w.slug}">Dry run</button>
+                  <button type="button" class="apply-btn tiny" data-dash-wf-run="${w.slug}">Run</button>
+                  <button type="button" class="ghost-btn tiny" data-dash-wf-open="${w.slug}">Automation</button>
+                </span></li>`
             )
             .join("")
         : "<li class='muted'>No learned workflows yet. <button type='button' class='ghost-btn tiny' id='wfEmptyScanBtn'>Scan action log</button></li>";
@@ -599,6 +630,34 @@ async function loadSkillsWorkflows() {
         const btn = $("workflowsScanBtn");
         if (btn) btn.click();
         else scanWorkflowsFromActionLog();
+      });
+      workflowsEl.querySelectorAll("[data-dash-wf-dry]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const res = await fetch(`/api/automation/workflows/${encodeURIComponent(btn.dataset.dashWfDry)}/run`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dry_run: true }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (data.activity) window.AriaActivity?.publish?.(data.activity);
+          window.showAriaToast?.(data.ok ? "Dry run done" : (data.error || "Failed"), data.ok ? "ok" : "err", 3000);
+        });
+      });
+      workflowsEl.querySelectorAll("[data-dash-wf-run]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          if (!window.confirm?.("Run this learned workflow for real?")) return;
+          const res = await fetch(`/api/automation/workflows/${encodeURIComponent(btn.dataset.dashWfRun)}/run`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ dry_run: false, confirm: true }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (data.activity) window.AriaActivity?.publish?.(data.activity);
+          window.showAriaToast?.(data.ok ? "Workflow finished" : (data.error || "Failed"), data.ok ? "ok" : "err", 3000);
+        });
+      });
+      workflowsEl.querySelectorAll("[data-dash-wf-open]").forEach((btn) => {
+        btn.addEventListener("click", () => window.switchToView?.("automation"));
       });
     }
   } catch (e) {

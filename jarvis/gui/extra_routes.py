@@ -697,6 +697,23 @@ def register_routes(app, assistant):
         if not isinstance(body, dict):
             body = {}
 
+        def _pub(name: str, status: str, why: str = "", ok: bool = True):
+            try:
+                from jarvis.automation.activity_bridge import publish_run_event
+                from jarvis.automation.execution import FAILED, SUCCEEDED
+
+                return publish_run_event(
+                    kind="webhook",
+                    name=name,
+                    status=SUCCEEDED if ok else FAILED,
+                    source="home",
+                    why=why or status,
+                    executed=True,
+                    detail={"action": action},
+                )
+            except Exception:
+                return {}
+
         action = (body.get("action") or "chat").strip().lower()
         message = (body.get("message") or body.get("text") or "").strip()
 
@@ -748,7 +765,11 @@ def register_routes(app, assistant):
                 )
             ok, msg = activate_scene(scene)
             status = 200 if ok else 400
-            return JSONResponse(status_code=status, content={"ok": ok, "message": msg})
+            pub = _pub(f"HA scene {scene}", "ok" if ok else "failed", msg, ok)
+            return JSONResponse(
+                status_code=status,
+                content={"ok": ok, "message": msg, "activity": pub.get("activity"), "run": pub.get("run")},
+            )
 
         if action == "briefing":
             from jarvis.handlers import ensure_handlers_loaded
@@ -756,6 +777,9 @@ def register_routes(app, assistant):
 
             ensure_handlers_loaded()
             result = call_action(assistant, "morning_briefing", {}, message or "morning briefing")
+            pub = _pub("Morning briefing", "ok" if result.get("ok", True) else "failed", "briefing", bool(result.get("ok", True)))
+            if isinstance(result, dict):
+                result = {**result, "activity": pub.get("activity"), "run": pub.get("run")}
             return result
 
         if action == "run_script":
@@ -2270,16 +2294,40 @@ def register_routes(app, assistant):
 
     @app.post("/api/skills/{slug}/run")
     async def skills_run(slug: str, request: Request):
+        from jarvis.automation.activity_bridge import publish_run_event
+        from jarvis.automation.execution import normalize_result
         from jarvis.skill_database import run_skill
 
         try:
             body = await request.json()
         except Exception:
             body = {}
-        dry_run = True if body.get("dry_run") is None else bool(body.get("dry_run"))
+        # Explicit dry_run; tests often pass dry_run True. Default True for legacy safety
+        # unless confirm=true requests real run.
+        if body.get("confirm") and "dry_run" not in body:
+            dry_run = False
+        else:
+            dry_run = True if body.get("dry_run") is None else bool(body.get("dry_run"))
         result = run_skill(slug, dry_run=dry_run)
-        status = 200 if result.get("ok") else 404
-        return JSONResponse(status_code=status, content=result)
+        norm = normalize_result(
+            {"ok": result.get("ok", False), "result": result, "message": result.get("message")},
+            dry_run=dry_run,
+        )
+        pub = publish_run_event(
+            kind="skill",
+            name=slug,
+            status=norm["status"],
+            target_id=slug,
+            why=norm["why"],
+            dry_run=dry_run,
+            executed=norm["executed"],
+            detail=result,
+        )
+        status = 200 if result.get("ok") or dry_run else 404
+        return JSONResponse(
+            status_code=status,
+            content={**result, "execution": norm, "activity": pub.get("activity"), "run": pub.get("run")},
+        )
 
     @app.get("/api/workflows")
     def workflows_list(q: str = ""):
@@ -2303,19 +2351,51 @@ def register_routes(app, assistant):
 
     @app.post("/api/workflows/{slug}/run")
     async def workflows_run(slug: str, request: Request):
+        from jarvis.automation.activity_bridge import publish_run_event
+        from jarvis.automation.execution import normalize_result
         from jarvis.workflow_learning import run_workflow
 
         try:
             body = await request.json()
         except Exception:
             body = {}
-        dry_run = True if body.get("dry_run") is None else bool(body.get("dry_run"))
-        result = run_workflow(slug, assistant=assistant, dry_run=dry_run)
-        status = 200 if result.get("ok") else 404
-        return JSONResponse(status_code=status, content=result)
+        if body.get("confirm") and "dry_run" not in body:
+            dry_run = False
+        else:
+            dry_run = True if body.get("dry_run") is None else bool(body.get("dry_run"))
+        if not dry_run and not body.get("confirm"):
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "ok": False,
+                    "status": "permission_required",
+                    "error": "confirm=true required for real execution",
+                },
+            )
+        result = run_workflow(slug, assistant=None if dry_run else assistant, dry_run=dry_run)
+        norm = normalize_result(
+            {"ok": result.get("ok", False), "result": result, "message": result.get("message")},
+            dry_run=dry_run,
+        )
+        pub = publish_run_event(
+            kind="learned_workflow",
+            name=slug,
+            status=norm["status"],
+            target_id=slug,
+            why=norm["why"],
+            dry_run=dry_run,
+            executed=norm["executed"],
+            detail=result,
+        )
+        status = 200 if result.get("ok") or dry_run else 404
+        return JSONResponse(
+            status_code=status,
+            content={**result, "execution": norm, "activity": pub.get("activity"), "run": pub.get("run")},
+        )
 
     @app.post("/api/workflows/scan")
     async def workflows_scan(request: Request):
+        from jarvis.automation.suggestions import propose_from_scan
         from jarvis.workflow_learning import scan_action_log
 
         try:
@@ -2323,12 +2403,16 @@ def register_routes(app, assistant):
         except Exception:
             body = {}
         min_rep = body.get("min_repeats")
-        try:
-            min_rep_i = int(min_rep) if min_rep is not None else None
-        except (TypeError, ValueError):
-            min_rep_i = None
-        found = scan_action_log(min_repeats_count=min_rep_i)
-        return {"ok": True, "workflows": found, "count": len(found)}
+        found = scan_action_log(min_repeats_count=min_rep)
+        suggestions = propose_from_scan(found)
+        return {
+            "ok": True,
+            "count": len(found),
+            "workflows": found,
+            "suggestions": suggestions,
+            "auto_enabled": False,
+            "message": "Suggestions created — review in Automation Home before enabling.",
+        }
 
     # —— Connections (Knowledge Graph product surface) ——
     @app.get("/api/connections/home")
@@ -2521,6 +2605,9 @@ def register_routes(app, assistant):
         from jarvis.intelligence.routes import register_intelligence_routes
 
         register_intelligence_routes(app, assistant)
+        from jarvis.automation.product_routes import register_automation_product_routes
+
+        register_automation_product_routes(app, assistant)
     except Exception as exc:
         import logging
 

@@ -5600,6 +5600,66 @@ body.resizing-split { cursor: col-resize; user-select: none; }
   margin-top: 0.75rem;
 }
 
+/* Automation Home */
+.auto-home-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+.auto-home-header h2 { margin: 0; }
+.auto-identity { font-size: 0.75rem; line-height: 1.35; margin: 0.35rem 0 0.75rem; }
+.auto-toolbar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.75rem; }
+.auto-toolbar .audio-path-input { flex: 1 1 160px; }
+.auto-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+.auto-stat {
+  min-width: 5.5rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.02);
+  display: flex;
+  flex-direction: column;
+}
+.auto-stat strong { font-size: 1.05rem; }
+.auto-stat span { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.auto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+.auto-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.65rem 0.75rem;
+  background: rgba(255,255,255,0.02);
+  min-height: 8rem;
+}
+.auto-card h3 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.auto-list { display: flex; flex-direction: column; gap: 0.4rem; max-height: 280px; overflow: auto; }
+.auto-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  align-items: flex-start;
+  padding: 0.4rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+}
+.auto-row:hover { border-color: var(--border); background: rgba(255,255,255,0.03); }
+.auto-row-actions { display: flex; flex-wrap: wrap; gap: 0.2rem; justify-content: flex-end; }
+.auto-rule-card label { display: block; margin: 0.45rem 0; }
+.auto-rule-card .audio-path-input,
+.auto-rule-card .personality-select { width: 100%; margin-top: 0.2rem; }
+.auto-search-hits { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.75rem; }
+.auto-dash-row .auto-row-actions { display: inline-flex; margin-left: 0.35rem; }
+
 /* Workspaces */
 .workspace-switcher-list {
   display: flex;

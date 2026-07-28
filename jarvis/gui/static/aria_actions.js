@@ -381,9 +381,12 @@
         return false;
       },
       workflows: () => {
+        if (window.AriaViewPaths?.openModal) { window.AriaViewPaths.openModal(); return true; }
         if (window.AriaWorkflows?.openModal) { window.AriaWorkflows.openModal(); return true; }
-        return invoke("workflowOpenBtn", "Workflows");
+        return invoke("workflowOpenBtn", "View Paths");
       },
+      automation: () => goView("automation"),
+      viewPaths: () => AriaActions.shell.workflows(),
       customizeDash: () => {
         if (window.AriaDashboardWidgets?.openCustomize) {
           window.AriaDashboardWidgets.openCustomize();

@@ -1,22 +1,31 @@
 /** Primary view router — extracted from app.js. */
 (function () {
   const VIEW_PANELS = [
-    "chatView", "dashboardView", "workstationView", "plannerView", "calendarView", "flytyingView", "projectsView",
+    "chatView", "dashboardView", "automationView", "workstationView", "plannerView", "calendarView", "flytyingView", "projectsView",
     "makerView", "browserView", "securityView", "presenceView", "auditView", "voiceView", "audioView", "journalView",
     "memoryView", "galleryView", "videoView", "memeView", "documentsView", "connectionsView", "actionsView",
   ];
 
   function switchToView(view) {
     if (!view) return;
+    const splitOn = !!window.AriaSplitView?.getState?.()?.enabled;
     document.querySelectorAll(".view-tab").forEach((t) => {
-      t.classList.toggle("active", t.dataset.view === view);
+      if (splitOn) {
+        const st = window.AriaSplitView.getState();
+        t.classList.toggle("active", t.dataset.view === st.primary || t.dataset.view === st.secondary || t.dataset.view === view);
+      } else {
+        t.classList.toggle("active", t.dataset.view === view);
+      }
     });
     const targetId = `${view}View`;
-    VIEW_PANELS.forEach((id) => {
-      document.getElementById(id)?.classList.toggle("hidden", id !== targetId);
-    });
+    if (!splitOn) {
+      VIEW_PANELS.forEach((id) => {
+        document.getElementById(id)?.classList.toggle("hidden", id !== targetId);
+      });
+    }
     if (view === "dashboard" && window.initDashboard) window.initDashboard();
     else if (view !== "dashboard") window.stopDashboardClock?.();
+    if (view === "automation" && window.initAutomation) window.initAutomation();
     if (view === "workstation" && window.initWorkstation) window.initWorkstation();
     if (view === "planner" && window.initPlanner) window.initPlanner();
     if (view === "calendar" && window.initCalendar) window.initCalendar();
@@ -44,7 +53,7 @@
     const tab = document.querySelector(`.view-tab[data-view="${view}"]`);
     tab?.scrollIntoView({ block: "nearest", inline: "nearest" });
     const panel = document.getElementById(targetId);
-    if (panel) {
+    if (panel && !splitOn) {
       if (!panel.hasAttribute("tabindex")) panel.setAttribute("tabindex", "-1");
       try { panel.focus({ preventScroll: true }); } catch (_) { /* ignore */ }
     }
@@ -53,6 +62,9 @@
       if (window.location.hash !== hash) {
         history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
       }
+    } catch (_) { /* ignore */ }
+    try {
+      window.dispatchEvent(new CustomEvent("aria-view-change", { detail: { view } }));
     } catch (_) { /* ignore */ }
   }
 

@@ -1,4 +1,4 @@
-"""Automation package — continuous workstation operations."""
+"""Automation package — ops + product orchestration layer."""
 
 from jarvis.automation.ops import last_maintenance, maybe_nightly_maintenance, run_maintenance
 

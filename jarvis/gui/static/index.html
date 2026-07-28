@@ -346,7 +346,7 @@
             <button type="button" id="whatsNewBtn" class="ghost-btn small" data-new-feature="whatsnew" title="Recently added features">What's New</button>
             <button type="button" id="activityCenterBtn" class="ghost-btn small" title="Activity Center (Ctrl+Shift+A)">Activity <span id="activityCenterBadge" class="job-center-badge hidden" aria-hidden="true"></span></button>
             <button type="button" id="workspaceLayoutsBtn" class="ghost-btn small" title="Workspace layouts (Ctrl+Shift+P)">Workspaces</button>
-            <button type="button" id="workflowOpenBtn" class="ghost-btn small" title="Record and replay workflows">Workflows</button>
+            <button type="button" id="workflowOpenBtn" class="ghost-btn small" title="View Paths — UI navigation shortcuts (not Automation)">View Paths</button>
             <button type="button" id="jobCenterBtn" class="ghost-btn small" title="Job Center — live background work (media, coding, audio). Alerts live in Activity Center.">Job center</button>
             <button type="button" id="debugBundleBtn" class="ghost-btn small" title="Copy diagnostics for troubleshooting">Debug bundle</button>
             <button type="button" id="reloadUiBtn" class="ghost-btn small" title="Reload this window (Ctrl+Shift+R)">Reload UI</button>
@@ -507,6 +507,7 @@
         <button type="button" id="favoriteCurrentViewBtn" class="view-fav-pin" aria-pressed="false" aria-label="Pin current view to Favorites" title="Pin current view to Favorites (★)">★</button>
         <button type="button" class="view-tab active" data-view="chat">Chat</button>
         <button type="button" class="view-tab" data-view="dashboard">Dashboard</button>
+        <button type="button" class="view-tab" data-view="automation">Automation</button>
         <button type="button" class="view-tab" data-view="workstation">Mission Control</button>
         <button type="button" class="view-tab" data-view="planner">Planner</button>
         <button type="button" class="view-tab" data-view="calendar">Calendar</button>
@@ -1464,6 +1465,68 @@
         </dialog>
       </div>
 
+      <div id="automationView" class="view-panel hidden" tabindex="-1" aria-label="Automation Home">
+        <div class="auto-home-header">
+          <div>
+            <h2>Automation Home</h2>
+            <p class="muted">Orchestrates schedules, rules, skills, and workflows. Not Job Center, Activity Center, Mission Control, or Home Assistant.</p>
+          </div>
+          <div class="sidebar-btn-row auto-home-actions">
+            <button type="button" id="autoRefreshBtn" class="ghost-btn small">Refresh</button>
+            <button type="button" id="autoPauseBtn" class="ghost-btn small">Pause all</button>
+            <button type="button" id="autoResumeBtn" class="ghost-btn small">Resume</button>
+            <button type="button" id="autoNewRuleBtn" class="apply-btn small">New rule</button>
+            <button type="button" id="autoViewPathsBtn" class="ghost-btn small">View Paths</button>
+            <button type="button" id="autoWebhookBtn" class="ghost-btn small">Webhook</button>
+            <button type="button" id="autoExportBtn" class="ghost-btn small">Export</button>
+            <button type="button" id="autoImportBtn" class="ghost-btn small">Import</button>
+          </div>
+        </div>
+        <p id="autoIdentityStrip" class="auto-identity muted" role="note"></p>
+        <div class="auto-toolbar" role="search">
+          <input type="search" id="autoSearchInput" class="audio-path-input" placeholder="Search rules, skills, runs, templates…" aria-label="Search automation" />
+          <input type="text" id="autoNlInput" class="audio-path-input" placeholder="NL: Every weekday at 7am run Briefing" aria-label="Natural language automation" />
+          <button type="button" id="autoNlBtn" class="ghost-btn small">Draft from NL</button>
+        </div>
+        <div id="autoSummary" class="auto-summary" aria-live="polite"></div>
+        <div id="autoSearchHits" class="auto-search-hits hidden"></div>
+        <div class="auto-grid">
+          <section class="auto-card" aria-labelledby="autoRulesTitle">
+            <h3 id="autoRulesTitle">Rules</h3>
+            <div id="autoRulesList" class="auto-list"></div>
+          </section>
+          <section class="auto-card" aria-labelledby="autoRunsTitle">
+            <h3 id="autoRunsTitle">Recent runs</h3>
+            <div id="autoRunsList" class="auto-list"></div>
+          </section>
+          <section class="auto-card" aria-labelledby="autoFailTitle">
+            <h3 id="autoFailTitle">Failures</h3>
+            <div id="autoFailList" class="auto-list"></div>
+          </section>
+          <section class="auto-card" aria-labelledby="autoSugTitle">
+            <h3 id="autoSugTitle">Learned suggestions</h3>
+            <div id="autoSuggestionsList" class="auto-list"></div>
+          </section>
+          <section class="auto-card" aria-labelledby="autoSkillsTitle">
+            <h3 id="autoSkillsTitle">Skills</h3>
+            <div id="autoSkillsList" class="auto-list"></div>
+          </section>
+          <section class="auto-card" aria-labelledby="autoLearnedTitle">
+            <h3 id="autoLearnedTitle">Learned workflows</h3>
+            <div id="autoLearnedList" class="auto-list"></div>
+          </section>
+          <section class="auto-card" aria-labelledby="autoTplTitle">
+            <h3 id="autoTplTitle">Templates &amp; DAGs</h3>
+            <div id="autoTemplatesList" class="auto-list"></div>
+          </section>
+          <section class="auto-card" aria-labelledby="autoWhTitle">
+            <h3 id="autoWhTitle">Webhook &amp; health</h3>
+            <div id="autoWebhookPanel" class="auto-list"></div>
+          </section>
+        </div>
+        <p id="autoLive" class="visually-hidden" role="status" aria-live="polite"></p>
+      </div>
+
       <div id="dashboardView" class="view-panel hidden">
         <div class="dash-page-header">
           <p id="dashboardWelcome" class="muted dash-welcome">Welcome back</p>
@@ -1484,8 +1547,8 @@
           <ul id="checklistResults" class="checklist-results"></ul>
         </section>
         <section class="checklist-section">
-          <h3>Skills &amp; workflows</h3>
-          <p class="muted">Bundled procedure skills and learned action sequences.</p>
+          <h3>Skills &amp; learned workflows</h3>
+          <p class="muted">Reusable procedures and learned sequences. Prefer <button type="button" class="ghost-btn tiny" id="dashOpenAutomationBtn">Automation Home</button> for schedules and rules. View Paths are navigation shortcuts only.</p>
           <button type="button" id="skillsWorkflowsRefreshBtn" class="ghost-btn small">Refresh</button>
           <button type="button" id="workflowsScanBtn" class="ghost-btn small">Scan action log</button>
           <ul id="skillsList" class="checklist-results"></ul>
@@ -2109,6 +2172,8 @@
             <li><kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> — back / forward in view history</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> — workspace layouts</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> — Activity Center</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> — Automation Home</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> — View Paths (navigation shortcuts)</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> — floating mini chat</li>
             <li><kbd>Ctrl</kbd>+<kbd>\</kbd> — split view</li>
             <li><kbd>Ctrl</kbd>+<kbd>,</kbd> — settings · <kbd>Ctrl</kbd>+<kbd>/</kbd> — this panel</li>
@@ -2218,18 +2283,69 @@
 
       <div id="workflowModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="workflowTitle">
         <div class="crop-modal-card profile-modal-card">
-          <h3 id="workflowTitle">Workflow recorder</h3>
-          <p class="muted">Record a path through Aria, then replay it in one click.</p>
+          <h3 id="workflowTitle">View Paths</h3>
+          <p class="muted">Navigation shortcuts only — not Automation. Record a path through Aria views, then replay it.</p>
           <p id="workflowBuffer" class="muted small">No steps yet</p>
           <div class="sidebar-btn-row">
-            <button type="button" id="workflowRecordBtn" class="ghost-btn small">Record workflow</button>
+            <button type="button" id="workflowRecordBtn" class="ghost-btn small">Record path</button>
           </div>
           <div class="planner-add-row">
-            <input type="text" id="workflowNameInput" class="audio-path-input" placeholder="Morning Routine…" />
+            <input type="text" id="workflowNameInput" class="audio-path-input" placeholder="Morning navigation…" />
             <button type="button" id="workflowSaveBtn" class="apply-btn small">Save</button>
           </div>
           <div id="workflowList" class="workflow-list"></div>
           <button type="button" id="workflowCloseBtn" class="ghost-btn small">Close</button>
+        </div>
+      </div>
+
+      <div id="autoRuleModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="autoRuleTitle">
+        <div class="crop-modal-card profile-modal-card auto-rule-card">
+          <h3 id="autoRuleTitle">Rule editor</h3>
+          <p class="muted">Trigger → Action. Rules are not Skills, View Paths, or Job Center.</p>
+          <label class="muted">Name <input type="text" id="autoRuleName" class="audio-path-input" /></label>
+          <label class="muted">Kind
+            <select id="autoRuleKind" class="personality-select">
+              <option value="interval">Interval</option>
+              <option value="cron">Cron</option>
+              <option value="watch">Watch path</option>
+              <option value="file">File</option>
+              <option value="folder">Folder</option>
+              <option value="planner">Planner</option>
+              <option value="calendar">Calendar</option>
+              <option value="memory">Memory</option>
+              <option value="documents">Documents</option>
+              <option value="connections">Connections</option>
+              <option value="providers">Providers</option>
+              <option value="ha">Home Assistant</option>
+            </select>
+          </label>
+          <label class="muted">Expression <input type="text" id="autoRuleExpr" class="audio-path-input" placeholder="300 or 0 7 * * * or ~/Documents" /></label>
+          <label class="muted">Action
+            <select id="autoRuleAction" class="personality-select"></select>
+          </label>
+          <label class="muted">Condition (optional) <input type="text" id="autoRuleCondition" class="audio-path-input" placeholder="vars.ready == true" /></label>
+          <label class="muted"><input type="checkbox" id="autoRuleEnabled" /> Enable after save</label>
+          <p id="autoRulePreview" class="muted tiny"></p>
+          <div class="sidebar-btn-row">
+            <button type="button" id="autoRuleSaveBtn" class="apply-btn small">Save rule</button>
+            <button type="button" id="autoRuleDryBtn" class="ghost-btn small">Dry run</button>
+            <button type="button" id="autoRuleCloseBtn" class="ghost-btn small">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="autoWebhookModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="autoWebhookTitle">
+        <div class="crop-modal-card profile-modal-card">
+          <h3 id="autoWebhookTitle">Home Assistant webhook</h3>
+          <p class="muted">External provider into Aria. Use header <code>X-Jarvis-Automation-Secret</code> only — query secrets are rejected.</p>
+          <p id="autoWebhookStatus" class="muted"></p>
+          <p id="autoWebhookUrl" class="muted tiny"></p>
+          <div class="sidebar-btn-row">
+            <button type="button" id="autoWebhookCopyBtn" class="apply-btn small">Copy URL</button>
+            <button type="button" id="autoWebhookTestBtn" class="ghost-btn small">Test config</button>
+            <button type="button" id="autoWebhookHaBtn" class="ghost-btn small">Open Smart Home</button>
+            <button type="button" id="autoWebhookCloseBtn" class="ghost-btn small">Close</button>
+          </div>
         </div>
       </div>
 
@@ -2416,7 +2532,8 @@
   <script src="/static/split_view.js?v=1.0.1"></script>
   <script src="/static/mini_chat.js?v=1.1.0"></script>
   <script src="/static/keyboard_nav.js?v=1.0.0"></script>
-  <script src="/static/workflow_recorder.js?v=1.0.0"></script>
+  <script src="/static/workflow_recorder.js?v=2.0.0"></script>
+  <script src="/static/automation_home.js?v=1.0.0"></script>
   <script src="/static/smart_welcome.js?v=1.1.0"></script>
   <script src="/static/modal_chrome.js?v=1.1.0"></script>
   <script src="/static/aria_dialogs.js?v=1.0.0"></script>

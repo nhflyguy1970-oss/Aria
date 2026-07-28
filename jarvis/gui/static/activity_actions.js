@@ -21,6 +21,7 @@
         toast(e.message || "Action failed", "err");
       }
     }
+    if (raw === "automation") return A?.goView?.("automation");
     if (raw === "jobs" || raw.startsWith("job:")) {
       return A?.mission?.jobs?.() || A?.invoke?.("jobCenterBtn", "Job center");
     }

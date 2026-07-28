@@ -11,10 +11,11 @@ from pathlib import Path
 from typing import Any, Callable
 
 from jarvis.config import DATA_DIR
+from jarvis.automation.paths import WORKFLOW_DAGS_DIR, ensure_dirs
 
 log = logging.getLogger("jarvis.intelligence.workflow")
 
-WORKFLOW_DIR = DATA_DIR / "workflows"
+WORKFLOW_DIR = WORKFLOW_DAGS_DIR
 
 
 @dataclass
@@ -96,6 +97,7 @@ def workflow_from_template(template_id: str, *, name: str | None = None) -> Work
 
 
 def save_workflow(wf: WorkflowDef) -> Path:
+    ensure_dirs()
     WORKFLOW_DIR.mkdir(parents=True, exist_ok=True)
     path = WORKFLOW_DIR / f"{wf.id}.json"
     payload = {

@@ -29,6 +29,8 @@
       "activityCenterModal",
       "workspaceLayoutsModal",
       "workflowModal",
+      "autoRuleModal",
+      "autoWebhookModal",
       "splitPickerModal",
     ];
 
@@ -84,7 +86,7 @@
         window.AriaActivity?.close?.();
         return;
       }
-      if (el.id === "workspaceLayoutsModal" || el.id === "workflowModal" || el.id === "splitPickerModal" || el.id === "dashCustomizeModal") {
+      if (el.id === "workspaceLayoutsModal" || el.id === "workflowModal" || el.id === "autoRuleModal" || el.id === "autoWebhookModal" || el.id === "splitPickerModal" || el.id === "dashCustomizeModal") {
         el.classList.add("hidden");
         return;
       }

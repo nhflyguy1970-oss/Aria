@@ -13,12 +13,18 @@ from pathlib import Path
 from typing import Any
 
 from jarvis.config import DATA_DIR
+from jarvis.automation.paths import (
+    LEARNED_INDEX_FILE,
+    LEARNED_WATCH_FILE,
+    LEARNED_WORKFLOWS_DIR,
+    ensure_dirs,
+)
 
 log = logging.getLogger("jarvis.workflow_learning")
 
-WORKFLOWS_DIR = DATA_DIR / "workflows"
-INDEX_FILE = WORKFLOWS_DIR / "index.json"
-WATCH_FILE = WORKFLOWS_DIR / "_watch_state.json"
+WORKFLOWS_DIR = LEARNED_WORKFLOWS_DIR
+INDEX_FILE = LEARNED_INDEX_FILE
+WATCH_FILE = LEARNED_WATCH_FILE
 WORKFLOW_TAG = "workflow-learn"
 WORKFLOW_NAMESPACE = "workflows"
 
@@ -96,6 +102,7 @@ def auto_remember() -> bool:
 
 
 def _ensure_dir() -> None:
+    ensure_dirs()
     WORKFLOWS_DIR.mkdir(parents=True, exist_ok=True)
 
 
