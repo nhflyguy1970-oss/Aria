@@ -347,6 +347,11 @@ def test_command_palette_is_wired():
     assert "documentsRebuildBtn" in html
     assert "documentsDropzone" in html
     assert "documentsAskDialog" in html
+    assert "connectionsView" in html
+    assert "connectionsHome" in html
+    assert "memoryOpenConnectionsBtn" in html
+    assert "Open Connections" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
+    assert "Knowledge Briefs" in html
     assert "Reindex RAG" not in html
     assert "documentsOpenIcsBtn" not in html
     assert "auditOpenMcBtn" in html

@@ -117,6 +117,65 @@ class KnowledgeOperations:
         )
 
     @classmethod
+    def connection_recall(cls, ctx, params: dict, message: str) -> dict:
+        from jarvis.connections_services import chat_grounding_context, format_recall_markdown
+        from jarvis.relationship_memory import parse_relationship_recall_query, recall_relationships
+
+        q = (params.get("query") or parse_relationship_recall_query(message) or message or "").strip()
+        grounded = chat_grounding_context(q or message, limit=8)
+        if grounded.get("used"):
+            return _ok(
+                format_recall_markdown(grounded),
+                module="connections",
+                triples=grounded.get("triples") or [],
+                type="connection_recall",
+            )
+        # Fall back to search but still filter in formatter message
+        raw = recall_relationships(q, limit=8)
+        trusted = [
+            t
+            for t in (raw.get("triples") or [])
+            if float(t.get("confidence") or 0) >= 0.55
+            and ((t.get("source") or "unknown") not in ("unknown", "") or t.get("memory_id"))
+        ]
+        return _ok(
+            format_recall_markdown({"triples": trusted}),
+            module="connections",
+            triples=trusted,
+            type="connection_recall",
+        )
+
+    @classmethod
+    def connection_lookup(cls, ctx, params: dict, message: str) -> dict:
+        from jarvis.connections_services import entity_page, search_connections
+
+        name = (params.get("name") or params.get("query") or "").strip()
+        if not name:
+            from jarvis.relationship_memory import parse_relationship_recall_query
+
+            name = parse_relationship_recall_query(message) or message.strip()
+        page = entity_page(name)
+        if page.get("ok"):
+            ent = page["entity"]
+            rels = page.get("relationships") or []
+            lines = [
+                f"**{ent.get('name')}** ({ent.get('kind')}, ns={ent.get('namespace')})",
+                f"Source: {ent.get('source')} · confidence: {ent.get('confidence')}",
+            ]
+            for r in rels[:12]:
+                lines.append(
+                    f"• {r.get('subject')} —{r.get('predicate')}→ {r.get('object')} "
+                    f"(source={r.get('source')}, conf={r.get('confidence')})"
+                )
+            return _ok("\n".join(lines), module="connections", entity=ent, relationships=rels)
+        found = search_connections(name, limit=8, mode="entities")
+        nodes = found.get("nodes") or []
+        if not nodes:
+            return _err(f"No connection entity found for “{name}”.", module="connections")
+        listing = "\n".join(f"• {n.get('name')} ({n.get('kind')}, {n.get('namespace')})" for n in nodes)
+        return _ok(f"Matches:\n{listing}", module="connections", nodes=nodes)
+
+    @classmethod
     def learn_about(cls, ctx, params: dict, message: str) -> dict:
         from jarvis.knowledge import learn_topic, parse_learn_topic
         from jarvis.profiles import web_search_disabled

@@ -3,7 +3,7 @@
   const VIEW_PANELS = [
     "chatView", "dashboardView", "workstationView", "plannerView", "calendarView", "flytyingView", "projectsView",
     "makerView", "browserView", "securityView", "presenceView", "auditView", "voiceView", "audioView", "journalView",
-    "memoryView", "galleryView", "videoView", "memeView", "documentsView", "actionsView",
+    "memoryView", "galleryView", "videoView", "memeView", "documentsView", "connectionsView", "actionsView",
   ];
 
   function switchToView(view) {
@@ -39,6 +39,7 @@
     else if (view === "meme" && typeof loadMemeGallery === "function") loadMemeGallery();
     if (view === "actions") window.loadActions?.(document.getElementById("actionsFilter")?.value);
     if (view === "documents") { window.initDocumentsTab?.(); window.loadDocumentsTab?.(); }
+    if (view === "connections" && window.initConnections) window.initConnections();
 
     const tab = document.querySelector(`.view-tab[data-view="${view}"]`);
     tab?.scrollIntoView({ block: "nearest", inline: "nearest" });

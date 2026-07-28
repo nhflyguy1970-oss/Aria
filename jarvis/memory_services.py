@@ -140,11 +140,20 @@ def adopt_candidate(memory_store, candidate_id: str) -> dict[str, Any]:
     if isinstance(entry, dict):
         cand["memory_id"] = entry.get("id")
     _save_candidates(items)
+    mirror: dict[str, Any] = {"ok": True, "mirrored": 0}
+    try:
+        from jarvis.connections_services import mirror_adopted_memory
+
+        mid = str(cand.get("memory_id") or "")
+        mirror = mirror_adopted_memory(cand, memory_id=mid)
+    except Exception as exc:
+        mirror = {"ok": False, "error": str(exc), "mirrored": 0}
     return {
         "ok": True,
         "candidate": cand,
         "entry": memory_store.to_public(entry) if hasattr(memory_store, "to_public") else entry,
         "message": "Adopted into autobiographical memory (ACM).",
+        "connections_mirror": mirror,
     }
 
 
@@ -613,7 +622,8 @@ def associative_recall(memory_store, query: str, *, limit: int = 8) -> dict[str,
     if q and hasattr(memory_store, "search"):
         for h in (memory_store.search(q, limit=limit) or [])[:limit]:
             related.append(_public_card(h))
-    # Optional KG
+    # Optional Connections (Knowledge Graph) — never silent about failure mode
+    kg_error = ""
     try:
         from jarvis import knowledge_graph as kg
 
@@ -624,18 +634,21 @@ def associative_recall(memory_store, query: str, *, limit: int = 8) -> dict[str,
                         "id": e.get("id") or e.get("name"),
                         "title": _clip(str(e.get("name") or e.get("label") or e)),
                         "type": "entity",
-                        "source": "knowledge_graph",
-                        "why": "Knowledge graph link — not autobiographical until adopted.",
+                        "source": "connections",
+                        "why": "Connections link — not autobiographical Memory.",
                     }
                 )
-    except Exception:
-        pass
-    return {
+    except Exception as exc:
+        kg_error = str(exc)
+    out: dict[str, Any] = {
         "ok": True,
         "query": q,
         "related": related,
         "message": "Associative surface for review — not a dump of all memories.",
     }
+    if kg_error:
+        out["connections_error"] = kg_error
+    return out
 
 
 def filter_user_facing(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:

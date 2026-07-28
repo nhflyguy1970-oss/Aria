@@ -169,7 +169,7 @@ function renderKnowledge(d) {
   const k = d.knowledge || {};
   const sources = (k.sources || []).map((s) => `<li>${mcEsc(typeof s === "string" ? s : s.name || JSON.stringify(s))}</li>`).join("");
   return mcGrid([
-    mcCard("Retrieval", `<p>Provider: <strong>${mcEsc(k.retrieval)}</strong></p><p>Documents: ${k.documents ?? "—"}</p><p>Last sync: ${mcEsc(k.last_sync || "—")}</p>`),
+    mcCard("Retrieval / Knowledge Briefs", `<p>Provider: <strong>${mcEsc(k.retrieval)}</strong></p><p>Documents: ${k.documents ?? "—"}</p><p>Last sync: ${mcEsc(k.last_sync || "—")}</p><p class="muted tiny">This is Knowledge Briefs / retrieval — not Connections (graph).</p>`),
     mcCard("Sources", mcList([sources])),
   ]);
 }
@@ -177,7 +177,18 @@ function renderKnowledge(d) {
 function renderDatabases(d) {
   const dbs = (d.databases || []).map((db) => `<li>${mcEsc(db.label || db.id)} ${mcBadge(db.running, "up", "down")} <span class="muted">${mcEsc(db.detail || "")}</span></li>`).join("");
   const svc = (d.services || []).map((s) => `<li>${mcEsc(s.label || s.id)} ${mcBadge(s.running, "up", "down")}</li>`).join("");
-  return mcGrid([mcCard("Databases", mcList([dbs])), mcCard("All services", mcList([svc]))]);
+  const conn = d.connections || {};
+  const connCard = mcCard(
+    "Connections (Knowledge Graph)",
+    `<p>Backend: <strong>${mcEsc(conn.backend || "—")}</strong> · ${mcEsc(conn.health || conn.status || "—")}</p>
+     <p>Nodes: ${conn.node_count ?? "—"} · Relationships: ${conn.relationship_count ?? "—"}</p>
+     <p>Namespaces: ${Array.isArray(conn.namespaces) ? conn.namespaces.length : (conn.namespaces ?? "—")}</p>
+     <p>Last ingest: ${mcEsc((conn.last_ingest && (conn.last_ingest.at || conn.last_ingest.kind)) || "—")}</p>
+     <p>Last cleanup: ${mcEsc((conn.last_cleanup && conn.last_cleanup.at) || "—")}</p>
+     <p class="muted tiny">Storage: ${mcEsc(conn.storage || "—")}</p>
+     <p class="muted tiny">Not Memory · Not Documents · ACM remains SoT</p>`
+  );
+  return mcGrid([mcCard("Databases", mcList([dbs])), mcCard("All services", mcList([svc])), connCard]);
 }
 
 function renderHardware(d) {
@@ -796,6 +807,12 @@ async function loadMissionControl() {
   if (status) status.textContent = "Refreshing…";
   try {
     _mcData = await mcFetch("/api/mission-control");
+    try {
+      const conn = await mcFetch("/api/connections/health");
+      _mcData.connections = conn;
+    } catch (_) {
+      _mcData.connections = { backend: "unavailable", health: "error", node_count: 0, relationship_count: 0 };
+    }
     if (status) status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
     switchMcTab(_mcTab);
   } catch (e) {

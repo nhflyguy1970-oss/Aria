@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=5.17.1" />
+  <link rel="stylesheet" href="/static/style.css?v=5.17.2" />
   <script>
     (function () {
       var standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -128,6 +128,7 @@
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="memory">Memory</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="projects">Projects</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="documents">Documents</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="connections" title="Relationship explorer — not Memory">Connections</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="browser">Browser</button>
         </div>
       </div>
@@ -523,6 +524,7 @@
         <button type="button" class="view-tab" data-view="video">Video</button>
         <button type="button" class="view-tab" data-view="meme">Meme</button>
         <button type="button" class="view-tab" data-view="documents">Documents</button>
+        <button type="button" class="view-tab" data-view="connections">Connections</button>
         <button type="button" class="view-tab" data-view="actions">Actions</button>
       </nav>
 
@@ -1015,7 +1017,7 @@
               <button type="button" id="memoryOpenProjectsBtn" class="ghost-btn small">Projects</button>
               <button type="button" id="memoryOpenBrowserBtn" class="ghost-btn small">Browser</button>
               <button type="button" id="memoryOpenDocumentsBtn" class="ghost-btn small">Documents</button>
-              <button type="button" id="memoryOpenKnowledgeBtn" class="ghost-btn small" title="Knowledge is separate from Memory">Knowledge</button>
+              <button type="button" id="memoryOpenKnowledgeBtn" class="ghost-btn small" title="Knowledge Briefs (research) — not Connections or Memory">Knowledge Briefs</button>
               <button type="button" id="memoryExportBtn" class="apply-btn small">Export</button>
               <button type="button" id="memoryImportBtn" class="apply-btn small">Import</button>
               <input type="file" id="memoryImportFile" accept="application/json,.json" hidden />
@@ -1029,7 +1031,8 @@
           <aside class="memory-knowledge-sep muted">
             <strong>Knowledge separation:</strong> Memory = autobiography about you.
             Knowledge / research / RAG / documents are separate — adopt into Memory only after review.
-            <button type="button" id="memoryOpenKnowledgeBtn2" class="ghost-btn tiny">Open Knowledge</button>
+            <button type="button" id="memoryOpenKnowledgeBtn2" class="ghost-btn tiny">Open Knowledge Briefs</button>
+            <button type="button" id="memoryOpenConnectionsBtn" class="ghost-btn tiny" title="Relationship explorer">Open Connections</button>
           </aside>
         </div>
 
@@ -1266,7 +1269,7 @@
             <div>
               <h2>Documents</h2>
               <p class="muted docs-tagline">Personal document intelligence — local files, grounded search, Memory candidates. Not Drive, SharePoint, or Notion.</p>
-              <p class="muted tiny">Documents = library · Knowledge = extracted briefs · Memory = autobiography · Search index = retrieval</p>
+              <p class="muted tiny">Documents = library · Knowledge = briefs · Connections = graph · Memory = autobiography · Search index = retrieval</p>
             </div>
             <div class="docs-shell-actions">
               <button type="button" id="documentsHelpBtn" class="ghost-btn tiny" title="Shortcuts">?</button>
@@ -1327,6 +1330,84 @@
           <form method="dialog" class="docs-dialog-card">
             <h3>Document briefing</h3>
             <pre id="documentsBriefingBody" class="docs-briefing"></pre>
+            <div class="docs-dialog-actions"><button type="submit" class="ghost-btn">Close</button></div>
+          </form>
+        </dialog>
+      </div>
+
+
+      <div id="connectionsView" class="view-panel hidden">
+        <div class="conn-shell">
+          <header class="conn-shell-header">
+            <div>
+              <h2>Connections</h2>
+              <p class="muted docs-tagline">Relationship explorer — models how things relate. Not Memory, not Documents, not Knowledge Briefs. ACM remains cognitive source of truth; the graph mirrors.</p>
+              <p class="muted tiny">Documents = files · Knowledge = briefs · Connections = graph · Memory = autobiography</p>
+            </div>
+            <div class="docs-shell-actions">
+              <button type="button" id="connectionsHelpBtn" class="ghost-btn tiny" title="Shortcuts">?</button>
+            </div>
+          </header>
+          <div class="docs-layout">
+            <aside class="docs-sidebar" aria-label="Connections library">
+              <div class="planner-add-row">
+                <input type="search" id="connectionsSearchInput" placeholder="Search connections… (/)" aria-label="Search connections" />
+                <button type="button" id="connectionsSearchBtn" class="ghost-btn small">Search</button>
+              </div>
+              <label class="muted tiny">Mode
+                <select id="connectionsSearchMode" aria-label="Search mode">
+                  <option value="all">All</option>
+                  <option value="entities">Entities</option>
+                  <option value="relationships">Relationships</option>
+                  <option value="people">People</option>
+                  <option value="places">Places</option>
+                  <option value="organizations">Organizations</option>
+                  <option value="concepts">Concepts</option>
+                  <option value="project">Project namespace</option>
+                  <option value="document">Document-linked</option>
+                </select>
+              </label>
+              <div class="docs-quick-row">
+                <button type="button" id="connectionsBrowseBtn" class="ghost-btn tiny">Browse</button>
+                <button type="button" id="connectionsNewBtn" class="ghost-btn tiny">New (N)</button>
+                <button type="button" id="connectionsImportBtn" class="ghost-btn tiny">Import</button>
+                <button type="button" id="connectionsCleanupBtn" class="ghost-btn tiny">Cleanup</button>
+                <button type="button" id="connectionsAssistantBtn" class="ghost-btn tiny">Assistant</button>
+                <button type="button" id="connectionsUndoBtn" class="ghost-btn tiny">Undo</button>
+                <button type="button" id="connectionsClearBtn" class="ghost-btn tiny">Clear</button>
+              </div>
+              <ul id="connectionsList" class="docs-list" role="listbox" aria-label="Entities"></ul>
+              <ul id="connectionsSearchResults" class="docs-list hidden" role="listbox" aria-label="Search results"></ul>
+            </aside>
+            <main id="connectionsHome" class="docs-home" aria-live="polite">
+              <div class="conn-skeleton" aria-busy="true"><div></div><div></div><div></div></div>
+            </main>
+          </div>
+        </div>
+        <dialog id="connectionsImportDialog" class="docs-dialog">
+          <form method="dialog" class="docs-dialog-card">
+            <h3>Import for review</h3>
+            <p class="muted tiny">Extracts entities/relationships but does not write until you Approve.</p>
+            <label>Namespace <input type="text" id="connectionsImportNs" value="default" /></label>
+            <label>Text <textarea id="connectionsImportText" rows="6" placeholder="Aria works at Home Lab. Aria uses Ollama."></textarea></label>
+            <div class="docs-dialog-actions">
+              <button type="submit" value="cancel" class="ghost-btn">Cancel</button>
+              <button type="button" id="connectionsImportSubmit" class="apply-btn">Stage for review</button>
+            </div>
+          </form>
+        </dialog>
+        <dialog id="connectionsAssistantDialog" class="docs-dialog">
+          <form method="dialog" class="docs-dialog-card">
+            <h3>Relationship assistant</h3>
+            <p class="muted tiny">Suggestions only — never auto-modifies the graph.</p>
+            <ul id="connectionsAssistantBody" class="conn-mini"></ul>
+            <div class="docs-dialog-actions"><button type="submit" class="ghost-btn">Close</button></div>
+          </form>
+        </dialog>
+        <dialog id="connectionsExplainDialog" class="docs-dialog">
+          <form method="dialog" class="docs-dialog-card">
+            <h3>Relationship explanation</h3>
+            <pre id="connectionsExplainBody" class="docs-briefing"></pre>
             <div class="docs-dialog-actions"><button type="submit" class="ghost-btn">Close</button></div>
           </form>
         </dialog>
@@ -2219,6 +2300,7 @@
   <script src="/static/smarthome.js?v=5.16.73"></script>
   <script src="/static/chat_sessions.js?v=5.16.72"></script>
   <script src="/static/documents.js?v=2.0.0"></script>
+  <script src="/static/connections.js?v=1.0.0"></script>
   <script src="/static/movie_tiers.js?v=5.16.140"></script>
   <script src="/static/ha_extras.js?v=1.0.0"></script>
   <script src="/static/actions_view.js?v=1.0.0"></script>

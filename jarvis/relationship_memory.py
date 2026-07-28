@@ -210,6 +210,11 @@ def record_link(
             obj_s,
             namespace=namespace,
             memory_id=acm_id or memory_id,
+            props={
+                "source": "memory",
+                "confidence": 0.9,
+                "description": "Mirrored from explicit relationship teach / ACM encode",
+            },
         )
     except Exception as exc:
         logger.debug("relationship graph viz write skipped: %s", exc)
@@ -240,7 +245,13 @@ def record_links(
 
 
 def sync_memory_entry(entry: dict) -> list[dict]:
-    """Extract and store relationships when a memory entry is added."""
+    """Disabled by default — auto-extract from memory writes causes graph pollution.
+
+    ACM adopt → Connections mirror is handled by connections_services.mirror_adopted_memory.
+    Set JARVIS_GRAPH_SYNC_MEMORY=1 only for explicit legacy experiments.
+    """
+    if os.getenv("JARVIS_GRAPH_SYNC_MEMORY", "").strip().lower() not in ("1", "true", "yes"):
+        return []
     if not entry or entry.get("type") in ("failure", "success", "auto"):
         return []
     content = (entry.get("content") or "").strip()
@@ -253,7 +264,6 @@ def sync_memory_entry(entry: dict) -> list[dict]:
         triples.extend(extract_triples_llm(content))
     if not triples:
         return []
-    # dedupe
     seen: set[tuple[str, str, str]] = set()
     unique: list[tuple[str, str, str]] = []
     for t in triples:
@@ -319,24 +329,15 @@ def _entity_tokens(message: str) -> list[str]:
 
 
 def relationship_context_for_chat(message: str, *, limit: int = 8) -> str:
-    """Inject relevant subgraph when message mentions known entities."""
-    graph = get_graph_store()
-    if graph.stats().get("nodes", 0) == 0:
+    """Inject trusted Connections subgraph — requires confidence + provenance."""
+    try:
+        from jarvis.connections_services import chat_grounding_context
+
+        result = chat_grounding_context(message, limit=limit)
+        return str(result.get("context") or "")
+    except Exception as exc:
+        logger.debug("connections chat grounding skipped: %s", exc)
         return ""
-    tokens = _entity_tokens(message)
-    if not tokens:
-        return ""
-    triples = graph.related_triples(tokens, depth=1, limit=limit)
-    if not triples:
-        for token in tokens:
-            hits = graph.search_nodes(token, limit=2)
-            if hits:
-                triples = graph.neighbors(hits[0]["name"], depth=1, limit=limit)
-                break
-    if not triples:
-        return ""
-    lines = [f"- {t['subject']} —[{t['predicate']}]→ {t['object']}" for t in triples[:limit]]
-    return "Known relationships (use as grounded context):\n" + "\n".join(lines)
 
 
 def format_triples_markdown(triples: list[dict]) -> str:

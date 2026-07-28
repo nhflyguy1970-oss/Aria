@@ -192,6 +192,7 @@ def memory_surface(journal, query: str = "", *, limit: int = 8) -> dict[str, Any
                 )
     except Exception:
         log.debug("memory search unavailable", exc_info=True)
+    connections_error = ""
     try:
         from jarvis import knowledge_graph as kg
 
@@ -202,18 +203,23 @@ def memory_surface(journal, query: str = "", *, limit: int = 8) -> dict[str, Any
                         "kind": "entity",
                         "id": e.get("id") or e.get("name"),
                         "label": _clip(str(e.get("name") or e.get("label") or e)),
+                        "source": "connections",
                     }
                 )
-    except Exception:
-        log.debug("knowledge graph unavailable", exc_info=True)
+    except Exception as exc:
+        connections_error = str(exc)
+        log.warning("Connections search failed for journal related: %s", exc)
 
-    return {
+    out = {
         "ok": True,
         "query": q,
         "related": related,
         "requires_confirmation": True,
         "message": "Related items surfaced for review — nothing linked automatically.",
     }
+    if connections_error:
+        out["connections_error"] = connections_error
+    return out
 
 
 def writing_assistant(text: str, mode: str = "organize") -> dict[str, Any]:

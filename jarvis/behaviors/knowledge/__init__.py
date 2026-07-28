@@ -33,6 +33,8 @@ _KNOWLEDGE_ACTIONS: dict[str, tuple[Any, bool]] = {
     "knowledge_ingest": (KnowledgeEngine.knowledge_ingest, False),
     "git_sync": (KnowledgeEngine.git_sync, False),
     "git_sync_all": (KnowledgeEngine.git_sync_all, False),
+    "connection_recall": (KnowledgeEngine.connection_recall, True),
+    "connection_lookup": (KnowledgeEngine.connection_lookup, True),
 }
 
 _KNOWLEDGE_DEPENDENCIES = ["retrieval", "semantic_memory", "capability_registry"]

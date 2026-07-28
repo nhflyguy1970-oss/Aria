@@ -6072,3 +6072,39 @@ body:not(.has-status-bar) .mini-chat-panel { bottom: 4rem; }
   .docs-layout { grid-template-columns: 1fr; }
   .docs-sidebar { max-height: none; }
 }
+
+/* —— Connections (Knowledge Graph explorer) —— */
+#connectionsView { overflow: auto; }
+.conn-shell { padding: 1rem 1.25rem 2rem; }
+.conn-shell-header { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; }
+.conn-home-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0.85rem;
+}
+.conn-panel {
+  border: 1px solid var(--border); border-radius: 10px; padding: 0.85rem 1rem; background: var(--surface2);
+}
+.conn-panel h4 { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.conn-panel-wide { grid-column: 1 / -1; }
+.conn-dl { display: grid; grid-template-columns: 7rem 1fr; gap: 0.25rem 0.65rem; margin: 0; font-size: 0.82rem; }
+.conn-dl dt { color: var(--muted); }
+.conn-dl dd { margin: 0; overflow-wrap: anywhere; }
+.conn-mini { margin: 0.25rem 0 0.75rem; padding-left: 1.1rem; font-size: 0.82rem; }
+.conn-row, .conn-hit {
+  padding: 0.5rem 0.55rem; border-radius: 8px; border: 1px solid transparent;
+  margin-bottom: 0.35rem; cursor: pointer;
+}
+.conn-row:hover, .conn-row:focus-visible, .conn-hit:hover {
+  border-color: var(--border); background: var(--bg-elevated); outline: none;
+}
+.conn-row.is-selected { border-color: var(--accent, #5b8); background: var(--bg-elevated); }
+.conn-hit { cursor: default; }
+.conn-hit-actions { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+.conn-skeleton div {
+  height: 3rem; margin: 0.45rem 0; border-radius: 8px;
+  background: linear-gradient(90deg, var(--surface2), var(--bg-elevated), var(--surface2));
+  background-size: 200% 100%; animation: docsSkel 1.2s ease infinite;
+}
+#connectionsSearchMode {
+  width: 100%; margin: 0.35rem 0; background: var(--bg-elevated); color: var(--text);
+  border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.45rem; font: inherit;
+}

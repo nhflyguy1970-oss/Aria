@@ -2330,6 +2330,193 @@ def register_routes(app, assistant):
         found = scan_action_log(min_repeats_count=min_rep_i)
         return {"ok": True, "workflows": found, "count": len(found)}
 
+    # —— Connections (Knowledge Graph product surface) ——
+    @app.get("/api/connections/home")
+    def connections_home_api():
+        from jarvis.connections_services import connections_home
+
+        return connections_home()
+
+    @app.get("/api/connections/health")
+    def connections_health_api():
+        from jarvis.connections_services import health
+
+        return health()
+
+    @app.get("/api/connections/search")
+    def connections_search_api(
+        q: str = "",
+        limit: int = 20,
+        namespace: str = "",
+        kind: str = "",
+        mode: str = "all",
+    ):
+        from jarvis.connections_services import search_connections
+
+        return search_connections(q, limit=limit, namespace=namespace, kind=kind, mode=mode)
+
+    @app.get("/api/connections/entity")
+    def connections_entity_api(name: str = "", namespace: str = ""):
+        from jarvis.connections_services import entity_page
+
+        return entity_page(name, namespace=namespace)
+
+    @app.post("/api/connections/entity")
+    async def connections_create_entity(request: Request):
+        body = await request.json()
+        from jarvis.connections_services import create_entity
+
+        return create_entity(
+            str(body.get("name") or ""),
+            kind=str(body.get("kind") or "entity"),
+            namespace=str(body.get("namespace") or "default"),
+            description=str(body.get("description") or ""),
+            source=str(body.get("source") or "manual"),
+            confidence=float(body.get("confidence") or 1.0),
+            project=str(body.get("project") or ""),
+            document=str(body.get("document") or ""),
+        )
+
+    @app.post("/api/connections/relationship")
+    async def connections_create_rel(request: Request):
+        body = await request.json()
+        from jarvis.connections_services import create_relationship
+
+        return create_relationship(
+            str(body.get("subject") or ""),
+            str(body.get("predicate") or ""),
+            str(body.get("object") or ""),
+            namespace=str(body.get("namespace") or "default"),
+            source=str(body.get("source") or "manual"),
+            confidence=float(body.get("confidence") or 1.0),
+            memory_id=str(body.get("memory_id") or ""),
+            document=str(body.get("document") or ""),
+            project=str(body.get("project") or ""),
+            journal=str(body.get("journal") or ""),
+            description=str(body.get("description") or ""),
+        )
+
+    @app.post("/api/connections/propose")
+    async def connections_propose(request: Request):
+        body = await request.json()
+        from jarvis.connections_services import propose_ingest_from_text
+
+        return propose_ingest_from_text(
+            str(body.get("text") or ""),
+            namespace=str(body.get("namespace") or "default"),
+            source=str(body.get("source") or "ai_suggestion"),
+            document=str(body.get("document") or ""),
+            project=str(body.get("project") or ""),
+        )
+
+    @app.post("/api/connections/approve")
+    async def connections_approve(request: Request):
+        body = await request.json()
+        from jarvis.connections_services import approve_pending_ingest
+
+        return approve_pending_ingest(
+            str(body.get("pending_id") or ""),
+            selected_entities=body.get("entities"),
+            selected_rels=body.get("relationships"),
+        )
+
+    @app.post("/api/connections/dismiss")
+    async def connections_dismiss(request: Request):
+        body = await request.json()
+        from jarvis.connections_services import dismiss_pending_ingest
+
+        return dismiss_pending_ingest(str(body.get("pending_id") or ""))
+
+    @app.delete("/api/connections/entity")
+    def connections_delete_entity(name: str = "", namespace: str = "default"):
+        from jarvis.connections_services import delete_entity
+
+        return delete_entity(name, namespace=namespace)
+
+    @app.delete("/api/connections/relationship")
+    def connections_delete_rel(id: str = ""):
+        from jarvis.connections_services import delete_relationship
+
+        return delete_relationship(id)
+
+    @app.post("/api/connections/prune")
+    async def connections_prune(request: Request):
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        from jarvis.connections_services import prune_orphans
+
+        return prune_orphans(namespace=str(body.get("namespace") or ""))
+
+    @app.post("/api/connections/cleanup-queries")
+    def connections_cleanup_queries():
+        from jarvis.connections_services import cleanup_queries_namespace
+
+        return cleanup_queries_namespace()
+
+    @app.post("/api/connections/undo")
+    async def connections_undo(request: Request):
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        from jarvis.connections_services import undo_last
+
+        return undo_last(str(body.get("undo_id") or ""))
+
+    @app.post("/api/connections/merge")
+    async def connections_merge(request: Request):
+        body = await request.json()
+        from jarvis.connections_services import merge_entities
+
+        return merge_entities(
+            str(body.get("keep") or ""),
+            str(body.get("drop") or ""),
+            namespace=str(body.get("namespace") or "default"),
+        )
+
+    @app.get("/api/connections/assistant")
+    def connections_assistant_api():
+        from jarvis.connections_services import relationship_assistant
+
+        return relationship_assistant()
+
+    @app.get("/api/connections/explain")
+    def connections_explain_api(subject: str = "", object: str = "", namespace: str = ""):
+        from jarvis.connections_services import explain_relationship
+
+        return explain_relationship(subject, object, namespace=namespace)
+
+    @app.get("/api/connections/project")
+    def connections_project_api(slug: str = ""):
+        from jarvis.connections_services import project_subgraph
+
+        return project_subgraph(slug)
+
+    @app.post("/api/connections/from-document")
+    async def connections_from_document(request: Request):
+        """Documents → extract → review queue (never auto-write)."""
+        body = await request.json()
+        from jarvis.connections_services import propose_ingest_from_text
+        from jarvis.document_pipeline import parse_document
+
+        path = str(body.get("path") or "").strip()
+        text = str(body.get("text") or "")
+        if path and not text:
+            try:
+                doc = parse_document(path)
+                text = "\n\n".join(getattr(doc, "pages", None) or [])
+            except Exception as exc:
+                return {"ok": False, "error": str(exc)}
+        return propose_ingest_from_text(
+            text,
+            namespace=str(body.get("namespace") or "default"),
+            source="document",
+            document=path or str(body.get("document") or ""),
+            project=str(body.get("project") or ""),
+        )
+
     try:
         from jarvis.intelligence.routes import register_intelligence_routes
 

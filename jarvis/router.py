@@ -1416,6 +1416,28 @@ def _quick_route(
             "thinking": "ask document library with citations",
         }
 
+    if re.search(
+        r"\b(connections?|relationships?|knowledge graph)\s+(?:for|of|about|with)\b"
+        r"|\bwhat(?:'s| is)\s+connected to\b"
+        r"|\bshow (?:my )?(?:connections?|relationships?)\b"
+        r"|\bwho\s+(?:works on|uses|knows)\b",
+        lower,
+    ):
+        from jarvis.relationship_memory import parse_relationship_recall_query
+
+        return {
+            "action": "connection_recall",
+            "params": {"query": parse_relationship_recall_query(message) or message},
+            "thinking": "connections recall with provenance",
+        }
+
+    if re.search(r"\b(?:lookup|open|show)\s+(?:entity|connection)\b", lower):
+        return {
+            "action": "connection_lookup",
+            "params": {"query": message},
+            "thinking": "connections entity lookup",
+        }
+
     doc_path = _document_path_in_message(message)
     if doc_path and re.search(
         r"\b(summarize|summary|overview|what does|warranty|coverage|explain)\b",

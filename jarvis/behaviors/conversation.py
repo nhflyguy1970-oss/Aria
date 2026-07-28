@@ -133,6 +133,16 @@ class ConversationEngine:
             know_warnings = getattr(knowledge_behavior, "_last_warnings", [])
             warnings.extend(know_warnings)
 
+        # Trusted Connections grounding (graph mirror — never anonymous / low-confidence)
+        try:
+            from jarvis.relationship_memory import relationship_context_for_chat
+
+            conn_ctx = relationship_context_for_chat(message, limit=6)
+            if conn_ctx:
+                parts.append(conn_ctx)
+        except Exception:
+            pass
+
         from jarvis.lang_util import detect_text_language, language_reply_hint
 
         lang = detect_text_language(message)

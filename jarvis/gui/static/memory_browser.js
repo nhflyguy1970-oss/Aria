@@ -869,10 +869,14 @@ function initMemoryBrowser() {
   });
   document.getElementById("memoryOpenKnowledgeBtn")?.addEventListener("click", () => {
     window.switchToView?.("documents");
-    window.showAriaToast?.("Knowledge lives with Documents / research — not Memory.", "info", 4000);
+    window.showAriaToast?.("Knowledge Briefs live with Documents / research — not Memory, not Connections.", "info", 4000);
   });
   document.getElementById("memoryOpenKnowledgeBtn2")?.addEventListener("click", () => {
     document.getElementById("memoryOpenKnowledgeBtn")?.click();
+  });
+  document.getElementById("memoryOpenConnectionsBtn")?.addEventListener("click", () => {
+    window.switchToView?.("connections");
+    window.showAriaToast?.("Connections = relationship graph. ACM remains cognitive SoT.", "info", 3500);
   });
   document.addEventListener("keydown", (e) => {
     const view = document.getElementById("memoryView");

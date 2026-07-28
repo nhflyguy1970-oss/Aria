@@ -549,6 +549,23 @@
         },
       },
       {
+        id: "act:open-connections",
+        label: "Open Connections",
+        group: "Navigate",
+        keywords: "knowledge graph relationships entities links",
+        run: () => goView("connections"),
+      },
+      {
+        id: "act:connections-search",
+        label: "Search Connections",
+        group: "Actions",
+        keywords: "graph entity relationship",
+        run: () => {
+          goView("connections");
+          setTimeout(() => $("connectionsSearchInput")?.focus(), 80);
+        },
+      },
+      {
         id: "act:browser-url",
         label: "Focus browser URL",
         group: "Actions",

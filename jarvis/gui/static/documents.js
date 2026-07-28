@@ -124,6 +124,7 @@
               <button type="button" class="apply-btn small" data-act="summarize" data-path="${escapeHtml(d.location || previewPath)}">Summarize</button>
               <button type="button" class="ghost-btn small" data-act="ask" data-path="${escapeHtml(d.location || previewPath)}">Ask Aria</button>
               <button type="button" class="ghost-btn small" data-act="learn" data-path="${escapeHtml(d.location || previewPath)}">Learn → candidates</button>
+              <button type="button" class="ghost-btn small" data-act="connections" data-path="${escapeHtml(d.location || previewPath)}">Add to Connections…</button>
               <button type="button" class="ghost-btn small" data-act="chat" data-path="${escapeHtml(d.location || previewPath)}">Open in Chat</button>
             </div>
           </section>`;
@@ -250,6 +251,20 @@
         });
         toast(data.message || "Candidates staged", "ok");
         await loadHome(docsState.selected);
+      } catch (e) {
+        toast(e.message, "err");
+      }
+      return;
+    }
+    if (act === "connections") {
+      try {
+        const data = await docsFetch("/api/connections/from-document", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ path: full, source: "document" }),
+        });
+        toast(data.message || "Staged for Connections review — approve in Connections", "ok");
+        window.switchToView?.("connections");
       } catch (e) {
         toast(e.message, "err");
       }
