@@ -515,9 +515,34 @@
   };
   window.initDocumentsTab = initDocumentsTab;
 
+  // Module-owned command (palette registry) — Documents registers itself
+  function registerDocumentsCommands() {
+    const reg = window.AriaCommandRegistry || window;
+    if (typeof reg.register !== "function" && typeof window.registerAriaCommand !== "function") return;
+    const register = window.registerAriaCommand || reg.register.bind(reg);
+    register({
+      id: "mod:documents:ask-library",
+      title: "Ask Documents library",
+      group: "Actions",
+      keywords: "rag cited ask sources",
+      source: "module",
+      description: "Ask Aria with Documents grounding",
+      run: () => {
+        window.AriaActions?.askAria?.(
+          "Search my documents and answer with citations. Ask what I need to know.",
+          { autoSend: true, returnView: "documents" },
+        );
+      },
+    });
+  }
+
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initDocumentsTab);
+    document.addEventListener("DOMContentLoaded", () => {
+      initDocumentsTab();
+      registerDocumentsCommands();
+    });
   } else {
     initDocumentsTab();
+    registerDocumentsCommands();
   }
 })();

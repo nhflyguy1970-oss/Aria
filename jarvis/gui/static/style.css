@@ -6207,3 +6207,50 @@ body:not(.has-status-bar) .mini-chat-panel { bottom: 4rem; }
 @media (prefers-reduced-motion: reduce) {
   .chat-ctx-chip, .citation-chip, .chat-reply-actions button { transition: none; }
 }
+
+/* ===== Command Palette OS launcher ===== */
+.command-palette-status {
+  margin: 0.25rem 0.9rem 0;
+  font-size: 0.75rem;
+  min-height: 1.1em;
+}
+.command-palette-status.is-loading { color: var(--accent); }
+.command-palette-status.is-error { color: var(--danger, #d4685e); }
+.command-palette-status.hidden,
+.command-palette-retry.hidden,
+.command-palette-help.hidden { display: none; }
+.command-palette-retry { margin: 0.15rem 0.9rem 0.25rem; }
+.command-palette-help {
+  margin: 0.35rem 0.9rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+.command-palette-help p { margin: 0.2rem 0; }
+.command-palette-help code {
+  font-size: 0.7rem;
+  padding: 0.05rem 0.25rem;
+  border-radius: 4px;
+  background: var(--bg-deep);
+}
+.command-palette-desc {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-top: 0.1rem;
+}
+.command-palette-badge {
+  display: inline-block;
+  margin-right: 0.35rem;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+@media (prefers-reduced-motion: reduce) {
+  .command-palette-item,
+  .command-palette-pin { transition: none; }
+}

@@ -1,20 +1,35 @@
-/** Global command palette — Ctrl/Cmd+K (nav + actions). */
+/** Command Palette — Aria structured OS launcher (orchestrator). Catalog lives in registry + modules. */
 (function () {
+  "use strict";
+
   const RECENT_KEY = "aria_cmd_palette_recent";
-  const MAX_RECENT = 8;
+  const PIN_KEY = "aria_cmd_palette_pins";
+  const USAGE_KEY = "aria_cmd_palette_usage";
+  const MAX_RECENT = 10;
   const MAX_VISIBLE = 40;
 
-  /** @type {{ id: string, label: string, group: string, keywords?: string, run: () => void, hint?: string }[]} */
-  let commands = [];
+  /** @type {object[]} */
   let filtered = [];
   let activeIndex = 0;
   let openerEl = null;
+  let contentHits = [];
+  let searchSeq = 0;
+  let searchTimer = null;
+  let searchStatus = "idle"; // idle | searching | ready | empty | error
+  let searchError = "";
+  let helpOpen = false;
 
   function $(id) {
     return document.getElementById(id);
   }
 
+  function registry() {
+    return window.AriaCommandRegistry;
+  }
+
   function loadRecent() {
+    const fromPrefs = window.AriaUiPrefs?.get?.("recentCommands");
+    if (Array.isArray(fromPrefs) && fromPrefs.length) return fromPrefs;
     try {
       const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || "[]");
       return Array.isArray(raw) ? raw.filter((x) => typeof x === "string") : [];
@@ -28,841 +43,97 @@
     try {
       localStorage.setItem(RECENT_KEY, JSON.stringify(next));
     } catch {
-      /* ignore quota */
+      /* ignore */
+    }
+    window.AriaUiPrefs?.set?.("recentCommands", next);
+    window.AriaUiPrefs?.bumpUsage?.("commandUsage", id);
+    try {
+      const usage = JSON.parse(localStorage.getItem(USAGE_KEY) || "{}");
+      usage[id] = (usage[id] || 0) + 1;
+      localStorage.setItem(USAGE_KEY, JSON.stringify(usage));
+    } catch {
+      /* ignore */
     }
   }
 
-  function score(cmd, q) {
-    if (!q) return 1;
-    const hay = `${cmd.label} ${cmd.group} ${cmd.keywords || ""} ${cmd.id}`.toLowerCase();
-    const needle = q.toLowerCase().trim();
-    if (!needle) return 1;
-    if (hay === needle) return 100;
-    if (hay.startsWith(needle)) return 80;
-    if (hay.includes(needle)) return 50;
-    const parts = needle.split(/\s+/).filter(Boolean);
-    if (parts.every((p) => hay.includes(p))) return 35;
-    // simple fuzzy: all chars in order
-    let i = 0;
-    for (const ch of hay) {
-      if (ch === needle[i]) i += 1;
-      if (i >= needle.length) return 20;
+  function loadPins() {
+    const fromPrefs = window.AriaUiPrefs?.get?.("pinnedCommands");
+    if (Array.isArray(fromPrefs)) return fromPrefs;
+    try {
+      const raw = JSON.parse(localStorage.getItem(PIN_KEY) || "[]");
+      return Array.isArray(raw) ? raw : [];
+    } catch {
+      return [];
     }
-    return 0;
   }
 
-  function goView(view) {
-    window.switchToView?.(view);
+  function togglePin(id) {
+    const pins = loadPins();
+    const next = pins.includes(id) ? pins.filter((x) => x !== id) : [id, ...pins].slice(0, 12);
+    try {
+      localStorage.setItem(PIN_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+    window.AriaUiPrefs?.set?.("pinnedCommands", next);
+    announce(next.includes(id) ? "Pinned" : "Unpinned");
+    return next;
   }
 
-  function goMc(tab) {
-    window.switchToView?.("workstation");
-    setTimeout(() => window.switchMcTab?.(tab), 50);
+  function loadUsage() {
+    const fromPrefs = window.AriaUiPrefs?.get?.("commandUsage");
+    if (fromPrefs && typeof fromPrefs === "object") return fromPrefs;
+    try {
+      return JSON.parse(localStorage.getItem(USAGE_KEY) || "{}");
+    } catch {
+      return {};
+    }
   }
 
-  function openModal(id) {
-    const el = $(id);
+  function announce(msg) {
+    const live = $("commandPaletteLive");
+    if (live) live.textContent = msg || "";
+  }
+
+  function setSearchStatus(status, detail) {
+    searchStatus = status;
+    searchError = detail || "";
+    const el = $("commandPaletteStatus");
     if (!el) return;
-    el.classList.remove("hidden");
-  }
-
-  function buildCommands() {
-    const views = [
-      ["chat", "Chat", "conversation ai"],
-      ["dashboard", "Dashboard", "home overview"],
-      ["workstation", "Mission Control", "mc operator acm"],
-      ["planner", "Planner", "tasks todo"],
-      ["calendar", "Calendar", "schedule"],
-      ["flytying", "Fly tying", "flies patterns"],
-      ["projects", "Projects", "repos"],
-      ["maker", "Maker lab", "cad stl print"],
-      ["browser", "Browser agent", "playwright web"],
-      ["security", "Security", "pin auth"],
-      ["presence", "Presence", "location"],
-      ["audit", "System / audit", "logs repair"],
-      ["voice", "Voice", "speech mic"],
-      ["audio", "Audio", "sound whisper"],
-      ["journal", "Bullet Journal", "bujo gratitude"],
-      ["memory", "Memory", "knowledge recall"],
-      ["gallery", "Gallery", "images comfy"],
-      ["video", "Video", "movie render"],
-      ["meme", "Meme studio", "captions"],
-      ["documents", "Documents", "files pdf"],
-      ["actions", "Actions / report", "checklist"],
-    ];
-
-    const nav = views.map(([id, label, keywords]) => ({
-      id: `nav:${id}`,
-      label: `Go to ${label}`,
-      group: "Navigate",
-      keywords,
-      hint: "View",
-      run: () => goView(id),
-    }));
-
-    const mcTabs = [
-      "overview", "routing", "timeline", "intent_analytics", "release", "connection",
-      "applications", "inference", "memory", "knowledge", "databases", "hardware",
-      "jobs", "activity", "performance", "settings", "recovery",
-    ].map((tab) => ({
-      id: `mc:${tab}`,
-      label: `Mission Control · ${tab.replace(/_/g, " ")}`,
-      group: "Mission Control",
-      keywords: `mc ${tab}`,
-      hint: "MC",
-      run: () => goMc(tab),
-    }));
-
-    const actions = [
-      {
-        id: "act:focus-chat",
-        label: "Focus chat input",
-        group: "Actions",
-        keywords: "message type ask",
-        run: () => {
-          goView("chat");
-          setTimeout(() => $("messageInput")?.focus(), 60);
-        },
-      },
-      {
-        id: "act:clear-chat",
-        label: "Clear conversation",
-        group: "Actions",
-        keywords: "reset wipe history",
-        run: () => $("clearBtn")?.click(),
-      },
-      {
-        id: "act:read-aloud",
-        label: "Read last reply aloud",
-        group: "Actions",
-        keywords: "tts speak voice audio narration",
-        run: () => $("readAloudBtn")?.click(),
-      },
-      {
-        id: "act:stop-chat",
-        label: "Stop responding",
-        group: "Actions",
-        keywords: "cancel abort generation",
-        run: () => $("stopChatBtn")?.click(),
-      },
-      {
-        id: "act:export-chat",
-        label: "Export chat (Markdown)",
-        group: "Actions",
-        keywords: "download md transcript",
-        run: () => $("exportChatBtn")?.click(),
-      },
-      {
-        id: "act:new-branch",
-        label: "New chat branch",
-        group: "Actions",
-        keywords: "fork conversation",
-        run: () => $("newBranchBtn")?.click(),
-      },
-      {
-        id: "act:free-vram",
-        label: "Free VRAM",
-        group: "System",
-        keywords: "gpu memory unload",
-        run: () => $("freeVramBtn")?.click(),
-      },
-      {
-        id: "act:cloud-live",
-        label: "Toggle Cloud Live voice",
-        group: "Actions",
-        keywords: "gemini live cloud microphone",
-        run: () => $("cloudLiveBtn")?.click(),
-      },
-      {
-        id: "act:git-status",
-        label: "Refresh git status",
-        group: "System",
-        keywords: "diff log repo",
-        run: () => {
-          goView("chat");
-          $("gitRefreshBtn")?.click();
-        },
-      },
-      {
-        id: "act:maker",
-        label: "Open Maker lab",
-        group: "Actions",
-        keywords: "cad 3d print openscad slicer",
-        run: () => goView("maker"),
-      },
-      {
-        id: "act:fly-tying",
-        label: "Open Fly tying",
-        group: "Actions",
-        keywords: "fly recipe pattern hatch",
-        run: () => goView("flytying"),
-      },
-      {
-        id: "act:presence",
-        label: "Open Presence camera",
-        group: "Actions",
-        keywords: "webcam gesture face enroll",
-        run: () => goView("presence"),
-      },
-      {
-        id: "act:audit",
-        label: "Open System audit",
-        group: "System",
-        keywords: "health diagnostics check",
-        run: () => goView("audit"),
-      },
-      {
-        id: "act:meme-studio",
-        label: "Open Meme Studio",
-        group: "Actions",
-        keywords: "caption image funny meme generate",
-        run: () => goView("meme"),
-      },
-      {
-        id: "act:mute-voice",
-        label: "Toggle voice mute",
-        group: "Actions",
-        keywords: "mute unmute speaker silence",
-        run: () => $("voiceMuteBtn")?.click(),
-      },
-      {
-        id: "act:speak-replies",
-        label: "Toggle speak replies",
-        group: "Actions",
-        keywords: "tts auto speak voice replies mute",
-        run: () => {
-          const cb = $("speakRepliesToggle");
-          if (cb) {
-            cb.checked = !cb.checked;
-            cb.dispatchEvent(new Event("change"));
-          } else {
-            $("voiceMuteBtn")?.click();
-          }
-        },
-      },
-      {
-        id: "act:uncensored",
-        label: "Toggle uncensored mode",
-        group: "Settings",
-        keywords: "nsfw uncensored adult content",
-        run: () => $("uncensoredToggle")?.click(),
-      },
-      {
-        id: "act:server-whisper",
-        label: "Toggle server Whisper",
-        group: "Settings",
-        keywords: "stt whisper server mic transcription",
-        run: () => $("serverWhisperToggle")?.click(),
-      },
-      {
-        id: "act:lan-copy",
-        label: "Copy LAN URL",
-        group: "System",
-        keywords: "lan network url share phone tablet",
-        run: () => $("lanCopyUrlBtn")?.click(),
-      },
-      {
-        id: "act:open-actions",
-        label: "Open Actions / report",
-        group: "Navigate",
-        keywords: "checklist actions report daily",
-        run: () => goView("actions"),
-      },
-      {
-        id: "act:stop-speaking",
-        label: "Stop speaking",
-        group: "Actions",
-        keywords: "tts stop audio speak silence interrupt",
-        run: () => {
-          if (typeof window.jarvisStopSpeaking === "function") window.jarvisStopSpeaking();
-          else $("audioStopBtn")?.click();
-        },
-      },
-      {
-        id: "act:lock-security",
-        label: "Lock Aria (PIN)",
-        group: "System",
-        keywords: "security pin lock screen",
-        run: () => {
-          goView("security");
-          setTimeout(() => $("securityLockBtn")?.click(), 80);
-        },
-      },
-      {
-        id: "act:pomodoro",
-        label: "Start Pomodoro",
-        group: "Actions",
-        keywords: "timer focus 25 planner",
-        run: () => {
-          goView("planner");
-          setTimeout(() => $("plannerPomodoroBtn")?.click(), 80);
-        },
-      },
-      {
-        id: "act:video-studio",
-        label: "Open Video Studio",
-        group: "Actions",
-        keywords: "animatediff ken burns storyboard",
-        run: () => $("openVideoStudioBtn")?.click() || window.switchToView?.("video"),
-      },
-      {
-        id: "act:models-editor",
-        label: "Open models editor",
-        group: "System",
-        keywords: "ollama settings roles",
-        run: () => {
-          const ed = $("modelsEditor");
-          const tog = $("modelsToggle");
-          ed?.classList.remove("hidden");
-          tog?.setAttribute("aria-expanded", "true");
-          // expand models sidebar section if collapsed
-          const sec = ed?.closest(".sidebar-section");
-          if (sec?.classList.contains("collapsed")) sec.querySelector(".sidebar-section-head")?.click();
-          window.loadModelSettings?.();
-          window.showAriaToast?.("Models editor", "ok", 2000);
-        },
-      },
-      {
-        id: "act:pull-models",
-        label: "Pull missing models",
-        group: "System",
-        keywords: "ollama download install",
-        run: () => {
-          goView("chat");
-          $("pullMissingBtn")?.click();
-        },
-      },
-      {
-        id: "act:lsp-diag",
-        label: "LSP diagnostics",
-        group: "System",
-        keywords: "coding check errors",
-        run: () => {
-          goView("chat");
-          window.runLspAction?.("diagnostics") || $("lspDiagBtn")?.click();
-        },
-      },
-      {
-        id: "act:reindex-code",
-        label: "Reindex code",
-        group: "System",
-        keywords: "search symbols lsp",
-        run: () => $("indexCodeBtn")?.click(),
-      },
-      {
-        id: "act:job-center",
-        label: "Open job center",
-        group: "Actions",
-        keywords: "background jobs media",
-        run: () => {
-          $("jobCenterBtn")?.click();
-          if ($("jobCenterModal")?.classList.contains("hidden")) openModal("jobCenterModal");
-        },
-      },
-      {
-        id: "act:settings",
-        label: "Open voice & chat settings",
-        group: "Actions",
-        keywords: "preferences tts",
-        run: () => {
-          $("settingsBtn")?.click();
-          openModal("settingsModal");
-        },
-      },
-      {
-        id: "act:shortcuts",
-        label: "Open keyboard shortcuts",
-        group: "Actions",
-        keywords: "help keys",
-        run: () => {
-          $("shortcutsBtn")?.click();
-          openModal("shortcutsModal");
-        },
-      },
-      {
-        id: "act:upgrade",
-        label: "Open upgrade wizard",
-        group: "Actions",
-        keywords: "update patch",
-        run: () => {
-          $("upgradeWizardBtn")?.click();
-          openModal("upgradeWizardModal");
-        },
-      },
-      {
-        id: "act:ha-setup",
-        label: "Open smart home setup",
-        group: "Actions",
-        keywords: "home assistant ha",
-        run: () => openModal("haSetupModal"),
-      },
-      {
-        id: "act:ha-test",
-        label: "Test Home Assistant connection",
-        group: "Actions",
-        keywords: "ha ping smart home connection",
-        run: () => {
-          const sec = $("haPanel")?.closest?.(".sidebar-section");
-          if (sec?.classList.contains("collapsed")) {
-            sec.querySelector(".sidebar-section-head")?.click();
-          }
-          $("haPanel")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-          setTimeout(() => $("haTestBtn")?.click(), 80);
-        },
-      },
-      {
-        id: "act:image-engine",
-        label: "Open image engine / Comfy settings",
-        group: "Actions",
-        keywords: "comfy sdxl flux checkpoint gallery mode",
-        run: () => {
-          goView("gallery");
-          setTimeout(() => {
-            $("imageEnginePanel")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-            $("galleryModeSelect")?.focus();
-          }, 80);
-        },
-      },
-      {
-        id: "act:integrations-keys",
-        label: "API keys (Cloud Live & models)",
-        group: "Actions",
-        keywords: "gemini openai huggingface integrations cloud live",
-        run: () => {
-          const panel = $("integrationsPanel") || $("integrationsGeminiKey")?.closest(".sidebar-section");
-          const sec = panel?.closest?.(".sidebar-section") || panel;
-          if (sec?.classList.contains("collapsed")) {
-            sec.querySelector(".sidebar-section-head")?.click();
-          }
-          $("integrationsSettingsBtn")?.click();
-          setTimeout(() => {
-            $("integrationsGeminiKey")?.focus();
-            $("integrationsGeminiKey")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-          }, 80);
-          window.showAriaToast?.("Integrations — paste keys then Save", "ok", 3500);
-        },
-      },
-      {
-        id: "act:generate-image",
-        label: "Generate image (Gallery)",
-        group: "AI",
-        keywords: "comfy sd flux",
-        run: () => {
-          goView("gallery");
-          setTimeout(() => $("galleryPromptInput")?.focus(), 80);
-        },
-      },
-      {
-        id: "act:ask-status",
-        label: "Ask Aria: status",
-        group: "AI",
-        keywords: "health services",
-        run: () => {
-          goView("chat");
-          window.sendMessage?.("status");
-        },
-      },
-      {
-        id: "act:voice-smoke",
-        label: "Run voice smoke test",
-        group: "AI",
-        keywords: "mic stt",
-        run: () => {
-          goView("voice");
-          $("voiceSmokeBtn")?.click();
-        },
-      },
-      {
-        id: "act:router-warm",
-        label: "Warm model router",
-        group: "AI",
-        keywords: "ollama models",
-        run: () => $("routerWarmBtn")?.click(),
-      },
-      {
-        id: "act:reload-ui",
-        label: "Reload UI",
-        group: "System",
-        keywords: "refresh restart spa",
-        hint: "Ctrl+Shift+R",
-        run: () => window.reloadJarvisUi?.(),
-      },
-      {
-        id: "act:reset-sidebar",
-        label: "Expand all sidebar sections",
-        group: "System",
-        keywords: "layout",
-        run: () => window.resetSidebarLayout?.(),
-      },
-      {
-        id: "act:backup",
-        label: "Backup Aria data",
-        group: "System",
-        keywords: "export snapshot archive",
-        run: () => $("backupDataBtn")?.click(),
-      },
-      {
-        id: "act:theme-toggle",
-        label: "Toggle light / dark theme",
-        group: "System",
-        keywords: "appearance light dark",
-        run: () => $("themeToggle")?.click(),
-      },
-      {
-        id: "act:journal-rapid",
-        label: "Focus journal rapid log",
-        group: "Actions",
-        keywords: "bujo quick capture bullet",
-        run: () => {
-          goView("journal");
-          setTimeout(() => $("rapidLogInput")?.focus(), 80);
-        },
-      },
-      {
-        id: "act:compare-images",
-        label: "Compare two images",
-        group: "Actions",
-        keywords: "vision attach side-by-side diff",
-        run: () => {
-          goView("chat");
-          setTimeout(() => document.getElementById("compareModeBtn")?.click(), 80);
-        },
-      },
-      {
-        id: "act:planner-task",
-        label: "Add planner task",
-        group: "Actions",
-        keywords: "todo focus task input",
-        run: () => {
-          goView("planner");
-          setTimeout(() => $("plannerTaskInput")?.focus(), 80);
-        },
-      },
-      {
-        id: "act:documents-reindex",
-        label: "Rebuild document search index",
-        group: "System",
-        keywords: "library pdf chunks rag",
-        run: () => {
-          goView("documents");
-          setTimeout(() => $("documentsRebuildBtn")?.click(), 80);
-        },
-      },
-      {
-        id: "act:open-connections",
-        label: "Open Connections",
-        group: "Navigate",
-        keywords: "knowledge graph relationships entities links",
-        run: () => goView("connections"),
-      },
-      {
-        id: "act:connections-search",
-        label: "Search Connections",
-        group: "Actions",
-        keywords: "graph entity relationship",
-        run: () => {
-          goView("connections");
-          setTimeout(() => $("connectionsSearchInput")?.focus(), 80);
-        },
-      },
-      {
-        id: "act:browser-url",
-        label: "Focus browser URL",
-        group: "Actions",
-        keywords: "playwright navigate web",
-        run: () => {
-          goView("browser");
-          setTimeout(() => $("browserUrlInput")?.focus(), 80);
-        },
-      },
-      {
-        id: "act:calendar-today",
-        label: "Open calendar today",
-        group: "Actions",
-        keywords: "schedule day",
-        run: () => {
-          goView("calendar");
-          const day = new Date().toISOString().slice(0, 10);
-          window.openCalendarDay?.(day);
-        },
-      },
-      {
-        id: "act:audio-studio",
-        label: "Open Audio studio",
-        group: "Actions",
-        keywords: "music podcast genre song whisper",
-        run: () => goView("audio"),
-      },
-      {
-        id: "act:security",
-        label: "Open Security / PIN",
-        group: "System",
-        keywords: "lock pin auth trust",
-        run: () => goView("security"),
-      },
-      {
-        id: "act:gallery",
-        label: "Open Gallery",
-        group: "Actions",
-        keywords: "images comfy generate",
-        run: () => goView("gallery"),
-      },
-      {
-        id: "act:memory",
-        label: "Open Memory",
-        group: "Actions",
-        keywords: "knowledge recall acm",
-        run: () => goView("memory"),
-      },
-      {
-        id: "act:webcam",
-        label: "Capture webcam attachment",
-        group: "Actions",
-        keywords: "camera vision photo",
-        run: () => {
-          goView("chat");
-          setTimeout(() => {
-            if (typeof window.captureWebcamAttachment === "function") {
-              window.captureWebcamAttachment();
-            } else {
-              $("webcamBtn")?.click();
-            }
-          }, 60);
-        },
-      },
-      {
-        id: "act:ics-wizard",
-        label: "Focus calendar ICS import",
-        group: "Actions",
-        keywords: "ical feed subscribe calendar google outlook",
-        run: () => {
-          goView("calendar");
-          setTimeout(() => {
-            const details = $("calendarIcsUrl")?.closest("details");
-            if (details) details.open = true;
-            $("calendarIcsUrl")?.focus();
-            $("calendarIcsUrl")?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
-          }, 80);
-        },
-      },
-      {
-        id: "act:checklist",
-        label: "Run first-flight checklist",
-        group: "System",
-        keywords: "smoke test dashboard health",
-        run: () => {
-          goView("dashboard");
-          setTimeout(() => $("checklistRunBtn")?.click(), 80);
-        },
-      },
-      {
-        id: "act:video-storyboard",
-        label: "Focus video storyboard",
-        group: "Actions",
-        keywords: "ken burns animate gallery paths",
-        run: () => {
-          goView("video");
-          setTimeout(() => $("storyboardPathsInput")?.focus(), 80);
-        },
-      },
-      {
-        id: "act:resume-media-jobs",
-        label: "Resume pending media jobs",
-        group: "System",
-        keywords: "image comfy poll recover",
-        run: () => {
-          window.resumePendingMediaJobs?.();
-          window.showAriaToast?.("Checking pending media jobs…", "info", 2500);
-        },
-      },
-      {
-        id: "act:run-research",
-        label: "Run knowledge research now",
-        group: "Actions",
-        keywords: "nightly briefs learn memory knowledge",
-        run: () => {
-          goView("memory");
-          setTimeout(() => $("knowledgeResearchRunBtn")?.click(), 120);
-        },
-      },
-      {
-        id: "act:open-projects",
-        label: "Open Projects",
-        group: "Actions",
-        keywords: "repos workspace coding",
-        run: () => goView("projects"),
-      },
-      {
-        id: "act:debug-bundle",
-        label: "Copy debug bundle",
-        group: "System",
-        keywords: "diagnostics troubleshooting clipboard",
-        run: () => $("debugBundleBtn")?.click(),
-      },
-      {
-        id: "act:export-chat-pdf",
-        label: "Export chat (PDF)",
-        group: "Actions",
-        keywords: "download pdf transcript",
-        run: () => $("exportChatPdfBtn")?.click(),
-      },
-      {
-        id: "act:browser-task",
-        label: "Focus browser agent task",
-        group: "Actions",
-        keywords: "playwright goal run",
-        run: () => {
-          goView("browser");
-          setTimeout(() => $("browserGoalInput")?.focus(), 80);
-        },
-      },
-    ];
-
-    function focusSearch(view, inputId, clickBtnId) {
-      return () => {
-        goView(view);
-        setTimeout(() => {
-          const el = $(inputId);
-          el?.focus();
-          el?.select?.();
-          if (clickBtnId) $(clickBtnId)?.focus?.();
-        }, 80);
-      };
-    }
-
-    const search = [
-      {
-        id: "search:journal",
-        label: "Search journal",
-        group: "Search",
-        keywords: "bujo find filter",
-        run: focusSearch("journal", "journalSearch"),
-      },
-      {
-        id: "search:memory",
-        label: "Search memory",
-        group: "Search",
-        keywords: "recall find filter",
-        run: focusSearch("memory", "memorySearch"),
-      },
-      {
-        id: "search:documents",
-        label: "Search documents",
-        group: "Search",
-        keywords: "library files pdf",
-        run: focusSearch("documents", "documentsSearchInput"),
-      },
-      {
-        id: "search:flytying",
-        label: "Search fly patterns",
-        group: "Search",
-        keywords: "tying recipes",
-        run: focusSearch("flytying", "flytyingSearchInput"),
-      },
-      {
-        id: "search:gallery-prompt",
-        label: "Focus gallery prompt",
-        group: "Search",
-        keywords: "comfy image generate",
-        run: focusSearch("gallery", "galleryPromptInput"),
-      },
-      {
-        id: "search:mc-routing",
-        label: "Search Mission Control routing",
-        group: "Search",
-        keywords: "intent handler prompts",
-        run: () => {
-          goMc("routing");
-          setTimeout(() => $("mcRoutingSearch")?.focus(), 200);
-        },
-      },
-    ];
-
-    const modelSelect = $("chatModelSelect");
-    const models = modelSelect
-      ? [...modelSelect.options]
-          .filter((o) => o.value)
-          .slice(0, 24)
-          .map((o) => ({
-            id: `model:${o.value}`,
-            label: `Use model: ${o.textContent || o.value}`,
-            group: "Models",
-            keywords: `ollama provider ${o.value}`,
-            hint: "Chat",
-            run: () => {
-              modelSelect.value = o.value;
-              modelSelect.dispatchEvent(new Event("change", { bubbles: true }));
-              window.showAriaToast?.(`Model: ${o.textContent || o.value}`, "ok");
-            },
-          }))
-      : [];
-
-    const profileSelect = $("profileSelect");
-    const profiles = profileSelect
-      ? [...profileSelect.options]
-          .filter((o) => o.value)
-          .slice(0, 16)
-          .map((o) => ({
-            id: `profile:${o.value}`,
-            label: `Config profile: ${o.textContent || o.value}`,
-            group: "Settings",
-            keywords: `profile config ${o.value}`,
-            hint: "Sidebar",
-            run: () => {
-              profileSelect.value = o.value;
-              profileSelect.dispatchEvent(new Event("change", { bubbles: true }));
-              window.showAriaToast?.(`Profile: ${o.textContent || o.value}`, "ok");
-            },
-          }))
-      : [];
-
-    const personalitySelect = $("personalitySelect");
-    const personalities = personalitySelect
-      ? [...personalitySelect.options]
-          .filter((o) => o.value)
-          .slice(0, 16)
-          .map((o) => ({
-            id: `personality:${o.value}`,
-            label: `Personality: ${o.textContent || o.value}`,
-            group: "Settings",
-            keywords: `personality tone style ${o.value}`,
-            hint: "Sidebar",
-            run: () => {
-              personalitySelect.value = o.value;
-              personalitySelect.dispatchEvent(new Event("change", { bubbles: true }));
-              window.showAriaToast?.(`Personality: ${o.textContent || o.value}`, "ok");
-            },
-          }))
-      : [];
-
-    commands = [...nav, ...mcTabs, ...actions, ...search, ...models, ...profiles, ...personalities];
-  }
-
-  let contentHits = [];
-  let searchSeq = 0;
-  let searchTimer = null;
-
-  function hitToCommand(hit, idx) {
-    const source = hit.source_type || "knowledge";
-    const label = hit.title || hit.excerpt || "Result";
-    const excerpt = (hit.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 72);
-    const id = `hit:${source}:${hit.location || hit.title || idx}`;
-    return {
-      id,
-      label: excerpt ? `${label} — ${excerpt}` : String(label),
-      group: "Results",
-      hint: hit.source_label || source,
-      keywords: `${hit.excerpt || ""} ${hit.location || ""}`,
-      run: () => openHit(hit),
+    const map = {
+      idle: "",
+      searching: "Searching knowledge…",
+      ready: detail || "",
+      empty: "No knowledge matches",
+      error: detail || "Knowledge search unavailable",
     };
+    el.textContent = map[status] || "";
+    el.classList.toggle("hidden", !el.textContent);
+    el.classList.toggle("is-error", status === "error");
+    el.classList.toggle("is-loading", status === "searching");
+    const retry = $("commandPaletteRetryBtn");
+    if (retry) retry.classList.toggle("hidden", status !== "error");
+    if (status === "searching") announce("Searching knowledge");
+    else if (status === "error") announce(el.textContent);
+    else if (status === "empty") announce("No knowledge matches");
+    else if (status === "ready" && detail) announce(detail);
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   function openHit(hit) {
     const type = hit.source_type || "";
     const loc = String(hit.location || "");
     const rawId = hit.raw?.id || (String(hit.title || "").match(/^(exp_|mem_|acm)/) ? hit.title : "");
+    const A = window.AriaActions;
     if (type === "conversation" || type.includes("memory") || loc.includes("acm") || loc === "memory" || loc === "profile") {
-      goView("memory");
+      A?.memory?.open?.();
       setTimeout(async () => {
         const q = (hit.excerpt || hit.title || "").slice(0, 48);
         const el = $("memorySearch");
@@ -882,14 +153,12 @@
             item.scrollIntoView({ block: "nearest", behavior: "smooth" });
             setTimeout(() => item.classList.remove("memory-item--flash"), 2200);
           }
-        } else {
-          el?.focus();
-        }
+        } else el?.focus();
       }, 100);
       return;
     }
     if (type === "notes" || type === "journal" || loc.includes("journal")) {
-      goView("journal");
+      A?.journal?.open?.();
       setTimeout(() => {
         const el = $("journalSearch");
         const q = (hit.title || "").replace(/\.[^.]+$/, "");
@@ -902,7 +171,7 @@
       return;
     }
     if (type === "document_library" || type.includes("document")) {
-      goView("documents");
+      A?.documents?.open?.();
       setTimeout(() => {
         const el = $("documentsSearchInput");
         if (el) {
@@ -913,54 +182,122 @@
       }, 80);
       return;
     }
+    if (type.includes("connection") || type === "entity" || type === "graph") {
+      A?.connections?.open?.();
+      setTimeout(() => {
+        const el = $("connectionsSearchInput");
+        if (el) {
+          el.value = hit.title || hit.excerpt || "";
+          el.focus();
+          $("connectionsSearchBtn")?.click();
+        }
+      }, 80);
+      return;
+    }
     if (type === "code_index" || type === "git_repository") {
-      goView("projects");
+      A?.projects?.open?.();
       window.showAriaToast?.(loc || hit.title || "Open in projects / coding", "info");
       return;
     }
-    goView("memory");
+    A?.memory?.open?.();
     window.showAriaToast?.((hit.excerpt || hit.title || "").slice(0, 120), "info");
   }
 
-  function filterCommands(q) {
-    const scored = commands
-      .map((c) => ({ c, s: score(c, q) }))
-      .filter((x) => x.s > 0)
-      .sort((a, b) => b.s - a.s || a.c.label.localeCompare(b.c.label));
+  function hitToCommand(hit, idx) {
+    const source = hit.source_type || "knowledge";
+    const label = hit.title || hit.excerpt || "Result";
+    const excerpt = (hit.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 72);
+    return {
+      id: `hit:${source}:${hit.location || hit.title || idx}`,
+      title: excerpt ? `${label} — ${excerpt}` : String(label),
+      label: excerpt ? `${label} — ${excerpt}` : String(label),
+      group: "Results",
+      hint: hit.source_label || source,
+      mode: "search",
+      keywords: `${hit.excerpt || ""} ${hit.location || ""}`,
+      description: "Knowledge result",
+      run: () => openHit(hit),
+    };
+  }
 
-    if (!q.trim()) {
-      contentHits = [];
-      const recent = loadRecent();
+  function buildAskCommand(trimmed) {
+    return {
+      id: "ask:aria",
+      title: `Ask Aria: “${trimmed}”`,
+      label: `Ask Aria: “${trimmed}”`,
+      group: "AI",
+      hint: "Chat",
+      mode: "ask",
+      description: "Auto-sends to Chat with streaming reply",
+      run: () => {
+        window.AriaActions?.askAria?.(trimmed, { autoSend: true, switchView: true });
+      },
+    };
+  }
+
+  function filterCommands(rawQ) {
+    const reg = registry();
+    const parsed = reg?.parseMode?.(rawQ) || { mode: "", query: String(rawQ || "").trim() };
+    const mode = parsed.mode;
+    const q = parsed.query;
+    const pins = loadPins();
+    const usage = loadUsage();
+    const view = window.AriaCommandCatalog?.currentView?.() || "chat";
+    let commands = reg?.list?.() || [];
+
+    if (mode === "pinned") {
       const byId = new Map(commands.map((c) => [c.id, c]));
-      const recentCmds = recent.map((id) => byId.get(id)).filter(Boolean);
-      const rest = scored.map((x) => x.c).filter((c) => !recent.includes(c.id));
-      filtered = [...recentCmds, ...rest].slice(0, MAX_VISIBLE);
+      filtered = pins.map((id) => byId.get(id)).filter(Boolean).slice(0, MAX_VISIBLE);
       return;
     }
+    if (mode === "recent") {
+      const byId = new Map(commands.map((c) => [c.id, c]));
+      filtered = loadRecent().map((id) => byId.get(id)).filter(Boolean).slice(0, MAX_VISIBLE);
+      return;
+    }
+    if (mode) {
+      commands = commands.filter((c) => c.mode === mode || (mode === "context" && c.context));
+    }
+
+    const scored = commands
+      .map((c) => ({
+        c,
+        s: (reg?.scoreCommand?.(c, q) || 0) + (q ? (reg?.rankBoost?.(c, { pins, usage, view }) || 0) * 0.15 : (reg?.rankBoost?.(c, { pins, usage, view }) || 0)),
+      }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s || a.c.title.localeCompare(b.c.title));
+
+    if (!q.trim() && !mode) {
+      contentHits = [];
+      setSearchStatus("idle");
+      const byId = new Map(commands.map((c) => [c.id, c]));
+      const contextCmds = commands.filter((c) => c.context || c.group === "This page");
+      const pinCmds = pins.map((id) => byId.get(id)).filter(Boolean).map((c) => ({ ...c, group: "Pinned", hint: c.hint || "Pinned" }));
+      const recentCmds = loadRecent()
+        .map((id) => byId.get(id))
+        .filter(Boolean)
+        .filter((c) => !pins.includes(c.id))
+        .map((c) => ({ ...c, group: "Recent" }));
+      const used = new Set([...pins, ...loadRecent(), ...contextCmds.map((c) => c.id)]);
+      const rest = scored.map((x) => x.c).filter((c) => !used.has(c.id));
+      filtered = [...contextCmds, ...pinCmds, ...recentCmds, ...rest].slice(0, MAX_VISIBLE);
+      return;
+    }
+
     const cmdHits = scored.map((x) => x.c);
-    const trimmed = q.trim();
-    const askCmd = trimmed
-      ? [{
-        id: "ask:aria",
-        label: `Ask Aria: “${trimmed}”`,
-        group: "AI",
-        hint: "Chat",
-        run: () => {
-          window.switchToView?.("chat");
-          const send = () => {
-            if (typeof window.jarvisSendToChat === "function") {
-              window.jarvisSendToChat(trimmed);
-            } else {
-              const input = document.getElementById("messageInput");
-              if (input) input.value = trimmed;
-              window.sendMessage?.(trimmed);
-            }
-          };
-          setTimeout(send, 60);
-        },
-      }]
+    const sentence = reg?.looksLikeSentence?.(q);
+    const askCmd = q.trim() && mode !== "navigate" && mode !== "action" && mode !== "system"
+      ? [buildAskCommand(q.trim())]
       : [];
-    const head = [...contentHits, ...cmdHits].slice(0, MAX_VISIBLE - askCmd.length);
+
+    let head;
+    if (sentence && askCmd.length) {
+      // NL prioritizes Ask Aria
+      head = [...askCmd, ...contentHits, ...cmdHits].slice(0, MAX_VISIBLE);
+      filtered = head;
+      return;
+    }
+    head = [...contentHits, ...cmdHits].slice(0, Math.max(0, MAX_VISIBLE - askCmd.length));
     filtered = [...head, ...askCmd];
   }
 
@@ -968,9 +305,11 @@
     const needle = q.trim();
     if (needle.length < 2) {
       contentHits = [];
+      setSearchStatus("idle");
       return;
     }
     const seq = ++searchSeq;
+    setSearchStatus("searching");
     try {
       const res = await fetch(`/api/knowledge/search?q=${encodeURIComponent(needle)}&limit=8`);
       const data = await res.json().catch(() => ({}));
@@ -980,15 +319,13 @@
       }
       const hits = Array.isArray(data.hits) ? data.hits : [];
       contentHits = hits.slice(0, 8).map((h, i) => hitToCommand(h, i));
+      window.AriaHistory?.trackSearch?.(needle);
+      if (!contentHits.length) setSearchStatus("empty");
+      else setSearchStatus("ready", `${contentHits.length} knowledge result${contentHits.length === 1 ? "" : "s"}`);
     } catch (err) {
-      if (seq === searchSeq) {
-        contentHits = [];
-        if (!fetchContentHits._toasted) {
-          fetchContentHits._toasted = true;
-          window.showAriaToast?.(err?.message || "Knowledge search unavailable", "err", 4000);
-          setTimeout(() => { fetchContentHits._toasted = false; }, 8000);
-        }
-      }
+      if (seq !== searchSeq) return;
+      contentHits = [];
+      setSearchStatus("error", err?.message || "Knowledge search unavailable — Retry");
     }
   }
 
@@ -998,12 +335,21 @@
     if (!list) return;
     list.innerHTML = "";
     if (!filtered.length) {
-      if (empty) empty.classList.remove("hidden");
+      if (empty) {
+        empty.classList.remove("hidden");
+        empty.textContent = searchStatus === "error"
+          ? (searchError || "Search failed")
+          : searchStatus === "searching"
+            ? "Searching…"
+            : "No matching commands — try >ask or Ask Aria";
+      }
       list.setAttribute("aria-activedescendant", "");
       return;
     }
     if (empty) empty.classList.add("hidden");
     let lastGroup = "";
+    const pins = loadPins();
+    const qEmpty = !($("commandPaletteInput")?.value || "").trim();
     filtered.forEach((cmd, i) => {
       if (cmd.group !== lastGroup) {
         lastGroup = cmd.group;
@@ -1019,27 +365,34 @@
       li.setAttribute("role", "option");
       li.setAttribute("aria-selected", i === activeIndex ? "true" : "false");
       li.dataset.index = String(i);
-      const recent = !($("commandPaletteInput")?.value || "").trim() && loadRecent().includes(cmd.id);
-      li.innerHTML = `<span class="command-palette-label">${escapeHtml(cmd.label)}${recent ? ' <span class="command-palette-recent">Recent</span>' : ""}</span><span class="command-palette-meta">${escapeHtml(cmd.hint || cmd.group)}</span>`;
+      const pinned = pins.includes(cmd.id);
+      const recent = qEmpty && loadRecent().includes(cmd.id);
+      const desc = cmd.description ? `<span class="command-palette-desc">${escapeHtml(cmd.description)}</span>` : "";
+      const badge = cmd.mode ? `<span class="command-palette-badge">${escapeHtml(cmd.mode)}</span>` : "";
+      li.innerHTML = `<button type="button" class="command-palette-pin${pinned ? " is-pinned" : ""}" data-pin-id="${escapeHtml(cmd.id)}" title="${pinned ? "Unpin" : "Pin"} (Ctrl+P)" aria-label="${pinned ? "Unpin command" : "Pin command"}">★</button>`
+        + `<span class="command-palette-label">${escapeHtml(cmd.title || cmd.label)}${recent && !pinned ? ' <span class="command-palette-recent">Recent</span>' : ""}${pinned ? ' <span class="command-palette-recent">Pinned</span>' : ""}${desc}</span>`
+        + `<span class="command-palette-meta">${badge}${escapeHtml(cmd.hint || cmd.group)}${cmd.shortcut ? ` · ${escapeHtml(cmd.shortcut)}` : ""}</span>`;
+      li.querySelector(".command-palette-pin")?.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePin(cmd.id);
+        filterCommands($("commandPaletteInput")?.value || "");
+        renderList();
+      });
       li.addEventListener("mouseenter", () => {
         activeIndex = i;
         syncActive();
       });
       li.addEventListener("mousedown", (e) => {
+        if (e.target.closest(".command-palette-pin")) return;
         e.preventDefault();
         runIndex(i);
       });
       list.appendChild(li);
     });
     syncActive();
-  }
-
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+    const count = $("commandPaletteCount");
+    if (count) count.textContent = `${filtered.length} shown`;
   }
 
   function syncActive() {
@@ -1074,19 +427,39 @@
     return !$("commandPaletteModal")?.classList.contains("hidden");
   }
 
-  function openPalette(fromEl) {
-    buildCommands();
+  function toggleHelp() {
+    const help = $("commandPaletteHelp");
+    if (!help) return;
+    helpOpen = !helpOpen;
+    help.classList.toggle("hidden", !helpOpen);
+    announce(helpOpen ? "Command palette help open" : "Help closed");
+  }
+
+  function openPalette(fromEl, prefill) {
+    window.AriaCommandCatalog?.registerAll?.();
     contentHits = [];
-    openerEl = fromEl || document.activeElement;
+    setSearchStatus("idle");
+    helpOpen = false;
+    $("commandPaletteHelp")?.classList.add("hidden");
+    openerEl = fromEl && typeof fromEl.focus === "function" ? fromEl : document.activeElement;
     const modal = $("commandPaletteModal");
     const input = $("commandPaletteInput");
     if (!modal || !input) return;
     modal.classList.remove("hidden");
-    input.value = "";
+    const q = typeof prefill === "string" ? prefill : "";
+    input.value = q;
     activeIndex = 0;
-    filterCommands("");
+    filterCommands(q);
     renderList();
+    if (q.trim().length >= 2) {
+      const parsed = registry()?.parseMode?.(q) || { query: q };
+      fetchContentHits(parsed.query || q).then(() => {
+        filterCommands($("commandPaletteInput")?.value || "");
+        renderList();
+      });
+    }
     setTimeout(() => input.focus(), 0);
+    announce("Command palette open");
   }
 
   function closePalette() {
@@ -1095,6 +468,8 @@
     modal.classList.add("hidden");
     clearTimeout(searchTimer);
     searchTimer = null;
+    helpOpen = false;
+    $("commandPaletteHelp")?.classList.add("hidden");
     const restore = openerEl;
     openerEl = null;
     if (restore && typeof restore.focus === "function") {
@@ -1112,26 +487,37 @@
     filterCommands(q);
     renderList();
     clearTimeout(searchTimer);
-    if (q.trim().length < 2) {
+    const parsed = registry()?.parseMode?.(q) || { query: q.trim() };
+    if (parsed.query.trim().length < 2 || parsed.mode === "navigate" || parsed.mode === "action") {
       contentHits = [];
+      if (parsed.query.trim().length < 2) setSearchStatus("idle");
       return;
     }
     searchTimer = setTimeout(async () => {
-      await fetchContentHits(q);
+      await fetchContentHits(parsed.query);
       if (($("commandPaletteInput")?.value || "") !== q) return;
       filterCommands(q);
       renderList();
     }, 160);
   }
 
+  function retrySearch() {
+    const q = $("commandPaletteInput")?.value || "";
+    const parsed = registry()?.parseMode?.(q) || { query: q };
+    fetchContentHits(parsed.query || q).then(() => {
+      filterCommands(q);
+      renderList();
+    });
+  }
+
   function init() {
-    buildCommands();
     $("commandPaletteBtn")?.addEventListener("click", (e) => openPalette(e.currentTarget));
     $("commandPaletteCloseBtn")?.addEventListener("click", closePalette);
     $("commandPaletteModal")?.addEventListener("click", (e) => {
       if (e.target?.id === "commandPaletteModal") closePalette();
     });
     $("commandPaletteInput")?.addEventListener("input", onInput);
+    $("commandPaletteRetryBtn")?.addEventListener("click", retrySearch);
     $("commandPaletteInput")?.addEventListener("keydown", (e) => {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -1149,7 +535,37 @@
       } else if (e.key === "Escape") {
         e.preventDefault();
         e.stopPropagation();
+        if (helpOpen) {
+          toggleHelp();
+          return;
+        }
         closePalette();
+      } else if (e.key === "?" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const input = $("commandPaletteInput");
+        if (input && !input.value) {
+          e.preventDefault();
+          toggleHelp();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === "p") {
+        e.preventDefault();
+        const cmd = filtered[activeIndex];
+        if (cmd) {
+          togglePin(cmd.id);
+          filterCommands(inputValue());
+          renderList();
+        }
+      } else if (e.key === "Tab") {
+        // Cycle modes lightly
+        e.preventDefault();
+        const modes = ["", ">navigate ", ">action ", ">search ", ">ask ", ">context ", ">system "];
+        const cur = $("commandPaletteInput")?.value || "";
+        const idx = Math.max(0, modes.findIndex((m) => cur.startsWith(m)));
+        const next = modes[(idx + (e.shiftKey ? modes.length - 1 : 1)) % modes.length];
+        const rest = cur.replace(/^\s*>(navigate|nav|action|actions|search|ask|recent|pinned|context|system|sys)\b\s*/i, "");
+        if ($("commandPaletteInput")) {
+          $("commandPaletteInput").value = next + rest;
+          onInput();
+        }
       }
     });
 
@@ -1162,12 +578,17 @@
     });
   }
 
+  function inputValue() {
+    return $("commandPaletteInput")?.value || "";
+  }
+
   window.openAriaCommandPalette = openPalette;
+  window.openCommandPalette = (prefill) => openPalette(null, typeof prefill === "string" ? prefill : undefined);
   window.closeAriaCommandPalette = closePalette;
+  // Prefer registry; keep alias for modules that still call this
   window.registerAriaCommand = (cmd) => {
-    if (!cmd?.id || !cmd.label || typeof cmd.run !== "function") return;
-    commands = commands.filter((c) => c.id !== cmd.id);
-    commands.push(cmd);
+    if (window.AriaCommandRegistry?.register) return window.AriaCommandRegistry.register({ ...cmd, source: cmd.source || "module" });
+    return false;
   };
 
   if (document.readyState === "loading") {

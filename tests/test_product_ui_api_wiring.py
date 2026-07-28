@@ -231,6 +231,10 @@ def test_command_palette_is_wired():
 
     html = Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
     js = Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
+    catalog = Path("jarvis/gui/static/command_catalog.js").read_text(encoding="utf-8")
+    registry = Path("jarvis/gui/static/command_registry.js").read_text(encoding="utf-8")
+    actions = Path("jarvis/gui/static/aria_actions.js").read_text(encoding="utf-8")
+    cmd_src = "\n".join([js, catalog, registry, actions])
     css = Path("jarvis/gui/static/style.css").read_text(encoding="utf-8")
     mc = Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
 
@@ -238,15 +242,26 @@ def test_command_palette_is_wired():
     assert 'id="commandPaletteBtn"' in html
     assert 'id="commandPaletteInput"' in html
     assert "command_palette.js" in html
+    assert "command_registry.js" in html
+    assert "aria_actions.js" in html
+    assert "command_catalog.js" in html
     assert "Ctrl</kbd>+<kbd>K" in html or "Ctrl+K" in html
     assert "openAriaCommandPalette" in js
     assert 'toLowerCase() !== "k"' in js or 'toLowerCase() === "k"' in js
-    assert 'id: "search:memory"' in js
+    assert 'search:memory' in cmd_src
     assert "/api/knowledge/search" in js
     assert "fetchContentHits" in js
     assert "memory-item--flash" in js
-    assert "Use model:" in js
+    assert "Use model:" in catalog
+    assert "AriaCommandRegistry" in registry
+    assert "AriaActions" in actions
+    assert "connections\", \"Connections\"" in catalog or "Connections" in catalog
+    assert "looksLikeSentence" in registry
     assert "command-palette-modal" in css
+    assert "command-palette-status" in css
+    assert 'id="commandPaletteStatus"' in html
+    assert 'id="commandPaletteLive"' in html
+    js = cmd_src  # act:/search asserts apply across registry stack
     assert "window.switchMcTab = switchMcTab" in mc
     assert Path("docs/ARIA_COMPETITIVE_ANALYSIS_V2.md").is_file()
     assert Path("docs/ARIA_GUI_INVENTORY_V2.md").is_file()
@@ -349,7 +364,7 @@ def test_command_palette_is_wired():
     assert "connectionsView" in html
     assert "connectionsHome" in html
     assert "memoryOpenConnectionsBtn" in html
-    assert "Open Connections" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
+    assert "Open Connections" in Path("jarvis/gui/static/command_catalog.js").read_text(encoding="utf-8")
     assert "Knowledge Briefs" in html
     assert "Reindex RAG" not in html
     assert "documentsOpenIcsBtn" not in html
@@ -361,7 +376,7 @@ def test_command_palette_is_wired():
     assert "taskNudgeBar" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "confirm(" not in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8").split("maybeTaskNudge")[1].split("initHud")[0]
     assert "ICS feed saved" in Path("jarvis/gui/static/calendar.js").read_text(encoding="utf-8")
-    assert "calendarIcsUrl" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
+    assert "calendarIcsUrl" in Path("jarvis/gui/static/aria_actions.js").read_text(encoding="utf-8")
     assert "Video settings saved" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")
     assert Path("jarvis/gui/static/vision_settings.js").is_file()
     assert Path("jarvis/gui/static/free_vram.js").is_file()
@@ -423,7 +438,7 @@ def test_command_palette_is_wired():
     assert "function bujoDispatch" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "showBujoError" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "bujoRetryBtn" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
-    assert "act:compare-images" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
+    assert "act:compare-images" in Path("jarvis/gui/static/command_catalog.js").read_text(encoding="utf-8")
     assert "Could not restore uncensored session" in Path("jarvis/gui/static/uncensored_mode.js").read_text(encoding="utf-8")
     assert "sessionStorage.removeItem(UNCENSORED_SESSION_KEY)" in Path("jarvis/gui/static/uncensored_mode.js").read_text(encoding="utf-8")
     assert "window.openCropModal" in Path("jarvis/gui/static/crop_webcam.js").read_text(encoding="utf-8")
@@ -469,7 +484,7 @@ def test_command_palette_is_wired():
     assert "mcEmptyRecChatBtn" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "galleryEmptyPromptBtn" in Path("jarvis/gui/static/gallery_view.js").read_text(encoding="utf-8")
     assert "memeEmptyChatBtn" in Path("jarvis/gui/static/meme_studio.js").read_text(encoding="utf-8")
-    assert "act:resume-media-jobs" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
+    assert "act:resume-media-jobs" in Path("jarvis/gui/static/command_catalog.js").read_text(encoding="utf-8")
     assert "videoEmptyChatBtn" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")
     assert "Could not load voice settings" in Path("jarvis/gui/static/voice_bar.js").read_text(encoding="utf-8")
     assert "Media job resume failed" in Path("jarvis/gui/static/media_jobs.js").read_text(encoding="utf-8")
@@ -488,7 +503,7 @@ def test_command_palette_is_wired():
     assert "researchEmptyChatBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8") or "memoryEmptyChatBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "profileEmptyEditBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "mcEmptyRoutingChatBtn" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
-    assert "act:run-research" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
+    assert "act:run-research" in Path("jarvis/gui/static/command_catalog.js").read_text(encoding="utf-8")
     assert "function appendAuthenticatedVideo" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "appendGeneratedVideo," in Path("jarvis/gui/static/chat_video.js").read_text(encoding="utf-8")
     assert "browserEmptyFocusUrl" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
