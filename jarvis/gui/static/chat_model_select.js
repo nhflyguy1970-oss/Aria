@@ -56,8 +56,40 @@
       const st = document.getElementById("statusText");
       if (st) st.textContent = msg;
       window.showAriaToast?.(msg, "ok", 2500);
+      const makeBtn = document.getElementById("chatMakeDefaultBtn");
+      if (makeBtn) makeBtn.classList.toggle("hidden", !e.target.value);
     } catch (err) {
       window.showAriaToast?.(err.message || "Chat model update failed", "err", 5000);
+    }
+  });
+
+  document.getElementById("chatMakeDefaultBtn")?.addEventListener("click", async () => {
+    const sel = document.getElementById("chatModelSelect");
+    const model = sel?.value;
+    if (!model) {
+      window.showAriaToast?.("Select a chat model first", "warn");
+      return;
+    }
+    const ok = window.ariaConfirm
+      ? await window.ariaConfirm(`Make ${model} the default Chat (conversation) role model?`, {
+          title: "Make default",
+          okLabel: "Make default",
+        })
+      : window.confirm(`Make ${model} the default Chat model?`);
+    if (!ok) return;
+    try {
+      const res = await fetch("/api/models/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scope: "make_default", model }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.message || data.error || "Failed");
+      window.showAriaToast?.(data.message || `Default → ${model}`, "ok", 4000);
+      await loadChatModelSelect();
+      window.openModelsHome?.("roles");
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Make default failed", "err");
     }
   });
 })();

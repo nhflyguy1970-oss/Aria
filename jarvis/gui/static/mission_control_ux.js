@@ -325,13 +325,14 @@
     const model = inf.current_model || "";
     const actions = `
       <div class="mc-inference-actions" role="group" aria-label="Safe inference actions">
-        <p class="muted tiny">Approved actions require confirmation and are audited. Never auto-remediate.</p>
+        <p class="muted tiny">Approved actions require confirmation and are audited. Switch updates the Models registry (conversation default). Warm/unload remain Mission Control health ops.</p>
         <button type="button" class="ghost-btn small" data-mc-inf="warm_model" data-model="${esc(model)}">Warm model</button>
-        <button type="button" class="ghost-btn small" data-mc-inf="switch_model">Switch model</button>
+        <button type="button" class="ghost-btn small" data-mc-inf="switch_model">Switch model (Models registry)</button>
         <button type="button" class="ghost-btn small" data-mc-inf="reload_provider">Reload provider</button>
         <button type="button" class="ghost-btn small" data-mc-inf="unload_model" data-model="${esc(model)}">Unload model</button>
         <button type="button" class="ghost-btn small" data-mc-inf="reconnect">Reconnect</button>
         <button type="button" class="ghost-btn small" data-mc-nav="memory">Open ACM / Memory</button>
+        <button type="button" class="apply-btn small" data-models-open-home>Open Models Home</button>
       </div>`;
     return (
       actions +
@@ -855,6 +856,11 @@
       if (!(t instanceof Element)) return;
       if (!document.getElementById("workstationView") || document.getElementById("workstationView").classList.contains("hidden")) {
         // still allow toolbar outside? only MC
+      }
+      if (t.closest?.("[data-models-open-home]")) {
+        e.preventDefault();
+        window.openModelsHome?.() || window.switchToView?.("models");
+        return;
       }
       const cta = t.closest?.("[data-mc-cta]");
       if (cta) {

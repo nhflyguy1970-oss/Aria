@@ -140,28 +140,35 @@ def _warm_model(model: str) -> dict[str, Any]:
 
 
 def _switch_model(model: str) -> dict[str, Any]:
+    """Delegate to Models authoritative API — never write divergent preferred_model.txt."""
     if not model:
         return {"ok": False, "action": "switch_model", "error": "model required", "executed": False}
     try:
-        from jarvis.inference import set_model  # type: ignore
+        from jarvis.models_product.switch import apply_model_change, ModelChangeRequest
 
-        set_model(model)
-        return {"ok": True, "action": "switch_model", "executed": True, "model": model, "message": f"Switched to {model}"}
-    except Exception:
-        pass
-    try:
-        # Persist preference if gateway supports it
-        from jarvis.config import DATA_DIR as DD
-
-        pref = DD / "inference" / "preferred_model.txt"
-        pref.parent.mkdir(parents=True, exist_ok=True)
-        pref.write_text(model.strip() + "\n", encoding="utf-8")
+        out = apply_model_change(
+            ModelChangeRequest(
+                scope="role_default",
+                role="conversation",
+                model=model,
+                actor="mission_control",
+                reason="mc_inference_switch",
+            )
+        )
         return {
-            "ok": True,
+            "ok": bool(out.get("ok")),
             "action": "switch_model",
-            "executed": True,
+            "executed": bool(out.get("executed")),
             "model": model,
-            "message": f"Preferred model set to {model} (restart chat to apply if needed)",
+            "message": out.get("message")
+            or (
+                f"Conversation default set to {model} via Models registry"
+                if out.get("ok")
+                else out.get("error") or "switch failed"
+            ),
+            "models_api": out,
+            "note": "Mission Control switch uses Models registry (role_default). Warm/unload remain health ops.",
+            "error": out.get("error"),
         }
     except Exception as exc:
         return {"ok": False, "action": "switch_model", "executed": False, "error": str(exc)}

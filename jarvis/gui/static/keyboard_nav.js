@@ -3,7 +3,7 @@
   "use strict";
 
   const VIEW_ORDER = [
-    "chat", "dashboard", "workstation", "planner", "calendar",
+    "chat", "dashboard", "workstation", "models", "planner", "calendar",
     "memory", "documents", "connections", "gallery", "projects", "maker", "journal",
   ];
 
@@ -137,6 +137,13 @@
       if (mod && e.shiftKey && e.key.toLowerCase() === "m") {
         e.preventDefault();
         window.AriaActions?.goMc?.("overview") || window.switchToView?.("workstation");
+        return;
+      }
+
+      // Ctrl+Shift+. — Models Home
+      if (mod && e.shiftKey && (e.key === "." || e.code === "Period")) {
+        e.preventDefault();
+        window.openModelsHome?.() || window.switchToView?.("models");
         return;
       }
 

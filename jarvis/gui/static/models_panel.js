@@ -259,6 +259,16 @@ async function pullMissingModels() {
 
 document.getElementById("pullMissingBtn")?.addEventListener("click", pullMissingModels);
 
+document.getElementById("modelsHomeOpenBtn")?.addEventListener("click", () => {
+  window.openModelsHome?.() || window.switchToView?.("models");
+});
+
+document.getElementById("modelsEditorToggle")?.addEventListener("click", () => {
+  if (!modelsEditor) return;
+  const open = modelsEditor.classList.toggle("hidden") === false;
+  document.getElementById("modelsEditorToggle")?.setAttribute("aria-expanded", open ? "true" : "false");
+  if (open) loadModelSettings();
+});
 
   window.renderModelSettings = renderModelSettings;
   window.loadModelSettings = loadModelSettings;

@@ -338,7 +338,7 @@
       imageEngine: () => invoke("imageEngineBtn", "Image engine") || openModal("imageEngineModal", "Image engine"),
       apiKeys: () => invoke("apiKeysBtn", "API keys") || openModal("apiKeyModal", "API keys"),
       gitStatus: () => invoke("gitRefreshBtn", "Git status"),
-      pullModels: () => invoke("pullModelsBtn", "Pull models"),
+      pullModels: () => invoke("pullMissingBtn", "Pull missing models") || invoke("pullModelsBtn", "Pull models"),
       lsp: () => invoke("lspDiagBtn", "LSP diagnostics"),
       reindexCode: () => invoke("reindexCodeBtn", "Reindex code"),
       checklist: () => invoke("firstFlightBtn", "First-flight checklist") || goView("actions"),
@@ -351,15 +351,19 @@
         return false;
       },
       modelsEditor: () => {
-        goView("chat");
-        const tog = $("modelsEditorToggle") || document.querySelector("[data-models-editor]");
+        if (window.openModelsHome) {
+          window.openModelsHome("roles");
+          return true;
+        }
+        if (goView("models")) return true;
+        const tog = $("modelsToggle") || $("modelsEditorToggle") || document.querySelector("[data-models-editor]");
         if (tog) {
-          tog.setAttribute("aria-expanded", "true");
           tog.click();
           return true;
         }
-        return invoke("modelsEditorBtn", "Models editor");
+        return invoke("modelsHomeOpenBtn", "Models Home");
       },
+      modelsHome: () => window.openModelsHome?.() || goView("models"),
       warmRouter: () => invoke("routerWarmBtn", "Warm router") || askAria("Warm the model router"),
     },
 

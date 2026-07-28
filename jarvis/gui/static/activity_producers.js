@@ -102,6 +102,11 @@
       complete: (msg) => emit("automation", "workflow_complete", "success", "Workflow complete", msg, "jobs", { read: true }),
       failed: (msg) => emit("automation", "workflow_failed", "error", "Workflow failed", msg, "jobs"),
     },
+    models: {
+      switched: (msg) => emit("models", "model_switched", "success", "Model switched", msg, "models", { read: true }),
+      pullFailed: (msg) => emit("models", "pull_failed", "error", "Model pull failed", msg, "models"),
+      vram: (msg) => emit("models", "vram_warning", "warning", "VRAM warning", msg, "mc:inference"),
+    },
     mission: {
       health: (msg) => emit("mission", "health", "warning", "Mission Control health", msg, "mission"),
       warning: (msg) => emit("mission", "warning", "warning", "System warning", msg, "mission"),

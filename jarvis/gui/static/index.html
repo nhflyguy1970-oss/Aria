@@ -333,6 +333,7 @@
           <select id="chatModelSelect" class="personality-select" title="Per-chat model override (empty = default)">
             <option value="">Chat model: (default)</option>
           </select>
+          <button type="button" id="chatMakeDefaultBtn" class="ghost-btn tiny hidden" title="Make this chat model the conversation default">Make default</button>
           <select id="profileSelect" class="personality-select" title="Config profile">
             <option value="">Profile: (none)</option>
             <option value="work">Profile: Work</option>
@@ -447,14 +448,17 @@
       </div>
 
       <div class="sidebar-section sidebar-section--models models-panel" data-section="models">
-        <button type="button" id="modelsToggle" class="sidebar-section-head models-toggle" aria-expanded="false">
-          <p class="sidebar-section-title">Model settings</p><span class="section-chevron">▾</span>
+        <button type="button" id="modelsToggle" class="sidebar-section-head models-toggle" aria-expanded="false" data-models-editor="1">
+          <p class="sidebar-section-title">Models</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body">
         <p id="modelsStatus" class="models-status">Checking…</p>
         <p id="gpuStatus" class="gpu-status"></p>
+        <button type="button" id="modelsHomeOpenBtn" class="apply-btn small" title="Open Models Home (Ctrl+Shift+.)">Open Models Home</button>
         <button type="button" id="freeVramBtn" class="ghost-btn small vram-free-btn" title="Unload Ollama models before image/video gen">Free VRAM</button>
+        <button type="button" id="modelsEditorToggle" class="ghost-btn small" data-models-editor="1">Quick editor</button>
         <div id="modelsEditor" class="models-editor hidden">
+          <p class="muted tiny">Quick editor — full canonical roles live in Models Home.</p>
           <p class="hw-note" id="hwNote"></p>
           <div class="model-row"><label>Chat</label><select id="modelGeneral"></select></div>
           <div class="model-row"><label>Code</label><select id="modelCoder"></select></div>
@@ -470,7 +474,7 @@
           </div>
           <p id="visionStatusNote" class="editor-status"></p>
           <div class="model-row"><label>Image</label><select id="modelImage"></select></div>
-          <div class="model-row"><label>Memory</label><select id="modelEmbed"></select></div>
+          <div class="model-row"><label>Embedding</label><select id="modelEmbed"></select></div>
           <div class="preset-row">
             <button type="button" id="presetFastBtn" class="preset-btn" title="7B models for speed">⚡ Fast</button>
             <button type="button" id="presetQualityBtn" class="preset-btn" title="14B models for quality">✦ Quality</button>
@@ -481,6 +485,7 @@
             <button type="button" id="refreshModelsBtn" class="ghost-btn small">Refresh</button>
           </div>
           <button type="button" id="pullMissingBtn" class="ghost-btn small pull-btn">Pull missing models</button>
+          <button type="button" id="pullModelsBtn" class="ghost-btn small pull-btn hidden" aria-hidden="true">Pull models</button>
           <p id="modelsEditorStatus" class="editor-status"></p>
           <pre id="pullLog" class="pull-log hidden"></pre>
         </div>
@@ -509,6 +514,7 @@
         <button type="button" class="view-tab" data-view="dashboard">Dashboard</button>
         <button type="button" class="view-tab" data-view="automation">Automation</button>
         <button type="button" class="view-tab" data-view="workstation">Mission Control</button>
+        <button type="button" class="view-tab" data-view="models">Models</button>
         <button type="button" class="view-tab" data-view="planner">Planner</button>
         <button type="button" class="view-tab" data-view="calendar">Calendar</button>
         <button type="button" class="view-tab" data-view="flytying">Fly tying</button>
@@ -1611,6 +1617,21 @@
         <div id="mcTabBody" class="mc-tab-body" role="tabpanel" tabindex="0"></div>
       </div>
 
+      <div id="modelsView" class="view-panel hidden">
+        <div class="mc-page-header">
+          <h2>Models</h2>
+          <p class="muted">AI model configuration and routing center — roles, catalog, providers, presets. Mission Control owns health; Models owns configuration.</p>
+          <div class="mc-toolbar">
+            <button type="button" id="modelsHomeRefreshBtn" class="ghost-btn small">Refresh</button>
+            <button type="button" id="modelsOpenMcBtn" class="ghost-btn small" title="Provider / VRAM health">Mission Control · Inference</button>
+            <span class="muted tiny" title="Keyboard shortcut">Ctrl+Shift+.</span>
+            <span id="modelsHomeStatus" class="muted" aria-live="polite"></span>
+          </div>
+          <nav id="modelsHomeTabs" class="mc-tab-nav" aria-label="Models sections"></nav>
+        </div>
+        <div id="modelsHomeBody" class="mc-tab-body models-home-body" role="tabpanel" tabindex="0"></div>
+      </div>
+
       <div id="plannerView" class="view-panel hidden">
         <div class="planner-header">
           <div>
@@ -2205,6 +2226,7 @@
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> — Automation Home</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> — View Paths (navigation shortcuts)</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> — Mission Control</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>.</kbd> — Models Home</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> — floating mini chat</li>
             <li><kbd>Ctrl</kbd>+<kbd>\</kbd> — split view</li>
             <li><kbd>Ctrl</kbd>+<kbd>,</kbd> — settings · <kbd>Ctrl</kbd>+<kbd>/</kbd> — this panel</li>
@@ -2650,6 +2672,7 @@
   <script src="/static/planner_live.js?v=1.0.0"></script>
   <script src="/static/mission_control.js?v=1.1.0"></script>
   <script src="/static/mission_control_ux.js?v=1.0.0"></script>
+  <script src="/static/models_home.js?v=1.0.0"></script>
   <script src="/static/calendar.js?v=5.17.0"></script>
   <script src="/static/flytying.js?v=5.16.106"></script>
 

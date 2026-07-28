@@ -2715,6 +2715,194 @@ def models_info():
     }
 
 
+@app.get("/api/models/home")
+def models_home_api():
+    from jarvis.models_product.home import models_home_snapshot
+
+    return models_home_snapshot()
+
+
+@app.get("/api/models/catalog")
+def models_catalog_api(
+    q: str = "",
+    capability: str = "",
+    provider: str = "",
+    installed_only: bool = False,
+    sort: str = "name",
+):
+    from jarvis.models_product.catalog import build_catalog
+
+    return build_catalog(
+        q=q,
+        capability=capability,
+        provider=provider,
+        installed_only=installed_only,
+        sort=sort,
+    )
+
+
+@app.get("/api/models/card/{tag:path}")
+def models_card_api(tag: str):
+    from jarvis.models_product.catalog import build_model_card
+
+    return {"ok": True, "card": build_model_card(tag)}
+
+
+@app.post("/api/models/switch")
+def models_switch_api(body: dict | None = None):
+    """Authoritative model change API — Models product owns registry."""
+    from jarvis.models_product.switch import apply_model_change
+
+    return apply_model_change(body or {})
+
+
+@app.get("/api/models/switch/contract")
+def models_switch_contract():
+    from jarvis.models_product.switch import describe_switch_contract
+
+    return describe_switch_contract()
+
+
+@app.get("/api/models/recommend")
+def models_recommend_api():
+    from jarvis.models_product.recommender import recommend_stacks
+
+    return recommend_stacks()
+
+
+@app.post("/api/models/recommend/apply")
+def models_recommend_apply(body: dict | None = None):
+    from jarvis.models_product.recommender import recommend_stacks
+    from jarvis.models_product.switch import apply_model_change, ModelChangeRequest
+    from jarvis.models_product.vram_advisor import advise_vram
+
+    body = body or {}
+    if not body.get("confirmed"):
+        return {"ok": False, "error": "confirmation_required", "message": "Stack apply requires confirmation"}
+    stack_id = str(body.get("stack_id") or "")
+    stacks = recommend_stacks().get("stacks") or []
+    stack = next((s for s in stacks if s.get("id") == stack_id), None)
+    if not stack:
+        return {"ok": False, "error": "unknown_stack"}
+    # VRAM advisory for conversation model
+    roles = dict(stack.get("roles") or {})
+    advisory = advise_vram(roles.get("conversation") or "", action="assign")
+    out = apply_model_change(
+        ModelChangeRequest(scope="role_default", roles=roles, mode=str(body.get("mode") or ""), reason=f"stack:{stack_id}")
+    )
+    out["advisory"] = advisory
+    out["stack"] = stack
+    return out
+
+
+@app.get("/api/models/providers")
+def models_providers_api():
+    from jarvis.models_product.providers import wizard_status
+
+    return wizard_status()
+
+
+@app.post("/api/models/providers/validate")
+def models_providers_validate(body: dict | None = None):
+    from jarvis.models_product.providers import validate_provider
+
+    body = body or {}
+    return validate_provider(
+        str(body.get("provider") or ""),
+        url=str(body.get("url") or ""),
+        api_key=str(body.get("api_key") or ""),
+    )
+
+
+@app.get("/api/models/vram-advise")
+def models_vram_advise(model: str = "", action: str = "assign"):
+    from jarvis.models_product.vram_advisor import advise_vram
+
+    return advise_vram(model, action=action)
+
+
+@app.post("/api/models/coach")
+def models_coach_api(body: dict | None = None):
+    from jarvis.models_product.task_coach import suggest_for_prompt
+
+    body = body or {}
+    return suggest_for_prompt(str(body.get("prompt") or ""), current_model=str(body.get("current_model") or ""))
+
+
+@app.get("/api/models/packs")
+def models_packs_list():
+    from jarvis.models_product.packs import list_packs
+
+    return list_packs()
+
+
+@app.post("/api/models/packs")
+def models_packs_save(body: dict | None = None):
+    from jarvis.models_product.packs import save_pack
+
+    return save_pack(body or {})
+
+
+@app.post("/api/models/packs/{pack_id}/apply")
+def models_packs_apply(pack_id: str, body: dict | None = None):
+    from jarvis.models_product.packs import apply_pack
+
+    body = body or {}
+    return apply_pack(pack_id, mode=str(body.get("mode") or ""))
+
+
+@app.get("/api/models/pull/status")
+def models_pull_status():
+    from jarvis.models_product.pull_manager import get_pull_state
+
+    return get_pull_state()
+
+
+@app.get("/api/models/export")
+def models_export_api():
+    from jarvis.models_product.home import export_config
+
+    return export_config()
+
+
+@app.post("/api/models/import")
+def models_import_api(body: dict | None = None):
+    from jarvis.models_product.home import import_config
+
+    body = body or {}
+    if not body.get("confirmed"):
+        return {"ok": False, "error": "confirmation_required"}
+    return import_config(body.get("config") or body, mode=str(body.get("mode") or ""))
+
+
+@app.get("/api/models/policy")
+def models_policy_get():
+    from jarvis.models_product.policy import load_policy
+
+    return {"ok": True, "policy": load_policy()}
+
+
+@app.post("/api/models/policy")
+def models_policy_set(body: dict | None = None):
+    from jarvis.models_product.policy import save_policy
+
+    return {"ok": True, "policy": save_policy(body or {})}
+
+
+@app.get("/api/models/activity/outbox")
+def models_activity_outbox():
+    from jarvis.models_product.activity_bridge import drain_outbox
+
+    return {"ok": True, "events": drain_outbox()}
+
+
+@app.get("/api/models/loaded")
+def models_loaded_api():
+    from jarvis.resource_router import ollama_loaded_models
+
+    return {"ok": True, "models": ollama_loaded_models()}
+
+
 @app.get("/api/models/settings")
 def get_model_settings():
     from jarvis.model_store import get_all_settings
@@ -2732,16 +2920,20 @@ async def save_model_settings(
     image: str = Form(""),
     embed: str = Form(""),
 ):
-    from jarvis.model_store import update_models
+    from jarvis.model_store import get_all_settings
+    from jarvis.models_product.switch import apply_model_change, ModelChangeRequest
 
     models = {
         k: v
         for k, v in {
+            "conversation": general,
             "general": general,
+            "coding": coder,
             "coder": coder,
             "review": review,
             "vision": vision,
             "image": image,
+            "embedding": embed,
             "embed": embed,
         }.items()
         if v
@@ -2750,7 +2942,26 @@ async def save_model_settings(
         from jarvis.config import save_vision_quality
 
         save_vision_quality("custom")
-    return {"ok": True, "settings": update_models(mode, models)}
+    out = apply_model_change(ModelChangeRequest(scope="role_default", roles=models, mode=mode, reason="sidebar_save"))
+    return {"ok": bool(out.get("ok")), "settings": get_all_settings(), "switch": out}
+
+
+@app.post("/api/models/settings/json")
+def save_model_settings_json(body: dict | None = None):
+    """Full canonical role save from Models Home."""
+    from jarvis.models_product.switch import apply_model_change, ModelChangeRequest
+    from jarvis.model_store import get_all_settings
+
+    body = body or {}
+    out = apply_model_change(
+        ModelChangeRequest(
+            scope="role_default",
+            roles=dict(body.get("roles") or {}),
+            mode=str(body.get("mode") or ""),
+            reason="models_home_save",
+        )
+    )
+    return {"ok": bool(out.get("ok")), "settings": get_all_settings(), "switch": out}
 
 
 @app.post("/api/models/preset")
@@ -2780,12 +2991,26 @@ def refresh_models():
 async def pull_model_endpoint(model: str = Form(...)):
     from jarvis.async_util import stream_sync_iter
     from jarvis.model_pull import pull_model
+    from jarvis.models_product.pull_manager import mark_pull_finished, mark_pull_started
+    from jarvis.models_product.policy import check_permission
+
+    perm = check_permission("pull_models")
+    if not perm.get("ok"):
+        return {"ok": False, "error": "permission_denied", "policy": perm}
+
+    mark_pull_started(model)
 
     async def event_stream():
+        ok = True
+        msg = ""
         async for event in stream_sync_iter(
             lambda: pull_model(model), thread_name="jarvis-model-pull"
         ):
+            if isinstance(event, dict) and event.get("type") in ("error", "failed"):
+                ok = False
+                msg = str(event.get("message") or event)
             yield f"data: {json.dumps(event)}\n\n"
+        mark_pull_finished(model, ok=ok, message=msg or ("completed" if ok else "failed"))
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
 
@@ -2795,6 +3020,12 @@ async def pull_missing():
     from jarvis.async_util import stream_sync_iter
     from jarvis.model_pull import pull_model
     from jarvis.model_store import get_missing_models
+    from jarvis.models_product.pull_manager import mark_pull_finished, mark_pull_started
+    from jarvis.models_product.policy import check_permission
+
+    perm = check_permission("pull_models")
+    if not perm.get("ok"):
+        return {"ok": False, "error": "permission_denied", "policy": perm}
 
     missing = get_missing_models()
     if not missing:
@@ -2802,8 +3033,14 @@ async def pull_missing():
 
     def produce():
         for model in missing:
+            mark_pull_started(model)
             yield {"type": "model_start", "model": model}
-            yield from pull_model(model)
+            failed = False
+            for ev in pull_model(model):
+                if isinstance(ev, dict) and ev.get("type") in ("error", "failed"):
+                    failed = True
+                yield ev
+            mark_pull_finished(model, ok=not failed)
         yield {"type": "all_done", "ok": True}
 
     async def event_stream():

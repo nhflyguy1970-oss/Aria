@@ -133,8 +133,24 @@ def enrich_snapshot(data: dict[str, Any] | None) -> dict[str, Any]:
             "durable_events",
             "chat",
             "automation",
+            "model_registry",
+            "role_assignments",
         ],
     }
+    # Sync loaded model inventory from runtime (Platform panel often empty)
+    try:
+        from jarvis.resource_router import ollama_loaded_models
+
+        loaded = ollama_loaded_models() or []
+        inf = dict(snap.get("inference") or {})
+        if not inf.get("loaded_models"):
+            inf["loaded_models"] = loaded
+        inf["loaded_count"] = len(loaded)
+        inf["models_home"] = "models"
+        inf["switch_note"] = "Switch uses Models registry (role_default). Warm/unload are health ops only."
+        snap["inference"] = inf
+    except Exception:
+        pass
     snap["health_brief"] = build_health_brief(snap)
     snap["advisor_actions"] = advisor_action_cards(snap)
     snap["predictive_warnings"] = build_predictive_warnings(snap)
