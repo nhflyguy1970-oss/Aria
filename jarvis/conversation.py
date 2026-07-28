@@ -29,6 +29,18 @@ class Conversation:
             return True
         return False
 
+    def truncate_last_assistant(self, *, mark: str = "\n\n[interrupted]") -> bool:
+        """Cancel/recovery: shorten the last assistant turn and mark interruption."""
+        if not self.messages or self.messages[-1].get("role") != "assistant":
+            return False
+        content = str(self.messages[-1].get("content") or "")
+        # Keep a short prefix so context survives cancel without retaining a huge partial
+        keep = content[:400].rstrip()
+        if mark and mark.strip() not in keep:
+            keep = f"{keep}{mark}" if keep else mark.strip()
+        self.messages[-1]["content"] = keep
+        return True
+
     def set_system_content(self, content: str) -> None:
         if self.messages and self.messages[0].get("role") == "system":
             self.messages[0]["content"] = content

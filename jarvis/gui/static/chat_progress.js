@@ -32,9 +32,17 @@
   }
 
   function showError(msg) {
-    window.addMessage?.("assistant", msg, { type: "info" });
+    const text = String(msg || "Something went wrong").trim();
+    const hint = /ollama|provider|timeout|connect|refus/i.test(text)
+      ? " — Retry, switch model, or open Mission Control diagnostics"
+      : " — Retry or check Activity Center for details";
+    window.addMessage?.("assistant", text, { type: "info" });
     const { statusText } = els();
-    if (statusText) statusText.textContent = "Error";
+    if (statusText) {
+      const short = text.length > 72 ? `${text.slice(0, 69)}…` : text;
+      statusText.textContent = short.includes("—") ? short : `${short}${hint}`;
+    }
+    window.showAriaToast?.(text.slice(0, 160), "err", 5000);
   }
 
   function showProviderRecovery(message, opts = {}) {
@@ -115,6 +123,7 @@
     progressStart = Date.now();
     clearInterval(progressTimer);
     progressTimer = setInterval(() => {
+      if (document.hidden) return;
       const sec = Math.floor((Date.now() - progressStart) / 1000);
       if (progressText) {
         progressText.textContent = sec > 0 ? `${label} (${sec}s)` : label;

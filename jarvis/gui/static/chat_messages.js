@@ -64,14 +64,39 @@
       actions.className = "message-actions";
       const copyBtn = window.createCopyButton?.(body);
       if (copyBtn) actions.appendChild(copyBtn);
+      if (role === "assistant") {
+        const shareBtn = document.createElement("button");
+        shareBtn.type = "button";
+        shareBtn.className = "ghost-btn small";
+        shareBtn.title = "Copy message";
+        shareBtn.textContent = "Share";
+        shareBtn.onclick = async () => {
+          const t = body.dataset.rawText || body.textContent || "";
+          try {
+            await navigator.clipboard.writeText(t);
+            window.showAriaToast?.("Copied to clipboard", "ok", 2000);
+          } catch (_) {
+            window.showAriaToast?.("Could not copy", "err", 3000);
+          }
+        };
+        actions.appendChild(shareBtn);
+      }
       const forkBtn = document.createElement("button");
       forkBtn.type = "button";
       forkBtn.className = "ghost-btn small fork-btn";
-      forkBtn.title = "Fork branch from this message";
+      forkBtn.title = "Fork thread from this message";
       forkBtn.textContent = "⎇ Fork";
       forkBtn.onclick = () => window.forkBranchFromIndex?.(msgIndex);
       actions.appendChild(forkBtn);
+      const ts = document.createElement("time");
+      ts.className = "msg-timestamp muted";
+      ts.dateTime = new Date().toISOString();
+      ts.textContent = new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+      actions.appendChild(ts);
       bubble.appendChild(actions);
+      if (role === "assistant") {
+        window.AriaChatOS?.attachReplyActions?.(bubble, meta);
+      }
     }
 
     msgs.appendChild(div);

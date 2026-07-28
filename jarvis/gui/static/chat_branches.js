@@ -112,7 +112,7 @@ branchSelect?.addEventListener("change", async () => {
 });
 
 newBranchBtn?.addEventListener("click", async () => {
-  const name = prompt("Branch name:", "Branch");
+  const name = await window.ariaPrompt?.("Name this fork:", "Branch", { title: "Fork conversation" });
   if (!name) return;
   const form = new FormData();
   form.append("name", name);
@@ -123,10 +123,10 @@ newBranchBtn?.addEventListener("click", async () => {
     window.activeBranchId = data.branch_id;
     await loadBranches();
     await reloadBranchMessages();
-    (document.getElementById("statusText") || {}).textContent = `Branch: ${name}`;
-    window.showAriaToast?.(`Branch created: ${name}`, "ok", 3000);
+    (document.getElementById("statusText") || {}).textContent = `Thread: ${name}`;
+    window.showAriaToast?.(`Fork created: ${name}`, "ok", 3000);
   } catch (err) {
-    window.showAriaToast?.(err.message || "Could not create branch", "err", 5000);
+    window.showAriaToast?.(err.message || "Could not create fork", "err", 5000);
   }
 });
 
@@ -162,7 +162,11 @@ function closeBranchTrimModal() {
 trimBranchesBtn?.addEventListener("click", () => { openBranchTrimModal(); });
 
 clearMainBranchBtn?.addEventListener("click", async () => {
-  if (!confirm("Clear all messages on the Main branch? This cannot be undone.")) return;
+  const ok = await window.ariaConfirm?.(
+    "Clear all messages on the Main thread? This cannot be undone.",
+    { title: "Clear Main", okLabel: "Clear" },
+  );
+  if (!ok) return;
   try {
     const form = new FormData();
     form.append("branch_id", "main");
@@ -209,7 +213,11 @@ branchTrimConfirmBtn?.addEventListener("click", async () => {
     window.showAriaToast?.("Select at least one branch", "warn", 3000);
     return;
   }
-  if (!confirm(`Delete ${checked.length} branch(es)? This cannot be undone.`)) return;
+  const ok = await window.ariaConfirm?.(
+    `Delete ${checked.length} thread(s)? This cannot be undone.`,
+    { title: "Delete threads", okLabel: "Delete" },
+  );
+  if (!ok) return;
   const form = new FormData();
   form.append("branch_ids", checked.join(","));
   try {
@@ -237,7 +245,7 @@ branchTrimConfirmBtn?.addEventListener("click", async () => {
   window.maybeShowMorningBriefing = maybeShowMorningBriefing;
 
   async function forkBranchFromIndex(displayIndex) {
-    const name = prompt("New branch name:", "Fork");
+    const name = await window.ariaPrompt?.("Name for this fork:", "Fork", { title: "Fork from message" });
     if (!name) return;
     const form = new FormData();
     form.append("name", name);

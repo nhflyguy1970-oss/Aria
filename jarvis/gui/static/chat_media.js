@@ -27,14 +27,14 @@
   window.showGeneratedImage = showGeneratedImage;
   window.showAudioPlayer = showAudioPlayer;
 
-  window.jarvisSendToChat = (text) => {
-    if (!text) return;
-    const input = document.getElementById("messageInput");
-    if (input) input.value = text;
-    window.switchToView?.("chat") || document.querySelector('.view-tab[data-view="chat"]')?.click();
-    setTimeout(() => {
-      input?.focus();
-      if (typeof window.resizeMessageInput === "function") window.resizeMessageInput();
-    }, 40);
-  };
+  // Back-compat: jarvisSendToChat is owned by chat_os.js (auto-send). Soft fallback only.
+  if (typeof window.jarvisSendToChat !== "function") {
+    window.jarvisSendToChat = (text) => {
+      if (typeof window.jarvisAskAria === "function") return window.jarvisAskAria(text);
+      const input = document.getElementById("messageInput");
+      if (input) input.value = text || "";
+      window.switchToView?.("chat");
+      setTimeout(() => window.sendMessage?.(text), 60);
+    };
+  }
 })();

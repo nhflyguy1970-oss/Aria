@@ -46,10 +46,9 @@
             + `<button type="button" class="ghost-btn tiny chat-session-pin" title="Pin session" aria-label="Pin session">★</button>`
             + `</li>`;
         }).join("")
-        : "<li class='muted'>No saved sessions. <button type='button' class='ghost-btn tiny' id='chatSessionsEmptyNewBtn'>New session</button> or use + Branch</li>";
+        : "<li class='muted'>No saved threads. <button type='button' class='ghost-btn tiny' id='chatSessionsEmptyNewBtn'>New Chat</button></li>";
       list.querySelector("#chatSessionsEmptyNewBtn")?.addEventListener("click", () => {
-        $("chatSessionTitleInput")?.focus();
-        createSession();
+        window.AriaChatOS?.newChat?.() || $("chatNewBtn")?.click();
       });
       list.querySelectorAll(".chat-session-btn").forEach((btn) => {
         btn.addEventListener("click", async () => {
@@ -61,28 +60,30 @@
             else if (!ok) window.showAriaToast?.("Could not switch session branch", "err", 4000);
             return;
           }
-          if (window.showAriaToast) window.showAriaToast("Session has no branch — create one with + Branch", "warn");
+          if (window.showAriaToast) window.showAriaToast("Session has no branch — use New Chat", "warn");
         });
       });
       list.querySelectorAll(".chat-session-pin").forEach((btn) => {
         btn.addEventListener("click", async (ev) => {
           ev.stopPropagation();
-          const id = btn.closest("li")?.dataset.id;
+          const li = btn.closest("li");
+          const id = li?.dataset.id;
           if (!id) return;
+          const currentlyPinned = btn.closest("li")?.querySelector(".chat-session-btn")?.classList.contains("pinned");
           try {
             const data = await fetchJson(`/api/chat/sessions/${encodeURIComponent(id)}/pin`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ pinned: true }),
+              body: JSON.stringify({ pinned: !currentlyPinned }),
             });
             if (data?.ok === false) {
-              window.showAriaToast?.(data.message || data.error || "Could not pin session", "err", 4000);
+              window.showAriaToast?.(data.message || data.error || "Could not update pin", "err", 4000);
               return;
             }
-            window.showAriaToast?.("Session pinned", "ok", 2000);
+            window.showAriaToast?.(currentlyPinned ? "Unpinned" : "Pinned", "ok", 2000);
             loadSessions();
           } catch (err) {
-            window.showAriaToast?.(err?.message || "Could not pin session", "err", 4000);
+            window.showAriaToast?.(err?.message || "Could not update pin", "err", 4000);
           }
         });
       });
@@ -93,8 +94,9 @@
   }
 
   async function createSession() {
-    const title = $("chatSessionTitleInput")?.value?.trim() || "New chat";
-    const branchId = $("branchSelect")?.value || "main";
+    // Bookmark current thread (session metadata only — does not create a new branch)
+    const title = $("chatSessionTitleInput")?.value?.trim() || "Bookmarked chat";
+    const branchId = $("branchSelect")?.value || window.activeBranchId || "main";
     try {
       const created = await fetchJson("/api/chat/sessions", {
         method: "POST",
@@ -102,20 +104,22 @@
         body: JSON.stringify({ title, branch_id: branchId }),
       });
       if (created?.ok === false || (!created?.session && created?.error)) {
-        window.showAriaToast?.(created.message || created.error || "Could not create session", "err", 5000);
+        window.showAriaToast?.(created.message || created.error || "Could not bookmark thread", "err", 5000);
         return;
       }
       if ($("chatSessionTitleInput")) $("chatSessionTitleInput").value = "";
-      if (created?.session?.branch_id) await switchToBranch(created.session.branch_id);
-      window.showAriaToast?.(created?.session?.title ? `Session “${created.session.title}” created` : "Session created", "ok", 2500);
+      window.showAriaToast?.(created?.session?.title ? `Bookmarked “${created.session.title}”` : "Thread bookmarked", "ok", 2500);
       loadSessions();
     } catch (err) {
-      window.showAriaToast?.(err?.message || "Could not create session", "err", 5000);
+      window.showAriaToast?.(err?.message || "Could not bookmark thread", "err", 5000);
     }
   }
 
   function initChatSessions() {
     $("chatSessionNewBtn")?.addEventListener("click", createSession);
+    $("chatSessionNewChatBtn")?.addEventListener("click", () => {
+      window.AriaChatOS?.newChat?.() || $("chatNewBtn")?.click();
+    });
     loadSessions();
   }
 

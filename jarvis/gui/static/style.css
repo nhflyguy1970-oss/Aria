@@ -6108,3 +6108,102 @@ body:not(.has-status-bar) .mini-chat-panel { bottom: 4rem; }
   width: 100%; margin: 0.35rem 0; background: var(--bg-elevated); color: var(--text);
   border: 1px solid var(--border); border-radius: 6px; padding: 0.35rem 0.45rem; font: inherit;
 }
+
+/* ===== Chat OS — composer, citations, dialogs, reply actions ===== */
+.chat-context-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.35rem 1.5rem 0;
+}
+.chat-context-chips.hidden { display: none; }
+.chat-ctx-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  cursor: pointer;
+}
+.chat-ctx-chip .chat-ctx-x { opacity: 0.6; margin-left: 0.15rem; }
+.chat-at-suggest {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.25rem 1.5rem;
+}
+.chat-at-suggest.hidden { display: none; }
+.composer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+.composer-model-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+}
+.composer-model-select {
+  max-width: 12rem;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.4rem;
+}
+.citation-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+.citation-chip:hover { color: var(--accent); }
+.citation-kind { text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.65rem; }
+.chat-reply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.4rem;
+  padding-top: 0.35rem;
+  border-top: 1px dashed var(--border);
+}
+.msg-timestamp {
+  font-size: 0.65rem;
+  margin-left: auto;
+  align-self: center;
+}
+.aria-dialog {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0;
+  background: var(--bg-elevated);
+  color: var(--text);
+  max-width: 26rem;
+  width: calc(100vw - 2rem);
+}
+.aria-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+.aria-dialog-card { padding: 1rem 1.15rem 1.1rem; }
+.aria-dialog-card h3 { margin: 0 0 0.35rem; font-size: 1.05rem; }
+.aria-dialog-card .personality-select { width: 100%; margin: 0.5rem 0; }
+.mini-chat-bubble {
+  padding: 0.45rem 0.6rem;
+  border-radius: 8px;
+  margin: 0.35rem 0;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+}
+.mini-chat-user { background: var(--bg-deep); border: 1px solid var(--border); }
+.mini-chat-assist { background: rgba(212, 160, 84, 0.08); border: 1px solid rgba(212, 160, 84, 0.25); }
+@media (prefers-reduced-motion: reduce) {
+  .chat-ctx-chip, .citation-chip, .chat-reply-actions button { transition: none; }
+}

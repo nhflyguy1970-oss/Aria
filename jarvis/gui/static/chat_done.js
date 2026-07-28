@@ -229,6 +229,15 @@
     if (data.memory_citations?.length) {
       const bubble = document.querySelector(".message.assistant:last-child .bubble");
       window.jarvisRenderMemoryCitations?.(bubble, data.memory_citations);
+      window.AriaChatOS?.attachReplyActions?.(
+        document.querySelector(".message.assistant:last-child .bubble"),
+        meta,
+      );
+    } else {
+      window.AriaChatOS?.attachReplyActions?.(
+        document.querySelector(".message.assistant:last-child .bubble"),
+        meta,
+      );
     }
     if (data.ok && (text || data.message) && meta.type !== "proposal" && !data.proposal_id) {
       window.jarvisMaybeSpeakReply?.(text || data.message);

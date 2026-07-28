@@ -132,6 +132,21 @@ def register_routes(app, assistant) -> None:
         sess = create_session(body.get("title") or "New chat", branch_id=body.get("branch_id"))
         return {"ok": True, "session": sess}
 
+    @app.post("/api/chat/new")
+    async def chat_new(request: Request):
+        """Unified New Chat — branch + session in one step."""
+        from jarvis.chat_sessions import create_new_chat
+
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        result = create_new_chat(
+            title=(body.get("title") or body.get("name") or "").strip() or None,
+            branch_name=(body.get("branch_name") or body.get("name") or "").strip() or None,
+        )
+        return result
+
     @app.post("/api/chat/sessions/{session_id}/pin")
     async def chat_sessions_pin(session_id: str, request: Request):
         from jarvis.chat_sessions import pin_session

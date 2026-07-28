@@ -707,14 +707,34 @@
     } catch (_) {}
   }
 
-  /* --- Memory citations footer hook --- */
+  /* --- Grounding citations — clickable provenance --- */
   window.jarvisRenderMemoryCitations = function (bubble, citations) {
     if (!bubble || !citations?.length) return;
-    const foot = document.createElement("div");
-    foot.className = "memory-citations muted";
-    foot.innerHTML = citations.map((c) =>
-      `From memory · ${escapeHtml(c.type)} · ${escapeHtml(c.date)} · ${escapeHtml(c.content.slice(0, 80))}`).join("<br>");
-    bubble.appendChild(foot);
+    let foot = bubble.querySelector(".memory-citations");
+    if (!foot) {
+      foot = document.createElement("div");
+      foot.className = "memory-citations muted";
+      bubble.appendChild(foot);
+    }
+    foot.innerHTML = citations.map((c, i) => {
+      const source = String(c.source || c.type || "memory");
+      const label = c.title || c.name || c.type || source;
+      const snippet = String(c.content || c.text || c.path || "").slice(0, 80);
+      const date = c.date ? ` · ${escapeHtml(c.date)}` : "";
+      return `<button type="button" class="citation-chip" data-cite-idx="${i}" title="${escapeHtml(source)}">`
+        + `<span class="citation-kind">${escapeHtml(source)}</span>`
+        + ` · ${escapeHtml(label)}${date}`
+        + (snippet ? ` · ${escapeHtml(snippet)}` : "")
+        + `</button>`;
+    }).join("");
+    foot.querySelectorAll(".citation-chip").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = Number(btn.getAttribute("data-cite-idx"));
+        const cite = citations[idx];
+        if (window.AriaChatOS?.openCitation) window.AriaChatOS.openCitation(cite);
+        else window.switchToView?.("memory");
+      });
+    });
   };
 
   /* --- Coding job polling lives in app.js (jarvisPollCodingJob) --- */
@@ -726,13 +746,11 @@
     });
 
     initSpeakToggle();
-    initCollapsibleSections();
+    // Sidebar collapse + Restart Server chrome owned by sidebar_chrome.js
     initModuleFilter();
     initIntegrationsPanel();
     initChatMicPtt();
     initServiceRestart();
-    initUpgradeRestart();
-    initServerRestart();
     initJarvisBlue();
     initShortcuts();
     initSettingsModal();

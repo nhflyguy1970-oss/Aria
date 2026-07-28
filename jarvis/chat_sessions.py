@@ -116,6 +116,25 @@ def get_session(session_id: str) -> dict[str, Any] | None:
     return _row_to_dict(row) if row else None
 
 
+def create_new_chat(*, title: str | None = None, branch_name: str | None = None) -> dict[str, Any]:
+    """Unified New Chat: create a fresh branch + named session metadata.
+
+    Users never need to understand branches vs sessions — this is one action.
+    """
+    from jarvis.assistant_instance import get_assistant
+
+    name = (branch_name or title or "New chat").strip() or "New chat"
+    assistant = get_assistant()
+    branch_id = assistant.create_branch(name)
+    session = create_session(title or name, branch_id=branch_id)
+    return {
+        "ok": True,
+        "branch_id": branch_id,
+        "session": session,
+        "message": f"Started “{session['title']}”.",
+    }
+
+
 def seed_default_sessions() -> None:
     """Ensure starter named sessions exist for the sidebar UX."""
     if not chat_sessions_enabled():

@@ -230,15 +230,22 @@
       return;
     }
     if (act === "ask" || act === "chat") {
-      window.switchToView?.("chat");
+      const name = String(full).split(/[/\\]/).pop() || full;
       if (act === "ask") {
-        window.jarvisSendToChat?.(`Ask about document ${full}: `);
+        window.jarvisAskAria?.(
+          `What should I know about this document? Summarize key points and how it relates to my work.`,
+          {
+            autoSend: true,
+            switchView: true,
+            returnView: "documents",
+            context: [{ kind: "document", id: full, label: name }],
+          },
+        );
       } else {
-        const input = $("messageInput");
-        if (input) {
-          input.value = `summarize document ${full}`;
-          input.focus();
-        }
+        window.jarvisAskAria?.(`Summarize document ${full}`, {
+          autoSend: true,
+          context: [{ kind: "document", id: full, label: name }],
+        });
       }
       return;
     }

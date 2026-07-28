@@ -265,6 +265,9 @@
                 c.activeStreamText = full;
                 body.innerHTML = formatMessage(full);
                 syncMessageRawText?.(body, full);
+                if (typeof options.onToken === "function") {
+                  try { options.onToken(event.content, full); } catch (_) {}
+                }
                 if (msgs) msgs.scrollTop = msgs.scrollHeight;
               } else if (event.type === "done" || (event.ok && event.image_path)) {
                 gotProgress = true;
@@ -289,6 +292,9 @@
                   : {};
                 try {
                   window.handleDone?.(event, full || event.message, streamed, doneOpts);
+                  if (typeof options.onDone === "function") {
+                    try { options.onDone(event, full || event.message); } catch (_) {}
+                  }
                 } catch (err) {
                   console.error("handleDone failed", err);
                   window.showError?.(`Could not display response: ${err.message || err}`);

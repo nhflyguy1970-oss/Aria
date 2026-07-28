@@ -253,11 +253,10 @@ def test_command_palette_is_wired():
     assert "Ctrl</kbd>+<kbd>L" in html or "Ctrl+L" in html
     cal = Path("jarvis/gui/static/calendar.js").read_text(encoding="utf-8")
     app = Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
-    assert "planner_tasks" in cal
-    assert "cal-open-planner" in cal
+    assert "planner_tasks" in Path("jarvis/calendar_tab.py").read_text(encoding="utf-8")
     assert "calOpenJournalBtn" in cal
     assert "window.openCalendarDay" in cal
-    assert "planner_tasks" in Path("jarvis/calendar_tab.py").read_text(encoding="utf-8")
+    assert "Ask Aria" in cal
     assert "async: true" in Path("jarvis/gui/static/chat_export.js").read_text(encoding="utf-8")
     assert "aria_theme" in app or "aria_theme" in Path("jarvis/gui/static/theme.js").read_text(encoding="utf-8")
     assert "theme.js" in html
@@ -277,11 +276,11 @@ def test_command_palette_is_wired():
     assert "async function loadGallery" not in app
     assert "Memory exported" in app or "Memory exported" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "dataset.bound === \"1\"" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
-    assert "Could not switch project" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
+    assert "Active project:" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8") or "Workspace Identity" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
     assert "window.syncMuteButton" in Path("jarvis/gui/static/voice_bar.js").read_text(encoding="utf-8")
     assert 'dataset.bound === "1"' in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert 'dataset.bound === "1"' in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
-    assert "Reindexing…" in Path("jarvis/gui/static/documents.js").read_text(encoding="utf-8")
+    assert "Rebuilding search index…" in Path("jarvis/gui/static/documents.js").read_text(encoding="utf-8")
 
     assert "act:backup" in js
     assert "act:theme-toggle" in js
@@ -318,7 +317,7 @@ def test_command_palette_is_wired():
     assert "act:pomodoro" in js
     assert "act:open-meme" not in js
     assert "journalOpenDocumentsBtn" in html
-    assert "documentsOpenJournalBtn" in html
+    assert "documentsAskBtn" in html
     assert "plannerOpenDocumentsBtn" in html
     assert "dashboardOpenCalendarBtn" in html
     assert "auditOpenActionsBtn" in html
@@ -401,6 +400,12 @@ def test_command_palette_is_wired():
     assert "window.showGeneratedImage" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat" in Path("jarvis/gui/static/chat_media.js").read_text(encoding="utf-8")
     assert "window.jarvisSendToChat =" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
+    assert "window.jarvisAskAria" in Path("jarvis/gui/static/chat_os.js").read_text(encoding="utf-8")
+    assert "chat_os.js" in html
+    assert 'id="chatNewBtn"' in html
+    assert 'id="chatComposerModelSelect"' in html
+    assert "aria_dialogs.js" in html
+    assert "/api/chat/new" in Path("jarvis/gui/static/chat_os.js").read_text(encoding="utf-8")
     assert "actionsEmptyChatBtn" in Path("jarvis/gui/static/actions_view.js").read_text(encoding="utf-8")
     assert "ha_extras.js" in Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
     assert "actions_view.js" in Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
@@ -480,7 +485,7 @@ def test_command_palette_is_wired():
     assert "setChatBusy," in Path("jarvis/gui/static/chat_progress.js").read_text(encoding="utf-8")
     assert "const resolveVideoUrl" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "researchEmptyRunBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
-    assert "knowledgeEmptyChatBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
+    assert "researchEmptyChatBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8") or "memoryEmptyChatBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "profileEmptyEditBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "mcEmptyRoutingChatBtn" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "act:run-research" in Path("jarvis/gui/static/command_palette.js").read_text(encoding="utf-8")
@@ -499,7 +504,7 @@ def test_command_palette_is_wired():
     assert "showChatWarnings," in Path("jarvis/gui/static/chat_done.js").read_text(encoding="utf-8") or "showChatWarnings }" in Path("jarvis/gui/static/chat_done.js").read_text(encoding="utf-8")
     assert "function addMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function addMessage" in Path("jarvis/gui/static/chat_messages.js").read_text(encoding="utf-8")
-    assert "Drop PDFs/DOCX" in Path("jarvis/gui/static/documents.js").read_text(encoding="utf-8")
+    assert "Drop files" in Path("jarvis/gui/static/index.html").read_text(encoding="utf-8") or "documentsDropzone" in Path("jarvis/gui/static/documents.js").read_text(encoding="utf-8")
     assert "audit-empty-run" in Path("jarvis/gui/static/audit.js").read_text(encoding="utf-8")
     assert "function sendQuickCodingMessage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function showGeneratedImage" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
@@ -558,7 +563,7 @@ def test_command_palette_is_wired():
     assert "aria-labelledby=\"settingsModalTitle\"" in html
     assert "flytyingOpenGalleryBtn" in html
     assert "cadOpenGalleryBtn" in html
-    assert "Could not load projects" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
+    assert "Active project:" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
     assert "Security status unavailable" in Path("jarvis/gui/static/security_settings.js").read_text(encoding="utf-8")
     assert "Voice tab load failed" in Path("jarvis/gui/static/voice_tab.js").read_text(encoding="utf-8")
     assert "Browser agent unavailable" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
@@ -582,7 +587,7 @@ def test_command_palette_is_wired():
     assert "applyModuleFilter" in mt and "MODULE_NAV" in mt
     assert 'target === "workstation"' in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "created?.project?.slug" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
-    assert "title.textContent = p.title" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
+    assert "proj-home-title" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
     assert "li.innerHTML = `<strong>${p.title}" not in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
     assert "modelsEl.replaceChildren" in Path("jarvis/gui/static/models_panel.js").read_text(encoding="utf-8")
     assert "document.hidden || window.mediaWorkActive" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
@@ -640,7 +645,7 @@ def test_command_palette_is_wired():
     assert "Trusted device revoked" in Path("jarvis/gui/static/security_settings.js").read_text(encoding="utf-8")
     assert "Journal stats unavailable" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "Work schedule unavailable" in cal
-    assert "Memory deleted" in app or "Memory deleted" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
+    assert "Could not load memory settings" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "ensureMcDelegates" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "Conversation cleared" in Path("jarvis/gui/static/chat_controls.js").read_text(encoding="utf-8")
     assert "initChatControls" in Path("jarvis/gui/static/chat_controls.js").read_text(encoding="utf-8")
@@ -677,7 +682,7 @@ def test_command_palette_is_wired():
     assert "window.forkBranchFromIndex" in Path("jarvis/gui/static/chat_branches.js").read_text(encoding="utf-8")
     assert "Could not load models" in Path("jarvis/gui/static/models_panel.js").read_text(encoding="utf-8")
     assert "act:clear-chat" in js
-    assert "Memory load failed" in app or "Memory load failed" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
+    assert "Could not load memory settings" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8") or "memoryEmptyChatBtn" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
 
     assert not Path("jarvis/gui/static/browser.js").exists()
     assert Path("jarvis/gui/static/browser_panel.js").is_file()

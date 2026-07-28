@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=5.17.2" />
+  <link rel="stylesheet" href="/static/style.css?v=5.17.3" />
   <script>
     (function () {
       var standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -379,10 +379,11 @@
             <button type="button" id="backupDataBtn" class="ghost-btn small">Backup</button>
           </div>
           <div class="chat-sessions-panel">
-            <p class="sidebar-section-title">Chat sessions</p>
+            <p class="sidebar-section-title">Chat threads</p>
             <div class="planner-add-row">
-              <input type="text" id="chatSessionTitleInput" class="audio-path-input" placeholder="New session title…" />
-              <button type="button" id="chatSessionNewBtn" class="ghost-btn small">Save</button>
+              <button type="button" id="chatSessionNewChatBtn" class="apply-btn small" title="Same as New Chat">New Chat</button>
+              <input type="text" id="chatSessionTitleInput" class="audio-path-input" placeholder="Rename / bookmark title…" />
+              <button type="button" id="chatSessionNewBtn" class="ghost-btn small" title="Bookmark current thread">Bookmark</button>
             </div>
             <ul id="chatSessionsList" class="planner-list chat-sessions-list"></ul>
           </div>
@@ -546,7 +547,7 @@
           <span class="voice-bar-label">Voice idle</span>
         </div>
         <span id="voiceBarMode" class="voice-bar-mode muted" title="Duplex mode"></span>
-        <button type="button" id="voiceMuteBtn" class="ghost-btn small voice-mute-btn" title="Mute auto-speak">Muted</button>
+        <button type="button" id="voiceMuteBtn" class="ghost-btn small voice-mute-btn" title="Mute read-aloud">Mute TTS</button>
         <select id="duplexModeSelect" class="ghost-btn small" title="Duplex voice mode">
           <option value="off">Duplex off</option>
           <option value="half" selected>Half duplex</option>
@@ -595,18 +596,19 @@
           <div id="profileBanner" class="profile-banner hidden"></div>
         </div>
         <div class="header-actions">
-          <select id="branchSelect" class="branch-select" title="Chat branch">
+          <button type="button" id="chatNewBtn" class="apply-btn small" title="Start a new chat (branch + session)">New Chat</button>
+          <select id="branchSelect" class="branch-select" title="Conversation thread" aria-label="Conversation thread">
             <option value="main">Main</option>
           </select>
-          <button type="button" id="newBranchBtn" class="ghost-btn small" title="Fork conversation">+ Branch</button>
-          <button type="button" id="trimBranchesBtn" class="ghost-btn small" title="Delete unused chat branches">Trim</button>
-          <button type="button" id="clearMainBranchBtn" class="ghost-btn small" title="Clear all messages on the Main branch">Clear Main</button>
-          <button type="button" id="pttBtn" class="icon-btn ptt-btn" title="Hold for local Whisper (Sound Blaster)" aria-label="Push to talk">
+          <button type="button" id="newBranchBtn" class="ghost-btn small" title="Fork this conversation into a side thread">Fork</button>
+          <button type="button" id="trimBranchesBtn" class="ghost-btn small" title="Archive unused threads">Trim</button>
+          <button type="button" id="clearMainBranchBtn" class="ghost-btn small" title="Clear all messages on Main">Clear Main</button>
+          <button type="button" id="pttBtn" class="icon-btn ptt-btn" title="Hold to talk (local Whisper)" aria-label="Hold to talk">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/></svg>
           </button>
-          <label class="speak-toggle" title="Auto read assistant replies">
+          <label class="speak-toggle" title="Read replies aloud (TTS)">
             <input type="checkbox" id="speakRepliesToggle" />
-            <span>Speak</span>
+            <span>Read aloud</span>
           </label>
           <button type="button" id="micBtn" class="icon-btn" title="Hold = server Whisper · or browser STT" aria-label="Voice input">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/></svg>
@@ -625,7 +627,7 @@
         </div>
       </header>
 
-      <div id="dropOverlay" class="drop-overlay hidden">Drop image to attach</div>
+      <div id="dropOverlay" class="drop-overlay hidden">Drop to attach (image, document, audio, or data)</div>
 
       <div id="pinnedBriefing" class="pinned-briefing hidden">
         <div class="pinned-head">
@@ -655,11 +657,22 @@
 
       <div class="chat-composer">
         <div id="suggestions" class="suggestions"></div>
+        <div id="chatContextChips" class="chat-context-chips hidden" aria-label="Active context"></div>
+        <div id="chatAtSuggest" class="chat-at-suggest hidden" role="listbox" aria-label="Context kinds"></div>
 
         <form id="chatForm" class="input-area">
           <div id="attachmentPreview" class="attachment-preview hidden"></div>
+          <div class="composer-toolbar">
+            <label class="composer-model-chip" title="Active model (change applies to next message)">
+              <span class="muted tiny">Model</span>
+              <select id="chatComposerModelSelect" class="personality-select composer-model-select" aria-label="Chat model">
+                <option value="">(default)</option>
+              </select>
+            </label>
+            <button type="button" id="micBtnComposer" class="icon-btn small" title="Hold to talk" aria-label="Hold to talk" hidden></button>
+          </div>
           <div class="input-row">
-            <textarea id="messageInput" rows="1" placeholder="Say anything… (Ctrl+V to paste)" autofocus spellcheck="true"></textarea>
+            <textarea id="messageInput" rows="1" placeholder="Ask Aria… paste or drop files · @memory @document @project" autofocus spellcheck="true"></textarea>
             <button type="button" id="stopChatBtn" class="stop-chat-btn hidden" aria-label="Stop responding" title="Stop">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
             </button>
@@ -667,7 +680,7 @@
               <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
             </button>
           </div>
-          <p class="chat-mic-hint">Hold <strong>mic</strong> or <strong>PTT</strong> for local Whisper. Toggle <strong>Speak</strong> for auto read-aloud.</p>
+          <p class="chat-mic-hint">Hold the mic to talk. Use <strong>Read aloud</strong> for TTS. Wake word stays in the status strip.</p>
         </form>
       </div>
       </div>
@@ -749,8 +762,8 @@
 
       <div id="branchTrimModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="branchTrimTitle">
         <div class="crop-modal-card profile-modal-card">
-          <h3 id="branchTrimTitle">Trim chat branches</h3>
-          <p class="profile-modal-intro">Select branches to delete. <strong>Main</strong> is always kept.</p>
+          <h3 id="branchTrimTitle">Trim chat threads</h3>
+          <p class="profile-modal-intro">Select threads to delete. <strong>Main</strong> is always kept.</p>
           <div id="branchTrimList" class="branch-trim-list"></div>
           <div class="crop-actions profile-modal-actions">
             <button type="button" id="branchTrimConfirmBtn" class="apply-btn small">Delete selected</button>
@@ -758,6 +771,44 @@
           </div>
         </div>
       </div>
+
+      <dialog id="chatNewDialog" class="aria-dialog">
+        <form method="dialog" class="aria-dialog-card">
+          <h3>New Chat</h3>
+          <p class="muted">Start a fresh conversation. Aria creates the thread for you.</p>
+          <label class="image-engine-field">
+            <span>Title (optional)</span>
+            <input type="text" id="chatNewTitleInput" class="personality-select" placeholder="e.g. Weekend project" autocomplete="off" />
+          </label>
+          <div class="crop-actions profile-modal-actions">
+            <button type="button" value="cancel" class="ghost-btn" onclick="this.closest('dialog')?.close()">Cancel</button>
+            <button type="submit" id="chatNewConfirmBtn" class="apply-btn">Start</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="ariaPromptDialog" class="aria-dialog">
+        <form method="dialog" class="aria-dialog-card">
+          <h3 id="ariaPromptTitle">Name</h3>
+          <p id="ariaPromptIntro" class="muted"></p>
+          <input type="text" id="ariaPromptInput" class="personality-select" autocomplete="off" />
+          <div class="crop-actions profile-modal-actions">
+            <button type="button" id="ariaPromptCancel" class="ghost-btn" value="cancel">Cancel</button>
+            <button type="submit" id="ariaPromptOk" class="apply-btn" value="ok">OK</button>
+          </div>
+        </form>
+      </dialog>
+
+      <dialog id="ariaConfirmDialog" class="aria-dialog">
+        <form method="dialog" class="aria-dialog-card">
+          <h3 id="ariaConfirmTitle">Confirm</h3>
+          <p id="ariaConfirmBody" class="muted"></p>
+          <div class="crop-actions profile-modal-actions">
+            <button type="button" id="ariaConfirmCancel" class="ghost-btn" value="cancel">Cancel</button>
+            <button type="submit" id="ariaConfirmOk" class="apply-btn" value="ok">Confirm</button>
+          </div>
+        </form>
+      </dialog>
 
       <div id="jobCenterModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="jobCenterTitle">
         <div class="crop-modal-card profile-modal-card job-center-card">
@@ -2298,10 +2349,10 @@
   <script src="/static/video_studio.js?v=5.16.160"></script>
   <script src="/static/meme_studio.js?v=1.1.5"></script>
   <script src="/static/smarthome.js?v=5.16.73"></script>
-  <script src="/static/chat_sessions.js?v=5.16.72"></script>
-  <script src="/static/documents.js?v=2.0.0"></script>
+  <script src="/static/chat_sessions.js?v=5.17.0"></script>
+  <script src="/static/documents.js?v=2.1.0"></script>
   <script src="/static/connections.js?v=1.0.0"></script>
-  <script src="/static/movie_tiers.js?v=5.16.140"></script>
+  <script src="/static/movie_tiers.js?v=5.16.141"></script>
   <script src="/static/ha_extras.js?v=1.0.0"></script>
   <script src="/static/actions_view.js?v=1.0.0"></script>
   <script src="/static/gemini_live.js?v=5.16.70"></script>
@@ -2341,11 +2392,12 @@
   <script src="/static/activity_center.js?v=1.0.1"></script>
   <script src="/static/workspace_layouts.js?v=1.0.1"></script>
   <script src="/static/split_view.js?v=1.0.1"></script>
-  <script src="/static/mini_chat.js?v=1.0.0"></script>
+  <script src="/static/mini_chat.js?v=1.1.0"></script>
   <script src="/static/keyboard_nav.js?v=1.0.0"></script>
   <script src="/static/workflow_recorder.js?v=1.0.0"></script>
   <script src="/static/smart_welcome.js?v=1.1.0"></script>
   <script src="/static/modal_chrome.js?v=1.1.0"></script>
+  <script src="/static/aria_dialogs.js?v=1.0.0"></script>
   <script src="/static/command_palette.js?v=1.1.0"></script>
   <script src="/static/ha_panel.js?v=1.0.3"></script>
   <script src="/static/upgrade_wizard.js?v=1.0.3"></script>
@@ -2368,8 +2420,8 @@
   <script src="/static/chat_suggestions.js?v=1.1.0"></script>
   <script src="/static/chat_export.js?v=1.0.0"></script>
   <script src="/static/chat_progress.js?v=1.1.0"></script>
-  <script src="/static/chat_messages.js?v=1.0.0"></script>
-  <script src="/static/chat_send.js?v=1.0.2"></script>
+  <script src="/static/chat_messages.js?v=1.1.0"></script>
+  <script src="/static/chat_send.js?v=1.1.0"></script>
   <script src="/static/chat_images.js?v=1.0.1"></script>
   <script src="/static/chat_video.js?v=1.0.0"></script>
   <script src="/static/attachment_compare.js?v=1.0.0"></script>
@@ -2377,15 +2429,16 @@
   <script src="/static/coding_jobs.js?v=1.0.0"></script>
   <script src="/static/coding_proposals.js?v=1.0.2"></script>
   <script src="/static/coding_quick.js?v=1.0.1"></script>
-  <script src="/static/chat_media.js?v=1.0.1"></script>
-  <script src="/static/chat_done.js?v=1.0.1"></script>
+  <script src="/static/chat_media.js?v=1.1.0"></script>
+  <script src="/static/chat_done.js?v=1.1.0"></script>
   <script src="/static/crop_webcam.js?v=1.0.1"></script>
-  <script src="/static/vision_drop.js?v=1.0.1"></script>
+  <script src="/static/vision_drop.js?v=1.1.0"></script>
   <script src="/static/models_panel.js?v=1.0.3"></script>
   <script src="/static/uncensored_mode.js?v=1.0.3"></script>
   <script src="/static/startup_overlay.js?v=1.0.2"></script>
   <script src="/static/wakeword_chat.js?v=1.0.1"></script>
-  <script src="/static/chat_branches.js?v=1.0.3"></script>
+  <script src="/static/chat_branches.js?v=1.1.0"></script>
+  <script src="/static/chat_os.js?v=1.0.0"></script>
   <script src="/static/profile_controls.js?v=1.0.1"></script>
   <script src="/static/video_sidebar.js?v=1.0.0"></script>
   <script src="/static/sidebar_chrome.js?v=1.0.1"></script>
