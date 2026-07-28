@@ -44,6 +44,28 @@ class MediaHandler:
         name = Path(result).name
         enhanced = self.a.image.last_enhanced_prompt
         negative = self.a.image.last_negative_prompt
+        try:
+            from jarvis.config import is_uncensored
+            from jarvis.gallery_product.metadata import mark_generation
+
+            project = ""
+            try:
+                from jarvis.active_project import get_active_slug
+
+                project = get_active_slug() or ""
+            except Exception:
+                project = ""
+            mark_generation(
+                name,
+                prompt=prompt,
+                enhanced=enhanced or "",
+                negative=negative or "",
+                checkpoint=checkpoint_label(),
+                uncensored=is_uncensored(),
+                project=project,
+            )
+        except Exception:
+            pass
         self.a.session.note_image(result)
 
         msg = f"Here's your image — **{prompt[:80]}**"

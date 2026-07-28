@@ -22,6 +22,11 @@ from jarvis.config import DATA_DIR
 def register_routes(app, assistant):
     journal = assistant.journal
 
+    # Gallery product routes must register before /api/gallery/{name}
+    from jarvis.gallery_product.api import register_routes as register_gallery_product
+
+    register_gallery_product(app, assistant)
+
     @app.get("/api/journal")
     def journal_all():
         return journal.export_all()
@@ -1439,23 +1444,40 @@ def register_routes(app, assistant):
     _IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
     @app.get("/api/gallery")
-    def gallery_list():
-        cached = get_gallery_cache()
-        if cached is not None:
-            return {"images": cached}
-        img_dir = DATA_DIR / "generated"
-        img_dir.mkdir(parents=True, exist_ok=True)
-        files = sorted(img_dir.glob("*"), key=lambda p: p.stat().st_mtime, reverse=True)
-        images = [
-            {"name": f.name, "path": str(f)}
-            for f in files
-            if f.is_file() and f.suffix.lower() in _IMAGE_EXTS
-        ][:50]
-        set_gallery_cache(images)
-        return {"images": images}
+    def gallery_list(
+        offset: int = 0,
+        limit: int = 48,
+        q: str = "",
+        sort: str = "newest",
+        include_artifacts: bool = False,
+        favorites: bool = False,
+        project: str = "",
+    ):
+        """Gallery library — paginated stills (artifacts excluded by default)."""
+        from jarvis.gallery_product.library import list_images
+
+        # Short cache only for default unfiltered first page
+        if not q and not favorites and not project and offset == 0 and not include_artifacts:
+            cached = get_gallery_cache()
+            if cached is not None:
+                return {"images": cached[:limit], "total": len(cached), "offset": 0, "limit": limit, "ok": True}
+        result = list_images(
+            offset=offset,
+            limit=limit,
+            query=q,
+            sort=sort,
+            include_artifacts=include_artifacts,
+            project=project,
+            favorites_only=favorites,
+        )
+        if not q and not favorites and not project and offset == 0 and not include_artifacts:
+            set_gallery_cache(result.get("images") or [])
+        return result
 
     @app.get("/api/gallery/{name}")
-    def gallery_file(name: str, max: int = 0):
+    def gallery_file(name: str, max: int = 0, reveal: bool = False):
+        from jarvis.gallery_product.visibility import is_restricted_for_viewer
+
         generated = (DATA_DIR / "generated").resolve()
         path = (generated / Path(name).name).resolve()
         if (
@@ -1464,6 +1486,20 @@ def register_routes(app, assistant):
             or path.suffix.lower() not in _IMAGE_EXTS
         ):
             return JSONResponse(status_code=404, content={"detail": "not found"})
+        # Profile-appropriate presentation: censored viewers get placeholder, not the asset
+        if is_restricted_for_viewer(name) and not reveal:
+            from jarvis.config import is_uncensored
+
+            if not is_uncensored():
+                svg = (
+                    "<svg xmlns='http://www.w3.org/2000/svg' width='384' height='384'>"
+                    "<rect width='100%' height='100%' fill='#1a1a1a'/>"
+                    "<text x='50%' y='50%' fill='#aaa' font-size='16' text-anchor='middle' "
+                    "dominant-baseline='middle' font-family='sans-serif'>Restricted</text></svg>"
+                )
+                from fastapi.responses import Response as FastResponse
+
+                return FastResponse(content=svg.encode("utf-8"), media_type="image/svg+xml")
         if max and max > 0:
             try:
                 import io
@@ -1483,16 +1519,20 @@ def register_routes(app, assistant):
         return FileResponse(path)
 
     @app.delete("/api/gallery/{name}")
-    def gallery_delete(name: str):
+    def gallery_delete(name: str, permanent: bool = False):
         generated = (DATA_DIR / "generated").resolve()
         path = (generated / Path(name).name).resolve()
         if generated not in path.parents or not path.is_file():
             return JSONResponse(status_code=404, content={"ok": False, "message": "Not found"})
         if path.suffix.lower() not in _IMAGE_EXTS:
             return JSONResponse(status_code=400, content={"ok": False, "message": "Not an image"})
-        path.unlink(missing_ok=False)
-        invalidate_gallery()
-        return {"ok": True, "deleted": path.name}
+        if permanent:
+            path.unlink(missing_ok=False)
+            invalidate_gallery()
+            return {"ok": True, "deleted": path.name, "permanent": True}
+        from jarvis.gallery_product.soft_delete import soft_delete
+
+        return soft_delete(path)
 
     _VIDEO_EXTS = {".mp4", ".webm", ".mov", ".mkv", ".avi", ".m4v"}
     _VIDEO_MEDIA = {

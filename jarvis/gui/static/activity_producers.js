@@ -84,6 +84,10 @@
       failed: (msg) => emit("gallery", "generation_failed", "error", "Generation failed", msg, "gallery"),
       compare: (msg) => emit("gallery", "comparison_complete", "success", "Comparison complete", msg, "gallery", { read: true }),
     },
+    video: {
+      complete: (msg) => emit("video", "generation_complete", "success", "Video ready", msg, "video", { read: true }),
+      failed: (msg) => emit("video", "generation_failed", "error", "Video failed", msg, "video"),
+    },
     voice: {
       recognition: (msg) => emit("voice", "recognition_failure", "error", "Voice recognition failed", msg, "voice"),
       wake: (msg) => emit("voice", "wake_failure", "warning", "Wake word failure", msg, "voice"),

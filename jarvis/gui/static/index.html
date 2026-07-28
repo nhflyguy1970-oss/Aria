@@ -1109,19 +1109,42 @@
         <div id="memoryShortcutOverlay" class="bujo-shortcut-overlay hidden" role="dialog" aria-label="Memory shortcuts"></div>
       </div>
 
-      <div id="galleryView" class="view-panel hidden">
-        <section id="imageEnginePanel" class="image-engine-panel">
-          <div class="image-engine-header">
-            <div>
-              <h2>Image Engine</h2>
-              <p class="image-engine-sub">ComfyUI checkpoints · SD / SDXL / Flux</p>
-              <p id="galleryLastGood" class="image-engine-hint muted">Last good settings…</p>
-            </div>
-            <a id="openComfyUiLink" class="ghost-btn small" href="http://127.0.0.1:8188" target="_blank" rel="noopener">Open ComfyUI ↗</a>
+      <div id="galleryView" class="view-panel hidden" aria-label="Gallery Home">
+        <div class="mc-page-header">
+          <h2>Gallery</h2>
+          <p class="muted">Local AI image product — generate, browse, organize, and edit stills. Video and Meme stay separate. Chat converses; Documents store knowledge.</p>
+          <div class="mc-toolbar">
+            <button type="button" id="galleryRefreshBtn" class="ghost-btn small">Refresh</button>
+            <button type="button" id="galleryOpenJobsBtn" class="ghost-btn small">Job Center</button>
+            <button type="button" id="galleryOpenModelsBtn" class="ghost-btn small">Models</button>
             <button type="button" id="galleryOpenMakerBtn" class="ghost-btn small" title="Open Maker lab">Maker</button>
             <button type="button" id="galleryOpenFlytyingBtn" class="ghost-btn small" title="Open Fly tying">Fly tying</button>
             <button type="button" id="galleryOpenVideoBtn" class="ghost-btn small" title="Open Video Studio">Video</button>
             <button type="button" id="galleryOpenMemeBtn" class="ghost-btn small" title="Open Meme Studio">Meme</button>
+            <span class="muted tiny" title="Keyboard shortcut">Ctrl+Shift+G</span>
+            <span id="galleryLibraryMeta" class="muted tiny" aria-live="polite"></span>
+          </div>
+        </div>
+        <p id="galleryUndoBar" class="muted small hidden" aria-live="polite"></p>
+        <p id="galleryJobStatus" class="muted" role="status" aria-live="polite"></p>
+
+        <section id="galleryGenerateSection" class="image-engine-panel" aria-label="Generation">
+          <h3>Generation</h3>
+          <p class="muted small">Stays in Gallery — progress is shared with Job Center (not a Chat hop).</p>
+          <div class="planner-add-row image-engine-generate-row">
+            <input type="text" id="galleryPromptInput" class="audio-path-input" placeholder="Describe an image to generate…" aria-label="Image generation prompt" />
+            <button type="button" id="galleryGenerateBtn" class="apply-btn small">Generate</button>
+          </div>
+        </section>
+
+        <section id="imageEnginePanel" class="image-engine-panel" aria-label="Image Engine settings">
+          <div class="image-engine-header">
+            <div>
+              <h3>Image Engine</h3>
+              <p class="image-engine-sub">Settings — ComfyUI checkpoints · SD / SDXL / Flux</p>
+              <p id="galleryLastGood" class="image-engine-hint muted">Last good settings…</p>
+            </div>
+            <a id="openComfyUiLink" class="ghost-btn small" href="http://127.0.0.1:8188" target="_blank" rel="noopener">Open ComfyUI ↗</a>
           </div>
           <div class="image-engine-grid">
             <label class="image-engine-field">
@@ -1155,18 +1178,40 @@
           <p id="imageEngineStatus" class="image-engine-status muted">Loading…</p>
           <p id="imageEngineInstallHint" class="image-engine-hint hidden"></p>
           <button type="button" id="imageEngineInstallNsfwBtn" class="ghost-btn small hidden">Install NSFW checkpoints</button>
-          <div class="planner-add-row image-engine-generate-row">
-            <input type="text" id="galleryPromptInput" class="audio-path-input" placeholder="Describe an image to generate…" />
-            <button type="button" id="galleryGenerateBtn" class="apply-btn small">Generate</button>
-          </div>
-          <p id="galleryGenerateHint" class="muted small">Runs through chat image generation with your active checkpoint.</p>
         </section>
-        <h2>Generated Images</h2>
-        <div id="galleryGrid" class="gallery-grid"></div>
-        <div id="inpaintModal" class="inpaint-modal hidden" role="dialog" aria-labelledby="inpaintModalTitle">
+
+        <section aria-label="Library">
+          <h3>Library</h3>
+          <div class="planner-add-row">
+            <input type="search" id="gallerySearchInput" class="audio-path-input" placeholder="Search prompts, captions, tags, filenames…" aria-label="Search gallery" />
+            <button type="button" id="gallerySearchBtn" class="ghost-btn small">Search</button>
+            <select id="gallerySortSelect" class="personality-select" aria-label="Sort">
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="name">Name</option>
+              <option value="size">Size</option>
+            </select>
+            <label class="muted tiny"><input type="checkbox" id="galleryFavoritesToggle" /> Favorites</label>
+            <label class="muted tiny"><input type="checkbox" id="galleryArtifactsToggle" /> Show artifacts</label>
+          </div>
+          <div class="ha-actions" role="toolbar" aria-label="Library actions">
+            <button type="button" id="galleryStoryboardBtn" class="ghost-btn small">→ Video storyboard</button>
+            <button type="button" id="galleryCollectionBtn" class="ghost-btn small">New collection</button>
+            <button type="button" id="galleryVisionMetaBtn" class="ghost-btn small" title="Opt-in Vision caption">Generate metadata</button>
+            <button type="button" id="galleryDescribeBtn" class="ghost-btn small">Describe</button>
+            <button type="button" id="gallerySaveDocsBtn" class="ghost-btn small">Save caption to Documents</button>
+            <button type="button" id="galleryVisionCodingBtn" class="ghost-btn small">Vision→Coding</button>
+            <button type="button" id="galleryClusterBtn" class="ghost-btn small">Similarity clusters</button>
+          </div>
+          <div id="galleryGrid" class="gallery-grid" role="listbox" aria-label="Generated images" aria-multiselectable="true"></div>
+          <button type="button" id="galleryLoadMoreBtn" class="ghost-btn small hidden">Load more</button>
+          <pre id="galleryClusterOut" class="coding-pre muted"></pre>
+        </section>
+
+        <div id="inpaintModal" class="inpaint-modal hidden" role="dialog" aria-modal="true" aria-labelledby="inpaintModalTitle">
           <div class="inpaint-modal-card">
-            <h3 id="inpaintModalTitle">Inpaint (ComfyUI)</h3>
-            <p class="muted">Describe what should appear in the masked region. Uses your active checkpoint.</p>
+            <h3 id="inpaintModalTitle">Edit / Inpaint</h3>
+            <p class="muted">Unified editing — describe the change. Jobs poll until complete.</p>
             <label class="inpaint-field">
               <span>Prompt</span>
               <input type="text" id="inpaintPrompt" class="audio-path-input" placeholder="e.g. blue sky with clouds" />
@@ -1188,9 +1233,9 @@
             </label>
             <div class="inpaint-actions">
               <button type="button" id="inpaintCancelBtn" class="ghost-btn">Cancel</button>
-              <button type="button" id="inpaintRunBtn" class="primary-btn">Run inpaint</button>
+              <button type="button" id="inpaintRunBtn" class="primary-btn">Apply edit</button>
             </div>
-            <p id="inpaintStatus" class="muted"></p>
+            <p id="inpaintStatus" class="muted" aria-live="polite"></p>
           </div>
         </div>
         <h3>Prompt history</h3>
@@ -2810,7 +2855,7 @@
   <script src="/static/chat_model_select.js?v=1.0.0"></script>
   <script src="/static/theme.js?v=1.1.0"></script>
   <script src="/static/coding_panel.js?v=1.0.2"></script>
-  <script src="/static/gallery_view.js?v=1.0.9"></script>
+  <script src="/static/gallery_view.js?v=2.0.0"></script>
   <script src="/static/memory_browser.js?v=2.0.0"></script>
 </body>
 </html>

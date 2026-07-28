@@ -11,7 +11,7 @@ from typing import Any
 from jarvis.config import DATA_DIR
 
 PROJECTS_ROOT = DATA_DIR / "projects"
-SUBDIRS = ("cad", "exports", "browser")
+SUBDIRS = ("cad", "exports", "browser", "images")
 
 
 def _slugify(name: str | None) -> str:

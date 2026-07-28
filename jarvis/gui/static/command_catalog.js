@@ -137,11 +137,17 @@
 
   function registerMediaDev() {
     reg([
-      mk("act:gallery", "Open Gallery", "Actions", "images comfy generate", () => A().gallery.open()),
-      mk("act:generate-image", "Generate image (Gallery)", "AI", "comfy create", () => {
-        A().gallery.open();
-        A().gallery.focusPrompt();
+      mk("act:gallery", "Open Gallery Home", "Gallery", "images comfy generate ctrl+shift+g", () => window.openGalleryHome?.() || A().gallery.open(), {
+        hint: "Ctrl+Shift+G",
+        shortcut: "Ctrl+Shift+G",
+      }),
+      mk("act:generate-image", "Generate image (Gallery)", "AI", "comfy create stay in gallery", () => {
+        A().gallery.generate();
       }, { mode: "ask" }),
+      mk("act:gallery-search", "Focus gallery search", "Gallery", "find caption prompt", () => {
+        A().gallery.open();
+        setTimeout(() => document.getElementById("gallerySearchInput")?.focus(), 80);
+      }),
       mk("act:video-studio", "Open Video Studio", "Actions", "animate movie", () => A().video.studio()),
       mk("act:video-storyboard", "Focus video storyboard", "Actions", "shots", () => A().video.storyboard()),
       mk("act:audio-studio", "Open Audio studio", "Actions", "music podcast genre song whisper", () => A().audio.open()),

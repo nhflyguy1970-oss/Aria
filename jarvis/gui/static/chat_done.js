@@ -274,12 +274,13 @@
     if (data.ok) {
       const P = window.AriaActivityProducers;
       if (hasImage && data.module === "image") P?.gallery?.complete?.(text || data.message || "Image generated");
-      if (hasVideo) P?.gallery?.complete?.(text || data.message || "Video generated");
+      if (hasVideo) P?.video?.complete?.(text || data.message || "Video generated");
       if (data.module === "coding") P?.coding?.applied?.(text || data.message || "Coding finished");
       if (data.module === "vision" || data.vision) P?.vision?.complete?.(text || "Vision analysis complete");
     } else if (!data.ok) {
       const P = window.AriaActivityProducers;
-      if (data.module === "image" || data.module === "video") P?.gallery?.failed?.(data.message || "Generation failed");
+      if (data.module === "image") P?.gallery?.failed?.(data.message || "Generation failed");
+      if (hasVideo || data.module === "video") P?.video?.failed?.(data.message || "Video failed");
       if (data.module === "coding") P?.coding?.rejected?.(data.message || "Coding failed");
     }
     if (hasImage && data.module === "image" && window.galleryViewVisible?.() && !isNativeApp()) {

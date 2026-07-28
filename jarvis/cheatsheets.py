@@ -17,6 +17,8 @@ ALIASES: dict[str, str] = {
     "dev": "coding",
     "browse": "browser",
     "web": "browser",
+    "gallery": "gallery",
+    "images": "gallery",
     "csv": "data",
     "spreadsheet": "data",
     "bujo": "journal",

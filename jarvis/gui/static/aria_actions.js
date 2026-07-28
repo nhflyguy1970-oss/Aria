@@ -279,11 +279,12 @@
     },
 
     gallery: {
-      open: () => goView("gallery"),
+      open: () => window.openGalleryHome?.() || goView("gallery"),
       focusPrompt: () => focusAfter("gallery", "galleryPromptInput"),
       generate: () => {
-        goView("gallery");
-        return focusAfter("gallery", "galleryPromptInput");
+        window.openGalleryHome?.() || goView("gallery");
+        focusAfter("gallery", "galleryPromptInput");
+        setTimeout(() => document.getElementById("galleryGenerateBtn")?.click(), 50);
       },
     },
 

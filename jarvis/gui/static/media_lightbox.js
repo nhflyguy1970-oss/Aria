@@ -136,15 +136,59 @@ async function queueImageEdit(imagePath, prompt, regionKey, statusEl, onDone, de
       return false;
     }
     if (out.job_id) {
+      const pollFn = window.pollGalleryJob;
+      if (statusEl && typeof pollFn === "function") {
+        try {
+          if (statusEl) statusEl.textContent = out.message || "Queued…";
+          const result = await pollFn(out.job_id);
+          if (result.image_path) window.showGeneratedImage?.(result.image_path, result.image_name);
+          if (statusEl) statusEl.textContent = "Edit complete";
+          window.loadGallery?.();
+          onDone?.();
+          return true;
+        } catch (err) {
+          if (statusEl) statusEl.textContent = err.message || "Edit failed";
+          window.showAriaToast?.(err.message || "Edit failed", "err", 5000);
+          return false;
+        }
+      }
+      // Fallback: inline poll with truthful status (never fake completion)
+      if (statusEl) {
+        const poll = async (jobId) => {
+          const res2 = await fetch(`/api/media/job/${encodeURIComponent(jobId)}`);
+          const data = await res2.json();
+          if (!data.ok) throw new Error(data.message || "Job not found");
+          statusEl.textContent = data.message || (data.done ? "Done" : "Working…");
+          if (!data.done) {
+            await new Promise((r) => setTimeout(r, 1200));
+            return poll(jobId);
+          }
+          if (!data.result?.ok) throw new Error(data.error || data.result?.message || "Edit failed");
+          return data.result;
+        };
+        try {
+          const result = await poll(out.job_id);
+          if (result.image_path) window.showGeneratedImage?.(result.image_path, result.image_name);
+          statusEl.textContent = "Edit complete";
+          window.loadGallery?.();
+          onDone?.();
+          return true;
+        } catch (err) {
+          statusEl.textContent = err.message || "Edit failed";
+          window.showAriaToast?.(err.message || "Edit failed", "err", 5000);
+          return false;
+        }
+      }
       const addMessage = window.addMessage;
       const pollMediaJob = window.pollMediaJob;
-      const { body } = addMessage("assistant", out.message || (wholeImage ? "Editing image…" : "Inpainting…"), {
-        module: "image",
-        type: "media_job",
-      });
-      const msg = body?.closest?.(".message");
-      pollMediaJob?.(out.job_id, msg);
-      onDone?.();
+      if (addMessage && pollMediaJob) {
+        const { body } = addMessage("assistant", out.message || (wholeImage ? "Editing image…" : "Inpainting…"), {
+          module: "image",
+          type: "media_job",
+        });
+        const msg = body?.closest?.(".message");
+        pollMediaJob?.(out.job_id, msg);
+      }
       return true;
     }
     if (out.image_path) {

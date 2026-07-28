@@ -154,6 +154,13 @@
         return;
       }
 
+      // Ctrl+Shift+G — Gallery Home
+      if (mod && e.shiftKey && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        window.openGalleryHome?.() || window.switchToView?.("gallery");
+        return;
+      }
+
       // Ctrl+Shift+B — Browser Home
       if (mod && e.shiftKey && e.key.toLowerCase() === "b") {
         e.preventDefault();

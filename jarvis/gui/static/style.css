@@ -2769,12 +2769,39 @@ html.media-busy .sidebar .module-chip:not(.active) {
 .gallery-item {
   position: relative;
 }
+.gallery-item.selected,
+.gallery-item.focused {
+  outline: 2px solid var(--accent, #c9a227);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+.gallery-item--restricted img {
+  filter: blur(0);
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+.gallery-restricted-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #ddd;
+}
 .gallery-item img {
   width: 100%;
   border-radius: 8px;
   border: 1px solid var(--border);
   display: block;
   cursor: zoom-in;
+}
+.gallery-fav {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 2;
 }
 
 .clickable-image {
