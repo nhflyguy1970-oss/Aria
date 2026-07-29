@@ -118,6 +118,7 @@ function renderOverview(d) {
       const voice = d.voice || {};
   const vision = d.vision || {};
   const flytying = d.flytying || {};
+  const smarthome = d.smarthome || {};
   const voiceCard = voice.product
     ? mcCard(
         "Voice",
@@ -160,6 +161,20 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const smarthomeCard = smarthome.product
+    ? mcCard(
+        "Smart Home",
+        `<p>State: <strong>${mcEsc(smarthome.state || "idle")}</strong> · ${mcBadge(!!smarthome.connected, "ok", "offline")}</p>
+         <p>Entities: ${smarthome.entity_count ?? "—"} · rooms ${smarthome.rooms?.count ?? 0} · favorites ${smarthome.favorites?.count ?? 0}</p>
+         <p>Webhook ${mcBadge(!!smarthome.webhook?.set, "ok", "unset")} · HA ${mcEsc(smarthome.version || "—")}</p>
+         <p>Recovery: ${smarthome.recovery?.ready ? "ready" : mcEsc(smarthome.recovery?.hint || "setup needed")} (${smarthome.recovery?.steps_done ?? 0}/${smarthome.recovery?.steps_total ?? 0})</p>
+         <p class="mc-actions">
+           <a class="ghost-btn small" href="#smarthome" data-mc-nav="home">Open Smart Home</a>
+           <a class="ghost-btn small" href="/api/smarthome/product/recovery" target="_blank">Recovery</a>
+           <a class="ghost-btn small" href="/api/smarthome/product/mission" target="_blank">Mission</a>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -179,6 +194,7 @@ function renderOverview(d) {
       voiceCard,
       visionCard,
       flytyingCard,
+      smarthomeCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;

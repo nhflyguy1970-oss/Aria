@@ -171,6 +171,12 @@ def _loop() -> None:
                 flytying_nightly(now, memory=memory)
             except Exception as exc:
                 logger.debug("Fly tying nightly skipped: %s", exc)
+            try:
+                from jarvis.sunlight_scene import tick_sunlight
+
+                tick_sunlight()
+            except Exception as exc:
+                logger.debug("Sunlight tick skipped: %s", exc)
         except Exception as exc:
             logger.warning("Scheduler tick failed: %s", exc)
 

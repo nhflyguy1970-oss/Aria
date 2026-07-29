@@ -65,3 +65,11 @@ def register_routes(app, assistant) -> None:
 
         ok_flag, msg = activate_preset(preset_id)
         return {"ok": ok_flag, "message": msg}
+
+    # Smart Home product package — one engine wrapping jarvis.home_assistant
+    try:
+        from jarvis.home_assistant_product.api import register_product_routes
+
+        register_product_routes(app, assistant)
+    except Exception:
+        pass

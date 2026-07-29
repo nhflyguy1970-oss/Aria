@@ -383,7 +383,7 @@
       uncensored: () => invoke("uncensoredToggle", "Uncensored"),
       lanCopy: () => invoke("lanCopyBtn", "Copy LAN URL"),
       upgrade: () => invoke("upgradeWizardBtn", "Upgrade wizard") || openModal("upgradeWizardModal", "Upgrade wizard"),
-      haSetup: () => invoke("haSetupBtn", "HA setup") || openModal("haSetupModal", "HA setup"),
+      haSetup: () => invoke("haSetupWizardBtn", "HA setup") || openModal("haSetupModal", "HA setup"),
       haTest: () => invoke("haTestBtn", "HA test"),
       imageEngine: () => {
         window.openGalleryHome?.() || goView("gallery");

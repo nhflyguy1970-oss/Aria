@@ -40,10 +40,11 @@ def ha_api_url() -> str:
 
 
 def should_autostart_ha() -> bool:
+    """Single source of truth with service_policy (default OFF)."""
     load_jarvis_env()
-    if os.getenv("JARVIS_HA_AUTOSTART", "1").lower() in ("0", "false", "no", "off"):
-        return False
-    return shutil.which("docker") is not None
+    from jarvis.service_policy import autostart_ha
+
+    return bool(autostart_ha()) and shutil.which("docker") is not None
 
 
 def docker_available() -> bool:

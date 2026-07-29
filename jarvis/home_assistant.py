@@ -155,6 +155,46 @@ def list_states(*, refresh: bool = True) -> list[dict]:
     return states if isinstance(states, list) else []
 
 
+def entity_is_available(st: dict | None) -> bool:
+    if not st:
+        return False
+    state = str(st.get("state") or "").lower()
+    return state not in ("unavailable", "unknown")
+
+
+def list_entities(
+    *,
+    domain: str | None = None,
+    limit: int = 80,
+    include_hidden: bool = False,
+) -> list[dict[str, Any]]:
+    """Normalized entity rows for device_router / Smart Home product (same engine as list_states)."""
+    from jarvis.ha_entity_filter import filter_visible_entities
+
+    rows = list_states()
+    if not include_hidden:
+        rows = filter_visible_entities(rows)
+    out: list[dict[str, Any]] = []
+    for st in rows:
+        eid = str(st.get("entity_id") or "")
+        if domain and not eid.startswith(f"{domain}."):
+            continue
+        attrs = st.get("attributes") or {}
+        out.append(
+            {
+                "entity_id": eid,
+                "friendly_name": attrs.get("friendly_name") or eid,
+                "state": st.get("state"),
+                "domain": eid.split(".", 1)[0] if "." in eid else "",
+                "area_id": attrs.get("area_id") or attrs.get("area") or "",
+                "attributes": attrs,
+            }
+        )
+        if len(out) >= max(1, min(int(limit or 80), 500)):
+            break
+    return out
+
+
 def get_state(entity_id: str) -> dict | None:
     eid = (entity_id or "").strip()
     if not eid:
@@ -174,27 +214,102 @@ def find_entities(query: str, *, domain: str | None = None, limit: int = 8) -> l
     q = _norm(query)
     if not q:
         return []
+
+    # Alias resolution → exact entity ids first
+    try:
+        from jarvis.ha_aliases import resolve_alias
+
+        alias_ids = resolve_alias(q)
+    except Exception:
+        alias_ids = []
+    if alias_ids:
+        found: list[dict] = []
+        for eid in alias_ids:
+            st = get_state(eid)
+            if st:
+                if domain and not str(st.get("entity_id") or "").startswith(f"{domain}."):
+                    continue
+                found.append(st)
+            elif "." in eid:
+                found.append({"entity_id": eid, "attributes": {"friendly_name": eid}, "state": "?"})
+        if found:
+            return found[: max(1, limit)]
+
     words = [w for w in q.split() if len(w) > 1]
     scored: list[tuple[float, dict]] = []
-    for st in list_states():
+    try:
+        from jarvis.ha_entity_filter import filter_visible_entities
+
+        states = filter_visible_entities(list_states())
+    except Exception:
+        states = list_states()
+
+    fuzzy = True
+    try:
+        from jarvis.feature_flags import ha_fuzzy_enabled
+
+        fuzzy = bool(ha_fuzzy_enabled())
+    except Exception:
+        fuzzy = True
+
+    for st in states:
         eid = st.get("entity_id") or ""
         if domain and not eid.startswith(f"{domain}."):
             continue
         attrs = st.get("attributes") or {}
         friendly = _norm(attrs.get("friendly_name") or "")
-        hay = _norm(f"{eid} {friendly}")
+        area = _norm(str(attrs.get("area_id") or attrs.get("area") or ""))
+        hay = _norm(f"{eid} {friendly} {area}")
         score = 0.0
         if q in hay or q.replace(" ", "_") in eid:
             score += 10
         for w in words:
             if w in hay or w in eid:
                 score += 2
+            elif fuzzy and _fuzzy_token_match(w, hay):
+                score += 1.2
         if eid.endswith(q.replace(" ", "_")):
             score += 3
         if score > 0:
             scored.append((score, st))
     scored.sort(key=lambda x: x[0], reverse=True)
     return [st for _, st in scored[:limit]]
+
+
+def _fuzzy_token_match(token: str, hay: str) -> bool:
+    """Lightweight fuzzy: prefix / substring / 1-char edit for short tokens."""
+    if not token or len(token) < 3:
+        return False
+    if token in hay:
+        return True
+    for part in hay.split():
+        if part.startswith(token) or token.startswith(part[: max(3, len(token) - 1)]):
+            return True
+        if abs(len(part) - len(token)) <= 1 and _edit_distance_le1(token, part):
+            return True
+    return False
+
+
+def _edit_distance_le1(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    if abs(len(a) - len(b)) > 1:
+        return False
+    if len(a) == len(b):
+        return sum(x != y for x, y in zip(a, b)) <= 1
+    if len(a) > len(b):
+        a, b = b, a
+    i = j = diffs = 0
+    while i < len(a) and j < len(b):
+        if a[i] == b[j]:
+            i += 1
+            j += 1
+        else:
+            diffs += 1
+            if diffs > 1:
+                return False
+            j += 1
+    return True
 
 
 def call_service(domain: str, service: str, data: dict | None = None) -> dict:
@@ -239,10 +354,29 @@ def activate_scene(scene: str) -> tuple[bool, str]:
         return False, str(exc)
 
 
-def control_entity(target: str, action: str) -> tuple[bool, str]:
+def control_entity(
+    target: str,
+    action: str,
+    *,
+    brightness_pct: int | None = None,
+    color_name: str | None = None,
+    rgb: list[int] | None = None,
+    hs: list[float] | None = None,
+    color_temp_kelvin: int | None = None,
+    hvac_mode: str | None = None,
+    temperature: float | None = None,
+    **kwargs: Any,
+) -> tuple[bool, str]:
     action = (action or "").strip().lower()
-    if action not in ("on", "off", "toggle"):
-        return False, f"Unknown action `{action}` — use on, off, or toggle."
+    # Relative brightness helpers
+    if action in ("dim", "brighten"):
+        # Relative handled after entity resolve
+        pass
+    elif action not in ("on", "off", "toggle", "set"):
+        if brightness_pct is not None or color_name or rgb or hs or color_temp_kelvin:
+            action = "on"
+        else:
+            return False, f"Unknown action `{action}` — use on, off, toggle, dim, or brighten."
 
     target = (target or "").strip()
     if not target:
@@ -262,6 +396,76 @@ def control_entity(target: str, action: str) -> tuple[bool, str]:
     st = matches[0]
     eid = st.get("entity_id") or target
     domain = eid.split(".")[0] if "." in eid else "homeassistant"
+
+    # Climate domain
+    if domain == "climate" and (temperature is not None or hvac_mode or action in ("on", "off", "set")):
+        data: dict[str, Any] = {"entity_id": eid}
+        try:
+            if hvac_mode:
+                call_service("climate", "set_hvac_mode", {"entity_id": eid, "hvac_mode": hvac_mode})
+            if temperature is not None:
+                call_service(
+                    "climate",
+                    "set_temperature",
+                    {"entity_id": eid, "temperature": float(temperature)},
+                )
+            elif action == "off":
+                call_service("climate", "turn_off", data)
+            elif action in ("on", "set"):
+                call_service("climate", "turn_on", data)
+            name = (st.get("attributes") or {}).get("friendly_name") or eid
+            return True, f"Climate updated — **{name}** (`{eid}`)."
+        except Exception as exc:
+            return False, str(exc)
+
+    # Lights with brightness / color
+    if domain == "light" and (
+        brightness_pct is not None
+        or color_name
+        or rgb
+        or hs
+        or color_temp_kelvin
+        or action in ("dim", "brighten", "set")
+        or kwargs.get("brightness") is not None
+    ):
+        from jarvis.ha_light_control import set_light
+
+        bp = brightness_pct
+        if bp is None and kwargs.get("brightness") is not None:
+            try:
+                bp = int(kwargs["brightness"])
+            except (TypeError, ValueError):
+                bp = None
+        if action == "dim":
+            cur = (st.get("attributes") or {}).get("brightness")
+            try:
+                cur_pct = int(round(int(cur) * 100 / 255)) if cur is not None else 50
+            except (TypeError, ValueError):
+                cur_pct = 50
+            bp = max(1, (bp if bp is not None else cur_pct) - 15)
+            action = "on"
+        elif action == "brighten":
+            cur = (st.get("attributes") or {}).get("brightness")
+            try:
+                cur_pct = int(round(int(cur) * 100 / 255)) if cur is not None else 50
+            except (TypeError, ValueError):
+                cur_pct = 50
+            bp = min(100, (bp if bp is not None else cur_pct) + 15)
+            action = "on"
+        elif action == "set":
+            action = "on"
+        return set_light(
+            eid,
+            action=action if action in ("on", "off", "toggle") else "on",
+            brightness_pct=bp,
+            color_name=color_name,
+            rgb=rgb,
+            hs=hs,
+            color_temp_kelvin=color_temp_kelvin,
+        )
+
+    if action not in ("on", "off", "toggle"):
+        action = "on"
     service = {"on": "turn_on", "off": "turn_off", "toggle": "toggle"}.get(action, "turn_on")
     try:
         call_service(domain, service, {"entity_id": eid})
@@ -354,6 +558,15 @@ def parse_scene(message: str) -> str | None:
 
 def parse_control(message: str) -> dict | None:
     text = (message or "").strip()
+    # Color / brightness NL first (shared ha_light_control parser)
+    try:
+        from jarvis.ha_light_control import parse_color_control
+
+        color_spec = parse_color_control(text)
+        if color_spec:
+            return color_spec
+    except Exception:
+        pass
     m = re.match(
         r"^(?:please\s+)?(turn|switch)\s+(on|off|toggle)\s+(?:the\s+)?(.+)$",
         text,
@@ -364,6 +577,16 @@ def parse_control(message: str) -> dict | None:
     m = re.match(r"^(?:please\s+)?(turn|switch)\s+(?:the\s+)?(.+?)\s+(on|off)$", text, re.I)
     if m:
         return {"action": m.group(3).lower(), "target": m.group(2).strip()}
+    m = re.match(
+        r"^(?:please\s+)?(dim|brighten)\s+(?:the\s+)?(.+?)(?:\s+by\s+(\d{1,3})\s*%)?\.?$",
+        text,
+        re.I,
+    )
+    if m:
+        out: dict[str, Any] = {"action": m.group(1).lower(), "target": m.group(2).strip()}
+        if m.group(3):
+            out["brightness_pct"] = int(m.group(3))
+        return out
     return None
 
 

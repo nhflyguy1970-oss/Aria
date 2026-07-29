@@ -216,8 +216,20 @@
       mk("act:settings", "Open voice & chat settings", "Actions", "preferences", () => A().system.settings()),
       mk("act:shortcuts", "Open keyboard shortcuts", "Actions", "hotkeys help", () => A().system.shortcuts()),
       mk("act:upgrade", "Open upgrade wizard", "Actions", "self update", () => A().system.upgrade()),
-      mk("act:ha-setup", "Open smart home setup", "Actions", "home assistant", () => A().system.haSetup()),
+      mk("act:ha-setup", "Open smart home setup", "Actions", "home assistant connect recovery", () => A().system.haSetup()),
       mk("act:ha-test", "Test Home Assistant connection", "Actions", "ha ping smart home connection", () => A().system.haTest()),
+      mk("act:ha-home", "Open Smart Home Home", "Actions", "favorites rooms scenes lights", () => {
+        const head = document.querySelector('[data-section="home"] .sidebar-section-head');
+        if (head && head.getAttribute("aria-expanded") === "false") head.click();
+        document.getElementById("smarthomeSearchInput")?.focus();
+        window.loadSmarthomeHome?.();
+        return true;
+      }),
+      mk("act:ha-status", "House status", "Actions", "home status lights on", () => {
+        if (window.sendMessage) window.sendMessage("house status");
+        else return A().system.haTest();
+        return true;
+      }),
       mk("act:image-engine", "Open image engine / Comfy settings", "Actions", "comfyui", () => A().system.imageEngine()),
       mk("act:integrations-keys", "API keys (Cloud Live & models)", "Actions", "secrets tokens", () => A().system.apiKeys()),
       mk("act:voice-smoke", "Run voice smoke test", "AI", "stt tts check", () => A().voice.smoke(), { mode: "ask" }),

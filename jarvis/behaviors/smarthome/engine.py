@@ -70,7 +70,18 @@ class SmartHomeEngine:
         spec = parse_control(message) or params
         target = (spec.get("target") or "").strip()
         action = (spec.get("action") or "on").strip().lower()
-        success, msg = control_entity(target, action)
+        success, msg = control_entity(
+            target,
+            action,
+            brightness_pct=spec.get("brightness_pct"),
+            color_name=spec.get("color_name"),
+            rgb=spec.get("rgb"),
+            hs=spec.get("hs"),
+            color_temp_kelvin=spec.get("color_temp_kelvin"),
+            temperature=spec.get("temperature"),
+            hvac_mode=spec.get("hvac_mode"),
+            brightness=spec.get("brightness"),
+        )
         ctx.session.note_module("automation")
         if not success:
             return err(msg, module="automation")

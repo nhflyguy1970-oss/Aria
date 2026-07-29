@@ -224,17 +224,22 @@ def daylight_levels_from_sun(sun_state: dict | None = None) -> dict[str, Any]:
     if elevation <= NAUTICAL_TWILIGHT_ELEV:
         t = (elevation - ASTRONOMICAL_TWILIGHT_ELEV) / (NAUTICAL_TWILIGHT_ELEV - ASTRONOMICAL_TWILIGHT_ELEV)
         bright = int(max(0, min(8, round(t * 8))))
-        phase = "astronomical twilight"
+        detail = "astronomical twilight"
     elif elevation <= CIVIL_SUNRISE_ELEV:
         t = (elevation - NAUTICAL_TWILIGHT_ELEV) / (CIVIL_SUNRISE_ELEV - NAUTICAL_TWILIGHT_ELEV)
         bright = int(8 + t * 22)
-        phase = "nautical twilight" if elevation < -6 else "civil twilight"
+        detail = "nautical twilight" if elevation < -6 else "civil twilight"
     elif elevation < 45:
         t = elevation / 45.0
         bright = int(30 + t * 65)
-        phase = "day"
+        detail = "day"
     else:
         bright = int(90 + min(10, (elevation - 45) / 3))
+        detail = "day"
+
+    if elevation < CIVIL_SUNRISE_ELEV:
+        phase = "dawn" if rising else "dusk"
+    else:
         phase = "day"
 
     return {
@@ -244,6 +249,7 @@ def daylight_levels_from_sun(sun_state: dict | None = None) -> dict[str, Any]:
         "light_tint": tint["label"],
         "elevation": round(elevation, 1),
         "phase": phase,
+        "phase_detail": detail,
         "in_window": elevation > ASTRONOMICAL_TWILIGHT_ELEV,
         "rising": rising,
     }

@@ -840,7 +840,7 @@
     });
     $("autoWebhookHaBtn")?.addEventListener("click", () => {
       $("autoWebhookModal")?.classList.add("hidden");
-      document.getElementById("haSetupBtn")?.click?.();
+      document.getElementById("haSetupWizardBtn")?.click?.();
       window.AriaActions?.system?.haSetup?.();
     });
 

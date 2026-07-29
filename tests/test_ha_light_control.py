@@ -8,6 +8,7 @@ import pytest
 
 from jarvis.ha_light_control import (
     ASTRONOMICAL_TWILIGHT_ELEV,
+    CIVIL_SUNRISE_ELEV,
     NAUTICAL_TWILIGHT_ELEV,
     build_light_service_data,
     daylight_levels_from_sun,
@@ -97,7 +98,8 @@ def test_daylight_levels_from_sun(elevation, rising, bright_min, bright_max, in_
 
 
 def test_twilight_thresholds():
-    assert NAUTICAL_TWILIGHT_ELEV < 0 < ASTRONOMICAL_TWILIGHT_ELEV + 6
+    assert ASTRONOMICAL_TWILIGHT_ELEV < NAUTICAL_TWILIGHT_ELEV < 0
+    assert NAUTICAL_TWILIGHT_ELEV < CIVIL_SUNRISE_ELEV
 
 
 def test_sunlight_activate_mocked(tmp_path, monkeypatch):
@@ -108,6 +110,7 @@ def test_sunlight_activate_mocked(tmp_path, monkeypatch):
                 "sunlight": {
                     "mode": "sunlight",
                     "devices": [{"target": "light.table_lamp"}],
+                    "all_lights": False,
                 }
             }
         ),
@@ -119,12 +122,22 @@ def test_sunlight_activate_mocked(tmp_path, monkeypatch):
         "jarvis.home_assistant.get_state",
         lambda eid: {"attributes": {"elevation": 30, "rising": True}},
     )
+    monkeypatch.setattr("jarvis.home_assistant.ha_enabled", lambda: True)
+    monkeypatch.setattr("jarvis.sunlight_scene.ensure_scene_state", lambda: {"sunlight_auto": True})
+    monkeypatch.setattr("jarvis.sunlight_scene._write_scene_state", lambda s: None)
+    monkeypatch.setattr("jarvis.sunlight_scene.set_sunlight_active", lambda *a, **k: None)
     calls: list[tuple] = []
+
+    def fake_set_lights(eids, **kwargs):
+        for eid in eids:
+            calls.append((eid, kwargs))
+        return True, f"updated {len(eids)} light(s)"
 
     def fake_set_light(eid, **kwargs):
         calls.append((eid, kwargs))
         return True, f"ok {eid}"
 
+    monkeypatch.setattr("jarvis.ha_light_control.set_lights", fake_set_lights)
     monkeypatch.setattr("jarvis.ha_light_control.set_light", fake_set_light)
     from jarvis.scene_presets import activate_preset
 
@@ -138,13 +151,14 @@ def test_sunlight_activate_mocked(tmp_path, monkeypatch):
 def test_tick_sunlight_when_auto_enabled(monkeypatch, tmp_path):
     monkeypatch.setattr("jarvis.sunlight_scene.ensure_scene_state", lambda: {"sunlight_auto": True})
     monkeypatch.setattr("jarvis.sunlight_scene.should_manage_sunlight", lambda: True)
+    monkeypatch.setattr("jarvis.home_assistant.ha_enabled", lambda: True)
     monkeypatch.setattr(
         "jarvis.home_assistant.get_state",
         lambda eid: {"attributes": {"elevation": 25, "rising": True}},
     )
     monkeypatch.setattr("jarvis.sunlight_scene._write_scene_state", lambda s: None)
     presets = tmp_path / "scene_presets.json"
-    presets.write_text(json.dumps({"sunlight": {"devices": []}}), encoding="utf-8")
+    presets.write_text(json.dumps({"sunlight": {"devices": [], "all_lights": False}}), encoding="utf-8")
     monkeypatch.setattr("jarvis.scene_presets.PRESETS_FILE", presets)
     called = {"n": 0}
 

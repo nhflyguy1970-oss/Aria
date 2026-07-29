@@ -357,6 +357,12 @@ def run_tray(uncensored: bool = False) -> None:
         apply_system_default()
         svc_ollama()
         ensure_homeassistant_background()
+        try:
+            from jarvis.sunlight_scene import bootstrap_sunlight
+
+            bootstrap_sunlight()
+        except Exception as exc:
+            logger.debug("Sunlight bootstrap skipped: %s", exc)
         if os.getenv("JARVIS_GRAPH_BACKEND", "sqlite").strip().lower() == "memgraph":
             try:
                 from jarvis.memgraph_docker import ensure_memgraph_background

@@ -24,7 +24,17 @@ def control_device(target: str, action: str, **kwargs) -> tuple[bool, str, str]:
     from jarvis.home_assistant import control_entity, ha_enabled
 
     if ha_enabled():
-        ok, msg = control_entity(target, action)
+        ok, msg = control_entity(
+            target,
+            action,
+            brightness_pct=kwargs.get("brightness_pct") or kwargs.get("brightness"),
+            color_name=kwargs.get("color_name"),
+            rgb=kwargs.get("rgb"),
+            hs=kwargs.get("hs"),
+            color_temp_kelvin=kwargs.get("color_temp_kelvin"),
+            temperature=kwargs.get("temperature"),
+            hvac_mode=kwargs.get("hvac_mode"),
+        )
         if ok:
             return ok, msg, "ha"
         if not device_router_enabled() or not kasa_enabled():

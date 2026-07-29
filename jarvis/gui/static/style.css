@@ -2074,6 +2074,16 @@ html.media-busy .sidebar .module-chip:not(.active) {
   min-width: 0;
 }
 
+.smarthome-home-panel { margin: 0 0 0.45rem; }
+.smarthome-home-toolbar { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin-bottom: 0.35rem; }
+.smarthome-home-toolbar input[type="search"] { flex: 1 1 8rem; min-width: 0; }
+.smarthome-home-grid { display: grid; grid-template-columns: 1fr; gap: 0.4rem; }
+.smarthome-home-card { border: 1px solid var(--border); border-radius: 8px; padding: 0.45rem 0.55rem; background: var(--panel); }
+.smarthome-home-list { margin: 0.25rem 0 0; padding-left: 1rem; max-height: 9rem; overflow: auto; }
+.smarthome-recovery-card { border: 1px solid var(--accent-dim, #22d3ee); border-radius: 8px; padding: 0.5rem 0.6rem; margin-bottom: 0.4rem; background: rgba(34, 211, 238, 0.06); }
+.smarthome-recovery-card ol { margin: 0.3rem 0 0; padding-left: 1.1rem; }
+.smarthome-setup-details { margin: 0.35rem 0; border-top: 1px solid var(--border); padding-top: 0.35rem; }
+
 .ha-panel-head .sidebar-section-title {
   margin: 0;
 }
