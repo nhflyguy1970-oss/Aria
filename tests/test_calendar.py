@@ -35,10 +35,9 @@ def test_work_blocks_for_day(data_dir, monkeypatch):
 
 
 def test_fetch_events_for_month_parses():
-    from jarvis.calendar_ics import _parse_ics_event_block
+    from jarvis.calendar_ics import _parse_ics_events
 
-    chunk = "SUMMARY:Team standup\nDTSTART:20260621T090000\n"
-    d, summary, time_str = _parse_ics_event_block(chunk)
-    assert d == date(2026, 6, 21)
-    assert summary == "Team standup"
-    assert time_str == "09:00"
+    chunk = "BEGIN:VEVENT\nSUMMARY:Team standup\nDTSTART:20260621T090000\nEND:VEVENT\n"
+    events = _parse_ics_events(chunk, date(2026, 6, 21))
+    assert events[0]["summary"] == "Team standup"
+    assert events[0]["time"] == "09:00"

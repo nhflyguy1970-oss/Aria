@@ -513,6 +513,13 @@ def register_routes(app, assistant):
     except Exception:
         pass
 
+    try:
+        from jarvis.calendar_api import register_product_routes as register_calendar_product
+
+        register_calendar_product(app, assistant)
+    except Exception:
+        pass
+
     @app.get("/api/knowledge")
     def knowledge_list():
         from jarvis.knowledge import list_topics
@@ -2132,19 +2139,6 @@ def register_routes(app, assistant):
 
         mark_task_nudge_shown()
         return {"ok": True}
-
-    @app.post("/api/calendar/ics")
-    async def calendar_ics_save(request: Request):
-        from jarvis.movie_tiers import save_ics_url, validate_ics_url
-
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        url = (body.get("url") or "").strip()
-        if body.get("test_only"):
-            return validate_ics_url(url)
-        return save_ics_url(url)
 
     @app.get("/api/resources/last-good")
     def resources_last_good():

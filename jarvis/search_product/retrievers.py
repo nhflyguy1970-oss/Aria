@@ -511,33 +511,24 @@ def retrieve_planner(query: str, limit: int) -> list[dict[str, Any]]:
 
 def retrieve_calendar(query: str, limit: int) -> list[dict[str, Any]]:
     def _run():
-        from jarvis.calendar_store import WEEKDAYS, load_work_schedule
+        from jarvis.calendar_bridges import search_hits
 
-        q = query.lower()
         out = []
-        sched = load_work_schedule()
-        for day in WEEKDAYS:
-            for block in sched.get("days", {}).get(day, []) or []:
-                label = str(block.get("label") or "Work")
-                blob = f"{day} {label} {block.get('start')} {block.get('end')}".lower()
-                if q not in blob and not any(w in blob for w in re.findall(r"\w{2,}", q)):
-                    continue
-                out.append(
-                    make_result(
-                        source="calendar",
-                        source_label="Calendar",
-                        title=f"{day.title()}: {label}",
-                        summary=f"{block.get('start')}–{block.get('end')}",
-                        preview=f"{day} {block.get('start')}–{block.get('end')} {label}",
-                        location=day,
-                        score=0.68,
-                        strategy="keyword",
-                        open_action={"view": "calendar", "query": query, "day": day},
-                        icon="calendar",
-                    )
+        for hit in search_hits(query, limit=limit):
+            out.append(
+                make_result(
+                    source="calendar",
+                    source_label="Calendar",
+                    title=hit.get("title") or "Calendar",
+                    summary=hit.get("summary") or "",
+                    preview=hit.get("summary") or hit.get("title") or "",
+                    location=str(hit.get("day") or ""),
+                    score=float(hit.get("score") or 0.7),
+                    strategy="keyword",
+                    open_action={"view": "calendar", "query": query, "day": hit.get("day")},
+                    icon="calendar",
                 )
-                if len(out) >= limit:
-                    break
+            )
         return out[:limit]
 
     return _safe(_run, "calendar")

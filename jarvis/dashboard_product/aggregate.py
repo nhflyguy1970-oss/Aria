@@ -154,14 +154,12 @@ def _planner_widget() -> dict[str, Any]:
 
 
 def _calendar_widget() -> dict[str, Any]:
-    from datetime import date
+    from jarvis.calendar_bridges import dashboard_summary
 
-    events, err = _safe(
-        "calendar",
-        lambda: __import__("jarvis.calendar_ics", fromlist=["fetch_events_for_day"]).fetch_events_for_day(date.today()),
-    )
-    events = events or []
-    if err and not events:
+    data, err = _safe("calendar", dashboard_summary)
+    data = data or {}
+    items = data.get("items") or []
+    if err and not items and not data.get("ok"):
         return make_widget(
             id="calendar_summary",
             title="Calendar",
@@ -173,7 +171,7 @@ def _calendar_widget() -> dict[str, Any]:
             reason=err,
             deep_links=[{"label": "Calendar", "view": "calendar"}],
         )
-    empty = len(events) == 0
+    empty = len(items) == 0
     return make_widget(
         id="calendar_summary",
         title="Calendar",
@@ -184,11 +182,12 @@ def _calendar_widget() -> dict[str, Any]:
         empty=empty,
         coach="No calendar events today." if empty else "",
         payload={
-            "count": len(events),
+            "count": data.get("count", len(items)),
             "items": [
-                {"title": e.get("summary") or e.get("title"), "time": e.get("time")}
-                for e in events[:5]
+                {"title": e.get("title"), "time": e.get("time"), "source": e.get("source")}
+                for e in items[:5]
             ],
+            "ics_status": data.get("ics_status"),
         },
         deep_links=[{"label": "Calendar", "view": "calendar"}],
     )

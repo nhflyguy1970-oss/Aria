@@ -5,7 +5,6 @@ from __future__ import annotations
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-
 def register_routes(app, assistant) -> None:
     @app.get("/api/planner")
     @app.get("/api/planner/snapshot")
@@ -75,40 +74,6 @@ def register_routes(app, assistant) -> None:
         from jarvis.planner_store import tick_alarms_and_timers
 
         return {"ok": True, "notifications": tick_alarms_and_timers()}
-
-    @app.get("/api/calendar/month")
-    def calendar_month(month: str = "", year: int = 0, month_num: int = 0):
-        from jarvis.calendar_tab import month_overview
-        from jarvis.modules.journal import _month_key
-
-        mk = (month or "").strip()
-        if not mk and year and month_num:
-            mk = f"{year}-{month_num:02d}"
-        return month_overview(assistant.journal, mk or _month_key())
-
-    @app.get("/api/calendar/day")
-    def calendar_day(day: str = ""):
-        from jarvis.calendar_tab import day_detail
-        from jarvis.modules.journal import _today
-
-        return day_detail(assistant.journal, day or _today())
-
-    @app.get("/api/calendar/work-schedule")
-    def calendar_work_schedule_get():
-        from jarvis.calendar_ics import ics_url
-        from jarvis.calendar_store import load_work_schedule
-
-        sched = load_work_schedule()
-        sched["ics_url"] = ics_url()
-        return sched
-
-    @app.put("/api/calendar/work-schedule")
-    async def calendar_work_schedule_put(request: Request):
-        from jarvis.calendar_store import save_work_schedule
-
-        body = await request.json()
-        saved = save_work_schedule(body)
-        return {"ok": True, **saved}
 
     @app.get("/api/system-info")
     def system_info_route():

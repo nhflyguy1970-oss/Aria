@@ -1,94 +1,104 @@
-"""Calendar tab — merge journal, holidays, ICS, and work schedule."""
+"""Calendar tab — thin wrappers over Schedule Abstraction Layer."""
 
 from __future__ import annotations
 
-from datetime import date
 from typing import Any
 
-from jarvis.calendar_ics import fetch_events_for_day, fetch_events_for_month, ics_url
-from jarvis.calendar_store import load_work_schedule, work_blocks_for_day
+from jarvis.calendar_schedule import (
+    agenda_schedule,
+    month_schedule,
+    schedule_for_day,
+    timeline_schedule,
+    week_schedule,
+)
 
 
 def month_overview(journal, month: str | None = None) -> dict[str, Any]:
-    from jarvis.modules.journal import _month_key
-
-    mk = month or _month_key()
-    cal = journal.monthly_calendar(mk)
-    ics_by_day = fetch_events_for_month(mk)
-    if ics_by_day:
-        merged = dict(cal.get("events") or {})
-        for day_str, items in ics_by_day.items():
-            for item in items:
-                merged.setdefault(day_str, []).append(
-                    {
-                        "time": item.get("time", ""),
-                        "content": item.get("summary", ""),
-                        "source": "ics",
-                    }
-                )
-        cal["events"] = merged
-        cal["ics_events"] = ics_by_day
-    cal["ics_url"] = ics_url()
-    cal["work_schedule"] = load_work_schedule()
-    return cal
+    return month_schedule(journal, month)
 
 
 def day_detail(journal, day: str) -> dict[str, Any]:
-    d = date.fromisoformat(day)
-    mk = day[:7]
-    monthly = journal.monthly_calendar(mk)
-    day_num = str(d.day)
-    note = (monthly.get("calendar_notes") or {}).get(day_num, "")
-    holidays = (monthly.get("holidays") or {}).get(day, [])
-    page = journal.daily_get(day, enrich=False)
-    timeline = journal.daily_timeline(day)
-    ics = fetch_events_for_day(d)
-    work = work_blocks_for_day(d)
-    bullets = page.get("bullets") or []
-    appointments: list[dict[str, Any]] = []
-    tasks: list[dict[str, Any]] = []
-    for b in bullets:
-        item = {
-            "id": b.get("id"),
-            "type": b.get("type"),
-            "content": b.get("content", ""),
-            "time": b.get("time"),
-            "status": b.get("status"),
-        }
-        if b.get("type") == "event":
-            appointments.append(item)
-        elif b.get("type") == "task":
-            tasks.append(item)
-    journal_events = timeline.get("events") or []
-    planner_tasks: list[dict[str, Any]] = []
-    if day == date.today().isoformat():
-        try:
-            from jarvis.planner_store import list_tasks
-
-            for t in list_tasks(include_completed=False):
-                planner_tasks.append(
-                    {
-                        "id": t.get("id"),
-                        "type": "planner_task",
-                        "content": t.get("text") or "",
-                        "time": None,
-                        "status": "open",
-                        "source": "planner",
-                    }
-                )
-        except Exception:
-            planner_tasks = []
+    detail = schedule_for_day(journal, day)
+    # Back-compat fields expected by older UI / tests
+    items = detail.get("items") or []
     return {
-        "ok": True,
-        "day": day,
-        "title": page.get("title", day),
-        "holidays": holidays,
-        "calendar_note": note,
-        "work_blocks": work,
-        "ics_events": ics,
-        "journal_events": journal_events,
-        "appointments": appointments,
-        "tasks": tasks,
-        "planner_tasks": planner_tasks,
-        "ics_url": ics_url(),
+        **detail,
+        "holidays": [i for i in items if i.get("source") == "holiday"],
+        "work_blocks": [
+            {"start": i.get("time"), "end": i.get("end_hm"), "label": i.get("title")}
+            for i in items
+            if i.get("source") == "work"
+        ],
+        "ics_events": [
+            {"summary": i.get("title"), "time": i.get("time"), "source": "ics", "id": i.get("id")}
+            for i in items
+            if i.get("source") == "ics"
+        ],
+        "journal_events": [
+            {
+                "id": (i.get("meta") or {}).get("bullet_id"),
+                "content": i.get("title"),
+                "time": i.get("time"),
+                "all_day": i.get("all_day"),
+                "item_id": i.get("id"),
+            }
+            for i in items
+            if i.get("source") == "journal" and i.get("kind") == "event"
+        ],
+        "appointments": [
+            {
+                "id": (i.get("meta") or {}).get("bullet_id"),
+                "content": i.get("title"),
+                "time": i.get("time"),
+                "type": "event",
+                "item_id": i.get("id"),
+            }
+            for i in items
+            if i.get("source") == "journal" and i.get("kind") == "event"
+        ],
+        "tasks": [
+            {
+                "id": (i.get("meta") or {}).get("bullet_id"),
+                "content": i.get("title"),
+                "status": (i.get("meta") or {}).get("status") or "open",
+                "item_id": i.get("id"),
+            }
+            for i in items
+            if i.get("source") == "journal" and i.get("kind") == "task"
+        ],
+        "planner_tasks": [
+            {
+                "id": (i.get("meta") or {}).get("task_id"),
+                "content": i.get("title"),
+                "type": "planner_task",
+                "source": "planner",
+                "item_id": i.get("id"),
+            }
+            for i in items
+            if i.get("source") == "planner" and i.get("kind") == "task"
+        ],
+        "planner_events": [
+            {
+                "id": (i.get("meta") or {}).get("event_id"),
+                "title": i.get("title"),
+                "time": i.get("time"),
+                "source": "planner",
+                "item_id": i.get("id"),
+            }
+            for i in items
+            if i.get("source") == "planner" and i.get("kind") == "event"
+        ],
+        "ics_url": (detail.get("ics_status") or {}).get("url") or "",
     }
+
+
+def week_overview(journal, anchor: str | None = None) -> dict[str, Any]:
+    return week_schedule(journal, anchor)
+
+
+def agenda_overview(journal, *, days: int = 7, start: str | None = None) -> dict[str, Any]:
+    return agenda_schedule(journal, days=days, start=start)
+
+
+def timeline_overview(journal, day: str | None = None) -> dict[str, Any]:
+    return timeline_schedule(journal, day)
