@@ -446,25 +446,30 @@ def register_routes(app, assistant):
 
         return lan_status()
 
-    @app.get("/api/integrations/secrets")
-    def integrations_secrets_get():
-        from jarvis.integration_secrets import secrets_status
+    try:
+        from jarvis.integrations_product.api import register_product_routes as register_integrations_product
 
-        return {"ok": True, **secrets_status()}
+        register_integrations_product(app, assistant)
+    except Exception:
+        @app.get("/api/integrations/secrets")
+        def integrations_secrets_get():
+            from jarvis.integration_secrets import secrets_status
 
-    @app.post("/api/integrations/secrets")
-    async def integrations_secrets_post(request: Request):
-        from jarvis.integration_secrets import save_secrets
+            return {"ok": True, **secrets_status()}
 
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        if not isinstance(body, dict):
-            return JSONResponse(
-                status_code=400, content={"ok": False, "message": "JSON body required"}
-            )
-        return save_secrets(body)
+        @app.post("/api/integrations/secrets")
+        async def integrations_secrets_post(request: Request):
+            from jarvis.integration_secrets import save_secrets
+
+            try:
+                body = await request.json()
+            except Exception:
+                body = {}
+            if not isinstance(body, dict):
+                return JSONResponse(
+                    status_code=400, content={"ok": False, "message": "JSON body required"}
+                )
+            return save_secrets(body)
 
     @app.get("/api/knowledge")
     def knowledge_list():

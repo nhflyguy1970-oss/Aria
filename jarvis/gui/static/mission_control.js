@@ -120,6 +120,7 @@ function renderOverview(d) {
   const flytying = d.flytying || {};
   const smarthome = d.smarthome || {};
   const capabilities = d.capabilities || {};
+  const integrations = d.integrations || {};
   const voiceCard = voice.product
     ? mcCard(
         "Voice",
@@ -190,6 +191,20 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const integrationsCard = integrations.product
+    ? mcCard(
+        "Integrations",
+        `<p>State: <strong>${mcEsc(integrations.state || "idle")}</strong> · configured ${integrations.configured ?? 0}/${integrations.total ?? 0}</p>
+         <p>Health ${mcBadge(!!integrations.healthy, "ready", "attention")} · failures ${integrations.failed ?? 0}</p>
+         <p>Secrets: ${integrations.storage?.encrypted ? "encrypted" : "plaintext jarvis.env"}${integrations.storage?.world_readable ? " · ⚠ world-readable" : ""}</p>
+         <p>Recovery: ${integrations.recovery?.ready ? "ready" : mcEsc(integrations.recovery?.hint || "review needed")} (${integrations.recovery?.steps_done ?? 0}/${integrations.recovery?.steps_total ?? 0})</p>
+         <p class="mc-actions">
+           <a class="ghost-btn small" href="#integrations" data-mc-nav="integrations">Open Integrations</a>
+           <a class="ghost-btn small" href="/api/integrations/product/diagnostics" target="_blank">Diagnostics</a>
+           <a class="ghost-btn small" href="/api/integrations/product/recovery" target="_blank">Recovery</a>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -211,6 +226,7 @@ function renderOverview(d) {
       flytyingCard,
       smarthomeCard,
       capabilitiesCard,
+      integrationsCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;

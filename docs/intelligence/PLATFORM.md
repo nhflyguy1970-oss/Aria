@@ -144,10 +144,11 @@ curl -s -X POST http://127.0.0.1:8765/api/intelligence/workflows/from-template \
 2. True inotify watchers (currently mtime polling)  
 3. Visual workflow editor wired to `workflow_engine` JSON  
 4. Stronger capability isolation (process/WASM) — see `docs/CAPABILITIES_IMPLEMENTATION.md`  
-5. OAuth connector profiles in `integration_secrets`  
+5. OAuth connector profiles — see `docs/INTEGRATIONS_IMPLEMENTATION.md` (experimental)  
 6. Stream reasoning traces over WebSocket to Chat UI  
 
-**Operator note:** Local extensibility is managed as **Capabilities** (not a public plugin marketplace).  
-See `docs/CAPABILITIES_IMPLEMENTATION.md`.
+**Operator note:** Provider keys and health are managed as **Integrations**.  
+“External APIs” refers to the connector runtime architecture.  
+See `docs/INTEGRATIONS_IMPLEMENTATION.md` and `docs/CAPABILITIES_IMPLEMENTATION.md`.
 
 See also: `docs/ARIA_COGNITIVE_MEMORY.md`, `docs/KNOWLEDGE.md`, capability inventory under `docs/aria_core/`.

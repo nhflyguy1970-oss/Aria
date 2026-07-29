@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0a0c10" />
   <meta name="application-name" content="ARIA" />
-  <meta name="jarvis-ui-version" content="5.16.161" />
+  <meta name="jarvis-ui-version" content="5.16.162" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>ARIA</title>
@@ -205,9 +205,10 @@
         </button>
         <div class="sidebar-section-body">
         <div id="integrationsPanel" class="integrations-panel">
-          <p id="integrationsStatusLine" class="ha-status-line muted">API keys for cloud voice &amp; models</p>
+          <p id="integrationsStatusLine" class="ha-status-line muted">Provider keys · health · unlocks</p>
+          <p id="integrationsSecurityMini" class="muted small">Plaintext storage in data/jarvis.env — not encrypted.</p>
           <label class="ha-field">
-            <span class="ha-field-label">Gemini API key <span class="muted">(Cloud Live voice)</span></span>
+            <span class="ha-field-label">Gemini API key <span class="muted">(Cloud Live)</span></span>
             <input type="password" id="integrationsGeminiKey" class="audio-path-input" placeholder="AIza…" autocomplete="off" />
             <span id="integrationsGeminiStatus" class="ha-token-preview muted"></span>
           </label>
@@ -217,16 +218,32 @@
             <span id="integrationsOpenaiStatus" class="ha-token-preview muted"></span>
           </label>
           <label class="ha-field">
+            <span class="ha-field-label">Anthropic API key <span class="muted">(optional)</span></span>
+            <input type="password" id="integrationsAnthropicKey" class="audio-path-input" placeholder="sk-ant-…" autocomplete="off" />
+            <span id="integrationsAnthropicStatus" class="ha-token-preview muted"></span>
+          </label>
+          <label class="ha-field">
+            <span class="ha-field-label">OpenRouter API key <span class="muted">(optional)</span></span>
+            <input type="password" id="integrationsOpenrouterKey" class="audio-path-input" placeholder="sk-or-…" autocomplete="off" />
+            <span id="integrationsOpenrouterStatus" class="ha-token-preview muted"></span>
+          </label>
+          <label class="ha-field">
             <span class="ha-field-label">Hugging Face token <span class="muted">(optional)</span></span>
             <input type="password" id="integrationsHfToken" class="audio-path-input" placeholder="hf_…" autocomplete="off" />
             <span id="integrationsHfStatus" class="ha-token-preview muted"></span>
           </label>
+          <label class="ha-field">
+            <span class="ha-field-label">Meshy API key <span class="muted">(Engineering)</span></span>
+            <input type="password" id="integrationsMeshyKey" class="audio-path-input" placeholder="msy-…" autocomplete="off" />
+            <span id="integrationsMeshyStatus" class="ha-token-preview muted"></span>
+          </label>
           <p id="integrationsPanelMsg" class="ha-panel-status muted" aria-live="polite"></p>
           <div class="ha-actions">
             <button type="button" id="integrationsSaveBtn" class="apply-btn small">Save API keys</button>
+            <button type="button" id="integrationsOpenHomeBtn" class="ghost-btn small" data-view-jump="integrations">Integrations Home</button>
             <button type="button" id="integrationsSettingsBtn" class="ghost-btn small" title="Voice toggles">More settings…</button>
           </div>
-          <p class="ha-token-hint muted">Saved on this PC only. Cloud Live turns on when Gemini is set.</p>
+          <p class="ha-token-hint muted">Saved on this PC only. Products own behavior — Integrations owns credentials &amp; health.</p>
         </div>
         </div>
       </div>
@@ -564,6 +581,7 @@
         <button type="button" class="view-tab" data-view="presence">Presence</button>
         <button type="button" class="view-tab" data-view="audit">System</button>
         <button type="button" class="view-tab" data-view="capabilities">Capabilities</button>
+        <button type="button" class="view-tab" data-view="integrations">Integrations</button>
         <button type="button" class="view-tab" data-view="voice">Voice</button>
         <button type="button" class="view-tab" data-view="vision">Vision</button>
         <button type="button" class="view-tab" data-view="audio">Audio</button>
@@ -2414,6 +2432,47 @@
         <p id="gestureCalibSteps" class="muted" aria-live="polite"></p>
       </div>
 
+      <div id="integrationsView" class="view-panel hidden integrations-workspace" role="region" aria-label="Integrations Home">
+        <header class="integrations-header">
+          <div>
+            <h2>Integrations</h2>
+            <p class="muted">Provider credentials, connection tests, and unlock matrix. Products own behavior — Integrations owns keys and health.</p>
+          </div>
+          <div class="integrations-header-actions">
+            <button type="button" id="integrationsHomeRefreshBtn" class="ghost-btn small">Refresh</button>
+            <button type="button" id="integrationsTestAllBtn" class="ghost-btn small">Test configured</button>
+            <button type="button" id="integrationsDiagHomeBtn" class="ghost-btn small">Diagnostics</button>
+          </div>
+        </header>
+        <p id="integrationsSecurityBanner" class="integrations-security-banner" role="status">
+          Secrets are stored in plaintext in data/jarvis.env. Aria does not encrypt this file today. Prefer chmod 600. Never store keys in Memory or chat.
+        </p>
+        <div id="integrationsRecoveryCard" class="integrations-recovery-card hidden" role="status"></div>
+        <div class="integrations-toolbar" role="search">
+          <label class="sr-only" for="integrationsSearchInput">Search providers</label>
+          <input type="search" id="integrationsSearchInput" class="audio-path-input" placeholder="Search providers…" autocomplete="off" />
+          <label class="sr-only" for="integrationsCategoryFilter">Category</label>
+          <select id="integrationsCategoryFilter" class="personality-select" aria-label="Filter by category">
+            <option value="">All categories</option>
+          </select>
+        </div>
+        <div id="integrationsSummary" class="integrations-summary" aria-live="polite"></div>
+        <div class="integrations-layout">
+          <ul id="integrationsProviderList" class="integrations-provider-list" role="listbox" aria-label="Providers" tabindex="0"></ul>
+          <aside id="integrationsProviderDetail" class="integrations-provider-detail" aria-live="polite">
+            <p class="muted">Select a provider to review unlocks, test connection, and manage credentials.</p>
+          </aside>
+        </div>
+        <section aria-label="Recent integration activity">
+          <h3 class="flytying-col-subtitle">Recent activity</h3>
+          <ul id="integrationsUsageList" class="integrations-usage-list muted small"></ul>
+        </section>
+        <details class="integrations-experimental">
+          <summary>Experimental</summary>
+          <div id="integrationsExperimental" class="muted small"></div>
+        </details>
+      </div>
+
       <div id="capabilitiesView" class="view-panel hidden capabilities-workspace" role="region" aria-label="Capabilities Home">
         <header class="capabilities-header">
           <div>
@@ -3166,6 +3225,7 @@
   <script src="/static/ha_panel.js?v=1.0.3"></script>
   <script src="/static/smarthome_home.js?v=1.0.0"></script>
   <script src="/static/capabilities_home.js?v=1.0.0"></script>
+  <script src="/static/integrations_home.js?v=1.0.0"></script>
   <script src="/static/upgrade_wizard.js?v=1.0.3"></script>
   <script src="/static/image_engine.js?v=1.0.4"></script>
   <script src="/static/media_lightbox.js?v=1.0.1"></script>

@@ -2,7 +2,7 @@
 (function () {
   const VIEW_PANELS = [
     "chatView", "dashboardView", "automationView", "workstationView", "modelsView", "codingView", "plannerView", "calendarView", "flytyingView", "projectsView",
-    "makerView", "browserView", "securityView", "presenceView", "auditView", "capabilitiesView", "voiceView", "visionView", "audioView", "journalView",
+    "makerView", "browserView", "securityView", "presenceView", "auditView", "capabilitiesView", "integrationsView", "voiceView", "visionView", "audioView", "journalView",
     "memoryView", "galleryView", "videoView", "memeView", "documentsView", "connectionsView", "actionsView",
   ];
 
@@ -35,6 +35,7 @@
     if (view === "calendar" && window.initCalendar) window.initCalendar();
     if (view === "flytying" && window.initFlytying) window.initFlytying();
     if (view === "capabilities" && window.initCapabilities) window.initCapabilities();
+    if (view === "integrations" && window.initIntegrationsHome) window.initIntegrationsHome();
     if (view === "projects" && window.initProjects) window.initProjects();
     if (view === "maker" && window.initMakerLab) window.initMakerLab();
     if (view === "browser" && window.initBrowserPanel) window.initBrowserPanel();

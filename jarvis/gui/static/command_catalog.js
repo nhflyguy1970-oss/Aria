@@ -247,7 +247,26 @@
         return true;
       }),
       mk("act:image-engine", "Open image engine / Comfy settings", "Actions", "comfyui", () => A().system.imageEngine()),
-      mk("act:integrations-keys", "API keys (Cloud Live & models)", "Actions", "secrets tokens", () => A().system.apiKeys()),
+      mk("act:integrations-keys", "API keys (Cloud Live & models)", "Actions", "secrets tokens integrations providers", () => A().system.apiKeys()),
+      mk("act:integrations-home", "Open Integrations Home", "System", "providers secrets health test connection unlocks", () => {
+        window.switchToView?.("integrations") || A().goView?.("integrations");
+        window.initIntegrationsHome?.();
+        return true;
+      }),
+      mk("act:integrations-test-gemini", "Test Gemini connection", "System", "cloud live api key", async () => {
+        try {
+          const res = await fetch("/api/integrations/product/test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: "gemini" }),
+          });
+          const data = await res.json();
+          window.showAriaToast?.(data.message || (data.ok ? "Gemini OK" : "Gemini failed"), data.ok ? "ok" : "err");
+        } catch (e) {
+          window.showAriaToast?.(e.message || "Test failed", "err");
+        }
+        return true;
+      }),
       mk("act:voice-smoke", "Run voice smoke test", "AI", "stt tts check", () => A().voice.smoke(), { mode: "ask" }),
       mk("act:router-warm", "Warm model router", "AI", "preload", () => A().system.warmRouter(), { mode: "ask" }),
       mk("act:reload-ui", "Reload UI", "System", "refresh soft", () => A().system.reloadUi()),

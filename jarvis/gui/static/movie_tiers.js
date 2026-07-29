@@ -645,12 +645,21 @@
       const data = await fetchJson("/api/integrations/secrets");
       setLine($("integrationsGeminiStatus"), data.gemini_api_key_set, data.gemini_api_key_preview);
       setLine($("integrationsOpenaiStatus"), data.openai_api_key_set, data.openai_api_key_preview);
+      setLine($("integrationsAnthropicStatus"), data.anthropic_api_key_set, data.anthropic_api_key_preview);
+      setLine($("integrationsOpenrouterStatus"), data.openrouter_api_key_set, data.openrouter_api_key_preview);
       setLine($("integrationsHfStatus"), data.hf_token_set, data.hf_token_preview);
+      setLine($("integrationsMeshyStatus"), data.meshy_api_key_set, data.meshy_api_key_preview);
       const line = $("integrationsStatusLine");
       if (line) {
         line.textContent = data.gemini_api_key_set
-          ? "Cloud Live ready — use voice bar → Cloud live"
-          : "Paste Gemini key below for Cloud Live voice";
+          ? "Cloud Live ready — open Integrations Home for tests & unlocks"
+          : "Paste keys below · open Integrations Home for the full provider matrix";
+      }
+      const mini = $("integrationsSecurityMini");
+      if (mini && data.storage_info?.message) {
+        mini.textContent = data.storage_info.encrypted
+          ? "Encrypted secret storage"
+          : "Plaintext storage in data/jarvis.env — not encrypted.";
       }
     } catch (_) {
       const line = $("integrationsStatusLine");
@@ -668,10 +677,16 @@
       const body = {};
       const g = $("integrationsGeminiKey")?.value?.trim();
       const o = $("integrationsOpenaiKey")?.value?.trim();
+      const a = $("integrationsAnthropicKey")?.value?.trim();
+      const r = $("integrationsOpenrouterKey")?.value?.trim();
       const h = $("integrationsHfToken")?.value?.trim();
+      const m = $("integrationsMeshyKey")?.value?.trim();
       if (g) body.gemini_api_key = g;
       if (o) body.openai_api_key = o;
+      if (a) body.anthropic_api_key = a;
+      if (r) body.openrouter_api_key = r;
       if (h) body.hf_token = h;
+      if (m) body.meshy_api_key = m;
       const msg = $("integrationsPanelMsg");
       if (!Object.keys(body).length) {
         if (msg) msg.textContent = "Paste at least one key, then Save.";
@@ -695,7 +710,10 @@
         }
         if ($("integrationsGeminiKey") && g) $("integrationsGeminiKey").value = "";
         if ($("integrationsOpenaiKey") && o) $("integrationsOpenaiKey").value = "";
+        if ($("integrationsAnthropicKey") && a) $("integrationsAnthropicKey").value = "";
+        if ($("integrationsOpenrouterKey") && r) $("integrationsOpenrouterKey").value = "";
         if ($("integrationsHfToken") && h) $("integrationsHfToken").value = "";
+        if ($("integrationsMeshyKey") && m) $("integrationsMeshyKey").value = "";
         if (msg) {
           msg.textContent = data.gemini_api_key_set
             ? "Saved — Cloud Live is ready."
