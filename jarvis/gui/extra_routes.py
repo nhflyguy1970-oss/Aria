@@ -35,6 +35,13 @@ def register_routes(app, assistant):
     register_voice_product(app, assistant)
     register_vision_product(app, assistant)
 
+    try:
+        from jarvis.capabilities_product.api import register_product_routes as register_capabilities_product
+
+        register_capabilities_product(app, assistant)
+    except Exception:
+        pass
+
     @app.get("/api/journal")
     def journal_all():
         return journal.export_all()

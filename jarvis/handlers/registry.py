@@ -19,6 +19,7 @@ class ActionSpec:
     info: bool = False
     module: str | None = None
     description: str = ""
+    extension: str | None = None  # owning host extension / capability id
 
 
 _REGISTRY: dict[str, ActionSpec] = {}
@@ -31,6 +32,7 @@ def register_action(
     info: bool = False,
     module: str | None = None,
     description: str = "",
+    extension: str | None = None,
 ) -> Callable[[HandlerFn], HandlerFn]:
     def decorator(fn: HandlerFn) -> HandlerFn:
         _REGISTRY[name] = ActionSpec(
@@ -40,6 +42,7 @@ def register_action(
             info=info,
             module=module,
             description=description or name.replace("_", " "),
+            extension=extension,
         )
         return fn
 
@@ -53,6 +56,7 @@ def register_queue(
     info: bool = False,
     module: str | None = None,
     description: str = "",
+    extension: str | None = None,
 ) -> None:
     """Register queue-only metadata (handler runs via existing assistant method)."""
     _REGISTRY[name] = ActionSpec(
@@ -62,6 +66,7 @@ def register_queue(
         info=info,
         module=module,
         description=description or name.replace("_", " "),
+        extension=extension,
     )
 
 
@@ -97,6 +102,7 @@ def all_actions() -> list[dict[str, Any]]:
             "info": spec.info,
             "module": spec.module,
             "description": spec.description,
+            "extension": spec.extension,
             "registered": spec.handler is not None,
         })
     return out

@@ -199,6 +199,12 @@ def enrich_snapshot(data: dict[str, Any] | None) -> dict[str, Any]:
     except Exception:
         snap["smarthome"] = {"product": "Smart Home", "state": "unknown"}
         snap["home_assistant"] = {"product": "Smart Home", "state": "unknown"}
+    try:
+        from jarvis.capabilities_product.mission_bridge import capabilities_mission_panel
+
+        snap["capabilities"] = capabilities_mission_panel()
+    except Exception:
+        snap["capabilities"] = {"product": "Capabilities", "state": "unknown"}
     return snap
 
 

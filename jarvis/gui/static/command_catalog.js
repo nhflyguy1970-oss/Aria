@@ -230,6 +230,22 @@
         else return A().system.haTest();
         return true;
       }),
+      mk("act:capabilities-home", "Open Capabilities Home", "System", "plugins extensions registry trust permissions", () => {
+        window.switchToView?.("capabilities") || A().goView?.("capabilities");
+        window.initCapabilities?.();
+        return true;
+      }),
+      mk("act:capabilities-diagnostics", "Capabilities diagnostics", "System", "extensions health quarantine", async () => {
+        try {
+          const res = await fetch("/api/capabilities/product/diagnostics");
+          const data = await res.json();
+          window.showAriaToast?.(`Capabilities: ${data.registry?.count ?? "?"} · failed ${data.registry?.failed ?? 0}`, "ok");
+          console.info(data);
+        } catch (e) {
+          window.showAriaToast?.(e.message || "Diagnostics failed", "err");
+        }
+        return true;
+      }),
       mk("act:image-engine", "Open image engine / Comfy settings", "Actions", "comfyui", () => A().system.imageEngine()),
       mk("act:integrations-keys", "API keys (Cloud Live & models)", "Actions", "secrets tokens", () => A().system.apiKeys()),
       mk("act:voice-smoke", "Run voice smoke test", "AI", "stt tts check", () => A().voice.smoke(), { mode: "ask" }),

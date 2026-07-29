@@ -58,7 +58,27 @@ def platform_status() -> dict[str, Any]:
     )
     probe(
         "plugins",
-        lambda: {"ok": True, "plugins": __import__("jarvis.intelligence.plugin_sdk", fromlist=["list_plugins"]).list_plugins()},
+        lambda: {
+            "ok": True,
+            "note": "Operator product is Capabilities; this probe lists SDK-layer capabilities.",
+            "capabilities": __import__("jarvis.intelligence.plugin_sdk", fromlist=["list_plugins"]).list_plugins(),
+            "plugins": __import__("jarvis.intelligence.plugin_sdk", fromlist=["list_plugins"]).list_plugins(),
+        },
+    )
+    probe(
+        "capabilities",
+        lambda: {
+            "ok": True,
+            **{
+                k: v
+                for k, v in __import__(
+                    "jarvis.capabilities_product.registry", fromlist=["registry_snapshot"]
+                )
+                .registry_snapshot()
+                .items()
+                if k in ("count", "enabled", "disabled", "failed", "by_layer")
+            },
+        },
     )
     probe(
         "connectors",
@@ -190,6 +210,16 @@ def bootstrap_platform(*, start_automation: bool = True) -> dict[str, Any]:
         log.debug("example plugin: %s", exc)
 
     plugins = load_all()
+    capabilities_boot = {"ok": True, "skipped": True}
+    try:
+        from jarvis.capabilities_product.loader import load_all_enabled
+        from jarvis.capabilities_product.history import record_activity
+
+        capabilities_boot = load_all_enabled(include_sdk=True)
+        record_activity("bootstrap", message="Capabilities pipeline bootstrapped")
+    except Exception as exc:
+        log.debug("capabilities bootstrap: %s", exc)
+        capabilities_boot = {"ok": False, "error": str(exc)}
 
     # Ensure default pipeline templates exist on disk once (reuse by name — no spam)
     saved_wf = []
@@ -215,6 +245,7 @@ def bootstrap_platform(*, start_automation: bool = True) -> dict[str, Any]:
         "connectors": connectors,
         "example_plugins": created,
         "plugins": plugins,
+        "capabilities": capabilities_boot,
         "workflows_seeded": saved_wf,
         "automation": automation,
         "status": platform_status(),

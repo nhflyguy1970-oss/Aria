@@ -130,8 +130,20 @@ def _sorted_rules() -> list[RouteRule]:
             rules.extend(extension_routes())
         except Exception:
             pass
+        try:
+            from jarvis.capabilities_product.contributions import contribution_routes
+
+            rules.extend(contribution_routes())
+        except Exception:
+            pass
         _SORTED = sorted(rules, key=lambda r: r.priority)
     return _SORTED
+
+
+def invalidate_router_table() -> None:
+    """Clear cached rules so contribution routes can appear without process restart."""
+    global _SORTED
+    _SORTED = None
 
 
 def match_router_table(message: str, session: SessionContext) -> dict | None:

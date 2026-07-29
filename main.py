@@ -68,6 +68,7 @@ def print_help():
     print("  serve            headless server (for tray daemon)")
     print("  tray-uncensored  tray mode, uncensored models")
     print("  gui-uncensored   web interface, uncensored models")
+    print("  capability new   scaffold a local capability (disabled by default)")
     print("\nExample: python main.py tray\n")
 
 
@@ -105,6 +106,17 @@ def main():
 
         gui_main()
         return
+
+    # aria capability new <name> …
+    if module_name in ("capability", "capabilities"):
+        sub = (sys.argv[2].lower() if len(sys.argv) > 2 else "")
+        if sub in ("new", "scaffold"):
+            from jarvis.capabilities_product.scaffold import scaffold_cli
+
+            raise SystemExit(scaffold_cli(sys.argv[3:]))
+        print("Usage: python main.py capability new <name> [--description ...] [--category ...] [--permission P]")
+        raise SystemExit(2)
+
     if module_name == "chat":
         module_name = "general"
     if module_name not in MODULES:

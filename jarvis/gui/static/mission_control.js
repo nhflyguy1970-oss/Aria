@@ -119,6 +119,7 @@ function renderOverview(d) {
   const vision = d.vision || {};
   const flytying = d.flytying || {};
   const smarthome = d.smarthome || {};
+  const capabilities = d.capabilities || {};
   const voiceCard = voice.product
     ? mcCard(
         "Voice",
@@ -175,6 +176,20 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const capabilitiesCard = capabilities.product
+    ? mcCard(
+        "Capabilities",
+        `<p>State: <strong>${mcEsc(capabilities.state || "idle")}</strong> · ${capabilities.count ?? 0} total</p>
+         <p>Enabled ${capabilities.enabled ?? 0} · disabled ${capabilities.disabled ?? 0} · failed ${capabilities.failed ?? 0}</p>
+         <p>Isolation: <strong>none</strong> (honest — in-process)</p>
+         <p>Recovery: ${capabilities.recovery?.ready ? "ready" : mcEsc(capabilities.recovery?.hint || "review needed")} (${capabilities.recovery?.steps_done ?? 0}/${capabilities.recovery?.steps_total ?? 0})</p>
+         <p class="mc-actions">
+           <a class="ghost-btn small" href="#capabilities" data-mc-nav="capabilities">Open Capabilities</a>
+           <a class="ghost-btn small" href="/api/capabilities/product/diagnostics" target="_blank">Diagnostics</a>
+           <a class="ghost-btn small" href="/api/capabilities/product/recovery" target="_blank">Recovery</a>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -195,6 +210,7 @@ function renderOverview(d) {
       visionCard,
       flytyingCard,
       smarthomeCard,
+      capabilitiesCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;

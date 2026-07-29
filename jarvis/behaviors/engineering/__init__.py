@@ -90,11 +90,13 @@ class EngineeringBehavior(ApplicationBehavior):
 
     def attach(self) -> list[str]:
         for action, (handler, info) in _ENGINEERING_ACTIONS.items():
+            extension = "git" if action.startswith("git_") else "engineering"
             register_action(
                 action,
                 info=info,
                 module="coding",
                 description=action.replace("_", " "),
+                extension=extension,
             )(self._bind(handler))
         return []
 

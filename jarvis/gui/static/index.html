@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0a0c10" />
   <meta name="application-name" content="ARIA" />
-  <meta name="jarvis-ui-version" content="5.16.160" />
+  <meta name="jarvis-ui-version" content="5.16.161" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>ARIA</title>
@@ -178,6 +178,7 @@
           <button type="button" id="jobCenterServicesBtn" class="service-row service-row--action" title="Media, coding, research, and audio jobs">
             <span class="svc-dot" id="jobCenterSvcDot"></span> Background jobs <span id="jobCenterBadge" class="job-center-badge hidden" aria-hidden="true"></span>
           </button>
+          <button type="button" class="ghost-btn small" data-view-jump="capabilities" title="Manage what extends Aria">Capabilities</button>
         </div>
         </div>
       </div>
@@ -562,6 +563,7 @@
         <button type="button" class="view-tab" data-view="security">Security</button>
         <button type="button" class="view-tab" data-view="presence">Presence</button>
         <button type="button" class="view-tab" data-view="audit">System</button>
+        <button type="button" class="view-tab" data-view="capabilities">Capabilities</button>
         <button type="button" class="view-tab" data-view="voice">Voice</button>
         <button type="button" class="view-tab" data-view="vision">Vision</button>
         <button type="button" class="view-tab" data-view="audio">Audio</button>
@@ -2412,6 +2414,69 @@
         <p id="gestureCalibSteps" class="muted" aria-live="polite"></p>
       </div>
 
+      <div id="capabilitiesView" class="view-panel hidden capabilities-workspace" role="region" aria-label="Capabilities Home">
+        <header class="capabilities-header">
+          <div>
+            <h2>Capabilities</h2>
+            <p class="muted">Unified management for everything that extends Aria. Products stay product owners — Capabilities only extends them.</p>
+          </div>
+          <div class="capabilities-header-actions">
+            <button type="button" id="capabilitiesRefreshBtn" class="ghost-btn small">Refresh</button>
+            <button type="button" id="capabilitiesLoadAllBtn" class="ghost-btn small">Load enabled</button>
+            <button type="button" id="capabilitiesScaffoldBtn" class="ghost-btn small">New capability</button>
+            <button type="button" id="capabilitiesDiagBtn" class="ghost-btn small">Diagnostics</button>
+          </div>
+        </header>
+        <p id="capabilitiesSecurityBanner" class="capabilities-security-banner" role="status">
+          No OS sandbox. Local capabilities run in-process with Aria. Review trust and permissions before enabling.
+        </p>
+        <div id="capabilitiesRecoveryCard" class="capabilities-recovery-card hidden" role="status"></div>
+        <div class="capabilities-toolbar" role="search">
+          <label class="sr-only" for="capabilitiesSearchInput">Search capabilities</label>
+          <input type="search" id="capabilitiesSearchInput" class="audio-path-input" placeholder="Search capabilities…" autocomplete="off" />
+          <label class="sr-only" for="capabilitiesLayerFilter">Layer</label>
+          <select id="capabilitiesLayerFilter" class="personality-select" aria-label="Filter by layer">
+            <option value="">All layers</option>
+            <option value="host">Host</option>
+            <option value="sdk">Local</option>
+            <option value="acm">Cognitive</option>
+            <option value="platform">Platform</option>
+          </select>
+          <label class="sr-only" for="capabilitiesCategoryFilter">Category</label>
+          <select id="capabilitiesCategoryFilter" class="personality-select" aria-label="Filter by category">
+            <option value="">All categories</option>
+          </select>
+          <label class="sr-only" for="capabilitiesTrustFilter">Trust</label>
+          <select id="capabilitiesTrustFilter" class="personality-select" aria-label="Filter by trust">
+            <option value="">All trust</option>
+            <option value="built_in">Built-in</option>
+            <option value="first_party">First-party</option>
+            <option value="trusted_local">Trusted Local</option>
+            <option value="experimental">Experimental</option>
+            <option value="untrusted">Untrusted</option>
+            <option value="disabled">Disabled</option>
+            <option value="quarantined">Quarantined</option>
+          </select>
+        </div>
+        <div id="capabilitiesSummary" class="capabilities-summary" aria-live="polite"></div>
+        <div class="capabilities-layout">
+          <div class="capabilities-list-wrap">
+            <ul id="capabilitiesList" class="capabilities-list" role="listbox" aria-label="Installed capabilities" tabindex="0"></ul>
+          </div>
+          <aside id="capabilitiesDetail" class="capabilities-detail" aria-live="polite">
+            <p class="muted">Select a capability to review permissions, trust, and health.</p>
+          </aside>
+        </div>
+        <section class="capabilities-activity" aria-label="Recent capability activity">
+          <h3 class="flytying-col-subtitle">Recent activity</h3>
+          <ul id="capabilitiesActivity" class="capabilities-activity-list muted small"></ul>
+        </section>
+        <details class="capabilities-experimental">
+          <summary>Experimental</summary>
+          <div id="capabilitiesExperimental" class="muted small"></div>
+        </details>
+      </div>
+
       <div id="auditView" class="view-panel hidden">
         <div class="audit-header">
           <div>
@@ -3100,6 +3165,7 @@
   <script src="/static/command_palette.js?v=2.0.0"></script>
   <script src="/static/ha_panel.js?v=1.0.3"></script>
   <script src="/static/smarthome_home.js?v=1.0.0"></script>
+  <script src="/static/capabilities_home.js?v=1.0.0"></script>
   <script src="/static/upgrade_wizard.js?v=1.0.3"></script>
   <script src="/static/image_engine.js?v=1.0.4"></script>
   <script src="/static/media_lightbox.js?v=1.0.1"></script>

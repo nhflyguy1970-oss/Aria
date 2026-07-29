@@ -229,13 +229,20 @@ def register_intelligence_routes(app, assistant: Any = None) -> None:
     def intelligence_plugins():
         from jarvis.intelligence.plugin_sdk import list_plugins
 
-        return {"ok": True, "plugins": list_plugins()}
+        return {
+            "ok": True,
+            "note": "Operator product is Capabilities (/api/capabilities/product). This endpoint lists SDK-layer capabilities.",
+            "capabilities": list_plugins(),
+            "plugins": list_plugins(),
+        }
 
     @app.post("/api/intelligence/plugins/load")
     def intelligence_plugins_load():
         from jarvis.intelligence.plugin_sdk import load_all
 
-        return load_all()
+        result = load_all()
+        result["note"] = "Prefer /api/capabilities/product/load for policy-aware loading."
+        return result
 
     @app.get("/api/intelligence/connectors")
     def intelligence_connectors():
