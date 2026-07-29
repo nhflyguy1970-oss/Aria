@@ -793,12 +793,14 @@ def knowledge_sync():
 
 
 @app.get("/api/knowledge/search")
-def knowledge_unified_search(q: str = "", limit: int = 12):
+def knowledge_unified_search(q: str = "", limit: int = 12, facet: str = ""):
+    """Compat client of the one Search engine (legacy hit shape + SearchResult)."""
     from jarvis.knowledge.search import format_unified_results, unified_search
 
     if not q.strip():
         return {"ok": False, "error": "q parameter required"}
-    result = unified_search(q.strip(), limit=min(limit, 30))
+    facets = [facet] if facet and facet != "everything" else None
+    result = unified_search(q.strip(), limit=min(limit, 30), facets=facets)
     result["message"] = format_unified_results(result)
     return result
 

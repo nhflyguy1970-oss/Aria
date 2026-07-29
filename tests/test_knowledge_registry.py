@@ -53,31 +53,40 @@ class TestKnowledgeRegistry(unittest.TestCase):
 
 
 class TestUnifiedSearch(unittest.TestCase):
-    @patch("jarvis.knowledge.search._search_documents", return_value=[{
-        "source_type": "document_library",
-        "source_label": "Document Library",
-        "title": "LiteLLM Guide",
-        "excerpt": "LiteLLM routing",
-        "location": "guide.pdf",
-        "strategy": "semantic",
-        "score": 0.9,
-    }])
-    @patch("jarvis.knowledge.search._search_code", return_value=[])
-    @patch("jarvis.knowledge.search._search_memory", return_value=[])
-    @patch("jarvis.knowledge.search._search_journal", return_value=[])
-    @patch("jarvis.knowledge.search._search_project_docs", return_value=[])
-    @patch("jarvis.knowledge.search._search_learned", return_value=[])
-    @patch("jarvis.knowledge.search.list_sources", return_value=[
-        KnowledgeSource(
-            id="d1",
-            type="document_library",
-            label="Docs",
-            location="/data/documents",
-            retrieval_available=True,
-        )
-    ])
-    def test_unified_search_merges_hits(self, *_mocks):
+    @patch("jarvis.search_product.pipeline.run_search")
+    def test_unified_search_merges_hits(self, mock_run):
+        mock_run.return_value = {
+            "ok": True,
+            "query": "LiteLLM",
+            "corpora": ["documents"],
+            "searched": ["documents"],
+            "results": [
+                {
+                    "id": "1",
+                    "source": "documents",
+                    "source_label": "Document Library",
+                    "title": "LiteLLM Guide",
+                    "summary": "LiteLLM routing",
+                    "preview": "LiteLLM routing",
+                    "location": "guide.pdf",
+                    "score": 0.9,
+                    "confidence": 0.85,
+                    "strategy": "semantic",
+                    "open": {"view": "documents"},
+                    "metadata": {},
+                    "highlights": [],
+                    "icon": "documents",
+                }
+            ],
+            "latency_ms": 1.0,
+            "intent": {"primary": "documents"},
+        }
         result = unified_search("LiteLLM")
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["pipeline"], "shared_search_pipeline")
+        self.assertEqual(len(result["hits"]), 1)
+        self.assertIn("LiteLLM", result["hits"][0]["title"])
+        self.assertTrue(result["results"])
         self.assertTrue(result.get("ok"))
         self.assertEqual(result.get("hit_count"), 1)
         text = format_unified_results(result)

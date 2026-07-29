@@ -128,19 +128,44 @@
   }
 
   function openHit(hit) {
-    const type = hit.source_type || "";
-    const loc = String(hit.location || "");
-    const rawId = hit.raw?.id || (String(hit.title || "").match(/^(exp_|mem_|acm)/) ? hit.title : "");
+    const open = hit.raw?.open || hit.open || {};
+    const qPreserve = open.query || hit.query || "";
+    const type = hit.source_type || open.view || "";
+    const loc = String(hit.location || open.location || "");
+    const rawId = hit.raw?.id || open.id || (String(hit.title || "").match(/^(exp_|mem_|acm)/) ? hit.title : "");
     const A = window.AriaActions;
-    if (type === "conversation" || type.includes("memory") || loc.includes("acm") || loc === "memory" || loc === "profile") {
-      A?.memory?.open?.();
-      setTimeout(async () => {
-        const q = (hit.excerpt || hit.title || "").slice(0, 48);
-        const el = $("memorySearch");
+
+    function prefill(sel, q, btn) {
+      setTimeout(() => {
+        const el = typeof sel === "string" ? $(sel.replace(/^#/, "")) || document.querySelector(sel) : sel;
         if (el && q) {
           el.value = q;
           el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.focus();
         }
+        if (btn) $(btn.replace(/^#/, ""))?.click();
+      }, 80);
+    }
+
+    if (open.handoff === "web_search" || type === "web") {
+      A?.askAria?.(qPreserve || hit.title || "web search", { autoSend: true, switchView: true });
+      return;
+    }
+    if (open.view === "search") {
+      window.switchToView?.("search");
+      setTimeout(() => {
+        const el = $("searchHomeInput");
+        if (el) {
+          el.value = qPreserve || hit.title || "";
+          window.initSearchHome?.(true);
+        }
+      }, 60);
+      return;
+    }
+    if (type === "conversation" || type === "memory" || type.includes("memory") || loc.includes("acm") || loc === "memory" || loc === "profile" || open.view === "memory") {
+      A?.memory?.open?.();
+      prefill("memorySearch", (qPreserve || hit.excerpt || hit.title || "").slice(0, 48));
+      setTimeout(async () => {
         try {
           await window.loadMemoryBrowser?.();
         } catch {
@@ -153,54 +178,71 @@
             item.scrollIntoView({ block: "nearest", behavior: "smooth" });
             setTimeout(() => item.classList.remove("memory-item--flash"), 2200);
           }
-        } else el?.focus();
+        }
       }, 100);
       return;
     }
-    if (type === "notes" || type === "journal" || loc.includes("journal")) {
+    if (type === "notes" || type === "journal" || loc.includes("journal") || open.view === "journal") {
       A?.journal?.open?.();
-      setTimeout(() => {
-        const el = $("journalSearch");
-        const q = (hit.title || "").replace(/\.[^.]+$/, "");
-        if (el) {
-          el.value = q;
-          el.focus();
-          $("journalSearchBtn")?.click();
-        }
-      }, 80);
+      prefill("journalSearch", qPreserve || (hit.title || "").replace(/\.[^.]+$/, ""), "journalSearchBtn");
       return;
     }
-    if (type === "document_library" || type.includes("document")) {
+    if (type === "document_library" || type === "documents" || type.includes("document") || open.view === "documents") {
       A?.documents?.open?.();
-      setTimeout(() => {
-        const el = $("documentsSearchInput");
-        if (el) {
-          el.value = hit.title || hit.query || "";
-          el.focus();
-          $("documentsSearchBtn")?.click();
-        }
-      }, 80);
+      prefill("documentsSearchInput", qPreserve || hit.title || "", "documentsSearchBtn");
       return;
     }
-    if (type.includes("connection") || type === "entity" || type === "graph") {
+    if (type.includes("connection") || type === "entity" || type === "graph" || type === "connections" || open.view === "connections") {
       A?.connections?.open?.();
-      setTimeout(() => {
-        const el = $("connectionsSearchInput");
-        if (el) {
-          el.value = hit.title || hit.excerpt || "";
-          el.focus();
-          $("connectionsSearchBtn")?.click();
-        }
-      }, 80);
+      prefill("connectionsSearchInput", qPreserve || hit.title || hit.excerpt || "", "connectionsSearchBtn");
       return;
     }
-    if (type === "code_index" || type === "git_repository") {
+    if (type === "code" || type === "code_index" || type === "git_repository" || open.view === "coding") {
+      window.switchToView?.("coding");
+      window.showAriaToast?.(loc || hit.title || "Open in Coding", "info");
+      return;
+    }
+    if (type === "planner" || open.view === "planner") {
+      window.switchToView?.("planner");
+      prefill("plannerSearchInput", qPreserve || hit.title || "");
+      return;
+    }
+    if (type === "calendar" || open.view === "calendar") {
+      window.switchToView?.("calendar");
+      return;
+    }
+    if (type === "audio" || open.view === "audio") {
+      window.switchToView?.("audio");
+      prefill("audioSearchInput", qPreserve || hit.title || "");
+      return;
+    }
+    if (type === "gallery" || open.view === "gallery") {
+      window.switchToView?.("gallery");
+      prefill("gallerySearchInput", qPreserve || hit.title || "");
+      return;
+    }
+    if (type === "flytying" || open.view === "flytying") {
+      window.switchToView?.("flytying");
+      prefill("flySearchInput", qPreserve || hit.title || "");
+      return;
+    }
+    if (type === "automation" || open.view === "automation") {
+      window.switchToView?.("automation");
+      return;
+    }
+    if (type === "projects" || open.view === "projects") {
       A?.projects?.open?.();
-      window.showAriaToast?.(loc || hit.title || "Open in projects / coding", "info");
       return;
     }
-    A?.memory?.open?.();
-    window.showAriaToast?.((hit.excerpt || hit.title || "").slice(0, 120), "info");
+    // Prefer Search Home for unknown federated hits — preserve query
+    window.switchToView?.("search");
+    setTimeout(() => {
+      const el = $("searchHomeInput");
+      if (el) {
+        el.value = qPreserve || hit.title || hit.excerpt || "";
+        window.runSearchHomeQuery?.();
+      }
+    }, 60);
   }
 
   function hitToCommand(hit, idx) {
@@ -311,17 +353,30 @@
     const seq = ++searchSeq;
     setSearchStatus("searching");
     try {
-      const res = await fetch(`/api/knowledge/search?q=${encodeURIComponent(needle)}&limit=8`);
+      const res = await fetch(`/api/search/product/query?q=${encodeURIComponent(needle)}&limit=8`);
       const data = await res.json().catch(() => ({}));
       if (seq !== searchSeq) return;
       if (!res.ok) {
-        throw new Error(data.message || data.detail || `Search failed (${res.status})`);
+        throw new Error(data.message || data.error || data.detail || `Search failed (${res.status})`);
       }
-      const hits = Array.isArray(data.hits) ? data.hits : [];
+      const hits = Array.isArray(data.results)
+        ? data.results.map((r) => ({
+            source_type: r.source,
+            source_label: r.source_label || r.source,
+            title: r.title,
+            excerpt: r.preview || r.summary,
+            location: r.location,
+            strategy: r.strategy,
+            score: r.score,
+            raw: { open: r.open, confidence: r.confidence, id: r.id },
+          }))
+        : Array.isArray(data.hits)
+          ? data.hits
+          : [];
       contentHits = hits.slice(0, 8).map((h, i) => hitToCommand(h, i));
       window.AriaHistory?.trackSearch?.(needle);
       if (!contentHits.length) setSearchStatus("empty");
-      else setSearchStatus("ready", `${contentHits.length} knowledge result${contentHits.length === 1 ? "" : "s"}`);
+      else setSearchStatus("ready", `${contentHits.length} search result${contentHits.length === 1 ? "" : "s"}`);
     } catch (err) {
       if (seq !== searchSeq) return;
       contentHits = [];

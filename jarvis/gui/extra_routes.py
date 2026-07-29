@@ -471,6 +471,13 @@ def register_routes(app, assistant):
                 )
             return save_secrets(body)
 
+    try:
+        from jarvis.search_product.api import register_product_routes as register_search_product
+
+        register_search_product(app, assistant)
+    except Exception:
+        pass
+
     @app.get("/api/knowledge")
     def knowledge_list():
         from jarvis.knowledge import list_topics

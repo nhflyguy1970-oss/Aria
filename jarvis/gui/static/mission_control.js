@@ -121,6 +121,7 @@ function renderOverview(d) {
   const smarthome = d.smarthome || {};
   const capabilities = d.capabilities || {};
   const integrations = d.integrations || {};
+  const searchProduct = d.search || {};
   const voiceCard = voice.product
     ? mcCard(
         "Voice",
@@ -205,6 +206,19 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const searchCard = searchProduct.product
+    ? mcCard(
+        "Search",
+        `<p>State: <strong>${mcEsc(searchProduct.state || "idle")}</strong> · corpora ${searchProduct.corpora_enabled ?? 0} · ${searchProduct.latency_ms ?? 0} ms</p>
+         <p>Web: ${mcEsc(searchProduct.web_backend || "—")} ${mcBadge(!!searchProduct.web_ok, "ok", "down")} · index ${searchProduct.retrieval_available ?? 0}/${searchProduct.registry_sources ?? 0}</p>
+         <p>Recovery: ${searchProduct.recovery?.ready ? "ready" : mcEsc(searchProduct.recovery?.hint || "review")} (${searchProduct.recovery?.steps_done ?? 0}/${searchProduct.recovery?.steps_total ?? 0})</p>
+         <p class="mc-actions">
+           <a class="ghost-btn small" href="#search" data-mc-nav="search">Search Home</a>
+           <a class="ghost-btn small" href="/api/search/product/diagnostics" target="_blank">Diagnostics</a>
+           <a class="ghost-btn small" href="/api/search/product/recovery" target="_blank">Recovery</a>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -227,6 +241,7 @@ function renderOverview(d) {
       smarthomeCard,
       capabilitiesCard,
       integrationsCard,
+      searchCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;

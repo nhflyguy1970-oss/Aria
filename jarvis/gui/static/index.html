@@ -52,7 +52,7 @@
             <circle cx="11" cy="11" r="7"/>
             <path d="m21 21-4.3-4.3"/>
           </svg>
-          <input type="search" id="sidebarSearchInput" class="sidebar-search-input" placeholder="Search Aria… (Ctrl+Shift+F)" autocomplete="off" spellcheck="false" aria-label="Search views, settings, models, and tools" aria-controls="sidebarSearchResults" role="combobox" aria-expanded="false" />
+          <input type="search" id="sidebarSearchInput" class="sidebar-search-input" placeholder="Filter navigation… (Ctrl+Shift+F)" autocomplete="off" spellcheck="false" aria-label="Filter views, settings, models, and tools — not content search" aria-controls="sidebarSearchResults" role="combobox" aria-expanded="false" />
         </div>
         <ul id="sidebarSearchResults" class="sidebar-search-results hidden" role="listbox" aria-label="Search results"></ul>
       </div>
@@ -121,6 +121,7 @@
         </button>
         <div class="sidebar-section-body ws-menu">
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="chat">Chat</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="search">Search</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="dashboard">Dashboard</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="planner">Planner</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="calendar">Calendar</button>
@@ -582,6 +583,7 @@
         <button type="button" class="view-tab" data-view="audit">System</button>
         <button type="button" class="view-tab" data-view="capabilities">Capabilities</button>
         <button type="button" class="view-tab" data-view="integrations">Integrations</button>
+        <button type="button" class="view-tab" data-view="search">Search</button>
         <button type="button" class="view-tab" data-view="voice">Voice</button>
         <button type="button" class="view-tab" data-view="vision">Vision</button>
         <button type="button" class="view-tab" data-view="audio">Audio</button>
@@ -2432,6 +2434,61 @@
         <p id="gestureCalibSteps" class="muted" aria-live="polite"></p>
       </div>
 
+      <div id="searchView" class="view-panel hidden search-workspace" role="region" aria-label="Search Home">
+        <div id="searchHomeRoot">
+          <header class="search-header">
+            <div>
+              <h2>Search</h2>
+              <p class="muted">One federated engine. Browse everything here — Ctrl+K for commands, Chat for answers, products own their data.</p>
+            </div>
+            <div class="search-header-actions">
+              <button type="button" id="searchHomeRefreshBtn" class="ghost-btn small">Refresh</button>
+              <button type="button" id="searchSaveBtn" class="ghost-btn small">Save search</button>
+              <button type="button" id="searchDiagBtn" class="ghost-btn small">Diagnostics</button>
+            </div>
+          </header>
+          <div id="searchMentalModel" class="search-mental-model" aria-label="Search mental model"></div>
+          <div id="searchHealthStrip" class="search-health-strip" role="status" aria-live="polite"></div>
+          <div class="search-toolbar" role="search">
+            <label class="sr-only" for="searchHomeInput">Federated search query</label>
+            <input type="search" id="searchHomeInput" class="audio-path-input search-home-input" placeholder="Search documents, memory, code, graph, planner…" autocomplete="off" />
+            <label class="sr-only" for="searchModeSelect">Mode</label>
+            <select id="searchModeSelect" class="personality-select" aria-label="Browse or answer mode">
+              <option value="browse">Browse</option>
+              <option value="answer">Answer</option>
+              <option value="auto">Auto</option>
+            </select>
+            <label class="sr-only" for="searchCodeModeSelect">Code mode</label>
+            <select id="searchCodeModeSelect" class="personality-select" aria-label="Code search mode">
+              <option value="auto">Code: auto</option>
+              <option value="semantic">Code: semantic</option>
+              <option value="grep">Code: grep</option>
+            </select>
+            <button type="button" id="searchHomeRunBtn" class="apply-btn small">Search</button>
+          </div>
+          <div id="searchFacetBar" class="search-facet-bar" role="toolbar" aria-label="Search facets"></div>
+          <p id="searchResultsStatus" class="muted small" aria-live="polite"></p>
+          <div class="search-layout">
+            <ul id="searchResultsList" class="search-results-list" role="listbox" aria-label="Search results" tabindex="0"></ul>
+            <aside id="searchResultDetail" class="search-result-detail" aria-live="polite">
+              <p class="muted">Select a result for preview, confidence, and open-in-context.</p>
+            </aside>
+            <aside class="search-side-rail">
+              <h3 class="flytying-col-subtitle">Recent</h3>
+              <ul id="searchHistoryList" class="search-hist-list"></ul>
+              <button type="button" id="searchClearHistoryBtn" class="ghost-btn tiny">Clear history</button>
+              <h3 class="flytying-col-subtitle">Saved</h3>
+              <ul id="searchSavedList" class="search-hist-list"></ul>
+              <h3 class="flytying-col-subtitle">Privacy opt-in</h3>
+              <label class="toggle-row small"><span>Gallery</span><input type="checkbox" id="searchOptInGallery" /></label>
+              <label class="toggle-row small"><span>Home Assistant</span><input type="checkbox" id="searchOptInHa" /></label>
+              <h3 class="flytying-col-subtitle">Tips</h3>
+              <ul id="searchTipsList" class="muted small"></ul>
+            </aside>
+          </div>
+        </div>
+      </div>
+
       <div id="integrationsView" class="view-panel hidden integrations-workspace" role="region" aria-label="Integrations Home">
         <header class="integrations-header">
           <div>
@@ -3226,6 +3283,7 @@
   <script src="/static/smarthome_home.js?v=1.0.0"></script>
   <script src="/static/capabilities_home.js?v=1.0.0"></script>
   <script src="/static/integrations_home.js?v=1.0.0"></script>
+  <script src="/static/search_home.js?v=1.0.0"></script>
   <script src="/static/upgrade_wizard.js?v=1.0.3"></script>
   <script src="/static/image_engine.js?v=1.0.4"></script>
   <script src="/static/media_lightbox.js?v=1.0.1"></script>

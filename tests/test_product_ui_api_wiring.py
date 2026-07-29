@@ -249,9 +249,11 @@ def test_command_palette_is_wired():
     assert "openAriaCommandPalette" in js
     assert 'toLowerCase() !== "k"' in js or 'toLowerCase() === "k"' in js
     assert 'search:memory' in cmd_src
-    assert "/api/knowledge/search" in js
+    assert "/api/search/product/query" in js or "/api/knowledge/search" in js
     assert "fetchContentHits" in js
     assert "memory-item--flash" in js
+    assert "search_home.js" in html
+    assert 'data-view="search"' in html
     assert "Use model:" in catalog
     assert "AriaCommandRegistry" in registry
     assert "AriaActions" in actions

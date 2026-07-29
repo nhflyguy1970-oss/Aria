@@ -544,12 +544,21 @@ class KnowledgeOperations:
         if not query:
             return _err("What should I search for across the workstation?", module="knowledge")
         limit = int(params.get("limit") or 12)
-        result = unified_search(query, limit=limit, refresh_registry=bool(params.get("refresh")))
+        facets = params.get("facets") or params.get("facet")
+        if isinstance(facets, str):
+            facets = [facets]
+        result = unified_search(
+            query,
+            limit=limit,
+            refresh_registry=bool(params.get("refresh")),
+            facets=facets,
+        )
+        keys = ("query", "hits", "strategies", "searched", "results", "intent", "latency_ms", "pipeline")
         return _ok(
             format_unified_results(result),
             module="knowledge",
             type="unified_search",
-            **{k: result[k] for k in ("query", "hits", "strategies", "searched") if k in result},
+            **{k: result[k] for k in keys if k in result},
         )
 
     @classmethod

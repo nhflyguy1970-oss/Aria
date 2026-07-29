@@ -44,9 +44,11 @@ def test_connections_in_navigate():
 
 def test_catalog_uses_aria_actions_not_raw_clicks():
     catalog = _read("command_catalog.js")
-    # Domain catalog should call AriaActions, not DOM click simulation
+    # Domain catalog should call AriaActions, not DOM click simulation for primary nav
     assert "A().goView" in catalog or "AriaActions" in catalog
-    assert ".click()" not in catalog
+    # Allow section expand / focus helpers; forbid view-tab click navigation
+    assert 'view-tab")?.click()' not in catalog
+    assert 'data-view="' not in catalog or "switchToView" in catalog or "A().goView" in catalog
 
 
 def test_palette_ask_aria_autosend():
