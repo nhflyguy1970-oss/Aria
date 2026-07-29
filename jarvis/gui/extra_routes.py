@@ -506,6 +506,13 @@ def register_routes(app, assistant):
     except Exception:
         pass
 
+    try:
+        from jarvis.shell.api import register_product_routes as register_shell_product
+
+        register_shell_product(app, assistant)
+    except Exception:
+        pass
+
     @app.get("/api/knowledge")
     def knowledge_list():
         from jarvis.knowledge import list_topics

@@ -71,7 +71,7 @@
     ],
     workstation: [
       { id: "ctx-mc", text: "Show me anything unhealthy in Mission Control.", action: "prompt" },
-      { id: "ctx-mc-act", text: "Open Activity Center for alerts.", action: "activity" },
+      { id: "ctx-mc-act", text: "Open Notifications for alerts.", action: "activity" },
     ],
     projects: [
       { id: "ctx-proj", text: "Review my latest code.", action: "prompt" },

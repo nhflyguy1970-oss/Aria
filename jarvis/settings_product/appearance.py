@@ -11,8 +11,9 @@ APPEARANCE_FILE = DATA_DIR / "settings_product" / "appearance.json"
 GLOBAL_FILE = DATA_DIR / "settings_product" / "global.json"
 
 APPEARANCE_DEFAULTS: dict[str, Any] = {
-    "theme": "dark",  # dark | light — single source; clients migrate from aria_theme
-    "accent": "gold",
+    "theme": "dark",  # dark | light — Professional Dark / Professional Light
+    "accent": "steel",  # steel | slate | teal | emerald (no RGB / neon themes)
+    "density": "standard",  # comfortable | standard | compact | operator
     "dock_hidden": False,
     "status_bar_hidden": False,
     "mini_chat_hidden": False,

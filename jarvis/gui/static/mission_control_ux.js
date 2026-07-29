@@ -121,7 +121,7 @@
       <div class="mc-health-brief__cta">
         <button type="button" class="apply-btn" data-mc-cta="${esc(cta.action || "mc:refresh")}" title="${esc(cta.why || "")}">${esc(cta.label || "Refresh")}</button>
         <button type="button" class="ghost-btn small" data-mc-action="voice_summary">Voice summary</button>
-        <button type="button" class="ghost-btn small" data-mc-nav="activity-center">Open Activity Center</button>
+        <button type="button" class="ghost-btn small" data-mc-nav="activity-center">Open Notifications</button>
         <button type="button" class="ghost-btn small" data-mc-nav="job-center">Open Job Center</button>
       </div>
     </section>`;
@@ -280,16 +280,16 @@
     const events = act.events || d.activity?.events || [];
     const bridge = `
       <div class="mc-product-bridge">
-        <p><strong>Operations Event Log</strong> is a Mission Control operations stream — not Activity Center (durable inbox).</p>
-        <button type="button" class="apply-btn small" data-mc-nav="activity-center">Open Activity Center</button>
+        <p><strong>Operations Event Log</strong> is a Mission Control operations stream — not Notifications (durable inbox).</p>
+        <button type="button" class="apply-btn small" data-mc-nav="activity-center">Open Notifications</button>
       </div>`;
     if (!events.length) {
       return (
         bridge +
         emptyState(
           "No operations events yet",
-          "Infrastructure events will appear here. Durable alerts live in Activity Center.",
-          `<button type="button" class="ghost-btn tiny" data-mc-nav="activity-center">Open Activity Center</button>
+          "Infrastructure events will appear here. Durable alerts live in Notifications.",
+          `<button type="button" class="ghost-btn tiny" data-mc-nav="activity-center">Open Notifications</button>
            <button type="button" class="ghost-btn tiny" id="mcEmptyActivityChatBtn">Chat</button>`
         )
       );
@@ -387,7 +387,7 @@
         <button type="button" class="apply-btn small" id="mcRepairBtn">Repair (confirm)</button>
         <button type="button" class="ghost-btn small" id="mcVerifyBtn">Verify after repair</button>
         <button type="button" class="ghost-btn small" id="mcAcceptanceBtn">Run acceptance</button>
-        <button type="button" class="ghost-btn small" data-mc-nav="activity-center">Open Activity Center</button>
+        <button type="button" class="ghost-btn small" data-mc-nav="activity-center">Open Notifications</button>
       </div>
       <p class="muted tiny">Repairs require confirmation. Auto-verification publishes to Activity — it never remediates further.</p>
       ${mcGrid([

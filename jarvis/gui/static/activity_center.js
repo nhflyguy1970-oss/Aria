@@ -120,7 +120,7 @@
     if (!rows.length) {
       list.innerHTML = `<li class="empty-state" role="presentation"><div class="empty-state-icon" aria-hidden="true">◎</div>`
         + `<p class="empty-state-title">Inbox is clear</p>`
-        + `<p class="muted">Activity Center is Aria’s durable event inbox — not Job Center (live work) and not Mission Control (health). Alerts stay until you mark them read or dismiss them.</p>`
+        + `<p class="muted">Notifications uses this Activity Center inbox for durable attention — not Job Center (live work) and not Mission Control (health). Items stay until you mark them read or dismiss them.</p>`
         + `<div class="empty-state-actions">`
         + `<button type="button" class="apply-btn small" id="activityEmptyJobsBtn">Open Job center</button>`
         + `<button type="button" class="ghost-btn small" id="activityEmptyMcBtn">Mission Control</button>`

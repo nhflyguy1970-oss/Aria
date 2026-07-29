@@ -1,4 +1,4 @@
-/** Theme toggle + accent color persistence. */
+/** Theme toggle + restrained accent persistence (Professional Dark / Light). */
 (function () {
   "use strict";
 
@@ -14,7 +14,6 @@
     }
     const btn = document.getElementById("themeToggle");
     if (btn) btn.textContent = on ? "Dark theme" : "Light theme";
-    // Mirror into Settings appearance store (single source of truth)
     fetch("/api/settings/product/appearance", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -25,7 +24,7 @@
   document.getElementById("themeToggle")?.addEventListener("click", () => {
     const next = document.body.classList.contains("light-theme") ? "dark" : "light";
     setTheme(next);
-    window.showAriaToast?.(next === "light" ? "Light theme" : "Dark theme", "ok", 1800);
+    window.showAriaToast?.(next === "light" ? "Professional Light" : "Professional Dark", "ok", 1800);
   });
 
   (function restoreAriaTheme() {
@@ -46,27 +45,38 @@
     }
   })();
 
-  /* --- Accent colors (highlights only — not a reskin) --- */
-  const ACCENTS = ["gold", "blue", "green", "purple", "orange", "red", "teal", "amber"];
+  /* Restrained accents only — steel default (no RGB / neon themes) */
+  const ACCENTS = ["steel", "slate", "teal", "emerald"];
+  const LEGACY_MAP = {
+    gold: "steel",
+    blue: "steel",
+    green: "emerald",
+    purple: "slate",
+    orange: "teal",
+    red: "steel",
+    amber: "steel",
+  };
 
   function applyAccent(name) {
-    const accent = ACCENTS.includes(name) ? name : "gold";
-    if (accent === "gold") document.documentElement.removeAttribute("data-accent");
+    let accent = LEGACY_MAP[name] || name;
+    if (!ACCENTS.includes(accent)) accent = "steel";
+    if (accent === "steel") document.documentElement.removeAttribute("data-accent");
     else document.documentElement.setAttribute("data-accent", accent);
     document.querySelectorAll(".accent-swatch").forEach((b) => {
-      b.classList.toggle("active", b.dataset.accent === accent);
-      b.setAttribute("aria-pressed", b.dataset.accent === accent ? "true" : "false");
+      const key = LEGACY_MAP[b.dataset.accent] || b.dataset.accent;
+      b.classList.toggle("active", key === accent);
+      b.setAttribute("aria-pressed", key === accent ? "true" : "false");
     });
     window.AriaUiPrefs?.set?.("accent", accent);
   }
 
   function initAccents() {
-    const saved = window.AriaUiPrefs?.get?.("accent", "gold");
-    applyAccent(saved);
+    const raw = window.AriaUiPrefs?.get?.("accent", "steel");
+    applyAccent(raw);
     document.querySelectorAll(".accent-swatch").forEach((btn) => {
       btn.addEventListener("click", () => {
         applyAccent(btn.dataset.accent);
-        window.showAriaToast?.(`Accent: ${btn.dataset.accent}`, "ok", 1600);
+        window.showAriaToast?.(`Accent: ${LEGACY_MAP[btn.dataset.accent] || btn.dataset.accent}`, "ok", 1600);
       });
     });
   }

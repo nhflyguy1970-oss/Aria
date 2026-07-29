@@ -13,8 +13,9 @@
   <link rel="manifest" href="/static/manifest.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=5.17.4" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css?v=5.18.0" />
+  <link rel="stylesheet" href="/static/shell_design.css?v=2.0.0" />
   <script>
     (function () {
       var standalone = window.matchMedia("(display-mode: standalone)").matches
@@ -410,8 +411,8 @@
             <button type="button" id="collapseSidebarBtn" class="ghost-btn small" title="Collapse all sidebar sections">Collapse all</button>
           </div>
           <div class="sidebar-btn-row sidebar-btn-row--compact">
-            <button type="button" id="jarvisAliveToggle" class="ghost-btn small active">Life UI on</button>
-            <button type="button" id="jarvisBlueToggle" class="ghost-btn small">HUD mode</button>
+            <button type="button" id="jarvisAliveToggle" class="ghost-btn small" title="Optional legacy decorative motion">Legacy motion</button>
+            <button type="button" id="jarvisBlueToggle" class="ghost-btn small" title="Optional legacy glow theme">Legacy glow</button>
             <button type="button" id="themeToggle" class="light-theme-btn ghost-btn small">Light theme</button>
             <button type="button" id="toggleDockBtn" class="ghost-btn small" title="Quick Access Dock under the header">Hide dock</button>
             <button type="button" id="toggleStatusBarBtn" class="ghost-btn small" title="Bottom status bar">Hide status bar</button>
@@ -420,14 +421,10 @@
           </div>
           <p class="sidebar-mini-label">Accent color</p>
           <div class="accent-swatch-row" role="group" aria-label="Accent color">
-            <button type="button" class="accent-swatch accent-swatch--gold" data-accent="gold" title="Gold (default)" aria-label="Accent: Gold (default)" aria-pressed="true"></button>
-            <button type="button" class="accent-swatch accent-swatch--blue" data-accent="blue" title="Blue" aria-label="Accent: Blue" aria-pressed="false"></button>
-            <button type="button" class="accent-swatch accent-swatch--green" data-accent="green" title="Green" aria-label="Accent: Green" aria-pressed="false"></button>
-            <button type="button" class="accent-swatch accent-swatch--purple" data-accent="purple" title="Purple" aria-label="Accent: Purple" aria-pressed="false"></button>
-            <button type="button" class="accent-swatch accent-swatch--orange" data-accent="orange" title="Orange" aria-label="Accent: Orange" aria-pressed="false"></button>
-            <button type="button" class="accent-swatch accent-swatch--red" data-accent="red" title="Red" aria-label="Accent: Red" aria-pressed="false"></button>
-            <button type="button" class="accent-swatch accent-swatch--teal" data-accent="teal" title="Teal" aria-label="Accent: Teal" aria-pressed="false"></button>
-            <button type="button" class="accent-swatch accent-swatch--amber" data-accent="amber" title="Amber" aria-label="Accent: Amber" aria-pressed="false"></button>
+            <button type="button" class="accent-swatch accent-swatch--steel" data-accent="steel" title="Steel blue (default)" aria-label="Accent: Steel blue" aria-pressed="true" style="background:#4f7cac"></button>
+            <button type="button" class="accent-swatch accent-swatch--slate" data-accent="slate" title="Slate blue" aria-label="Accent: Slate blue" aria-pressed="false" style="background:#6b7c93"></button>
+            <button type="button" class="accent-swatch accent-swatch--teal" data-accent="teal" title="Muted teal" aria-label="Accent: Muted teal" aria-pressed="false"></button>
+            <button type="button" class="accent-swatch accent-swatch--emerald" data-accent="emerald" title="Deep emerald" aria-label="Accent: Deep emerald" aria-pressed="false" style="background:#3d8f6a"></button>
           </div>
           <div class="sidebar-btn-row sidebar-btn-row--compact">
             <button type="button" id="exportChatBtn" class="ghost-btn small" title="Include memory snapshot">Export MD</button>
@@ -1863,7 +1860,7 @@
           <div class="mc-toolbar">
             <button type="button" id="mcRefreshBtn" class="ghost-btn small">Refresh</button>
             <button type="button" id="mcOpenJobCenterBtn" class="ghost-btn small" title="Open Job Center">Open Job Center</button>
-            <button type="button" id="mcOpenActivityCenterBtn" class="ghost-btn small" title="Open Activity Center">Open Activity Center</button>
+            <button type="button" id="mcOpenActivityCenterBtn" class="ghost-btn small" title="Open Notifications (Activity Center inbox)">Open Notifications</button>
             <button type="button" id="mcOpenChatBtn" class="ghost-btn small" title="Open Chat">Chat</button>
             <button type="button" id="mcOpenAuditBtn" class="ghost-btn small" title="Open System audit">Audit</button>
             <button type="button" id="mcOpenDashboardBtn" class="ghost-btn small" title="Open Home">Home</button>
@@ -2527,20 +2524,24 @@
               <h3 class="flytying-col-subtitle">Appearance</h3>
               <label class="settings-field">Theme
                 <select id="settingsThemeSelect" class="personality-select" aria-label="Theme">
-                  <option value="dark">Dark</option>
-                  <option value="light">Light</option>
+                  <option value="dark">Professional Dark</option>
+                  <option value="light">Professional Light</option>
                 </select>
               </label>
               <label class="settings-field">Accent
                 <select id="settingsAccentSelect" class="personality-select" aria-label="Accent">
-                  <option value="gold">Gold</option>
-                  <option value="blue">Blue</option>
-                  <option value="green">Green</option>
-                  <option value="purple">Purple</option>
-                  <option value="orange">Orange</option>
-                  <option value="red">Red</option>
-                  <option value="teal">Teal</option>
-                  <option value="amber">Amber</option>
+                  <option value="steel">Steel blue</option>
+                  <option value="slate">Slate blue</option>
+                  <option value="teal">Muted teal</option>
+                  <option value="emerald">Deep emerald</option>
+                </select>
+              </label>
+              <label class="settings-field">Density
+                <select id="settingsDensitySelect" class="personality-select" aria-label="UI density">
+                  <option value="comfortable">Comfortable</option>
+                  <option value="standard">Standard</option>
+                  <option value="compact">Compact</option>
+                  <option value="operator">Operator</option>
                 </select>
               </label>
               <label class="toggle-row small"><span>Quick dock</span><input type="checkbox" id="settingsDockToggle" checked /></label>
@@ -2846,30 +2847,10 @@
       <div id="shortcutsModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="shortcutsModalTitle">
         <div class="crop-modal-card profile-modal-card">
           <h3 id="shortcutsModalTitle">Keyboard shortcuts</h3>
-          <ul class="shortcuts-list">
-            <li><kbd>Ctrl</kbd>+<kbd>K</kbd> — command palette (context-aware + knowledge search)</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> — sidebar search</li>
-            <li><kbd>Ctrl</kbd>+<kbd>1</kbd>…<kbd>9</kbd> — jump Favorites / primary views</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Ctrl</kbd>+<kbd>Tab</kbd> — cycle views</li>
-            <li><kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> — back / forward in view history</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> — Layouts · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> alias · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>8</kbd> starters</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> — Notifications (Activity Center inbox)</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> — Automation Home</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> — View Paths (navigation shortcuts)</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> — Mission Control</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>.</kbd> — Models Home</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> — Vision Home</li>
-            <li><strong>Vision</strong> (after attach): action rail — Describe / OCR / Compare / Import…</li>
-            <li><kbd>Space</kbd> (hold on mic) — push-to-talk / server Whisper</li>
-            <li>Voice strip — Mute / Speak replies, Stop, Duplex, Cloud Live</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> — floating mini chat</li>
-            <li><kbd>Ctrl</kbd>+<kbd>\</kbd> — split view</li>
-            <li><kbd>Ctrl</kbd>+<kbd>,</kbd> — Settings Home · <kbd>Ctrl</kbd>+<kbd>/</kbd> — this panel</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — send · <kbd>Ctrl</kbd>+<kbd>L</kbd> — clear chat</li>
-            <li><kbd>Esc</kbd> — close modals · Right-click — context menus</li>
-            <li><strong>Planner</strong> (when open): <kbd>N</kbd> new task · <kbd>P</kbd> Focus 25m · <kbd>F</kbd> focus session · <kbd>T</kbd> Plan My Day · <kbd>U</kbd> undo</li>
-            <li><strong>Calendar</strong> (when open): <kbd>←</kbd>/<kbd>→</kbd> day · <kbd>T</kbd> today · <kbd>N</kbd> new · <kbd>1</kbd>–<kbd>4</kbd> month/week/agenda/timeline</li>
+          <ul class="shortcuts-list" id="shortcutsList" aria-live="polite">
+            <!-- Filled from AriaHotkeys registry (/api/shell/hotkeys) -->
           </ul>
+          <p class="muted tiny">Product-specific chords (Planner, Calendar, Vision) appear when those Homes are open. Registry is the source of truth.</p>
           <button type="button" id="shortcutsCloseBtn" class="ghost-btn">Close</button>
         </div>
       </div>
@@ -2898,7 +2879,7 @@
       <div id="whatsNewModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="whatsNewTitle">
         <div class="crop-modal-card profile-modal-card whats-new-card">
           <h3 id="whatsNewTitle">What's New in Aria</h3>
-          <p class="muted">GUI modernization highlights — navigation, suggestions, and polish.</p>
+          <p class="muted">Shell and product architecture — calm professional desktop, not movie HUD.</p>
           <ul id="whatsNewList" class="whats-new-list"></ul>
           <div class="sidebar-btn-row">
             <button type="button" id="whatsNewDismissBtn" class="apply-btn small">Got it</button>
@@ -3205,7 +3186,7 @@
     <button type="button" id="statusSegJobsWrap" class="status-seg-wrap" title="Background jobs — click to open Job center">
       <span id="statusSegJobs" class="status-seg">idle</span>
     </button>
-    <button type="button" id="statusSegActivityWrap" class="status-seg-wrap" title="Activity Center — durable OS event inbox (not Job Center)">
+    <button type="button" id="statusSegActivityWrap" class="status-seg-wrap" title="Notifications — durable attention inbox (not Job Center)">
       <span id="statusSegActivity" class="status-seg">quiet</span>
     </button>
     <button type="button" id="statusSegLayoutWrap" class="status-seg-wrap" title="Active Layout — click to open Layouts" data-layout-active-label>
@@ -3339,19 +3320,12 @@
   <script src="/static/world_state_hud.js?v=5.16.73"></script>
   <script src="/static/audit.js?v=5.16.160"></script>
   <script src="/static/voice_tab.js?v=5.16.90"></script>
-  <script src="/static/ui_prefs.js?v=1.1.0"></script>
+  <script src="/api/shell/bundle.js?v=2.0.0"></script>
   <script src="/static/sidebar_favorites.js?v=1.0.1"></script>
-  <script src="/static/discoverability.js?v=1.2.0"></script>
   <script src="/static/sidebar_search.js?v=1.0.0"></script>
-  <script src="/static/quick_dock.js?v=1.0.0"></script>
-  <script src="/static/breadcrumbs.js?v=1.0.0"></script>
-  <script src="/static/status_bar.js?v=1.1.0"></script>
   <script src="/static/context_menus.js?v=1.1.1"></script>
   <script src="/static/dashboard_widgets.js?v=1.1.0"></script>
-  <script src="/static/collapsible_panels.js?v=1.0.0"></script>
-  <script src="/static/global_history.js?v=1.0.0"></script>
   <script src="/static/workspace_layouts.js?v=1.1.0"></script>
-  <script src="/static/split_view.js?v=1.0.1"></script>
   <script src="/static/mini_chat.js?v=1.1.0"></script>
   <script src="/static/keyboard_nav.js?v=1.0.0"></script>
   <script src="/static/workflow_recorder.js?v=2.0.0"></script>

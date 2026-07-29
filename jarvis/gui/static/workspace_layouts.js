@@ -32,11 +32,11 @@
       miniChatHidden: !!prefs.miniChatHidden,
       dashboardLayout: prefs.dashboardLayout || null,
       theme,
-      accent: prefs.accent || "gold",
+      accent: prefs.accent || "steel",
       panelCollapsed: prefs.panelCollapsed || {},
       module: window.jarvisPreferredModule || "",
       model: $("chatModelSelect")?.value || "",
-      density: prefs.dashboardLayout?.density || "comfortable",
+      density: prefs.density || prefs.dashboardLayout?.density || "standard",
       role: prefsGet("activeLayoutRole", "default") || "default",
       split: window.AriaSplitView?.getState?.() || {
         enabled: false,
@@ -84,6 +84,10 @@
         if (btn) btn.textContent = snap.theme === "light" ? "Dark theme" : "Light theme";
       }
       if (snap.accent) window.applyAriaAccent?.(snap.accent);
+      if (snap.density) {
+        prefsSet("density", snap.density);
+        document.documentElement.setAttribute("data-density", snap.density);
+      }
       if (snap.module != null) {
         window.jarvisPreferredModule = snap.module;
         document.querySelectorAll(".module-chip").forEach((c) => {

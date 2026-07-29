@@ -163,8 +163,16 @@
   function renderAppearance(app) {
     const theme = $("settingsThemeSelect");
     const accent = $("settingsAccentSelect");
+    const density = $("settingsDensitySelect");
     if (theme && app?.theme) theme.value = app.theme;
-    if (accent && app?.accent) accent.value = app.accent;
+    const accentVal = app?.accent === "gold" || app?.accent === "blue" ? "steel" : app?.accent;
+    if (accent && accentVal) accent.value = accentVal;
+    const dens =
+      app?.density ||
+      window.AriaUiPrefs?.get?.("density") ||
+      window.AriaUiPrefs?.get?.("shellDensity") ||
+      "standard";
+    if (density) density.value = dens;
     if ($("settingsDockToggle")) $("settingsDockToggle").checked = !app?.dock_hidden;
     if ($("settingsStatusToggle")) $("settingsStatusToggle").checked = !app?.status_bar_hidden;
     if ($("settingsMiniChatToggle")) $("settingsMiniChatToggle").checked = !app?.mini_chat_hidden;
@@ -279,6 +287,17 @@
         body: JSON.stringify({ accent }),
       });
       window.applyAriaAccent?.(accent);
+    });
+    $("settingsDensitySelect")?.addEventListener("change", async (e) => {
+      const density = e.target.value;
+      await api("/api/settings/product/appearance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ density }),
+      });
+      window.AriaUiPrefs?.set?.("density", density);
+      document.documentElement.setAttribute("data-density", density);
+      window.dispatchEvent(new CustomEvent("aria-ui-prefs", { detail: window.AriaUiPrefs?.load?.() }));
     });
     async function toggleChrome(key, checked, inverted) {
       const val = inverted ? !checked : checked;

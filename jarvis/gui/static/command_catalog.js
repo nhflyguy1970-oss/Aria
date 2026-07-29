@@ -386,7 +386,10 @@
       mk("act:layout-home", "Apply Home layout", "Layouts", "dashboard home", () => window.applyAriaLayout?.("home", { confirm: false })),
       mk("act:layout-undo", "Undo last layout", "Layouts", "restore previous chrome", () => window.AriaLayouts?.undoLayout?.()),
       mk("act:split", "Toggle split view", "Actions", "dual pane", () => A().shell.split()),
-      mk("act:mini-chat", "Toggle mini chat", "Actions", "floating assistant", () => A().shell.miniChat()),
+      mk("act:mini-chat", "Toggle mini chat", "Actions", "floating assistant ctrl+shift+k", () => A().shell.miniChat(), {
+        hint: "Ctrl+Shift+K",
+        shortcut: "Ctrl+Shift+K",
+      }),
       mk("act:workflows", "Open View Paths (navigation shortcuts)", "Actions", "view paths macro routine workflow recorder", () => A().shell.workflows()),
     ]);
   }
@@ -458,7 +461,7 @@
       workstation: [
         mkCtx("diag", "Mission Control diagnostics", "health inference", () => A().mission.diagnostics()),
         mkCtx("jobs", "Open Job center", "queue", () => A().mission.jobs()),
-        mkCtx("activity", "Open Activity Center", "alerts", () => A().mission.activity()),
+        mkCtx("activity", "Open Notifications", "alerts inbox", () => A().mission.activity()),
         mkCtx("logs", "Open Audit / logs", "repair", () => A().audit.open()),
       ],
       memory: [
@@ -536,10 +539,10 @@
 
     const page = map[view] || [];
     const globalCtx = [
-      mkCtx("activity", "Open Activity Center", "notifications jobs", () => A().shell.activity(), "Global"),
+      mkCtx("activity", "Open Notifications", "notifications inbox activity center", () => A().shell.activity(), "Global"),
       mkCtx("workspace", "Layouts", "coding writing", () => A().shell.workspaces(), "Global"),
       mkCtx("split", "Toggle split view", "dual pane", () => A().shell.split(), "Global"),
-      mkCtx("mini", "Toggle mini chat", "floating assistant", () => A().shell.miniChat(), "Global"),
+      mkCtx("mini", "Toggle mini chat", "floating assistant ctrl+shift+k", () => A().shell.miniChat(), "Global"),
       mkCtx("workflow", "Automation & workflows…", "rules skills learned view paths templates", () => A().goView("automation"), "Global"),
       mkCtx("view-paths", "Open View Paths", "navigation shortcuts", () => A().shell.workflows(), "Global"),
       mkCtx("automation", "Open Automation Home", "rules schedules", () => A().goView("automation"), "Global"),

@@ -10,7 +10,7 @@
   function syncHudButton(on) {
     const btn = document.getElementById("jarvisBlueToggle");
     if (!btn) return;
-    btn.textContent = on ? "HUD mode on" : "HUD mode";
+    btn.textContent = on ? "Legacy glow on" : "Legacy glow";
     btn.classList.toggle("active", on);
   }
 
@@ -26,16 +26,16 @@
     localStorage.setItem(LS_ALIVE, on ? "1" : "0");
     const btn = document.getElementById("jarvisAliveToggle");
     if (btn) {
-      btn.textContent = on ? "Life UI on" : "Life UI off";
+      btn.textContent = on ? "Legacy motion on" : "Legacy motion";
       btn.classList.toggle("active", on);
-      btn.title = on ? "Jarvis HUD motion and glow (on)" : "Turn Life UI back on";
+      btn.title = on
+        ? "Legacy decorative motion (optional)"
+        : "Enable optional legacy decorative motion";
     }
     const canvas = document.getElementById("jarvisAmbientCanvas");
     if (canvas) canvas.classList.toggle("hidden", !on);
     document.querySelector(".brand-icon")?.classList.toggle("brand-idle", on);
-    if (on && localStorage.getItem(LS_HUD) !== "0") {
-      setHud(true);
-    }
+    // Do not auto-enable glow themes when motion is on — professional shell default
   }
 
   function flashSystemsOnline() {
@@ -54,8 +54,8 @@
   }
 
   function initAliveToggle() {
-    const stored = localStorage.getItem(LS_ALIVE);
-    const on = stored !== "0";
+    // Professional shell: legacy decorative motion/glow are opt-in only
+    const on = localStorage.getItem(LS_ALIVE) === "1";
     setAlive(on);
     document.getElementById("jarvisAliveToggle")?.addEventListener("click", () => {
       setAlive(!isAlive());
@@ -64,10 +64,10 @@
       const next = !document.documentElement.classList.contains("theme-jarvis-blue");
       setHud(next);
     });
-    if (localStorage.getItem(LS_HUD) !== "0") {
+    if (localStorage.getItem(LS_HUD) === "1") {
       setHud(true);
     } else {
-      syncHudButton(false);
+      setHud(false);
     }
   }
 
