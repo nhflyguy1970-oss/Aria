@@ -2,25 +2,30 @@
 
 Stored in memory namespace **`cheatsheet`** (key: `vision`). Edit in the Memory tab or say **"vision cheatsheet"**.
 
+## Product
+Vision **understands** images. Image Generation **creates** them. Gallery **stores** them. Presence is **gestures**, not Vision.
+
 ## Chat examples
 
-| You say | ARIA does |
-|---------|-------------|
-| Attach image + "Describe this" | Image description |
-| "Read all text in this image" | OCR |
-| "Structured OCR" / tables in image | Structured extraction |
-| "What's in the top-left?" | Region question |
-| "Convert this UI to HTML" | Image-to-code |
-| Attach two images + compare | Before/after compare |
-| "Remember what this image says" | Vision → memory |
-| Attach video + question | Frame analysis (ffmpeg) |
+| You say / do | ARIA does |
+|--------------|-----------|
+| Attach + action rail **Describe** | Image description |
+| **OCR** / **Structured OCR** | Text / tables extraction |
+| **Identify** | Species / object ID (quality model) |
+| Two images / **Compare** | Side-by-side comparison + visual diff |
+| **UI→Code** | HTML/CSS from screenshot |
+| **Remember** | Stage vision extract for Memory (confirm) |
+| **Import** | Shared preview → Journal / Planner / Calendar |
+| Webcam button | Capture → attach → same pipeline |
+
+## Vision Home
+Open the **Vision** tab for honesty (model / VRAM / latency), profiles, path analyze, and history.
 
 ## Settings
-
-- **Vision quality** in sidebar: Custom / Fast (moondream) / Quality preset.
-- Default model via `JARVIS_VISION_MODEL` or GUI Model settings.
+- **Vision quality**: Custom / Fast (moondream) / Quality (llava / llama3.2-vision)
+- Profiles: Document OCR, Fast Scan, Coding, Naturalist, …
 
 ## Tips
-
-- On 8GB GPU, prefer **llama3.2-vision** or **moondream** over heavy llava:13b.
-- Use crop tool in GUI for region questions.
+- Warnings appear **before** heavy models on low VRAM.
+- Prefer Fast Scan on 8GB GPUs.
+- Censored/uncensored share one engine; history is never rewritten.

@@ -26,12 +26,14 @@ def register_routes(app, assistant):
     from jarvis.gallery_product.api import register_routes as register_gallery_product
     from jarvis.image_generation.api import register_routes as register_image_generation
     from jarvis.video_generation.api import register_routes as register_video_generation
+    from jarvis.vision_product.api import register_routes as register_vision_product
     from jarvis.voice_product.api import register_routes as register_voice_product
 
     register_gallery_product(app, assistant)
     register_image_generation(app, assistant)
     register_video_generation(app, assistant)
     register_voice_product(app, assistant)
+    register_vision_product(app, assistant)
 
     @app.get("/api/journal")
     def journal_all():
@@ -953,13 +955,14 @@ def register_routes(app, assistant):
 
     @app.post("/api/journal/assist/vision")
     async def journal_assist_vision(
-        ocr_text: str = Form(...),
+        ocr_text: str = Form(""),
+        path: str = Form(""),
         source: str = Form("scan"),
         section: str = Form("daily"),
     ):
         from jarvis.journal_services import vision_import_preview
 
-        return vision_import_preview(ocr_text=ocr_text, source=source, section=section)
+        return vision_import_preview(ocr_text=ocr_text, path=path, source=source, section=section)
 
     @app.get("/api/journal/wizard/month-end")
     def journal_month_end_wizard(month: str = ""):

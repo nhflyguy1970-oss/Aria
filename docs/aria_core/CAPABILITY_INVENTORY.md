@@ -21,7 +21,7 @@
 | `coding-agent` | Capability | Critical | True | `jarvis/coding_agent.py` |
 | `voice-stt-tts` | Capability | High | True | `jarvis/stt.py` |
 | `audio-studio` | Capability | Medium | True | `jarvis/song_studio.py` |
-| `vision-media` | Capability | High | True | `jarvis/comfyui.py` |
+| `vision-media` | Capability | High | True | `jarvis/vision_media.py` + `jarvis/modules/vision.py` (Ollama VLM — not ComfyUI) |
 | `fly-tying` | Capability | Medium | True | `jarvis/flytying` |
 | `home-smarthome` | Capability | High | True | `jarvis/home_assistant.py` |
 | `web-research` | Capability | Medium | True | `jarvis/web_search.py` |

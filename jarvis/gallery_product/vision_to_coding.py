@@ -20,14 +20,18 @@ def vision_to_coding(assistant, *, image_path: str = "", hint: str = "") -> dict
 
     description = hint or "UI issue visible in this screenshot"
     try:
-        if assistant and getattr(assistant, "vision", None):
-            description = str(
-                assistant.vision.analyze(
-                    "Describe likely UI/software issues visible. Be specific.",
-                    path,
-                )
-                or description
-            )
+        from jarvis.vision_product.engine import analyze
+
+        out = analyze(
+            path=path,
+            action="describe",
+            question="Describe likely UI/software issues visible. Be specific.",
+            source="gallery",
+            assistant=assistant,
+            force=True,
+        )
+        if out.get("ok"):
+            description = str(out.get("message") or out.get("analysis") or description)
     except Exception:
         pass
 

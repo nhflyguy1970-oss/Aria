@@ -1616,6 +1616,53 @@ html.media-busy .sidebar .module-chip:not(.active) {
 .aria-voice-strip.voice-strip-active {
   border-bottom-color: var(--accent-dim);
 }
+.aria-vision-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.3rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--vision, #b07cc6) 8%, var(--surface));
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+.vision-strip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vision, #b07cc6);
+  flex-shrink: 0;
+}
+.aria-vision-strip.vision-strip-active .vision-strip-dot {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--vision, #b07cc6) 35%, transparent);
+}
+.vision-action-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+  width: 100%;
+}
+.vision-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 320px;
+  overflow: auto;
+}
+.vision-history-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.65rem;
+}
+.vision-honesty-card {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
 
 @media (min-width: 769px) {
   body.mobile-sidebar-open .sidebar {

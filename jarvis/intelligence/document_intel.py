@@ -220,20 +220,23 @@ def analyze_document(path: str | Path) -> dict[str, Any]:
 
 
 def ocr_image(path: str | Path) -> dict[str, Any]:
-    """OCR via vision module when available; degrade gracefully."""
+    """OCR via shared Vision product pipeline (VisionEngine — never module-level phantoms)."""
     p = Path(path).expanduser()
     if not p.is_file():
         return {"ok": False, "error": f"not found: {p}"}
     try:
-        from jarvis.modules import vision
+        from jarvis.vision_product.ocr import run_ocr
 
-        fn = getattr(vision, "ocr", None) or getattr(vision, "ocr_image", None) or getattr(vision, "describe", None)
-        if not callable(fn):
-            return {"ok": False, "error": "vision OCR unavailable"}
-        result = fn(str(p))
-        if isinstance(result, dict):
-            return {"ok": True, **result}
-        return {"ok": True, "text": str(result)}
+        result = run_ocr(p)
+        if result.get("ok"):
+            return {
+                "ok": True,
+                "text": result.get("text") or "",
+                "engine": result.get("engine"),
+                "confidence": result.get("confidence"),
+                "mode": result.get("mode"),
+            }
+        return {"ok": False, "error": result.get("error") or "OCR failed", "hint": "Enable vision model or install tesseract"}
     except Exception as exc:
         log.warning("ocr failed: %s", exc)
         return {"ok": False, "error": str(exc), "hint": "Enable vision model or attach as chat OCR request"}

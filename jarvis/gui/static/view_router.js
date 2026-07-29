@@ -2,7 +2,7 @@
 (function () {
   const VIEW_PANELS = [
     "chatView", "dashboardView", "automationView", "workstationView", "modelsView", "codingView", "plannerView", "calendarView", "flytyingView", "projectsView",
-    "makerView", "browserView", "securityView", "presenceView", "auditView", "voiceView", "audioView", "journalView",
+    "makerView", "browserView", "securityView", "presenceView", "auditView", "voiceView", "visionView", "audioView", "journalView",
     "memoryView", "galleryView", "videoView", "memeView", "documentsView", "connectionsView", "actionsView",
   ];
 
@@ -43,6 +43,7 @@
     if (view === "presence" && window.initPresence) window.initPresence();
     if (view === "audit" && window.initAudit) window.initAudit();
     if (view === "voice" && window.initVoiceTab) window.initVoiceTab();
+    if (view === "vision" && window.initVisionHome) window.initVisionHome();
     if (view === "audio" && window.initAudio) window.initAudio();
     if (view === "journal" && window.initJournal) window.initJournal();
     if (view === "memory") window.loadMemoryBrowser?.();

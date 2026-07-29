@@ -529,6 +529,7 @@
         <button type="button" class="view-tab" data-view="presence">Presence</button>
         <button type="button" class="view-tab" data-view="audit">System</button>
         <button type="button" class="view-tab" data-view="voice">Voice</button>
+        <button type="button" class="view-tab" data-view="vision">Vision</button>
         <button type="button" class="view-tab" data-view="audio">Audio</button>
         <button type="button" class="view-tab" data-view="journal">Bullet Journal</button>
         <button type="button" class="view-tab" data-view="memory">Memory</button>
@@ -566,10 +567,16 @@
         </select>
         <select id="sttBackendSelect" class="ghost-btn small" title="Speech-to-text backend">
           <option value="whisper" selected>Whisper STT</option>
-          <option value="realtimestt">RealTimeSTT</option>
+          <option value="realtimestt">RealtimeSTT</option>
         </select>
-        <button type="button" id="cloudLiveBtn" class="ghost-btn small" title="Cloud live voice (OpenAI/Gemini)">Cloud live</button>
+        <button type="button" id="cloudLiveBtn" class="ghost-btn small" title="Cloud live voice">Cloud live</button>
         <button type="button" id="audioStopBtn" class="ghost-btn small" title="Stop speaking" aria-label="Stop speaking">Stop</button>
+      </div>
+      <div id="ariaVisionStrip" class="aria-vision-strip" role="status" aria-live="polite" title="Vision status — open Vision Home">
+        <span class="vision-strip-dot" aria-hidden="true"></span>
+        <span class="vision-strip-label">Vision ready</span>
+        <button type="button" id="visionStripHomeBtn" class="ghost-btn tiny" title="Open Vision Home">Home</button>
+        <span id="visionStripHonesty" class="muted tiny"></span>
       </div>
 
       <div id="splitViewHost" class="split-view-host hidden" aria-label="Split view">
@@ -2428,6 +2435,61 @@
         <p class="muted">Use the voice strip above chat for PTT, mute, and quick controls.</p>
       </div>
 
+      <div id="visionView" class="view-panel hidden life-panel" aria-label="Vision Home">
+        <div class="voice-tab-header">
+          <h2>Vision</h2>
+          <button type="button" id="visionOpenChatBtn" class="ghost-btn small">Chat attach</button>
+          <button type="button" id="visionOpenGalleryBtn" class="ghost-btn small">Gallery</button>
+          <button type="button" id="visionHomeRefreshBtn" class="ghost-btn small">Refresh</button>
+        </div>
+        <p id="visionHomeStatus" class="muted" role="status">Loading…</p>
+        <div id="visionHonesty" class="vision-honesty-card" aria-live="polite"></div>
+        <div class="vision-tab-settings">
+          <label>Profile
+            <select id="visionProfileSelect" class="personality-select" aria-label="Vision profile"></select>
+          </label>
+          <button type="button" id="visionHomeActivateProfileBtn" class="ghost-btn small">Apply profile</button>
+          <label>OCR mode
+            <select id="visionHomeOcrMode" class="personality-select" aria-label="OCR mode">
+              <option value="auto">Auto</option>
+              <option value="classic">Classic</option>
+              <option value="vlm">VLM</option>
+              <option value="hybrid">Hybrid</option>
+            </select>
+          </label>
+          <label class="toggle-row"><span>Speak results (Voice)</span><input type="checkbox" id="visionHomeSpeak" /><span class="toggle-slider"></span></label>
+          <label>Image path <input type="text" id="visionHomePath" class="audio-path-input" placeholder="/path/or/upload" aria-label="Vision image path" /></label>
+          <label>Compare path B <input type="text" id="visionHomePath2" class="audio-path-input" placeholder="optional second image" aria-label="Compare image path B" /></label>
+          <label>Question <input type="text" id="visionHomeQuestion" class="audio-path-input" placeholder="optional question" /></label>
+          <label>Import target
+            <select id="visionHomeImportTarget" class="personality-select">
+              <option value="preview">Preview</option>
+              <option value="journal">Journal</option>
+              <option value="planner">Planner</option>
+              <option value="calendar">Calendar</option>
+              <option value="memory">Memory</option>
+              <option value="documents">Documents</option>
+              <option value="gallery">Gallery</option>
+            </select>
+          </label>
+        </div>
+        <div id="visionHomeActions" class="sidebar-btn-row" role="toolbar" aria-label="Vision actions"></div>
+        <div class="sidebar-btn-row">
+          <button type="button" id="visionHomeSpeakOcrBtn" class="ghost-btn small">Speak OCR (Voice)</button>
+          <button type="button" id="visionHomeBatchBtn" class="ghost-btn small">Refresh batch</button>
+        </div>
+        <pre id="visionHomeResult" class="cheatsheet-content" aria-live="polite"></pre>
+        <h3 class="life-subheading">Batch queue</h3>
+        <div id="visionBatchList" class="vision-history-list" aria-live="polite"></div>
+        <h3 class="life-subheading">History</h3>
+        <div id="visionHistoryList" class="vision-history-list"></div>
+        <details class="vision-exp-details">
+          <summary>Experimental (env-gated)</summary>
+          <pre id="visionExperimentalStatus" class="cheatsheet-content muted"></pre>
+        </details>
+        <p class="muted">Vision understands images — Image Generation creates them; Gallery stores them; Presence is gestures only. Shortcuts: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> Vision Home · action rail after attach.</p>
+      </div>
+
       <div id="toolConfirmModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="toolConfirmTitle">
         <div class="crop-modal-card">
           <h3 id="toolConfirmTitle">Confirm action</h3>
@@ -2474,6 +2536,8 @@
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> — View Paths (navigation shortcuts)</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> — Mission Control</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>.</kbd> — Models Home</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> — Vision Home</li>
+            <li><strong>Vision</strong> (after attach): action rail — Describe / OCR / Compare / Import…</li>
             <li><kbd>Space</kbd> (hold on mic) — push-to-talk / server Whisper</li>
             <li>Voice strip — Mute / Speak replies, Stop, Duplex, Cloud Live</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> — floating mini chat</li>
@@ -2974,7 +3038,8 @@
   <script src="/static/media_lightbox.js?v=1.0.1"></script>
   <script src="/static/lan_access.js?v=1.0.0"></script>
   <script src="/static/media_urls.js?v=1.0.0"></script>
-  <script src="/static/vision_settings.js?v=1.0.0"></script>
+  <script src="/static/vision_settings.js?v=1.1.0"></script>
+  <script src="/static/vision_home.js?v=1.0.0"></script>
   <script src="/static/free_vram.js?v=1.0.1"></script>
   <script src="/static/view_router.js?v=1.1.0"></script>
   <script src="/static/chat_format.js?v=1.0.0"></script>

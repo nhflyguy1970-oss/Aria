@@ -31,6 +31,7 @@
       ["presence", "Presence", "location"],
       ["audit", "System / audit", "logs repair"],
       ["voice", "Voice", "speech mic"],
+      ["vision", "Vision", "ocr compare webcam image understand"],
       ["audio", "Audio", "sound whisper"],
       ["journal", "Bullet Journal", "bujo gratitude"],
       ["memory", "Memory", "knowledge recall"],

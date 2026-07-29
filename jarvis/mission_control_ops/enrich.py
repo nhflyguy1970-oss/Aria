@@ -178,6 +178,12 @@ def enrich_snapshot(data: dict[str, Any] | None) -> dict[str, Any]:
         snap["perf_series"]["voice_queue"] = _series_stub("voice_queue", vq)
     except Exception:
         snap["voice"] = {"product": "Voice", "state": "unknown"}
+    try:
+        from jarvis.vision_product.mission_bridge import vision_mission_panel
+
+        snap["vision"] = vision_mission_panel()
+    except Exception:
+        snap["vision"] = {"product": "Vision", "state": "unknown"}
     return snap
 
 

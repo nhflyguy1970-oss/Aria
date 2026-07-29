@@ -256,7 +256,7 @@
     all: { view: "chat", hint: "Unified mode — Aria routes by intent" },
     general: { view: "chat", hint: "Chat mode" },
     coding: { view: "chat", hint: "Coding mode — ask about code, files, or fixes" },
-    vision: { view: "chat", hint: "Vision mode — attach an image or use the camera" },
+    vision: { view: "vision", hint: "Vision Home — analyze images, OCR, compare, import" },
     audio: { view: "audio", hint: "Audio workspace" },
     image: { view: "gallery", hint: "Image gallery & generation" },
     video: { view: "video", hint: "Video workspace" },

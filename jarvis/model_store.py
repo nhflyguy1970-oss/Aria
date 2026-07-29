@@ -248,7 +248,9 @@ def _installed() -> list[str]:
             return platform_models
     except Exception:
         pass
-    ollama = check_ollama()
+    # Tags-only — never soft-probe generate here. Listing models for routing/status
+    # must stay fast; inference liveness is Mission Control / health's job.
+    ollama = check_ollama(soft_probe=False)
     return ollama.get("models", []) if ollama.get("running") else []
 
 

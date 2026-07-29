@@ -1402,11 +1402,8 @@ async def video_analyze_frame(
     question: str = Form("Describe this video frame."),
 ):
     from jarvis.video_ops import resolve_video_path
-    from jarvis.vision_media import (
-        build_vision_prompt,
-        extract_video_frame,
-        vision_task_for_question,
-    )
+    from jarvis.vision_media import extract_video_frame
+    from jarvis.vision_product.engine import analyze
 
     p = resolve_video_path(path)
     if p is None:
@@ -1421,12 +1418,27 @@ async def video_analyze_frame(
     frame_path = DATA_DIR / "uploads" / frame_name
     frame_path.parent.mkdir(parents=True, exist_ok=True)
     frame_path.write_bytes(frame_bytes)
-    task = vision_task_for_question(question)
-    prompt = build_vision_prompt(question, task)
-    answer = assistant.vision.analyze(prompt, str(frame_path), task=task)
-    if answer.startswith("ERROR:"):
-        return JSONResponse(status_code=500, content={"ok": False, "message": answer})
-    return {"ok": True, "message": answer, "frame_path": str(frame_path)}
+    out = analyze(
+        path=str(frame_path),
+        action="describe",
+        question=question,
+        source="video_frame",
+        assistant=assistant,
+        force=True,
+    )
+    if not out.get("ok"):
+        return JSONResponse(
+            status_code=500,
+            content={"ok": False, "message": out.get("error") or "Vision failed"},
+        )
+    return {
+        "ok": True,
+        "message": out.get("message") or out.get("analysis"),
+        "frame_path": str(frame_path),
+        "pipeline": "vision_engine",
+        "honesty": out.get("honesty"),
+        "latency_ms": out.get("latency_ms"),
+    }
 
 
 @app.get("/api/gpu")
@@ -2872,22 +2884,30 @@ def suggestions():
 def vision_settings_get():
     from jarvis.config import load_vision_quality
     from jarvis.gpu import detect_gpu, is_low_vram
+    from jarvis.vision_product.honesty import honesty_report
+    from jarvis.vision_product.settings import load_settings
 
     gpu = detect_gpu()
+    honesty = honesty_report(task="describe")
+    unified = load_settings()
     return {
         "ok": True,
         "quality_mode": load_vision_quality(),
-        "model": assistant.get_status().get("models", {}).get("vision"),
+        "model": honesty.get("model") or assistant.get_status().get("models", {}).get("vision"),
         "low_vram": is_low_vram(),
         "vram_gb": round((gpu.get("vram_mb") or 0) / 1024, 1),
+        "honesty": honesty,
+        "settings": unified,
     }
 
 
 @app.post("/api/vision/settings")
 async def vision_settings_post(quality_mode: str = Form("fast")):
     from jarvis.config import save_vision_quality
+    from jarvis.vision_product.settings import save_settings
 
     save_vision_quality(quality_mode)
+    save_settings({"quality_mode": quality_mode})
     return {
         "ok": True,
         "quality_mode": quality_mode,

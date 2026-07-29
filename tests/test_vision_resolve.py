@@ -1,7 +1,10 @@
-"""Test stub — decompiled original replaced for collection."""
+"""Vision path resolve behavior."""
+
 import pytest
 
-pytestmark = pytest.mark.skip(reason="decompiled test pending rewrite")
+from jarvis.modules.vision import _resolve_image_path
 
-def test_decompile_stub():
-    pass
+
+def test_resolve_missing_raises(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        _resolve_image_path(str(tmp_path / "missing.png"))

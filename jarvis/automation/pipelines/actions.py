@@ -366,12 +366,26 @@ def _execute_vision(params: dict[str, Any], variables: dict[str, Any], *, approv
     if not approve:
         return {"ok": False, "permission_required": True, "error": "vision_analyze requires approval"}
     path = str(params.get("path") or variables.get("path") or "")
-    log.info("pipeline vision_analyze approved path=%s", path[:200])
-    return {
-        "ok": True,
-        "result": {
-            "mode": "gated_stub",
-            "path": path,
-            "message": "Vision step audited (gated; no unbounded vision loop).",
-        },
-    }
+    action = str(params.get("action") or "describe")
+    question = str(params.get("question") or params.get("prompt") or "")
+    log.info("pipeline vision_analyze approved path=%s action=%s", path[:200], action)
+    if not path:
+        return {"ok": False, "error": "path required"}
+    try:
+        from jarvis.vision_product.engine import analyze
+
+        out = analyze(
+            path=path,
+            action=action,
+            question=question,
+            source="automation",
+            force=True,
+        )
+        return {
+            "ok": bool(out.get("ok")),
+            "result": out,
+            "error": None if out.get("ok") else (out.get("error") or "vision failed"),
+        }
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+

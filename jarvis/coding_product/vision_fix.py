@@ -23,17 +23,21 @@ def vision_bugfix(
 
     description = ""
     try:
-        vision = assistant.vision if hasattr(assistant, "vision") else None
-        if vision is None and hasattr(assistant, "_vision_engines"):
-            # Prefer describe via action path
-            pass
-        from jarvis.handlers.registry import call_action, has_action
+        from jarvis.vision_product.engine import analyze
 
-        if has_action("describe_image"):
-            out = call_action(assistant, "describe_image", {"path": str(path)}, hint or "describe UI bug")
-            description = (out.get("message") or out.get("description") or str(out))[:3000]
+        out = analyze(
+            path=str(path),
+            action="describe",
+            question=hint
+            or "Describe likely UI/software bugs visible in this screenshot. Be specific about layout and text.",
+            source="coding",
+            assistant=assistant,
+            force=True,
+        )
+        if out.get("ok"):
+            description = (out.get("message") or out.get("analysis") or "")[:3000]
         else:
-            description = f"(no describe_image action) hint={hint}"
+            description = f"Vision describe failed: {out.get('error')}. hint={hint}"
     except Exception as exc:
         description = f"Vision describe failed: {exc}. hint={hint}"
 

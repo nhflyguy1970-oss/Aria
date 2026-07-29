@@ -73,21 +73,24 @@
     [pendingFile, pendingFile2].filter(Boolean).forEach((f, i) => {
       let preview = "";
       if (isVision(f)) {
-        preview = `<img src="${URL.createObjectURL(f)}" alt="" class="attach-thumb" /> `;
+        preview = `<img src="${URL.createObjectURL(f)}" alt="Compare ${i === 0 ? "A" : "B"}" class="attach-thumb" /> `;
       }
-      const label = pendingFile2 ? `Image ${i + 1}: ` : "";
+      const label = pendingFile2 ? `<strong>${i === 0 ? "A" : "B"}</strong>: ` : "";
       parts.push(`${preview}${label}📎 ${escapeHtml(f.name)}`);
     });
+    const compareRow = pendingFile2
+      ? `<div class="compare-images-row" role="group" aria-label="Compare A and B">${parts.join("")}</div>`
+      : parts.join(" · ");
     const dataBadge = pendingFile && isData(pendingFile) && !pendingFile2
       ? `<span class="compare-badge data-badge">Data file</span>`
       : "";
     const compareBadge = pendingFile2
-      ? `<span class="compare-badge">Compare · 2 images</span>`
+      ? `<span class="compare-badge">Compare · A/B ready · side-by-side + visual diff on send</span>`
       : compareMode
-        ? `<span class="compare-badge warn">Compare · 1/2 — add second image</span>`
+        ? `<span class="compare-badge warn">Compare · A ready — drop image B</span>`
         : "";
     const addSecond = compareMode && pendingFile && !pendingFile2
-      ? `<button type="button" id="addSecondImgBtn" class="ghost-btn small">+ Add image 2</button>`
+      ? `<button type="button" id="addSecondImgBtn" class="ghost-btn small">+ Add image B</button>`
       : "";
     const cancelCompare = compareMode || pendingFile2
       ? `<button type="button" id="cancelCompareBtn" class="ghost-btn small">Cancel compare</button>`
@@ -106,9 +109,11 @@
       ? `<label class="attach-opt">Page <input type="number" id="pdfPageInput" min="1" value="${escapeHtml(a().pendingPdfPage || "1")}" class="attach-mini-input" title="For OCR/vision only" /></label>`
       : "";
     const cropBtn = pendingFile && isVision(pendingFile) && !pendingFile2
-      ? `<button type="button" id="cropAttachBtn" class="ghost-btn small">Crop</button>`
+      ? `<button type="button" id="cropAttachBtn" class="ghost-btn small" aria-label="Crop region for Vision analysis">Crop</button>`
       : "";
-    attachmentPreview.innerHTML = `${dataBadge} ${docBadge} ${compareBadge} ${parts.join(" · ")} ${videoOpts} ${pdfOpts} ${addSecond} ${cropBtn} ${cancelCompare} <button type="button" aria-label="Remove">×</button>`;
+    attachmentPreview.innerHTML = `${dataBadge} ${docBadge} ${compareBadge} ${compareRow} ${videoOpts} ${pdfOpts} ${addSecond} ${cropBtn} ${cancelCompare} <button type="button" aria-label="Remove attachment">×</button>
+      <div id="visionActionRail" class="vision-action-rail" role="toolbar" aria-label="Vision actions"></div>
+      <p id="visionAttachHonesty" class="muted tiny" role="status"></p>`;
     document.getElementById("videoSecondInput")?.addEventListener("change", (e) => {
       a().pendingVideoSecond = e.target.value;
     });
@@ -138,7 +143,79 @@
     document.getElementById("cropAttachBtn")?.addEventListener("click", () => {
       window.openCropModal?.();
     });
+    if (pendingFile && isVision(pendingFile)) {
+      renderVisionActionRail(Boolean(pendingFile2));
+      refreshAttachHonesty(pendingFile2 ? "compare" : "describe");
+    }
     updateCompareButton();
+  }
+
+  async function refreshAttachHonesty(task) {
+    const el = document.getElementById("visionAttachHonesty");
+    if (!el) return;
+    try {
+      const h = await fetch(`/api/vision/honesty?task=${encodeURIComponent(task || "describe")}`).then((r) => r.json());
+      const warn = (h.warnings || [])[0] || "";
+      el.textContent = `${h.model || "?"} · ${h.quality_mode || ""} · ~${h.estimated_vram_mb || "?"}MB · ${h.expected_latency || ""}${warn ? " · " + warn : ""}`;
+    } catch (_) {
+      el.textContent = "";
+    }
+  }
+
+  async function renderVisionActionRail(hasTwo) {
+    const rail = document.getElementById("visionActionRail");
+    if (!rail) return;
+    rail.innerHTML = "";
+    try {
+      const data = await fetch("/api/vision/actions").then((r) => r.json());
+      (data.actions || []).forEach((act) => {
+        if (act.id === "compare" && !hasTwo) {
+          // still show — clicking enables compare mode / asks for second
+        }
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "ghost-btn tiny vision-rail-btn";
+        btn.textContent = act.label;
+        btn.setAttribute("aria-label", act.label);
+        btn.addEventListener("click", () => runVisionRailAction(act.id));
+        rail.appendChild(btn);
+      });
+    } catch (_) {}
+  }
+
+  async function runVisionRailAction(actionId) {
+    const bridge = a();
+    if (actionId === "compare") {
+      if (!bridge.pendingFile2) {
+        enterCompareMode();
+        window.showAriaToast?.("Add a second image to compare", "info");
+        return;
+      }
+      // Let send with compare proceed — set default message
+      const input = document.getElementById("messageInput");
+      if (input && !input.value.trim()) input.value = "Compare these two images.";
+      document.getElementById("sendBtn")?.click();
+      return;
+    }
+    const prompts = {
+      describe: "Describe this",
+      ocr: "Read all text in this image",
+      ocr_structured: "Structured OCR (tables/forms)",
+      tables: "Structured OCR (tables/forms)",
+      identify: "What is this? Identify it.",
+      image_to_code: "Convert this UI to HTML",
+      remember: "Remember what this image says",
+      import: "Import this with Vision OCR preview",
+      translate: "Translate all visible text to English",
+      summarize: "Summarize this image",
+    };
+    const input = document.getElementById("messageInput");
+    if (input) input.value = prompts[actionId] || actionId;
+    await refreshAttachHonesty(actionId === "tables" ? "ocr_structured" : actionId);
+    if ((actionId === "ocr" || actionId === "ocr_structured" || actionId === "tables") && bridge.pendingFile) {
+      // Prefer shared Vision API when we already uploaded — else send via chat
+    }
+    document.getElementById("sendBtn")?.click();
   }
 
   function assignAttachment(file, asSecond = false) {

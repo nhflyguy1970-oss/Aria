@@ -115,7 +115,8 @@ function renderOverview(d) {
   const ov = d.overview || {};
   const phase = (ov.phase || {}).phase || "?";
   const advisor = ov.operational_advisor || d.operational_advisor || {};
-  const voice = d.voice || {};
+      const voice = d.voice || {};
+  const vision = d.vision || {};
   const voiceCard = voice.product
     ? mcCard(
         "Voice",
@@ -127,6 +128,19 @@ function renderOverview(d) {
            <button type="button" class="ghost-btn small" data-mc-action="voice_summary">Voice summary</button>
            <a class="ghost-btn small" href="#voice" data-mc-nav="voice">Open Voice</a>
            <a class="ghost-btn small" href="/api/voice/recovery" target="_blank">Recovery</a>
+         </p>`
+      )
+    : "";
+  const visionCard = vision.product
+    ? mcCard(
+        "Vision",
+        `<p>State: <strong>${mcEsc(vision.state || "idle")}</strong></p>
+         <p>Model: <code>${mcEsc(vision.model || "—")}</code> · ${mcEsc(vision.quality_mode || "")}</p>
+         <p>VRAM est. ${vision.estimated_vram_mb ?? "—"}MB · free ${vision.free_vram_mb ?? "—"}MB</p>
+         <p>Batch jobs: ${vision.queue?.batch_jobs ?? 0} · active ${vision.queue?.active ?? 0}</p>
+         <p class="mc-actions">
+           <a class="ghost-btn small" href="#vision" data-mc-nav="vision">Open Vision</a>
+           <a class="ghost-btn small" href="/api/vision/honesty" target="_blank">Honesty</a>
          </p>`
       )
     : "";
@@ -147,6 +161,7 @@ function renderOverview(d) {
       mcCard("Attention", (ov.needs_attention || []).map((n) => `<p>• ${mcEsc(n)}</p>`).join("") || "<p class='muted'>All clear</p>"),
       renderRoutingOverviewCard(d.routing_stats),
       voiceCard,
+      visionCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;

@@ -21,9 +21,14 @@ _ROUTES: list[tuple[re.Pattern[str], str, str, str]] = [
     (re.compile(r"\b(open|show)\s+(documents?|docs)\b", re.I), "documents", "open", "documents"),
     (re.compile(r"\b(open|show)\s+(audio\s+studio|studio)\b", re.I), "audio_studio", "open", "audio"),
     (re.compile(r"\b(open|show)\s+(voice|voice\s+settings)\b", re.I), "voice", "open", "voice"),
+    (re.compile(r"\b(open|show)\s+(vision|vision\s+home)\b", re.I), "vision", "open", "vision"),
     (re.compile(r"\b(open|show)\s+(chat|conversation)\b", re.I), "chat", "open", "chat"),
     (re.compile(r"\b(mute|stop\s+speaking|be\s+quiet)\b", re.I), "voice", "stop_speak", ""),
     (re.compile(r"\b(speak\s+replies|unmute|read\s+aloud)\b", re.I), "voice", "speak_on", ""),
+    (re.compile(r"\b(read|ocr|speak)\s+(this|the\s+image|the\s+text|ocr)\b", re.I), "vision", "ocr", "vision"),
+    (re.compile(r"\b(describe|summarize)\s+(this|the\s+image|what\s+you\s+see)\b", re.I), "vision", "describe", "vision"),
+    (re.compile(r"\bwhat('?s| is)\s+on\s+my\s+screen\b", re.I), "vision", "describe", "vision"),
+    (re.compile(r"\b(ocr|read)\s+this\b", re.I), "vision", "ocr", "vision"),
 ]
 
 
@@ -68,6 +73,28 @@ def apply_route(route: dict[str, Any]) -> dict[str, Any]:
         except Exception:
             pass
         return {"ok": True, "handled": True, "reply": "Speak replies enabled.", "route": route}
+
+    if product == "vision" and action in ("ocr", "describe", "summarize", "identify"):
+        try:
+            from jarvis.vision_product.voice_bridge import voice_vision_command
+
+            out = voice_vision_command(action, speak=True)
+            if out.get("ok"):
+                return {
+                    "ok": True,
+                    "handled": True,
+                    "reply": (out.get("message") or out.get("analysis") or "Done.")[:1200],
+                    "route": route,
+                    "vision": out,
+                }
+            return {
+                "ok": False,
+                "handled": True,
+                "reply": out.get("error") or "Vision command failed",
+                "route": route,
+            }
+        except Exception as exc:
+            return {"ok": False, "handled": True, "reply": str(exc), "route": route}
 
     # Navigation is returned to the client; server records activity
     try:

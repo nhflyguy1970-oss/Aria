@@ -108,32 +108,28 @@ def generate_vision_meta(name: str, path: str, *, assistant=None) -> dict[str, A
     caption = ""
     ocr = ""
     try:
-        # Prefer vision module if available
-        if assistant and getattr(assistant, "vision", None):
-            caption = str(
-                assistant.vision.analyze(
-                    "Describe this image in one short paragraph for search.",
-                    path,
-                )
-                or ""
-            )[:2000]
-        else:
-            from jarvis import llm
-            from jarvis.model_store import model_for
+        from jarvis.vision_product.engine import analyze
 
-            # Text-only fallback note — still requires vision-capable stack
-            model = model_for("vision") or model_for("browser_vision")
-            if not model:
-                return {"ok": False, "message": "No vision model configured in Models"}
-            caption = str(
-                llm.ask_with_system(
-                    model,
-                    "You describe images briefly for a local gallery search index.",
-                    f"Image path: {path}. If you cannot see it, say so.",
-                    options={"temperature": 0.2, "num_predict": 120},
-                )
-                or ""
-            )[:2000]
+        desc = analyze(
+            path=path,
+            action="describe",
+            question="Describe this image in one short paragraph for search.",
+            source="gallery",
+            assistant=assistant,
+            force=True,
+        )
+        if not desc.get("ok"):
+            return {"ok": False, "message": desc.get("error") or "Vision describe failed"}
+        caption = str(desc.get("message") or "")[:2000]
+        ocr_out = analyze(
+            path=path,
+            action="ocr",
+            source="gallery",
+            assistant=assistant,
+            force=True,
+        )
+        if ocr_out.get("ok"):
+            ocr = str(ocr_out.get("ocr") or ocr_out.get("message") or "")[:8000]
     except Exception as exc:
         return {"ok": False, "message": f"Vision metadata failed: {exc}"}
 

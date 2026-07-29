@@ -330,11 +330,24 @@ def parse_voice_rapid_log(transcript: str) -> dict[str, Any]:
 def vision_import_preview(
     *,
     ocr_text: str = "",
+    path: str = "",
     source: str = "scan",
     section: str = "daily",
 ) -> dict[str, Any]:
-    """OCR / vision import preview. Always confirm before writing."""
+    """OCR / vision import preview. Accepts pasted text OR image path via shared OCR."""
     raw = (ocr_text or "").strip()
+    if path and not raw:
+        from jarvis.vision_product.ocr import run_ocr
+
+        ocr = run_ocr(path)
+        if not ocr.get("ok"):
+            return {
+                "ok": False,
+                "error": ocr.get("error") or "OCR failed",
+                "requires_confirmation": True,
+                "preview_lines": [],
+            }
+        raw = str(ocr.get("text") or "").strip()
     source = (source or "scan").lower()
     section = (section or "daily").lower()
     if section not in ("daily", "weekly", "monthly", "future", "collections"):
@@ -360,9 +373,11 @@ def vision_import_preview(
         "ok": True,
         "source": source,
         "section": section,
+        "path": path or "",
         "preview_lines": lines,
         "text": "\n".join(lines),
         "requires_confirmation": True,
+        "pipeline": "vision_import",
         "message": f"Vision import from {source} — approve to add to {section}.",
     }
 
