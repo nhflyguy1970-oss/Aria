@@ -12,11 +12,16 @@ def build_system_info(*, assistant) -> dict[str, Any]:
     now = datetime.now()
     greeting = "Hello"
     try:
-        from jarvis.morning_briefing import personalized_greeting
+        from jarvis.dashboard_product.greeting import personalized_greeting
 
         greeting = personalized_greeting(when=now, assistant=assistant)
     except Exception:
-        pass
+        try:
+            from jarvis.morning_briefing import time_greeting
+
+            greeting = time_greeting(when=now)
+        except Exception:
+            pass
     env: dict[str, Any] = {}
     try:
         from jarvis.environment import snapshot as env_snapshot

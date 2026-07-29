@@ -123,6 +123,7 @@ function renderOverview(d) {
   const integrations = d.integrations || {};
   const searchProduct = d.search || {};
   const settingsProduct = d.settings_product || {};
+  const dashboardProduct = d.dashboard || {};
   const voiceCard = voice.product
     ? mcCard(
         "Voice",
@@ -231,6 +232,18 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const homeCard = dashboardProduct.product
+    ? mcCard(
+        "Home",
+        `<p>Widgets showing <strong>${dashboardProduct.widgets_showing ?? 0}</strong> / defs ${dashboardProduct.widget_defs ?? 0} · ${dashboardProduct.latency_ms ?? "—"} ms</p>
+         <p>State ${mcEsc(dashboardProduct.state || "—")} · failures ${dashboardProduct.failures ?? 0}</p>
+         <p class="muted tiny">${mcEsc(dashboardProduct.note || "Summary only — open Home for the glance surface.")}</p>
+         <p class="mc-actions">
+           <a class="ghost-btn small" href="#dashboard" data-mc-nav="dashboard">Open Home</a>
+           <a class="ghost-btn small" href="/api/dashboard/diagnostics" target="_blank">Diagnostics</a>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -255,6 +268,7 @@ function renderOverview(d) {
       integrationsCard,
       searchCard,
       settingsPrefsCard,
+      homeCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;

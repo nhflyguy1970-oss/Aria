@@ -139,11 +139,11 @@ def register_routes(app, assistant) -> None:
         return {"ok": True, "enabled": True, "state": state}
 
     @app.get("/api/curated-news")
-    def curated_news_route(use_ai: bool = True):
+    def curated_news_route(use_ai: bool = True, category: str = ""):
         try:
             from jarvis.curated_news import get_curated_headlines
 
-            return {"ok": True, **get_curated_headlines(use_ai=use_ai)}
+            return {"ok": True, **get_curated_headlines(use_ai=use_ai, category=category)}
         except Exception as exc:
             return {"ok": False, "headlines": [], "message": str(exc)}
 

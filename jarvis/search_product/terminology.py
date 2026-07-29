@@ -81,4 +81,5 @@ FACETS = (
     "automation",
     "learned",
     "settings",
+    "dashboard",
 )

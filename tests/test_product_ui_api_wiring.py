@@ -372,7 +372,9 @@ def test_command_palette_is_wired():
     assert "documentsOpenIcsBtn" not in html
     assert "auditOpenMcBtn" in html
     assert "mcOpenAuditBtn" in html
-    assert "dashAiSuggestChips" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "dashAiSuggestChips" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8")
+    assert "dashboard_home.js" in html
+    assert "/api/dashboard/home" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8")
     assert "document.hidden" in Path("jarvis/gui/static/tools_sidebar.js").read_text(encoding="utf-8")
     assert "Slice complete" in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
     assert "taskNudgeBar" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
@@ -437,7 +439,7 @@ def test_command_palette_is_wired():
     assert "Output sink save failed" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
     assert "plannerEmptyAddBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "plannerEmptyCalBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
-    assert "skillsEmptyChatBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "No skills" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8") or "Automation Home" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8")
     assert "bujoEmptyGalleryBtn" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "function bujoDispatch" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "showBujoError" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
@@ -590,7 +592,7 @@ def test_command_palette_is_wired():
     assert "document.hidden" in Path("jarvis/gui/static/browser_panel.js").read_text(encoding="utf-8")
     assert "document.hidden" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "Planner load failed" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
-    assert "News briefing failed" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "News failed" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8") or "Home load failed" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8")
     assert "Diarize failed" in Path("jarvis/gui/static/audio_advanced.js").read_text(encoding="utf-8")
     assert "window.loadVisionSettings" in Path("jarvis/gui/static/vision_settings.js").read_text(encoding="utf-8")
     assert "async function loadVisionSettings" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
@@ -614,7 +616,7 @@ def test_command_palette_is_wired():
     assert "if (document.hidden) return;" in Path("jarvis/gui/static/world_state_hud.js").read_text(encoding="utf-8")
     assert "document.hidden || window.mediaWorkActive" in Path("jarvis/gui/static/wakeword_chat.js").read_text(encoding="utf-8")
     assert "if (document.hidden) return;" in Path("jarvis/gui/static/modules/jobs.mjs").read_text(encoding="utf-8")
-    assert "if (document.hidden) return;" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "if (document.hidden) return;" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8") or "if (document.hidden) return;" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "if (document.hidden) return;" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")
     assert "audioEmptyRecordBtn" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
     assert Path("jarvis/gui/static/editor_context.js").is_file()
@@ -651,7 +653,7 @@ def test_command_palette_is_wired():
     assert "openFromBar" in Path("jarvis/gui/static/world_state_hud.js").read_text(encoding="utf-8")
     assert "Home Assistant offline" in Path("jarvis/gui/static/world_state_hud.js").read_text(encoding="utf-8")
     assert 'window.switchToView("chat")' in Path("jarvis/gui/static/coding_quick.js").read_text(encoding="utf-8")
-    assert "dashSuggestChatBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "dashAiSuggestChips" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8")
     assert "bujoProjectEmptyChatBtn" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "Gratitude added" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "panel.focus" in Path("jarvis/gui/static/view_router.js").read_text(encoding="utf-8")
@@ -674,7 +676,7 @@ def test_command_palette_is_wired():
     assert "act:image-engine" in js
     assert "ask:aria" in js
     assert "Ask Aria:" in js
-    assert "dashSceneEmptyHaBtn" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
+    assert "scenes" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8") and "ha_setup" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8")
     assert "Memory settings unavailable" in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "Video trimmed" in Path("jarvis/gui/static/video_studio.js").read_text(encoding="utf-8")
     assert "bujoSearchEmptyDailyBtn" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")

@@ -98,6 +98,13 @@
         return;
       }
 
+      // Ctrl+Home — Aria Home (Dashboard product)
+      if (mod && e.key === "Home") {
+        e.preventDefault();
+        window.openHome?.() || window.switchToView?.("dashboard");
+        return;
+      }
+
       // Ctrl+/ shortcuts
       if (mod && e.key === "/") {
         e.preventDefault();

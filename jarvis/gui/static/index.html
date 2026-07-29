@@ -123,7 +123,7 @@
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="chat">Chat</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="search">Search</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="settings">Settings</button>
-          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="dashboard">Dashboard</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="dashboard">Home</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="planner">Planner</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="calendar">Calendar</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="journal">Journal</button>
@@ -569,7 +569,7 @@
       <nav class="view-tabs" aria-label="Primary views">
         <button type="button" id="favoriteCurrentViewBtn" class="view-fav-pin" aria-pressed="false" aria-label="Pin current view to Favorites" title="Pin current view to Favorites (★)">★</button>
         <button type="button" class="view-tab active" data-view="chat">Chat</button>
-        <button type="button" class="view-tab" data-view="dashboard">Dashboard</button>
+        <button type="button" class="view-tab" data-view="dashboard">Home</button>
         <button type="button" class="view-tab" data-view="automation">Automation</button>
         <button type="button" class="view-tab" data-view="workstation">Mission Control</button>
         <button type="button" class="view-tab" data-view="models">Models</button>
@@ -1817,26 +1817,27 @@
         <p id="autoLive" class="visually-hidden" role="status" aria-live="polite"></p>
       </div>
 
-      <div id="dashboardView" class="view-panel hidden">
+      <div id="dashboardView" class="view-panel hidden" role="region" aria-label="Home">
         <div class="dash-page-header">
           <p id="dashboardWelcome" class="muted dash-welcome">Welcome back</p>
-          <h2 id="dashboardGreeting">Dashboard</h2>
+          <h2 id="dashboardGreeting">Home</h2>
           <p id="dashboardDate" class="muted dash-date"></p>
           <div class="dash-header-actions">
             <button type="button" id="dashboardOpenMcBtn" class="ghost-btn small" title="Open Mission Control">Mission Control</button>
             <button type="button" id="dashboardOpenPlannerBtn" class="ghost-btn small" title="Open Planner">Planner</button>
             <button type="button" id="dashboardOpenJournalBtn" class="ghost-btn small" title="Open Bullet Journal">Journal</button>
             <button type="button" id="dashboardOpenCalendarBtn" class="ghost-btn small" title="Open Calendar">Calendar</button>
+            <span class="muted tiny" title="Keyboard shortcut">Ctrl+Home</span>
           </div>
         </div>
-        <div id="dashboardBody" class="dashboard-body"></div>
-        <section class="checklist-section">
+        <div id="dashboardBody" class="dashboard-body" aria-live="polite"></div>
+        <section class="checklist-section" aria-label="First-flight setup">
           <h3>First-flight checklist</h3>
-          <p id="checklistSummary" class="muted">Click Run checks for voice, briefing, HA, and dependency smoke tests.</p>
+          <p id="checklistSummary" class="muted">Setup validation — not part of the daily Home glance. Prefer Automation Home for ongoing workflows.</p>
           <button type="button" id="checklistRunBtn" class="ghost-btn small">Run checks</button>
           <ul id="checklistResults" class="checklist-results"></ul>
         </section>
-        <section class="checklist-section">
+        <section class="checklist-section" aria-label="Skills setup">
           <h3>Skills &amp; learned workflows</h3>
           <p class="muted">Reusable procedures and learned sequences. Prefer <button type="button" class="ghost-btn tiny" id="dashOpenAutomationBtn">Automation Home</button> for schedules and rules. View Paths are navigation shortcuts only.</p>
           <button type="button" id="skillsWorkflowsRefreshBtn" class="ghost-btn small">Refresh</button>
@@ -1844,9 +1845,9 @@
           <ul id="skillsList" class="checklist-results"></ul>
           <ul id="workflowsList" class="checklist-results"></ul>
         </section>
-        <section class="checklist-section">
+        <section class="checklist-section" aria-label="Security setup">
           <h3>Security</h3>
-          <p class="muted">Optional PIN lock — set <code>JARVIS_PIN_LOCK=1</code> in jarvis.env to enforce.</p>
+          <p class="muted">Optional PIN lock — prefer Settings → Security. Set <code>JARVIS_PIN_LOCK=1</code> in jarvis.env to enforce.</p>
           <div class="planner-add-row">
             <input type="password" id="pinSetupInput" class="audio-path-input" inputmode="numeric" maxlength="6" placeholder="4–6 digit PIN" autocomplete="new-password" />
             <button type="button" id="pinSetupBtn" class="ghost-btn small">Set PIN</button>
@@ -1865,7 +1866,7 @@
             <button type="button" id="mcOpenActivityCenterBtn" class="ghost-btn small" title="Open Activity Center">Open Activity Center</button>
             <button type="button" id="mcOpenChatBtn" class="ghost-btn small" title="Open Chat">Chat</button>
             <button type="button" id="mcOpenAuditBtn" class="ghost-btn small" title="Open System audit">Audit</button>
-            <button type="button" id="mcOpenDashboardBtn" class="ghost-btn small" title="Open Dashboard">Dashboard</button>
+            <button type="button" id="mcOpenDashboardBtn" class="ghost-btn small" title="Open Home">Home</button>
             <span class="muted tiny" title="Keyboard shortcut">Ctrl+Shift+M</span>
             <span id="mcLoadStatus" class="muted" aria-live="polite"></span>
           </div>
@@ -2909,8 +2910,8 @@
 
       <div id="dashCustomizeModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="dashCustomizeTitle">
         <div class="crop-modal-card profile-modal-card">
-          <h3 id="dashCustomizeTitle">Customize dashboard</h3>
-          <p class="muted">Choose which cards appear and their order.</p>
+          <h3 id="dashCustomizeTitle">Customize Home</h3>
+          <p class="muted">Choose which Home cards appear and their order. Products own the data — Home only presents.</p>
           <div id="dashCustomizeList" class="dash-customize-list"></div>
           <div class="sidebar-btn-row">
             <button type="button" id="dashCustomizeSaveBtn" class="apply-btn small">Save layout</button>
@@ -3302,7 +3303,8 @@
   <script src="/static/jarvis_ambient.js?v=1.2.0"></script>
   <script type="module" src="/static/modules/jobs.mjs?v=5.16.73"></script>
   <script type="module" src="/static/modules/health.mjs?v=5.16.72"></script>
-  <script src="/static/planner.js?v=5.16.170"></script>
+  <script src="/static/planner.js?v=5.16.171"></script>
+  <script src="/static/dashboard_home.js?v=1.0.0"></script>
   <script src="/static/planner_live.js?v=1.0.0"></script>
   <script src="/static/mission_control.js?v=1.1.0"></script>
   <script src="/static/mission_control_ux.js?v=1.0.0"></script>
@@ -3333,7 +3335,7 @@
   <script src="/static/breadcrumbs.js?v=1.0.0"></script>
   <script src="/static/status_bar.js?v=1.1.0"></script>
   <script src="/static/context_menus.js?v=1.1.1"></script>
-  <script src="/static/dashboard_widgets.js?v=1.0.1"></script>
+  <script src="/static/dashboard_widgets.js?v=1.1.0"></script>
   <script src="/static/collapsible_panels.js?v=1.0.0"></script>
   <script src="/static/global_history.js?v=1.0.0"></script>
   <script src="/static/workspace_layouts.js?v=1.0.1"></script>

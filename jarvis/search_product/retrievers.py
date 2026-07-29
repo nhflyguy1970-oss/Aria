@@ -703,6 +703,59 @@ def retrieve_settings(query: str, limit: int) -> list[dict[str, Any]]:
     return _safe(_run, "settings")
 
 
+def retrieve_dashboard(query: str, limit: int) -> list[dict[str, Any]]:
+    """Dashboard/Home facet — widget catalog + deep links; products own data."""
+
+    def _run():
+        from jarvis.dashboard_product.widgets import search_widgets
+
+        out = []
+        for e in search_widgets(query, limit=limit):
+            open_action = dict(e.get("deep_link") or {"view": "dashboard", "widget": e.get("id")})
+            open_action.setdefault("view", "dashboard")
+            out.append(
+                make_result(
+                    source="dashboard",
+                    source_label="Home",
+                    title=str(e.get("title") or e.get("id")),
+                    summary=str(e.get("description") or "")[:280],
+                    preview=f"{e.get('category')} · owner {e.get('owner')}",
+                    location=str(e.get("id") or ""),
+                    score=0.87,
+                    strategy="catalog",
+                    open_action=open_action,
+                    metadata={
+                        "category": e.get("category"),
+                        "owner": e.get("owner"),
+                        "widget_id": e.get("id"),
+                        "aliases": e.get("aliases"),
+                    },
+                    icon="dashboard",
+                )
+            )
+        # Always include Home itself on broad queries
+        q = (query or "").lower()
+        if not out or any(t in q for t in ("home", "dashboard", "brief", "attention")):
+            out.insert(
+                0,
+                make_result(
+                    source="dashboard",
+                    source_label="Home",
+                    title="Home",
+                    summary="Aria Home — what is happening, what next, where to go.",
+                    preview="Dashboard product",
+                    location="home",
+                    score=0.95,
+                    strategy="catalog",
+                    open_action={"view": "dashboard"},
+                    icon="dashboard",
+                ),
+            )
+        return out[:limit]
+
+    return _safe(_run, "dashboard")
+
+
 RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "documents": retrieve_documents,
     "memory": retrieve_memory,
@@ -721,4 +774,5 @@ RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "flytying": retrieve_flytying,
     "automation": retrieve_automation,
     "settings": retrieve_settings,
+    "dashboard": retrieve_dashboard,
 }

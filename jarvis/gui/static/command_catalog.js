@@ -16,7 +16,7 @@
   function registerNavigate() {
     const views = [
       ["chat", "Chat", "conversation ai"],
-      ["dashboard", "Dashboard", "home overview"],
+      ["dashboard", "Home", "home overview daily brief attention"],
       ["workstation", "Mission Control", "mc operator acm health ctrl+shift+m"],
       ["mission", "Mission Control", "mc operator health infrastructure"],
       ["models", "Models", "ollama providers roles catalog routing ctrl+shift+."],
@@ -221,6 +221,10 @@
       mk("act:settings", "Open Settings Home", "Actions", "preferences catalog ctrl+,", () => A().system.settings(), {
         hint: "Ctrl+,",
         shortcut: "Ctrl+,",
+      }),
+      mk("act:home", "Open Home", "Actions", "dashboard daily brief attention ctrl+home", () => window.openHome?.() || window.switchToView?.("dashboard"), {
+        hint: "Ctrl+Home",
+        shortcut: "Ctrl+Home",
       }),
       mk("act:voice-chat-settings", "Open Voice & Chat", "Actions", "speak whisper preferences", () => A().system.voiceChatSettings?.() || window.openVoiceChatSettings?.()),
       mk("act:shortcuts", "Open keyboard shortcuts", "Actions", "hotkeys help", () => A().system.shortcuts()),
@@ -504,9 +508,11 @@
         mkCtx("gallery", "Video gallery", "clips", () => A().video.open()),
       ],
       dashboard: [
-        mkCtx("customize", "Customize dashboard", "widgets", () => A().shell.customizeDash()),
+        mkCtx("customize", "Customize Home", "widgets", () => A().shell.customizeDash()),
         mkCtx("workspace", "Switch workspace", "layout", () => A().shell.workspaces()),
         mkCtx("welcome", "Refresh welcome card", "resume", () => window.AriaSmartWelcome?.injectIntoDashboard?.()),
+        mkCtx("refresh", "Refresh Home", "reload", () => window.loadDashboard?.()),
+        mkCtx("brief", "Jump to Daily Brief", "morning", () => window.openHome?.("daily_brief")),
       ],
       audit: [
         mkCtx("run", "Run system audit", "health", () => A().audit.run()),

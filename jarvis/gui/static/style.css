@@ -4418,6 +4418,36 @@ html.theme-jarvis-blue .brand-icon { color: #5eb8ff; }
 .dash-scene-btns, .dash-news-cats, .dash-ai-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.4rem; }
 .dash-intel-head { display: flex; align-items: center; gap: 0.5rem; }
 .dash-live-tag { font-size: 0.65rem; padding: 0.15rem 0.45rem; border-radius: 6px; background: #1a2236; color: #8b9bb4; }
+.dash-updated { font-size: 0.7rem; color: var(--muted, #8b9bb4); }
+.dash-attention-list { display: flex; flex-direction: column; gap: 0.35rem; }
+.dash-attention-item {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border, #444);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.dash-attention-item:hover, .dash-attention-item:focus { outline: none; background: color-mix(in srgb, var(--accent, #6af) 10%, transparent); }
+.dash-attention-item.severity-critical { border-color: #c44; }
+.dash-attention-item.severity-warn { border-color: #c9a227; }
+.dash-coach { border-style: dashed; opacity: 0.95; }
+.dash-brief-md {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 0.8rem;
+  max-height: 10rem;
+  overflow: auto;
+  margin: 0.35rem 0;
+}
+.dash-brief-salutation { font-weight: 600; margin: 0.25rem 0; }
+@media (prefers-reduced-motion: reduce) {
+  .dash-widget { transition: none; }
+}
 .dash-intel-item { padding: 0.5rem 0; border-bottom: 1px solid var(--border, #1a2236); }
 .dash-intel-item p { margin: 0.2rem 0 0; color: var(--muted, #8b9bb4); font-size: 0.88rem; }
 .dash-priority-card { margin-top: 0.75rem; padding: 0.85rem 1rem; border-radius: 14px; background: linear-gradient(90deg, #1e4d6b, #2a3f6e); }
