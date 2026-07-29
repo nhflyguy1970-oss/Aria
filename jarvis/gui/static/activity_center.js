@@ -532,11 +532,11 @@
       category: "system",
       type: "welcome",
       severity: "info",
-      title: "Activity Center is your alert inbox",
-      summary: "Toasts are temporary. Events stay here until you mark them read or dismiss them. Job Center tracks live work; Mission Control tracks health.",
+      title: "Notifications is your alert inbox",
+      summary: "Activity Center keeps durable events until you resolve them. Toasts are temporary. Job Center tracks live work; Mission Control tracks health.",
       source: "system",
       deepLink: "",
-      read: false,
+      read: true,
     });
     try {
       localStorage.setItem("aria_activity_welcome_v1", "1");
@@ -615,16 +615,32 @@
 
   // Public API — store handles data; this module owns UI
   window.AriaActivity = {
-    push: (e) => store()?.push?.(e),
-    publish: (e) => store()?.publish?.(e),
+    push: (e) => {
+      if (window.AriaNotifications?.publish) {
+        return window.AriaNotifications.publish(e, { localOnly: true, skipChannels: true });
+      }
+      return store()?.push?.(e);
+    },
+    publish: (e) => {
+      if (window.AriaNotifications?.publish) {
+        return window.AriaNotifications.publish(e, { localOnly: true, skipChannels: true });
+      }
+      return store()?.publish?.(e);
+    },
+    // Compatibility alias — never leave .add undefined
+    add: (e) => window.AriaActivity.publish(e),
     open,
     close,
     syncJobs,
     hookToasts,
+    hookDesktopNotify,
     unread: () => store()?.unreadCount?.() || 0,
     summarizeUnread: () => store()?.summarizeUnread?.() || "",
     whatsWrong: () => window.AriaActivityActions?.whatsWrong?.(),
   };
+
+  // Notifications product alias for the inbox
+  window.AriaNotificationsInbox = { open, close };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

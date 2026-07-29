@@ -139,6 +139,10 @@
       window.AriaLayouts?.openModal?.() || window.AriaWorkspaces?.openModal?.();
       return;
     }
+    if (open.type === "open_notifications" || open.action === "open_notifications") {
+      window.openNotifications?.(open.filter) || window.AriaNotifications?.open?.(open.filter) || window.AriaActivity?.open?.();
+      return;
+    }
     if (open.type === "apply_layout" || open.action === "apply_layout") {
       const lid = open.layout_id || loc;
       if (lid) window.applyAriaLayout?.(lid, { confirm: false, quiet: true });

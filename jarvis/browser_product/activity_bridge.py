@@ -37,6 +37,27 @@ def emit_browser_event(event_type: str, message: str = "", detail: dict | None =
     return evt
 
 
+def drain_outbox(*, limit: int = 50) -> list[dict[str, Any]]:
+    from jarvis.config import DATA_DIR
+    import json
+
+    path = DATA_DIR / "browser_product" / "activity_outbox.jsonl"
+    if not path.is_file():
+        return list(_RECENT)[:limit]
+    lines = path.read_text(encoding="utf-8").strip().splitlines()
+    events = []
+    for line in lines[-limit:]:
+        try:
+            events.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    try:
+        path.write_text("", encoding="utf-8")
+    except Exception:
+        pass
+    return list(reversed(events))
+
+
 def recent_events(*, limit: int = 30) -> list[dict[str, Any]]:
     return list(_RECENT)[:limit]
 

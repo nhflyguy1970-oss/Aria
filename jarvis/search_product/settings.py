@@ -28,6 +28,7 @@ DEFAULT_ENABLED = [
     "settings",
     "dashboard",
     "layouts",
+    "notifications",
 ]
 
 OPT_IN_DEFAULT_OFF = ["gallery", "home_assistant"]

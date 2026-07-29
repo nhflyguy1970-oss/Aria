@@ -400,10 +400,10 @@
             <button type="button" id="shortcutsBtn" class="ghost-btn small">Shortcuts</button>
             <button type="button" id="commandPaletteBtn" class="ghost-btn small" title="Command palette (Ctrl+K)" aria-keyshortcuts="Control+K Meta+K">Commands</button>
             <button type="button" id="whatsNewBtn" class="ghost-btn small" data-new-feature="whatsnew" title="Recently added features">What's New</button>
-            <button type="button" id="activityCenterBtn" class="ghost-btn small" title="Activity Center (Ctrl+Shift+A)">Activity <span id="activityCenterBadge" class="job-center-badge hidden" aria-hidden="true"></span></button>
+            <button type="button" id="activityCenterBtn" class="ghost-btn small" title="Notifications — Activity Center inbox (Ctrl+Shift+A)">Notifications <span id="activityCenterBadge" class="job-center-badge hidden" aria-hidden="true"></span></button>
             <button type="button" id="workspaceLayoutsBtn" class="ghost-btn small" title="Layouts (Ctrl+Shift+L)" data-layout-active-label>Layouts</button>
             <button type="button" id="workflowOpenBtn" class="ghost-btn small" title="View Paths — UI navigation shortcuts (not Automation)">View Paths</button>
-            <button type="button" id="jobCenterBtn" class="ghost-btn small" title="Job Center — live background work (media, coding, audio). Alerts live in Activity Center.">Job center</button>
+            <button type="button" id="jobCenterBtn" class="ghost-btn small" title="Job Center — live background work (media, coding, audio). Alerts live in Notifications.">Job center</button>
             <button type="button" id="debugBundleBtn" class="ghost-btn small" title="Copy diagnostics for troubleshooting">Debug bundle</button>
             <button type="button" id="reloadUiBtn" class="ghost-btn small" title="Reload this window (Ctrl+Shift+R)">Reload UI</button>
             <button type="button" id="resetLayoutBtn" class="ghost-btn small" title="Expand all collapsed sidebar sections">Expand sidebar</button>
@@ -2853,7 +2853,7 @@
             <li><kbd>Ctrl</kbd>+<kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Ctrl</kbd>+<kbd>Tab</kbd> — cycle views</li>
             <li><kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> — back / forward in view history</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> — Layouts · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> alias · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>8</kbd> starters</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> — Activity Center</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> — Notifications (Activity Center inbox)</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> — Automation Home</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> — View Paths (navigation shortcuts)</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd> — Mission Control</li>
@@ -2923,8 +2923,8 @@
 
       <div id="activityCenterModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="activityCenterTitle">
         <div class="crop-modal-card profile-modal-card activity-center-card">
-          <h3 id="activityCenterTitle">Activity Center</h3>
-          <p class="muted">Durable OS event inbox — alerts stay until you resolve them. <strong>Job Center</strong> = live work · <strong>Mission Control</strong> = health.</p>
+          <h3 id="activityCenterTitle">Notifications</h3>
+          <p class="muted">Durable inbox — what still needs your attention. <strong>Toasts</strong> = temporary · <strong>Job Center</strong> = live work · <strong>Mission Control</strong> = health.</p>
           <p id="activityUnreadSummary" class="activity-unread-summary muted" aria-live="polite"></p>
           <div id="activityCorrelation" class="activity-correlation hidden" aria-label="Correlated incidents"></div>
           <p id="activitySyncStatus" class="muted tiny hidden" role="status"></p>
@@ -3364,8 +3364,8 @@
   <script src="/static/aria_actions.js?v=1.0.0"></script>
   <script src="/static/activity_store.js?v=1.0.0"></script>
   <script src="/static/activity_actions.js?v=1.0.0"></script>
-  <script src="/static/activity_center.js?v=2.0.0"></script>
-  <script src="/static/activity_producers.js?v=1.0.0"></script>
+  <script src="/static/activity_center.js?v=2.1.0"></script>
+  <script src="/static/activity_producers.js?v=1.1.0"></script>
   <script src="/static/command_catalog.js?v=1.0.0"></script>
   <script src="/static/command_palette.js?v=2.0.0"></script>
   <script src="/static/ha_panel.js?v=1.0.3"></script>
@@ -3417,7 +3417,8 @@
   <script src="/static/profile_controls.js?v=1.0.1"></script>
   <script src="/static/video_sidebar.js?v=1.0.0"></script>
   <script src="/static/sidebar_chrome.js?v=1.0.1"></script>
-  <script src="/static/notify.js?v=1.0.0"></script>
+  <script src="/static/notify.js?v=1.1.0"></script>
+  <script src="/static/notifications.js?v=1.0.0"></script>
   <script src="/static/git_panel.js?v=1.0.0"></script>
   <script src="/static/chat_model_select.js?v=1.0.0"></script>
   <script src="/static/theme.js?v=1.1.0"></script>

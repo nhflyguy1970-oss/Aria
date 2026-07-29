@@ -487,16 +487,21 @@
         return window.AriaActivity?.open?.();
       case "create_activity_alert": {
         const msg = window._mcData?.health_brief?.headline || "Mission Control alert";
+        const payload = {
+          category: "mission",
+          type: "health",
+          severity: "warning",
+          title: "Mission Control alert",
+          summary: msg,
+          message: msg,
+          deepLink: "providers",
+          source: "mission_control",
+          product: "mission_control",
+        };
         window.AriaActivityProducers?.mission?.health?.(msg) ||
-          window.AriaActivity?.add?.({
-            category: "mission",
-            type: "health",
-            severity: "warning",
-            title: "Mission Control alert",
-            message: msg,
-            fix: "mc:overview",
-          });
-        window.showAriaToast?.("Activity alert created", "ok");
+          window.AriaNotifications?.publish?.(payload) ||
+          window.AriaActivity?.add?.(payload);
+        window.showAriaToast?.("Notification created", "ok");
         return;
       }
       default:
@@ -561,14 +566,17 @@
       });
       const act = out.activity || {};
       if (act.title) {
-        window.AriaActivity?.add?.({
+        const payload = {
           category: act.category || "mission",
           type: act.type || "verification",
           severity: act.severity || "info",
           title: act.title,
+          summary: act.message || "",
           message: act.message,
-          fix: act.fix || "mc:recovery",
-        });
+          deepLink: act.fix || "mc:recovery",
+          source: "mission_control",
+        };
+        window.AriaNotifications?.publish?.(payload) || window.AriaActivity?.add?.(payload);
       }
       window.showAriaToast?.(act.message || (out.ok ? "Verified" : "Verification issues"), out.ok ? "ok" : "warn");
     } catch (e) {
@@ -709,20 +717,24 @@
   function promoteActivityCorrelation(events) {
     if (!events?.length) return;
     events.forEach((ev) => {
-      window.AriaActivity?.add?.({
+      const payload = {
         id: ev.id,
         category: "mission",
         type: ev.type || "critical_health",
         severity: ev.severity || "warning",
         title: ev.title || "Mission Control health",
+        summary: ev.message || ev.title || "",
         message: ev.message,
-        fix: ev.fix || "mc:recovery",
-        meta: {
+        deepLink: ev.fix || "mc:recovery",
+        source: "mission_control",
+        product: "mission_control",
+        metadata: {
           subsystem: ev.subsystem,
           suggested_fix: ev.suggested_fix,
           resolution: ev.resolution,
         },
-      });
+      };
+      window.AriaNotifications?.publish?.(payload) || window.AriaActivity?.add?.(payload);
     });
   }
 

@@ -257,6 +257,19 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const notificationsProduct = d.notifications || {};
+  const notificationsCard = notificationsProduct.product
+    ? mcCard(
+        "Notifications",
+        `<p>${mcEsc(notificationsProduct.detail || "")}</p>
+         <p>Unread proxy ${notificationsProduct.unread_proxy ?? "—"} · critical ${notificationsProduct.critical_proxy ?? 0} · ${notificationsProduct.enabled === false ? "disabled" : "enabled"}</p>
+         <p class="muted tiny">${mcEsc(notificationsProduct.note || "")}</p>
+         <p class="mc-actions">
+           <button type="button" class="ghost-btn small" onclick="window.openNotifications&amp;&amp;window.openNotifications()">Open Notifications</button>
+           <a class="ghost-btn small" href="/api/notifications/diagnostics" target="_blank">Diagnostics</a>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -283,6 +296,7 @@ function renderOverview(d) {
       settingsPrefsCard,
       homeCard,
       layoutsCard,
+      notificationsCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;

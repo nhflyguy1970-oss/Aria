@@ -83,4 +83,5 @@ FACETS = (
     "settings",
     "dashboard",
     "layouts",
+    "notifications",
 )

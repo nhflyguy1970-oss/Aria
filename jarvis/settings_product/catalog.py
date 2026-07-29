@@ -31,13 +31,50 @@ def build_catalog() -> list[dict[str, Any]]:
             make_preference(
                 id="global.notifications",
                 title="Notifications",
-                description="Toast and soft-tip notification preferences.",
+                description="Enable Notifications delivery — toasts, desktop, and Activity Center inbox. Notifications owns routing.",
+                category="global",
+                owner="Notifications",
+                type="toggle",
+                default=True,
+                deep_link={"action": "open_notifications", "pref": "enabled"},
+                aliases=["toasts", "alerts", "activity center"],
+                keywords="notifications toasts tips activity inbox quiet",
+                editable_in_settings=True,
+            ),
+            make_preference(
+                id="global.notifications_desktop",
+                title="Desktop notifications",
+                description="OS desktop notifications for warnings and errors. Gated by Notifications preferences.",
+                category="global",
+                owner="Notifications",
+                type="toggle",
+                default=True,
+                deep_link={"action": "open_notifications", "pref": "desktop_enabled"},
+                aliases=["os notify", "notify-send"],
+                keywords="desktop notifications os",
+            ),
+            make_preference(
+                id="global.notifications_quiet_hours",
+                title="Quiet hours / Do Not Disturb",
+                description="Suppress toast and desktop during quiet hours; critical alerts still reach the inbox.",
+                category="global",
+                owner="Notifications",
+                type="link",
+                deep_link={"action": "open_notifications", "pref": "quiet_hours"},
+                aliases=["dnd", "quiet hours"],
+                keywords="quiet hours dnd do not disturb",
+            ),
+            make_preference(
+                id="global.soft_tips",
+                title="Soft tips",
+                description="Show soft coaching tips in the UI.",
                 category="global",
                 owner="Settings",
-                type="link",
-                deep_link={"view": "settings", "section": "global", "pref": "global.notifications"},
-                aliases=["toasts", "alerts"],
-                keywords="notifications toasts tips",
+                type="toggle",
+                default=True,
+                deep_link={"view": "settings", "section": "global", "pref": "global.soft_tips"},
+                aliases=["tips", "coaching"],
+                keywords="soft tips coaching",
                 editable_in_settings=True,
             ),
             make_preference(
@@ -326,6 +363,7 @@ def build_catalog() -> list[dict[str, Any]]:
         ("calendar", "Calendar", "calendar", "schedule ics", ["calendar", "ics"]),
         ("dashboard", "Home / Dashboard", "dashboard", "home widgets daily brief attention", ["home", "dashboard", "daily brief"]),
         ("layouts", "Layouts", "layouts", "shell layouts coding writing research", ["layouts", "shell layout"]),
+        ("notifications", "Notifications", "notifications", "activity center alerts unread quiet hours", ["notifications", "activity center", "alerts"]),
         ("documents", "Documents", "documents", "library rag index", ["documents"]),
         ("connections", "Connections", "connections", "knowledge graph", ["graph"]),
     ]
@@ -333,6 +371,8 @@ def build_catalog() -> list[dict[str, Any]]:
         deep = {"view": view, "section": "settings", "product": pid}
         if pid == "layouts":
             deep = {"action": "open_layouts", "product": "layouts"}
+        if pid == "notifications":
+            deep = {"action": "open_notifications", "product": "notifications"}
         entries.append(
             make_preference(
                 id=f"products.{pid}",

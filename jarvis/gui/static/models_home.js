@@ -339,18 +339,23 @@
     if (st) st.textContent = "Loading…";
     try {
       _data = await api("/api/models/home");
-      // Drain activity outbox into Activity Center
+      // Drain Models outbox through Notifications pipeline
       try {
         const box = await api("/api/models/activity/outbox");
         (box.events || []).forEach((ev) => {
-          window.AriaActivity?.add?.({
+          const payload = {
             category: "models",
             type: ev.type,
-            severity: ev.severity,
-            title: ev.title,
-            message: ev.message,
-            fix: ev.fix,
-          });
+            severity: ev.severity || "info",
+            title: ev.title || ev.type,
+            summary: ev.message || ev.summary || "",
+            detail: ev.message || "",
+            deepLink: ev.fix || "models",
+            source: "models",
+            product: "models",
+          };
+          if (window.AriaNotifications?.publish) window.AriaNotifications.publish(payload, { localOnly: true });
+          else window.AriaActivity?.add?.(payload) || window.AriaActivity?.publish?.(payload);
         });
       } catch (_) {
         /* */

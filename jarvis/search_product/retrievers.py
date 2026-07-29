@@ -821,6 +821,101 @@ def retrieve_layouts(query: str, limit: int) -> list[dict[str, Any]]:
     return _safe(_run, "layouts")
 
 
+def retrieve_notifications(query: str, limit: int) -> list[dict[str, Any]]:
+    """Notifications facet — Search indexes; Notifications owns delivery/inbox."""
+
+    def _run():
+        from jarvis.notifications_product.digest import build_digest
+        from jarvis.notifications_product.history import load_history
+        from jarvis.notifications_product.pipeline import unread_summary
+
+        q = (query or "").lower()
+        out = []
+        summary = unread_summary()
+        out.append(
+            make_result(
+                source="notifications",
+                source_label="Notifications",
+                title="Open Notifications",
+                summary="Durable inbox — what still needs your attention (Ctrl+Shift+A)",
+                preview=f"{summary.get('unread') or 0} unread · {summary.get('critical') or 0} critical",
+                location="notifications",
+                score=0.96,
+                strategy="catalog",
+                open_action={"type": "open_notifications"},
+                icon="notifications",
+            )
+        )
+        if not q or any(t in q for t in ("unread", "alert", "inbox", "activity")):
+            out.append(
+                make_result(
+                    source="notifications",
+                    source_label="Notifications",
+                    title="Unread notifications",
+                    summary="Filter Activity Center to unread",
+                    preview="unread",
+                    location="unread",
+                    score=0.9,
+                    strategy="catalog",
+                    open_action={"type": "open_notifications", "filter": "unread"},
+                    icon="notifications",
+                )
+            )
+        if not q or any(t in q for t in ("error", "fail", "critical")):
+            out.append(
+                make_result(
+                    source="notifications",
+                    source_label="Notifications",
+                    title="Errors & failures",
+                    summary="Filter to error severity",
+                    preview="errors",
+                    location="err",
+                    score=0.88,
+                    strategy="catalog",
+                    open_action={"type": "open_notifications", "filter": "err"},
+                    icon="notifications",
+                )
+            )
+        if not q or "digest" in q or "today" in q:
+            digest = build_digest("needs_attention")
+            out.append(
+                make_result(
+                    source="notifications",
+                    source_label="Notifications",
+                    title=digest.get("title") or "Needs attention",
+                    summary=str(digest.get("summary") or "")[:280],
+                    preview=f"{digest.get('count') or 0} events",
+                    location="digest",
+                    score=0.85,
+                    strategy="digest",
+                    open_action={"type": "open_notifications", "filter": "unread"},
+                    icon="notifications",
+                )
+            )
+        for item in load_history(limit=min(limit, 8)):
+            blob = f"{item.get('title')} {item.get('summary')} {item.get('source')}".lower()
+            if q and q not in blob:
+                continue
+            out.append(
+                make_result(
+                    source="notifications",
+                    source_label="Notifications",
+                    title=str(item.get("title") or "Notification"),
+                    summary=str(item.get("summary") or "")[:280],
+                    preview=str(item.get("severity") or "info"),
+                    location=str(item.get("id") or ""),
+                    score=0.7,
+                    strategy="history",
+                    open_action={"type": "open_notifications", "id": item.get("id")},
+                    metadata={"notification_id": item.get("id")},
+                    icon="notifications",
+                )
+            )
+        return out[:limit]
+
+    return _safe(_run, "notifications")
+
+
 RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "documents": retrieve_documents,
     "memory": retrieve_memory,
@@ -841,4 +936,5 @@ RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "settings": retrieve_settings,
     "dashboard": retrieve_dashboard,
     "layouts": retrieve_layouts,
+    "notifications": retrieve_notifications,
 }

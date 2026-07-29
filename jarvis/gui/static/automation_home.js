@@ -29,10 +29,15 @@
 
   function ingestActivity(activity) {
     if (!activity) return;
-    window.AriaActivity?.publish?.(activity);
-    window.AriaActivityProducers?.automation?.[
-      activity.severity === "error" ? "failed" : activity.severity === "success" ? "complete" : "complete"
-    ]?.(activity.title || activity.summary);
+    // One pipeline — avoid double-publish via Producers after publish
+    const payload = {
+      ...activity,
+      source: activity.source || "automation",
+      category: activity.category || "automation",
+      product: "automation",
+    };
+    if (window.AriaNotifications?.publish) window.AriaNotifications.publish(payload, { localOnly: true });
+    else window.AriaActivity?.publish?.(payload) || window.AriaActivity?.add?.(payload);
   }
 
   async function api(path, opts) {

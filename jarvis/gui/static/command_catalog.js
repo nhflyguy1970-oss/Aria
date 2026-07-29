@@ -293,7 +293,10 @@
 
   function registerShell() {
     reg([
-      mk("act:activity", "Open Activity Center", "Actions", "notifications jobs alerts inbox events unread", () => A().shell.activity()),
+      mk("act:activity", "Open Notifications", "Actions", "notifications jobs alerts inbox events unread activity center", () => A().shell.activity(), {
+        hint: "Ctrl+Shift+A",
+        shortcut: "Ctrl+Shift+A",
+      }),
       mk("act:activity-whats-wrong", "What's wrong? (Activity summary)", "Actions", "unread failures diagnose aria inbox", () => {
         if (window.AriaActivityActions?.whatsWrong) return window.AriaActivityActions.whatsWrong();
         return A().shell.activity();

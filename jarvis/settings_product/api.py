@@ -83,6 +83,20 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
 
         data = save_global(body if isinstance(body, dict) else {})
         record_change("global", detail=str(list((body or {}).keys())), category="global")
+        # Notifications owns delivery — mirror enable/soft_tips into prefs
+        try:
+            from jarvis.notifications_product.preferences import save_preferences
+
+            patch = {}
+            if isinstance(body, dict):
+                if "notifications_enabled" in body:
+                    patch["enabled"] = bool(body.get("notifications_enabled"))
+                if "soft_tips" in body:
+                    patch["soft_tips"] = bool(body.get("soft_tips"))
+            if patch:
+                save_preferences(patch)
+        except Exception:
+            pass
         return {"ok": True, **data}
 
     @app.get("/api/settings/product/profiles")

@@ -156,6 +156,16 @@ WIDGET_DEFS: list[dict[str, Any]] = [
         "deep_link": {"view": "search"},
     },
     {
+        "id": "notifications_summary",
+        "title": "Notifications",
+        "owner": "Notifications",
+        "category": "attention",
+        "priority": 12,
+        "description": "Unread and critical summary — Notifications owns the inbox.",
+        "aliases": ["alerts", "activity center", "inbox"],
+        "deep_link": {"action": "open_notifications"},
+    },
+    {
         "id": "diagnostics",
         "title": "Home diagnostics",
         "owner": "Dashboard",

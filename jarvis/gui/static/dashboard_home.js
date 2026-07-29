@@ -309,6 +309,18 @@
     </section>`;
   }
 
+  function renderNotificationsSummary(w, escFn) {
+    const p = w?.payload || {};
+    const unread = p.unread ?? 0;
+    const critical = p.critical ?? 0;
+    return `<section class="dash-widget" data-widget="notifications_summary" aria-label="Notifications">
+      <h3>Notifications</h3>
+      <p><strong>${escFn(unread)}</strong> unread · <strong>${escFn(critical)}</strong> critical</p>
+      <p class="muted tiny">${escFn(p.digest_summary || p.note || "What still needs your attention.")}</p>
+      <button type="button" class="ghost-btn small" id="dashOpenNotifications">Open Notifications</button>
+    </section>`;
+  }
+
   function renderDiagnostics(w, escFn) {
     const p = w.payload || {};
     const fails = (p.widget_failures || []).length;
@@ -386,6 +398,7 @@
 
       const defaultOrder = [
         "attention",
+        "notifications_summary",
         "daily_brief",
         "time_weather",
         "quick_launch",
@@ -427,6 +440,7 @@
         else if (id === "news") parts.push(renderNews(w, esc));
         else if (id === "suggestions") parts.push(renderSuggestions(w, esc));
         else if (id === "search_shortcuts") parts.push(renderSearchShortcuts(w, esc));
+        else if (id === "notifications_summary") parts.push(renderNotificationsSummary(w, esc));
         else if (id === "diagnostics") parts.push(renderDiagnostics(w, esc));
         else if (["calendar_summary", "journal_reminder", "memory_highlights", "projects"].includes(id))
           parts.push(renderSimpleProduct(w, esc));
@@ -448,6 +462,9 @@
       fillFavorites(body);
       bindDeepLinks(body);
 
+      body.querySelector("#dashOpenNotifications")?.addEventListener("click", () => {
+        window.openNotifications?.() || window.AriaActivity?.open?.();
+      });
       body.querySelector("#dashWhatsNewBtn")?.addEventListener("click", () => window.openWhatsNew?.(true));
       body.querySelector("#dashCustomizeBtn")?.addEventListener("click", () => window.AriaDashboardWidgets?.openCustomize?.());
       body.querySelector("#dashHomeRefreshBtn")?.addEventListener("click", () => loadDashboard());

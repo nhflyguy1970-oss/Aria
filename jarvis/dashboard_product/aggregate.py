@@ -573,7 +573,29 @@ def _launcher_widgets() -> list[dict[str, Any]]:
             deep_links=[{"label": "Search", "view": "search"}],
             actions=[{"label": "Open Search", "view": "search"}],
         ),
+        make_widget(
+            id="notifications_summary",
+            title="Notifications",
+            owner="Notifications",
+            category="attention",
+            priority=12,
+            available=True,
+            payload=_notifications_payload(),
+            deep_links=[{"label": "Open Notifications", "action": "open_notifications"}],
+            actions=[{"label": "Open inbox", "action": "open_notifications"}],
+            description="Unread and critical summary — Notifications owns the inbox.",
+        ),
     ]
+
+
+def _notifications_payload() -> dict[str, Any]:
+    try:
+        from jarvis.notifications_product.dashboard_bridge import dashboard_notifications_summary
+
+        return dashboard_notifications_summary()
+    except Exception as exc:
+        return {"error": str(exc), "unread": 0, "critical": 0, "note": "Notifications summary unavailable"}
+
 
 
 def build_home_aggregate(

@@ -27,6 +27,10 @@
       window.AriaLayouts?.openModal?.() || window.AriaWorkspaces?.openModal?.();
       return;
     }
+    if (open.action === "open_notifications" || open.type === "open_notifications") {
+      window.openNotifications?.(open.filter) || window.AriaNotifications?.open?.(open.filter) || window.AriaActivity?.open?.();
+      return;
+    }
     if (open.action === "voice_chat_modal") {
       window.openVoiceChatSettings?.();
       return;

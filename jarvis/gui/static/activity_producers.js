@@ -261,7 +261,9 @@
   function rehook() {
     hookShowError();
     hookProviderRecovery();
-    window.AriaActivity?.open && window.AriaActivityCenter?.hookToasts?.();
+    window.AriaActivity?.hookToasts?.();
+    window.AriaActivity?.hookDesktopNotify?.();
+    window.AriaNotifications?.fetchPrefs?.(true);
   }
 
   function init() {
