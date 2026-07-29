@@ -65,8 +65,8 @@
       actions.push({ label: labels[v] || v, run: () => window.switchToView?.(v) });
     });
     actions.push({
-      label: "Workspaces",
-      run: () => window.AriaWorkspaces?.openModal?.(),
+      label: "Layouts",
+      run: () => window.AriaLayouts?.openModal?.() || window.AriaWorkspaces?.openModal?.(),
     });
 
     const tips = [];

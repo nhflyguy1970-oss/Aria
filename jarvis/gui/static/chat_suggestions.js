@@ -87,7 +87,7 @@
     ],
     dashboard: [
       { id: "ctx-dash-resume", text: "Resume yesterday's work.", action: "prompt" },
-      { id: "ctx-dash-ws", text: "Switch workspace layout.", action: "workspace" },
+      { id: "ctx-dash-ws", text: "Switch Layouts.", action: "workspace" },
     ],
   };
 
@@ -162,7 +162,7 @@
       return;
     }
     if (item.action === "workspace") {
-      window.AriaWorkspaces?.openModal?.();
+      window.AriaLayouts?.openModal?.() || window.AriaWorkspaces?.openModal?.();
       return;
     }
     if (item.action === "split") {

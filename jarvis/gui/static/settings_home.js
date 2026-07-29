@@ -23,6 +23,10 @@
 
   function openDeepLink(open) {
     if (!open) return;
+    if (open.action === "open_layouts" || open.type === "open_layouts") {
+      window.AriaLayouts?.openModal?.() || window.AriaWorkspaces?.openModal?.();
+      return;
+    }
     if (open.action === "voice_chat_modal") {
       window.openVoiceChatSettings?.();
       return;

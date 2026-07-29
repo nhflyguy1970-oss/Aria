@@ -112,10 +112,19 @@
         return;
       }
 
-      // Ctrl+Shift+P — workspaces (VS Code muscle memory)
-      if (mod && e.shiftKey && e.key.toLowerCase() === "p") {
+      // Ctrl+Shift+L — Layouts (primary). Ctrl+Shift+P kept as alias.
+      if (mod && e.shiftKey && (e.key.toLowerCase() === "l" || e.key.toLowerCase() === "p")) {
         e.preventDefault();
-        window.AriaWorkspaces?.openModal?.();
+        window.AriaLayouts?.openModal?.() || window.AriaWorkspaces?.openModal?.();
+        return;
+      }
+
+      // Ctrl+Alt+1..8 — apply starter layouts by index
+      if (mod && e.altKey && e.key >= "1" && e.key <= "8") {
+        e.preventDefault();
+        const order = ["coding", "writing", "research", "planning", "media", "maker", "flytying", "home"];
+        const id = order[Number(e.key) - 1];
+        if (id) window.applyAriaLayout?.(id, { quiet: true, confirm: false });
         return;
       }
 

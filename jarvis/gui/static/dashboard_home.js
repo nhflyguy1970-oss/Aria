@@ -334,6 +334,13 @@
       favRow.querySelectorAll(".dash-fav-btn").forEach((btn) => {
         btn.addEventListener("click", () => window.switchToView?.(btn.dataset.view));
       });
+      const layoutsBtn = document.createElement("button");
+      layoutsBtn.type = "button";
+      layoutsBtn.className = "ghost-btn small";
+      layoutsBtn.textContent = "Layouts";
+      layoutsBtn.title = "Shell presentation profiles (Ctrl+Shift+L)";
+      layoutsBtn.addEventListener("click", () => window.AriaLayouts?.openModal?.());
+      favRow.appendChild(layoutsBtn);
     }
     const recentRow = body.querySelector("#dashRecentRow");
     const recent = (window.AriaUiPrefs?.get?.("recentViews") || []).filter((v) => !favs.includes(v)).slice(0, 6);

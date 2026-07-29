@@ -196,6 +196,29 @@ def build_catalog() -> list[dict[str, Any]]:
                 aliases=["role layout", "home role"],
                 keywords="home role maker developer operations media research",
             ),
+            make_preference(
+                id="appearance.layouts_restore",
+                title="Restore last layout on boot",
+                description="Opt-in: re-apply the last Layouts profile when Aria loads. Layouts owns application.",
+                category="appearance",
+                owner="Layouts",
+                type="toggle",
+                default=False,
+                deep_link={"action": "open_layouts", "pref": "restore_on_boot"},
+                aliases=["boot restore", "layout restore"],
+                keywords="layouts restore boot shell profile",
+            ),
+            make_preference(
+                id="appearance.layouts_defaults",
+                title="Layouts",
+                description="Shell presentation profiles — open Layouts (Ctrl+Shift+L).",
+                category="appearance",
+                owner="Layouts",
+                type="link",
+                deep_link={"action": "open_layouts"},
+                aliases=["shell layouts", "starter layouts"],
+                keywords="layouts coding writing research shell",
+            ),
         ]
     )
 
@@ -302,10 +325,14 @@ def build_catalog() -> list[dict[str, Any]]:
         ("planner", "Planner", "planner", "tasks focus", ["planner"]),
         ("calendar", "Calendar", "calendar", "schedule ics", ["calendar", "ics"]),
         ("dashboard", "Home / Dashboard", "dashboard", "home widgets daily brief attention", ["home", "dashboard", "daily brief"]),
+        ("layouts", "Layouts", "layouts", "shell layouts coding writing research", ["layouts", "shell layout"]),
         ("documents", "Documents", "documents", "library rag index", ["documents"]),
         ("connections", "Connections", "connections", "knowledge graph", ["graph"]),
     ]
     for pid, label, view, kw, aliases in product_links:
+        deep = {"view": view, "section": "settings", "product": pid}
+        if pid == "layouts":
+            deep = {"action": "open_layouts", "product": "layouts"}
         entries.append(
             make_preference(
                 id=f"products.{pid}",
@@ -314,7 +341,7 @@ def build_catalog() -> list[dict[str, Any]]:
                 category="products",
                 owner=label,
                 type="link",
-                deep_link={"view": view, "section": "settings", "product": pid},
+                deep_link=deep,
                 aliases=aliases,
                 keywords=f"{label.lower()} settings {kw}",
             )

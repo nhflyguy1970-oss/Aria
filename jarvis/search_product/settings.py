@@ -27,6 +27,7 @@ DEFAULT_ENABLED = [
     "automation",
     "settings",
     "dashboard",
+    "layouts",
 ]
 
 OPT_IN_DEFAULT_OFF = ["gallery", "home_assistant"]

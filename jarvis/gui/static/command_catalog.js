@@ -370,7 +370,18 @@
         return true;
       }),
       mk("act:view-paths", "Open View Paths", "Actions", "navigation shortcuts macro ui path recorder", () => A().shell.workflows()),
-      mk("act:workspaces", "Workspace layouts", "Actions", "coding writing layout", () => A().shell.workspaces()),
+      mk("act:workspaces", "Layouts", "Actions", "shell layout coding writing research ctrl+shift+l", () => A().shell.workspaces(), {
+        hint: "Ctrl+Shift+L",
+        shortcut: "Ctrl+Shift+L",
+      }),
+      mk("act:layout-coding", "Apply Coding layout", "Layouts", "dev projects", () => window.applyAriaLayout?.("coding", { confirm: false })),
+      mk("act:layout-writing", "Apply Writing layout", "Layouts", "journal documents", () => window.applyAriaLayout?.("writing", { confirm: false })),
+      mk("act:layout-research", "Apply Research layout", "Layouts", "browser documents", () => window.applyAriaLayout?.("research", { confirm: false })),
+      mk("act:layout-planning", "Apply Planning layout", "Layouts", "planner calendar", () => window.applyAriaLayout?.("planning", { confirm: false })),
+      mk("act:layout-media", "Apply Media layout", "Layouts", "gallery video", () => window.applyAriaLayout?.("media", { confirm: false })),
+      mk("act:layout-maker", "Apply Maker layout", "Layouts", "maker lab", () => window.applyAriaLayout?.("maker", { confirm: false })),
+      mk("act:layout-home", "Apply Home layout", "Layouts", "dashboard home", () => window.applyAriaLayout?.("home", { confirm: false })),
+      mk("act:layout-undo", "Undo last layout", "Layouts", "restore previous chrome", () => window.AriaLayouts?.undoLayout?.()),
       mk("act:split", "Toggle split view", "Actions", "dual pane", () => A().shell.split()),
       mk("act:mini-chat", "Toggle mini chat", "Actions", "floating assistant", () => A().shell.miniChat()),
       mk("act:workflows", "Open View Paths (navigation shortcuts)", "Actions", "view paths macro routine workflow recorder", () => A().shell.workflows()),
@@ -509,7 +520,7 @@
       ],
       dashboard: [
         mkCtx("customize", "Customize Home", "widgets", () => A().shell.customizeDash()),
-        mkCtx("workspace", "Switch workspace", "layout", () => A().shell.workspaces()),
+        mkCtx("workspace", "Layouts", "layout", () => A().shell.workspaces()),
         mkCtx("welcome", "Refresh welcome card", "resume", () => window.AriaSmartWelcome?.injectIntoDashboard?.()),
         mkCtx("refresh", "Refresh Home", "reload", () => window.loadDashboard?.()),
         mkCtx("brief", "Jump to Daily Brief", "morning", () => window.openHome?.("daily_brief")),
@@ -523,7 +534,7 @@
     const page = map[view] || [];
     const globalCtx = [
       mkCtx("activity", "Open Activity Center", "notifications jobs", () => A().shell.activity(), "Global"),
-      mkCtx("workspace", "Workspace layouts", "coding writing", () => A().shell.workspaces(), "Global"),
+      mkCtx("workspace", "Layouts", "coding writing", () => A().shell.workspaces(), "Global"),
       mkCtx("split", "Toggle split view", "dual pane", () => A().shell.split(), "Global"),
       mkCtx("mini", "Toggle mini chat", "floating assistant", () => A().shell.miniChat(), "Global"),
       mkCtx("workflow", "Automation & workflows…", "rules skills learned view paths templates", () => A().goView("automation"), "Global"),

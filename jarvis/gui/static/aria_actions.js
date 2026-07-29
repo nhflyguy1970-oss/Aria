@@ -431,8 +431,15 @@
     shell: {
       activity: () => AriaActions.mission.activity(),
       workspaces: () => {
-        if (window.AriaWorkspaces?.openModal) { window.AriaWorkspaces.openModal(); return true; }
-        toast("Workspaces unavailable", "warn");
+        if (window.AriaLayouts?.openModal) {
+          window.AriaLayouts.openModal();
+          return true;
+        }
+        if (window.AriaWorkspaces?.openModal) {
+          window.AriaWorkspaces.openModal();
+          return true;
+        }
+        toast("Layouts unavailable", "warn");
         return false;
       },
       split: () => {

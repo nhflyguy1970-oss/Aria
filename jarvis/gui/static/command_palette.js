@@ -135,6 +135,17 @@
     const rawId = hit.raw?.id || open.id || (String(hit.title || "").match(/^(exp_|mem_|acm)/) ? hit.title : "");
     const A = window.AriaActions;
 
+    if (open.type === "open_layouts" || open.action === "open_layouts") {
+      window.AriaLayouts?.openModal?.() || window.AriaWorkspaces?.openModal?.();
+      return;
+    }
+    if (open.type === "apply_layout" || open.action === "apply_layout") {
+      const lid = open.layout_id || loc;
+      if (lid) window.applyAriaLayout?.(lid, { confirm: false, quiet: true });
+      else window.AriaLayouts?.openModal?.();
+      return;
+    }
+
     function prefill(sel, q, btn) {
       setTimeout(() => {
         const el = typeof sel === "string" ? $(sel.replace(/^#/, "")) || document.querySelector(sel) : sel;

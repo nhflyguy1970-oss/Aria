@@ -117,7 +117,7 @@
 
       <div class="sidebar-section sidebar-section--workspaces" data-section="workspaces">
         <button type="button" class="sidebar-section-head" aria-expanded="false">
-          <p class="sidebar-section-title">Workspaces</p><span class="section-chevron">▾</span>
+          <p class="sidebar-section-title">Surfaces</p><span class="section-chevron">▾</span>
         </button>
         <div class="sidebar-section-body ws-menu">
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="chat">Chat</button>
@@ -401,7 +401,7 @@
             <button type="button" id="commandPaletteBtn" class="ghost-btn small" title="Command palette (Ctrl+K)" aria-keyshortcuts="Control+K Meta+K">Commands</button>
             <button type="button" id="whatsNewBtn" class="ghost-btn small" data-new-feature="whatsnew" title="Recently added features">What's New</button>
             <button type="button" id="activityCenterBtn" class="ghost-btn small" title="Activity Center (Ctrl+Shift+A)">Activity <span id="activityCenterBadge" class="job-center-badge hidden" aria-hidden="true"></span></button>
-            <button type="button" id="workspaceLayoutsBtn" class="ghost-btn small" title="Workspace layouts (Ctrl+Shift+P)">Workspaces</button>
+            <button type="button" id="workspaceLayoutsBtn" class="ghost-btn small" title="Layouts (Ctrl+Shift+L)" data-layout-active-label>Layouts</button>
             <button type="button" id="workflowOpenBtn" class="ghost-btn small" title="View Paths — UI navigation shortcuts (not Automation)">View Paths</button>
             <button type="button" id="jobCenterBtn" class="ghost-btn small" title="Job Center — live background work (media, coding, audio). Alerts live in Activity Center.">Job center</button>
             <button type="button" id="debugBundleBtn" class="ghost-btn small" title="Copy diagnostics for troubleshooting">Debug bundle</button>
@@ -2852,7 +2852,7 @@
             <li><kbd>Ctrl</kbd>+<kbd>1</kbd>…<kbd>9</kbd> — jump Favorites / primary views</li>
             <li><kbd>Ctrl</kbd>+<kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Ctrl</kbd>+<kbd>Tab</kbd> — cycle views</li>
             <li><kbd>Alt</kbd>+<kbd>←</kbd> / <kbd>Alt</kbd>+<kbd>→</kbd> — back / forward in view history</li>
-            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> — workspace layouts</li>
+            <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd> — Layouts · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> alias · <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>1</kbd>–<kbd>8</kbd> starters</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd> — Activity Center</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> — Automation Home</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> — View Paths (navigation shortcuts)</li>
@@ -2958,14 +2958,23 @@
 
       <div id="workspaceLayoutsModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="workspaceLayoutsTitle">
         <div class="crop-modal-card profile-modal-card">
-          <h3 id="workspaceLayoutsTitle">Workspace layouts</h3>
-          <p class="muted">Switch presets instantly, or save your current layout.</p>
-          <div id="workspaceSwitcherList" class="workspace-switcher-list"></div>
+          <h3 id="workspaceLayoutsTitle">Layouts</h3>
+          <p class="muted">Shell presentation profiles — how Aria looks. Starter layouts are <strong>full frozen snapshots</strong>. Projects own identity; Layouts never change product data.</p>
+          <p class="muted tiny">Active: <span data-layout-active-label>—</span> · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></p>
+          <input type="search" id="layoutsTypeahead" class="audio-path-input" placeholder="Filter layouts…" aria-label="Filter layouts" autocomplete="off" />
+          <div id="workspaceSwitcherList" class="workspace-switcher-list" role="listbox" aria-label="Layouts"></div>
           <div class="planner-add-row">
-            <input type="text" id="workspaceNameInput" class="audio-path-input" placeholder="Name current layout…" />
+            <input type="text" id="workspaceNameInput" class="audio-path-input" placeholder="Name current layout…" aria-label="Layout name" />
             <button type="button" id="workspaceSaveBtn" class="apply-btn small">Save</button>
           </div>
-          <button type="button" id="workspaceLayoutsCloseBtn" class="ghost-btn small">Close</button>
+          <label class="toggle-row small"><span>Restore last layout on boot</span><input type="checkbox" id="layoutsRestoreBootToggle" /></label>
+          <div class="sidebar-btn-row">
+            <button type="button" id="layoutsUndoBtn" class="ghost-btn small">Undo</button>
+            <button type="button" id="layoutsExportBtn" class="ghost-btn small">Export</button>
+            <button type="button" id="layoutsImportBtn" class="ghost-btn small">Import</button>
+            <input type="file" id="layoutsImportFile" accept="application/json,.json" hidden />
+            <button type="button" id="workspaceLayoutsCloseBtn" class="ghost-btn small">Close</button>
+          </div>
         </div>
       </div>
 
@@ -3199,6 +3208,9 @@
     <button type="button" id="statusSegActivityWrap" class="status-seg-wrap" title="Activity Center — durable OS event inbox (not Job Center)">
       <span id="statusSegActivity" class="status-seg">quiet</span>
     </button>
+    <button type="button" id="statusSegLayoutWrap" class="status-seg-wrap" title="Active Layout — click to open Layouts" data-layout-active-label>
+      <span id="statusSegLayout" class="status-seg">Layouts</span>
+    </button>
     <span class="status-bar-spacer"></span>
     <span class="status-seg-wrap status-seg-version" title="Aria version">
       <span id="statusSegVersion" class="status-seg">—</span>
@@ -3338,7 +3350,7 @@
   <script src="/static/dashboard_widgets.js?v=1.1.0"></script>
   <script src="/static/collapsible_panels.js?v=1.0.0"></script>
   <script src="/static/global_history.js?v=1.0.0"></script>
-  <script src="/static/workspace_layouts.js?v=1.0.1"></script>
+  <script src="/static/workspace_layouts.js?v=1.1.0"></script>
   <script src="/static/split_view.js?v=1.0.1"></script>
   <script src="/static/mini_chat.js?v=1.1.0"></script>
   <script src="/static/keyboard_nav.js?v=1.0.0"></script>

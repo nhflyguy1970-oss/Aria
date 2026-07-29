@@ -82,4 +82,5 @@ FACETS = (
     "learned",
     "settings",
     "dashboard",
+    "layouts",
 )

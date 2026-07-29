@@ -213,6 +213,12 @@ function renderHome(home) {
           <dt>Knowledge index</dt><dd>${esc(coding.knowledge_index)}</dd>
           <dt>Workspace session</dt><dd><code>${esc(coding.workspace_session)}</code></dd>
         </dl>
+        <p class="muted tiny">Coding Workspace Identity stays on the project — Layouts only control shell presentation.</p>
+      </section>
+
+      <section class="proj-panel" id="projectsLayoutOffer">
+        <h4>Layouts</h4>
+        <p class="muted tiny" id="projectsLayoutOfferBody">Checking optional layout recommendation…</p>
       </section>
 
       <section class="proj-panel">
@@ -297,6 +303,45 @@ function renderHome(home) {
   root.querySelectorAll("[data-quick]").forEach((btn) => {
     btn.addEventListener("click", () => handleQuick(btn.getAttribute("data-quick"), p));
   });
+
+  const offerBody = root.querySelector("#projectsLayoutOfferBody");
+  if (offerBody) {
+    fetch(`/api/layouts/suggest/project?slug=${encodeURIComponent(p.slug || "")}`)
+      .then((r) => r.json())
+      .then((sug) => {
+        if (!sug?.ok || !sug?.recommend) {
+          offerBody.textContent =
+            "No forced layout — open Layouts anytime to change shell presentation.";
+          return;
+        }
+        const name = sug.layout_name || sug.layout_id || "a layout";
+        offerBody.innerHTML = "";
+        const msg = document.createElement("p");
+        msg.className = "muted tiny";
+        msg.textContent = sug.message || `This project recommends the ${name} layout. You choose.`;
+        offerBody.appendChild(msg);
+        const applyBtn = document.createElement("button");
+        applyBtn.type = "button";
+        applyBtn.className = "ghost-btn small";
+        applyBtn.textContent = `Apply ${name}`;
+        applyBtn.addEventListener("click", () => {
+          window.AriaLayouts?.applyLayout?.(sug.layout_id, { source: "projects" });
+        });
+        const openBtn = document.createElement("button");
+        openBtn.type = "button";
+        openBtn.className = "ghost-btn small";
+        openBtn.textContent = "Open Layouts";
+        openBtn.addEventListener("click", () => window.AriaLayouts?.openModal?.());
+        const row = document.createElement("div");
+        row.className = "proj-continue-grid";
+        row.appendChild(applyBtn);
+        row.appendChild(openBtn);
+        offerBody.appendChild(row);
+      })
+      .catch(() => {
+        offerBody.textContent = "Layouts available via Ctrl+Shift+L — never forced by Projects.";
+      });
+  }
 }
 
 function toastErr(err) {

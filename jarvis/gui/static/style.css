@@ -5919,7 +5919,7 @@ body.resizing-split { cursor: col-resize; user-select: none; }
 .auto-search-hits { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.75rem; }
 .auto-dash-row .auto-row-actions { display: inline-flex; margin-left: 0.35rem; }
 
-/* Workspaces */
+/* Layouts (shell presentation profiles) */
 .workspace-switcher-list {
   display: flex;
   flex-wrap: wrap;

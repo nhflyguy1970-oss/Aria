@@ -244,6 +244,19 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const layoutsProduct = d.layouts || {};
+  const layoutsCard = layoutsProduct.product
+    ? mcCard(
+        "Layouts",
+        `<p>${mcEsc(layoutsProduct.detail || "")}</p>
+         <p>Active ${mcEsc(layoutsProduct.active_layout || "—")} · restore ${layoutsProduct.restore_on_boot ? "on" : "off"} · failures ${layoutsProduct.failures ?? 0}</p>
+         <p class="muted tiny">${mcEsc(layoutsProduct.note || "")}</p>
+         <p class="mc-actions">
+           <button type="button" class="ghost-btn small" id="mcOpenLayoutsBtn" onclick="window.AriaLayouts&amp;&amp;window.AriaLayouts.openModal()">Open Layouts</button>
+           <a class="ghost-btn small" href="/api/layouts/diagnostics" target="_blank">Diagnostics</a>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -269,6 +282,7 @@ function renderOverview(d) {
       searchCard,
       settingsPrefsCard,
       homeCard,
+      layoutsCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;

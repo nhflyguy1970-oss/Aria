@@ -229,6 +229,12 @@ def enrich_snapshot(data: dict[str, Any] | None) -> dict[str, Any]:
         snap["dashboard"] = dashboard_mission_panel()
     except Exception:
         snap["dashboard"] = {"product": "Dashboard", "state": "unknown"}
+    try:
+        from jarvis.layouts_product.mission_bridge import layouts_mission_panel
+
+        snap["layouts"] = layouts_mission_panel()
+    except Exception:
+        snap["layouts"] = {"product": "Layouts", "state": "unknown"}
     return snap
 
 

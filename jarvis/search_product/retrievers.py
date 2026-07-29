@@ -756,6 +756,71 @@ def retrieve_dashboard(query: str, limit: int) -> list[dict[str, Any]]:
     return _safe(_run, "dashboard")
 
 
+def retrieve_layouts(query: str, limit: int) -> list[dict[str, Any]]:
+    """Layouts facet — shell presentation profiles; Search indexes, Layouts applies."""
+
+    def _run():
+        from jarvis.layouts_product.catalog import search_builtins
+        from jarvis.layouts_product.store import load_customs
+
+        out = []
+        for e in search_builtins(query, limit=limit):
+            out.append(
+                make_result(
+                    source="layouts",
+                    source_label="Layouts",
+                    title=f"Apply {e.get('label')}",
+                    summary=str(e.get("description") or "")[:280],
+                    preview=f"{e.get('kind')} · frozen starter",
+                    location=str(e.get("id") or ""),
+                    score=0.9,
+                    strategy="catalog",
+                    open_action={"type": "apply_layout", "layout_id": e.get("id"), "view": None},
+                    metadata={"layout_id": e.get("id"), "kind": e.get("kind")},
+                    icon="layouts",
+                )
+            )
+        q = (query or "").lower()
+        for cid, snap in load_customs().items():
+            blob = f"{cid} {snap.get('label') or ''}".lower()
+            if q and q not in blob:
+                continue
+            out.append(
+                make_result(
+                    source="layouts",
+                    source_label="Layouts",
+                    title=f"Apply {snap.get('label') or cid}",
+                    summary="Custom shell layout",
+                    preview="custom",
+                    location=cid,
+                    score=0.86,
+                    strategy="catalog",
+                    open_action={"type": "apply_layout", "layout_id": cid},
+                    metadata={"layout_id": cid, "kind": "custom"},
+                    icon="layouts",
+                )
+            )
+        if not q or "layout" in q:
+            out.insert(
+                0,
+                make_result(
+                    source="layouts",
+                    source_label="Layouts",
+                    title="Open Layouts",
+                    summary="Shell presentation profiles — Ctrl+Shift+L",
+                    preview="Layouts product",
+                    location="layouts",
+                    score=0.95,
+                    strategy="catalog",
+                    open_action={"type": "open_layouts"},
+                    icon="layouts",
+                ),
+            )
+        return out[:limit]
+
+    return _safe(_run, "layouts")
+
+
 RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "documents": retrieve_documents,
     "memory": retrieve_memory,
@@ -775,4 +840,5 @@ RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "automation": retrieve_automation,
     "settings": retrieve_settings,
     "dashboard": retrieve_dashboard,
+    "layouts": retrieve_layouts,
 }
