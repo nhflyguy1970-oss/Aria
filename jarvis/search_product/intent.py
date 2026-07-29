@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    ("settings", re.compile(r"\b(settings|preference|theme|accent|pin lock|whisper|speak replies)\b", re.I)),
     ("web", re.compile(r"\b(latest|news|current|today|online|google|web|internet|look up)\b", re.I)),
     ("code", re.compile(r"\b(code|function|class|import|repo|git|python|typescript|def |grep|symbol)\b", re.I)),
     ("memory", re.compile(r"\b(remember|we discussed|conversation|said|told you|recall)\b", re.I)),
@@ -74,7 +75,7 @@ def select_corpora(
     intents = intent.get("intents") or ["everything"]
     if intents == ["everything"] or intent.get("primary") == "everything":
         # Default federated set (always-on cores); opt-in extras only if enabled
-        core = ["documents", "memory", "projects", "journal", "code", "learned", "graph", "connections", "audio"]
+        core = ["documents", "memory", "projects", "journal", "code", "learned", "graph", "connections", "audio", "settings"]
         return [c for c in core if c in enabled] or sorted(enabled)
     picked = [i for i in intents if i in enabled or i == "web"]
     # Always include memory for AI OS unless explicitly facet-limited

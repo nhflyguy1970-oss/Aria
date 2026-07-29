@@ -16,7 +16,7 @@ const MC_TABS = [
   "jobs",
   "activity",
   "performance",
-  "settings",
+  "runtime_config",
   "recovery",
 ];
 
@@ -122,6 +122,7 @@ function renderOverview(d) {
   const capabilities = d.capabilities || {};
   const integrations = d.integrations || {};
   const searchProduct = d.search || {};
+  const settingsProduct = d.settings_product || {};
   const voiceCard = voice.product
     ? mcCard(
         "Voice",
@@ -219,6 +220,17 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const settingsPrefsCard = settingsProduct.product
+    ? mcCard(
+        "Settings",
+        `<p>Catalog <strong>${settingsProduct.catalog_count ?? 0}</strong> · stores ${settingsProduct.stores_present ?? 0}/${settingsProduct.stores_tracked ?? 0}</p>
+         <p>Corrupt ${settingsProduct.corrupt_count ?? 0} · profile ${mcEsc(settingsProduct.active_profile || "default")}</p>
+         <p class="mc-actions">
+           <a class="ghost-btn small" href="#settings" data-mc-nav="settings">Settings Home</a>
+           <a class="ghost-btn small" href="/api/settings/product/diagnostics" target="_blank">Diagnostics</a>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -242,6 +254,7 @@ function renderOverview(d) {
       capabilitiesCard,
       integrationsCard,
       searchCard,
+      settingsPrefsCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;
@@ -397,6 +410,7 @@ function renderReleaseDashboard(r) {
 
 function renderSettings(d) {
   const s = d.settings || {};
+  const prefs = d.settings_product || {};
   const registry = s.intent_registry?.intents || [];
   const regRows = registry
     .map(
@@ -406,15 +420,29 @@ function renderSettings(d) {
         `<td>${i.success_rate ?? "—"}%</td></tr>`
     )
     .join("");
-  return mcGrid([
-    mcCard("Platform", `<pre class="mc-pre">${mcEsc(JSON.stringify(s, null, 2).slice(0, 1200))}</pre>`),
+  const prefsCard = prefs.product
+    ? mcCard(
+        "Operator Settings (preferences)",
+        `<p>Catalog <strong>${prefs.catalog_count ?? 0}</strong> · stores ${prefs.stores_present ?? 0}/${prefs.stores_tracked ?? 0} · corrupt ${prefs.corrupt_count ?? 0}</p>
+         <p class="muted tiny">${mcEsc(prefs.runtime_config_note || "")}</p>
+         <p class="mc-actions">
+           <a class="ghost-btn small" href="#settings" data-mc-nav="settings">Settings Home</a>
+           <a class="ghost-btn small" href="/api/settings/product/diagnostics" target="_blank">Diagnostics</a>
+         </p>`
+      )
+    : "";
+  return `
+    <p class="muted">This tab is <strong>Runtime configuration</strong> (ops snapshot) — not the Settings preference editor. Use Settings Home for preferences.</p>
+    ${prefsCard}
+    ${mcGrid([
+    mcCard("Platform runtime", `<pre class="mc-pre">${mcEsc(JSON.stringify(s, null, 2).slice(0, 1200))}</pre>`),
     mcCard(
       "Intent Registry",
       regRows
         ? `<table class="mc-table"><thead><tr><th>Intent</th><th>Handler</th><th>Uses</th><th>Confidence</th><th>Success</th></tr></thead><tbody>${regRows}</tbody></table>`
         : "<p class='muted'>No intent statistics yet. <button type='button' class='ghost-btn tiny' id='mcEmptyIntentChatBtn'>Ask Chat</button></p>"
     ),
-  ]);
+  ])}`;
 }
 
 function timelineSeverityClass(ev) {
@@ -774,6 +802,7 @@ async function renderMcTab(tab) {
     case "performance":
       html = (window.renderPerformance || renderPerformance)(_mcData);
       break;
+    case "runtime_config":
     case "settings":
       html = renderSettings(_mcData);
       break;
@@ -958,9 +987,15 @@ function initMissionControl() {
   const nav = mc$("mcTabNav");
   if (nav && !nav.dataset.wired) {
     nav.dataset.wired = "1";
-    nav.innerHTML = MC_TABS.map(
-      (t) => `<button type="button" class="mc-tab${t === _mcTab ? " active" : ""}" data-mc-tab="${t}">${t.charAt(0).toUpperCase() + t.slice(1)}</button>`
-    ).join("");
+    nav.innerHTML = MC_TABS.map((t) => {
+      const label =
+        t === "runtime_config"
+          ? "Runtime config"
+          : t === "intent_analytics"
+            ? "Intent analytics"
+            : t.charAt(0).toUpperCase() + t.slice(1).replace(/_/g, " ");
+      return `<button type="button" class="mc-tab${t === _mcTab ? " active" : ""}" data-mc-tab="${t}">${label}</button>`;
+    }).join("");
     nav.querySelectorAll(".mc-tab").forEach((btn) => {
       btn.addEventListener("click", () => switchMcTab(btn.dataset.mcTab));
     });

@@ -6745,3 +6745,33 @@ body:not(.has-status-bar) .mini-chat-panel { bottom: 4rem; }
 @media (prefers-contrast: more) {
   .search-results-list, .search-result-detail, .search-side-rail, .search-mm-item { border-width: 2px; }
 }
+
+/* —— Settings Home —— */
+.settings-workspace { padding: 1rem 1.25rem 2rem; max-width: 1200px; }
+.settings-header { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; }
+.settings-header-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.settings-health-strip { display: flex; flex-wrap: wrap; gap: 0.85rem; margin-bottom: 0.65rem; font-size: 0.85rem; }
+.settings-coach-card { border: 1px solid var(--border, #555); border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 0.75rem; background: color-mix(in srgb, var(--accent, #6af) 8%, transparent); }
+.settings-toolbar { display: flex; flex-wrap: wrap; gap: 0.45rem; align-items: center; margin-bottom: 0.65rem; }
+.settings-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(12rem, 1fr) minmax(11rem, 0.9fr); gap: 0.75rem; align-items: start; }
+.settings-pref-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border, #444); border-radius: 6px; max-height: 28rem; overflow: auto; }
+.settings-pref-item { padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--border, #333); cursor: pointer; }
+.settings-pref-item:hover, .settings-pref-item:focus { outline: none; background: color-mix(in srgb, var(--accent, #6af) 10%, transparent); }
+.settings-pref-item.is-selected { background: color-mix(in srgb, var(--accent, #6af) 16%, transparent); }
+.settings-pref-row { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: baseline; }
+.settings-cat-chip { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; border: 1px solid var(--border, #555); border-radius: 4px; padding: 0.05rem 0.35rem; }
+.settings-pref-detail { border: 1px solid var(--border, #444); border-radius: 6px; padding: 0.85rem; min-height: 12rem; }
+.settings-side-rail { border: 1px solid var(--border, #444); border-radius: 6px; padding: 0.65rem; }
+.settings-field { display: flex; flex-direction: column; gap: 0.25rem; margin: 0.45rem 0; font-size: 0.85rem; }
+.settings-detail-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.75rem; }
+.settings-hist-list { list-style: none; padding: 0; margin: 0 0 0.5rem; max-height: 8rem; overflow: auto; }
+.settings-sensitive { color: #c9a227; font-size: 0.85rem; }
+@media (max-width: 960px) {
+  .settings-layout { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-pref-item { transition: none; }
+}
+@media (prefers-contrast: more) {
+  .settings-pref-list, .settings-pref-detail, .settings-side-rail, .settings-coach-card { border-width: 2px; }
+}

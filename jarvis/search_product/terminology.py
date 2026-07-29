@@ -80,4 +80,5 @@ FACETS = (
     "flytying",
     "automation",
     "learned",
+    "settings",
 )

@@ -371,7 +371,10 @@
     },
 
     system: {
-      settings: () => invoke("settingsBtn", "Settings"),
+      settings: () => {
+        window.openSettingsHome?.() || window.switchToView?.("settings");
+      },
+      voiceChatSettings: () => window.openVoiceChatSettings?.(),
       shortcuts: () => invoke("shortcutsBtn", "Shortcuts"),
       backup: () => invoke("backupDataBtn", "Backup"),
       debugBundle: () => invoke("debugBundleBtn", "Debug bundle"),

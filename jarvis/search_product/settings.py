@@ -25,6 +25,7 @@ DEFAULT_ENABLED = [
     "web",
     "flytying",
     "automation",
+    "settings",
 ]
 
 OPT_IN_DEFAULT_OFF = ["gallery", "home_assistant"]

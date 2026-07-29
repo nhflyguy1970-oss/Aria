@@ -122,6 +122,7 @@
         <div class="sidebar-section-body ws-menu">
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="chat">Chat</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="search">Search</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="settings">Settings</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="dashboard">Dashboard</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="planner">Planner</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="calendar">Calendar</button>
@@ -242,7 +243,7 @@
           <div class="ha-actions">
             <button type="button" id="integrationsSaveBtn" class="apply-btn small">Save API keys</button>
             <button type="button" id="integrationsOpenHomeBtn" class="ghost-btn small" data-view-jump="integrations">Integrations Home</button>
-            <button type="button" id="integrationsSettingsBtn" class="ghost-btn small" title="Voice toggles">More settings…</button>
+            <button type="button" id="integrationsSettingsBtn" class="ghost-btn small" title="Open Settings Home" data-view-jump="settings">Settings Home</button>
           </div>
           <p class="ha-token-hint muted">Saved on this PC only. Products own behavior — Integrations owns credentials &amp; health.</p>
         </div>
@@ -394,7 +395,8 @@
             <option value="offline">Profile: Offline</option>
           </select>
           <div class="sidebar-btn-row sidebar-btn-row--compact">
-            <button type="button" id="settingsBtn" class="ghost-btn small">Settings</button>
+            <button type="button" id="settingsBtn" class="ghost-btn small" title="Settings Home (Ctrl+,)">Settings</button>
+            <button type="button" id="voiceChatSettingsBtn" class="ghost-btn small" title="Speak replies &amp; Whisper">Voice &amp; Chat</button>
             <button type="button" id="shortcutsBtn" class="ghost-btn small">Shortcuts</button>
             <button type="button" id="commandPaletteBtn" class="ghost-btn small" title="Command palette (Ctrl+K)" aria-keyshortcuts="Control+K Meta+K">Commands</button>
             <button type="button" id="whatsNewBtn" class="ghost-btn small" data-new-feature="whatsnew" title="Recently added features">What's New</button>
@@ -584,6 +586,7 @@
         <button type="button" class="view-tab" data-view="capabilities">Capabilities</button>
         <button type="button" class="view-tab" data-view="integrations">Integrations</button>
         <button type="button" class="view-tab" data-view="search">Search</button>
+        <button type="button" class="view-tab" data-view="settings">Settings</button>
         <button type="button" class="view-tab" data-view="voice">Voice</button>
         <button type="button" class="view-tab" data-view="vision">Vision</button>
         <button type="button" class="view-tab" data-view="audio">Audio</button>
@@ -2489,6 +2492,75 @@
         </div>
       </div>
 
+      <div id="settingsView" class="view-panel hidden settings-workspace" role="region" aria-label="Settings Home">
+        <div id="settingsHomeRoot">
+          <header class="settings-header">
+            <div>
+              <h2>Settings</h2>
+              <p class="muted">Preference catalog and deep links. Products own their stores — Settings indexes them. Ctrl+, opens this Home.</p>
+            </div>
+            <div class="settings-header-actions">
+              <button type="button" id="settingsHomeRefreshBtn" class="ghost-btn small">Refresh</button>
+              <button type="button" id="settingsVoiceChatBtn" class="ghost-btn small">Voice &amp; Chat</button>
+              <button type="button" id="settingsDiagBtn" class="ghost-btn small">Diagnostics</button>
+              <button type="button" id="settingsExportBtn" class="ghost-btn small">Export</button>
+            </div>
+          </header>
+          <div id="settingsHealthStrip" class="settings-health-strip" role="status" aria-live="polite"></div>
+          <div id="settingsCoachCard" class="settings-coach-card hidden" role="status"></div>
+          <div class="settings-toolbar" role="search">
+            <label class="sr-only" for="settingsSearchInput">Search preferences</label>
+            <input type="search" id="settingsSearchInput" class="audio-path-input" placeholder="Search preferences (PIN, theme, whisper, models…)" autocomplete="off" />
+            <label class="sr-only" for="settingsCategoryFilter">Category</label>
+            <select id="settingsCategoryFilter" class="personality-select" aria-label="Filter by category">
+              <option value="">All categories</option>
+            </select>
+            <button type="button" id="settingsSearchBtn" class="apply-btn small">Search</button>
+          </div>
+          <div class="settings-layout">
+            <ul id="settingsPrefList" class="settings-pref-list" role="listbox" aria-label="Preferences" tabindex="0"></ul>
+            <aside id="settingsPrefDetail" class="settings-pref-detail" aria-live="polite">
+              <p class="muted">Select a preference to preview owner, category, and open the deep link.</p>
+            </aside>
+            <aside class="settings-side-rail">
+              <h3 class="flytying-col-subtitle">Appearance</h3>
+              <label class="settings-field">Theme
+                <select id="settingsThemeSelect" class="personality-select" aria-label="Theme">
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                </select>
+              </label>
+              <label class="settings-field">Accent
+                <select id="settingsAccentSelect" class="personality-select" aria-label="Accent">
+                  <option value="gold">Gold</option>
+                  <option value="blue">Blue</option>
+                  <option value="green">Green</option>
+                  <option value="purple">Purple</option>
+                  <option value="orange">Orange</option>
+                  <option value="red">Red</option>
+                  <option value="teal">Teal</option>
+                  <option value="amber">Amber</option>
+                </select>
+              </label>
+              <label class="toggle-row small"><span>Quick dock</span><input type="checkbox" id="settingsDockToggle" checked /></label>
+              <label class="toggle-row small"><span>Status bar</span><input type="checkbox" id="settingsStatusToggle" checked /></label>
+              <label class="toggle-row small"><span>Mini chat</span><input type="checkbox" id="settingsMiniChatToggle" checked /></label>
+              <button type="button" id="settingsResetAppearanceBtn" class="ghost-btn tiny">Reset appearance</button>
+              <h3 class="flytying-col-subtitle">Profiles</h3>
+              <select id="settingsProfileSelect" class="personality-select" aria-label="Preference profile"></select>
+              <div class="settings-detail-actions">
+                <button type="button" id="settingsActivateProfileBtn" class="ghost-btn tiny">Activate</button>
+                <button type="button" id="settingsSaveProfileBtn" class="ghost-btn tiny">Save profile</button>
+              </div>
+              <h3 class="flytying-col-subtitle">Recent changes</h3>
+              <ul id="settingsRecentList" class="settings-hist-list"></ul>
+              <h3 class="flytying-col-subtitle">Tips</h3>
+              <ul id="settingsTipsList" class="muted small"></ul>
+            </aside>
+          </div>
+        </div>
+      </div>
+
       <div id="integrationsView" class="view-panel hidden integrations-workspace" role="region" aria-label="Integrations Home">
         <header class="integrations-header">
           <div>
@@ -2759,11 +2831,14 @@
 
       <div id="settingsModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
         <div class="crop-modal-card profile-modal-card">
-          <h3 id="settingsModalTitle">Voice &amp; chat settings</h3>
+          <h3 id="settingsModalTitle">Voice &amp; Chat</h3>
           <label class="toggle-row"><span>Speak replies</span><input type="checkbox" id="settingsSpeakToggle" /><span class="toggle-slider"></span></label>
           <label class="toggle-row"><span>Server Whisper (mic works without browser STT)</span><input type="checkbox" id="serverWhisperToggle" checked /><span class="toggle-slider"></span></label>
-          <p class="muted">One Voice pipeline for PTT, wake, Cloud Live, and Chat. Mute and Speak replies are the same preference. Audio Studio is for production audio.</p>
-          <button type="button" id="settingsCloseBtn" class="ghost-btn">Close</button>
+          <p class="muted">Voice owns these preferences. Mute and Speak replies are the same preference. For the full preference catalog use Settings Home (Ctrl+,).</p>
+          <div class="settings-detail-actions">
+            <button type="button" id="settingsOpenHomeFromModalBtn" class="ghost-btn">Open Settings Home</button>
+            <button type="button" id="settingsCloseBtn" class="ghost-btn">Close</button>
+          </div>
         </div>
       </div>
 
@@ -2788,7 +2863,7 @@
             <li>Voice strip — Mute / Speak replies, Stop, Duplex, Cloud Live</li>
             <li><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>K</kbd> — floating mini chat</li>
             <li><kbd>Ctrl</kbd>+<kbd>\</kbd> — split view</li>
-            <li><kbd>Ctrl</kbd>+<kbd>,</kbd> — settings · <kbd>Ctrl</kbd>+<kbd>/</kbd> — this panel</li>
+            <li><kbd>Ctrl</kbd>+<kbd>,</kbd> — Settings Home · <kbd>Ctrl</kbd>+<kbd>/</kbd> — this panel</li>
             <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> — send · <kbd>Ctrl</kbd>+<kbd>L</kbd> — clear chat</li>
             <li><kbd>Esc</kbd> — close modals · Right-click — context menus</li>
             <li><strong>Planner</strong> (when open): <kbd>N</kbd> new task · <kbd>P</kbd> Focus 25m · <kbd>F</kbd> focus session · <kbd>T</kbd> Plan My Day · <kbd>U</kbd> undo</li>
@@ -3284,6 +3359,7 @@
   <script src="/static/capabilities_home.js?v=1.0.0"></script>
   <script src="/static/integrations_home.js?v=1.0.0"></script>
   <script src="/static/search_home.js?v=1.0.0"></script>
+  <script src="/static/settings_home.js?v=1.0.0"></script>
   <script src="/static/upgrade_wizard.js?v=1.0.3"></script>
   <script src="/static/image_engine.js?v=1.0.4"></script>
   <script src="/static/media_lightbox.js?v=1.0.1"></script>

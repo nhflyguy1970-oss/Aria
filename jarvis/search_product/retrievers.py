@@ -668,6 +668,41 @@ def retrieve_automation(query: str, limit: int) -> list[dict[str, Any]]:
     return _safe(_run, "automation")
 
 
+def retrieve_settings(query: str, limit: int) -> list[dict[str, Any]]:
+    """Settings facet — catalog only; products own stores."""
+
+    def _run():
+        from jarvis.settings_product.catalog import search_catalog
+
+        out = []
+        for e in search_catalog(query, limit=limit):
+            open_action = dict(e.get("deep_link") or {})
+            open_action.setdefault("view", "settings")
+            out.append(
+                make_result(
+                    source="settings",
+                    source_label="Settings",
+                    title=str(e.get("title") or e.get("id")),
+                    summary=str(e.get("description") or "")[:280],
+                    preview=f"{e.get('category')} · owner {e.get('owner')}",
+                    location=str(e.get("id") or ""),
+                    score=0.88,
+                    strategy="catalog",
+                    open_action=open_action,
+                    metadata={
+                        "category": e.get("category"),
+                        "owner": e.get("owner"),
+                        "pref_id": e.get("id"),
+                        "aliases": e.get("aliases"),
+                    },
+                    icon="settings",
+                )
+            )
+        return out
+
+    return _safe(_run, "settings")
+
+
 RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "documents": retrieve_documents,
     "memory": retrieve_memory,
@@ -685,4 +720,5 @@ RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "home_assistant": retrieve_home_assistant,
     "flytying": retrieve_flytying,
     "automation": retrieve_automation,
+    "settings": retrieve_settings,
 }

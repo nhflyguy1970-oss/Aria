@@ -45,7 +45,7 @@
   function buildIndex() {
     const labels = window.AriaFavorites?.VIEW_LABELS || {};
     const sectionOf = {
-      chat: "AI", search: "Workspace", dashboard: "Home", workstation: "Mission Control", planner: "Workspace",
+      chat: "AI", search: "Workspace", settings: "Workspace", dashboard: "Home", workstation: "Mission Control", planner: "Workspace",
       calendar: "Workspace", journal: "Workspace", memory: "Workspace", projects: "Developer",
       documents: "Workspace", browser: "AI", flytying: "Maker", maker: "Maker",
       gallery: "Media", video: "Media", meme: "Media", audio: "Media", voice: "Media",
@@ -63,7 +63,8 @@
     }));
 
     const settings = [
-      { label: "Settings", el: "settingsBtn", keywords: "voice chat speak whisper" },
+      { label: "Settings Home", el: "settingsBtn", keywords: "preferences catalog appearance ctrl+," },
+      { label: "Voice & Chat", el: "voiceChatSettingsBtn", keywords: "speak whisper voice" },
       { label: "Keyboard shortcuts", el: "shortcutsBtn", keywords: "keys hotkeys" },
       { label: "What's New", el: "whatsNewBtn", keywords: "features changelog recent" },
       { label: "Job center", el: "jobCenterBtn", keywords: "background media coding jobs" },

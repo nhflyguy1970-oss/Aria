@@ -91,10 +91,10 @@
         return;
       }
 
-      // Ctrl+, settings
+      // Ctrl+, Settings Home
       if (mod && e.key === ",") {
         e.preventDefault();
-        document.getElementById("settingsBtn")?.click();
+        window.openSettingsHome?.() || window.switchToView?.("settings");
         return;
       }
 

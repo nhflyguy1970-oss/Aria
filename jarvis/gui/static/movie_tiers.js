@@ -731,15 +731,29 @@
       }
     });
     $("integrationsSettingsBtn")?.addEventListener("click", () => {
-      $("settingsModal")?.classList.remove("hidden");
+      window.openSettingsHome?.("secrets") || window.switchToView?.("settings");
     });
   }
 
-  /* --- Settings modal (Tier 2 voice unified #8) --- */
+  /* --- Voice & Chat modal (Speak + Whisper). Settings Home is Ctrl+, / settingsBtn. --- */
+  function openVoiceChatSettings() {
+    $("settingsModal")?.classList.remove("hidden");
+  }
+  window.openVoiceChatSettings = openVoiceChatSettings;
+
   function initSettingsModal() {
     const modal = $("settingsModal");
-    $("settingsBtn")?.addEventListener("click", () => modal?.classList.remove("hidden"));
+    $("voiceChatSettingsBtn")?.addEventListener("click", () => openVoiceChatSettings());
     $("settingsCloseBtn")?.addEventListener("click", () => modal?.classList.add("hidden"));
+    $("settingsOpenHomeFromModalBtn")?.addEventListener("click", () => {
+      modal?.classList.add("hidden");
+      window.openSettingsHome?.();
+    });
+    // Honest entry: Settings button opens Settings Home, not Voice & Chat
+    $("settingsBtn")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.openSettingsHome?.() || window.switchToView?.("settings");
+    });
   }
 
   /* Actions filter / loadActions → actions_view.js */

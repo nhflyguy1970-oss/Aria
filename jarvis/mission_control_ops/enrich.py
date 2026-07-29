@@ -217,6 +217,12 @@ def enrich_snapshot(data: dict[str, Any] | None) -> dict[str, Any]:
         snap["search"] = search_mission_panel()
     except Exception:
         snap["search"] = {"product": "Search", "state": "unknown"}
+    try:
+        from jarvis.settings_product.mission_bridge import settings_mission_panel
+
+        snap["settings_product"] = settings_mission_panel()
+    except Exception:
+        snap["settings_product"] = {"product": "Settings", "state": "unknown"}
     return snap
 
 
