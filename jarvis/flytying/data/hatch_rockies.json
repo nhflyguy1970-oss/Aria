@@ -1,0 +1,67 @@
+{
+  "id": "rockies",
+  "region": "Rocky Mountains",
+  "description": "High-country hatch calendar for Rocky Mountain trout waters.",
+  "months": {
+    "1": {
+      "hatches": ["Midges"],
+      "suggest_types": ["midge", "nymph"],
+      "notes": "Deep winter — tiny midges and zebra midges under indicators."
+    },
+    "2": {
+      "hatches": ["Midges", "Winter stones"],
+      "suggest_types": ["midge", "nymph", "streamer"],
+      "notes": "Black stones on mild days; midges remain primary."
+    },
+    "3": {
+      "hatches": ["Blue-winged olives", "Midges"],
+      "suggest_types": ["baetis", "nymph", "emerger"],
+      "notes": "Early BWO on lower-elevation freestones."
+    },
+    "4": {
+      "hatches": ["Blue-winged olives", "Skwalas", "Early caddis"],
+      "suggest_types": ["dry", "nymph", "stonefly"],
+      "notes": "Skwala stones on western freestones; BWO continue."
+    },
+    "5": {
+      "hatches": ["Mother's Day caddis", "PMDs (low)", "Salmonflies (local)"],
+      "suggest_types": ["caddis", "dry", "stonefly", "nymph"],
+      "notes": "Explosive caddis; salmonfly where rivers warm."
+    },
+    "6": {
+      "hatches": ["PMDs", "Yellow sallies", "Green drakes (local)", "Caddis"],
+      "suggest_types": ["dry", "emerger", "nymph"],
+      "notes": "Peak dry-fly season at elevation as snowmelt settles."
+    },
+    "7": {
+      "hatches": ["PMDs", "Tricos (low)", "Hoppers", "Caddis"],
+      "suggest_types": ["dry", "terrestrial", "streamer"],
+      "notes": "Terrestrials start; high lakes still productive."
+    },
+    "8": {
+      "hatches": ["Hoppers", "Ants", "Tricos", "Evening caddis"],
+      "suggest_types": ["terrestrial", "dry", "streamer"],
+      "notes": "Hopper-dropper prime time along meadow stretches."
+    },
+    "9": {
+      "hatches": ["Blue-winged olives", "Mahogany duns", "October caddis (early)"],
+      "suggest_types": ["baetis", "dry", "nymph", "streamer"],
+      "notes": "Fall BWO return; mahogany mayflies on freestones."
+    },
+    "10": {
+      "hatches": ["Blue-winged olives", "October caddis", "Midges"],
+      "suggest_types": ["caddis", "baetis", "streamer", "nymph"],
+      "notes": "October caddis evenings; streamers for pre-spawn browns."
+    },
+    "11": {
+      "hatches": ["Midges", "Blue-winged olives"],
+      "suggest_types": ["midge", "nymph", "streamer"],
+      "notes": "Cooling water — midges and nymphs dominate."
+    },
+    "12": {
+      "hatches": ["Midges"],
+      "suggest_types": ["midge", "nymph", "streamer"],
+      "notes": "Winter program: midges and slow streamers."
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "id": "northeast",
+  "region": "Northeast US",
+  "description": "Typical inland and coastal Northeast hatch calendar for trout and warmwater tying prep.",
+  "months": {
+    "1": {
+      "hatches": ["Midges", "Winter stoneflies"],
+      "suggest_types": ["midge", "nymph", "streamer"],
+      "notes": "Slow winter water — tiny midges and dark stonefly nymphs. Streamers for deeper pools on mild days."
+    },
+    "2": {
+      "hatches": ["Midges", "Early little black stoneflies"],
+      "suggest_types": ["midge", "nymph", "soft hackle"],
+      "notes": "Continue midge focus; black stones start on freestones during thaws. Soft hackles in slow seams."
+    },
+    "3": {
+      "hatches": ["Blue-winged olives", "Little black stoneflies", "Early midges"],
+      "suggest_types": ["baetis", "dry", "nymph", "emerger"],
+      "notes": "First reliable BWO windows on overcast afternoons. Stock baetis dries, emergers, and pheasant tails."
+    },
+    "4": {
+      "hatches": ["Hendricksons", "Quill Gordons", "Blue-winged olives", "Early caddis"],
+      "suggest_types": ["dry", "emerger", "nymph", "caddis"],
+      "notes": "Classic early mayfly season. Hendrickson and Quill Gordon dries/emergers; tan caddis begin late month."
+    },
+    "5": {
+      "hatches": ["March browns", "Hendricksons", "Caddis", "Sulphurs (late)", "Black flies"],
+      "suggest_types": ["dry", "caddis", "nymph", "streamer"],
+      "notes": "Peak spring diversity. Elk-hair caddis, march brown patterns, and streamers for high water."
+    },
+    "6": {
+      "hatches": ["Sulphurs", "Caddis", "Light cahills", "Green drakes (local)", "Ants"],
+      "suggest_types": ["dry", "emerger", "caddis", "terrestrial"],
+      "notes": "Sulphur evenings and cahill afternoons. Start terrestrial boxes; green drake where local."
+    },
+    "7": {
+      "hatches": ["Tricos", "Caddis", "Ants", "Beetles", "Isos"],
+      "suggest_types": ["dry", "terrestrial", "spinner", "nymph"],
+      "notes": "Trico spinner falls at dawn; terrestrials midday. Iso nymphs and dries on freestones."
+    },
+    "8": {
+      "hatches": ["Tricos", "Ants", "Hoppers", "Flying ants", "Evening caddis"],
+      "suggest_types": ["terrestrial", "dry", "streamer", "bass"],
+      "notes": "Terrestrial peak — hoppers and ants. Warmwater poppers/streamers for bass ponds and rivers."
+    },
+    "9": {
+      "hatches": ["Blue-winged olives", "Flying ants", "Caddis", "Early October caddis (local)"],
+      "suggest_types": ["baetis", "dry", "nymph", "streamer"],
+      "notes": "Fall BWO return; ants after rains. Streamers as baitfish move — excellent for larger trout."
+    },
+    "10": {
+      "hatches": ["Blue-winged olives", "October caddis", "Midges", "Slate drakes (local)"],
+      "suggest_types": ["baetis", "caddis", "nymph", "streamer"],
+      "notes": "Cooling water — olives and large autumn caddis. Stock streamers for pre-spawn aggression."
+    },
+    "11": {
+      "hatches": ["Midges", "Late BWOs", "Stoneflies"],
+      "suggest_types": ["midge", "nymph", "streamer"],
+      "notes": "Sparse surface action; focus nymphs and streamers. Midge clusters on calm late-season days."
+    },
+    "12": {
+      "hatches": ["Midges", "Winter stoneflies"],
+      "suggest_types": ["midge", "nymph", "streamer"],
+      "notes": "Bench season — rebuild midge and nymph boxes, restock streamers for winter trips."
+    }
+  }
+}

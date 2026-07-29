@@ -65,6 +65,22 @@ def _blackfly_rag_context(question: str, *, fly_type: str | None = None, limit: 
     return blob[:MAX_RAG_CHARS], hits
 
 
+def _messages_for_llm(question: str, context: str) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are a fly-tying assistant. Answer ONLY from the Blackfly recipe library excerpts. "
+                "If the library lacks the answer, say so. Cite pattern names when relevant."
+            ),
+        },
+        {
+            "role": "user",
+            "content": f"Question: {question}\n\nLibrary excerpts:\n{context or '(no matching patterns)'}",
+        },
+    ]
+
+
 def chat_turn(
     messages: list[dict[str, Any]],
     *,
@@ -101,12 +117,7 @@ def chat_turn(
     try:
         from jarvis.llm import ask
 
-        prompt = (
-            "You are a fly-tying assistant. Answer ONLY from the Blackfly recipe library excerpts below. "
-            "If the library lacks the answer, say so.\n\n"
-            f"Question: {question}\n\nLibrary excerpts:\n{context or '(no matching patterns)'}"
-        )
-        answer = ask(chosen_model, [{"role": "user", "content": prompt}])
+        answer = ask(chosen_model, _messages_for_llm(question, context))
     except Exception as exc:
         return {"ok": False, "message": str(exc), "answer": "", "recipes": hits}
     return {"ok": True, "answer": answer, "recipes": hits, "model": chosen_model, "source": "blackfly_jsonl"}
@@ -131,7 +142,70 @@ def chat_turn_stream(
     *,
     fly_type: str | None = None,
     model: str | None = None,
-) -> Iterator[str]:
-    result = chat_turn(messages, fly_type=fly_type, model=model)
-    text = result.get("answer") or result.get("message") or ""
-    yield f"data: {json.dumps({'text': text, 'recipes': result.get('recipes') or []})}\n\n"
+) -> Iterator[dict[str, Any]]:
+    """Yield token/done events for SSE (dicts — API wraps as data: JSON)."""
+    if not blackfly_data_available():
+        yield {
+            "type": "done",
+            "ok": False,
+            "message": f"Blackfly scraped database not found at {recipe_source_path()}",
+            "answer": "",
+            "recipes": [],
+        }
+        return
+
+    question = ""
+    for msg in reversed(messages or []):
+        if msg.get("role") == "user":
+            question = str(msg.get("content") or "")
+            break
+
+    context, hits = _blackfly_rag_context(question, fly_type=fly_type) if question else ("", [])
+    chosen_model = flytying_model(override=model)
+
+    if hits:
+        yield {"type": "recipes", "recipes": hits}
+
+    # Prefer true token streaming via jarvis.llm.ask_stream; fall back to blackfly one-shot
+    if _prepare_semantic_rag(question):
+        try:
+            from blackfly_rag import answer_question
+
+            answer = answer_question(question, fly_type=fly_type, model=chosen_model)
+            if answer:
+                # Emit in chunks so UI still animates
+                step = max(24, len(answer) // 40)
+                for i in range(0, len(answer), step):
+                    yield {"type": "token", "content": answer[i : i + step]}
+                yield {
+                    "type": "done",
+                    "ok": True,
+                    "answer": answer,
+                    "recipes": hits,
+                    "model": chosen_model,
+                    "source": "blackfly_rag",
+                }
+                return
+        except Exception:
+            pass
+
+    try:
+        from jarvis.llm import ask_stream
+
+        parts: list[str] = []
+        for token in ask_stream(chosen_model, _messages_for_llm(question, context)):
+            if not token:
+                continue
+            parts.append(token)
+            yield {"type": "token", "content": token}
+        answer = "".join(parts)
+        yield {
+            "type": "done",
+            "ok": True,
+            "answer": answer,
+            "recipes": hits,
+            "model": chosen_model,
+            "source": "blackfly_jsonl_stream",
+        }
+    except Exception as exc:
+        yield {"type": "done", "ok": False, "message": str(exc), "answer": "", "recipes": hits}

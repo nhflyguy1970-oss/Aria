@@ -127,13 +127,39 @@ def enrich_article_embeds(*, limit: int = 8) -> dict[str, Any]:
 
 def learn_recipe_of_the_day(*, memory_store=None) -> dict[str, Any]:
     """Add one short fly-tying fact to memory (rotates through gold library)."""
-    import json as _json
+    potd = pattern_of_the_day()
+    if not potd.get("ok"):
+        return {"ok": False, "message": potd.get("message") or "Pattern of the day unavailable"}
 
-    from jarvis.flytying.config import recipe_source_path
     from jarvis.flytying.knowledge import FLYTYING_MEMORY_NAMESPACE
 
     if memory_store is None:
-        return {"ok": False, "skipped": True, "message": "no memory store"}
+        return {"ok": False, "skipped": True, "message": "no memory store", **potd}
+
+    day = _today()
+    name = potd.get("name") or "Pattern"
+    content = potd.get("summary") or f"Pattern of the day: **{name}**."
+    tag = f"fly-tying-daily:{day}"
+    try:
+        for entry in memory_store.list_entries(namespace=FLYTYING_MEMORY_NAMESPACE):
+            if tag in (entry.get("tags") or []):
+                return {"ok": True, "skipped": True, "message": "already learned today", "pattern": name, **potd}
+        memory_store.add(
+            "note",
+            content,
+            tags=["fly-tying-daily", tag, "document-learn"],
+            namespace=FLYTYING_MEMORY_NAMESPACE,
+        )
+    except Exception as exc:
+        return {"ok": False, "message": str(exc), **potd}
+    return {"ok": True, "pattern": name, "message": content, **potd}
+
+
+def pattern_of_the_day(*, day: str | None = None) -> dict[str, Any]:
+    """Deterministic Pattern of the Day from the gold/scraped library (no Memory write)."""
+    import json as _json
+
+    from jarvis.flytying.config import recipe_source_path
 
     path = recipe_source_path()
     if not path.is_file():
@@ -152,35 +178,37 @@ def learn_recipe_of_the_day(*, memory_store=None) -> dict[str, Any]:
                     continue
                 if isinstance(item, dict):
                     recipes.append(item)
-    except OSError:
-        return {"ok": False, "message": "read failed"}
+    except OSError as exc:
+        return {"ok": False, "message": str(exc)}
     if not recipes:
         return {"ok": False, "message": "empty library"}
 
-    day = _today()
-    idx = sum(ord(c) for c in day) % len(recipes)
+    d = day or _today()
+    idx = sum(ord(c) for c in d) % len(recipes)
     recipe = recipes[idx]
     name = str(recipe.get("fly_name") or recipe.get("name") or recipe.get("instruction") or "Pattern")
     rtype = recipe.get("type") or "?"
     hook = recipe.get("hook") or ""
+    rid = str(recipe.get("id") or recipe.get("recipe_id") or recipe.get("content_hash") or name)
     mats = recipe.get("materials") or []
     mat_preview = "; ".join(str(m) for m in mats[:4])
-    content = f"Pattern of the day: **{name}** ({rtype})."
+    summary = f"Pattern of the day: **{name}** ({rtype})."
     if hook:
-        content += f" Hook: {hook}."
+        summary += f" Hook: {hook}."
     if mat_preview:
-        content += f" Key materials: {mat_preview}."
-    tag = f"fly-tying-daily:{day}"
-    for entry in memory_store.list_entries(namespace=FLYTYING_MEMORY_NAMESPACE):
-        if tag in (entry.get("tags") or []):
-            return {"ok": True, "skipped": True, "message": "already learned today", "pattern": name}
-    memory_store.add(
-        "note",
-        content,
-        tags=["fly-tying-daily", tag, "document-learn"],
-        namespace=FLYTYING_MEMORY_NAMESPACE,
-    )
-    return {"ok": True, "pattern": name, "message": content}
+        summary += f" Key materials: {mat_preview}."
+    return {
+        "ok": True,
+        "day": d,
+        "name": name,
+        "type": rtype,
+        "hook": hook,
+        "recipe_id": rid,
+        "materials_preview": mat_preview,
+        "summary": summary,
+        "index": idx,
+        "total": len(recipes),
+    }
 
 
 def run_nightly_flytying_learning(

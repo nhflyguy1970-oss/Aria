@@ -184,6 +184,12 @@ def enrich_snapshot(data: dict[str, Any] | None) -> dict[str, Any]:
         snap["vision"] = vision_mission_panel()
     except Exception:
         snap["vision"] = {"product": "Vision", "state": "unknown"}
+    try:
+        from jarvis.flytying_product.mission_bridge import flytying_mission_panel
+
+        snap["flytying"] = flytying_mission_panel()
+    except Exception:
+        snap["flytying"] = {"product": "Fly Tying", "state": "unknown"}
     return snap
 
 

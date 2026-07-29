@@ -112,3 +112,19 @@ def fetch_videos_from_url(url: str) -> list[dict[str, Any]]:
     if not html:
         return []
     return embedded_video_urls_from_html(html, page_url=url)
+
+
+def discover_videos_from_url(url: str) -> list[dict[str, Any]]:
+    """Alias used by API + nightly — same implementation as fetch_videos_from_url."""
+    rows = fetch_videos_from_url(url)
+    # Normalize keys for nightly (watch_url / embed_url)
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        item = dict(row)
+        url_s = str(item.get("url") or "")
+        if url_s and "watch_url" not in item:
+            item["watch_url"] = url_s
+        if item.get("provider") == "youtube" and item.get("id"):
+            item.setdefault("embed_url", f"https://www.youtube.com/embed/{item['id']}")
+        out.append(item)
+    return out

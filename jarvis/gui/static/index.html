@@ -1979,14 +1979,46 @@
             <label class="flytying-model-label">Model
               <select id="flytyingModelSelect" class="personality-select" title="Fly tying model (7b = recipes, 14b = design)"></select>
             </label>
-            <button type="button" id="flytyingHealthBtn" class="ghost-btn small" title="Library health">Health</button>
-            <button type="button" id="flytyingRebuildBtn" class="ghost-btn small" title="Rebuild gold index">Rebuild</button>
+            <button type="button" id="flytyingHealthBtn" class="ghost-btn small" title="Guided library setup &amp; health">Setup</button>
+            <button type="button" id="flytyingRebuildBtn" class="ghost-btn small hidden" title="Rebuild gold index">Rebuild</button>
             <button type="button" id="flytyingRefreshBtn" class="ghost-btn small">Refresh</button>
             <button type="button" id="flytyingOpenGalleryBtn" class="ghost-btn small" title="Open Gallery">Gallery</button>
           </div>
         </header>
         <p id="flytyingHatchBanner" class="flytying-hatch-banner muted small"></p>
         <p id="flytyingDataWarn" class="flytying-data-warn hidden" role="alert"></p>
+        <section id="flytyingHomePanel" class="flytying-home-panel" aria-label="Fly Tying Home">
+          <div id="flytyingRecoveryCard" class="flytying-recovery-card hidden" role="status"></div>
+          <div class="flytying-home-grid">
+            <div class="flytying-home-card">
+              <h3 class="flytying-col-subtitle">Inventory first</h3>
+              <p id="flytyingHomeInvStatus" class="muted small">—</p>
+              <div class="sidebar-btn-row">
+                <button type="button" id="flytyingHomeSuggestBtn" class="apply-btn small">Suggest a fly</button>
+                <button type="button" id="flytyingHomeFocusInvBtn" class="ghost-btn small">Open inventory</button>
+                <button type="button" id="flytyingStartSessionBtn" class="ghost-btn small">Start session</button>
+              </div>
+              <ul id="flytyingHomeLowStock" class="flytying-home-list muted small"></ul>
+            </div>
+            <div class="flytying-home-card">
+              <h3 class="flytying-col-subtitle">Today</h3>
+              <p id="flytyingHomePotd" class="small"></p>
+              <p id="flytyingHomeSession" class="muted small"></p>
+              <p id="flytyingHomeHatch" class="muted small"></p>
+            </div>
+            <div class="flytying-home-card">
+              <h3 class="flytying-col-subtitle">Profiles &amp; voice</h3>
+              <label>Profile
+                <select id="flytyingProfileSelect" class="personality-select" aria-label="Fly Tying profile"></select>
+              </label>
+              <button type="button" id="flytyingProfileActivateBtn" class="ghost-btn small">Apply profile</button>
+              <div class="sidebar-btn-row">
+                <button type="button" id="flytyingVoiceNextBtn" class="ghost-btn small" title="Voice: next step">Next step</button>
+                <button type="button" id="flytyingVoiceRepeatBtn" class="ghost-btn small" title="Voice: repeat step">Repeat</button>
+              </div>
+            </div>
+          </div>
+        </section>
         <div class="flytying-layout">
           <aside class="flytying-col flytying-col-recipes">
             <h3 class="flytying-col-title">Patterns</h3>
@@ -2052,11 +2084,10 @@
               <textarea id="flytyingMaterialsSummary" rows="2" placeholder="e.g. olive 14 dry hook, grizzly hackle, Uni 8/0 olive thread — or use the inventory table below"></textarea>
               <label class="flytying-materials-explain"><input type="checkbox" id="flytyingMaterialsExplain" /> Ask ARIA to explain matches (slower)</label>
               <div class="flytying-materials-actions">
+                <button type="button" id="flytyingMaterialsBtn" class="apply-btn small">Suggest a fly</button>
                 <button type="button" id="flytyingSaveMaterialsBtn" class="ghost-btn small">Save list</button>
-                <button type="button" id="flytyingMaterialsBtn" class="ghost-btn small">Suggest a fly</button>
               </div>
-              <details class="flytying-inv-details" id="flytyingInvDetails">
-                <summary class="nav-label">Inventory table — what, color, size, brand</summary>
+              <details class="flytying-inv-details" id="flytyingInvDetails" open>                <summary class="nav-label">Inventory table — what, color, size, brand</summary>
                 <div class="flytying-inv-db-wrap">
                   <table class="flytying-inv-table" aria-label="Materials inventory">
                     <thead>
@@ -2988,7 +3019,8 @@
   <script src="/static/models_home.js?v=1.0.0"></script>
   <script src="/static/coding_home.js?v=1.0.0"></script>
   <script src="/static/calendar.js?v=5.17.0"></script>
-  <script src="/static/flytying.js?v=5.16.106"></script>
+  <script src="/static/flytying.js?v=5.17.0"></script>
+  <script src="/static/flytying_home.js?v=1.0.0"></script>
 
   <script src="/static/projects.js?v=5.17.0"></script>
   <script src="/static/vendor/three/three.min.js"></script>

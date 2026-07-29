@@ -1151,6 +1151,8 @@
     try {
       const data = await fetchJson(`/api/flytying/recipes/${encodeURIComponent(idOrName)}`);
       _currentRecipe = data;
+      window._flytyingSelectedId = data.recipe_id || data.name || idOrName || "";
+      window._flytyingSelectedName = data.name || data.fly_name || "";
       updateCompareToolbar();
       const subs = data.substitutions || {};
       const subHtml = Object.keys(subs).length
@@ -1436,15 +1438,35 @@
 
   async function showLibraryHealth() {
     try {
-      const h = await fetchJson("/api/flytying/health");
-      const msg =
-        `Library: ${h.total} · images ${h.with_images} (${h.image_pct}%) · videos ${h.with_videos} (${h.video_pct}%) · avg quality ${h.avg_quality}`;
-      const status = $("flytyingStatus");
-      if (status) status.textContent = msg;
-      window.showAriaToast?.(msg, "ok", 6000);
-      const detail =
-        `Duplicate name groups: ${h.duplicate_name_groups} · Aliases: ${h.alias_count}`;
-      $("flytyingSearchHint") && ($("flytyingSearchHint").textContent = detail);
+      const [h, recovery] = await Promise.all([
+        fetchJson("/api/flytying/health").catch(() => null),
+        fetch("/api/flytying/product/recovery").then((r) => r.json()).catch(() => null),
+      ]);
+      if (recovery && !recovery.ready) {
+        const card = $("flytyingRecoveryCard");
+        if (card) {
+          card.classList.remove("hidden");
+          const steps = (recovery.steps || [])
+            .map((s) => `<li>${s.done ? "✓" : "○"} ${esc(s.label)}</li>`)
+            .join("");
+          card.innerHTML = `<strong>Connect your pattern library</strong><p class="muted small">${esc(recovery.hint || "")}</p><ol class="tiny">${steps}</ol>`;
+        }
+        $("flytyingRebuildBtn")?.classList.remove("hidden");
+        window.showAriaToast?.(recovery.hint || "Library setup needed", "warn", 6000);
+        window.loadFlytyingHome?.();
+        return;
+      }
+      if (h) {
+        const msg =
+          `Library: ${h.total} · images ${h.with_images} (${h.image_pct}%) · videos ${h.with_videos} (${h.video_pct}%) · avg quality ${h.avg_quality}`;
+        const status = $("flytyingStatus");
+        if (status) status.textContent = msg;
+        window.showAriaToast?.(msg, "ok", 6000);
+        const detail =
+          `Duplicate name groups: ${h.duplicate_name_groups} · Aliases: ${h.alias_count}`;
+        $("flytyingSearchHint") && ($("flytyingSearchHint").textContent = detail);
+      }
+      window.loadFlytyingHome?.();
     } catch (e) {
       window.showAriaToast?.(e.message || "Fly tying health failed", "err", 5000);
     }
@@ -1495,9 +1517,33 @@
       window.showAriaToast?.("Pop-up blocked — allow pop-ups to print", "warn", 4500);
       return;
     }
-    w.document.write(`<pre>${esc(_currentRecipe.formatted || _currentRecipe.name)}</pre>`);
+    const name = esc(_currentRecipe.name || _currentRecipe.fly_name || "Pattern");
+    const type = esc(_currentRecipe.type || "");
+    const hook = esc(_currentRecipe.hook || "");
+    const mats = (_currentRecipe.materials || []).map((m) => `<li>${esc(m)}</li>`).join("");
+    const steps = (_currentRecipe.steps || []).map((s, i) => `<li><strong>${i + 1}.</strong> ${esc(s)}</li>`).join("");
+    const body = _currentRecipe.formatted
+      ? `<pre class="recipe-plain">${esc(_currentRecipe.formatted)}</pre>`
+      : `<p class="meta">${type}${hook ? " · Hook " + hook : ""}</p>
+         ${mats ? `<h2>Materials</h2><ul>${mats}</ul>` : ""}
+         ${steps ? `<h2>Steps</h2><ol class="steps">${steps}</ol>` : ""}`;
+    w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${name}</title>
+<style>
+body{font-family:Georgia,serif;max-width:40rem;margin:1.5rem auto;padding:0 1rem;color:#111;line-height:1.45}
+h1{font-size:1.6rem;margin:0 0 .35rem}
+.meta{color:#444;margin:0 0 1rem}
+h2{font-size:1.1rem;margin:1.2rem 0 .4rem;border-bottom:1px solid #ccc;padding-bottom:.2rem}
+ul,ol.steps{padding-left:1.25rem}
+.recipe-plain{white-space:pre-wrap;font-family:inherit;font-size:.95rem}
+@media print{body{margin:.5rem}}
+</style></head><body>
+<h1>${name}</h1>
+${body}
+<p><button onclick="window.print()">Print</button></p>
+</body></html>`);
     w.document.close();
-    w.print();
+    w.focus();
+    setTimeout(() => w.print(), 250);
   }
 
   async function runCompare() {
@@ -1630,8 +1676,20 @@
       refreshStatus();
       loadRecipes();
       loadVideos();
+      window.loadFlytyingHome?.();
     });
     $("flytyingOpenGalleryBtn")?.addEventListener("click", () => {
+      if (_currentRecipe) {
+        window._flytyingGalleryLink = {
+          recipe_id: _currentRecipe.recipe_id || "",
+          recipe_name: _currentRecipe.name || "",
+        };
+        window.showAriaToast?.(
+          `Gallery open — tag a finished photo for ${_currentRecipe.name || "this pattern"} via Fly Tying link API`,
+          "ok",
+          4500
+        );
+      }
       window.switchToView?.("gallery");
     });
   }

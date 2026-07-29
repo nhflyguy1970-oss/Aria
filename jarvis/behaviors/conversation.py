@@ -143,6 +143,16 @@ class ConversationEngine:
         except Exception:
             pass
 
+        # Fly Tying library grounding (shared engine — confirm via knowledge.is_flytying_chat)
+        try:
+            from jarvis.flytying.knowledge import flytying_context_for_chat
+
+            fly_ctx = flytying_context_for_chat(getattr(self._a, "memory", None), message, limit=5)
+            if fly_ctx:
+                parts.append("Fly tying library context:\n" + fly_ctx)
+        except Exception:
+            pass
+
         from jarvis.lang_util import detect_text_language, language_reply_hint
 
         lang = detect_text_language(message)

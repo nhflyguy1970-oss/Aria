@@ -52,21 +52,26 @@ def get_cached_videos(source_url: str) -> list[dict[str, Any]]:
     return rows if isinstance(rows, list) else []
 
 
-def remove_custom_video(key: str) -> list[dict[str, Any]]:
+def remove_custom_video(key: str) -> dict[str, Any]:
     needle = (key or "").strip()
-    rows = [r for r in list_custom_videos() if str(r.get("video_id") or r.get("url") or "") != needle]
+    if not needle:
+        return {"ok": False, "message": "key required"}
+    before = list_custom_videos()
+    rows = [r for r in before if str(r.get("video_id") or r.get("url") or "") != needle]
+    if len(rows) == len(before):
+        return {"ok": False, "message": "not found", "count": len(rows), "results": rows}
     _write_json(CUSTOM_VIDEOS_FILE, rows)
-    return rows
+    return {"ok": True, "deleted": needle, "count": len(rows), "results": rows}
 
 
-def add_custom_video(url: str | None, *, title: str = "") -> list[dict[str, Any]]:
+def add_custom_video(url: str | None, *, title: str = "") -> dict[str, Any]:
     url = str(url or "").strip()
     if not url:
-        raise ValueError("url required")
+        return {"ok": False, "message": "url required"}
     video_id = _youtube_id(url)
     rows = list_custom_videos()
     row = {
-        "provider": "youtube",
+        "provider": "youtube" if video_id else "web",
         "url": url,
         "video_id": video_id,
         "title": title or url,
@@ -74,4 +79,16 @@ def add_custom_video(url: str | None, *, title: str = "") -> list[dict[str, Any]
     }
     rows.insert(0, row)
     _write_json(CUSTOM_VIDEOS_FILE, rows)
-    return rows
+    return {"ok": True, "video": row, "count": len(rows), "results": rows}
+
+
+def set_cached_videos(source_url: str, rows: list[dict[str, Any]]) -> dict[str, Any]:
+    url = (source_url or "").strip()
+    if not url:
+        return {"ok": False, "message": "source_url required"}
+    cache = _read_json(VIDEO_CACHE_FILE, {})
+    if not isinstance(cache, dict):
+        cache = {}
+    cache[url] = list(rows or [])
+    _write_json(VIDEO_CACHE_FILE, cache)
+    return {"ok": True, "source_url": url, "count": len(cache[url])}

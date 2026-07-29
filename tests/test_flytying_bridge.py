@@ -1,7 +1,36 @@
-"""Test stub — decompiled original replaced for collection."""
-import pytest
+"""Fly Tying bridge — status, search, materials suggest, POTD wiring."""
 
-pytestmark = pytest.mark.skip(reason="decompiled test pending rewrite")
+from __future__ import annotations
 
-def test_decompile_stub():
-    pass
+from unittest.mock import patch
+
+
+def test_bridge_status_includes_pattern_of_the_day():
+    from jarvis.flytying import bridge
+
+    potd = {"ok": True, "name": "Adams", "type": "dry", "day": "2026-07-28"}
+    with patch("jarvis.flytying.nightly.pattern_of_the_day", return_value=potd):
+        with patch("jarvis.flytying.bridge.gold_available", return_value=False):
+            st = bridge.status()
+    assert "pattern_of_the_day" in st
+    assert st["pattern_of_the_day"]["name"] == "Adams"
+
+
+def test_bridge_search_recipes_delegates():
+    from jarvis.flytying import bridge
+
+    with patch(
+        "jarvis.flytying.bridge.unified_search",
+        return_value={"ok": True, "results": [{"name": "BWO", "recipe_id": "1"}]},
+    ):
+        hits = bridge.search_recipes("bwo", limit=3)
+    assert hits
+    assert hits[0]["name"] == "BWO"
+
+
+def test_suggest_from_materials_tolerates_empty():
+    from jarvis.flytying import bridge
+
+    with patch("jarvis.flytying.bridge.gold_available", return_value=False):
+        out = bridge.suggest_from_materials([], limit=3)
+    assert isinstance(out, list)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 from fastapi import Request
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
 
 from jarvis.flytying import bridge
 from jarvis.flytying.chat import chat_turn, chat_turn_stream, get_model_setting, set_model_setting
@@ -249,31 +249,12 @@ def register_routes(app, assistant) -> None:
 
     @app.get("/api/flytying/materials/label/{barcode}")
     def api_flytying_materials_label_html(barcode: str, name: str = ""):
-        from html import escape
         from jarvis.flytying.barcode import normalize_barcode
-
-        code = normalize_barcode(barcode)
-        label = (name or "").strip() or code
-        qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={code}"
-        html = f"""<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Label — {escape(label)}</title>
-<style>
-body {{ font-family: system-ui, sans-serif; margin: 1.5rem; }}
-.label {{ border: 2px solid #333; padding: 1rem; max-width: 14rem; text-align: center; }}
-.name {{ font-weight: 700; font-size: 1rem; margin-bottom: 0.5rem; word-break: break-word; }}
-.code {{ font-family: monospace; font-size: 0.85rem; margin-top: 0.5rem; }}
-@media print {{ body {{ margin: 0; }} .label {{ border: 1px solid #000; }} }}
-</style></head><body>
-<div class="label">
-  <div class="name">{escape(label)}</div>
-  <img src="{escape(qr_url)}" width="180" height="180" alt="QR" />
-  <div class="code">{escape(code)}</div>
-</div>
-<p class="muted"><button onclick="window.print()">Print</button></p>
-</body></html>"""
+        from jarvis.flytying_product.qr_local import label_html
         from starlette.responses import HTMLResponse
 
-        return HTMLResponse(html)
+        code = normalize_barcode(barcode)
+        return HTMLResponse(label_html(code, name or ""))
 
     @app.post("/api/flytying/materials/scan-image")
     async def api_flytying_materials_scan_image(request: Request):
@@ -591,3 +572,11 @@ body {{ font-family: system-ui, sans-serif; margin: 1.5rem; }}
             if assistant is not None and getattr(assistant, "memory", None):
                 seed_memory(assistant.memory)
         return result
+
+    # Product layer routes (profiles, sessions, mission, vision/voice bridges, etc.)
+    try:
+        from jarvis.flytying_product.api import register_product_routes
+
+        register_product_routes(app, assistant)
+    except Exception:
+        pass

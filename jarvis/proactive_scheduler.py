@@ -158,6 +158,19 @@ def _loop() -> None:
             from jarvis.automation.ops import maybe_nightly_maintenance
 
             maybe_nightly_maintenance(now)
+            try:
+                from jarvis.flytying.nightly import run_scheduled as flytying_nightly
+
+                memory = None
+                try:
+                    from jarvis.assistant_instance import get_assistant
+
+                    memory = getattr(get_assistant(), "memory", None)
+                except Exception:
+                    memory = None
+                flytying_nightly(now, memory=memory)
+            except Exception as exc:
+                logger.debug("Fly tying nightly skipped: %s", exc)
         except Exception as exc:
             logger.warning("Scheduler tick failed: %s", exc)
 

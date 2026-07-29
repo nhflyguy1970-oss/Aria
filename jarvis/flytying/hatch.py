@@ -9,21 +9,23 @@ from pathlib import Path
 from typing import Any
 
 _DATA = Path(__file__).resolve().parent / "data" / "hatch_northeast.json"
+_OPERATOR = Path(__file__).resolve().parent / "data" / "hatch_operator_active.json"
 
 
-@lru_cache(maxsize=1)
-def _calendar() -> dict[str, Any]:
-    if not _DATA.is_file():
+@lru_cache(maxsize=2)
+def _calendar(path_key: str = "default") -> dict[str, Any]:
+    path = _OPERATOR if path_key == "operator" and _OPERATOR.is_file() else _DATA
+    if not path.is_file():
         return {}
     try:
-        data = json.loads(_DATA.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
         return data if isinstance(data, dict) else {}
     except (OSError, json.JSONDecodeError):
         return {}
 
 
 def hatch_context(*, month: int | None = None) -> dict[str, Any]:
-    cal = _calendar()
+    cal = _calendar("operator" if _OPERATOR.is_file() else "default")
     m = month or datetime.now().month
     month_data = (cal.get("months") or {}).get(str(m)) or {}
     return {
