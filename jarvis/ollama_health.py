@@ -85,6 +85,33 @@ def _list_via_http(host: str) -> tuple[list[str], str | None]:
         return [], err
 
 
+def _loaded_runner_names(host: str) -> list[str]:
+    """Models currently resident in Ollama (/api/ps). Empty on error."""
+    try:
+        with urllib.request.urlopen(f"{host.rstrip('/')}/api/ps", timeout=2) as resp:
+            data = json.loads(resp.read().decode())
+        names: list[str] = []
+        for row in data.get("models") or []:
+            name = (row.get("name") or row.get("model") or "").strip()
+            if name:
+                names.append(name)
+        return names
+    except Exception:
+        return []
+
+
+def _model_is_loaded(model: str, loaded: list[str]) -> bool:
+    if not model or not loaded:
+        return False
+    want = model.lower().strip()
+    want_base = want.split(":")[0]
+    for name in loaded:
+        low = (name or "").lower()
+        if low == want or low.startswith(want_base):
+            return True
+    return False
+
+
 def _soft_generate_probe(host: str, model: str, *, timeout: float) -> dict:
     """Cheap generate probe (1 token, short timeout). Never used on every health poll."""
     body = json.dumps({
@@ -178,6 +205,58 @@ def refresh_inference_probe(
 
     host = (host or ollama_host()).rstrip("/")
     model = _probe_model_for_health(models or [])
+    try:
+        from jarvis.ollama_runtime import chat_priority_active
+
+        if chat_priority_active() and not force:
+            return {
+                "ok": True,
+                "detail": "skipped soft probe — chat stream holds runner priority",
+                "model": model,
+                "elapsed_s": 0.0,
+                "cached": True,
+                "age_s": 0.0,
+                "skipped_chat_priority": True,
+            }
+    except Exception:
+        pass
+    # Cold soft-probes are a systemic FIRST_PROGRESS_TIMEOUT cause: the 5s client
+    # timeout aborts while Ollama keeps loading the chat model (~45s measured),
+    # orphaning the runner and starving the real chat stream of its first token.
+    # Only generate-probe when the model is already resident (or force=True).
+    if not force:
+        loaded = _loaded_runner_names(host)
+        if not _model_is_loaded(model, loaded):
+            detail = "inference not verified (chat model not loaded — skipped cold probe)"
+            with _probe_lock:
+                # Keep a prior live success sticky when we refuse to cold-load.
+                # Expiry of probe TTL must not trigger an orphaned generate.
+                if _probe_cache.get("ok") is True:
+                    return {
+                        "ok": True,
+                        "detail": _probe_cache.get("detail") or "recent live inference ok",
+                        "model": _probe_cache.get("model") or model,
+                        "elapsed_s": _probe_cache.get("elapsed_s"),
+                        "cached": True,
+                        "age_s": round(time.time() - float(_probe_cache.get("at") or 0), 1),
+                        "skipped_cold": True,
+                    }
+                _probe_cache["at"] = time.time()
+                # Keep prior failure; otherwise leave unverified (None → degraded).
+                if _probe_cache.get("ok") is not False:
+                    _probe_cache["ok"] = None
+                _probe_cache["detail"] = detail
+                _probe_cache["model"] = model
+                _probe_cache["elapsed_s"] = 0.0
+            return {
+                "ok": False,
+                "detail": detail,
+                "model": model,
+                "elapsed_s": 0.0,
+                "cached": False,
+                "age_s": 0.0,
+                "skipped_cold": True,
+            }
     result = _soft_generate_probe(host, model, timeout=_PROBE_TIMEOUT)
     with _probe_lock:
         _probe_cache["at"] = time.time()

@@ -37,6 +37,20 @@ def test_should_auto_search_skips_code_and_explicit_web(monkeypatch):
     assert not should_auto_search("hi")
 
 
+def test_should_auto_search_skips_advice_and_planning(monkeypatch):
+    from jarvis.web_search import should_auto_search
+
+    monkeypatch.setattr("jarvis.runtime_routing.is_runtime_routing_question", lambda m: False)
+    assert not should_auto_search(
+        "Can you develop a resistance band exercise plan for a 56-year-old male?"
+    )
+    assert not should_auto_search("Could you write a short bedtime story?")
+    assert not should_auto_search("Please help me brainstorm dinner ideas.")
+    assert not should_auto_search("What is 17 times 19?")
+    assert not should_auto_search("Hello, how are you today?")
+    assert not should_auto_search("Tell me a short joke about programming.")
+
+
 def test_should_auto_search_skips_runtime(monkeypatch):
     from jarvis.web_search import should_auto_search
 

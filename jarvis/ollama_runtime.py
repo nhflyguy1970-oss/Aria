@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
 import urllib.error
 import urllib.request
-from typing import Any
+from contextlib import contextmanager
+from typing import Any, Iterator
 
 from jarvis.ollama_health import ollama_host
 
@@ -16,6 +18,74 @@ logger = logging.getLogger("jarvis.ollama_runtime")
 
 _DEFAULT_PROBE_PROMPT = "Reply OK"
 _PROBE_NUM_PREDICT = 8
+
+# Chat streams hold this so background embed/index work cannot steal the sole
+# OLLAMA_MAX_LOADED_MODELS=1 runner mid-turn (measured FIRST_PROGRESS_TIMEOUT cause).
+# Cross-process: tray + serve are separate PIDs; a flag file coordinates them.
+_chat_priority = 0
+_chat_priority_lock = threading.Lock()
+
+
+def _chat_priority_flag_path():
+    from jarvis.config import DATA_DIR
+
+    path = DATA_DIR / "runtime" / "chat_priority.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def chat_priority_active() -> bool:
+    with _chat_priority_lock:
+        if _chat_priority > 0:
+            return True
+    # Cross-process: another Aria PID may hold the flag while this process embeds.
+    try:
+        flag = _chat_priority_flag_path()
+        if not flag.is_file():
+            return False
+        age = time.time() - flag.stat().st_mtime
+        # Stale lock (>15m) must not block embeds forever after a crash.
+        if age > 900:
+            try:
+                flag.unlink(missing_ok=True)
+            except Exception:
+                pass
+            return False
+        return True
+    except Exception:
+        return False
+
+
+def begin_chat_priority() -> None:
+    global _chat_priority
+    with _chat_priority_lock:
+        _chat_priority += 1
+        if _chat_priority == 1:
+            try:
+                flag = _chat_priority_flag_path()
+                flag.write_text(f"{os.getpid()}\n{time.time()}\n", encoding="utf-8")
+            except Exception as exc:
+                logger.debug("chat priority flag write failed: %s", exc)
+
+
+def end_chat_priority() -> None:
+    global _chat_priority
+    with _chat_priority_lock:
+        _chat_priority = max(0, _chat_priority - 1)
+        if _chat_priority == 0:
+            try:
+                _chat_priority_flag_path().unlink(missing_ok=True)
+            except Exception as exc:
+                logger.debug("chat priority flag clear failed: %s", exc)
+
+
+@contextmanager
+def chat_priority_section() -> Iterator[None]:
+    begin_chat_priority()
+    try:
+        yield
+    finally:
+        end_chat_priority()
 
 
 def default_num_ctx() -> int:
@@ -46,18 +116,25 @@ def probe_model_name() -> str:
         return os.getenv("JARVIS_GENERAL_MODEL", "qwen2.5:7b").strip() or "qwen2.5:7b"
 
 
+def _default_keep_alive() -> str | int:
+    raw = (os.getenv("OLLAMA_KEEP_ALIVE") or "30m").strip()
+    return raw or "30m"
+
+
 def _http_generate(
     model: str,
     prompt: str,
     *,
     options: dict[str, Any] | None = None,
     timeout: float = 120,
+    keep_alive: str | int | None = None,
 ) -> tuple[dict[str, Any], float]:
     host = ollama_host()
     body = {
         "model": model,
         "prompt": prompt,
         "stream": False,
+        "keep_alive": _default_keep_alive() if keep_alive is None else keep_alive,
         "options": options or default_options(num_predict=_PROBE_NUM_PREDICT),
     }
     data = json.dumps(body).encode()
@@ -71,6 +148,65 @@ def _http_generate(
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         payload = json.loads(resp.read().decode())
     return payload, time.perf_counter() - started
+
+
+def _model_base(name: str) -> str:
+    return (name or "").strip().lower().split(":")[0]
+
+
+def list_loaded_runners() -> list[dict[str, Any]]:
+    host = ollama_host().rstrip("/")
+    try:
+        with urllib.request.urlopen(f"{host}/api/ps", timeout=2) as resp:
+            rows = json.loads(resp.read().decode()).get("models") or []
+    except Exception:
+        return []
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        name = (row.get("name") or row.get("model") or "").strip()
+        if not name:
+            continue
+        out.append(
+            {
+                "name": name,
+                "size_vram": int(row.get("size_vram") or 0),
+                "context_length": int(row.get("context_length") or 0),
+            }
+        )
+    return out
+
+
+def runner_info(model: str) -> dict[str, Any] | None:
+    want = (model or "").strip()
+    if not want:
+        return None
+    want_base = _model_base(want)
+    for row in list_loaded_runners():
+        name = row["name"]
+        if _model_base(name) == want_base or name.lower() == want.lower():
+            return row
+    return None
+
+
+def unload_model(model: str, *, timeout: float = 15) -> bool:
+    name = (model or "").strip()
+    if not name:
+        return False
+    host = ollama_host().rstrip("/")
+    try:
+        body = json.dumps({"model": name, "keep_alive": 0}).encode()
+        req = urllib.request.Request(
+            f"{host}/api/generate",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            resp.read(64)
+        return True
+    except Exception as exc:
+        logger.debug("Unload %s failed: %s", name, exc)
+        return False
 
 
 def metrics_from_response(payload: dict[str, Any], elapsed_s: float) -> dict[str, Any]:
@@ -149,3 +285,119 @@ def benchmark_model(model: str, *, runs: int = 2) -> dict[str, Any]:
         probe["run"] = i + 1
         results.append(probe)
     return {"model": model, "runs": results}
+
+
+def free_slot_for_chat_model(model: str) -> dict[str, Any]:
+    """Unload embed squatters so chat can load under OLLAMA_MAX_LOADED_MODELS=1.
+
+    Measured failure mode: nomic-embed occupies the only runner slot; qwen cold-load
+    then takes ~45–70s and trips FIRST_PROGRESS_TIMEOUT before the first token.
+    """
+    want = (model or "").strip()
+    if not want:
+        return {"ok": False, "action": "noop", "detail": "no model"}
+
+    loaded = [r["name"] for r in list_loaded_runners()]
+    want_base = _model_base(want)
+    if any(_model_base(n) == want_base or n.lower() == want.lower() for n in loaded):
+        return {"ok": True, "action": "already_loaded", "loaded": loaded}
+
+    unloaded: list[str] = []
+    for name in loaded:
+        low = name.lower()
+        if "embed" in low or "nomic" in low:
+            if unload_model(name):
+                unloaded.append(name)
+                logger.info("Unloaded %s to free Ollama slot for chat model %s", name, want)
+    # Brief settle so the next chat load does not race a dying embed runner
+    # (observed: ngl=0 / "no usable GPU" when chat starts mid-eviction).
+    if unloaded:
+        deadline = time.monotonic() + 5.0
+        while time.monotonic() < deadline:
+            still = [
+                r["name"]
+                for r in list_loaded_runners()
+                if "embed" in r["name"].lower() or "nomic" in r["name"].lower()
+            ]
+            if not still:
+                break
+            time.sleep(0.2)
+    return {
+        "ok": True,
+        "action": "freed" if unloaded else "noop",
+        "unloaded": unloaded,
+        "loaded_before": loaded,
+    }
+
+
+def ensure_chat_model_ready(
+    model: str | None = None,
+    *,
+    timeout: float | None = None,
+) -> dict[str, Any]:
+    """Make the chat model GPU-resident before the first-progress clock starts.
+
+    Cold qwen2.5:7b load on this host is ~46s — just over the 45s FIRST_PROGRESS
+    budget. Loading (or confirming residency) here keeps provider_stream itself
+    under budget once tokens are requested.
+    """
+    name = (model or probe_model_name()).strip()
+    if not name:
+        return {"ok": False, "action": "noop", "detail": "no model"}
+    if timeout is None:
+        timeout = float(os.getenv("JARVIS_OLLAMA_WARMUP_TIMEOUT", "180"))
+    t0 = time.perf_counter()
+    freed = free_slot_for_chat_model(name)
+    # Extra settle after embed eviction — measured race: chat llama-server starts
+    # with ngl=0 ("no usable GPU") when CUDA is still releasing the embed runner.
+    if freed.get("action") == "freed" or freed.get("unloaded"):
+        time.sleep(float(os.getenv("JARVIS_OLLAMA_SLOT_SETTLE_S", "2.5")))
+    info = runner_info(name)
+    if info and int(info.get("size_vram") or 0) > 0:
+        return {
+            "ok": True,
+            "action": "already_ready",
+            "model": name,
+            "size_vram": info.get("size_vram"),
+            "freed": freed,
+            "elapsed_ms": round((time.perf_counter() - t0) * 1000, 2),
+        }
+
+    # CPU-only / zero-VRAM runner is a known failure mode after embed races —
+    # unload and reload so the next probe can bind CUDA.
+    if info and int(info.get("size_vram") or 0) == 0:
+        logger.warning("Chat model %s resident with size_vram=0 — reloading for GPU", name)
+        unload_model(name)
+        time.sleep(2.5)
+
+    warm = warmup_chat_model(model=name)
+    info = runner_info(name)
+    if not info or int(info.get("size_vram") or 0) == 0:
+        logger.warning("Warmup left %s without VRAM — one GPU retry after settle", name)
+        if info:
+            unload_model(name)
+        time.sleep(3.0)
+        free_slot_for_chat_model(name)
+        time.sleep(1.0)
+        warm = warmup_chat_model(model=name)
+        info = runner_info(name)
+
+    # Prefer GPU residency; accept any resident runner so chat can still proceed
+    # (CPU path is slow but better than refusing the turn entirely).
+    vram = int((info or {}).get("size_vram") or 0)
+    ok = bool(info)
+    if ok and vram <= 0:
+        logger.warning(
+            "Chat model %s resident without VRAM (CPU fallback) — proceeding anyway",
+            name,
+        )
+    return {
+        "ok": ok,
+        "action": "warmed" if ok else "warmup_failed",
+        "model": name,
+        "size_vram": (info or {}).get("size_vram"),
+        "freed": freed,
+        "warmup": {k: warm.get(k) for k in ("ok", "load_ms", "total_s", "detail", "cold_start")},
+        "elapsed_ms": round((time.perf_counter() - t0) * 1000, 2),
+        "cpu_fallback": bool(ok and vram <= 0),
+    }

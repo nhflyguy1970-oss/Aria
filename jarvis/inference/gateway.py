@@ -260,7 +260,28 @@ def stream_chat(
 
 
 def embed_text(model: str, text: str) -> list[float]:
-    """Embeddings always local via Ollama for now."""
-    from jarvis.llm import embed as ollama_embed
+    """Embeddings always local via Ollama — honor chat-priority / keep_alive=0."""
+    from jarvis.llm import embed_text as jarvis_embed_text
+    from jarvis.llm import model_for
 
-    return ollama_embed(model, text)
+    # Prefer role resolution when caller passes a blank model.
+    if not (model or "").strip():
+        model = model_for("embed")
+    # Temporarily force model_for to the requested name when it differs.
+    if (model or "").strip() and (model_for("embed") or "").strip() != (model or "").strip():
+        from ollama import embed
+        from jarvis.ollama_runtime import chat_priority_active, unload_model
+
+        if chat_priority_active():
+            return []
+        try:
+            response = embed(model=model, input=text, keep_alive=0)
+            vectors = response["embeddings"][0]
+        except Exception:
+            return []
+        try:
+            unload_model(model)
+        except Exception:
+            pass
+        return vectors
+    return jarvis_embed_text(text)

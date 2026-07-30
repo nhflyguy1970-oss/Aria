@@ -74,6 +74,20 @@ def test_documents_path() -> None:
     assert not needs.planning_tasks
 
 
+def test_ordinary_chat_skips_memory_and_web() -> None:
+    from jarvis.context.policy import context_needs
+    from jarvis.web_search import should_auto_search
+
+    msg = "Can you develop a resistance band exercise plan for a 56-year-old male?"
+    needs = context_needs(msg)
+    assert not needs.lightweight
+    assert not needs.memory
+    assert not needs.documents
+    assert not needs.knowledge_topics
+    assert not needs.web_search
+    assert not should_auto_search(msg)
+
+
 def test_bare_today_does_not_fetch_weather() -> None:
     from jarvis.context.policy import needs_weather
     from jarvis.behaviors.planning.engine import PlanningEngine

@@ -244,10 +244,11 @@ def auto_search_enabled() -> bool:
 
 
 _AUTO_PATTERNS = (
-    r"\b(who is|who was|what is|what are|when did|when was|where is|how much|how many)\b",
+    r"\b(who is|who was|what are|when did|when was|where is|how much|how many)\b",
+    r"\bwhat is(?!\s+\d)\b",  # "what is X" but not "what is 17 times 19"
     r"\bhow (?:would|does|can|could) .+ work\b",
     r"\b(would|could|can|should) .+ work (?:for|with)\b",
-    r"\b(latest|current|today|tonight|this week|right now|as of)\b",
+    r"\b(latest|current|tonight|this week|right now|as of)\b",
     r"\b(news|headline|stock price|exchange rate|score|election|release date)\b",
     r"\b(weather|forecast)\b.*\b(in|for|at)\b",
     r"\b(movidius|vpu|tpu|npu|inference chip|accelerator)\b",
@@ -256,7 +257,11 @@ _AUTO_PATTERNS = (
 
 
 def should_auto_search(message: str) -> bool:
-    """Heuristic: factual / current-events questions benefit from web context."""
+    """Heuristic: factual / current-events questions benefit from web context.
+
+    Do not treat every ``?`` as a web query — advice, planning, math, and
+    greetings must stay on the local chat path without a pre-stream web fetch.
+    """
     from jarvis.runtime_routing import is_runtime_routing_question
 
     if is_runtime_routing_question(message):
@@ -269,8 +274,23 @@ def should_auto_search(message: str) -> bool:
         return False
     if re.search(r"\b(fix|code|python|file|function|class|import|git|memory|remember)\b", lower):
         return False
-    if text.endswith("?"):
-        return True
+    # Arithmetic / unit conversions — local chat.
+    if re.search(r"\b\d+\s*(?:[\+\-\*/x×÷]|times|plus|minus|over)\s*\d+\b", lower):
+        return False
+    # Planning / creative asks are local chat — not live web grounding.
+    if re.search(
+        r"\b(can you|could you|would you|please)\b.*\b("
+        r"develop|write|create|draft|design|make|plan|exercise|workout|"
+        r"recipe|story|poem|joke|brainstorm|help me)\b",
+        lower,
+    ):
+        return False
+    # Greetings / small talk even when they mention "today".
+    if re.search(
+        r"^\s*(hi|hello|hey|how are you|how's it going|good (?:morning|afternoon|evening))\b",
+        lower,
+    ):
+        return False
     return any(re.search(p, lower) for p in _AUTO_PATTERNS)
 
 

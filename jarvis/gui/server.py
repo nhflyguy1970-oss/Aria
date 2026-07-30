@@ -26,7 +26,7 @@ from jarvis.ollama_health import check_ollama
 STATIC_DIR = Path(__file__).parent / "static"
 ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 APP_VERSION = "3.1.0"
-UI_VERSION = os.getenv("JARVIS_UI_VERSION", "5.16.73")
+UI_VERSION = os.getenv("JARVIS_UI_VERSION", "5.16.74")
 assistant = JarvisAssistant(uncensored=is_uncensored())
 
 from jarvis.assistant_instance import set_assistant
@@ -3554,122 +3554,244 @@ async def chat(
             yield f"data: {_sse_payload(boot)}\n\n"
             prefs = load_preferences()
             heartbeat_sec = float(prefs.get("heartbeat_sec") or 5.0)
-            bridge = stream_sync_iter(
-                lambda: assistant.process_stream(
-                    message,
-                    attachment,
-                    branch_id=bid,
-                    attachment2=attachment2,
-                    request_id=rid,
-                    lite_ui=use_lite_ui,
-                ),
-                thread_name="jarvis-chat-stream",
-            )
-            ait = bridge.__aiter__()
-            import time as _time
 
-            stream_t0 = _time.monotonic()
-            got_model_progress = False
-            timed_out = False
-            first_progress_ms = float(prefs.get("first_progress_ms") or 45000)
+            from jarvis.ollama_runtime import begin_chat_priority, end_chat_priority
+
+            # Hold runner priority for ensure + stream so background embeds cannot
+            # steal CUDA mid-load (measured: ngl=0 / concurrent /api/embed).
+            begin_chat_priority()
+            ensure_result: dict = {}
             try:
-                while True:
-                    try:
-                        event = await asyncio.wait_for(ait.__anext__(), timeout=max(2.0, heartbeat_sec))
-                    except asyncio.TimeoutError:
-                        note_heartbeat(stream_rid)
-                        waited_ms = (_time.monotonic() - stream_t0) * 1000.0
-                        if not got_model_progress and waited_ms >= first_progress_ms:
-                            # Do not heartbeat forever — surface a classified timeout so
-                            # clients can recover instead of hanging on a wedged provider.
-                            try:
-                                from jarvis.chat_cancel import cancel as cancel_chat
+                # Cold chat load is ~46s on this host — just over first_progress_ms.
+                # Ensure GPU residency BEFORE the first-progress clock so provider_stream
+                # only measures inference, not model swap / VRAM load.
+                ensure_fut = None
+                try:
+                    loop = asyncio.get_running_loop()
 
-                                cancel_chat(rid or stream_rid)
-                            except Exception:
-                                pass
-                            msg = (
-                                "The model provider did not produce the first token in time. "
-                                "It may be loading a model, out of VRAM, or wedged."
-                            )
-                            complete_request(
-                                stream_rid,
-                                reason="first_progress_timeout",
-                                error=msg,
-                            )
-                            try:
-                                from jarvis.latency_observability.trace import (
-                                    complete_trace,
-                                    get_by_request_id,
-                                    bind_active,
-                                )
+                    def _ensure():
+                        from jarvis.ollama_runtime import ensure_chat_model_ready
 
-                                tr = get_by_request_id(rid or stream_rid)
-                                if tr is not None:
-                                    bind_active(trace_id=tr.trace_id)
-                                    tr.note_stream(reason="first_progress_timeout")
-                                    tr.errors.append("FIRST_PROGRESS_TIMEOUT")
-                                    complete_trace(ok=False, error=msg)
-                            except Exception:
-                                pass
-                            yield f"data: {_sse_payload({'type': 'error', 'code': 'FIRST_PROGRESS_TIMEOUT', 'message': msg})}\n\n"
-                            yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'code': 'FIRST_PROGRESS_TIMEOUT', 'message': msg})}\n\n"
-                            timed_out = True
+                        return ensure_chat_model_ready(model_hint)
+
+                    ensure_fut = loop.run_in_executor(None, _ensure)
+                    while not ensure_fut.done():
+                        done, _pending = await asyncio.wait(
+                            {ensure_fut}, timeout=max(2.0, heartbeat_sec)
+                        )
+                        if done:
                             break
-                        yield f"data: {_sse_payload({'type': 'heartbeat', 'message': 'waiting for provider…'})}\n\n"
-                        continue
-                    except StopAsyncIteration:
-                        break
-                    if isinstance(event, dict):
-                        et = event.get("type")
-                        if et in ("token", "agent_step"):
-                            got_model_progress = True
-                            if et == "token":
-                                note_token(stream_rid)
+                        note_heartbeat(stream_rid)
+                        yield f"data: {_sse_payload({'type': 'heartbeat', 'message': 'loading chat model…'})}\n\n"
+                    try:
+                        ensure_result = ensure_fut.result() or {}
+                    except Exception as exc:
+                        ensure_result = {"ok": False, "detail": str(exc)[:160]}
+                    try:
+                        from jarvis.latency_observability.trace import get_by_request_id
+
+                        tr = get_by_request_id(rid or stream_rid)
+                        if tr is not None and isinstance(ensure_result, dict):
+                            tr.note_stage(
+                                "model_ready",
+                                float(ensure_result.get("elapsed_ms") or 0),
+                                action=ensure_result.get("action"),
+                                model=ensure_result.get("model") or model_hint,
+                                size_vram=ensure_result.get("size_vram"),
+                            )
+                    except Exception:
+                        pass
+                except Exception:
+                    if ensure_fut is not None:
+                        try:
+                            await ensure_fut
+                        except Exception:
+                            pass
+
+                if not ensure_result.get("ok"):
+                    yield f"data: {_sse_payload({'type': 'status', 'message': 'Retrying model load…'})}\n\n"
+                    try:
+                        loop = asyncio.get_running_loop()
+
+                        def _ensure_retry():
+                            from jarvis.ollama_runtime import ensure_chat_model_ready
+
+                            return ensure_chat_model_ready(model_hint)
+
+                        ensure_fut = loop.run_in_executor(None, _ensure_retry)
+                        while not ensure_fut.done():
+                            done, _pending = await asyncio.wait(
+                                {ensure_fut}, timeout=max(2.0, heartbeat_sec)
+                            )
+                            if done:
+                                break
+                            note_heartbeat(stream_rid)
+                            yield f"data: {_sse_payload({'type': 'heartbeat', 'message': 'loading chat model…'})}\n\n"
+                        ensure_result = ensure_fut.result() or {}
+                        try:
+                            from jarvis.latency_observability.trace import get_by_request_id
+
+                            tr = get_by_request_id(rid or stream_rid)
+                            if tr is not None:
+                                tr.note_stage(
+                                    "model_ready_retry",
+                                    float(ensure_result.get("elapsed_ms") or 0),
+                                    action=ensure_result.get("action"),
+                                    model=ensure_result.get("model") or model_hint,
+                                    size_vram=ensure_result.get("size_vram"),
+                                )
+                        except Exception:
+                            pass
+                    except Exception as exc:
+                        ensure_result = {"ok": False, "detail": str(exc)[:160]}
+
+                if not ensure_result.get("ok"):
+                    msg = (
+                        "The chat model could not be loaded into the provider. "
+                        "Another process may be using the GPU, or Ollama is wedged."
+                    )
+                    complete_request(stream_rid, reason="model_load_failed", error=msg)
+                    yield f"data: {_sse_payload({'type': 'error', 'code': 'MODEL_LOAD_FAILED', 'message': msg})}\n\n"
+                    yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'code': 'MODEL_LOAD_FAILED', 'message': msg})}\n\n"
+                    return
+
+                bridge = stream_sync_iter(
+                    lambda: assistant.process_stream(
+                        message,
+                        attachment,
+                        branch_id=bid,
+                        attachment2=attachment2,
+                        request_id=rid,
+                        lite_ui=use_lite_ui,
+                    ),
+                    thread_name="jarvis-chat-stream",
+                )
+                ait = bridge.__aiter__()
+                import time as _time
+
+                # First-progress clock starts only after the chat model is resident.
+                stream_t0 = _time.monotonic()
+                got_model_progress = False
+                timed_out = False
+                first_progress_ms = float(prefs.get("first_progress_ms") or 45000)
+                try:
+                    while True:
+                        try:
+                            event = await asyncio.wait_for(ait.__anext__(), timeout=max(2.0, heartbeat_sec))
+                        except asyncio.TimeoutError:
+                            note_heartbeat(stream_rid)
+                            waited_ms = (_time.monotonic() - stream_t0) * 1000.0
+                            if not got_model_progress and waited_ms >= first_progress_ms:
+                                # Do not heartbeat forever — surface a classified timeout so
+                                # clients can recover instead of hanging on a wedged provider.
+                                try:
+                                    from jarvis.chat_cancel import cancel as cancel_chat
+
+                                    cancel_chat(rid or stream_rid)
+                                except Exception:
+                                    pass
+                                msg = (
+                                    "The model provider did not produce the first token in time. "
+                                    "It may be loading a model, out of VRAM, or wedged."
+                                )
+                                complete_request(
+                                    stream_rid,
+                                    reason="first_progress_timeout",
+                                    error=msg,
+                                )
+                                try:
+                                    from jarvis.latency_observability.trace import (
+                                        complete_trace,
+                                        get_by_request_id,
+                                        bind_active,
+                                    )
+
+                                    tr = get_by_request_id(rid or stream_rid)
+                                    if tr is not None:
+                                        bind_active(trace_id=tr.trace_id)
+                                        tr.note_stream(reason="first_progress_timeout")
+                                        tr.errors.append("FIRST_PROGRESS_TIMEOUT")
+                                        complete_trace(ok=False, error=msg)
+                                except Exception:
+                                    pass
+                                yield f"data: {_sse_payload({'type': 'error', 'code': 'FIRST_PROGRESS_TIMEOUT', 'message': msg})}\n\n"
+                                yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'code': 'FIRST_PROGRESS_TIMEOUT', 'message': msg})}\n\n"
+                                timed_out = True
+                                break
+                            yield f"data: {_sse_payload({'type': 'heartbeat', 'message': 'waiting for provider…'})}\n\n"
+                            continue
+                        except StopAsyncIteration:
+                            break
+                        if isinstance(event, dict):
+                            et = event.get("type")
+                            if et in ("token", "agent_step"):
+                                got_model_progress = True
+                                if et == "token":
+                                    note_token(stream_rid)
+                                    try:
+                                        from jarvis.latency_observability.trace import get_by_request_id
+
+                                        tr = get_by_request_id(rid or stream_rid)
+                                        if tr is not None and tr.stream.get("first_token_ms") is None:
+                                            tr.note_stream(
+                                                first_token_ms=round(
+                                                    (_time.monotonic() - stream_t0) * 1000.0, 2
+                                                ),
+                                                first_sse_ms=round(
+                                                    (_time.monotonic() - stream_t0) * 1000.0, 2
+                                                ),
+                                            )
+                                    except Exception:
+                                        pass
+                            elif et == "status":
+                                note_heartbeat(stream_rid)
+                            elif et == "done" and latency_trace_id:
+                                event = dict(event)
+                                event.setdefault("trace_id", latency_trace_id)
                                 try:
                                     from jarvis.latency_observability.trace import get_by_request_id
 
-                                    tr = get_by_request_id(rid or stream_rid)
-                                    if tr is not None and tr.stream.get("first_token_ms") is None:
-                                        tr.note_stream(
-                                            first_token_ms=round(
-                                                (_time.monotonic() - stream_t0) * 1000.0, 2
-                                            ),
-                                            first_sse_ms=round(
-                                                (_time.monotonic() - stream_t0) * 1000.0, 2
-                                            ),
-                                        )
+                                    tr = get_by_request_id(rid or stream_rid) or get_by_request_id(
+                                        latency_trace_id
+                                    )
+                                    if tr is None:
+                                        from jarvis.latency_observability.trace import get_trace
+
+                                        tr = get_trace(latency_trace_id)
+                                    if tr is not None:
+                                        event["latency"] = {
+                                            "trace_id": tr.trace_id,
+                                            "elapsed_ms": tr.elapsed_ms(),
+                                            "first_token_ms": (tr.stream or {}).get("first_token_ms"),
+                                            "slowest": tr.slowest_stage(),
+                                            "budgets": tr.budgets,
+                                            "overlay": tr.developer_overlay(),
+                                        }
                                 except Exception:
                                     pass
-                        elif et == "status":
-                            note_heartbeat(stream_rid)
-                        elif et == "done" and latency_trace_id:
-                            event = dict(event)
-                            event.setdefault("trace_id", latency_trace_id)
-                            try:
-                                from jarvis.latency_observability.trace import get_by_request_id
+                        yield f"data: {_sse_payload(event)}\n\n"
+                    if not timed_out:
+                        complete_request(stream_rid, reason="done")
+                        try:
+                            from jarvis.latency_observability.trace import (
+                                bind_active,
+                                complete_trace,
+                                get_by_request_id,
+                                get_trace,
+                            )
 
-                                tr = get_by_request_id(rid or stream_rid) or get_by_request_id(
-                                    latency_trace_id
+                            tr = get_by_request_id(rid or stream_rid) or get_trace(latency_trace_id)
+                            if tr is not None:
+                                bind_active(trace_id=tr.trace_id)
+                                tr.note_stream(
+                                    duration_ms=round((_time.monotonic() - stream_t0) * 1000.0, 2),
+                                    reason="done",
                                 )
-                                if tr is None:
-                                    from jarvis.latency_observability.trace import get_trace
-
-                                    tr = get_trace(latency_trace_id)
-                                if tr is not None:
-                                    event["latency"] = {
-                                        "trace_id": tr.trace_id,
-                                        "elapsed_ms": tr.elapsed_ms(),
-                                        "first_token_ms": (tr.stream or {}).get("first_token_ms"),
-                                        "slowest": tr.slowest_stage(),
-                                        "budgets": tr.budgets,
-                                        "overlay": tr.developer_overlay(),
-                                    }
-                            except Exception:
-                                pass
-                    yield f"data: {_sse_payload(event)}\n\n"
-                if not timed_out:
-                    complete_request(stream_rid, reason="done")
+                                complete_trace(ok=True)
+                        except Exception:
+                            pass
+                except Exception as e:
+                    complete_request(stream_rid, reason="error", error=str(e))
                     try:
                         from jarvis.latency_observability.trace import (
                             bind_active,
@@ -3681,30 +3803,12 @@ async def chat(
                         tr = get_by_request_id(rid or stream_rid) or get_trace(latency_trace_id)
                         if tr is not None:
                             bind_active(trace_id=tr.trace_id)
-                            tr.note_stream(
-                                duration_ms=round((_time.monotonic() - stream_t0) * 1000.0, 2),
-                                reason="done",
-                            )
-                            complete_trace(ok=True)
+                            complete_trace(ok=False, error=str(e))
                     except Exception:
                         pass
-            except Exception as e:
-                complete_request(stream_rid, reason="error", error=str(e))
-                try:
-                    from jarvis.latency_observability.trace import (
-                        bind_active,
-                        complete_trace,
-                        get_by_request_id,
-                        get_trace,
-                    )
-
-                    tr = get_by_request_id(rid or stream_rid) or get_trace(latency_trace_id)
-                    if tr is not None:
-                        bind_active(trace_id=tr.trace_id)
-                        complete_trace(ok=False, error=str(e))
-                except Exception:
-                    pass
-                yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'message': str(e)})}\n\n"
+                    yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'message': str(e)})}\n\n"
+            finally:
+                end_chat_priority()
 
         return StreamingResponse(
             event_stream(),

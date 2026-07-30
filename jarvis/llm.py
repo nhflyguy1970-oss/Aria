@@ -169,11 +169,26 @@ def ask_stream(
                     yield content
             return
 
+        from jarvis.ollama_runtime import default_options
+
+        # Keep num_ctx aligned with warmup/gateway so Ollama does not reload
+        # the runner at the model's native 32k context on every chat turn.
+        normalized = _normalize_chat_kwargs(kwargs)
+        options = dict(normalized.get("options") or {})
+        for key, value in default_options().items():
+            options.setdefault(key, value)
+        normalized["options"] = options
+        # Keep the chat runner resident — under MAX_LOADED_MODELS=1 an immediate
+        # unload forces the next turn into a 45s+ cold load / FIRST_PROGRESS_TIMEOUT.
+        keep_alive = normalized.pop("keep_alive", None)
+        if keep_alive is None:
+            keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "30m").strip() or "30m"
         stream = chat(
             model=route.model,
             messages=_with_system(messages),
             stream=True,
-            **_normalize_chat_kwargs(kwargs),
+            keep_alive=keep_alive,
+            **normalized,
         )
         for chunk in _iter_blocking_cancellable(stream, cancel_key=cancel_key):
             if cancel_key and is_cancelled(cancel_key):
@@ -195,9 +210,12 @@ def generate_text(model: str, prompt: str, **kwargs) -> str:
 
 
 def embed_available() -> bool:
-    """True if the embed model returns a non-empty vector.
+    """True if the configured embed model appears installed in Ollama.
 
-    Cached so chat context assembly does not probe Ollama on every request.
+    Tags-only — never call live ``embed()`` here. A ping loads ``nomic-embed``
+    into VRAM, evicts the chat model, and causes ~45s cold reloads that trip
+    FIRST_PROGRESS_TIMEOUT on ordinary chat. Actual embedding still happens in
+    ``embed_text`` when memory/RAG retrieval needs vectors.
     """
     now = time.monotonic()
     cached = _EMBED_AVAIL_CACHE.get("ok")
@@ -205,7 +223,20 @@ def embed_available() -> bool:
     ttl = _EMBED_AVAIL_TTL_OK if cached else _EMBED_AVAIL_TTL_FAIL
     if cached is not None and (now - cached_at) < ttl:
         return bool(cached)
-    ok = bool(embed_text("ping"))
+    ok = False
+    try:
+        from jarvis.ollama_health import check_ollama
+
+        name = (model_for("embed") or "").strip().lower()
+        ollama = check_ollama(soft_probe=False)
+        if ollama.get("running") and name:
+            base = name.split(":")[0]
+            ok = any(
+                (m or "").lower() == name or (m or "").lower().startswith(base)
+                for m in (ollama.get("models") or [])
+            )
+    except Exception:
+        ok = False
     _EMBED_AVAIL_CACHE["ok"] = ok
     _EMBED_AVAIL_CACHE["at"] = now
     return ok
@@ -219,9 +250,38 @@ _EMBED_AVAIL_TTL_FAIL = float(os.getenv("JARVIS_EMBED_AVAIL_FAIL_TTL", "5"))
 
 def embed_text(text: str) -> list[float]:
     global _embed_warned
+    unload_fn = None
     try:
-        response = embed(model=model_for("embed"), input=text)
-        return response["embeddings"][0]
+        from jarvis.ollama_runtime import chat_priority_active, unload_model as _unload
+
+        unload_fn = _unload
+        # Never steal the sole runner slot while a chat stream is in flight.
+        if chat_priority_active():
+            return []
+    except Exception:
+        pass
+    vectors: list[float] = []
+    try:
+        # keep_alive=0: do not leave nomic-embed resident. With
+        # OLLAMA_MAX_LOADED_MODELS=1 it otherwise evicts the chat model and
+        # forces a 45s+ cold reload on the next token stream.
+        response = embed(model=model_for("embed"), input=text, keep_alive=0)
+        vectors = response["embeddings"][0]
+    except TypeError:
+        # Older ollama clients may not accept keep_alive on embed().
+        try:
+            response = embed(model=model_for("embed"), input=text)
+            vectors = response["embeddings"][0]
+        except Exception as exc:
+            if not _embed_warned:
+                import logging
+
+                logging.getLogger("jarvis").warning(
+                    "Embedding model unavailable (%s) — memory search may be degraded",
+                    exc,
+                )
+                _embed_warned = True
+            return []
     except Exception as exc:
         if not _embed_warned:
             import logging
@@ -232,6 +292,15 @@ def embed_text(text: str) -> list[float]:
             )
             _embed_warned = True
         return []
+    # Belt-and-suspenders: if keep_alive=0 left the embed runner up, unload it.
+    if unload_fn is not None:
+        try:
+            name = (model_for("embed") or "").strip()
+            if name:
+                unload_fn(name)
+        except Exception:
+            pass
+    return vectors
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:

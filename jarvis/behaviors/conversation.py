@@ -566,6 +566,19 @@ class ConversationEngine:
             action="chat",
         )
         yield {"type": "status", "message": "Calling model…"}
+        try:
+            from jarvis.ollama_runtime import ensure_chat_model_ready
+
+            # Prefer full ensure (free embed slot + warm). When the SSE layer
+            # already ensured residency this is a fast already_ready check.
+            ensure_chat_model_ready(chat_model)
+        except Exception:
+            try:
+                from jarvis.ollama_runtime import free_slot_for_chat_model
+
+                free_slot_for_chat_model(chat_model)
+            except Exception:
+                pass
         full: list[str] = []
         saved_user = False
         stopped = False
@@ -582,24 +595,36 @@ class ConversationEngine:
         except Exception:
             pass
         try:
-            for chunk in llm.ask_stream(chat_model, msgs, cancel_key=request_id, usage=usage, role=chat_role):
-                if request_id and is_cancelled(request_id):
-                    stopped = True
-                    break
-                if not saved_user:
-                    self._a.conversation.add_user(user_message)
-                    saved_user = True
-                full.append(chunk)
-                try:
-                    from jarvis.latency_observability.trace import active_trace
+            from jarvis.ollama_runtime import chat_priority_section
 
-                    tr = active_trace()
-                    if tr is not None and tr.stream.get("first_token_ms") is None:
-                        tr.note_stream(first_token_ms=round((time.perf_counter() - t0) * 1000, 2))
-                        tr.end_stage("provider_stream", first_token=True)
-                except Exception:
-                    pass
-                yield {"type": "token", "content": chunk}
+            with chat_priority_section():
+                for chunk in llm.ask_stream(
+                    chat_model, msgs, cancel_key=request_id, usage=usage, role=chat_role
+                ):
+                    if request_id and is_cancelled(request_id):
+                        stopped = True
+                        break
+                    if not saved_user:
+                        self._a.conversation.add_user(user_message)
+                        saved_user = True
+                    full.append(chunk)
+                    try:
+                        from jarvis.latency_observability.trace import active_trace
+
+                        tr = active_trace()
+                        if tr is not None and tr.stream.get("first_token_ms") is None:
+                            tr.note_stream(first_token_ms=round((time.perf_counter() - t0) * 1000, 2))
+                            tr.end_stage("provider_stream", first_token=True)
+                    except Exception:
+                        pass
+                    if len(full) == 1:
+                        try:
+                            from jarvis.ollama_health import note_inference_success
+
+                            note_inference_success(chat_model)
+                        except Exception:
+                            pass
+                    yield {"type": "token", "content": chunk}
         except Exception as exc:
             if saved_user:
                 self._a.conversation.pop_last_user()

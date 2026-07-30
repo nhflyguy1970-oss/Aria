@@ -121,9 +121,15 @@ def needs_documents(message: str) -> bool:
 
 
 def needs_memory_lookup(message: str) -> bool:
-    if is_lightweight_chat(message) and not _MEMORY_RE.search(message or ""):
-        return False
-    return True
+    """Semantic memory retrieval — cue-based, not every open chat turn.
+
+    Always-on memory search was loading the embed model under
+    OLLAMA_MAX_LOADED_MODELS=1 and evicting the chat runner before first token.
+    Profile/ACM fragments can still attach via other paths when cued.
+    """
+    if is_lightweight_chat(message):
+        return bool(_MEMORY_RE.search(message or ""))
+    return bool(_MEMORY_RE.search(message or ""))
 
 
 def needs_project_extras(message: str) -> bool:

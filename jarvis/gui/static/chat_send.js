@@ -206,6 +206,9 @@
         let gotDone = false;
         let gotProgress = false;
         const streamStartedAt = Date.now();
+        // Heartbeats during model load reset this anchor so client FIRST_PROGRESS
+        // does not fire while the server is still ensuring the chat model is ready.
+        let firstProgressAnchorAt = streamStartedAt;
 
         const res = await fetch("/api/chat", fetchOpts);
         if (!res.ok) {
@@ -224,13 +227,13 @@
               streamFinished = true;
               break;
             }
-            if (!gotProgress && Date.now() - streamStartedAt > FIRST_PROGRESS_MS) {
+            if (!gotProgress && Date.now() - firstProgressAnchorAt > FIRST_PROGRESS_MS) {
               const terr = providerTimeoutError("first");
               c.providerTimeout = terr;
               try { c.chatAbortController?.abort?.(); } catch (_) {}
               throw terr;
             }
-            const idleForChunk = gotProgress ? STREAM_IDLE_MS : Math.max(5000, FIRST_PROGRESS_MS - (Date.now() - streamStartedAt));
+            const idleForChunk = gotProgress ? STREAM_IDLE_MS : Math.max(5000, FIRST_PROGRESS_MS - (Date.now() - firstProgressAnchorAt));
             const idleCode = gotProgress ? "STREAM_IDLE_TIMEOUT" : "FIRST_PROGRESS_TIMEOUT";
             const { done, value } = await readStreamChunk(reader, idleForChunk, idleCode);
             if (done) break;
@@ -249,7 +252,9 @@
                 }
                 // Status alone does not count as model progress — avoids infinite "Processing…".
               } else if (event.type === "heartbeat") {
-                // Server keepalive while provider is blocked — resets chunk idle without counting as first token.
+                // Server keepalive while provider is blocked (e.g. loading chat model).
+                // Extends first-progress wait without counting as a token.
+                firstProgressAnchorAt = Date.now();
                 window.updateProgressStatus?.(event.message || "Waiting for provider…");
               } else if (event.type === "error" && (event.code === "FIRST_PROGRESS_TIMEOUT" || event.code === "STREAM_IDLE_TIMEOUT")) {
                 const terr = providerTimeoutError(event.code === "STREAM_IDLE_TIMEOUT" ? "idle" : "first");
