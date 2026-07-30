@@ -20,6 +20,7 @@ VALIDATION_CASES = [
     ("How do I configure Docker Compose?", "reference", "reference_search"),
     ("Search my memory for Docker.", "memory", "memory_search"),
     ("Search the web for Docker Compose.", "web_search", "web_search"),
+    ("What day is today?", "chat", "chat"),
 ]
 
 

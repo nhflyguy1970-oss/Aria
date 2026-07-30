@@ -115,6 +115,8 @@ def test_server_emits_heartbeat():
     server = Path("jarvis/gui/server.py").read_text(encoding="utf-8")
     assert '"type": "heartbeat"' in server or "'type': 'heartbeat'" in server
     assert "note_heartbeat" in server
+    assert "FIRST_PROGRESS_TIMEOUT" in server
+    assert "first_progress_ms" in server
 
 
 def test_docs_exist():

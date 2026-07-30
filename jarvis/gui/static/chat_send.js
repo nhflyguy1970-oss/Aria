@@ -251,6 +251,12 @@
               } else if (event.type === "heartbeat") {
                 // Server keepalive while provider is blocked — resets chunk idle without counting as first token.
                 window.updateProgressStatus?.(event.message || "Waiting for provider…");
+              } else if (event.type === "error" && (event.code === "FIRST_PROGRESS_TIMEOUT" || event.code === "STREAM_IDLE_TIMEOUT")) {
+                const terr = providerTimeoutError(event.code === "STREAM_IDLE_TIMEOUT" ? "idle" : "first");
+                if (event.message) terr.message = event.message;
+                c.providerTimeout = terr;
+                try { c.chatAbortController?.abort?.(); } catch (_) {}
+                throw terr;
               } else if (event.type === "agent_step") {
                 gotProgress = true;
                 const label = `${event.action || "step"}: ${event.detail || ""}`;
@@ -277,6 +283,12 @@
                 }
                 if (msgs) msgs.scrollTop = msgs.scrollHeight;
               } else if (event.type === "done" || (event.ok && event.image_path)) {
+                if (!event.ok && (event.code === "FIRST_PROGRESS_TIMEOUT" || event.code === "STREAM_IDLE_TIMEOUT")) {
+                  const terr = providerTimeoutError(event.code === "STREAM_IDLE_TIMEOUT" ? "idle" : "first");
+                  if (event.message) terr.message = event.message;
+                  c.providerTimeout = terr;
+                  throw terr;
+                }
                 gotProgress = true;
                 gotDone = true;
                 streamFinished = true;

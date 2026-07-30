@@ -247,6 +247,24 @@ def enrich_snapshot(data: dict[str, Any] | None) -> dict[str, Any]:
         snap["provider_health"] = provider_health_mission_panel()
     except Exception:
         snap["provider_health"] = {"product": "Provider Health", "state": "unknown"}
+    try:
+        from jarvis.calendar_bridges import mission_status as calendar_mission_status
+
+        snap["calendar"] = calendar_mission_status()
+    except Exception:
+        snap["calendar"] = {"product": "Calendar", "state": "unknown"}
+    try:
+        from jarvis.image_generation.mission_bridge import engine_health as image_engine_health
+
+        snap["image_generation"] = {"product": "Image Generation", **(image_engine_health() or {})}
+    except Exception:
+        snap["image_generation"] = {"product": "Image Generation", "state": "unknown"}
+    try:
+        from jarvis.video_generation.mission_bridge import engine_health as video_engine_health
+
+        snap["video_generation"] = {"product": "Video Generation", **(video_engine_health() or {})}
+    except Exception:
+        snap["video_generation"] = {"product": "Video Generation", "state": "unknown"}
     return snap
 
 

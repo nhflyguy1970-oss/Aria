@@ -3534,24 +3534,56 @@ async def chat(
                 thread_name="jarvis-chat-stream",
             )
             ait = bridge.__aiter__()
+            import time as _time
+
+            stream_t0 = _time.monotonic()
+            got_model_progress = False
+            timed_out = False
+            first_progress_ms = float(prefs.get("first_progress_ms") or 45000)
             try:
                 while True:
                     try:
                         event = await asyncio.wait_for(ait.__anext__(), timeout=max(2.0, heartbeat_sec))
                     except asyncio.TimeoutError:
                         note_heartbeat(stream_rid)
+                        waited_ms = (_time.monotonic() - stream_t0) * 1000.0
+                        if not got_model_progress and waited_ms >= first_progress_ms:
+                            # Do not heartbeat forever — surface a classified timeout so
+                            # clients can recover instead of hanging on a wedged provider.
+                            try:
+                                from jarvis.chat_cancel import cancel as cancel_chat
+
+                                cancel_chat(rid or stream_rid)
+                            except Exception:
+                                pass
+                            msg = (
+                                "The model provider did not produce the first token in time. "
+                                "It may be loading a model, out of VRAM, or wedged."
+                            )
+                            complete_request(
+                                stream_rid,
+                                reason="first_progress_timeout",
+                                error=msg,
+                            )
+                            yield f"data: {_sse_payload({'type': 'error', 'code': 'FIRST_PROGRESS_TIMEOUT', 'message': msg})}\n\n"
+                            yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'code': 'FIRST_PROGRESS_TIMEOUT', 'message': msg})}\n\n"
+                            timed_out = True
+                            break
                         yield f"data: {_sse_payload({'type': 'heartbeat', 'message': 'waiting for provider…'})}\n\n"
                         continue
                     except StopAsyncIteration:
                         break
                     if isinstance(event, dict):
                         et = event.get("type")
-                        if et == "token":
-                            note_token(stream_rid)
+                        if et in ("token", "agent_step"):
+                            got_model_progress = True
+                            if et == "token":
+                                note_token(stream_rid)
                         elif et == "status":
                             note_heartbeat(stream_rid)
                     yield f"data: {_sse_payload(event)}\n\n"
-                complete_request(stream_rid, reason="done")
+                if not timed_out:
+                    complete_request(stream_rid, reason="done")
             except Exception as e:
                 complete_request(stream_rid, reason="error", error=str(e))
                 yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'message': str(e)})}\n\n"

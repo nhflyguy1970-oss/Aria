@@ -33,10 +33,12 @@ def confidence_band(confidence: float) -> str:
 def needs_clarification(result: NLUResult) -> bool:
     if result.learned_match:
         return False
-    from jarvis.nlu.mapping import infer_intent_from_structure, resolve_memory_route
+    from jarvis.nlu.mapping import infer_intent_from_structure, is_calendar_fact_question, resolve_memory_route
 
     # Resolved memory verbs are deterministic — do not ask for clarification.
     if resolve_memory_route(result.prompt):
+        return False
+    if is_calendar_fact_question(result.prompt):
         return False
     if infer_intent_from_structure(result) and (
         result.semantic.confidence >= REVIEW_ROUTE or result.semantic.model == "structure"

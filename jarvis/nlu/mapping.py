@@ -412,9 +412,27 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
     return None
 
 
+_CALENDAR_FACT_QUERY = re.compile(
+    r"\bwhat\s+day\s+is\s+(?:it|today)\b|"
+    r"\bwhat(?:'?s|\s+is)\s+today'?s\s+date\b|"
+    r"\bwhat\s+is\s+the\s+(?:date|day)\b|"
+    r"\bwhat(?:'?s|\s+is)\s+the\s+date\s+today\b|"
+    r"\bday\s+of\s+the\s+week\b",
+    re.I,
+)
+
+
+def is_calendar_fact_question(prompt: str) -> bool:
+    """Clock/calendar facts are chat — never memory_search or clarification."""
+    return bool(_CALENDAR_FACT_QUERY.search(prompt or ""))
+
+
 def apply_intent_guards(result: NLUResult) -> str:
     prompt = result.prompt
     intent = result.semantic.intent
+    # Calendar / clock facts must never collapse into memory_search.
+    if is_calendar_fact_question(prompt):
+        return "chat"
     if is_episodic_teaching(prompt):
         return "memory"
     if is_episodic_memory_query(prompt) or is_past_event_memory_question(prompt):
@@ -493,6 +511,8 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
     subject = result.semantic.subject or result.syntax.object
     verb = result.syntax.verb or result.semantic.action
     confidence = result.semantic.confidence
+    if is_calendar_fact_question(result.prompt or ""):
+        confidence = max(confidence, 0.95)
     band = confidence_band(confidence)
 
     if confidence < 0.45 and not result.learned_match:
@@ -515,6 +535,23 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
             "router": "nlu",
             "router_stage": "nlu_pipeline",
             "rule_matched": "conversation_language",
+            "confidence_band": "high",
+            "flag_for_review": False,
+        }
+
+    if is_calendar_fact_question(result.prompt or ""):
+        return {
+            "action": "chat",
+            "params": {},
+            "thinking": "calendar fact",
+            "route_reason": "calendar_fact",
+            "route_confidence": confidence,
+            "route_handler": "ConversationEngine",
+            "nlu": result.to_debug(),
+            "semantic_report": result.to_debug(),
+            "router": "nlu",
+            "router_stage": "nlu_pipeline",
+            "rule_matched": "calendar_fact",
             "confidence_band": "high",
             "flag_for_review": False,
         }
