@@ -103,6 +103,7 @@ class KnowledgeBehavior(ApplicationBehavior):
         *,
         general: bool = False,
         skip_project_context: bool = False,
+        **kwargs: Any,
     ) -> tuple[list[str], list[dict]]:
         self.initialize(orchestrator)
         ctx = self._context or KnowledgeContext.from_orchestrator(orchestrator)
@@ -111,6 +112,9 @@ class KnowledgeBehavior(ApplicationBehavior):
             message,
             general=general,
             skip_project_context=skip_project_context,
+            include_topics=kwargs.get("include_topics", True),
+            include_documents=kwargs.get("include_documents"),
+            include_web=kwargs.get("include_web", True),
         )
         self._last_warnings = warnings
         return parts, citations

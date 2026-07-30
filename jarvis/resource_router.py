@@ -294,15 +294,33 @@ def should_prefer_ken_burns() -> bool:
     return False
 
 
+_BUSY_HINT_CACHE: tuple[float, str | None] | None = None
+_BUSY_HINT_TTL_S = 2.0
+
+
 def chat_busy_hint() -> str | None:
-    snap = snapshot()
-    media = snap["media_queue"]
+    """Cheap media-queue hint — avoid full GPU/Ollama snapshot on every chat turn."""
+    global _BUSY_HINT_CACHE
+    now = time.time()
+    if _BUSY_HINT_CACHE is not None:
+        ts, cached = _BUSY_HINT_CACHE
+        if now - ts < _BUSY_HINT_TTL_S:
+            return cached
+    try:
+        from jarvis.media_jobs import busy_state
+
+        media = busy_state()
+    except Exception:
+        media = {}
     if not media.get("busy") and not media.get("pending"):
-        return None
-    label = media.get("label") or "media render"
-    return (
-        f"Note: GPU queue busy ({label}) — chat still works; heavy image/video jobs are serialized."
-    )
+        hint = None
+    else:
+        label = media.get("label") or "media render"
+        hint = (
+            f"Note: GPU queue busy ({label}) — chat still works; heavy image/video jobs are serialized."
+        )
+    _BUSY_HINT_CACHE = (now, hint)
+    return hint
 
 
 def status_line() -> str:

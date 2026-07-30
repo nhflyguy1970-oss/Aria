@@ -104,7 +104,11 @@ class PlanningBehavior(ApplicationBehavior):
         self.initialize(orchestrator)
         ctx = self._context or PlanningContext.from_orchestrator(orchestrator)
         return PlanningEngine.prepare_context(
-            ctx, message, skip_project_context=skip_project_context
+            ctx,
+            message,
+            skip_project_context=skip_project_context,
+            include_weather=kwargs.get("include_weather"),
+            include_tasks=kwargs.get("include_tasks"),
         )
 
     def execute(

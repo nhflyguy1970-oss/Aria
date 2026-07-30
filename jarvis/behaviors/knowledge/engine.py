@@ -18,12 +18,21 @@ class KnowledgeEngine(KnowledgeOperations):
         *,
         general: bool = False,
         skip_project_context: bool = False,
+        include_topics: bool = True,
+        include_documents: bool | None = None,
+        include_web: bool = True,
     ) -> tuple[list[str], list[dict], list[str]]:
         parts: list[str] = []
         citations: list[dict] = []
         warnings: list[str] = []
 
-        if not llm.embed_available():
+        want_docs = (
+            include_documents
+            if include_documents is not None
+            else (not skip_project_context and not general)
+        )
+
+        if (include_topics or want_docs) and not llm.embed_available():
             warnings.append(
                 f"Semantic memory/RAG unavailable — check embed model `{llm.embed_model()}`."
             )
@@ -38,14 +47,15 @@ class KnowledgeEngine(KnowledgeOperations):
             if doc_ctx:
                 parts.append(doc_ctx)
 
-        from jarvis.knowledge import context_for_query as knowledge_context
+        if include_topics:
+            from jarvis.knowledge import context_for_query as knowledge_context
 
-        k_ctx, k_warnings = knowledge_context(message)
-        warnings.extend(k_warnings)
-        if k_ctx:
-            parts.append(k_ctx)
+            k_ctx, k_warnings = knowledge_context(message)
+            warnings.extend(k_warnings)
+            if k_ctx:
+                parts.append(k_ctx)
 
-        if not skip_project_context and not general:
+        if want_docs and not skip_project_context and not general:
             from jarvis.document_learning import document_learning_context_for_chat
 
             doc_learn_ctx = document_learning_context_for_chat(ctx.memory, message)
@@ -83,7 +93,8 @@ class KnowledgeEngine(KnowledgeOperations):
         from jarvis.runtime_routing import is_runtime_routing_question
 
         if (
-            not general
+            include_web
+            and not general
             and not is_runtime_routing_question(message)
             and not web_search_disabled()
             and web_search.auto_search_enabled()

@@ -6,7 +6,7 @@ import re
 import time
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from jarvis import llm
 from jarvis.behaviors import register_behavior
@@ -85,98 +85,229 @@ class ConversationEngine:
         *,
         skip_unified_extras: bool = False,
     ) -> tuple[str, list[str], list[dict]]:
-        parts: list[str] = []
-        warnings: list[str] = []
-        citations: list[dict] = []
+        import time as _time
 
+        from jarvis.context.policy import (
+            cached_language_hint,
+            context_needs,
+            local_clock_line,
+            record_inventory,
+        )
         from jarvis.router import is_general_knowledge_question, is_meta_self_question
         from jarvis.runtime_routing import is_runtime_routing_question
 
+        parts: list[str] = []
+        warnings: list[str] = []
+        citations: list[dict] = []
+        inventory: dict[str, Any] = {"message": (message or "")[:120], "sources": {}}
+
+        needs = context_needs(message)
         runtime_self = is_runtime_routing_question(message)
         general = is_general_knowledge_question(message, self._a.session)
-        skip_project_context = general or is_meta_self_question(message) or runtime_self
+        skip_project_context = (
+            needs.lightweight
+            or general
+            or is_meta_self_question(message)
+            or runtime_self
+        )
 
-        from jarvis.behaviors.knowledge import get_knowledge_behavior
-        from jarvis.behaviors.memory import get_memory_behavior
-        from jarvis.behaviors.planning import get_planning_behavior
+        def _note(source: str, t0: float, chunks: list[str] | str, *, used: bool) -> None:
+            text = chunks if isinstance(chunks, str) else "\n".join(chunks or [])
+            inventory["sources"][source] = {
+                "elapsed_ms": round((_time.perf_counter() - t0) * 1000, 1),
+                "characters": len(text or ""),
+                "required": used,
+                "injected": bool(text and used),
+            }
 
-        memory_behavior = get_memory_behavior()
-        if memory_behavior is not None:
-            mem_parts, mem_citations = memory_behavior.prepare_context(
-                self._a,
-                message,
-                general=general,
-                skip_project_context=skip_project_context,
-            )
-            parts.extend(mem_parts)
-            citations.extend(mem_citations)
+        if needs.local_clock:
+            t0 = _time.perf_counter()
+            line = local_clock_line()
+            parts.append(line)
+            _note("local_clock", t0, line, used=True)
 
-        planning_behavior = get_planning_behavior()
-        if planning_behavior is not None:
-            plan_parts, _plan_citations = planning_behavior.prepare_context(
-                self._a,
-                message,
-                skip_project_context=skip_project_context,
-            )
-            parts.extend(plan_parts)
+        if needs.memory:
+            from jarvis.behaviors.memory import get_memory_behavior
 
-        knowledge_behavior = get_knowledge_behavior()
-        if knowledge_behavior is not None:
-            know_parts, know_citations = knowledge_behavior.prepare_context(
-                self._a,
-                message,
-                general=general,
-                skip_project_context=skip_project_context,
-            )
-            parts.extend(know_parts)
-            citations.extend(know_citations)
-            know_warnings = getattr(knowledge_behavior, "_last_warnings", [])
-            warnings.extend(know_warnings)
+            memory_behavior = get_memory_behavior()
+            if memory_behavior is not None:
+                t0 = _time.perf_counter()
+                mem_parts, mem_citations = memory_behavior.prepare_context(
+                    self._a,
+                    message,
+                    general=general,
+                    skip_project_context=skip_project_context,
+                )
+                parts.extend(mem_parts)
+                citations.extend(mem_citations)
+                _note("memory", t0, mem_parts, used=True)
+            else:
+                inventory["sources"]["memory"] = {
+                    "elapsed_ms": 0,
+                    "characters": 0,
+                    "required": False,
+                    "injected": False,
+                }
+        else:
+            inventory["sources"]["memory"] = {
+                "elapsed_ms": 0,
+                "characters": 0,
+                "required": False,
+                "injected": False,
+            }
 
-        # Trusted Connections grounding (graph mirror — never anonymous / low-confidence)
-        try:
-            from jarvis.relationship_memory import relationship_context_for_chat
+        if needs.planning_tasks or needs.weather:
+            from jarvis.behaviors.planning import get_planning_behavior
 
-            conn_ctx = relationship_context_for_chat(message, limit=6)
-            if conn_ctx:
-                parts.append(conn_ctx)
-        except Exception:
-            pass
+            planning_behavior = get_planning_behavior()
+            if planning_behavior is not None:
+                t0 = _time.perf_counter()
+                plan_parts, _plan_citations = planning_behavior.prepare_context(
+                    self._a,
+                    message,
+                    skip_project_context=skip_project_context or not needs.planning_tasks,
+                    include_weather=needs.weather,
+                    include_tasks=needs.planning_tasks,
+                )
+                parts.extend(plan_parts)
+                _note("planning", t0, plan_parts, used=True)
+            else:
+                inventory["sources"]["planning"] = {
+                    "elapsed_ms": 0,
+                    "characters": 0,
+                    "required": False,
+                    "injected": False,
+                }
+        else:
+            inventory["sources"]["planning"] = {
+                "elapsed_ms": 0,
+                "characters": 0,
+                "required": False,
+                "injected": False,
+            }
 
-        # Fly Tying library grounding (shared engine — confirm via knowledge.is_flytying_chat)
-        try:
-            from jarvis.flytying.knowledge import flytying_context_for_chat
+        if needs.knowledge_topics or needs.documents or needs.web_search:
+            from jarvis.behaviors.knowledge import get_knowledge_behavior
 
-            fly_ctx = flytying_context_for_chat(getattr(self._a, "memory", None), message, limit=5)
-            if fly_ctx:
-                parts.append("Fly tying library context:\n" + fly_ctx)
-        except Exception:
-            pass
+            knowledge_behavior = get_knowledge_behavior()
+            if knowledge_behavior is not None:
+                t0 = _time.perf_counter()
+                know_parts, know_citations = knowledge_behavior.prepare_context(
+                    self._a,
+                    message,
+                    general=general,
+                    skip_project_context=skip_project_context,
+                    include_topics=needs.knowledge_topics,
+                    include_documents=needs.documents,
+                    include_web=needs.web_search and not needs.lightweight,
+                )
+                parts.extend(know_parts)
+                citations.extend(know_citations)
+                know_warnings = getattr(knowledge_behavior, "_last_warnings", [])
+                warnings.extend(know_warnings)
+                _note("knowledge", t0, know_parts, used=True)
+            else:
+                inventory["sources"]["knowledge"] = {
+                    "elapsed_ms": 0,
+                    "characters": 0,
+                    "required": False,
+                    "injected": False,
+                }
+        else:
+            inventory["sources"]["knowledge"] = {
+                "elapsed_ms": 0,
+                "characters": 0,
+                "required": False,
+                "injected": False,
+            }
 
-        from jarvis.lang_util import detect_text_language, language_reply_hint
+        if needs.relationships:
+            t0 = _time.perf_counter()
+            try:
+                from jarvis.relationship_memory import relationship_context_for_chat
 
-        lang = detect_text_language(message)
-        # Always attach a language lock: English by default, matching script otherwise.
-        lang_hint = language_reply_hint(lang)
+                conn_ctx = relationship_context_for_chat(message, limit=6)
+                if conn_ctx:
+                    parts.append(conn_ctx)
+                _note("relationships", t0, conn_ctx or "", used=True)
+            except Exception:
+                _note("relationships", t0, "", used=True)
+        else:
+            inventory["sources"]["relationships"] = {
+                "elapsed_ms": 0,
+                "characters": 0,
+                "required": False,
+                "injected": False,
+            }
+
+        if needs.flytying:
+            t0 = _time.perf_counter()
+            try:
+                from jarvis.flytying.knowledge import flytying_context_for_chat
+
+                fly_ctx = flytying_context_for_chat(
+                    getattr(self._a, "memory", None), message, limit=5
+                )
+                if fly_ctx:
+                    parts.append("Fly tying library context:\n" + fly_ctx)
+                _note("flytying", t0, fly_ctx or "", used=True)
+            except Exception:
+                _note("flytying", t0, "", used=True)
+        else:
+            inventory["sources"]["flytying"] = {
+                "elapsed_ms": 0,
+                "characters": 0,
+                "required": False,
+                "injected": False,
+            }
+
+        t0 = _time.perf_counter()
+        lang_hint = cached_language_hint(message)
         if lang_hint:
             parts.append(lang_hint)
+        _note("language", t0, lang_hint or "", used=True)
 
         from jarvis.resource_router import chat_busy_hint
 
-        busy_hint = chat_busy_hint()
-        if busy_hint:
-            parts.append(busy_hint)
+        if needs.lightweight:
+            inventory["sources"]["busy_hint"] = {
+                "elapsed_ms": 0,
+                "characters": 0,
+                "required": False,
+                "injected": False,
+            }
+        else:
+            t0 = _time.perf_counter()
+            busy_hint = chat_busy_hint()
+            if busy_hint:
+                parts.append(busy_hint)
+            _note("busy_hint", t0, busy_hint or "", used=bool(busy_hint))
 
-        if not skip_project_context and not skip_unified_extras:
+        if not skip_project_context and not skip_unified_extras and needs.project_extras:
+            t0 = _time.perf_counter()
             try:
                 from jarvis.context.builder import append_context_extras
 
                 meta: dict = {}
+                before = len(parts)
                 append_context_extras(parts, self._a, message, meta)
+                added = parts[before:]
+                _note("project_extras", t0, added, used=True)
             except Exception:
-                pass
+                _note("project_extras", t0, "", used=True)
+        else:
+            inventory["sources"]["project_extras"] = {
+                "elapsed_ms": 0,
+                "characters": 0,
+                "required": False,
+                "injected": False,
+            }
 
-        return "\n\n".join(parts), warnings, citations
+        prefix = "\n\n".join(parts)
+        inventory["prefix_characters"] = len(prefix)
+        inventory["lightweight"] = needs.lightweight
+        record_inventory(inventory)
+        return prefix, warnings, citations
 
     def messages_for_llm(self, messages: list[dict], context_prefix: str) -> list[dict]:
         if not context_prefix or not messages or messages[-1].get("role") != "user":

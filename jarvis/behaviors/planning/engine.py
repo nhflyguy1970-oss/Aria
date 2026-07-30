@@ -20,23 +20,26 @@ class PlanningEngine:
         message: str,
         *,
         skip_project_context: bool = False,
+        include_weather: bool | None = None,
+        include_tasks: bool | None = None,
     ) -> tuple[list[str], list[dict]]:
-        import re
+        from jarvis.context.policy import needs_planner_tasks, needs_weather
 
         parts: list[str] = []
-        lower_msg = message.lower()
-        if not skip_project_context and re.search(
-            r"\b(journal|task|todo|to-do|today|priorit|what('s| is) on my plate)\b",
-            lower_msg,
-        ):
+        want_tasks = (
+            include_tasks
+            if include_tasks is not None
+            else (not skip_project_context and needs_planner_tasks(message))
+        )
+        if want_tasks and not skip_project_context:
             open_tasks = ctx.journal.format_open_tasks(limit=8)
             if open_tasks != "No open journal tasks.":
                 parts.append(f"Open bullet journal tasks:\n{open_tasks}")
 
-        if re.search(
-            r"\b(weather|forecast|temperature|rain|snow|tomorrow|today|tonight)\b",
-            lower_msg,
-        ):
+        want_weather = (
+            include_weather if include_weather is not None else needs_weather(message)
+        )
+        if want_weather:
             from jarvis.journal_weather import parse_weather_day, weather_forecast_text
 
             parts.append(weather_forecast_text(parse_weather_day(message), message=message))
