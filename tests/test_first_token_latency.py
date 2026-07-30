@@ -171,6 +171,61 @@ def test_embed_text_skips_during_chat_priority(monkeypatch: pytest.MonkeyPatch) 
     assert called["embed"] is False
 
 
+def test_chat_priority_grace_blocks_embeds_after_end(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Inter-request grace must keep embeds deferred after the stream ends."""
+    import jarvis.llm as llm_mod
+    import jarvis.ollama_runtime as rt
+
+    monkeypatch.setenv("JARVIS_CHAT_PRIORITY_GRACE_S", "30")
+    # Reset module state between tests.
+    with rt._chat_priority_lock:
+        rt._chat_priority = 0
+        rt._chat_priority_grace_until = 0.0
+
+    called = {"embed": False}
+
+    def boom(*a, **k):
+        called["embed"] = True
+        raise AssertionError("embed must not run during chat priority grace")
+
+    monkeypatch.setattr(llm_mod, "embed", boom)
+    monkeypatch.setattr(llm_mod, "model_for", lambda role: "nomic-embed-text:latest")
+
+    rt.begin_chat_priority()
+    rt.end_chat_priority()
+    assert rt.chat_priority_active() is True
+    assert llm_mod.embed_text("ping") == []
+    assert called["embed"] is False
+
+    # Expire grace immediately for cleanup.
+    with rt._chat_priority_lock:
+        rt._chat_priority_grace_until = 0.0
+    try:
+        rt._chat_priority_flag_path().unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def test_ensure_skips_reload_inside_stream(monkeypatch: pytest.MonkeyPatch) -> None:
+    import jarvis.ollama_runtime as rt
+
+    monkeypatch.setattr(
+        rt,
+        "free_slot_for_chat_model",
+        lambda model: {"ok": True, "action": "noop", "loaded": []},
+    )
+    monkeypatch.setattr(rt, "runner_info", lambda model: {"name": model, "size_vram": 0})
+
+    def boom(*a, **k):
+        raise AssertionError("warmup must not run with allow_reload=False")
+
+    monkeypatch.setattr(rt, "warmup_chat_model", boom)
+    monkeypatch.setattr(rt, "unload_model", boom)
+    out = rt.ensure_chat_model_ready("qwen2.5:7b", allow_reload=False)
+    assert out["ok"] is False
+    assert out["action"] == "stream_skip_reload"
+
+
 def test_ensure_chat_model_ready_already_resident(monkeypatch: pytest.MonkeyPatch) -> None:
     import jarvis.ollama_runtime as rt
 
@@ -182,7 +237,11 @@ def test_ensure_chat_model_ready_already_resident(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(
         rt,
         "runner_info",
-        lambda model: {"name": model, "size_vram": 5_000_000_000, "context_length": 8192},
+        lambda model: {
+            "name": model,
+            "size_vram": 5_000_000_000,
+            "context_length": 8192,
+        },
     )
 
     def boom(*a, **k):
@@ -192,3 +251,46 @@ def test_ensure_chat_model_ready_already_resident(monkeypatch: pytest.MonkeyPatc
     out = rt.ensure_chat_model_ready("qwen2.5:7b")
     assert out["ok"] is True
     assert out["action"] == "already_ready"
+
+
+def test_ensure_reloads_oversized_host_default_context(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Daemon OLLAMA_CONTEXT_LENGTH=32768 residents must not count as chat-ready."""
+    import jarvis.ollama_runtime as rt
+
+    monkeypatch.setenv("JARVIS_OLLAMA_NUM_CTX", "8192")
+    monkeypatch.setenv("OLLAMA_NUM_PARALLEL", "2")
+    monkeypatch.setattr(rt.time, "sleep", lambda s: None)
+    calls = {"unload": 0, "warm": 0}
+    state = {"n": 0}
+
+    monkeypatch.setattr(
+        rt,
+        "free_slot_for_chat_model",
+        lambda model: {"ok": True, "action": "noop", "loaded": []},
+    )
+
+    def info(model):
+        state["n"] += 1
+        # First checks see oversized host-default context; after unload+warm, match chat.
+        if calls["warm"] == 0:
+            return {"name": model, "size_vram": 5_000_000_000, "context_length": 32768}
+        return {"name": model, "size_vram": 5_000_000_000, "context_length": 8192}
+
+    monkeypatch.setattr(rt, "runner_info", info)
+
+    def unload(model, **k):
+        calls["unload"] += 1
+        return True
+
+    def warm(model=None):
+        calls["warm"] += 1
+        return {"ok": True, "load_ms": 1, "total_s": 0.1}
+
+    monkeypatch.setattr(rt, "unload_model", unload)
+    monkeypatch.setattr(rt, "warmup_chat_model", warm)
+
+    out = rt.ensure_chat_model_ready("qwen2.5:7b", timeout=30)
+    assert out["ok"] is True
+    assert calls["unload"] >= 1
+    assert calls["warm"] >= 1
+    assert out["action"] == "warmed"

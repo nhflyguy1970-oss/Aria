@@ -569,9 +569,10 @@ class ConversationEngine:
         try:
             from jarvis.ollama_runtime import ensure_chat_model_ready
 
-            # Prefer full ensure (free embed slot + warm). When the SSE layer
-            # already ensured residency this is a fast already_ready check.
-            ensure_chat_model_ready(chat_model)
+            # SSE layer already ensured GPU residency outside the first-progress
+            # clock. Never unload/reload here — size_vram=0 reload was measured
+            # burning the FIRST_PROGRESS budget on alternating follow-ups.
+            ensure_chat_model_ready(chat_model, allow_reload=False)
         except Exception:
             try:
                 from jarvis.ollama_runtime import free_slot_for_chat_model

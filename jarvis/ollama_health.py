@@ -113,12 +113,25 @@ def _model_is_loaded(model: str, loaded: list[str]) -> bool:
 
 
 def _soft_generate_probe(host: str, model: str, *, timeout: float) -> dict:
-    """Cheap generate probe (1 token, short timeout). Never used on every health poll."""
+    """Cheap generate probe (1 token, short timeout). Never used on every health poll.
+
+    Always pass workstation ``num_ctx``. Omitting it lets the Ollama daemon fall
+    back to ``OLLAMA_CONTEXT_LENGTH`` (32768 here) × ``OLLAMA_NUM_PARALLEL`` (2) =
+    ``-c 65536``, which reloads/evicts the chat runner and is a measured cause of
+    alternating FIRST_PROGRESS_TIMEOUT.
+    """
+    options: dict = {"num_predict": max(1, _PROBE_NUM_PREDICT)}
+    try:
+        from jarvis.ollama_runtime import default_options
+
+        options = dict(default_options(num_predict=max(1, _PROBE_NUM_PREDICT)))
+    except Exception:
+        options["num_ctx"] = int(os.getenv("JARVIS_OLLAMA_NUM_CTX", "8192") or 8192)
     body = json.dumps({
         "model": model,
         "prompt": "ping",
         "stream": False,
-        "options": {"num_predict": max(1, _PROBE_NUM_PREDICT)},
+        "options": options,
     }).encode()
     req = urllib.request.Request(
         f"{host}/api/generate",

@@ -120,3 +120,30 @@ def test_soft_probe_preserves_recent_live_success_when_cold():
     probe.assert_not_called()
     assert result["ok"] is True
     assert result.get("skipped_cold") is True
+
+
+def test_soft_generate_probe_includes_num_ctx(monkeypatch):
+    """Probes must not omit num_ctx (daemon default 32768×parallel reloads chat)."""
+    captured = {}
+
+    class _Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b'{"response":"ok"}'
+
+    def fake_urlopen(req, timeout=0):
+        import json
+
+        captured["body"] = json.loads(req.data.decode())
+        return _Resp()
+
+    monkeypatch.setattr(oh.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setenv("JARVIS_OLLAMA_NUM_CTX", "8192")
+    out = oh._soft_generate_probe("http://127.0.0.1:11434", "qwen2.5:7b", timeout=2)
+    assert out["ok"] is True
+    assert captured["body"]["options"]["num_ctx"] == 8192

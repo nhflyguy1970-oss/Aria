@@ -22,8 +22,23 @@ _PROBE_NUM_PREDICT = 8
 # Chat streams hold this so background embed/index work cannot steal the sole
 # OLLAMA_MAX_LOADED_MODELS=1 runner mid-turn (measured FIRST_PROGRESS_TIMEOUT cause).
 # Cross-process: tray + serve are separate PIDs; a flag file coordinates them.
+#
+# After the stream ends we keep a short *grace* hold. Measured alternating
+# FIRST_PROGRESS_TIMEOUT: success → priority release → /api/embed loads nomic →
+# evicts qwen (or races ensure into size_vram=0) → next chat stalls → fail skips
+# post-turn embed → next chat succeeds. Grace blocks that inter-request eviction.
 _chat_priority = 0
 _chat_priority_lock = threading.Lock()
+_chat_priority_grace_until = 0.0
+_chat_priority_clear_timer: threading.Timer | None = None
+
+
+def _chat_priority_grace_s() -> float:
+    raw = (os.getenv("JARVIS_CHAT_PRIORITY_GRACE_S", "120") or "120").strip()
+    try:
+        return max(0.0, float(raw))
+    except ValueError:
+        return 120.0
 
 
 def _chat_priority_flag_path():
@@ -34,17 +49,78 @@ def _chat_priority_flag_path():
     return path
 
 
+def _write_chat_priority_flag(*, grace_until: float | None = None) -> None:
+    flag = _chat_priority_flag_path()
+    lines = [str(os.getpid()), str(time.time())]
+    if grace_until is not None:
+        lines.append(str(grace_until))
+    flag.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _schedule_grace_clear(grace_until: float) -> None:
+    """Unlink the flag once grace expires (if no new hard hold started)."""
+    global _chat_priority_clear_timer
+
+    def _clear() -> None:
+        global _chat_priority_grace_until
+        with _chat_priority_lock:
+            if _chat_priority > 0:
+                return
+            if time.time() < _chat_priority_grace_until - 0.05:
+                return
+            _chat_priority_grace_until = 0.0
+            try:
+                flag = _chat_priority_flag_path()
+                if not flag.is_file():
+                    return
+                text = flag.read_text(encoding="utf-8")
+                lines = text.splitlines()
+                # Only clear grace flags (3 lines). Mid-stream hard holds stay.
+                if len(lines) >= 3:
+                    flag.unlink(missing_ok=True)
+            except Exception as exc:
+                logger.debug("chat priority grace clear failed: %s", exc)
+
+    delay = max(0.05, grace_until - time.time())
+    if _chat_priority_clear_timer is not None:
+        try:
+            _chat_priority_clear_timer.cancel()
+        except Exception:
+            pass
+    timer = threading.Timer(delay, _clear)
+    timer.daemon = True
+    _chat_priority_clear_timer = timer
+    timer.start()
+
+
 def chat_priority_active() -> bool:
     with _chat_priority_lock:
         if _chat_priority > 0:
+            return True
+        if _chat_priority_grace_until and time.time() < _chat_priority_grace_until:
             return True
     # Cross-process: another Aria PID may hold the flag while this process embeds.
     try:
         flag = _chat_priority_flag_path()
         if not flag.is_file():
             return False
+        lines = flag.read_text(encoding="utf-8").splitlines()
+        if len(lines) >= 3:
+            try:
+                until = float(lines[2])
+            except ValueError:
+                until = 0.0
+            if until > 0 and time.time() < until:
+                return True
+            # Grace expired — drop stale grace flag.
+            if until > 0 and time.time() >= until:
+                try:
+                    flag.unlink(missing_ok=True)
+                except Exception:
+                    pass
+                return False
         age = time.time() - flag.stat().st_mtime
-        # Stale lock (>15m) must not block embeds forever after a crash.
+        # Stale hard hold (>15m) must not block embeds forever after a crash.
         if age > 900:
             try:
                 flag.unlink(missing_ok=True)
@@ -57,26 +133,44 @@ def chat_priority_active() -> bool:
 
 
 def begin_chat_priority() -> None:
-    global _chat_priority
+    global _chat_priority, _chat_priority_grace_until, _chat_priority_clear_timer
     with _chat_priority_lock:
         _chat_priority += 1
-        if _chat_priority == 1:
+        _chat_priority_grace_until = 0.0
+        if _chat_priority_clear_timer is not None:
             try:
-                flag = _chat_priority_flag_path()
-                flag.write_text(f"{os.getpid()}\n{time.time()}\n", encoding="utf-8")
-            except Exception as exc:
-                logger.debug("chat priority flag write failed: %s", exc)
+                _chat_priority_clear_timer.cancel()
+            except Exception:
+                pass
+            _chat_priority_clear_timer = None
+        try:
+            # Hard hold (no grace line) for the active stream.
+            _write_chat_priority_flag()
+        except Exception as exc:
+            logger.debug("chat priority flag write failed: %s", exc)
 
 
 def end_chat_priority() -> None:
-    global _chat_priority
+    global _chat_priority, _chat_priority_grace_until
     with _chat_priority_lock:
         _chat_priority = max(0, _chat_priority - 1)
-        if _chat_priority == 0:
+        if _chat_priority != 0:
+            return
+        grace = _chat_priority_grace_s()
+        if grace <= 0:
+            _chat_priority_grace_until = 0.0
             try:
                 _chat_priority_flag_path().unlink(missing_ok=True)
             except Exception as exc:
                 logger.debug("chat priority flag clear failed: %s", exc)
+            return
+        until = time.time() + grace
+        _chat_priority_grace_until = until
+        try:
+            _write_chat_priority_flag(grace_until=until)
+        except Exception as exc:
+            logger.debug("chat priority grace flag write failed: %s", exc)
+        _schedule_grace_clear(until)
 
 
 @contextmanager
@@ -186,6 +280,36 @@ def runner_info(model: str) -> dict[str, Any] | None:
         if _model_base(name) == want_base or name.lower() == want.lower():
             return row
     return None
+
+
+def _num_parallel() -> int:
+    # Prefer explicit env; default 2 matches common Ollama service units on this
+    # workstation (OLLAMA_NUM_PARALLEL=2). Aria's process env often omits it.
+    raw = (os.getenv("OLLAMA_NUM_PARALLEL") or os.getenv("JARVIS_OLLAMA_NUM_PARALLEL") or "2").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 2
+
+
+def runner_matches_chat_context(info: dict[str, Any] | None) -> bool:
+    """True when a resident runner's context fits workstation chat settings.
+
+    Soft probes that omit ``num_ctx`` load with daemon ``OLLAMA_CONTEXT_LENGTH``
+    (often 32768) × parallel slots. That resident looks "ready" in /api/ps but
+    the next chat with ``JARVIS_OLLAMA_NUM_CTX`` triggers a reload — frequently
+    onto CPU (``ngl 0``) mid first-progress window.
+    """
+    if not info:
+        return False
+    if int(info.get("size_vram") or 0) <= 0:
+        return False
+    reported = int(info.get("context_length") or 0)
+    if reported <= 0:
+        return True
+    want = default_num_ctx()
+    max_ok = want * _num_parallel()
+    return reported <= max_ok + 256
 
 
 def unload_model(model: str, *, timeout: float = 15) -> bool:
@@ -334,12 +458,16 @@ def ensure_chat_model_ready(
     model: str | None = None,
     *,
     timeout: float | None = None,
+    allow_reload: bool = True,
 ) -> dict[str, Any]:
     """Make the chat model GPU-resident before the first-progress clock starts.
 
     Cold qwen2.5:7b load on this host is ~46s — just over the 45s FIRST_PROGRESS
     budget. Loading (or confirming residency) here keeps provider_stream itself
     under budget once tokens are requested.
+
+    ``allow_reload=False`` is for the in-stream path: never unload/reload inside
+    the first-progress window (measured: CPU size_vram=0 reload burns the budget).
     """
     name = (model or probe_model_name()).strip()
     if not name:
@@ -347,57 +475,120 @@ def ensure_chat_model_ready(
     if timeout is None:
         timeout = float(os.getenv("JARVIS_OLLAMA_WARMUP_TIMEOUT", "180"))
     t0 = time.perf_counter()
+    settle = float(os.getenv("JARVIS_OLLAMA_SLOT_SETTLE_S", "2.5"))
     freed = free_slot_for_chat_model(name)
     # Extra settle after embed eviction — measured race: chat llama-server starts
     # with ngl=0 ("no usable GPU") when CUDA is still releasing the embed runner.
     if freed.get("action") == "freed" or freed.get("unloaded"):
-        time.sleep(float(os.getenv("JARVIS_OLLAMA_SLOT_SETTLE_S", "2.5")))
+        time.sleep(settle)
     info = runner_info(name)
-    if info and int(info.get("size_vram") or 0) > 0:
+    if runner_matches_chat_context(info):
         return {
             "ok": True,
             "action": "already_ready",
             "model": name,
             "size_vram": info.get("size_vram"),
+            "context_length": info.get("context_length"),
             "freed": freed,
             "elapsed_ms": round((time.perf_counter() - t0) * 1000, 2),
         }
 
-    # CPU-only / zero-VRAM runner is a known failure mode after embed races —
-    # unload and reload so the next probe can bind CUDA.
-    if info and int(info.get("size_vram") or 0) == 0:
-        logger.warning("Chat model %s resident with size_vram=0 — reloading for GPU", name)
+    if info and int(info.get("size_vram") or 0) > 0 and not runner_matches_chat_context(info):
+        logger.warning(
+            "Chat model %s resident with oversized context_length=%s (want<=%s) — reloading",
+            name,
+            info.get("context_length"),
+            default_num_ctx() * _num_parallel(),
+        )
+        if not allow_reload:
+            return {
+                "ok": False,
+                "action": "stream_skip_reload",
+                "model": name,
+                "size_vram": info.get("size_vram"),
+                "context_length": info.get("context_length"),
+                "freed": freed,
+                "elapsed_ms": round((time.perf_counter() - t0) * 1000, 2),
+                "detail": "oversized runner context; reload skipped inside stream",
+            }
         unload_model(name)
-        time.sleep(2.5)
+        time.sleep(settle)
 
-    warm = warmup_chat_model(model=name)
-    info = runner_info(name)
-    if not info or int(info.get("size_vram") or 0) == 0:
-        logger.warning("Warmup left %s without VRAM — one GPU retry after settle", name)
-        if info:
+    if not allow_reload:
+        # Stream path must not compete with the first-progress clock.
+        return {
+            "ok": False,
+            "action": "stream_skip_reload",
+            "model": name,
+            "size_vram": (info or {}).get("size_vram") if info else 0,
+            "freed": freed,
+            "elapsed_ms": round((time.perf_counter() - t0) * 1000, 2),
+            "detail": "chat model not GPU-resident; reload skipped inside stream",
+        }
+
+    warm: dict[str, Any] = {}
+    attempt = 0
+    deadline = time.perf_counter() + max(5.0, timeout)
+    while time.perf_counter() < deadline:
+        attempt += 1
+        info = runner_info(name)
+        # CPU-only / zero-VRAM runner is a known failure mode after embed races —
+        # unload and reload so the next probe can bind CUDA. Never accept CPU
+        # residency for interactive chat: it reliably trips FIRST_PROGRESS_TIMEOUT.
+        if info and int(info.get("size_vram") or 0) == 0:
+            logger.warning(
+                "Chat model %s resident with size_vram=0 — reloading for GPU (attempt %s)",
+                name,
+                attempt,
+            )
             unload_model(name)
-        time.sleep(3.0)
-        free_slot_for_chat_model(name)
-        time.sleep(1.0)
+            # Wait for the unload to finish; do not immediately start a competing
+            # load that aborts an in-flight llama-server (journal: context canceled).
+            time.sleep(settle + 1.0)
+        elif info and not runner_matches_chat_context(info):
+            unload_model(name)
+            time.sleep(settle + 1.0)
+
+        freed = free_slot_for_chat_model(name)
+        if freed.get("action") == "freed" or freed.get("unloaded"):
+            time.sleep(settle)
+
         warm = warmup_chat_model(model=name)
         info = runner_info(name)
-
-    # Prefer GPU residency; accept any resident runner so chat can still proceed
-    # (CPU path is slow but better than refusing the turn entirely).
-    vram = int((info or {}).get("size_vram") or 0)
-    ok = bool(info)
-    if ok and vram <= 0:
+        if runner_matches_chat_context(info):
+            return {
+                "ok": True,
+                "action": "warmed",
+                "model": name,
+                "size_vram": info.get("size_vram"),
+                "context_length": info.get("context_length"),
+                "freed": freed,
+                "warmup": {
+                    k: warm.get(k) for k in ("ok", "load_ms", "total_s", "detail", "cold_start")
+                },
+                "elapsed_ms": round((time.perf_counter() - t0) * 1000, 2),
+                "attempts": attempt,
+                "cpu_fallback": False,
+            }
         logger.warning(
-            "Chat model %s resident without VRAM (CPU fallback) — proceeding anyway",
+            "Warmup left %s without matching GPU residency (attempt %s) — retrying",
             name,
+            attempt,
         )
+        # Prefer waiting over hammering unload/reload (avoids 499 aborted loads).
+        time.sleep(settle + 1.5)
+
+    vram = int((info or {}).get("size_vram") or 0) if info else 0
     return {
-        "ok": ok,
-        "action": "warmed" if ok else "warmup_failed",
+        "ok": False,
+        "action": "warmup_failed",
         "model": name,
-        "size_vram": (info or {}).get("size_vram"),
+        "size_vram": (info or {}).get("size_vram") if info else None,
+        "context_length": (info or {}).get("context_length") if info else None,
         "freed": freed,
         "warmup": {k: warm.get(k) for k in ("ok", "load_ms", "total_s", "detail", "cold_start")},
         "elapsed_ms": round((time.perf_counter() - t0) * 1000, 2),
-        "cpu_fallback": bool(ok and vram <= 0),
+        "attempts": attempt,
+        "cpu_fallback": bool(info and vram <= 0),
+        "detail": "chat model did not reach GPU residency before warmup timeout",
     }
