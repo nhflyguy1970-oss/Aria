@@ -3513,13 +3513,45 @@ async def chat(
                 model_hint = general_model() or ""
             except Exception:
                 model_hint = ""
+            latency_trace_id = ""
+            try:
+                from jarvis.latency_observability.trace import (
+                    begin_trace as begin_latency_trace,
+                    get_by_request_id,
+                )
+
+                # Prefer the worker-thread trace once it exists; seed one for SSE correlation.
+                existing = get_by_request_id(rid or stream_rid)
+                if existing is not None:
+                    latency_trace_id = existing.trace_id
+                else:
+                    conv_id = ""
+                    try:
+                        conv_id = str(
+                            getattr(getattr(assistant, "branches", None), "active_id", "") or "main"
+                        )
+                    except Exception:
+                        conv_id = "main"
+                    lt = begin_latency_trace(
+                        request_id=rid or stream_rid,
+                        conversation_id=conv_id,
+                        provider_request_id=stream_rid,
+                        prompt=message or "",
+                    )
+                    latency_trace_id = lt.trace_id
+                    lt.note_provider(provider="ollama", model=model_hint, prompt_chars=len(message or ""))
+            except Exception:
+                latency_trace_id = ""
             begin_request(
                 stream_rid,
                 provider="ollama",
                 model=model_hint,
                 prompt_chars=len(message or ""),
             )
-            yield f"data: {_sse_payload({'type': 'status', 'message': 'Processing…'})}\n\n"
+            boot = {"type": "status", "message": "Processing…"}
+            if latency_trace_id:
+                boot["trace_id"] = latency_trace_id
+            yield f"data: {_sse_payload(boot)}\n\n"
             prefs = load_preferences()
             heartbeat_sec = float(prefs.get("heartbeat_sec") or 5.0)
             bridge = stream_sync_iter(
@@ -3565,6 +3597,21 @@ async def chat(
                                 reason="first_progress_timeout",
                                 error=msg,
                             )
+                            try:
+                                from jarvis.latency_observability.trace import (
+                                    complete_trace,
+                                    get_by_request_id,
+                                    bind_active,
+                                )
+
+                                tr = get_by_request_id(rid or stream_rid)
+                                if tr is not None:
+                                    bind_active(trace_id=tr.trace_id)
+                                    tr.note_stream(reason="first_progress_timeout")
+                                    tr.errors.append("FIRST_PROGRESS_TIMEOUT")
+                                    complete_trace(ok=False, error=msg)
+                            except Exception:
+                                pass
                             yield f"data: {_sse_payload({'type': 'error', 'code': 'FIRST_PROGRESS_TIMEOUT', 'message': msg})}\n\n"
                             yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'code': 'FIRST_PROGRESS_TIMEOUT', 'message': msg})}\n\n"
                             timed_out = True
@@ -3579,13 +3626,84 @@ async def chat(
                             got_model_progress = True
                             if et == "token":
                                 note_token(stream_rid)
+                                try:
+                                    from jarvis.latency_observability.trace import get_by_request_id
+
+                                    tr = get_by_request_id(rid or stream_rid)
+                                    if tr is not None and tr.stream.get("first_token_ms") is None:
+                                        tr.note_stream(
+                                            first_token_ms=round(
+                                                (_time.monotonic() - stream_t0) * 1000.0, 2
+                                            ),
+                                            first_sse_ms=round(
+                                                (_time.monotonic() - stream_t0) * 1000.0, 2
+                                            ),
+                                        )
+                                except Exception:
+                                    pass
                         elif et == "status":
                             note_heartbeat(stream_rid)
+                        elif et == "done" and latency_trace_id:
+                            event = dict(event)
+                            event.setdefault("trace_id", latency_trace_id)
+                            try:
+                                from jarvis.latency_observability.trace import get_by_request_id
+
+                                tr = get_by_request_id(rid or stream_rid) or get_by_request_id(
+                                    latency_trace_id
+                                )
+                                if tr is None:
+                                    from jarvis.latency_observability.trace import get_trace
+
+                                    tr = get_trace(latency_trace_id)
+                                if tr is not None:
+                                    event["latency"] = {
+                                        "trace_id": tr.trace_id,
+                                        "elapsed_ms": tr.elapsed_ms(),
+                                        "first_token_ms": (tr.stream or {}).get("first_token_ms"),
+                                        "slowest": tr.slowest_stage(),
+                                        "budgets": tr.budgets,
+                                        "overlay": tr.developer_overlay(),
+                                    }
+                            except Exception:
+                                pass
                     yield f"data: {_sse_payload(event)}\n\n"
                 if not timed_out:
                     complete_request(stream_rid, reason="done")
+                    try:
+                        from jarvis.latency_observability.trace import (
+                            bind_active,
+                            complete_trace,
+                            get_by_request_id,
+                            get_trace,
+                        )
+
+                        tr = get_by_request_id(rid or stream_rid) or get_trace(latency_trace_id)
+                        if tr is not None:
+                            bind_active(trace_id=tr.trace_id)
+                            tr.note_stream(
+                                duration_ms=round((_time.monotonic() - stream_t0) * 1000.0, 2),
+                                reason="done",
+                            )
+                            complete_trace(ok=True)
+                    except Exception:
+                        pass
             except Exception as e:
                 complete_request(stream_rid, reason="error", error=str(e))
+                try:
+                    from jarvis.latency_observability.trace import (
+                        bind_active,
+                        complete_trace,
+                        get_by_request_id,
+                        get_trace,
+                    )
+
+                    tr = get_by_request_id(rid or stream_rid) or get_trace(latency_trace_id)
+                    if tr is not None:
+                        bind_active(trace_id=tr.trace_id)
+                        complete_trace(ok=False, error=str(e))
+                except Exception:
+                    pass
                 yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'message': str(e)})}\n\n"
 
         return StreamingResponse(

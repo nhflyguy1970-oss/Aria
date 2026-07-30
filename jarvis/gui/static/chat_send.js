@@ -292,6 +292,22 @@
                 gotProgress = true;
                 gotDone = true;
                 streamFinished = true;
+                if (event.trace_id) c.lastLatencyTraceId = event.trace_id;
+                if (event.latency) {
+                  c.lastLatency = event.latency;
+                  try {
+                    const showDev = window.JARVIS_LATENCY_DEV === true
+                      || localStorage.getItem("JARVIS_LATENCY_DEV") === "1";
+                    if (showDev && Array.isArray(event.latency.overlay)) {
+                      console.info("[Aria latency]\n" + event.latency.overlay.join("\n"));
+                      window.showAriaToast?.(
+                        `Latency ${event.latency.elapsed_ms ?? "?"}ms · FT ${event.latency.first_token_ms ?? "—"}ms`,
+                        "info",
+                        3500,
+                      );
+                    }
+                  } catch (_) {}
+                }
                 typing.classList.remove("typing-msg");
                 if (!event.ok && !full && !event.image_path) {
                   typing.remove();

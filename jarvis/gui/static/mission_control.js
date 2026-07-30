@@ -3,6 +3,7 @@
 const MC_TABS = [
   "overview",
   "routing",
+  "latency",
   "timeline",
   "intent_analytics",
   "release",
@@ -286,6 +287,24 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const latency = d.latency || {};
+  const cur = latency.current || {};
+  const ft = latency.first_token || {};
+  const latencyCard = latency.product
+    ? mcCard(
+        "Latency",
+        `<p>State: <strong>${mcEsc(latency.state || "idle")}</strong> · live ${latency.live_count ?? 0}</p>
+         <p>Trace <code>${mcEsc(cur.trace_id || "—")}</code></p>
+         <p>Stage ${mcEsc(cur.stage || "—")} · elapsed ${cur.elapsed_ms ?? "—"} ms</p>
+         <p>First token avg ${ft.avg_ms ?? "—"} · p95 ${ft.p95_ms ?? "—"} · p99 ${ft.p99_ms ?? "—"}</p>
+         <p>Model <code>${mcEsc(cur.model || "—")}</code> · provider ${mcEsc(cur.provider || "ollama")}</p>
+         <p class="mc-actions">
+           <button type="button" class="ghost-btn small" data-mc-tab="latency">Open Latency</button>
+           <a class="ghost-btn small" href="/api/latency/diagnostics" target="_blank">Diagnostics</a>
+           <a class="ghost-btn small" href="/api/latency/stats" target="_blank">Stats</a>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -314,6 +333,7 @@ function renderOverview(d) {
       layoutsCard,
       notificationsCard,
       providerHealthCard,
+      latencyCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;
@@ -757,6 +777,64 @@ function renderConnection(conn) {
   ]);
 }
 
+function renderLatency(d) {
+  const L = d.latency || {};
+  const cur = L.current || {};
+  const ft = L.first_token || {};
+  const comp = L.completion || {};
+  const live = L.live || [];
+  const recent = L.recent || [];
+  const liveRows = live.length
+    ? `<table class="mc-table"><thead><tr><th>Trace</th><th>Stage</th><th>Elapsed</th><th>Model</th></tr></thead><tbody>${
+        live.map((r) => `<tr>
+          <td><code>${mcEsc(r.trace_id || "")}</code></td>
+          <td>${mcEsc(r.current_stage || "—")}</td>
+          <td>${r.elapsed_ms ?? "—"} ms</td>
+          <td><code>${mcEsc((r.provider || {}).model || (r.model || {}).model || "—")}</code></td>
+        </tr>`).join("")
+      }</tbody></table>`
+    : "<p class='muted'>No live requests</p>";
+  const recentRows = recent.length
+    ? `<table class="mc-table"><thead><tr><th>Trace</th><th>First token</th><th>Total</th><th>Slowest</th><th>OK</th></tr></thead><tbody>${
+        recent.map((r) => `<tr>
+          <td><code>${mcEsc(r.trace_id || "")}</code></td>
+          <td>${(r.stream || {}).first_token_ms ?? "—"}</td>
+          <td>${r.elapsed_ms ?? "—"}</td>
+          <td>${mcEsc((r.slowest || {}).name || "—")}</td>
+          <td>${r.ok === false ? "no" : r.ok === true ? "yes" : "—"}</td>
+        </tr>`).join("")
+      }</tbody></table>`
+    : "<p class='muted'>No recent traces yet</p>";
+  return `
+    <div class="mc-hero">
+      <div class="mc-hero-stat"><span class="muted">Live</span><strong>${L.live_count ?? live.length}</strong></div>
+      <div class="mc-hero-stat"><span class="muted">First token avg</span><strong>${ft.avg_ms ?? "—"} ms</strong></div>
+      <div class="mc-hero-stat"><span class="muted">P95</span><strong>${ft.p95_ms ?? "—"} ms</strong></div>
+      <div class="mc-hero-stat"><span class="muted">P99</span><strong>${ft.p99_ms ?? "—"} ms</strong></div>
+      <div class="mc-hero-stat"><span class="muted">Completion avg</span><strong>${comp.avg_ms ?? "—"} ms</strong></div>
+      <div class="mc-hero-stat"><span class="muted">Timeout rate</span><strong>${((L.timeout_rate || 0) * 100).toFixed(1)}%</strong></div>
+    </div>
+    ${mcGrid([
+      mcCard("Current request", `
+        <p>Trace <code>${mcEsc(cur.trace_id || "—")}</code></p>
+        <p>Stage <strong>${mcEsc(cur.stage || "—")}</strong> · elapsed ${cur.elapsed_ms ?? "—"} ms</p>
+        <p>Provider ${mcEsc(cur.provider || "ollama")} · model <code>${mcEsc(cur.model || "—")}</code></p>
+        <p>First token ${cur.first_token_ms ?? "—"} ms · slowest ${mcEsc((cur.slowest || {}).name || "—")}</p>
+        <p class="mc-actions">
+          <a class="ghost-btn small" href="/api/latency/live" target="_blank">Live API</a>
+          <a class="ghost-btn small" href="/api/latency/stats" target="_blank">Stats</a>
+          <a class="ghost-btn small" href="/api/latency/diagnostics" target="_blank">Diagnostics</a>
+        </p>`),
+      mcCard("Budgets (warn-only)", `
+        <p>Routing 20ms · Context 50ms · Prompt 20ms</p>
+        <p>Provider queue 250ms · First token 2s</p>
+        <p class="muted tiny">Budgets warn in traces; they never fail requests.</p>`),
+    ])}
+    ${mcCard("Live requests", liveRows)}
+    ${mcCard("Recent traces", recentRows)}
+  `;
+}
+
 async function renderMcTab(tab) {
   const body = mc$("mcTabBody");
   if (!body) return;
@@ -857,6 +935,9 @@ async function renderMcTab(tab) {
       break;
     case "activity":
       html = await (window.renderActivity || renderActivity)(_mcData);
+      break;
+    case "latency":
+      html = renderLatency(_mcData);
       break;
     case "performance":
       html = (window.renderPerformance || renderPerformance)(_mcData);
@@ -1103,6 +1184,7 @@ window.mcCard = mcCard;
 window.mcGrid = mcGrid;
 window.mcBadge = mcBadge;
 window.mcEsc = mcEsc;
+window.renderLatency = renderLatency;
 window.renderRoutingOverviewCard = renderRoutingOverviewCard;
 window.renderNotifications = renderNotifications;
 window.renderOperationalAdvisor = renderOperationalAdvisor;

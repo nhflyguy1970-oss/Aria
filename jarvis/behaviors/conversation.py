@@ -307,6 +307,19 @@ class ConversationEngine:
         inventory["prefix_characters"] = len(prefix)
         inventory["lightweight"] = needs.lightweight
         record_inventory(inventory)
+        try:
+            from jarvis.latency_observability.trace import active_trace
+
+            tr = active_trace()
+            if tr is not None:
+                tr.set_context_inventory(inventory)
+                total_ctx = sum(
+                    float((info or {}).get("elapsed_ms") or 0)
+                    for info in (inventory.get("sources") or {}).values()
+                )
+                tr.note_stage("context_assembly", total_ctx, sources=len(inventory.get("sources") or {}))
+        except Exception:
+            pass
         return prefix, warnings, citations
 
     def messages_for_llm(self, messages: list[dict], context_prefix: str) -> list[dict]:
@@ -504,7 +517,19 @@ class ConversationEngine:
             return
 
         yield {"type": "status", "message": "Gathering context…"}
+        _ctx_t0 = time.perf_counter()
         context_prefix, context_warnings, stream_citations = self.build_context_prefix(user_message)
+        try:
+            from jarvis.latency_observability.trace import active_trace
+
+            tr = active_trace()
+            if tr is not None and not any(s.name == "context_assembly" for s in tr.stages):
+                tr.note_stage(
+                    "context_assembly",
+                    round((time.perf_counter() - _ctx_t0) * 1000, 2),
+                )
+        except Exception:
+            pass
         from jarvis.instruction_follow import (
             is_strict_instruction_prompt,
             strict_instruction_context_prefix,
@@ -514,7 +539,21 @@ class ConversationEngine:
             hint = strict_instruction_context_prefix()
             context_prefix = f"{hint}\n\n{context_prefix}" if context_prefix else hint
         pending = self._a.conversation.messages + [{"role": "user", "content": user_message}]
+        _pb_t0 = time.perf_counter()
         msgs = self.messages_for_llm(pending, context_prefix)
+        try:
+            from jarvis.latency_observability.trace import active_trace
+
+            tr = active_trace()
+            if tr is not None:
+                tr.note_stage(
+                    "prompt_build",
+                    round((time.perf_counter() - _pb_t0) * 1000, 2),
+                    messages=len(msgs),
+                    prompt_chars=sum(len(m.get("content") or "") for m in msgs),
+                )
+        except Exception:
+            pass
         from jarvis.chat_cancel import finish as finish_cancel
         from jarvis.chat_cancel import is_cancelled
 
@@ -533,6 +572,16 @@ class ConversationEngine:
         usage: dict = {}
         t0 = time.perf_counter()
         try:
+            from jarvis.latency_observability.trace import active_trace
+
+            tr = active_trace()
+            if tr is not None:
+                tr.note_provider(provider="ollama", model=chat_model, role=chat_role)
+                tr.note_model(model=chat_model, role=chat_role)
+                tr.start_stage("provider_stream", model=chat_model)
+        except Exception:
+            pass
+        try:
             for chunk in llm.ask_stream(chat_model, msgs, cancel_key=request_id, usage=usage, role=chat_role):
                 if request_id and is_cancelled(request_id):
                     stopped = True
@@ -541,6 +590,15 @@ class ConversationEngine:
                     self._a.conversation.add_user(user_message)
                     saved_user = True
                 full.append(chunk)
+                try:
+                    from jarvis.latency_observability.trace import active_trace
+
+                    tr = active_trace()
+                    if tr is not None and tr.stream.get("first_token_ms") is None:
+                        tr.note_stream(first_token_ms=round((time.perf_counter() - t0) * 1000, 2))
+                        tr.end_stage("provider_stream", first_token=True)
+                except Exception:
+                    pass
                 yield {"type": "token", "content": chunk}
         except Exception as exc:
             if saved_user:

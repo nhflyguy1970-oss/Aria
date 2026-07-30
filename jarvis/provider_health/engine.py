@@ -106,4 +106,12 @@ def diagnostics() -> dict[str, Any]:
 
 
 def stats_payload() -> dict[str, Any]:
-    return {"ok": True, **watchdog_stats(), "prefs": load_preferences()}
+    out = {"ok": True, **watchdog_stats(), "prefs": load_preferences()}
+    # Historical latency trends (observability only — does not alter watchdog behavior).
+    try:
+        from jarvis.latency_observability.metrics import stats_payload as latency_stats
+
+        out["latency_history"] = latency_stats(limit=200)
+    except Exception:
+        out["latency_history"] = None
+    return out

@@ -706,6 +706,23 @@ class JarvisAssistant:
             return
         self._stream_lite_ui = lite_ui
         try:
+            # Bind / create latency trace in this worker thread (ContextVar-safe).
+            try:
+                from jarvis.latency_observability.trace import begin_trace, bind_active, get_by_request_id
+
+                rid = (request_id or "").strip()
+                existing = get_by_request_id(rid) if rid else None
+                if existing is not None:
+                    bind_active(request_id=rid)
+                else:
+                    begin_trace(
+                        request_id=rid or f"stream-{id(message)}",
+                        conversation_id=str(getattr(self.branches, "active_id", None) or "main"),
+                        provider_request_id=rid,
+                        prompt=message or "",
+                    )
+            except Exception:
+                pass
             yield from self._process_stream_unlocked(
                 message,
                 attachment,
@@ -819,6 +836,18 @@ class JarvisAssistant:
         t_route = time.perf_counter()
         intent = route(message, self.session, attachment)
         route_latency_ms = round((time.perf_counter() - t_route) * 1000, 1)
+        try:
+            from jarvis.latency_observability.trace import active_trace
+
+            tr = active_trace()
+            if tr is not None:
+                tr.note_stage("routing", route_latency_ms)
+                act = intent.get("action", "chat")
+                if isinstance(act, dict):
+                    act = str(act.get("name") or act.get("action") or "chat")
+                tr.action = str(act or "chat")
+        except Exception:
+            pass
         try:
             from jarvis.routing_inspector import begin_routing
 

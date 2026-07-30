@@ -248,6 +248,14 @@ def enrich_snapshot(data: dict[str, Any] | None) -> dict[str, Any]:
     except Exception:
         snap["provider_health"] = {"product": "Provider Health", "state": "unknown"}
     try:
+        from jarvis.latency_observability.mission_bridge import mission_panel as latency_mission_panel
+
+        snap["latency"] = latency_mission_panel()
+        ft = ((snap["latency"].get("first_token") or {}).get("avg_ms"))
+        snap["perf_series"]["first_token"] = _series_stub("first_token", ft)
+    except Exception:
+        snap["latency"] = {"product": "Latency", "state": "unknown"}
+    try:
         from jarvis.calendar_bridges import mission_status as calendar_mission_status
 
         snap["calendar"] = calendar_mission_status()

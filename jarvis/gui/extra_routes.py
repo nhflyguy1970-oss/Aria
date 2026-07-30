@@ -527,6 +527,13 @@ def register_routes(app, assistant):
     except Exception:
         pass
 
+    try:
+        from jarvis.latency_observability.api import register_product_routes as register_latency
+
+        register_latency(app, assistant)
+    except Exception:
+        pass
+
     @app.get("/api/knowledge")
     def knowledge_list():
         from jarvis.knowledge import list_topics

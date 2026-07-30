@@ -934,6 +934,46 @@ def retrieve_provider_health(query: str, limit: int) -> list[dict[str, Any]]:
     return _safe(_run, "provider_health")
 
 
+def retrieve_latency(query: str, limit: int) -> list[dict[str, Any]]:
+    def _run():
+        from jarvis.latency_observability.store import search_traces
+
+        out = []
+        for row in search_traces(query, limit=limit):
+            ft = (row.get("stream") or {}).get("first_token_ms")
+            title = row.get("trace_id") or "latency"
+            summary = (
+                f"elapsed={row.get('elapsed_ms')}ms first_token={ft} "
+                f"action={row.get('action')} slowest={(row.get('slowest') or {}).get('name')}"
+            )
+            out.append(
+                make_result(
+                    source="latency",
+                    source_label="Latency",
+                    title=str(title),
+                    summary=summary[:200],
+                    preview=summary[:280],
+                    score=0.75,
+                    strategy="keyword",
+                    open_action={
+                        "view": "mission_control",
+                        "tab": "latency",
+                        "trace_id": row.get("trace_id"),
+                    },
+                    icon="performance",
+                    metadata={
+                        "trace_id": row.get("trace_id"),
+                        "request_id": row.get("request_id"),
+                        "first_token_ms": ft,
+                        "elapsed_ms": row.get("elapsed_ms"),
+                    },
+                )
+            )
+        return out[:limit]
+
+    return _safe(_run, "latency")
+
+
 RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "documents": retrieve_documents,
     "memory": retrieve_memory,
@@ -956,4 +996,5 @@ RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "layouts": retrieve_layouts,
     "notifications": retrieve_notifications,
     "provider_health": retrieve_provider_health,
+    "latency": retrieve_latency,
 }

@@ -30,6 +30,7 @@ DEFAULT_ENABLED = [
     "layouts",
     "notifications",
     "provider_health",
+    "latency",
 ]
 
 OPT_IN_DEFAULT_OFF = ["gallery", "home_assistant"]
