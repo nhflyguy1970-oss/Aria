@@ -44,8 +44,11 @@ def needs_clarification(result: NLUResult) -> bool:
         result.semantic.confidence >= REVIEW_ROUTE or result.semantic.model == "structure"
     ):
         return False
-    if result.semantic.model == "structure":
-        return result.semantic.confidence < CLARIFY_BELOW
+    # Clarification only when a live classifier produced an uncertain band.
+    # Structure fallback / skipped classifiers must not trap chat in nlu_clarify.
+    model = (result.semantic.model or "").strip().lower()
+    if model in ("", "structure", "calendar_fact") or result.semantic.confidence <= 0:
+        return False
     return result.semantic.confidence < CLARIFY_BELOW
 
 

@@ -114,6 +114,30 @@ def route_via_nlu(
     if not text or attachment:
         return None
 
+    # Deterministic calendar/clock facts must never pay for a semantic LLM call.
+    # Placement has previously selected vision models as classifiers, which can
+    # unload the chat model and stall first-token by tens of seconds.
+    from jarvis.nlu.mapping import is_calendar_fact_question, nlu_to_router_intent
+    from jarvis.nlu.types import GrammarAnalysis, MorphologyAnalysis, NLUResult, SemanticClassification, SyntaxAnalysis
+
+    if is_calendar_fact_question(text):
+        stub = NLUResult(
+            prompt=text,
+            grammar=GrammarAnalysis(sentence_type="interrogative", question_type="what", mood="neutral"),
+            morphology=MorphologyAnalysis(stems=[]),
+            syntax=SyntaxAnalysis(subject="", verb="", object="", modifiers=[]),
+            semantic=SemanticClassification(
+                intent="chat",
+                confidence=0.99,
+                model="calendar_fact",
+                device="local",
+                latency_ms=0.0,
+            ),
+            conversation_context="",
+            keyword_hint="",
+        )
+        return nlu_to_router_intent(stub)
+
     result = analyze_prompt(text, session)
 
     if needs_clarification(result):
@@ -125,6 +149,26 @@ def route_via_nlu(
 
     intent = nlu_to_router_intent(result)
     if not intent:
+        # When semantic classification is skipped (structure fallback / unsuitable
+        # classifier), do not return None — that falls through to route_with_tools,
+        # which can burn tens of seconds on another Ollama model that rejects tools.
+        model = (result.semantic.model or "").strip().lower()
+        if model in ("", "structure") or result.semantic.confidence <= 0:
+            return {
+                "action": "chat",
+                "params": {},
+                "thinking": "structure_default_chat",
+                "route_reason": "nlu_structure_default",
+                "route_confidence": 0.55,
+                "route_handler": "ConversationEngine",
+                "nlu": result.to_debug(),
+                "semantic_report": result.to_debug(),
+                "router": "nlu",
+                "router_stage": "nlu_pipeline",
+                "rule_matched": "structure_default_chat",
+                "confidence_band": "review",
+                "flag_for_review": False,
+            }
         return None
 
     try:

@@ -20,6 +20,24 @@ _BENCHMARK_SCHEDULED = False
 _LOCK = threading.Lock()
 _log = logging.getLogger("jarvis.nlu.placement")
 
+# Vision / embed / multimodal models must never become the intent classifier —
+# they thrash VRAM and stall chat first-token (measured ~40s unload+load).
+_UNSUITABLE_CLASSIFIER_MARKERS = (
+    "vision",
+    "vl:",
+    "-vl",
+    "llava",
+    "moondream",
+    "embed",
+    "minicpm-v",
+    "bakllava",
+)
+
+
+def unsuitable_classifier_model(name: str) -> bool:
+    lower = (name or "").lower()
+    return any(m in lower for m in _UNSUITABLE_CLASSIFIER_MARKERS)
+
 
 def _structure_fallback() -> dict[str, Any]:
     return {
@@ -71,6 +89,12 @@ def placement_config() -> dict[str, Any]:
     env_model = (os.getenv("JARVIS_NLU_MODEL") or "").strip()
     env_device = (os.getenv("JARVIS_NLU_DEVICE") or "").strip()
     if env_model:
+        if unsuitable_classifier_model(env_model):
+            _log.warning(
+                "JARVIS_NLU_MODEL=%s is unsuitable for classification; using structure fallback",
+                env_model,
+            )
+            return _structure_fallback()
         return {
             "model": env_model,
             "device": env_device or "cpu",
@@ -81,6 +105,13 @@ def placement_config() -> dict[str, Any]:
     # Never block the hot path on run_benchmark — return cached/structure first.
     cached = _load_placement_file()
     if cached:
+        if unsuitable_classifier_model(str(cached.get("model") or "")):
+            _log.warning(
+                "Cached NLU classifier %s is unsuitable (vision/embed); using structure fallback",
+                cached.get("model"),
+            )
+            _schedule_background_rebenchmark()
+            return _structure_fallback()
         # Soft refresh when stale / new models appear (non-blocking).
         try:
             from jarvis.nlu.benchmark import should_rebenchmark

@@ -112,6 +112,14 @@ def classify_semantic(
     device = str(cfg.get("device") or "cpu")
     if model == "structure":
         return None
+    try:
+        from jarvis.nlu.placement import unsuitable_classifier_model
+
+        if unsuitable_classifier_model(model):
+            log.warning("Skipping unsuitable NLU classifier model: %s", model)
+            return None
+    except Exception:
+        pass
 
     try:
         from jarvis.nlu.health import (

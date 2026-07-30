@@ -11,7 +11,12 @@ from pathlib import Path
 from typing import Any
 
 from jarvis.config import DATA_DIR
-from jarvis.nlu.placement import _PLACEMENT_FILE, ollama_options_for_device, save_placement
+from jarvis.nlu.placement import (
+    _PLACEMENT_FILE,
+    ollama_options_for_device,
+    save_placement,
+    unsuitable_classifier_model,
+)
 
 _STALE_DAYS = int(os.getenv("JARVIS_NLU_BENCHMARK_STALE_DAYS", "30"))
 _BENCHMARK_PROMPTS: tuple[tuple[str, str], ...] = (
@@ -83,6 +88,8 @@ def discover_classifier_models() -> list[str]:
                 except ValueError:
                     pass
         lower = name.lower()
+        if unsuitable_classifier_model(lower):
+            continue
         if size_gb > _MAX_MODEL_SIZE_GB:
             continue
         if any(h in lower for h in _MODEL_HINTS) or size_gb <= 2.5:
