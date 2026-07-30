@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 import threading
 import uuid
@@ -691,7 +692,18 @@ class JarvisAssistant:
         from jarvis.request_activity import begin, end
 
         begin()
-        self._request_lock.acquire()
+        # Never wait forever — a wedged prior stream must not block the platform.
+        lock_wait_s = float(os.getenv("JARVIS_REQUEST_LOCK_TIMEOUT_S", "3"))
+        if not self._request_lock.acquire(timeout=max(0.5, lock_wait_s)):
+            yield _stream_done(
+                _err(
+                    "Another request is still finishing. Stop it or wait a moment, then try again.",
+                    module=None,
+                ),
+                lite_ui=lite_ui,
+            )
+            end()
+            return
         self._stream_lite_ui = lite_ui
         try:
             yield from self._process_stream_unlocked(
@@ -802,6 +814,8 @@ class JarvisAssistant:
                 self.session.note_document(path)
         import time
 
+        # Unblock SSE immediately — routing / handlers must not own silence.
+        yield {"type": "status", "message": "Routing…"}
         t_route = time.perf_counter()
         intent = route(message, self.session, attachment)
         route_latency_ms = round((time.perf_counter() - t_route) * 1000, 1)
@@ -1197,6 +1211,7 @@ class JarvisAssistant:
             return
 
         if action != "chat" or action in instant:
+            yield {"type": "status", "message": f"Running {action}…"}
             result = self._process_unlocked(message, attachment, branch_id, attachment2)
             yield _stream_done(result)
             return

@@ -383,7 +383,8 @@ class ConversationEngine:
     def execute(self, params: dict, message: str) -> dict:
         from jarvis.branding import assistant_name
 
-        ollama = check_ollama()
+        # Tags-only: soft generate probes compete with real chat for VRAM/time.
+        ollama = check_ollama(soft_probe=False)
         if not ollama["running"]:
             return _err(
                 "Ollama is still starting. Wait a few seconds and try again — "
@@ -469,7 +470,12 @@ class ConversationEngine:
     ) -> Iterator[dict]:
         from jarvis.branding import assistant_name
 
-        ollama = check_ollama()
+        # Emit immediately so SSE heartbeats can flow while we validate the provider.
+        yield {"type": "status", "message": "Checking provider…"}
+        # Tags-only reachability — never soft-probe generate on the chat hot path.
+        # A generate probe (up to ~5s) serializes behind / contends with the real
+        # first token and is a systemic FIRST_PROGRESS_TIMEOUT contributor.
+        ollama = check_ollama(soft_probe=False)
         if not ollama["running"]:
             yield {
                 "type": "done",
@@ -520,6 +526,7 @@ class ConversationEngine:
             session_chat_model=(self._a.session.chat_model or "").strip(),
             action="chat",
         )
+        yield {"type": "status", "message": "Calling model…"}
         full: list[str] = []
         saved_user = False
         stopped = False
@@ -560,7 +567,7 @@ class ConversationEngine:
         if not answer.strip():
             if saved_user:
                 self._a.conversation.pop_last_user()
-            detail = f"Model `{model}` returned empty"
+            detail = f"Model `{chat_model}` returned empty"
             _record_backend_failure(detail)
             yield {
                 "type": "done",

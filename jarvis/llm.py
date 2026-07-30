@@ -1,6 +1,8 @@
 import json
 import os
+import queue
 import re
+import threading
 import time
 from collections.abc import Iterator
 
@@ -98,6 +100,49 @@ def ask_with_system(model: str, system: str, user: str, *, role: str = "conversa
         ) from e
 
 
+def _iter_blocking_cancellable(
+    stream,
+    *,
+    cancel_key: str = "",
+    poll_s: float = 0.5,
+) -> Iterator:
+    """Iterate a blocking provider stream while honoring cooperative cancel.
+
+    Without this, a wedged Ollama stream never yields, cancel is never observed,
+    and the assistant request lock stays held — stalling every subsequent request.
+    """
+    from jarvis.chat_cancel import is_cancelled
+
+    out: queue.Queue = queue.Queue(maxsize=64)
+    sentinel = object()
+    errors: list[BaseException] = []
+
+    def _reader() -> None:
+        try:
+            for item in stream:
+                if cancel_key and is_cancelled(cancel_key):
+                    break
+                out.put(item)
+        except BaseException as exc:  # noqa: BLE001 — surface to consumer
+            errors.append(exc)
+        finally:
+            out.put(sentinel)
+
+    threading.Thread(target=_reader, name="aria-provider-stream", daemon=True).start()
+    while True:
+        if cancel_key and is_cancelled(cancel_key):
+            break
+        try:
+            item = out.get(timeout=max(0.1, poll_s))
+        except queue.Empty:
+            continue
+        if item is sentinel:
+            break
+        yield item
+    if errors:
+        raise errors[0]
+
+
 def ask_stream(
     model: str,
     messages: list[dict],
@@ -114,7 +159,10 @@ def ask_stream(
         role = kwargs.pop("role", "general")
         route = select_route(model, role=role, messages=messages)
         if route.backend == "litellm":
-            for content in stream_chat(model, messages, role=role, route=route, **kwargs):
+            for content in _iter_blocking_cancellable(
+                stream_chat(model, messages, role=role, route=route, **kwargs),
+                cancel_key=cancel_key,
+            ):
                 if cancel_key and is_cancelled(cancel_key):
                     break
                 if content:
@@ -127,7 +175,7 @@ def ask_stream(
             stream=True,
             **_normalize_chat_kwargs(kwargs),
         )
-        for chunk in stream:
+        for chunk in _iter_blocking_cancellable(stream, cancel_key=cancel_key):
             if cancel_key and is_cancelled(cancel_key):
                 break
             if usage is not None:

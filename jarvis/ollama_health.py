@@ -62,14 +62,27 @@ def _list_via_cli() -> list[str]:
         return []
 
 
+_TAGS_CACHE: dict[str, object] = {"at": 0.0, "host": "", "models": [], "err": None}
+_TAGS_TTL_S = float(os.getenv("JARVIS_OLLAMA_TAGS_TTL", "15"))
+
+
 def _list_via_http(host: str) -> tuple[list[str], str | None]:
+    now = time.time()
+    if (
+        _TAGS_CACHE.get("host") == host
+        and _TAGS_CACHE.get("models")
+        and (now - float(_TAGS_CACHE.get("at") or 0)) < _TAGS_TTL_S
+    ):
+        return list(_TAGS_CACHE.get("models") or []), _TAGS_CACHE.get("err")  # type: ignore[return-value]
     try:
         with urllib.request.urlopen(f"{host}/api/tags", timeout=5) as resp:
             data = json.loads(resp.read().decode())
             models = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
+            _TAGS_CACHE.update({"at": now, "host": host, "models": models, "err": None})
             return models, None
     except Exception as e:
-        return [], str(e)
+        err = str(e)
+        return [], err
 
 
 def _soft_generate_probe(host: str, model: str, *, timeout: float) -> dict:
