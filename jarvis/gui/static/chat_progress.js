@@ -48,15 +48,51 @@
   function showProviderRecovery(message, opts = {}) {
     const retryText = opts.retryText || "";
     const reason = opts.reason || "PROVIDER_TIMEOUT";
+    const recovery = opts.recovery || null;
+    const classified = recovery?.classified || {};
+    const steps = recovery?.steps || [];
     const wrap = document.createElement("div");
     wrap.className = "chat-recovery";
     wrap.setAttribute("role", "alert");
     const title = document.createElement("p");
     title.className = "chat-recovery-title";
-    title.textContent = "Model provider timed out";
+    title.textContent = classified.title || "The selected model stopped responding";
     const body = document.createElement("p");
     body.className = "chat-recovery-body";
-    body.textContent = message || "The provider accepted the request but did not produce a response in time.";
+    body.textContent = classified.explanation || message
+      || "The provider accepted the request but did not produce a response in time.";
+    wrap.appendChild(title);
+    wrap.appendChild(body);
+    const details = document.createElement("ul");
+    details.className = "chat-recovery-details muted";
+    const provider = recovery?.ping?.provider || "ollama";
+    const model = recovery?.ping?.probe?.model || "";
+    const alive = recovery?.ping?.alive;
+    [
+      `Provider: ${provider}`,
+      model ? `Model: ${model}` : null,
+      alive == null ? null : `Status: ${alive ? "Provider reachable" : "Provider unreachable"}`,
+      `Class: ${classified.class || reason}`,
+    ].filter(Boolean).forEach((line) => {
+      const li = document.createElement("li");
+      li.textContent = line;
+      details.appendChild(li);
+    });
+    wrap.appendChild(details);
+    if (steps.length) {
+      const attempted = document.createElement("p");
+      attempted.className = "chat-recovery-meta";
+      attempted.textContent = "Aria attempted:";
+      wrap.appendChild(attempted);
+      const stepList = document.createElement("ul");
+      stepList.className = "chat-recovery-steps";
+      steps.forEach((s) => {
+        const li = document.createElement("li");
+        li.textContent = `${s.ok ? "✓" : "✗"} ${s.id}${s.detail ? ` — ${s.detail}` : ""}`;
+        stepList.appendChild(li);
+      });
+      wrap.appendChild(stepList);
+    }
     const actions = document.createElement("div");
     actions.className = "chat-recovery-actions";
     const mkBtn = (label, onClick, primary) => {
@@ -71,17 +107,30 @@
       if (retryText) window.sendMessage?.(retryText);
       else document.getElementById("messageInput")?.focus();
     }, true));
-    actions.appendChild(mkBtn("Stop", () => window.stopChat?.()));
+    actions.appendChild(mkBtn("Restart Provider", async () => {
+      try {
+        const res = await fetch("/api/provider/restart", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ confirmed: true, provider: "ollama" }),
+        });
+        const data = await res.json();
+        window.showAriaToast?.(data.message || (data.ok ? "Provider restarted" : "Restart failed"), data.ok ? "ok" : "err", 4000);
+        if (data.ok && retryText) window.sendMessage?.(retryText);
+      } catch (e) {
+        window.showAriaToast?.(e.message || "Restart failed", "err", 4000);
+      }
+    }));
     actions.appendChild(mkBtn("Switch Model", () => {
       window.switchToView?.("chat");
       document.getElementById("modelsToggle")?.click?.();
       window.openCommandPalette?.("model");
-      window.showAriaToast?.("Open Models or use the command palette to switch models", "info", 4000);
+      window.showAriaToast?.("Choose another model, then retry", "info", 4000);
     }));
     actions.appendChild(mkBtn("Switch Provider", () => {
       window.openCommandPalette?.("provider");
-      window.switchToView?.("audit");
-      window.showAriaToast?.("Check provider status under System / Mission Control", "info", 4000);
+      window.switchToView?.("workstation");
+      window.showAriaToast?.("Open Provider Health in Mission Control", "info", 4000);
     }));
     actions.appendChild(mkBtn("View Diagnostics", () => {
       window.switchToView?.("workstation");
@@ -89,12 +138,6 @@
         document.querySelector('[data-mc-tab="diagnostics"], [data-tab="diagnostics"]')?.click?.();
       }, 200);
     }));
-    wrap.appendChild(title);
-    wrap.appendChild(body);
-    const meta = document.createElement("p");
-    meta.className = "chat-recovery-meta muted";
-    meta.textContent = `Reason: ${reason}`;
-    wrap.appendChild(meta);
     wrap.appendChild(actions);
     const msgs = document.getElementById("messages");
     if (msgs) {
@@ -110,8 +153,8 @@
       showError(`${title.textContent}: ${body.textContent}`);
     }
     const { statusText } = els();
-    if (statusText) statusText.textContent = "Provider timeout — choose a recovery action";
-    window.showAriaToast?.("Model provider timed out — use Retry or Diagnostics", "err", 5000);
+    if (statusText) statusText.textContent = "Provider issue — choose a recovery action";
+    window.showAriaToast?.(classified.title || "Provider issue — use recovery actions", "err", 5000);
   }
 
   function showProgress(label = "Thinking…") {

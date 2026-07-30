@@ -520,6 +520,13 @@ def register_routes(app, assistant):
     except Exception:
         pass
 
+    try:
+        from jarvis.provider_health.api import register_product_routes as register_provider_health
+
+        register_provider_health(app, assistant)
+    except Exception:
+        pass
+
     @app.get("/api/knowledge")
     def knowledge_list():
         from jarvis.knowledge import list_topics

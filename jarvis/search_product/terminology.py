@@ -84,4 +84,5 @@ FACETS = (
     "dashboard",
     "layouts",
     "notifications",
+    "provider_health",
 )

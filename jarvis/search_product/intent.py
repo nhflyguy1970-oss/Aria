@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    ("provider_health", re.compile(r"\b(provider health|stream.?idle|ollama (down|stuck|timeout)|model (crash|timeout)|provider (timeout|recover|restart))\b", re.I)),
     ("notifications", re.compile(r"\b(notification|notifications|activity center|unread alerts|what.?s wrong)\b", re.I)),
     ("layouts", re.compile(r"\b(layout|layouts|shell layout|apply coding layout|starter layout)\b", re.I)),
     ("dashboard", re.compile(r"\b(home dashboard|daily brief|attention strip|home screen|dashboard home|ctrl\+home)\b", re.I)),

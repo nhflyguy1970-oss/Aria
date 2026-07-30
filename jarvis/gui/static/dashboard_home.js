@@ -205,12 +205,18 @@
     const coached = renderCoachOrHide(w, escFn);
     if (coached !== null) return coached;
     const p = w.payload || {};
-    const models = (p.ollama_models || []).filter(Boolean).slice(0, 4).join(", ");
+    const models = (p.models || p.ollama_models || []).filter(Boolean).slice(0, 4).join(", ");
+    const status = p.status || "unknown";
+    const score = p.health_score != null ? Math.round(p.health_score) : null;
+    const recovery = p.recovery_active ? " · recovering" : "";
+    const lastErr = p.last_error ? ` · last: ${escFn(String(p.last_error).slice(0, 48))}` : "";
     return `<section class="dash-widget dash-health" data-widget="provider_health" aria-label="Provider health">
       <h3>Provider health</h3>
-      <p id="dashHealthLine">CPU ${escFn(Math.round(p.cpu_percent || 0))}% · RAM ${escFn(Math.round(p.ram_percent || 0))}%${models ? ` · ${escFn(models)}` : ""}</p>
+      <p id="dashHealthLine">${escFn(status)}${score != null ? ` · score ${escFn(score)}` : ""} · ${escFn(p.provider || "provider")}${p.model ? ` · ${escFn(p.model)}` : ""}${recovery}</p>
+      <p class="muted tiny">CPU ${escFn(Math.round(p.cpu_percent || 0))}% · RAM ${escFn(Math.round(p.ram_percent || 0))}%${models ? ` · ${escFn(models)}` : ""}${lastErr}</p>
       <button type="button" class="ghost-btn tiny dash-deeplink" data-view="workstation">Open Mission Control</button>
-      <p class="muted tiny">Summary only — Mission Control owns diagnostics.</p>
+      <button type="button" class="ghost-btn tiny" id="dashProviderDiagBtn">Diagnostics</button>
+      <p class="muted tiny">Summary only — Provider Health owns reliability; Mission Control is operational.</p>
     </section>`;
   }
 
@@ -470,6 +476,9 @@
       body.querySelector("#dashHomeRefreshBtn")?.addEventListener("click", () => loadDashboard());
       body.querySelector("#dashDiagRefresh")?.addEventListener("click", () => loadDashboard());
       body.querySelector("#dashNewsRefresh")?.addEventListener("click", () => loadDashboard());
+      body.querySelector("#dashProviderDiagBtn")?.addEventListener("click", () => {
+        window.open("/api/provider/diagnostics", "_blank", "noopener");
+      });
 
       body.querySelectorAll(".dash-stat-card[data-view], .dash-attention-item[data-view]").forEach((btn) => {
         const v = btn.dataset.view;

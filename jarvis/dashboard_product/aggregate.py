@@ -74,46 +74,50 @@ def _weather_widget(assistant: Any) -> dict[str, Any]:
 
 
 def _health_widget() -> dict[str, Any]:
-    data: dict[str, Any] = {}
-    err = None
-    try:
-        # Prefer existing health helpers without HTTP
-        from jarvis.system_monitor import collect_stats
-
-        stats = collect_stats() or {}
-        models = (stats.get("ollama_models") or [])[:5]
-        data = {
-            "ollama_models": [m.get("name") or m.get("model") for m in models if isinstance(m, dict)],
-            "cpu_percent": stats.get("cpu_percent"),
-            "ram_percent": (stats.get("ram") or {}).get("percent"),
-            "ready_hint": "open_mission_control",
-        }
-    except Exception as exc:
-        err = str(exc)
-
-    if data:
+    data, err = _safe(
+        "provider_health",
+        lambda: __import__(
+            "jarvis.provider_health.dashboard_bridge", fromlist=["dashboard_summary"]
+        ).dashboard_summary(),
+    )
+    data = data or {}
+    if err and not data.get("ok"):
         return make_widget(
             id="provider_health",
             title="Provider health",
-            owner="Mission Control",
+            owner="Provider Health",
             category="health",
             priority=30,
-            available=True,
-            payload=data,
-            actions=[{"label": "Open Mission Control", "view": "workstation"}],
-            deep_links=[{"label": "Mission Control", "view": "workstation"}],
-            description="Summary only — Mission Control owns diagnostics.",
+            available=False,
+            coach="Open Mission Control for provider diagnostics.",
+            reason=err or "health_unavailable",
+            deep_links=[{"label": "Diagnostics", "view": "workstation"}],
         )
     return make_widget(
         id="provider_health",
         title="Provider health",
-        owner="Mission Control",
+        owner="Provider Health",
         category="health",
         priority=30,
-        available=False,
-        coach="Open Mission Control for provider diagnostics.",
-        reason=err or "health_unavailable",
+        available=True,
+        payload={
+            "status": data.get("status") or data.get("state"),
+            "state": data.get("state"),
+            "health_score": data.get("health_score"),
+            "provider": data.get("provider"),
+            "model": data.get("model"),
+            "models": data.get("models") or [],
+            "alive": data.get("alive"),
+            "cpu_percent": data.get("cpu_percent"),
+            "ram_percent": data.get("ram_percent"),
+            "timeouts": data.get("timeouts"),
+            "recoveries": data.get("recoveries"),
+            "recovery_active": data.get("recovery_active"),
+            "last_error": data.get("last_error"),
+        },
+        actions=[{"label": "Diagnostics", "view": "workstation"}],
         deep_links=[{"label": "Mission Control", "view": "workstation"}],
+        description="Summary only — Provider Health owns reliability; Mission Control displays it.",
     )
 
 

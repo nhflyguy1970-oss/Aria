@@ -1,11 +1,20 @@
 /** Chat send / stream pipeline — extracted from app.js. Load after app.js + chat_progress.js. */
 (function () {
   // Idle between stream chunks after first token/progress (media/coding may be slower).
-  const STREAM_IDLE_MS = Number(window.JARVIS_CHAT_STREAM_IDLE_MS) || 90000;
+  let STREAM_IDLE_MS = Number(window.JARVIS_CHAT_STREAM_IDLE_MS) || 90000;
   // Absolute wait for first meaningful progress (token / agent_step / done) — never hang on "Processing…".
-  const FIRST_PROGRESS_MS = Number(window.JARVIS_CHAT_FIRST_PROGRESS_MS) || 45000;
+  let FIRST_PROGRESS_MS = Number(window.JARVIS_CHAT_FIRST_PROGRESS_MS) || 45000;
   // Non-streaming POST overall timeout.
   const NONSTREAM_MS = Number(window.JARVIS_CHAT_NONSTREAM_MS) || 120000;
+
+  fetch("/api/provider/prefs")
+    .then((r) => (r.ok ? r.json() : null))
+    .then((p) => {
+      if (!p || !p.ok) return;
+      if (Number(p.idle_timeout_ms) > 0) STREAM_IDLE_MS = Number(p.idle_timeout_ms);
+      if (Number(p.first_progress_ms) > 0) FIRST_PROGRESS_MS = Number(p.first_progress_ms);
+    })
+    .catch(() => {});
 
   function chat() {
     return window.jarvisChat || {};
@@ -23,16 +32,10 @@
     return document.getElementById("statusText");
   }
 
-  function readStreamChunk(reader, idleMs = STREAM_IDLE_MS) {
+  function readStreamChunk(reader, idleMs = STREAM_IDLE_MS, code = "STREAM_IDLE_TIMEOUT") {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
-        const name = typeof window.ariaName === "function" ? window.ariaName() : "ARIA";
-        const err = new Error(
-          `${name} stopped receiving tokens from the model provider. `
-          + "The provider may be wedged or overloaded.",
-        );
-        err.code = "STREAM_IDLE_TIMEOUT";
-        reject(err);
+        reject(providerTimeoutError(code === "FIRST_PROGRESS_TIMEOUT" ? "first" : "idle"));
       }, idleMs);
       reader.read().then(
         (result) => { clearTimeout(timer); resolve(result); },
@@ -228,7 +231,8 @@
               throw terr;
             }
             const idleForChunk = gotProgress ? STREAM_IDLE_MS : Math.max(5000, FIRST_PROGRESS_MS - (Date.now() - streamStartedAt));
-            const { done, value } = await readStreamChunk(reader, idleForChunk);
+            const idleCode = gotProgress ? "STREAM_IDLE_TIMEOUT" : "FIRST_PROGRESS_TIMEOUT";
+            const { done, value } = await readStreamChunk(reader, idleForChunk, idleCode);
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split("\n");
@@ -244,6 +248,9 @@
                   if (msgs) msgs.scrollTop = msgs.scrollHeight;
                 }
                 // Status alone does not count as model progress — avoids infinite "Processing…".
+              } else if (event.type === "heartbeat") {
+                // Server keepalive while provider is blocked — resets chunk idle without counting as first token.
+                window.updateProgressStatus?.(event.message || "Waiting for provider…");
               } else if (event.type === "agent_step") {
                 gotProgress = true;
                 const label = `${event.action || "step"}: ${event.detail || ""}`;
@@ -358,10 +365,36 @@
       if (isProviderTimeout) {
         c.providerTimeout = null;
         try { c.chatAbortController?.abort?.(); } catch (_) {}
-        if (statusText) statusText.textContent = "Provider timeout";
+        if (statusText) statusText.textContent = "Recovering provider…";
+        const gotProgress = Boolean((c.activeStreamText || "").trim());
+        let recovery = null;
+        try {
+          const res = await fetch("/api/provider/recover", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              code: timed?.code || e.code || "PROVIDER_TIMEOUT",
+              message: String(timed?.message || e?.message || e),
+              got_progress: gotProgress,
+              provider: "ollama",
+              auto: true,
+            }),
+          });
+          recovery = await res.json();
+        } catch (_) {
+          recovery = null;
+        }
+        if (recovery?.auto_retry_recommended && recovery?.usable && text && !options._providerRetried) {
+          window.showAriaToast?.("Provider recovered — retrying…", "ok", 2500);
+          if (statusText) statusText.textContent = "Retrying…";
+          await sendMessage(text, false, { skipUserBubble: true, _providerRetried: true });
+          return;
+        }
         window.showProviderRecovery?.(String(timed.message || e.message || e), {
           retryText: text,
           reason: timed.code || e.code || "PROVIDER_TIMEOUT",
+          recovery,
+          gotProgress,
         });
         return;
       }

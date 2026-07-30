@@ -29,6 +29,7 @@ DEFAULT_ENABLED = [
     "dashboard",
     "layouts",
     "notifications",
+    "provider_health",
 ]
 
 OPT_IN_DEFAULT_OFF = ["gallery", "home_assistant"]

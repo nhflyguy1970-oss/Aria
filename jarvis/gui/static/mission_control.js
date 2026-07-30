@@ -270,6 +270,22 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const providerHealth = d.provider_health || {};
+  const providerHealthCard = providerHealth.product
+    ? mcCard(
+        "Provider Health",
+        `<p>State: <strong>${mcEsc(providerHealth.state || "unknown")}</strong> · score ${providerHealth.health_score ?? "—"}</p>
+         <p>Provider: <strong>${mcEsc(providerHealth.provider || "—")}</strong> · model <code>${mcEsc(providerHealth.model || "—")}</code></p>
+         <p>Connection ${mcEsc(providerHealth.connection || "—")} · GPU ${mcEsc(typeof providerHealth.gpu === "object" ? (providerHealth.gpu?.name || providerHealth.gpu?.model || "—") : (providerHealth.gpu || "—"))}</p>
+         <p>Failure rate ${(providerHealth.failure_rate ?? 0) * 100}% · recoveries ${providerHealth.recovery_attempts ?? 0}</p>
+         <p class="muted tiny">${mcEsc(providerHealth.last_error || providerHealth.note || "")}</p>
+         <p class="mc-actions">
+           <a class="ghost-btn small" href="/api/provider/diagnostics" target="_blank">Diagnostics</a>
+           <a class="ghost-btn small" href="/api/provider/health" target="_blank">Health</a>
+           <button type="button" class="ghost-btn small" data-mc-action="provider_recover">Recover</button>
+         </p>`
+      )
+    : "";
   return `
     <div class="mc-hero">
       <div class="mc-hero-stat"><span class="muted">Platform</span><strong>${mcEsc(ov.platform_status)}</strong></div>
@@ -297,6 +313,7 @@ function renderOverview(d) {
       homeCard,
       layoutsCard,
       notificationsCard,
+      providerHealthCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
   `;

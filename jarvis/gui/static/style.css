@@ -3101,6 +3101,13 @@ html.media-busy .sidebar .module-chip:not(.active) {
   margin: 0;
   font-size: 0.75rem;
 }
+.chat-recovery-details,
+.chat-recovery-steps {
+  margin: 0.25rem 0 0.35rem;
+  padding-left: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
 .chat-recovery-actions {
   display: flex;
   flex-wrap: wrap;

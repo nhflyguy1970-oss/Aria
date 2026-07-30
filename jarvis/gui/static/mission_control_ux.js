@@ -951,6 +951,26 @@
       if (t.closest?.("[data-mc-action='voice_summary']")) {
         e.preventDefault();
         voiceSummary();
+        return;
+      }
+      if (t.closest?.("[data-mc-action='provider_recover']")) {
+        e.preventDefault();
+        try {
+          const res = await fetch("/api/provider/recover", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: "OPERATOR_RECOVER", message: "Mission Control recover", auto: true }),
+          });
+          const j = await res.json();
+          window.showAriaToast?.(
+            j.usable ? "Provider recovered" : j.classified?.title || "Recovery attempted",
+            j.usable ? "ok" : "warn",
+            4000
+          );
+          window.loadMcSnapshot?.() || window.refreshMc?.();
+        } catch (err) {
+          window.showAriaToast?.(err.message || "Recover failed", "err");
+        }
       }
     },
     true

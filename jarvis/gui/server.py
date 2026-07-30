@@ -3492,25 +3492,68 @@ async def chat(
                 )
 
         async def event_stream():
+            import asyncio
+
             from jarvis.chat_cancel import begin
+            from jarvis.provider_health.prefs import load_preferences
+            from jarvis.provider_health.watchdog import (
+                begin_request,
+                complete_request,
+                note_heartbeat,
+                note_token,
+            )
 
             if rid:
                 begin(rid)
-            yield f"data: {_sse_payload({'type': 'status', 'message': 'Processing…'})}\n\n"
+            stream_rid = rid or f"stream-{id(message)}"
+            model_hint = ""
             try:
-                async for event in stream_sync_iter(
-                    lambda: assistant.process_stream(
-                        message,
-                        attachment,
-                        branch_id=bid,
-                        attachment2=attachment2,
-                        request_id=rid,
-                        lite_ui=use_lite_ui,
-                    ),
-                    thread_name="jarvis-chat-stream",
-                ):
+                from jarvis.llm import general_model
+
+                model_hint = general_model() or ""
+            except Exception:
+                model_hint = ""
+            begin_request(
+                stream_rid,
+                provider="ollama",
+                model=model_hint,
+                prompt_chars=len(message or ""),
+            )
+            yield f"data: {_sse_payload({'type': 'status', 'message': 'Processing…'})}\n\n"
+            prefs = load_preferences()
+            heartbeat_sec = float(prefs.get("heartbeat_sec") or 5.0)
+            bridge = stream_sync_iter(
+                lambda: assistant.process_stream(
+                    message,
+                    attachment,
+                    branch_id=bid,
+                    attachment2=attachment2,
+                    request_id=rid,
+                    lite_ui=use_lite_ui,
+                ),
+                thread_name="jarvis-chat-stream",
+            )
+            ait = bridge.__aiter__()
+            try:
+                while True:
+                    try:
+                        event = await asyncio.wait_for(ait.__anext__(), timeout=max(2.0, heartbeat_sec))
+                    except asyncio.TimeoutError:
+                        note_heartbeat(stream_rid)
+                        yield f"data: {_sse_payload({'type': 'heartbeat', 'message': 'waiting for provider…'})}\n\n"
+                        continue
+                    except StopAsyncIteration:
+                        break
+                    if isinstance(event, dict):
+                        et = event.get("type")
+                        if et == "token":
+                            note_token(stream_rid)
+                        elif et == "status":
+                            note_heartbeat(stream_rid)
                     yield f"data: {_sse_payload(event)}\n\n"
+                complete_request(stream_rid, reason="done")
             except Exception as e:
+                complete_request(stream_rid, reason="error", error=str(e))
                 yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'message': str(e)})}\n\n"
 
         return StreamingResponse(

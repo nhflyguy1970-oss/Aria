@@ -907,6 +907,33 @@ def retrieve_notifications(query: str, limit: int) -> list[dict[str, Any]]:
     return _safe(_run, "notifications")
 
 
+def retrieve_provider_health(query: str, limit: int) -> list[dict[str, Any]]:
+    def _run():
+        from jarvis.provider_health.history import search_history
+
+        out = []
+        for row in search_history(query, limit=limit):
+            title = row.get("kind") or row.get("class") or "Provider event"
+            summary = row.get("code") or row.get("message") or row.get("class") or ""
+            out.append(
+                make_result(
+                    source="provider_health",
+                    source_label="Provider Health",
+                    title=str(title),
+                    summary=str(summary)[:160],
+                    preview=str(summary)[:200],
+                    score=0.7,
+                    strategy="keyword",
+                    open_action={"view": "workstation", "query": query},
+                    icon="provider",
+                    metadata={"iso": row.get("iso"), "provider": row.get("provider")},
+                )
+            )
+        return out[:limit]
+
+    return _safe(_run, "provider_health")
+
+
 RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "documents": retrieve_documents,
     "memory": retrieve_memory,
@@ -928,4 +955,5 @@ RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "dashboard": retrieve_dashboard,
     "layouts": retrieve_layouts,
     "notifications": retrieve_notifications,
+    "provider_health": retrieve_provider_health,
 }

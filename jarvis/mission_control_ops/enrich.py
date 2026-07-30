@@ -241,6 +241,12 @@ def enrich_snapshot(data: dict[str, Any] | None) -> dict[str, Any]:
         snap["notifications"] = notifications_mission_panel()
     except Exception:
         snap["notifications"] = {"product": "Notifications", "state": "unknown"}
+    try:
+        from jarvis.provider_health.mission_bridge import mission_panel as provider_health_mission_panel
+
+        snap["provider_health"] = provider_health_mission_panel()
+    except Exception:
+        snap["provider_health"] = {"product": "Provider Health", "state": "unknown"}
     return snap
 
 
