@@ -1,0 +1,44 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-13T16:58:00+00:00",
+  "note": "Exercised after Home Automation. URL hash was already stuck at #homeAutomation; visible panels and body.dataset.room still changed. Place labels often wrong.",
+  "presence": {
+    "h2": "Presence",
+    "status": "Gestures enabled — pick Control mode to move floating panels",
+    "mode": "off",
+    "camera": "NOT STARTED (hardware gate)",
+    "leave_security_voice": "UNPROVEN — hash/place did not move"
+  },
+  "video": {
+    "h2": "Video Studio",
+    "simple_expert_advanced": "Simple restored; Advanced/Expert panels not left open (toggled then Simple). Empty Generate: no toast.",
+    "generate": "N/A — not started",
+    "gallery_control": "clicked; hash stuck so leave not proven"
+  },
+  "browser": {
+    "h2": "Browser",
+    "status": "Ready",
+    "session": "idle · Playwright",
+    "profile": "_default",
+    "tabs": ["Overview", "Session", "History", "Bookmarks", "Downloads", "Notes", "Research", "Security"],
+    "tab_bodies_differ": true,
+    "empty_open": "stays idle · Playwright — no honest empty-URL error",
+    "navigate_run_takeover": "N/A — not exercised"
+  },
+  "vision": {
+    "h2": "Vision",
+    "status": "idle · moondream:latest · quality",
+    "honesty": "OCR hybrid, tesseract ok, no warnings (VRAM figures observed, not copied as a capability claim)",
+    "empty_ocr": "no result text — no honest empty-path error in result pane",
+    "history_present": true,
+    "remember_describe_ui_code": "N/A — not exercised"
+  },
+  "connections": {
+    "h2": "Connections",
+    "overview_counts": { "nodes": 59, "relationships": 53 },
+    "browse": "home rendered (not skeleton)",
+    "negative_search": "emptyish true",
+    "assistant_dialog": "did not open",
+    "new_import_cleanup": "N/A — not exercised"
+  }
+}

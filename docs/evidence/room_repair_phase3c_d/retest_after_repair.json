@@ -1,0 +1,130 @@
+{
+  "repairs": [],
+  "search": {
+    "api_fly": {
+      "ms": 3416.6,
+      "n": 7,
+      "ok": true,
+      "sample": [
+        [
+          "flytying",
+          "Adams dry fly #16"
+        ],
+        [
+          "flytying",
+          "Adams dry fly #18"
+        ],
+        [
+          "chat",
+          "Main: user"
+        ],
+        [
+          "chat",
+          "Main: assistant"
+        ]
+      ]
+    },
+    "api_docs": {
+      "ms": 3061.0,
+      "n": 4,
+      "ok": true,
+      "sample": [
+        [
+          "documents",
+          "automotive_warranty_cover_letter-v2"
+        ],
+        [
+          "documents",
+          "Resume 2026"
+        ],
+        [
+          "documents",
+          "Resume 2026-2"
+        ],
+        [
+          "documents",
+          "Resume 2026"
+        ]
+      ]
+    },
+    "ui_fly": {
+      "ms": 3511.3,
+      "ui": {
+        "n": 7,
+        "empty": false,
+        "status": "7 result(s) \u00b7 3460.25 ms \u00b7 dashboard, journal, layouts, chat, planner, learned, notifications, settings, flytying, calendar, health, projects, memory",
+        "titles": [
+          "FLY TYING\nAdams dry fly #16\n75%\nterrestrial",
+          "FLY TYING\nAdams dry fly #18\n75%\ndry",
+          "CHAT\nMain: user\n66%\nWrite me a one-paragraph project note for Adams Dry Fly Revival \u2014 status update ",
+          "CHAT\nMain: assistant\n66%\nSure! Here\u2019s a one-paragraph project note for Adams Dry Fly Revival: \"Curre",
+          "NOTIFICATIONS\nOpen Notifications\n56%\n28 unread \u00b7 23 critical"
+        ],
+        "searching": false
+      },
+      "dest": {
+        "room": "flytying",
+        "hash": "#flytying"
+      }
+    },
+    "ui_docs": {
+      "ms": 5077.6,
+      "ui": {
+        "n": 7,
+        "empty": false,
+        "status": "7 result(s) \u00b7 5559.23 ms \u00b7 chat, planner, journal, dashboard, layouts, learned, notifications, flytying, settings, calendar, health, projects, memory",
+        "titles": [
+          "FLY TYING\nAdams dry fly #16\n75%\nterrestrial",
+          "FLY TYING\nAdams dry fly #18\n75%\ndry",
+          "CHAT\nMain: user\n66%\nWrite me a one-paragraph project note for Adams Dry Fly Revival \u2014 status update ",
+          "CHAT\nMain: assistant\n66%\nSure! Here\u2019s a one-paragraph project note for Adams Dry Fly Revival: \"Curre",
+          "NOTIFICATIONS\nOpen Notifications\n56%\n28 unread \u00b7 23 critical"
+        ],
+        "searching": false
+      },
+      "dest": {
+        "room": "flytying",
+        "hash": "#flytying"
+      }
+    }
+  },
+  "video": {
+    "enter": {
+      "room": "video",
+      "btns": 18,
+      "couldnt": false,
+      "failedToLoad": false,
+      "emptyOk": true,
+      "head": "Aria \u00b7 Video studio Listening quietly Video Studio Stay-in-Studio generation \u00b7 AnimateDiff or Ken Burns \u00b7 shared media queue Gallery Meme Mission Control Generate Enhance prompt Preset \u2014 none \u2014 Fast Draft Portrait Motion Landscape Pan Storyboard Preview Cinematic Social Clip Anim"
+    }
+  },
+  "whatsnew": {
+    "hasDismiss": true,
+    "version": "2026.07.29-global-ux",
+    "hidden": true,
+    "after_timer": {
+      "stillHidden": true,
+      "blocking": false
+    },
+    "esc": {
+      "hidden": true,
+      "seen": "2026.07.29-global-ux"
+    }
+  },
+  "rapid_video": {
+    "room": "video",
+    "couldnt": false,
+    "failedToLoad": false,
+    "emptyOk": true
+  },
+  "integrity": {
+    "status": "clean",
+    "overall": 100,
+    "clean": true,
+    "ms": 3005.3
+  },
+  "isolation": {
+    "qa": 403,
+    "test_shaped": 400
+  }
+}

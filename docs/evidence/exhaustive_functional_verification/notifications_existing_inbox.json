@@ -1,0 +1,40 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "notifications",
+  "capability": "Activity Center existing inbox without dismiss",
+  "captured_at": "2026-08-15T19:23:00Z",
+  "result": "PARTIAL — Ctrl+Shift+A opened Activity Center (79 unread). First All paint said Inbox is clear while the header said 79 unread. Unread filter then listed 79 shown · 79 unread. Mark all read / Clear / Dismiss / Ask what’s wrong not clicked. Closed with Escape. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Ctrl+Shift+A from #homeAutomation",
+    "hash_unchanged": "#homeAutomation"
+  },
+  "first_paint_all": {
+    "header": "79 unread events, 36 failures, 36 warnings",
+    "body": "Inbox is clear",
+    "honesty": "FAIL — empty copy vs unread count"
+  },
+  "unread_filter": {
+    "clicked": true,
+    "result": "79 shown · 79 unread",
+    "titles_not_recorded_beyond_kinds": true
+  },
+  "not_clicked": [
+    "Mark all read",
+    "Clear read",
+    "Clear all",
+    "Dismiss",
+    "Ask what’s wrong",
+    "Open",
+    "Pin"
+  ],
+  "data_mutation": {
+    "dismiss": false,
+    "mark_read": false
+  },
+  "owner_session": "OWNER_UNLOCKED throughout"
+}

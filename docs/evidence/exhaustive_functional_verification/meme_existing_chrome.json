@@ -1,0 +1,45 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "meme",
+  "capability": "Meme existing chrome without AI generate",
+  "captured_at": "2026-08-15T19:49:00Z",
+  "result": "PASS — #meme Meme Generator Ready; idea/top/bottom + Quick preview + Generate meme present; library heading present with no cards. Gallery leave/return restored Ready + empty fields. Empty generate/preview already proven earlier. AI Generate / Generate in chat / Delete not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "hash #meme from workstation",
+    "hash": "#meme",
+    "h2": "Meme Generator",
+    "status": "Ready"
+  },
+  "library": {
+    "heading": "Meme library",
+    "cards": 0,
+    "honest_empty_copy": "absent — heading only (PARTIAL vs dedicated no-memes line)"
+  },
+  "leave_return": {
+    "leave": "Meme → Gallery #gallery",
+    "return": "Gallery → Meme #meme",
+    "result": "PASS — Ready; fields empty; Generate meme present"
+  },
+  "performance": {
+    "room_entry": "FAST",
+    "leave_return": "FAST"
+  },
+  "not_clicked": [
+    "Generate meme",
+    "Generate in chat",
+    "Quick preview (text only)",
+    "Delete",
+    "AI background toggle"
+  ],
+  "data_mutation": {
+    "meme_generate": false,
+    "meme_preview": false,
+    "journal_post": false
+  },
+  "owner_session": "OWNER_UNLOCKED throughout"
+}

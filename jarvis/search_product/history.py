@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 import uuid
 from typing import Any
@@ -12,6 +13,34 @@ from jarvis.config import DATA_DIR
 HISTORY_FILE = DATA_DIR / "search_product" / "history.json"
 SAVED_FILE = DATA_DIR / "search_product" / "saved.json"
 MAX_HISTORY = 100
+
+_QA_QUERY_RE = re.compile(
+    r"^(?:qa_|cert_|smoke_|demo-)|"
+    r"\bQA_FULL\b|"
+    r"\bQA_Aria_|"
+    r"\bVoice smoke\b|"
+    r"\bdemo-skill-check\b|"
+    r"\bSHIPMEM|"
+    r"\bship_probe\b|"
+    r"\bwf_probe\b|"
+    r"\bAriaCross\d*\b|"
+    r"\bAriaValidation\d*\b",
+    re.I,
+)
+
+
+def is_qa_search_query(query: str) -> bool:
+    q = (query or "").strip()
+    if not q:
+        return False
+    if _QA_QUERY_RE.search(q):
+        return True
+    try:
+        from jarvis.integrity_product.tags import looks_like_dev_label
+
+        return looks_like_dev_label(q)
+    except Exception:
+        return False
 
 
 def _load_list(path, key: str) -> list[dict[str, Any]]:
@@ -41,6 +70,8 @@ def record_query(
     q = (query or "").strip()
     if not q:
         return {}
+    if is_qa_search_query(q):
+        return {}
     entry = {
         "id": uuid.uuid4().hex[:12],
         "query": q,
@@ -57,8 +88,22 @@ def record_query(
     return entry
 
 
+def purge_qa_history() -> int:
+    items = _load_list(HISTORY_FILE, "history")
+    kept = [e for e in items if not is_qa_search_query(str(e.get("query") or ""))]
+    removed = len(items) - len(kept)
+    if removed:
+        _save_list(HISTORY_FILE, "history", kept)
+    return removed
+
+
 def list_history(limit: int = 30) -> list[dict[str, Any]]:
-    return _load_list(HISTORY_FILE, "history")[: max(1, min(limit, MAX_HISTORY))]
+    items = [
+        e
+        for e in _load_list(HISTORY_FILE, "history")
+        if not is_qa_search_query(str(e.get("query") or ""))
+    ]
+    return items[: max(1, min(limit, MAX_HISTORY))]
 
 
 def clear_history() -> dict[str, Any]:
@@ -83,6 +128,10 @@ def save_search(query: str, *, name: str = "", facets: list[str] | None = None) 
     q = (query or "").strip()
     if not q:
         return {"ok": False, "error": "query required"}
+    from jarvis.production_guard import is_production_workspace
+
+    if is_production_workspace() and (is_qa_search_query(q) or is_qa_search_query(name)):
+        return {"ok": False, "error": "Test/QA searches cannot be saved in the live workspace."}
     entry = {
         "id": uuid.uuid4().hex[:12],
         "name": (name or q)[:80],

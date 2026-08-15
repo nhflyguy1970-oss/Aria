@@ -313,6 +313,7 @@
       const home = await docsFetch("/api/documents/home");
       await renderHome(home, previewPath || docsState.selected);
     } catch (e) {
+      if (window.AriaNet?.isRoomAbort?.(e)) return;
       if (root) root.innerHTML = `<p class="muted">${escapeHtml(e.message)}</p>`;
       toast(e.message, "err");
     }

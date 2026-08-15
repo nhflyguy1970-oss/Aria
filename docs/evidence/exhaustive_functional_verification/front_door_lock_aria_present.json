@@ -1,0 +1,18 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "front_door",
+  "capability": "Lock Aria visible on Front Door while OWNER_UNLOCKED",
+  "captured_at": "2026-08-15T19:22:00Z",
+  "result": "PASS — Front Door open from Connections; Lock Aria button present (fdLockAria). Not clicked. Restart Server also listed under House Controls and was not clicked. Owner stayed OWNER_UNLOCKED.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "lock_aria": {
+    "present": true,
+    "clicked": false,
+    "ref": "e592"
+  },
+  "not_clicked": ["Lock Aria", "Restart Server", "System Audit"]
+}

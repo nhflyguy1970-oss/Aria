@@ -1,0 +1,147 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-13T18:18:00+00:00",
+  "not_certification": true,
+  "note": "Remaining rooms after repair-set. Counts and chrome only. No Health PHR writes, no Planner/Journal/Gallery/Meme/Maker generates, no HA scenes, no Coding Apply. Session later idle-locked; overlay was not auto-shown until jarvisShowLock.",
+  "rooms": {
+    "gallery": {
+      "identity": "PASS — #gallery / Gallery / Museum",
+      "library": "PASS — 0 images · showing 0; ComfyUI offline (honest)",
+      "empty_generate": "PASS — toast Enter an image description first",
+      "advanced": "PASS — params open then close",
+      "negative_search": "PARTIAL — already empty; no extra no-match copy",
+      "generate_started": false,
+      "leave_video_return": "PASS"
+    },
+    "search": {
+      "identity": "PASS — #search / Search / Research study",
+      "health": "PASS — idle · 24 corpora · DuckDuckGo · Ready",
+      "negative_search": "SLOW — Searching… ~9.2 s then 3 hits for garbage query (not a true no-match). See remaining_rooms_resume.json",
+      "save_search": "N/A — not clicked",
+      "leave_documents_return": "PASS"
+    },
+    "maker": {
+      "identity": "PASS — #maker / Maker lab / Maker lab",
+      "chrome": "Generate / Iterate / Hello cube / Slice / Download STL / printer Start print present",
+      "generate_hello_cube_slice_print": "N/A — not exercised",
+      "leave_gallery_return": "PASS"
+    },
+    "meme": {
+      "identity": "PASS — #meme / Meme Generator / Meme studio",
+      "empty_generate": "PASS — toast Need top text, bottom text, idea, or image_prompt",
+      "empty_preview": "PASS — Preview needs top or bottom text.",
+      "generate_started": false,
+      "leave_gallery_return": "PASS"
+    },
+    "audio": {
+      "identity": "PASS — #audio / Audio / Audio studio",
+      "health": "Whisper / ffmpeg / Piper present; mic 100%",
+      "record": "N/A — not exercised",
+      "voice_button": "NOTE — Voice chrome button leaves to Voice room",
+      "leave_voice_return": "PASS"
+    },
+    "projects": {
+      "identity": "PASS — #projects / Projects / Creative workshop",
+      "list": "PASS — 2 existing workspaces; filter zzzz shrinks list 2→1",
+      "create_import": "N/A — not exercised",
+      "leave_coding_return": "PASS"
+    },
+    "documents": {
+      "identity": "PASS — #documents / Documents / Private library",
+      "list_count": 40,
+      "negative_search": "PASS — No matches. Ask Chat (results pane; library list unchanged)",
+      "leave_memory_return": "PASS"
+    },
+    "memory": {
+      "identity": "PASS — #memory / Memory / Memory archive",
+      "new_briefing_assist": "N/A — not exercised",
+      "negative_search": "PARTIAL — no clear no-match copy",
+      "leave_journal_return": "PASS"
+    },
+    "home": {
+      "identity": "PASS — #dashboard / Good afternoon / Foyer",
+      "deep_links": "Mission Control Planner Journal Calendar present",
+      "leave_planner_return": "PASS"
+    },
+    "chat": {
+      "identity": "PASS — #chat / How can I help? / Living room",
+      "composer": "PASS — present; empty Send did not send a visible turn",
+      "starters": "present (not recorded)",
+      "leave_journal_return": "PASS"
+    },
+    "planner": {
+      "identity": "PASS — #planner / Planner / Leather notebook",
+      "add_task": "N/A — not exercised",
+      "today_upcoming_done_tabs": "N/A — Planner is Tasks/Timers/Alarms/Today events, not those tabs",
+      "honest_empty_tasks": "PASS — No tasks yet",
+      "leave_calendar_return": "PASS"
+    },
+    "health": {
+      "identity": "PASS — #health / Health / Wellness clinic",
+      "chrome": "Upload Doctor visit Emergency Timeline Dashboard Check-in … present",
+      "writes": false,
+      "leave_journal_return": "PASS"
+    },
+    "mission": {
+      "identity": "PASS — #workstation / Mission Control / Aerospace ops",
+      "tabs": "Overview Routing Performance Recovery Connection present",
+      "leave_repair_return": "PASS"
+    },
+    "repair": {
+      "identity": "PASS place/hash — Restoration bench / #repair; nested card h2 Integrity",
+      "open_repairs": 0,
+      "leave_from_mission": "PASS"
+    },
+    "integrity": {
+      "identity": "PASS place/hash — Quiet caretaker / #integrity; no room h2",
+      "score": "Truth Score 100 · ready",
+      "list": "PASS after ~2.5s — No deductions on record",
+    },
+    "providers": {
+      "identity": "PASS — #models / Models / Provider bay",
+      "catalog_tabs": "PASS after wait — 8 tabs (Overview Roles Catalog Providers Recommend Downloads Packs Setup). /api/models/home ~11 s first paint. Save/Pull/Export not clicked.",
+      "leave_mission_return": "PASS"
+    },
+    "settings": {
+      "identity": "PASS — #settings / Settings / Settings",
+      "voice_chat_deep_link": "PASS — Voice & Chat found; body length changed",
+      "leave_security_return": "PASS"
+    },
+    "capabilities": {
+      "identity": "PASS — #capabilities / Capabilities / Capabilities",
+      "refresh": "PASS — chrome remains",
+      "leave_integrations_return": "PASS"
+    },
+    "integrations": {
+      "identity": "PASS — #integrations / Integrations / Integrations",
+      "test_configured": "N/A — not clicked (credentials)",
+      "leave_settings_return": "PASS"
+    },
+    "audit": {
+      "identity": "PASS — #audit / System Audit / System audit",
+      "note": "Enter showed Audit in progress (Run audit not clicked this slice)",
+      "functions": "UNPROVEN — do not re-run a 14-phase audit casually"
+    },
+    "security": {
+      "identity": "PASS — #security / Security / Security",
+      "honesty": "PASS after unlock re-enter. Prior stale locked copy was during idle lock without overlay.",
+      "leave_presence_return": "PASS before idle lock fully painted"
+    },
+    "actions": {
+      "identity": "PASS — #actions / Action history / Action history",
+      "rows": 10,
+      "filter": "PASS — Coding option → honest empty No actions logged yet; All modules restores 10. Invalid zzzz is not a select option.",
+      "leave_mission_return": "PASS"
+    },
+    "flytying": {
+      "identity": "PASS — #flytying / Fly tying / Streamside cabin",
+      "catalog": "271 patterns after wait; first paint SLOW",
+      "suggest_session": "N/A — not exercised",
+      "leave_gallery_return": "PASS"
+    }
+  },
+  "integrity_scan": "clean / 100 earlier this unlock session",
+  "qa": "403 production_isolation",
+  "live_journal_sha256": "2d914b51e1359d3ff67aa1a848a482dd869e9efa90eac526e2e6197d1fc6a431",
+  "live_journal_size": 67555
+}

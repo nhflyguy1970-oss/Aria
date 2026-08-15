@@ -1,0 +1,61 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "home_automation",
+  "capability": "Home Automation remaining read-only clicks after prior scene/toggle gates",
+  "captured_at": "2026-08-15T18:05:00Z",
+  "result": "PARTIAL — Front Door → Home Automation; #homeAutomation h2 Home Automation. First paint stale locked copy then recovered Connected. Status toast returned a live house snapshot. Discover Kasa 0 devices. Negative search No matches. Entity list still Could not load entities: Home Assistant disabled while header Connected. Webhook query secret still visible in UI — not recorded. Scenes/Apply/Heading out/Copy webhook/Open HA/chat Home status not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Home Automation from Video",
+    "hash": "#homeAutomation",
+    "h2": "Home Automation",
+    "place": "Lights, scenes, and Home Assistant — control the room around you."
+  },
+  "functions": {
+    "first_paint": "STALE — Home Assistant is locked. Unlock Aria with your Master Password. Overlay stayed hidden; Owner was OWNER_UNLOCKED.",
+    "recovered_health": "PASS — Connected · http://127.0.0.1:8123; vault ha.token not shown",
+    "status_button": "PASS — POST /api/smarthome/product/house-status toast Home Assistant snapshot; multiple lights on. Entity names not recorded here.",
+    "discover_kasa": "PASS — Discovered 0 device(s); Kasa enabled · python-kasa OK · 0 device(s) · 0 on",
+    "negative_search": "PASS — zzzznonexistentxyz → No matches",
+    "entity_list": "FAIL vs Status — Could not load entities: Home Assistant disabled"
+  },
+  "leave_return": {
+    "leave": "Front Door → Connections",
+    "front_door_copy": "current — You’re in the middle of Home automation",
+    "result": "PASS — leave to Connections #connections"
+  },
+  "not_clicked": [
+    "Open HA",
+    "Apply profile",
+    "Test",
+    "Connect",
+    "Copy webhook",
+    "Home status (chat-insert)",
+    "Heading out",
+    "Guided setup",
+    "Save leave scene",
+    "Focus/Relax/Movie/Work/Sunlight (Movie + Heading out already proven earlier)",
+    "device toggles",
+    "Lock Aria"
+  ],
+  "webhook_query_secret_visible": true,
+  "webhook_secret_recorded": false,
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "ha_actuation": false,
+    "kasa_discover": true,
+    "journal_post": false,
+    "journal_bytes": 68340,
+    "health_phr": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "Connections namespace chips (read-only). Do not Run audit. Do not Lock Aria. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

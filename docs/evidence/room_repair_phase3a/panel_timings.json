@@ -1,0 +1,21 @@
+{
+  "voice": 2612.9,
+  "vision": 210.9,
+  "flytying": 184.0,
+  "health": 8.0,
+  "smarthome": 75.8,
+  "capabilities": 252.1,
+  "integrations": 6.2,
+  "search": 14.6,
+  "settings": 8.2,
+  "dashboard": 2.2,
+  "layouts": 2.5,
+  "notifications": 11.6,
+  "provider_health": 356.9,
+  "guided_repair": 6.1,
+  "integrity": 1.1,
+  "latency": 10.8,
+  "calendar": 0.7,
+  "image": 2.5,
+  "video": 319.5
+}

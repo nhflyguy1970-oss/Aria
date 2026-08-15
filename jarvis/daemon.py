@@ -15,6 +15,7 @@ from jarvis.env_loader import load_jarvis_env
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 from jarvis.lan import bind_port, client_base_url  # noqa: E402
+from jarvis.logging_config import open_rotating_log  # noqa: E402
 
 PORT = bind_port()
 CLIENT_URL = client_base_url()
@@ -36,7 +37,11 @@ _restart_in_progress = False
 
 def _setup_file_logging() -> None:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    fh = logging.FileHandler(LOG_DIR / "jarvis.log", encoding="utf-8")
+    from logging.handlers import RotatingFileHandler
+
+    fh = RotatingFileHandler(
+        LOG_DIR / "jarvis.log", maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+    )
     fh.setFormatter(logging.Formatter("%(asctime)s %(name)s %(message)s"))
     logging.getLogger().addHandler(fh)
 
@@ -67,12 +72,12 @@ def start_server(open_browser: bool = False) -> subprocess.Popen:
     from jarvis.platform_cutover import apply_cutover_state_on_startup
 
     apply_cutover_state_on_startup()
-    env = os.environ.copy()
-    env["JARVIS_NO_BROWSER"] = "1" if not open_browser else "0"
-    env["JARVIS_SERVICES_MANAGED"] = "1"
+    from jarvis.security.owner.env_boundary import copy_process_env
+
+    env = copy_process_env(extra={"JARVIS_NO_BROWSER": "1" if not open_browser else "0", "JARVIS_SERVICES_MANAGED": "1"})
     cmd = [sys.executable, str(PROJECT_ROOT / "main.py"), "serve"]
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    _serve_log_handle = open(LOG_DIR / "serve.log", "a", encoding="utf-8")
+    _serve_log_handle = open_rotating_log(LOG_DIR / "serve.log")
     _server_proc = subprocess.Popen(
         cmd,
         cwd=str(PROJECT_ROOT),
@@ -105,22 +110,39 @@ def start_server(open_browser: bool = False) -> subprocess.Popen:
 
 
 def stop_server() -> None:
+    """SIGTERM the serve child; allow time for C5 shutdown persist/flush before SIGKILL."""
     global _server_proc
+    # ACM full flush + branch persist can take a few seconds; keep bounded so
+    # Front Door "Restart Server" cannot leave Jeff without Aria for ~45s+.
+    grace = float(os.getenv("JARVIS_SERVER_STOP_GRACE_S", "12"))
     if _server_proc and _server_proc.poll() is None:
         _server_proc.send_signal(signal.SIGTERM)
         try:
-            _server_proc.wait(timeout=8)
+            _server_proc.wait(timeout=max(5.0, grace))
         except subprocess.TimeoutExpired:
+            logger.warning(
+                "Serve process did not exit within %.0fs after SIGTERM — sending SIGKILL",
+                grace,
+            )
             _server_proc.kill()
             try:
-                _server_proc.wait(timeout=3)
+                _server_proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 pass
     _server_proc = None
 
 
-def restart_server() -> subprocess.Popen:
+def restart_server() -> subprocess.Popen | None:
     global _watchdog, _restart_in_progress
+    from jarvis.launch_ownership import canonical_owns_server, systemd_restart
+
+    if canonical_owns_server():
+        logger.info("Restarting canonical systemd jarvis.service (tray will re-attach)")
+        from jarvis.restart_audit import log_restart_event
+
+        log_restart_event("daemon", detail="systemd restart_server()")
+        systemd_restart()
+        return None
     with _restart_lock:
         if _restart_in_progress:
             logger.info("Restart already in progress — skipping duplicate request")
@@ -376,7 +398,21 @@ def run_tray(uncensored: bool = False) -> None:
             )
             proc = None
         else:
-            proc = start_server()
+            from jarvis.launch_ownership import ensure_canonical_server, systemd_unit_installed
+
+            if systemd_unit_installed() and ensure_canonical_server():
+                for _ in range(120):
+                    if _server_responsive():
+                        break
+                    time.sleep(0.5)
+                if _server_responsive():
+                    logger.info("systemd jarvis.service started — tray attaching")
+                    proc = None
+                else:
+                    logger.warning("systemd unit started but health timed out — not spawning a second serve")
+                    proc = None
+            else:
+                proc = start_server()
 
         if os.getenv("JARVIS_NO_BROWSER") != "1":
             _notify("Jarvis", f"Ready — {url}")
@@ -404,28 +440,36 @@ def run_tray(uncensored: bool = False) -> None:
 
         start_restart_watcher(restart_server)
 
+        # C6: resume via HTTP into the serve process — never construct a second assistant.
         try:
-            from jarvis.assistant_instance import get_assistant
-            from jarvis.jobs.checkpointed import resume_incomplete_jobs
+            import json as _json
+            import urllib.error
+            import urllib.request
 
-            resumed = resume_incomplete_jobs(get_assistant())
+            req = urllib.request.Request(
+                f"{CLIENT_URL}/api/agent-jobs/resume",
+                data=b"{}",
+                method="POST",
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                payload = _json.loads(resp.read().decode("utf-8"))
+            resumed = payload.get("resumed") or []
             if resumed:
-                logger.info("Resumed %d checkpointed job(s): %s", len(resumed), ", ".join(resumed))
+                logger.info(
+                    "Resumed %d checkpointed job(s) via serve: %s",
+                    len(resumed),
+                    ", ".join(resumed),
+                )
         except Exception as exc:
-            logger.debug("Job resume skipped: %s", exc)
+            logger.warning("Job resume via serve skipped: %s", exc)
 
         if os.getenv("JARVIS_WAKEWORD", "0") == "1":
             try:
                 from jarvis.audio_wakeword import start_listener, wakeword_available
 
                 if wakeword_available():
-                    try:
-                        from jarvis.assistant_instance import get_assistant
-                        from jarvis.audio_wakeword import configure
-
-                        configure(chat_processor=get_assistant().process)
-                    except Exception:
-                        pass
+                    # Serve lifespan already configures chat_processor on the shared assistant.
                     start_listener()
                     logger.info("Wake word listener started (JARVIS_WAKEWORD=1)")
                 else:
@@ -449,7 +493,12 @@ def run_tray(uncensored: bool = False) -> None:
             _watchdog.stop()
             if _services_watchdog:
                 _services_watchdog.stop()
-            stop_server()
+            from jarvis.launch_ownership import canonical_owns_server
+
+            if canonical_owns_server():
+                logger.info("Tray quit — leaving systemd-owned server running")
+            else:
+                stop_server()
 
         from jarvis.config import is_uncensored
         from jarvis.proactive_scheduler import start as start_scheduler

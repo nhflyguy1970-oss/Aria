@@ -1,0 +1,49 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "health",
+  "capability": "Owner UI Upload / empty Log dose / empty NL Log — no invented PHR data",
+  "captured_at": "2026-08-14T18:09:19Z",
+  "jeff_authorized": "all",
+  "result": "PASS empty/honest — Upload picker opened with no file; empty Log dose blocked by required field; empty NL Log did not POST. No Vitamin D3 dose logged. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked": true,
+  "health_home": 200,
+  "lock_overlay": "hidden",
+  "production_integrity": "Did not invent PHR data. Did not log Vitamin D3 (UI still to log). Did not upload a test/medical PDF.",
+  "owner_ui": {
+    "hash": "#health",
+    "nl_log": {
+      "clicked": "#healthNlBtn Log with empty field",
+      "posted": false,
+      "note": "runNl returns if blank. Placeholder 'My sugar was 121 this morning…' is not a logged value."
+    },
+    "log_dose": {
+      "tab": "Meds",
+      "clicked": "Log dose with empty Medication name",
+      "html5_required": true,
+      "checkValidity": false,
+      "validationMessage": "Please fill out this field.",
+      "focus": "Medication name",
+      "phr_write": false
+    },
+    "upload": {
+      "clicked": "#healthUploadBtn",
+      "file_chosen": false,
+      "document_stored_toast": false
+    },
+    "not_clicked": [
+      "Doctor visit",
+      "Emergency",
+      "Add/update med",
+      "Check educational interactions",
+      "Log Vitamin D3 as taken"
+    ]
+  },
+  "data_mutation": {
+    "phr_dose": false,
+    "phr_nl_log": false,
+    "phr_upload": false,
+    "timeline": "unchanged this step (check-in already on file 2026-08-14; Vitamin D3 current from 2026-08-07)"
+  },
+  "integrity": "POST /api/integrity/scan 200 after remaining write gates; overall 100; clean; artifacts 0"
+}

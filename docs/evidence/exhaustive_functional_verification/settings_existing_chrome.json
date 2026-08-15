@@ -1,0 +1,81 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "settings",
+  "capability": "Settings existing owner chrome without Save",
+  "captured_at": "2026-08-15T00:10:00Z",
+  "result": "PASS — identity, catalog, search, empty search, category filter, preference detail, Diagnostics toast, Voice & Chat open/close, Refresh, leave Integrity / return Settings. Save / Reset / Activate / appearance writes not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Settings (How the house feels)",
+    "hash": "#settings",
+    "h2": "Settings",
+    "region": "Settings Home",
+    "first_paint": "chrome + empty category list then catalog fill",
+    "usable_state": "Catalog 63 · Stores 9/12 · Corrupt 0 · Profile My profile 912010b3c0"
+  },
+  "first_paint_vs_usable": {
+    "first_selects": "Theme Professional Dark / Accent Steel blue / Density Comfortable (HTML defaults before loadHome)",
+    "after_catalog": "Theme Professional Dark / Accent Muted teal / Density Standard — existing My profile. Not changed by this gate."
+  },
+  "functions": {
+    "search_theme": "PASS — 1 hit Theme; GET /api/settings/product/home?q=theme 200 in 7 ms",
+    "search_empty": "PASS — zzzznotapref → No preferences match.",
+    "category_appearance": "PASS — 13 prefs (Theme through Layouts)",
+    "pref_detail": "PASS — Theme selected; Owner Settings · type select · id appearance.theme",
+    "diagnostics": "PASS — toast Settings diagnostics · 63 prefs; GET /api/settings/product/diagnostics",
+    "voice_chat_modal": "PASS — modal Voice & Chat with Speak replies + Whisper; Close without save; modal hidden",
+    "refresh": "PASS — appearance filter and 13 prefs restored; theme/accent/density unchanged"
+  },
+  "leave_return": {
+    "leave": "Front Door → Integrity #integrity; heading Truth; Score 100 · ready; No deductions",
+    "return": "Front Door → Settings #settings h2 Settings",
+    "return_state": "appearance filter persisted; Theme still selected; Professional Dark / Muted teal / Standard",
+    "front_door_copy": "stale — still said Production Integrity after return to Settings",
+    "result": "PASS — room restored"
+  },
+  "coach": {
+    "warns_only": true,
+    "items": [
+      "Secrets stored in plaintext jarvis.env — Integrations owns secrets; file not opened",
+      "Theme migrated into Settings appearance store"
+    ]
+  },
+  "not_clicked": [
+    "Save profile",
+    "Activate",
+    "Reset appearance",
+    "Export",
+    "Open (deep link)",
+    "Theme / Accent / Density selects",
+    "atmosphere / chrome toggles",
+    "Lock Aria",
+    "Run audit"
+  ],
+  "performance": {
+    "room_entry": "hash #settings immediately on Front Door click",
+    "first_meaningful": "h2 Settings + Settings Home chrome on first paint",
+    "usable_catalog": "63 prefs after loadHome",
+    "primary_search_api_ms": 7,
+    "note": "Tool-roundtrip delays are not owner-visible time and were not recorded as room slowness."
+  },
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; idle_seconds 0; auto_idle_lock false; Lock Aria visible on Front Door"
+  },
+  "data_mutation": {
+    "journal_post": false,
+    "journal_bytes": 67547,
+    "health_phr": false,
+    "settings_save": false,
+    "appearance_post": false,
+    "profile_save_activate": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "stores_honesty": "9/12 stores present — catalog indexes missing stores; not treated as chrome failure",
+  "jeff_action_required": false,
+  "next_exact_capability": "Documents open an existing owner document (no Upload/Import). Do not Run audit. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

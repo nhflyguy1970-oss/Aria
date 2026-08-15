@@ -1,0 +1,217 @@
+{
+  "count": 53,
+  "files": [
+    {
+      "file": "jarvis/platform_cutover.py",
+      "score": 152
+    },
+    {
+      "file": "jarvis/modules/memory_adapter_store.py",
+      "score": 63
+    },
+    {
+      "file": "jarvis/model_store.py",
+      "score": 44
+    },
+    {
+      "file": "jarvis/modules/semantic_memory_adapter_store.py",
+      "score": 42
+    },
+    {
+      "file": "jarvis/gui/server.py",
+      "score": 31
+    },
+    {
+      "file": "jarvis/modules/memory.py",
+      "score": 24
+    },
+    {
+      "file": "jarvis/automation/migrate.py",
+      "score": 20
+    },
+    {
+      "file": "jarvis/modules/memory_sqlite.py",
+      "score": 19
+    },
+    {
+      "file": "jarvis/behaviors/operations/__init__.py",
+      "score": 15
+    },
+    {
+      "file": "jarvis/knowledge/search.py",
+      "score": 13
+    },
+    {
+      "file": "jarvis/modules/knowledge_retrieval_adapter.py",
+      "score": 13
+    },
+    {
+      "file": "jarvis/modules/automation_event_adapter.py",
+      "score": 11
+    },
+    {
+      "file": "jarvis/intelligence/multi_agent.py",
+      "score": 8
+    },
+    {
+      "file": "jarvis/journal_services.py",
+      "score": 8
+    },
+    {
+      "file": "jarvis/router.py",
+      "score": 8
+    },
+    {
+      "file": "jarvis/voice_product/settings.py",
+      "score": 8
+    },
+    {
+      "file": "jarvis/agents/coordinator.py",
+      "score": 7
+    },
+    {
+      "file": "jarvis/search_product/contract.py",
+      "score": 6
+    },
+    {
+      "file": "jarvis/specialists/engine.py",
+      "score": 6
+    },
+    {
+      "file": "jarvis/web_search.py",
+      "score": 6
+    },
+    {
+      "file": "jarvis/application/standalone/workstation_impl/daily_report.py",
+      "score": 5
+    },
+    {
+      "file": "jarvis/intelligence/automation_engine.py",
+      "score": 5
+    },
+    {
+      "file": "jarvis/memory_services.py",
+      "score": 5
+    },
+    {
+      "file": "jarvis/modules/workflow_orchestration_adapter.py",
+      "score": 5
+    },
+    {
+      "file": "jarvis/notifications_product/pipeline.py",
+      "score": 5
+    },
+    {
+      "file": "jarvis/models_product/switch.py",
+      "score": 4
+    },
+    {
+      "file": "jarvis/modules/capability_adapter.py",
+      "score": 4
+    },
+    {
+      "file": "jarvis/modules/journal.py",
+      "score": 4
+    },
+    {
+      "file": "jarvis/notifications_product/api.py",
+      "score": 4
+    },
+    {
+      "file": "jarvis/settings_product/catalog.py",
+      "score": 4
+    },
+    {
+      "file": "jarvis/voice_settings.py",
+      "score": 4
+    },
+    {
+      "file": "jarvis/extensions/memory/api.py",
+      "score": 3
+    },
+    {
+      "file": "jarvis/gui/extra_routes.py",
+      "score": 3
+    },
+    {
+      "file": "jarvis/intelligence/plugin_sdk.py",
+      "score": 3
+    },
+    {
+      "file": "jarvis/intelligence/workflow_engine.py",
+      "score": 3
+    },
+    {
+      "file": "jarvis/layouts_product/api.py",
+      "score": 3
+    },
+    {
+      "file": "jarvis/runtime_introspection.py",
+      "score": 3
+    },
+    {
+      "file": "jarvis/dashboard_product/aggregate.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/documentation_engine.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/flytying/user_store.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/journal_brain_feed.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/knowledge_graph.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/layouts_product/schema.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/learning_governor.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/planner_store.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/platform_attachment.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/project_journal_daily.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/runtime_routing_trace.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/settings_product/appearance.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/settings_product/coach.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/specialists/catalog.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/specialists/composer.py",
+      "score": 2
+    },
+    {
+      "file": "jarvis/workstation/__init__.py",
+      "score": 2
+    }
+  ]
+}

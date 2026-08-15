@@ -31,30 +31,49 @@ def alias_map() -> dict[str, list[str]]:
     return out
 
 
-def expand_query(q: str) -> tuple[str, list[str]]:
-    """Return (expanded_query_string, alias_terms_used)."""
+def query_variants(q: str) -> tuple[list[str], list[str]]:
+    """Return (OR search variants, alias keys used).
+
+    Aliases are alternate phrasings. Never AND-join them into one keyword query —
+    that made “elk hair caddis” require sparkle+pupa and hide real recipes.
+    """
     needle = (q or "").strip().lower()
     if not needle:
-        return "", []
+        return [], []
     amap = alias_map()
-    terms = [needle]
+    variants: list[str] = []
     used: list[str] = []
-    for tok in needle.split():
-        low = tok.lower()
-        if low in amap:
-            used.append(low)
-            terms.extend(amap[low])
+    seen: set[str] = set()
+
+    def _add(term: str, mark: str | None = None) -> None:
+        t = (term or "").strip().lower()
+        if not t or t in seen:
+            return
+        seen.add(t)
+        variants.append(t)
+        if mark and mark not in used:
+            used.append(mark)
+
+    _add(needle)
+
     if needle in amap:
         used.append(needle)
-        terms.extend(amap[needle])
-    seen: set[str] = set()
-    unique: list[str] = []
-    for t in terms:
-        t = t.strip().lower()
-        if t and t not in seen:
-            seen.add(t)
-            unique.append(t)
-    return " ".join(unique), used
+        for a in amap[needle]:
+            _add(a, needle)
+
+    for canon, als in amap.items():
+        if needle in als:
+            _add(canon, needle)
+            for a in als:
+                _add(a, needle)
+
+    return variants, used
+
+
+def expand_query(q: str) -> tuple[str, list[str]]:
+    """Compatibility helper. Prefer query_variants() for search."""
+    variants, used = query_variants(q)
+    return " ".join(variants), used
 
 
 def aliases_for_name(name: str) -> list[str]:

@@ -126,7 +126,9 @@ def require_api_key_for_lan_bind(host: str | None = None) -> None:
     """Refuse non-loopback binds without JARVIS_API_KEY unless explicitly overridden."""
     if not is_lan_bind(host):
         return
-    if os.getenv("JARVIS_API_KEY", "").strip():
+    from jarvis.auth import api_key_enabled
+
+    if api_key_enabled():
         return
     allow = os.getenv("JARVIS_ALLOW_INSECURE_LAN", "0").strip().lower() in (
         "1",

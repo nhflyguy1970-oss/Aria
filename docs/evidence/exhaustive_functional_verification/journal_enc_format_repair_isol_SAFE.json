@@ -1,0 +1,10 @@
+{
+  "at": "2026-08-12T20:38:56.974711+00:00",
+  "jarvis_data_dir": "/tmp/aria-exhaustive-isol-v2",
+  "live_unchanged": true,
+  "live_sha": "ec7b5a3770ffbb55bfed18de1b70ca3b59e1bbd5a838a941960c76c7214855cd",
+  "export_format": "jarvis-journal-v1",
+  "import_ok": true,
+  "owner_aug08_format_accepted": true,
+  "owner_message": "Wrong password or corrupt file"
+}

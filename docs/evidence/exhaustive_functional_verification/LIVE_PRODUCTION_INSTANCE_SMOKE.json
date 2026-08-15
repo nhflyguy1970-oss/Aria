@@ -1,0 +1,34 @@
+{
+  "captured_at": "2026-08-15T22:10:00Z",
+  "url": "http://127.0.0.1:8765/?workspace=1",
+  "pid": 1287356,
+  "owner": {
+    "state": "OWNER_UNLOCKED",
+    "idle_seconds": 0,
+    "auto_idle_lock": false,
+    "vault_unlocked": true,
+    "lock_aria_clicked": false
+  },
+  "smoke": {
+    "front_door": "PASS — overlay open; heading Where would you like to go?; fdLockAria visible Lock Aria",
+    "owner_unlocked": "PASS",
+    "lock_aria_visible": "PASS — Front Door fdLockAria display:block; not clicked",
+    "home": "PASS — #dashboard; no Home unavailable / Load failed",
+    "journal": "PASS — #journal Bullet Journal; Projects tab → Project journals; stayed on #journal",
+    "health": "PASS — Health PHR chrome; no writes",
+    "flytying": "PASS — catalog connected; Pattern of the day present",
+    "projects": "PASS — 2 workspaces; Active workspace home-lab; no QA-named rows observed",
+    "mission_workstation": "PASS — #workstation Mission Control body",
+    "connections_browse": "PASS — Overview 59/53 memgraph; Browse API 59; UI '59 entities'",
+    "knowledge_briefs": "PASS — hop to #memory; #memoryKnowledgePanel visible; existing briefs; Run not clicked",
+    "home_automation": "PASS — Connected · http://127.0.0.1:8123; entities API ok; no device toggles",
+    "nav_repair": "PASS — #missionRoom → #workstation; chat hidden",
+    "room_function_repair": "PASS — Journal Projects collision held (Project journals on #journal)",
+    "integrity": "PASS — score 100 · clean · artifacts 0 · UI Score 100 · ready"
+  },
+  "continuous_session": {
+    "rooms_visited": ["home/dashboard", "journal", "health", "flytying", "projects", "workstation", "connections", "memory", "homeAutomation", "integrity"],
+    "remained_OWNER_UNLOCKED": true,
+    "auto_idle_lock": false
+  }
+}

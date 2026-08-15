@@ -59,6 +59,8 @@
   }
 
   function openModal(id, label) {
+    window.AriaModalPortal?.ensure?.();
+    if (window.AriaModalPortal?.open?.(id)) return true;
     const el = $(id);
     if (!el) {
       toast(`${label || id} unavailable`);
@@ -66,6 +68,96 @@
     }
     el.classList.remove("hidden");
     return true;
+  }
+
+  function runBackup() {
+    const btn = $("backupDataBtn");
+    if (btn && !btn.closest("[inert]")) {
+      btn.click();
+      return true;
+    }
+    window.showAriaToast?.("Backup starting…", "info");
+    void (async () => {
+      try {
+        const res = await fetch("/api/admin/backup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ async: true }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          toast(data.message || "Backup failed");
+          return;
+        }
+        if (data.pending && data.job_id) {
+          window.showAriaToast?.(`Backup queued (${String(data.job_id).slice(0, 8)}…)`, "ok");
+          window.jarvisJobs?.refreshJobCenter?.();
+        } else {
+          window.showAriaToast?.(data.message || "Backup complete", "ok");
+        }
+      } catch (e) {
+        toast(e.message || "Backup failed");
+      }
+    })();
+    return true;
+  }
+
+  function runDebugBundle() {
+    const btn = $("debugBundleBtn");
+    if (btn && !btn.closest("[inert]")) {
+      btn.click();
+      return true;
+    }
+    void (async () => {
+      try {
+        const res = await fetch("/api/debug/bundle");
+        const data = await res.json();
+        const text = data.text || JSON.stringify(data, null, 2);
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          window.showAriaToast?.("Debug bundle copied", "ok", 2500);
+        } else {
+          if (window.ariaPrompt) {
+            await window.ariaPrompt("Copy debug bundle:", text.slice(0, 8000), {
+              title: "Debug bundle",
+              okLabel: "Close",
+            });
+          } else {
+            prompt("Copy debug bundle:", text.slice(0, 8000));
+          }
+        }
+      } catch (e) {
+        toast(`Debug bundle failed: ${e.message || e}`);
+      }
+    })();
+    return true;
+  }
+
+  function toggleUncensored() {
+    if (typeof window.toggleAriaUncensored === "function") {
+      return window.toggleAriaUncensored();
+    }
+    window.AriaModalPortal?.ensure?.();
+    const el = $("uncensoredToggle");
+    if (!el) {
+      toast("Uncensored unavailable");
+      return false;
+    }
+    const currentlyOn = document.body.classList.contains("uncensored-mode") || el.checked;
+    el.checked = !currentlyOn;
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  }
+
+  function toggleTheme() {
+    const next = document.body.classList.contains("light-theme") ? "dark" : "light";
+    if (typeof window.setAriaTheme === "function") {
+      window.setAriaTheme(next, {
+        successToast: next === "light" ? "Professional Light" : "Professional Dark",
+      });
+      return true;
+    }
+    return invoke("themeToggle", "Theme");
   }
 
   function askAria(text, opts = {}) {
@@ -108,6 +200,23 @@
     }
     el.value = value;
     el.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  }
+
+  function openVisionAction(action, label) {
+    goView("vision");
+    setTimeout(() => {
+      const path = $("visionHomePath");
+      const btn = [...document.querySelectorAll("#visionHomeActions button")].find((el) => el.title === action);
+      document.getElementById("visionView")?.scrollIntoView({ block: "start", behavior: "smooth" });
+      if (!path?.value?.trim()) {
+        path?.focus?.();
+        toast(`${label}: enter an image path, then run ${label}`, "info", 5000);
+        return;
+      }
+      if (btn) btn.click();
+      else toast(`${label} action unavailable`, "warn");
+    }, 180);
     return true;
   }
 
@@ -210,6 +319,18 @@
       today: () => askAria("Journal today", { returnView: "journal" }),
     },
 
+    health: {
+      open: () => goView("health"),
+      checkin: () => {
+        goView("health");
+        setTimeout(() => document.querySelector('.health-tab[data-htab="checkin"]')?.click(), 60);
+        return true;
+      },
+      search: () => focusAfter("health", "healthSearch"),
+      doctor: () => askAria("Prepare for my doctor appointment.", { returnView: "health" }),
+      emergency: () => askAria("Emergency summary", { returnView: "health" }),
+    },
+
     memory: {
       open: () => goView("memory"),
       search: () => focusAfter("memory", "memorySearch"),
@@ -300,6 +421,13 @@
       },
     },
 
+    vision: {
+      open: () => goView("vision"),
+      focusPath: () => focusAfter("vision", "visionHomePath"),
+      ocr: () => openVisionAction("ocr", "OCR"),
+      structuredOcr: () => openVisionAction("ocr_structured", "Structured OCR"),
+    },
+
     video: {
       open: () => goView("video"),
       studio: () => invoke("openVideoStudioBtn", "Video studio") || goView("video"),
@@ -375,15 +503,33 @@
         window.openSettingsHome?.() || window.switchToView?.("settings");
       },
       voiceChatSettings: () => window.openVoiceChatSettings?.(),
-      shortcuts: () => invoke("shortcutsBtn", "Shortcuts"),
-      backup: () => invoke("backupDataBtn", "Backup"),
-      debugBundle: () => invoke("debugBundleBtn", "Debug bundle"),
-      reloadUi: () => invoke("reloadUiBtn", "Reload UI"),
+      shortcuts: () => openModal("shortcutsModal", "Shortcuts") || invoke("shortcutsBtn", "Shortcuts"),
+      backup: () => runBackup(),
+      debugBundle: () => runDebugBundle(),
+      reloadUi: () => {
+        if (typeof window.reloadJarvisUi === "function") {
+          window.reloadJarvisUi();
+          return true;
+        }
+        return invoke("reloadUiBtn", "Reload UI");
+      },
       resetSidebar: () => invoke("resetLayoutBtn", "Expand sidebar"),
-      theme: () => invoke("themeToggle", "Theme"),
-      freeVram: () => invoke("freeVramBtn", "Free VRAM"),
-      lock: () => invoke("lockNowBtn", "Lock") || goView("security"),
-      uncensored: () => invoke("uncensoredToggle", "Uncensored"),
+      theme: () => toggleTheme(),
+      freeVram: () => {
+        if (typeof window.freeJarvisVram === "function") {
+          void window.freeJarvisVram(document.getElementById("statusText"));
+          return true;
+        }
+        return invoke("freeVramBtn", "Free VRAM");
+      },
+      lock: () => {
+        if (typeof window.jarvisLockHouse === "function") {
+          void window.jarvisLockHouse({ hard: true });
+          return true;
+        }
+        return invoke("ownerLockBtn", "Lock Aria") || invoke("securityLockBtn", "Lock now") || goView("security");
+      },
+      uncensored: () => toggleUncensored(),
       lanCopy: () => invoke("lanCopyBtn", "Copy LAN URL"),
       upgrade: () => invoke("upgradeWizardBtn", "Upgrade wizard") || openModal("upgradeWizardModal", "Upgrade wizard"),
       haSetup: () => invoke("haSetupWizardBtn", "HA setup") || openModal("haSetupModal", "HA setup"),

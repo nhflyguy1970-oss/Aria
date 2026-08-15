@@ -1,0 +1,87 @@
+{
+  "updated_at": "2026-08-13T15:03:56.011429+00:00",
+  "phase": "unlock_after_lock",
+  "status": "PROVEN",
+  "owner_state": "OWNER_UNLOCKED",
+  "entry_count": 4,
+  "ha_source": "vault",
+  "lan_still_unmigrated": true,
+  "jeff_entered_ha_token": false,
+  "unlock_with": "master_password",
+  "ha": {
+    "http_status": 200,
+    "elapsed_ms": 7.68,
+    "configured": true,
+    "connected": true,
+    "token_set": true,
+    "locked": null,
+    "url_set": true,
+    "conn_ok": true,
+    "conn_message": "API running.",
+    "enabled": true,
+    "secret_in_response": false
+  },
+  "timings": [
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.04,
+      "vault_id": "provider.openai.api_key"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.01,
+      "vault_id": "provider.gemini.api_key"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    }
+  ],
+  "secrets_in_evidence": false
+}

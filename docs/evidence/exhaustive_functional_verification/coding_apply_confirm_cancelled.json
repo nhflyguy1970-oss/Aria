@@ -1,0 +1,47 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "coding",
+  "capability": "Owner UI Apply confirm reachable — Cancel, do not apply residency leftover",
+  "captured_at": "2026-08-14T18:09:19Z",
+  "jeff_authorized": "all",
+  "result": "PASS — Apply opened confirm for 603973e7; Cancel closed it. Proposal still pending. jarvis/__init__.py unchanged. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked": true,
+  "health_home": 200,
+  "lock_overlay": "hidden",
+  "owner_ui": {
+    "hash": "#coding",
+    "h2": "Coding",
+    "tab": "Proposals",
+    "proposal": {
+      "id": "603973e7",
+      "file": "jarvis/__init__.py",
+      "summary": "Script ready to apply.",
+      "status": "pending",
+      "syntax_ok": true
+    },
+    "clicked": "Apply [data-coding-apply=603973e7]",
+    "confirm": {
+      "dialog": "#ariaConfirmDialog",
+      "title": "Apply proposal",
+      "body": "Apply proposal 603973e7? Risk: low Confidence: high Files: jarvis/__init__.py",
+      "ok_label": "Apply",
+      "clicked": "Cancel"
+    },
+    "not_clicked": [
+      "Apply on confirm",
+      "Export patch",
+      "Quality brief (as a write)",
+      "Continue task",
+      "Spec → code"
+    ]
+  },
+  "why_not_applied": "Unapplied diff plants residency marker RES27 into live jarvis/__init__.py and removes __version__. Applying would start Owner Residency leftovers in production code.",
+  "after_cancel": {
+    "dialog_open": false,
+    "proposal_status": "pending",
+    "file_on_disk": "\"\"\"Jarvis — local AI assistant modules powered by Ollama.\"\"\" / __version__ = \"1.0.0\"",
+    "applied_toast": false
+  },
+  "integrity": "POST /api/integrity/scan 200 after remaining write gates; overall 100; clean; artifacts 0"
+}

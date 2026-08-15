@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
 
 def register_product_routes(app, assistant) -> None:
-    from fastapi import Request
-    from fastapi.responses import JSONResponse
 
     @app.get("/api/calendar/product")
     def calendar_product():
@@ -72,7 +73,7 @@ def register_product_routes(app, assistant) -> None:
                 title=body.get("title") or body.get("content") or "",
                 day=body.get("day") or body.get("date"),
                 time=body.get("time"),
-                target=body.get("target") or "journal",
+                target=body.get("target") or "planner",
                 duration_min=int(body.get("duration_min") or 30),
             )
             notify_commitment_created(out)
@@ -180,7 +181,7 @@ def register_product_routes(app, assistant) -> None:
                 title=proposal.get("title") or "",
                 day=proposal.get("day"),
                 time=proposal.get("time"),
-                target=proposal.get("target") or "journal",
+                target=proposal.get("target") or "planner",
             )
             notify_commitment_created(out)
             return out

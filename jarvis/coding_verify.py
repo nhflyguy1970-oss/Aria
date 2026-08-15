@@ -109,10 +109,14 @@ def verify_python_files(
 
     for pf in py_files:
         rel = pf.relative_to(base) if pf.is_relative_to(base) else pf.name
-        check = run_sandboxed(
+        # py_compile is read-only analysis — do not wrap in firejail --private
+        # (private FS + large env can fail with MAX_ENVS / missing paths).
+        check = subprocess.run(
             [_PYTHON, "-m", "py_compile", str(pf)],
-            cwd=str(base),
+            capture_output=True,
+            text=True,
             timeout=15,
+            cwd=str(base),
         )
         if check.returncode != 0:
             err = (check.stderr or check.stdout or "syntax error").strip()[-400:]

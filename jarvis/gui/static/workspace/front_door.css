@@ -1,0 +1,552 @@
+/**
+ * Front Door foyer — arrival, not a launcher (Phase 6.1.1).
+ */
+
+/* —— Permanent house entry —— */
+.aria-house-btn {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 45;
+  width: 2.6rem;
+  height: 2.6rem;
+  border: 1px solid rgba(243, 235, 224, 0.14);
+  border-radius: 999px;
+  background: color-mix(in srgb, #1a1410 88%, transparent);
+  color: #d4a574;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), border-color 220ms ease, color 220ms ease;
+}
+
+.aria-house-btn.hidden {
+  display: none !important;
+}
+
+.aria-house-btn:hover,
+.aria-house-btn:focus-visible {
+  transform: translateY(-1px) scale(1.04);
+  border-color: rgba(212, 165, 116, 0.45);
+  color: #e8c49a;
+  outline: none;
+}
+
+.aria-house-btn .fd-house-glyph,
+.fd-header-mark .fd-house-glyph {
+  width: 1.15rem;
+  height: 1.15rem;
+  display: block;
+}
+
+body.living-workspace.living-room .aria-house-btn {
+  background: color-mix(in srgb, #14100e 82%, transparent);
+}
+
+/* Soften the room behind the foyer */
+body.front-door-open #ariaStage {
+  opacity: 0.38;
+  filter: saturate(0.85) blur(1.5px);
+  transform: scale(0.985);
+  transition: opacity 320ms ease, filter 320ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+body:not(.front-door-open) #ariaStage {
+  transition: opacity 280ms ease, filter 280ms ease, transform 280ms ease;
+}
+
+/* —— Overlay —— */
+.fd-root {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+  overflow: auto;
+}
+
+.fd-root.hidden {
+  display: none !important;
+}
+
+.fd-veil {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 15%, rgba(212, 165, 116, 0.14), transparent 58%),
+    linear-gradient(180deg, rgba(8, 6, 5, 0.55) 0%, rgba(6, 5, 4, 0.78) 100%);
+  backdrop-filter: blur(8px);
+}
+
+.fd-root--enter .fd-foyer {
+  animation: fd-arrive 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fd-root--leaving .fd-foyer {
+  animation: fd-depart 260ms ease both;
+}
+
+.fd-root--leaving .fd-veil {
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+@keyframes fd-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fd-depart {
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fd-root--enter .fd-foyer,
+  .fd-root--leaving .fd-foyer {
+    animation: none;
+  }
+  body.front-door-open #ariaStage {
+    filter: none;
+    transform: none;
+  }
+}
+
+/* —— Foyer sheet —— */
+.fd-foyer {
+  position: relative;
+  z-index: 1;
+  width: min(1080px, 100%);
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(2rem, 6vh, 3.5rem) clamp(1.25rem, 4vw, 3rem) 2rem;
+  color: #f3ebe0;
+  font-family: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  background:
+    linear-gradient(180deg, rgba(22, 17, 14, 0.55) 0%, rgba(12, 9, 8, 0.25) 40%, transparent 70%);
+}
+
+.fd-header {
+  max-width: 36rem;
+  margin-bottom: 1.75rem;
+}
+
+.fd-header-mark {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #d4a574;
+  border: 1px solid rgba(212, 165, 116, 0.28);
+  background: rgba(212, 165, 116, 0.08);
+  margin-bottom: 0.85rem;
+}
+
+.fd-brand {
+  margin: 0;
+  font-family: "Fraunces", Georgia, serif;
+  font-style: italic;
+  font-size: 1.15rem;
+  color: #d4a574;
+}
+
+.fd-title {
+  margin: 0.35rem 0 0.55rem;
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(1.85rem, 4.2vw, 2.65rem);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.fd-welcome {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: rgba(243, 235, 224, 0.62);
+  max-width: 32rem;
+}
+
+/* Foyer table — recent / kept near */
+.fd-table {
+  margin: 0 0 1.75rem;
+  padding: 0.85rem 0;
+  border-top: 1px solid rgba(243, 235, 224, 0.08);
+  border-bottom: 1px solid rgba(243, 235, 224, 0.08);
+}
+
+.fd-table[hidden] {
+  display: none !important;
+}
+
+.fd-table-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.85rem;
+  margin-bottom: 0.55rem;
+}
+
+.fd-table-row:last-child {
+  margin-bottom: 0;
+}
+
+.fd-table-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(243, 235, 224, 0.4);
+  min-width: 5.5rem;
+}
+
+.fd-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.fd-chip {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(243, 235, 224, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(243, 235, 224, 0.85);
+  cursor: pointer;
+}
+
+.fd-chip:hover,
+.fd-chip.is-active {
+  border-color: rgba(212, 165, 116, 0.35);
+  background: rgba(212, 165, 116, 0.1);
+}
+
+/* —— Room doors —— */
+.fd-wing {
+  margin-bottom: 1.75rem;
+}
+
+.fd-wing-title {
+  margin: 0 0 0.85rem;
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 500;
+  font-size: 1.05rem;
+  color: rgba(243, 235, 224, 0.72);
+}
+
+.fd-doors {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.fd-door {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.65rem;
+  min-height: 8.5rem;
+  padding: 1.1rem 1rem 1rem;
+  text-align: left;
+  border: 1px solid rgba(243, 235, 224, 0.1);
+  border-radius: 16px;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.05) 0%, transparent 42%),
+    rgba(20, 16, 13, 0.72);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1), border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.fd-door-glow {
+  position: absolute;
+  inset: auto -20% -40% -20%;
+  height: 70%;
+  background: radial-gradient(ellipse at center, rgba(212, 165, 116, 0.16), transparent 65%);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.fd-door:hover,
+.fd-door:focus-visible,
+.fd-door.is-active {
+  transform: translateY(-3px);
+  border-color: rgba(212, 165, 116, 0.35);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+  outline: none;
+}
+
+.fd-door-icon {
+  font-size: 1.15rem;
+  opacity: 0.75;
+  letter-spacing: 0.02em;
+}
+
+.fd-door-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  position: relative;
+  z-index: 1;
+}
+
+.fd-door-copy strong {
+  font-family: "Fraunces", Georgia, serif;
+  font-weight: 500;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.fd-door-blurb {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: rgba(243, 235, 224, 0.52);
+}
+
+.fd-pin {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  font-size: 0.7rem;
+  opacity: 0.35;
+  z-index: 2;
+}
+
+.fd-pin.is-on {
+  opacity: 0.9;
+  color: #d4a574;
+}
+
+/* Soft room atmospheres on doors */
+.fd-door--health .fd-door-glow { background: radial-gradient(ellipse at center, rgba(122, 158, 142, 0.22), transparent 65%); }
+.fd-door--flytying .fd-door-glow { background: radial-gradient(ellipse at center, rgba(74, 122, 140, 0.22), transparent 65%); }
+.fd-door--mission .fd-door-glow { background: radial-gradient(ellipse at center, rgba(90, 155, 184, 0.2), transparent 65%); }
+.fd-door--coding .fd-door-glow { background: radial-gradient(ellipse at center, rgba(106, 158, 196, 0.2), transparent 65%); }
+.fd-door--gallery .fd-door-glow { background: radial-gradient(ellipse at center, rgba(154, 123, 154, 0.2), transparent 65%); }
+.fd-door--chat .fd-door-glow { background: radial-gradient(ellipse at center, rgba(212, 165, 116, 0.22), transparent 65%); }
+
+/* —— Utility hallway (details) —— */
+.fd-wing--hall,
+.fd-wing--tools,
+.fd-wing--adv {
+  border-top: 1px solid rgba(243, 235, 224, 0.07);
+  padding-top: 0.35rem;
+}
+
+.fd-wing details,
+details.fd-wing {
+  border: 0;
+}
+
+.fd-wing summary {
+  cursor: pointer;
+  list-style: none;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 0.95rem;
+  color: rgba(243, 235, 224, 0.5);
+  padding: 0.55rem 0;
+}
+
+.fd-wing summary::-webkit-details-marker {
+  display: none;
+}
+
+.fd-wing summary::after {
+  content: " →";
+  opacity: 0.4;
+}
+
+.fd-wing[open] summary {
+  color: rgba(243, 235, 224, 0.72);
+  margin-bottom: 0.5rem;
+}
+
+.fd-quiet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.35rem;
+  padding-bottom: 0.75rem;
+}
+
+.fd-quiet {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.5rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.fd-quiet:hover,
+.fd-quiet.is-active,
+.fd-quiet:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+  outline: none;
+}
+
+.fd-quiet-icon {
+  opacity: 0.45;
+  width: 1.2rem;
+  text-align: center;
+}
+
+.fd-quiet-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.fd-quiet-copy strong {
+  font-weight: 500;
+  font-size: 0.88rem;
+}
+
+.fd-quiet-copy span {
+  font-size: 0.72rem;
+  color: rgba(243, 235, 224, 0.42);
+}
+
+/* Search — convenience, not hero */
+.fd-find {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(243, 235, 224, 0.07);
+}
+
+.fd-find-toggle {
+  font: inherit;
+  font-size: 0.82rem;
+  color: rgba(243, 235, 224, 0.45);
+  background: transparent;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-color: rgba(243, 235, 224, 0.2);
+}
+
+.fd-find-toggle:hover {
+  color: rgba(243, 235, 224, 0.7);
+}
+
+.fd-find-toggle.hidden,
+.fd-search-wrap.hidden {
+  display: none !important;
+}
+
+.fd-search {
+  width: 100%;
+  max-width: 28rem;
+  margin-top: 0.55rem;
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(243, 235, 224, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+}
+
+.fd-search:focus {
+  outline: none;
+  border-color: rgba(212, 165, 116, 0.4);
+}
+
+.fd-empty {
+  color: rgba(243, 235, 224, 0.55);
+  font-size: 0.95rem;
+  line-height: 1.45;
+  max-width: 28rem;
+}
+
+.fd-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 1.5rem;
+  padding-top: 0.85rem;
+}
+
+.fd-close {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(243, 235, 224, 0.14);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.fd-close:hover {
+  border-color: rgba(212, 165, 116, 0.4);
+}
+
+.fd-lock {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid rgba(243, 235, 224, 0.14);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.fd-lock:hover {
+  border-color: rgba(212, 165, 116, 0.45);
+}
+
+.fd-lock.hidden,
+.fd-lock[hidden] {
+  display: none !important;
+}
+
+.fd-foot-meta {
+  font-size: 0.72rem;
+  color: rgba(243, 235, 224, 0.35);
+  margin-left: auto;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+@media (max-width: 720px) {
+  .fd-doors {
+    grid-template-columns: 1fr 1fr;
+  }
+  .aria-house-btn {
+    top: 0.75rem;
+    left: 0.75rem;
+  }
+}

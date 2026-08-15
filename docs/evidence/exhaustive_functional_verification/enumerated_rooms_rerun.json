@@ -1,0 +1,52 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-13T18:08:00+00:00",
+  "note": "Re-run after hash repair + HA unlock restore. Hash/place/h2 agreed on every leave/return. Camera not started. Generate not started. Navigate/run/takeover not exercised. New/Import/Cleanup/Remember not exercised.",
+  "presence": {
+    "identity": { "hash": "#presence", "h2": "Presence", "place": "Presence" },
+    "status": "Gestures enabled — pick Control mode to move floating panels",
+    "hardware_visible": ["Start camera", "Stop", "Enroll face", "Calibrate gestures"],
+    "camera": "NOT STARTED (hardware gate)",
+    "leave_security": { "hash": "#security", "h2": "Security", "place": "Security", "result": "PASS" },
+    "leave_voice": { "hash": "#voice", "h2": "Voice", "place": "Voice", "result": "PASS" },
+    "return": "PASS"
+  },
+  "video": {
+    "identity": { "hash": "#video", "h2": "Video Studio", "place": "Video studio" },
+    "modes": "Simple / Expert / Advanced clicked; restored Simple",
+    "empty_generate": "PASS — toast Enter a video description first",
+    "generate_started": false,
+    "leave_gallery": { "hash": "#gallery", "h2": "Gallery", "place": "Museum", "result": "PASS" },
+    "return": "PASS"
+  },
+  "browser": {
+    "identity": { "hash": "#browser", "h2": "Browser", "place": "Browser" },
+    "status": "Ready",
+    "session": "idle · Playwright",
+    "profile": "_default",
+    "url_line": "No page loaded. Enter URL or ask Chat",
+    "tabs": ["Overview", "Session", "History", "Bookmarks", "Downloads", "Notes", "Research", "Security"],
+    "tab_bodies_differ": true,
+    "empty_open": "stays idle · Playwright; url line already honest empty",
+    "navigate_run_takeover": "N/A — not exercised",
+    "leave_documents": { "hash": "#documents", "h2": "Documents", "place": "Private library", "result": "PASS" },
+    "return": "PASS"
+  },
+  "vision": {
+    "identity": { "hash": "#vision", "h2": "Vision", "place": "Vision bench" },
+    "status": "idle · moondream:latest · quality",
+    "honesty": "OCR hybrid, tesseract ok, no warnings (VRAM observed, not a capability claim)",
+    "empty_ocr": "no result text — entry copy tells Jeff to enter a path first; no honest error toast",
+    "remember_describe_ui_code": "N/A — not exercised (would write memory / run models on files)",
+    "leave_gallery": { "hash": "#gallery", "h2": "Gallery", "place": "Museum", "result": "PASS" },
+    "return": "PASS"
+  },
+  "connections": {
+    "identity": { "hash": "#connections", "h2": "Connections", "place": "Connections" },
+    "overview_counts": { "nodes": 59, "relationships": 53 },
+    "browse": "home rendered (not skeleton)",
+    "new_import_cleanup": "N/A — not exercised",
+    "leave_memory": { "hash": "#memory", "h2": "Memory", "place": "Memory archive", "result": "PASS" },
+    "return": "PASS"
+  }
+}

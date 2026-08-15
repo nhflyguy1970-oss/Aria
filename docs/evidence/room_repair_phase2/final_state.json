@@ -1,0 +1,52 @@
+{
+  "integrity": {
+    "status": "clean",
+    "clean": true,
+    "score": 100,
+    "counts": {
+      "total": 0,
+      "actionable": 0,
+      "by_category": {},
+      "safe_to_remove": 0,
+      "uncertain": 0
+    },
+    "findings": []
+  },
+  "planner_tasks": [],
+  "health": {
+    "medications": [
+      [
+        "med_39bcc7df3187",
+        "Vitamin D3"
+      ]
+    ],
+    "dose_logs": 0,
+    "vitals": 0,
+    "checkins": 0,
+    "activities": 0,
+    "backups": 0,
+    "events": 1,
+    "backup_files": []
+  },
+  "acm": {
+    "snapshots": 8,
+    "token_snaps": 0
+  },
+  "activity_owner": {
+    "count": 28,
+    "unread": 28,
+    "titles": [
+      "Automations paused",
+      "EQ failed",
+      "Edit failed",
+      "Generation failed",
+      "Kasa unavailable",
+      "Missed: Work",
+      "PIN lock is off \u2014 set JARVIS_PIN_LOCK=1 and a PIN before locking.",
+      "Planner timer",
+      "Provider recovered",
+      "Record+transcribe failed",
+      "Voice\u2192song failed"
+    ]
+  }
+}

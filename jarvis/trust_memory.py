@@ -9,14 +9,29 @@ from jarvis.memory_context import should_inject_resume_context
 
 TRUST_MEMORY_TYPES = ("failure", "strategy")
 
-# Known pytest / dev scratch content — never inject into general chat or system prompt.
+# Known pytest / cert / smoke scratch content — never inject into general chat or system prompt.
 _TEST_ARTIFACT_RE = re.compile(
     r"broken_calc\.py|"
     r"\bbuy milk\b|"
     r"pytest journal scratch|"
     r"\btest unique xyz\b|"
     r"\blive test codename is Falcon\b|"
-    r"\bmy test codename is Phoenix\b",
+    r"\bmy test codename is Phoenix\b|"
+    r"ship_probe|"
+    r"wf_probe|"
+    r"\bqa_wf\b|"
+    r"data/certification|"
+    r"data/qa_wf|"
+    r"ZXQ_PERSIST|"
+    r"SHIPMEM99|"
+    r"p64mem_|"
+    r"OC memory write|"
+    r"phase64\s*certify|"
+    r"AriaValidation|"
+    r"onetruth_\d+|"
+    r"certification test|"
+    r"operational cert|"
+    r"Fix verified for `data/(qa_wf|certification)/",
     re.I,
 )
 
@@ -25,7 +40,10 @@ _CHECKPOINT_TEST_TASK = re.compile(
     re.I,
 )
 
-_TEST_PATH_RE = re.compile(r"broken_calc\.py|pytest_journal_scratch", re.I)
+_TEST_PATH_RE = re.compile(
+    r"broken_calc\.py|pytest_journal_scratch|ship_probe|wf_probe|/qa_wf/|/certification/",
+    re.I,
+)
 
 _DATA_LAYOUT_HINT = (
     "Data layout: `jarvis/` = app code; `data/` = your live files (memory, journal, chat, uploads); "
@@ -42,8 +60,11 @@ _CORRECT_PATTERNS = (
         r"^(?:please\s+)?(?:correct|update|fix)\s+(?:that|the fact|memory|my memory)\s*(?:to\s+)?(?:that\s+)?(.+)$",
         re.I,
     ),
+    # "Actually, my favorite color is blue" — assertion only, never questions / never mind.
     re.compile(
-        r"^(?:please\s+)?(?:actually,?\s+)(.+)$",
+        r"^(?:please\s+)?actually,?\s+(?!never\s+mind\b)(?!wait\b)(?!hold\s+on\b)"
+        r"(?!(?:what|how|why|where|when|who|is|are|can|could|should|do|does)\b)"
+        r"(.+)$",
         re.I,
     ),
     re.compile(
@@ -84,6 +105,13 @@ def parse_memory_correct(message: str) -> tuple[str, str] | None:
     """Parse 'correct that X is Y' style messages → (search_hint, new_fact)."""
     text = (message or "").strip()
     if not text:
+        return None
+    # Questions and discourse redirects are never memory corrections.
+    if "?" in text or re.match(
+        r"^(?:please\s+)?actually\s*(?:never\s+mind|wait|hold\s+on)\b",
+        text,
+        re.I,
+    ):
         return None
     for pat in _CORRECT_PATTERNS:
         m = pat.match(text)
@@ -365,14 +393,52 @@ def is_trusted_memory_content(content: str) -> bool:
     return filter_trusted_content(content) is not None
 
 
+def scrub_acm_artifacts() -> int:
+    """Cool ACM experiences/concepts that are certification / QA probes.
+
+    Owner Scrub must walk the full ACM store — projecting through a capped
+    list_entries() previously left probe concepts visible in About you.
+    """
+    try:
+        from aria_core import acm_bridge
+    except Exception:
+        return 0
+    if not acm_bridge.acm_is_authoritative():
+        return 0
+    removed = 0
+    try:
+        rows = acm_bridge.project_list_entries(
+            limit=50_000, include_test_artifacts=True
+        )
+    except TypeError:
+        rows = acm_bridge.project_list_entries(limit=50_000)
+    seen: set[str] = set()
+    for e in rows or []:
+        content = e.get("content", "")
+        eid = str(e.get("id") or "")
+        if not eid or eid in seen:
+            continue
+        if not (is_test_artifact(content) or should_skip_checkpoint_in_prompt(content)):
+            continue
+        seen.add(eid)
+        try:
+            out = acm_bridge.primary_forget(entry_id=eid)
+            if out.get("ok") or out.get("cooled"):
+                removed += 1
+        except Exception:
+            continue
+    return removed
+
+
 def scrub_store(store) -> dict:
-    """Remove test artifacts and stale checkpoints from memory."""
+    """Remove test artifacts and stale checkpoints from memory (legacy + ACM)."""
     removed = 0
     for e in store.list_entries(include_embedding=True):
         content = e.get("content", "")
         if is_test_artifact(content) or should_skip_checkpoint_in_prompt(content):
             if store.delete_id(e["id"]):
                 removed += 1
+    removed += scrub_acm_artifacts()
     return {"removed": removed}
 
 
@@ -384,6 +450,19 @@ def trust_status(store) -> dict:
         for e in store.list_entries(include_embedding=True)
         if is_test_artifact(e.get("content", ""))
     )
+    try:
+        from aria_core import acm_bridge
+
+        if acm_bridge.acm_is_authoritative():
+            artifacts = sum(
+                1
+                for e in acm_bridge.project_list_entries(
+                    limit=50_000, include_test_artifacts=True
+                )
+                if is_test_artifact(e.get("content", ""))
+            )
+    except Exception:
+        pass
     return {
         "strategies": len(strategies),
         "failures": len(failures),

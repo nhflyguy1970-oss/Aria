@@ -6,15 +6,21 @@ from typing import Any
 
 
 def flytying_mission_panel() -> dict[str, Any]:
-    from jarvis.flytying_product.engine import product_status, recovery_status
+    """Lightweight MC panel — avoid full product_status (re-probes Blackfly)."""
+    from jarvis.flytying import bridge as fly_bridge
+    from jarvis.flytying_product.engine import recovery_status
     from jarvis.flytying_product.inventory import inventory_summary
+    from jarvis.flytying_product.profiles import active_profile_id, list_profiles
     from jarvis.flytying_product.sessions import active_session
     from jarvis.flytying_product.status_bus import get_flytying_state
 
-    status = product_status()
+    bridge = {}
+    try:
+        bridge = fly_bridge.status() or {}
+    except Exception:
+        bridge = {}
     recovery = recovery_status()
     state = get_flytying_state()
-    bridge = status.get("bridge") or {}
     inv: dict[str, Any] = {}
     try:
         inv = inventory_summary()
@@ -26,7 +32,7 @@ def flytying_mission_panel() -> dict[str, Any]:
     except Exception:
         session = None
 
-    nightly = bridge.get("nightly") or {}
+    nightly = bridge.get("nightly") or bridge.get("pattern_of_the_day") or {}
     try:
         from jarvis.flytying.nightly import nightly_status
 
@@ -62,7 +68,7 @@ def flytying_mission_panel() -> dict[str, Any]:
             "step_idx": (session or {}).get("step_idx"),
         },
         "queue": {"pending": len(inv.get("queue") or [])},
-        "profiles": status.get("profiles"),
+        "profiles": {"active": active_profile_id(), "count": len(list_profiles())},
         "recovery": {
             "ready": recovery.get("ready"),
             "hint": recovery.get("hint"),

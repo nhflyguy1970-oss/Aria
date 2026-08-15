@@ -81,10 +81,18 @@
     maybeSoftTip();
   }
 
+  function tipDismissedIds(raw) {
+    if (Array.isArray(raw)) return raw.map(String);
+    if (raw && typeof raw === "object") {
+      return Object.keys(raw).filter((k) => raw[k]);
+    }
+    return [];
+  }
+
   function maybeSoftTip() {
     const tip = document.getElementById("ariaSoftTip");
     if (!tip) return;
-    const dismissed = new Set(prefs().tipDismissed || []);
+    const dismissed = new Set(tipDismissedIds(prefs().tipDismissed));
     const counts = prefs().tipSeenCount || {};
     const pool = tips().filter((t) => !dismissed.has(t.id) && (counts[t.id] || 0) < (t.max || 3));
     if (!pool.length) {
@@ -107,12 +115,20 @@
   function init() {
     document.getElementById("whatsNewBtn")?.addEventListener("click", () => openWhatsNew(true));
     document.getElementById("whatsNewDismissBtn")?.addEventListener("click", dismissWhatsNew);
-    setTimeout(() => openWhatsNew(false), 1200);
+    setTimeout(() => {
+      if (document.body?.classList.contains("living-room") || document.body?.dataset.activity === "converse") {
+        return; // Living Room owns first impression — no changelog wall
+      }
+      openWhatsNew(false);
+    }, 1200);
     setTimeout(maybeSoftTip, 4000);
   }
 
   window.openWhatsNew = openWhatsNew;
-  window.AriaDiscoverability = { openWhatsNew, features, tips };
+  // Esc / modal chrome call window.dismissWhatsNew — must be exported or Esc no-ops
+  // and leaves the changelog modal blocking owner clicks.
+  window.dismissWhatsNew = dismissWhatsNew;
+  window.AriaDiscoverability = { openWhatsNew, dismissWhatsNew, features, tips, WHATS_NEW_VERSION };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

@@ -8,7 +8,7 @@ from typing import Any
 from jarvis.config import DATA_DIR
 
 VOICE_FILE = DATA_DIR / "voice_product" / "settings.json"
-# Keep legacy path in sync for older readers
+# Migration source only; new writes go to VOICE_FILE.
 LEGACY_VOICE_FILE = DATA_DIR / "voice_settings.json"
 
 DEFAULTS: dict[str, Any] = {
@@ -29,32 +29,52 @@ DEFAULTS: dict[str, Any] = {
 }
 
 
-def _load_raw() -> dict[str, Any]:
-    merged = dict(DEFAULTS)
-    for path in (VOICE_FILE, LEGACY_VOICE_FILE):
-        if path.is_file():
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                if isinstance(data, dict):
-                    merged.update({k: v for k, v in data.items() if v is not None})
-            except (json.JSONDecodeError, OSError):
-                pass
-    # Migrate duplex from audio_settings when unified file has no explicit mode yet
+def _read_json(path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _write_voice_file(data: dict[str, Any]) -> None:
+    VOICE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    VOICE_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def _legacy_patch(existing_keys: set[str]) -> dict[str, Any]:
+    patch: dict[str, Any] = {}
+    legacy = _read_json(LEGACY_VOICE_FILE)
+    for key, value in legacy.items():
+        if key in DEFAULTS and key not in existing_keys and value is not None:
+            patch[key] = value
     try:
         from jarvis.audio_settings import load_settings
 
         audio = load_settings()
-        unified_has_duplex = False
-        if VOICE_FILE.is_file():
-            try:
-                raw = json.loads(VOICE_FILE.read_text(encoding="utf-8"))
-                unified_has_duplex = isinstance(raw, dict) and "duplex_mode" in raw
-            except (json.JSONDecodeError, OSError):
-                pass
-        if audio.get("duplex_mode") and not unified_has_duplex:
-            merged["duplex_mode"] = audio["duplex_mode"]
+        if "duplex_mode" not in existing_keys and "duplex_mode" not in patch and audio.get("duplex_mode"):
+            patch["duplex_mode"] = audio["duplex_mode"]
     except Exception:
         pass
+    if LEGACY_VOICE_FILE.is_file():
+        try:
+            LEGACY_VOICE_FILE.unlink()
+        except OSError:
+            pass
+    return patch
+
+
+def _load_raw() -> dict[str, Any]:
+    voice = _read_json(VOICE_FILE)
+    patch = _legacy_patch(set(voice))
+    if patch:
+        voice = {**voice, **patch}
+        payload = {k: voice.get(k, DEFAULTS.get(k)) for k in {**DEFAULTS, **voice}}
+        _write_voice_file(payload)
+    merged = dict(DEFAULTS)
+    merged.update({k: v for k, v in voice.items() if v is not None})
     return merged
 
 
@@ -81,33 +101,8 @@ def save_unified_settings(patch: dict[str, Any] | None = None) -> dict[str, Any]
             data[key] = value
     if data.get("cloud_provider") == "openai_realtime":
         data["cloud_provider"] = "gemini_live"
-    VOICE_FILE.parent.mkdir(parents=True, exist_ok=True)
     payload = {k: data.get(k, DEFAULTS.get(k)) for k in {**DEFAULTS, **data}}
-    VOICE_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    # Mirror subset to legacy voice_settings for older modules
-    try:
-        LEGACY_VOICE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        legacy = {
-            "duplex_mode": payload.get("duplex_mode"),
-            "stt_backend": payload.get("stt_backend"),
-            "interrupt_on_speak": payload.get("interrupt_on_speak"),
-            "speak_chunk_sentences": payload.get("speak_chunk_sentences"),
-            "tts_chunk_max_chars": payload.get("tts_chunk_max_chars"),
-            "tts_latency_target_ms": payload.get("tts_latency_target_ms"),
-            "tts_min_chunk_chars": payload.get("tts_min_chunk_chars"),
-        }
-        LEGACY_VOICE_FILE.write_text(json.dumps(legacy, indent=2), encoding="utf-8")
-    except Exception:
-        pass
-    if "duplex_mode" in patch:
-        try:
-            from jarvis.audio_settings import load_settings, save_settings
-
-            audio = load_settings()
-            audio["duplex_mode"] = payload["duplex_mode"]
-            save_settings(audio)
-        except Exception:
-            pass
+    _write_voice_file(payload)
     return payload
 
 

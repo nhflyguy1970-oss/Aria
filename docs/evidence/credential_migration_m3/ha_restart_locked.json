@@ -1,0 +1,25 @@
+{
+  "updated_at": "2026-08-13T15:04:32.575670+00:00",
+  "phase": "restart_locked",
+  "old_serve_pid": 290334,
+  "new_serve_pid": 447674,
+  "owner_state": "OWNER_LOCKED",
+  "entry_count": 4,
+  "ha": {
+    "http_status": 200,
+    "elapsed_ms": 18.9,
+    "configured": true,
+    "connected": false,
+    "token_set": true,
+    "locked": true,
+    "url_set": true,
+    "conn_ok": false,
+    "conn_message": "Home Assistant is locked. Unlock Aria with your Master Password.",
+    "asks_for_ha_token": false,
+    "asks_for_master_password": true,
+    "secret_in_response": false
+  },
+  "fail_closed": true,
+  "jeff_entered_ha_token": false,
+  "secrets_in_evidence": false
+}

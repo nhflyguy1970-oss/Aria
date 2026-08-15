@@ -427,8 +427,10 @@ def play_file(path: str | Path, *, vst_chain: str | None = None) -> str:
 
 def ffmpeg_env() -> dict[str, str]:
     """Environment for ffmpeg subprocesses (ALSA device hints)."""
+    from jarvis.security.owner.env_boundary import copy_process_env
+
     dev = detect_devices()
-    env = os.environ.copy()
+    env = copy_process_env()
     env["AUDIODEV"] = dev.get("alsa_playback", alsa_playback_device())
     env["ALSA_PCM_CARD"] = CREATIVE_ALSA_CARD
     env["ALSA_PCM_DEVICE"] = CREATIVE_ALSA_DEVICE

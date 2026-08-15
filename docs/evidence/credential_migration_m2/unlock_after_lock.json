@@ -1,0 +1,19 @@
+{
+  "test": "M2-G unlock after lock",
+  "at": "2026-08-13T13:30:00+00:00",
+  "owner_state": "OWNER_UNLOCKED",
+  "unlock_kdf_ms": 55.91,
+  "vault_entry_count": 3,
+  "provider_ops_after_unlock": {
+    "openai": {"ok": true, "http_status": 200, "latency_ms": 643, "note": "first attempt timed out at 8s; retry succeeded"},
+    "gemini": {"ok": true, "http_status": 200, "latency_ms": 223},
+    "huggingface": {"ok": true, "http_status": 200, "latency_ms": 199}
+  },
+  "credential_get_ms_after_unlock": {
+    "provider.openai.api_key": 0.04,
+    "provider.gemini.api_key": 0.05,
+    "provider.huggingface.token": 0.06
+  },
+  "legacy_env_retained": true,
+  "secrets_in_evidence": false
+}

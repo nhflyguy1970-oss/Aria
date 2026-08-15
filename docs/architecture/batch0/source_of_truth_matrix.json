@@ -1,0 +1,97 @@
+{
+  "domains": [
+    {
+      "domain": "cognitive_memory",
+      "declared_sot": "ACM (aria_core/acm_bridge)",
+      "persistence": "data/acm/cognitive.db",
+      "conflicts": [
+        "memory.db",
+        "memory.json",
+        "memory_vectors.db",
+        "platform dual_write theater"
+      ]
+    },
+    {
+      "domain": "chat_messages",
+      "declared_sot": "BranchManager",
+      "persistence": "data/chat_branches.json",
+      "conflicts": [
+        "chat_sessions.db orphans"
+      ]
+    },
+    {
+      "domain": "planner_tasks",
+      "declared_sot": "planner_store",
+      "persistence": "data/planner.db",
+      "conflicts": []
+    },
+    {
+      "domain": "journal",
+      "declared_sot": "modules.journal",
+      "persistence": "data/journal/bullet_journal.json",
+      "conflicts": []
+    },
+    {
+      "domain": "gallery_files",
+      "declared_sot": "filesystem generated/",
+      "persistence": "data/generated/",
+      "conflicts": [
+        "metadata sidecar optional"
+      ]
+    },
+    {
+      "domain": "activity_inbox",
+      "declared_sot": "NONE (client localStorage de-facto)",
+      "persistence": "aria_activity_log_v2 + outboxes",
+      "conflicts": [
+        "multiple activity_outbox.jsonl"
+      ]
+    },
+    {
+      "domain": "notifications",
+      "declared_sot": "notifications_product (routing)",
+      "persistence": "notifications_product/history.jsonl",
+      "conflicts": [
+        "activity dual-write"
+      ]
+    },
+    {
+      "domain": "model_roles",
+      "declared_sot": "model_store",
+      "persistence": "data/model_settings.json",
+      "conflicts": [
+        "models_product facade"
+      ]
+    },
+    {
+      "domain": "calendar",
+      "declared_sot": "facade over planner/journal/ICS",
+      "persistence": "calendar_prefs.json (prefs only)",
+      "conflicts": []
+    },
+    {
+      "domain": "certification",
+      "declared_sot": "evidence runs",
+      "persistence": "data/certification/runs/",
+      "conflicts": [
+        "manual cert docs"
+      ]
+    },
+    {
+      "domain": "voice_settings",
+      "declared_sot": "SPLIT",
+      "persistence": "voice_product/settings.json + voice_settings.json",
+      "conflicts": [
+        "dual-write"
+      ]
+    },
+    {
+      "domain": "ha",
+      "declared_sot": "Home Assistant server",
+      "persistence": "external + home_assistant_product favorites",
+      "conflicts": [
+        "triple stack"
+      ]
+    }
+  ]
+}

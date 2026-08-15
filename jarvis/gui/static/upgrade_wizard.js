@@ -152,8 +152,13 @@ function initUpgradeWizardModal() {
   });
 
   verifyBtn?.addEventListener("click", () => runUpgradeAction("verify", upgradeWizardState.proposal_id));
-  applyBtn?.addEventListener("click", () => {
-    if (!upgradeWizardState.verified && !confirm("Tests not verified yet. Apply anyway?")) return;
+  applyBtn?.addEventListener("click", async () => {
+    if (!upgradeWizardState.verified) {
+      const applyOk = window.ariaConfirm
+        ? await window.ariaConfirm("Tests not verified yet. Apply anyway?", { title: "Apply upgrade", okLabel: "Apply" })
+        : window.confirm("Tests not verified yet. Apply anyway?");
+      if (!applyOk) return;
+    }
     runUpgradeAction("apply", upgradeWizardState.proposal_id);
   });
   rollbackBtn?.addEventListener("click", () => runUpgradeAction("rollback", ""));

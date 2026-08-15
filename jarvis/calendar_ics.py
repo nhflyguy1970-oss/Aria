@@ -361,3 +361,6 @@ def refresh_ics(*, force: bool = True) -> dict[str, Any]:
         "status": result.get("status") or sync_status(),
         "days": len(result.get("events") or {}),
     }
+
+
+

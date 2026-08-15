@@ -4,9 +4,15 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from pathlib import Path
 
 DEFAULT_FLYTYING_ROOT = Path("/media/jeff/C/fly_fishing_project")
+
+_ROOT_CACHE: dict[str, object] = {"at": 0.0, "value": None}
+_ENABLEMENT_CACHE: dict[str, object] = {"at": 0.0, "value": None}
+_ROOT_CACHE_TTL_S = 60.0
+_ENABLEMENT_CACHE_TTL_S = 30.0
 
 
 def _discover_zenflow_roots() -> list[Path]:
@@ -90,6 +96,14 @@ def _root_stats(root: Path) -> tuple[int, int, bool]:
 
 def flytying_root() -> Path:
     """Blackfly project root — prefer gold dataset + full Blackfly tree over tiny stubs."""
+    now = time.monotonic()
+    cached = _ROOT_CACHE.get("value")
+    if (
+        isinstance(cached, Path)
+        and now - float(_ROOT_CACHE.get("at") or 0) < _ROOT_CACHE_TTL_S
+    ):
+        return cached
+
     scored: list[tuple[int, int, int, Path]] = []
     for root in _candidate_roots():
         if not _has_blackfly_output(root):
@@ -98,16 +112,19 @@ def flytying_root() -> Path:
         scored.append((scraped_n, gold_n, 1 if has_modules else 0, root))
     if scored:
         scored.sort(key=lambda row: (-row[0], -row[1], -row[2], str(row[3])))
-        return scored[0][3].resolve()
-    raw = (os.environ.get("JARVIS_FLYTYING_ROOT") or "").strip()
-    if raw:
-        return Path(raw).expanduser().resolve()
-    if DEFAULT_FLYTYING_ROOT.is_dir():
-        return DEFAULT_FLYTYING_ROOT.resolve()
-    zenflow = _discover_zenflow_roots()
-    if zenflow:
-        return zenflow[0].resolve()
-    return DEFAULT_FLYTYING_ROOT
+        chosen = scored[0][3].resolve()
+    else:
+        raw = (os.environ.get("JARVIS_FLYTYING_ROOT") or "").strip()
+        if raw:
+            chosen = Path(raw).expanduser().resolve()
+        elif DEFAULT_FLYTYING_ROOT.is_dir():
+            chosen = DEFAULT_FLYTYING_ROOT.resolve()
+        else:
+            zenflow = _discover_zenflow_roots()
+            chosen = zenflow[0].resolve() if zenflow else DEFAULT_FLYTYING_ROOT
+    _ROOT_CACHE["at"] = now
+    _ROOT_CACHE["value"] = chosen
+    return chosen
 
 
 def output_dir() -> Path:
@@ -156,13 +173,32 @@ def blackfly_data_available() -> bool:
     return scraped.is_file() or gold.is_file()
 
 
+_JSONL_COUNT_CACHE: dict[str, tuple[int, int, float]] = {}
+
+
 def count_jsonl_lines(path: Path) -> int:
+    """Count non-empty lines; cache by path mtime/size so status probes stay cheap."""
     if not path.is_file():
         return 0
     try:
-        return sum(1 for line in path.read_text(encoding="utf-8", errors="replace").splitlines() if line.strip())
+        st = path.stat()
     except OSError:
         return 0
+    key = str(path.resolve())
+    cached = _JSONL_COUNT_CACHE.get(key)
+    if cached and cached[0] == st.st_mtime_ns and cached[1] == st.st_size:
+        return cached[2]
+    try:
+        # Stream — do not load multi‑MB JSONL into one string on every status call.
+        n = 0
+        with path.open("r", encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if line.strip():
+                    n += 1
+    except OSError:
+        return 0
+    _JSONL_COUNT_CACHE[key] = (st.st_mtime_ns, st.st_size, n)
+    return n
 
 
 def ensure_blackfly_on_path() -> Path:
@@ -175,6 +211,11 @@ def ensure_blackfly_on_path() -> Path:
 
 
 def blackfly_enablement() -> dict[str, str | bool]:
+    now = time.monotonic()
+    cached = _ENABLEMENT_CACHE.get("value")
+    if isinstance(cached, dict) and now - float(_ENABLEMENT_CACHE.get("at") or 0) < _ENABLEMENT_CACHE_TTL_S:
+        return dict(cached)
+
     root = flytying_root()
     scraped = scraped_dataset_path()
     gold = gold_recipes_path()
@@ -202,7 +243,7 @@ def blackfly_enablement() -> dict[str, str | bool]:
         hints.append("Blackfly Python modules missing in project root (blackfly_rag.py, blackfly_gold.py)")
     if data_ok and not rag_ok:
         hints.append("Semantic search: ensure blackfly_rag.py is in the Blackfly project root (same folder as blackfly_ai.py)")
-    return {
+    value: dict[str, str | bool] = {
         "project_root": str(root),
         "scraped_path": str(scraped),
         "scraped_db_path": str(source),
@@ -216,3 +257,6 @@ def blackfly_enablement() -> dict[str, str | bool]:
         "rag_available": rag_ok,
         "hint": "; ".join(hints) if hints else "",
     }
+    _ENABLEMENT_CACHE["at"] = now
+    _ENABLEMENT_CACHE["value"] = value
+    return dict(value)

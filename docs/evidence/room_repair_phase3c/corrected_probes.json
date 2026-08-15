@@ -1,0 +1,43 @@
+{
+  "fly": {
+    "before": {
+      "room": "flytying",
+      "furnished": "1",
+      "items": 40,
+      "hint": "80 patterns \u00b7 showing 40",
+      "hasInput": true,
+      "hasList": true
+    },
+    "after": {
+      "items": 80,
+      "hint": "80 results for \u201cAdams\u201d \u00b7 alias",
+      "first": "Adams dry fly #16terrestrial \u00b7 9 steps 100",
+      "detail": "Pattern information Adams dry fly #16 terrestrial \u00b7 hook Size 10 TMC 100 dry fly hook \u00b7 Q100 \u2605 Favorited Add to queue Step mode Source Play YouTube Materials TMC 100 Size 10 Dry Fly Hook Vivus GSP 100",
+      "hasAdams": true
+    }
+  },
+  "repair": {
+    "room": "repair",
+    "native": true,
+    "rootExists": true,
+    "rootInStage": true,
+    "btns": 4,
+    "hasEvidence": true,
+    "head": "Aria \u00b7 Restoration bench Listening quietly Evidence Check integrity for details. Integrity 100 \u00b7 ready Platform healthy Attention \u2014 \u00b7\u00b7\u00b7"
+  },
+  "integrity": {
+    "room": "integrity",
+    "rootExists": true,
+    "rootInStage": true,
+    "btns": 3,
+    "hasTruth": true,
+    "score100": true,
+    "head": "Aria \u00b7 Quiet caretaker Listening quietly Truth Score 100 \u00b7 ready No deductions on record. \u00b7\u00b7\u00b7"
+  },
+  "search": {
+    "cards": 0,
+    "listItems": 13,
+    "hasPlanner": true,
+    "head": "Aria \u00b7 Research study Listening quietly Search One federated engine. Browse everything here \u2014 Ctrl+K for commands, Chat for answers, products own their data. Refresh Save search Diagnostics Sidebar Filter navigation (views, settings, tools) \u2014 not content search Ctrl+K Ctrl+K \u2014 commands + quick federated search Search Home Browse everything \u2014 facets, previews, history, saved searches Chat Answer + synthesis (including web) Voice Spoken search via the same engine Products Scoped in-product search;"
+  }
+}

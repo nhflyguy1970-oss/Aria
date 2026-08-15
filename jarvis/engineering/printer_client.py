@@ -8,8 +8,16 @@ from typing import Any
 from jarvis.engineering.printer_profiles import get_model
 
 
+def effective_backend(printer: dict[str, Any]) -> str:
+    """Route by known model profile so a Bambu A1 row cannot Moonraker-print."""
+    model = get_model(printer.get("model") or "")
+    if model:
+        return str(model.get("backend") or "moonraker").strip().lower()
+    return (printer.get("backend") or "moonraker").strip().lower()
+
+
 def printer_status(printer: dict[str, Any]) -> dict[str, Any]:
-    backend = (printer.get("backend") or "moonraker").strip().lower()
+    backend = effective_backend(printer)
     if backend == "bambu_handoff":
         from jarvis.engineering.bambu_handoff import printer_status as bambu_status
 
@@ -41,7 +49,7 @@ def printer_status(printer: dict[str, Any]) -> dict[str, Any]:
 
 
 def start_print_job(printer: dict[str, Any], gcode_path: str | Path) -> dict[str, Any]:
-    backend = (printer.get("backend") or "moonraker").strip().lower()
+    backend = effective_backend(printer)
     if backend == "bambu_handoff":
         from jarvis.engineering.bambu_handoff import handoff_gcode
 

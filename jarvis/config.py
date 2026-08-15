@@ -226,7 +226,9 @@ def piper_lib_dir() -> Path | None:
 
 def piper_runtime_env() -> dict[str, str]:
     """Environment for Piper subprocess (LD_LIBRARY_PATH for bundled libs)."""
-    env = os.environ.copy()
+    from jarvis.security.owner.env_boundary import copy_process_env
+
+    env = copy_process_env()
     lib_dir = piper_lib_dir()
     if lib_dir:
         prev = env.get("LD_LIBRARY_PATH", "")

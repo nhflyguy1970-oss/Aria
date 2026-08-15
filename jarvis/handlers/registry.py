@@ -108,6 +108,26 @@ def all_actions() -> list[dict[str, Any]]:
     return out
 
 
+def action_names() -> set[str]:
+    return set(_REGISTRY)
+
+
+def action_catalog_text() -> str:
+    """Build the LLM router action prose from the registered action catalog."""
+    rows = all_actions()
+    if not rows:
+        return "Available actions (respond with JSON only):\n\n- chat: general conversation. params: {}"
+    lines = ["Available actions (respond with JSON only):", ""]
+    for row in rows:
+        action = row["action"]
+        desc = row.get("description") or str(action).replace("_", " ")
+        module = row.get("module") or row.get("extension") or "general"
+        queue = row.get("queue")
+        suffix = f" [{module}{', queued ' + queue if queue else ''}]"
+        lines.append(f"- {action}: {desc}.{suffix} params: {{}}")
+    return "\n".join(lines)
+
+
 def call_action(assistant: JarvisAssistant, action: str, params: dict, message: str) -> dict:
     from jarvis.modules.capability_adapter import capability_invoke
 

@@ -73,7 +73,9 @@ def list_jobs(*, status: str | None = None) -> list[CheckpointedJob]:
 def start_agent_job(
     assistant: Any, goal: str, *, roles: list[str] | None = None
 ) -> CheckpointedJob:
-    job = CheckpointedJob(id=uuid.uuid4().hex[:12], kind="specialist_team", goal=goal, status="running")
+    job = CheckpointedJob(
+        id=uuid.uuid4().hex[:12], kind="specialist_team", goal=goal, status="running"
+    )
     job.checkpoint = {"roles": roles or [], "step": 0, "resumable": False}
     save_job(job)
 
@@ -152,9 +154,8 @@ def resume_incomplete_jobs(assistant: Any) -> list[str]:
                 existing.status = "completed" if result.get("ok") else "failed"
                 existing.progress = 1.0
                 existing.message = (
-                    (result.get("summary") or result.get("synthesis") or "done")
-                    + " (full re-run after restart — not mid-step checkpoint)"
-                )
+                    result.get("summary") or result.get("synthesis") or "done"
+                ) + " (full re-run after restart — not mid-step checkpoint)"
                 existing.result = result
                 existing.checkpoint["step"] = len(result.get("steps") or [])
                 existing.checkpoint["resumable"] = False

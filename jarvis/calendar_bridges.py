@@ -51,14 +51,25 @@ def search_hits(query: str, limit: int = 12, journal: Any | None = None) -> list
 
     q = (query or "").lower().strip()
     out: list[dict[str, Any]] = []
-    tokens = re.findall(r"\w{2,}", q) or [q]
+    tokens = re.findall(r"\w{2,}", q) or ([q] if q else [])
+    # Browsing the Calendar corpus by name should show today's commitments,
+    # not require the word "calendar" to appear inside every event title.
+    browse_all = (not q) or q in {
+        "calendar",
+        "schedule",
+        "schedules",
+        "agenda",
+        "appointments",
+        "meetings",
+        "events",
+    }
 
     sched = load_work_schedule()
     for day in WEEKDAYS:
         for block in sched.get("days", {}).get(day, []) or []:
             label = str(block.get("label") or "Work")
             blob = f"{day} {label} {block.get('start')} {block.get('end')}".lower()
-            if q and q not in blob and not any(t in blob for t in tokens):
+            if not browse_all and q and q not in blob and not any(t in blob for t in tokens):
                 continue
             out.append(
                 {
@@ -66,7 +77,7 @@ def search_hits(query: str, limit: int = 12, journal: Any | None = None) -> list
                     "summary": f"{block.get('start')}–{block.get('end')}",
                     "day": day,
                     "kind": "work_block",
-                    "score": 0.68,
+                    "score": 0.78 if browse_all else 0.68,
                 }
             )
             if len(out) >= limit:
@@ -83,8 +94,11 @@ def search_hits(query: str, limit: int = 12, journal: Any | None = None) -> list
     try:
         detail = schedule_for_day(journal, today_iso())
         for i in detail.get("items") or []:
+            # Calendar search owns commitments only — journal notes stay in Journal.
+            if i.get("kind") not in ("event", "holiday", "block"):
+                continue
             blob = f"{i.get('title')} {i.get('time')} {i.get('source')}".lower()
-            if q and q not in blob and not any(t in blob for t in tokens):
+            if not browse_all and q and q not in blob and not any(t in blob for t in tokens):
                 continue
             out.append(
                 {
@@ -93,7 +107,7 @@ def search_hits(query: str, limit: int = 12, journal: Any | None = None) -> list
                     "day": i.get("day") or today_iso(),
                     "kind": i.get("kind"),
                     "id": i.get("id"),
-                    "score": 0.72,
+                    "score": 0.82 if browse_all else 0.72,
                 }
             )
             if len(out) >= limit:

@@ -202,10 +202,12 @@ def refresh_inference_probe(
     now = time.time()
     with _probe_lock:
         age = now - float(_probe_cache.get("at") or 0)
+        fail_ttl = float(os.getenv("JARVIS_OLLAMA_HEALTH_FAIL_TTL", "45"))
+        cache_ttl = _PROBE_TTL if _probe_cache.get("ok") is True else fail_ttl
         if (
             not force
             and _probe_cache.get("ok") is not None
-            and age < _PROBE_TTL
+            and age < cache_ttl
         ):
             return {
                 "ok": _probe_cache["ok"],
@@ -254,16 +256,35 @@ def refresh_inference_probe(
                         "age_s": round(time.time() - float(_probe_cache.get("at") or 0), 1),
                         "skipped_cold": True,
                     }
+                # Prior hard failure: sticky only briefly. Refreshing `at` here
+                # used to keep Mission/health "degraded" forever while the chat
+                # model sat unloaded (owner saw ready=false after embed races).
+                if _probe_cache.get("ok") is False:
+                    fail_age = time.time() - float(_probe_cache.get("at") or 0)
+                    fail_ttl = float(os.getenv("JARVIS_OLLAMA_HEALTH_FAIL_TTL", "45"))
+                    if fail_age < fail_ttl:
+                        return {
+                            "ok": False,
+                            "detail": _probe_cache.get("detail") or detail,
+                            "model": model,
+                            "elapsed_s": 0.0,
+                            "cached": True,
+                            "age_s": round(fail_age, 1),
+                            "skipped_cold": True,
+                        }
+                    # Fail TTL elapsed and model still unloaded — report idle API
+                    # up rather than permanent degradation (do not cold-load).
+                # API up, models installed, cold probe intentionally skipped — not degraded.
+                # Loading a model just to paint "healthy" wedges the first real chat.
+                idle_detail = "API up · chat model idle (cold probe skipped)"
                 _probe_cache["at"] = time.time()
-                # Keep prior failure; otherwise leave unverified (None → degraded).
-                if _probe_cache.get("ok") is not False:
-                    _probe_cache["ok"] = None
-                _probe_cache["detail"] = detail
+                _probe_cache["ok"] = True
+                _probe_cache["detail"] = idle_detail
                 _probe_cache["model"] = model
                 _probe_cache["elapsed_s"] = 0.0
             return {
-                "ok": False,
-                "detail": detail,
+                "ok": True,
+                "detail": idle_detail,
                 "model": model,
                 "elapsed_s": 0.0,
                 "cached": False,
@@ -361,9 +382,10 @@ def check_ollama(*, soft_probe: bool = True, force_probe: bool = False) -> dict:
             result["health_state"] = "degraded"
             result["error"] = cached_detail or "inference probe failed"
         else:
-            # Reachable but never verified — do not advertise "ready".
-            result["health_state"] = "degraded"
-            result["error"] = "inference not verified yet"
+            # Reachable, never probed — idle is not degraded.
+            result["health_state"] = "healthy"
+            result["error"] = None
+            probe_snap["detail"] = cached_detail or "API up · inference idle (not probed yet)"
         result["probe"] = probe_snap
         return result
 

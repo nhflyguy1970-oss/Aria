@@ -85,13 +85,26 @@
     }
   }
 
+  let lastEditorFresh = false;
+
   function scheduleEditorContextPoll() {
     if (editorContextPollTimer) clearTimeout(editorContextPollTimer);
-    const delay = mediaWorkActive()
-      ? (isNativeApp() ? 45000 : 20000)
-      : (document.hidden ? 12000 : 4000);
+    let delay;
+    if (mediaWorkActive()) {
+      delay = isNativeApp() ? 45000 : 20000;
+    } else if (document.hidden) {
+      delay = 30000;
+    } else if (lastEditorFresh) {
+      delay = 8000;
+    } else {
+      // No live Cursor context — do not hammer the serve process every 4s.
+      delay = 20000;
+    }
     editorContextPollTimer = setTimeout(async () => {
-      if (!mediaWorkActive()) await loadEditorContext();
+      if (!mediaWorkActive()) {
+        const result = await loadEditorContext();
+        lastEditorFresh = Boolean(result?.fresh);
+      }
       scheduleEditorContextPoll();
     }, delay);
   }

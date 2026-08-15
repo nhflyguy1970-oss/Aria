@@ -1,0 +1,58 @@
+{
+  "files_mentioning_migration_cutover_backfill": [
+    "jarvis/application/standalone/workstation_impl/daily_report.py",
+    "jarvis/automation/migrate.py",
+    "jarvis/behaviors/operations/__init__.py",
+    "jarvis/behaviors/planning/engine.py",
+    "jarvis/capabilities.py",
+    "jarvis/extensions/journal/routes.py",
+    "jarvis/gui/extra_routes.py",
+    "jarvis/gui/server.py",
+    "jarvis/intelligence/automation_engine.py",
+    "jarvis/journal_brain_feed.py",
+    "jarvis/journal_services.py",
+    "jarvis/layouts_product/schema.py",
+    "jarvis/modules/journal.py",
+    "jarvis/modules/knowledge_retrieval_adapter.py",
+    "jarvis/modules/memory.py",
+    "jarvis/modules/memory_adapter_store.py",
+    "jarvis/modules/memory_migrate.py",
+    "jarvis/modules/memory_sqlite.py",
+    "jarvis/modules/semantic_memory_adapter_store.py",
+    "jarvis/modules/vector_store.py",
+    "jarvis/notifications_product/schema.py",
+    "jarvis/planner_store.py",
+    "jarvis/platform_cutover.py",
+    "jarvis/project_registry.py",
+    "jarvis/router.py",
+    "jarvis/runtime_introspection.py",
+    "jarvis/settings_product/appearance.py",
+    "jarvis/settings_product/catalog.py",
+    "jarvis/settings_product/coach.py",
+    "jarvis/settings_product/diagnostics.py",
+    "jarvis/settings_product/mission_bridge.py",
+    "jarvis/voice_product/settings.py"
+  ],
+  "incomplete_migrations": [
+    {
+      "name": "platform_cutover dual_write",
+      "status": "default mode but memory adapter retired"
+    },
+    {
+      "name": "voice settings dual-write",
+      "status": "writes two JSON files"
+    },
+    {
+      "name": "automation LEGACY_* paths",
+      "status": "mid-migration"
+    },
+    {
+      "name": "activity outboxes",
+      "status": "no server SoT"
+    },
+    {
+      "name": "HA/browser/flytying triple stacks",
+      "status": "legacy+product+extension"
+    }
+  ]
+}

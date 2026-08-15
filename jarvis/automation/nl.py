@@ -54,7 +54,9 @@ def parse_nl_automation(text: str) -> dict[str, Any]:
         draft["expression"] = str(max(30, secs))
         draft["name"] = f"Every {n} {unit}"
 
-    if re.search(r"\b(pdf|document|documents)\b", lower) and re.search(r"\b(index|reindex|arrive|new)\b", lower):
+    if re.search(r"\b(pdf|document|documents)\b", lower) and re.search(
+        r"\b(index|reindex|arrive|new)\b", lower
+    ):
         draft["kind"] = "watch"
         draft["expression"] = "~/Documents"
         draft["action"] = "documents_reindex"

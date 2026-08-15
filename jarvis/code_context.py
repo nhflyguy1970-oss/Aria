@@ -145,10 +145,10 @@ def gather_context(
         if resolved:
             add_file(resolved, f"imported by {path}")
 
-    # Callers / references
+    # Callers / references (bounded search — never scan multi-GB logs)
     stem = _module_stem(path)
     for pattern in _import_patterns(stem, path):
-        hits = fs.search_files(pattern, base)
+        hits = fs.search_files(pattern, base, limit=8)
         for hit_path, line_num, _line in hits[:8]:
             try:
                 rel = str(Path(hit_path).relative_to(base))
@@ -168,11 +168,12 @@ def gather_context(
     if task and not _is_sandbox_script(path):
         try:
             from jarvis import code_index
-            for hit in code_index.search(task, limit=4):
-                src = hit.get("source", "")
-                if src and src not in seen and src != path:
-                    semantic.append(hit)
-                    add_file(src, "semantic match")
+            if code_index.index_available():
+                for hit in code_index.search(task, limit=4):
+                    src = hit.get("source", "")
+                    if src and src not in seen and src != path:
+                        semantic.append(hit)
+                        add_file(src, "semantic match")
         except Exception:
             pass
 

@@ -1,0 +1,275 @@
+{
+  "updated_at": "2026-08-13T14:23:04.128493+00:00",
+  "source": "data/jarvis.env metadata only \u2014 no secret values",
+  "env_file": {
+    "path": "data/jarvis.env",
+    "mode": "0o600",
+    "size": 10616,
+    "rewritten": false
+  },
+  "ha": {
+    "env": "JARVIS_HA_TOKEN",
+    "alias": "HOME_ASSISTANT_TOKEN",
+    "alias_configured": false,
+    "vault_id": "ha.token",
+    "url_set": true,
+    "url_scheme_host": "http://127.0.0.1:8123",
+    "legacy": {
+      "configured": true,
+      "length": 183,
+      "sha256_8": "f76cc236",
+      "prefix_class": "jwt",
+      "looks_like_jwt": true
+    },
+    "canonical_getter": "jarvis.home_assistant.ha_token()",
+    "safe_proof_operation": "GET /api/homeassistant/status \u2192 check_connection() GET HA /api/ (no device toggle)",
+    "consumers": [
+      {
+        "file": "jarvis/home_assistant.py",
+        "role": "canonical getter + HTTP Bearer + check_connection/status/save_config",
+        "direct_getenv": true,
+        "cached": false,
+        "passed_to_subprocess": false,
+        "logs": "errors only, no token",
+        "activity": "no token",
+        "acm": "configured flag only"
+      },
+      {
+        "file": "jarvis/home_assistant_product/engine.py",
+        "room": "Smart Home",
+        "via": "ha_token()/ha_enabled()/check_connection",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/home_assistant_product/entities.py",
+        "room": "Smart Home",
+        "via": "ha_enabled()",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/home_assistant_product/rooms.py",
+        "room": "Smart Home",
+        "via": "ha_enabled()",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/home_assistant_product/favorites.py",
+        "room": "Smart Home",
+        "via": "ha_enabled()",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/home_assistant_product/mission_bridge.py",
+        "room": "Mission Control",
+        "via": "ha_enabled()",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/behaviors/smarthome/engine.py",
+        "room": "Chat / Smart Home",
+        "via": "ha_enabled()/save_config",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/gui/extra_routes.py",
+        "endpoints": [
+          "/api/homeassistant/status",
+          "/api/homeassistant/config",
+          "/api/homeassistant/test",
+          "/api/homeassistant/entities",
+          "/api/homeassistant/toggle",
+          "/api/homeassistant/scene"
+        ],
+        "via": "ha_enabled()/check_connection",
+        "direct_getenv": false,
+        "note": "toggle/scene are actuation \u2014 not used for M3 proof"
+      },
+      {
+        "file": "jarvis/jarvis_mcp.py",
+        "service": "MCP HA tools",
+        "via": "ha_enabled()/call_service",
+        "direct_getenv": false,
+        "passed_to_subprocess": false
+      },
+      {
+        "file": "jarvis/services.py",
+        "startup": "health check",
+        "via": "check_connection",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/integrations_product/providers.py",
+        "room": "Integrations",
+        "via": "ha_token()/ha_enabled() with getenv fallback for configured flag",
+        "direct_getenv": true,
+        "note": "getenv used only as configured boolean fallback"
+      },
+      {
+        "file": "jarvis/router.py",
+        "room": "Chat",
+        "via": "parse_ha_token_message",
+        "direct_getenv": false,
+        "note": "chat can save a pasted token; not a new prompt system"
+      },
+      {
+        "file": "jarvis/device_router.py",
+        "via": "ha_enabled()",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/scene_presets.py",
+        "via": "ha_enabled()",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/sunlight_scene.py",
+        "via": "ha_enabled()",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/security/tools_status.py",
+        "via": "ha_enabled()",
+        "direct_getenv": false
+      },
+      {
+        "file": "scripts/enable-home-assistant.sh",
+        "role": "legacy env writer",
+        "direct_getenv": false,
+        "note": "not a runtime consumer"
+      },
+      {
+        "file": "scripts/set-ha-token.sh",
+        "role": "legacy env writer",
+        "direct_getenv": false,
+        "note": "not a runtime consumer"
+      }
+    ],
+    "frontend": [
+      "Smart Home room",
+      "Integrations Home Assistant card",
+      "chat token paste"
+    ],
+    "backend": "urllib Bearer to JARVIS_HA_URL",
+    "subprocess": false,
+    "environment_variable": [
+      "JARVIS_HA_TOKEN",
+      "HOME_ASSISTANT_TOKEN",
+      "JARVIS_HA_URL",
+      "JARVIS_HA_ENABLED"
+    ],
+    "exposed_to_logs": false,
+    "exposed_to_activity": false,
+    "exposed_to_acm": false
+  },
+  "lan": {
+    "env": "JARVIS_API_KEY",
+    "vault_id": "lan.api_key",
+    "legacy": {
+      "configured": true,
+      "length": 30,
+      "sha256_8": "cec7e051",
+      "prefix_class": "other",
+      "looks_like_jwt": false
+    },
+    "canonical_getter": "jarvis.auth.get_api_key()",
+    "auth_boundary": "LAN API authentication only \u2014 NOT Owner Master, NOT Health step-up",
+    "loopback_exempt": true,
+    "safe_proof_operation": "authenticated GET from LAN IP with X-API-Key header; loopback remains exempt",
+    "consumers": [
+      {
+        "file": "jarvis/auth.py",
+        "role": "get_api_key/api_key_enabled/check_key/APIKeyMiddleware",
+        "direct_getenv": true,
+        "cached": false,
+        "passed_to_subprocess": false
+      },
+      {
+        "file": "jarvis/lan.py",
+        "role": "LAN bind policy require_api_key_for_lan_bind; /api/lan status",
+        "direct_getenv": true
+      },
+      {
+        "file": "jarvis/gui/server.py",
+        "startup": "LAN bind warning; some check_key",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/extensions/security/api.py",
+        "endpoints": [
+          "/api/owner-security/*"
+        ],
+        "via": "check_key",
+        "direct_getenv": false
+      },
+      {
+        "file": "jarvis/gui/static/lan_access.js",
+        "frontend": true,
+        "note": "client sends key; never stores Owner password"
+      },
+      {
+        "file": "jarvis/integrations_product/providers.py",
+        "role": "aria_host configured flag via getenv presence",
+        "direct_getenv": true
+      },
+      {
+        "file": "scripts/enable-lan.sh",
+        "role": "legacy env writer \u2014 not run during M3"
+      },
+      {
+        "file": "scripts/rotate-api-key.sh",
+        "role": "legacy env writer \u2014 not run during M3"
+      },
+      {
+        "file": "scripts/harden-security.sh",
+        "role": "presence check"
+      },
+      {
+        "file": "scripts/verify-setup.sh",
+        "role": "presence check"
+      }
+    ],
+    "frontend": [
+      "LAN access UI",
+      "optional X-API-Key from remote clients"
+    ],
+    "backend": "Starlette APIKeyMiddleware on /api/* except health/live/lan/automation inbound",
+    "subprocess": false,
+    "environment_variable": [
+      "JARVIS_API_KEY",
+      "JARVIS_API_KEY_LOCAL",
+      "JARVIS_API_KEY_IN_QUERY",
+      "JARVIS_HOST"
+    ],
+    "must_not_authenticate": [
+      "Owner Security unlock",
+      "Health owner step-up"
+    ],
+    "exposed_to_logs": false,
+    "exposed_to_activity": false,
+    "exposed_to_acm": false
+  },
+  "subprocess_environ_copy_sites_before_m3": [
+    "jarvis/services.py (ComfyUI, Ollama) \u2014 scrubbed to copy_process_env",
+    "jarvis/daemon.py (spawn serve) \u2014 scrubbed; child loads jarvis.env",
+    "jarvis/server_restart.py \u2014 scrubbed",
+    "jarvis/gui/server.py (AnimateDiff install) \u2014 scrubbed",
+    "jarvis/application/desktop_launch.py \u2014 scrubbed",
+    "jarvis/electron_shell.py \u2014 scrubbed",
+    "jarvis/audio_device.py (ffmpeg) \u2014 scrubbed",
+    "jarvis/config.py (piper) \u2014 scrubbed",
+    "jarvis/audit_paths.py \u2014 scrubbed",
+    "scripts/phase1_runtime_*.py \u2014 certification scripts, not live runtime children",
+    "scripts/aria_core_compat.py \u2014 not live HA/LAN consumer"
+  ],
+  "deferred": [
+    "Automation",
+    "Postgres",
+    "Journal",
+    "Health credentials",
+    "Git",
+    "Browser",
+    "Cloud Live",
+    "Connections",
+    "OAuth"
+  ]
+}

@@ -90,7 +90,9 @@ def generate_motion_clip(
         if frames is not None:
             plan = dict(plan)
             plan["frames"] = max(8, min(int(frames), int(plan.get("frames") or frames)))
-            plan["actual_duration_sec"] = round(plan["frames"] / max(1, plan.get("fps") or frame_fps), 2)
+            plan["actual_duration_sec"] = round(
+                plan["frames"] / max(1, plan.get("fps") or frame_fps), 2
+            )
         _last_clip_plan = plan
         ad_w, ad_h = plan["width"], plan["height"]
         use_frames = plan["frames"]
@@ -246,7 +248,8 @@ def generate_ken_burns_clip(
         fps=frame_fps,
         width=w,
         height=h,
-        zoom_end=1.0 + (0.25 if motion_strength is None else max(0.05, min(0.5, float(motion_strength)))),
+        zoom_end=1.0
+        + (0.25 if motion_strength is None else max(0.05, min(0.5, float(motion_strength)))),
     )
     if video.startswith("ERROR:"):
         return video, keyframe

@@ -1,0 +1,53 @@
+{
+  "resumed_at": "2026-08-12T20:12:48.014513+00:00",
+  "resume_phrase": "RESUME exhaustive verification \u2014 Journal encrypted import completed.",
+  "jeff_attestation_received": true,
+  "verification": {
+    "live_import_api": {
+      "success_200_count": 0,
+      "only_observed": "POST /api/journal/import/encrypted \u2192 400 Bad Request",
+      "owner_visible_error": "Not a Jarvis encrypted journal file",
+      "source": "serve.log + /api/activity/inbox toast"
+    },
+    "journal_data": {
+      "path": "data/journal/bullet_journal.json",
+      "mtime": "2026-08-12T13:26:26.292815",
+      "unchanged_since_before_import_gate": true,
+      "note": "Successful merge/replace would update this file; it was not updated."
+    },
+    "related_export_200_after_gate": true,
+    "note_export": "A later live POST /api/journal/export/encrypted \u2192 200 OK exists; no new jarvis-journal-encrypted-2026-08-12*.json found in Downloads.",
+    "downloads_matching_pattern": [
+      {
+        "path": "/home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08 (2).json",
+        "mtime": "2026-08-08T09:50:26.990834",
+        "size": 112049
+      },
+      {
+        "path": "/home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08 (1).json",
+        "mtime": "2026-08-08T09:50:13.395379",
+        "size": 112049
+      },
+      {
+        "path": "/home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08.json",
+        "mtime": "2026-08-08T09:14:50.715797",
+        "size": 113013
+      }
+    ],
+    "integrity": {
+      "status": "clean",
+      "score": 100,
+      "clean": true
+    }
+  },
+  "status": "NOT PROVEN \u2014 IMPORT DID NOT SUCCEED",
+  "jeff_attended_import": false,
+  "campaign_action": "STOP \u2014 remain at Journal encrypted import gate; do not continue",
+  "do_not": [
+    "mark passed",
+    "mark failed-as-skip",
+    "bypass",
+    "auto-import",
+    "continue to next Room"
+  ]
+}

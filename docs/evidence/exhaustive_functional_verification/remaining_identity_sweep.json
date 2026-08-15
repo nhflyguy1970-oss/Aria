@@ -1,0 +1,32 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "kind": "identity_and_primary_chrome",
+  "not_certification": true,
+  "captured_at": "2026-08-13T18:12:00+00:00",
+  "note": "Remaining rooms after repair-set + HA unlock restore. Hash/place/room agreed unless noted. Functions not fully exercised.",
+  "rooms": {
+    "gallery": { "hash": "#gallery", "h2": "Gallery", "place": "Museum", "ms": 391, "loading": false },
+    "search": { "hash": "#search", "h2": "Search", "place": "Research study", "ms": 391, "loading": false },
+    "maker": { "hash": "#maker", "h2": "Maker lab", "place": "Maker lab", "ms": 389, "loading": false },
+    "meme": { "hash": "#meme", "h2": "Meme Generator", "place": "Meme studio", "ms": 389, "loading": false },
+    "audio": { "hash": "#audio", "h2": "Audio", "place": "Audio studio", "ms": 410, "loading": false },
+    "projects": { "hash": "#projects", "h2": "Projects", "place": "Creative workshop", "ms": 392, "loading": false },
+    "documents": { "hash": "#documents", "h2": "Documents", "place": "Private library", "ms": 397, "loading": false },
+    "memory": { "hash": "#memory", "h2": "Memory", "place": "Memory archive", "ms": 422, "loading": false },
+    "home": { "hash": "#dashboard", "h2": "Good afternoon", "place": "Foyer", "ms": 392, "loading": false },
+    "chat": { "hash": "#chat", "h2": "How can I help?", "place": "Living room", "ms": 398, "loading": false },
+    "flytying": { "hash": "#flytying", "h2": "Fly tying", "place": "Streamside cabin", "first_paint": "Loading spinner ~2.5s; catalog visible by ~8s (271 patterns)", "performance": "SLOW first paint" },
+    "health": { "hash": "#health", "h2": "Health", "place": "Wellness clinic", "ms": 391, "writes": false },
+    "mission": { "hash": "#workstation", "h2": "Mission Control", "place": "Aerospace ops", "ms": 392 },
+    "planner": { "hash": "#planner", "h2": "Planner", "place": "Leather notebook", "ms": 390, "tasks_created": false },
+    "repair": { "hash": "#repair", "place": "Restoration bench", "room": "repair", "nested_h2": "Integrity", "note": "Native repair hero; inner card titled Integrity is not the room name" },
+    "integrity": { "hash": "#integrity", "h2": "", "place": "Quiet caretaker", "chrome": "Truth Score 100 · ready", "gathering": true },
+    "providers": { "hash": "#models", "h2": "Models", "place": "Provider bay", "ms": 386 },
+    "settings": { "hash": "#settings", "h2": "Settings", "place": "Settings", "ms": 389 },
+    "capabilities": { "hash": "#capabilities", "h2": "Capabilities", "place": "Capabilities", "ms": 389 },
+    "integrations": { "hash": "#integrations", "h2": "Integrations", "place": "Integrations", "ms": 388 },
+    "audit": { "hash": "#audit", "h2": "System Audit", "place": "System audit", "first_paint": "Loading audit…", "later": "Audit in progress… — observed after enter; Run audit not clicked" },
+    "security": { "hash": "#security", "h2": "Security", "place": "Security", "ms": 389, "copy": "Aria unlocked · one Master Password" },
+    "actions": { "hash": "#actions", "h2": "Action history", "place": "Action history", "ms": 408 }
+  }
+}

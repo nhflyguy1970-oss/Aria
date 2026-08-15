@@ -1,0 +1,207 @@
+{
+  "total_python_loc": 162929,
+  "files_ge_1000_loc": [
+    {
+      "loc": 3934,
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "loc": 2782,
+      "file": "jarvis/gui/extra_routes.py"
+    },
+    {
+      "loc": 2268,
+      "file": "jarvis/router.py"
+    },
+    {
+      "loc": 2153,
+      "file": "jarvis/assistant.py"
+    },
+    {
+      "loc": 1525,
+      "file": "jarvis/modules/journal.py"
+    },
+    {
+      "loc": 1445,
+      "file": "jarvis/system_audit_engine.py"
+    },
+    {
+      "loc": 1351,
+      "file": "jarvis/behaviors/engineering/_extracted.py"
+    },
+    {
+      "loc": 1070,
+      "file": "jarvis/modules/data.py"
+    },
+    {
+      "loc": 1050,
+      "file": "jarvis/search_product/retrievers.py"
+    },
+    {
+      "loc": 1013,
+      "file": "jarvis/behaviors/memory/engine.py"
+    }
+  ],
+  "top_40_files": [
+    {
+      "loc": 3934,
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "loc": 2782,
+      "file": "jarvis/gui/extra_routes.py"
+    },
+    {
+      "loc": 2268,
+      "file": "jarvis/router.py"
+    },
+    {
+      "loc": 2153,
+      "file": "jarvis/assistant.py"
+    },
+    {
+      "loc": 1525,
+      "file": "jarvis/modules/journal.py"
+    },
+    {
+      "loc": 1445,
+      "file": "jarvis/system_audit_engine.py"
+    },
+    {
+      "loc": 1351,
+      "file": "jarvis/behaviors/engineering/_extracted.py"
+    },
+    {
+      "loc": 1070,
+      "file": "jarvis/modules/data.py"
+    },
+    {
+      "loc": 1050,
+      "file": "jarvis/search_product/retrievers.py"
+    },
+    {
+      "loc": 1013,
+      "file": "jarvis/behaviors/memory/engine.py"
+    },
+    {
+      "loc": 970,
+      "file": "jarvis/modules/audio.py"
+    },
+    {
+      "loc": 939,
+      "file": "jarvis/briefing_news.py"
+    },
+    {
+      "loc": 915,
+      "file": "jarvis/application/standalone/workstation_impl/acceptance.py"
+    },
+    {
+      "loc": 913,
+      "file": "jarvis/modules/graph_store.py"
+    },
+    {
+      "loc": 913,
+      "file": "jarvis/llm.py"
+    },
+    {
+      "loc": 887,
+      "file": "jarvis/behaviors/conversation.py"
+    },
+    {
+      "loc": 886,
+      "file": "jarvis/modules/memory.py"
+    },
+    {
+      "loc": 879,
+      "file": "jarvis/platform_cutover.py"
+    },
+    {
+      "loc": 868,
+      "file": "jarvis/reference_engine.py"
+    },
+    {
+      "loc": 865,
+      "file": "jarvis/planner_store.py"
+    },
+    {
+      "loc": 841,
+      "file": "jarvis/audio_device.py"
+    },
+    {
+      "loc": 808,
+      "file": "jarvis/certification_product/runner.py"
+    },
+    {
+      "loc": 788,
+      "file": "jarvis/home_assistant.py"
+    },
+    {
+      "loc": 757,
+      "file": "jarvis/dashboard_product/aggregate.py"
+    },
+    {
+      "loc": 749,
+      "file": "jarvis/knowledge_research_daily.py"
+    },
+    {
+      "loc": 745,
+      "file": "jarvis/nlu/mapping.py"
+    },
+    {
+      "loc": 732,
+      "file": "jarvis/connections_services.py"
+    },
+    {
+      "loc": 727,
+      "file": "jarvis/runtime_introspection.py"
+    },
+    {
+      "loc": 725,
+      "file": "jarvis/modules/memory_sqlite.py"
+    },
+    {
+      "loc": 720,
+      "file": "jarvis/services.py"
+    },
+    {
+      "loc": 694,
+      "file": "jarvis/workflow_learning.py"
+    },
+    {
+      "loc": 683,
+      "file": "jarvis/modules/vector_store.py"
+    },
+    {
+      "loc": 673,
+      "file": "jarvis/document_services.py"
+    },
+    {
+      "loc": 669,
+      "file": "jarvis/calendar_schedule.py"
+    },
+    {
+      "loc": 661,
+      "file": "jarvis/memory_services.py"
+    },
+    {
+      "loc": 660,
+      "file": "jarvis/document_learning.py"
+    },
+    {
+      "loc": 659,
+      "file": "jarvis/settings_product/catalog.py"
+    },
+    {
+      "loc": 647,
+      "file": "jarvis/media_jobs.py"
+    },
+    {
+      "loc": 611,
+      "file": "jarvis/modules/journal_bujo.py"
+    },
+    {
+      "loc": 607,
+      "file": "jarvis/behaviors/knowledge/_extracted.py"
+    }
+  ]
+}

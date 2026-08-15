@@ -24,14 +24,15 @@ def browse_web(assistant, params: dict, message: str = "") -> dict[str, Any]:
         except Exception:
             pass
         msg = result.get("message") or f"Navigated to {url}"
+        extra = {k: v for k, v in result.items() if k not in ("message", "status", "ok", "url")}
         return _ok(
-            msg + "\n\nOpen the **Browser** tab to see the live screenshot and continue.",
+            msg,
             module="browser",
             type="browser_navigate",
             url=result.get("url") or url,
             open_view="browser",
             prefill_url=result.get("url") or url,
-            **{k: v for k, v in result.items() if k not in ("message", "status", "ok")},
+            **extra,
         )
     return _err(
         result.get("message") or "Navigation failed",

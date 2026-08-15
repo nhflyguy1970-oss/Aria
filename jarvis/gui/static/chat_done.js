@@ -261,9 +261,32 @@
     if (data.ok && window.jarvisNotify && !window.mediaWorkActive?.()) {
       window.__ariaActivitySuppressNotify = true;
       try {
-        if (hasVideo) window.jarvisNotify("Video ready", (text || data.message || "Clip generated").slice(0, 120));
-        else if (hasImage && data.module === "image" && !isNativeApp()) {
-          window.jarvisNotify("Image ready", (text || data.message || "Image generated").slice(0, 120));
+        if (hasVideo) {
+          const vname = data.video_name || (data.video_path || "").split(/[/\\]/).pop();
+          const notifyVideo = () =>
+            window.jarvisNotify("Video ready", (text || data.message || "Clip generated").slice(0, 120));
+          if (vname) {
+            fetch(`/api/video-gallery/${encodeURIComponent(vname)}`, {
+              headers: { Range: "bytes=0-0" },
+            })
+              .then((r) => {
+                if (r.ok || r.status === 206) notifyVideo();
+                else window.showAriaToast?.(`Video missing from gallery (${vname})`, "err", 5000);
+              })
+              .catch(() => window.showAriaToast?.("Could not verify video asset", "err", 5000));
+          }
+        } else if (hasImage && data.module === "image" && !isNativeApp()) {
+          const iname = data.image_name || (imgPath || "").split(/[/\\]/).pop();
+          const notifyImg = () =>
+            window.jarvisNotify("Image ready", (text || data.message || "Image generated").slice(0, 120));
+          if (iname) {
+            fetch(`/api/gallery/${encodeURIComponent(iname)}?max=64`)
+              .then((r) => {
+                if (r.ok) notifyImg();
+                else window.showAriaToast?.(`Image missing from Gallery (${iname})`, "err", 5000);
+              })
+              .catch(() => window.showAriaToast?.("Could not verify image asset", "err", 5000));
+          }
         } else if (data.module === "coding" && (data.proposal_id || data.agent_steps?.length)) {
           window.jarvisNotify("Coding task done", (text || data.message || "Finished").slice(0, 120));
         }
@@ -288,6 +311,11 @@
     }
     if ((hasVideo || data.module === "video") && typeof window.loadVideoGallery === "function") {
       setTimeout(() => window.loadVideoGallery?.(), 800);
+    }
+
+    // Keep Conversation thread counts in sync after each completed turn.
+    if (data.ok !== false) {
+      try { window.loadBranches?.(); } catch (_) { /* ignore */ }
     }
 
     // Browser Chat bridge — open Browser with shared URL/goal prefill (never fake success)

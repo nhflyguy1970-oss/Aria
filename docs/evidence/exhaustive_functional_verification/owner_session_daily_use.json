@@ -1,0 +1,129 @@
+{
+  "campaign": "owner_session_daily_use",
+  "captured_at": "2026-08-14T20:34:00Z",
+  "status": "PROVEN — STOP",
+  "not_certification": true,
+  "exhaustive_34_rooms": "STOPPED",
+  "secrets_in_evidence": false,
+  "do_not": [
+    "resume 34-room exhaustive campaign",
+    "start Owner Residency",
+    "start M5",
+    "apply 603973e7",
+    "execute Guided Repair",
+    "guess passwords",
+    "write Journal/Health/Planner/ACM",
+    "edit jarvis.env",
+    "migrate credentials"
+  ],
+  "contract": {
+    "unlock": "Master Password once",
+    "stay": "OWNER_UNLOCKED until explicit Lock Aria, restart/shutdown, or security-critical revoke",
+    "idle": "off (idle_seconds 0, auto_idle_lock false)",
+    "manual_lock": "Front Door Lock Aria → POST /api/security/lock hard true",
+    "pin_era_JARVIS_LOCK_IDLE_SEC": "present in jarvis.env; ignored; file not edited"
+  },
+  "isolation": {
+    "app_reads": "JARVIS_DATA_DIR",
+    "tests_set": "JARVIS_DATA_DIR=tmp_path",
+    "live_serve_JARVIS_DATA_DIR": "/media/jeff/AI/jarvis/data",
+    "live_vault_not_test_target": true,
+    "journal_post": false,
+    "health_phr_write": false,
+    "journal_bytes": 67547,
+    "journal_note": "Size unchanged across restart. mtime updated by serve load/normalize. No journal POST from this work."
+  },
+  "isolated_pytest": {
+    "python": "/media/jeff/AI/jarvis/venv/bin/python",
+    "files": [
+      "tests/test_owner_session_daily_use.py",
+      "tests/test_p4_security.py",
+      "tests/test_owner_security_m1.py"
+    ],
+    "result": "31 passed",
+    "backdated_session_seconds": 10000,
+    "explicit_lock_under_2s": true,
+    "pin_era_900_ignored": true
+  },
+  "live_after_restart": {
+    "serve_pid": 1513514,
+    "owner_state": "OWNER_LOCKED",
+    "idle_seconds": 0,
+    "auto_idle_lock": false,
+    "lock_capable": true,
+    "unlock_with": "master_password",
+    "overlay": {
+      "display": "flex",
+      "title": "ARIA locked",
+      "hint": "Aria is locked. Enter your Aria Master Password to unlock the house.",
+      "master_input": true,
+      "screenshot": "owner_session_locked_overlay.png"
+    },
+    "front_door_lock_button": {
+      "exists": true,
+      "text": "Lock Aria",
+      "hidden_while_locked": true
+    },
+    "health_home": {"http": 423, "locked": true},
+    "health_overview": {"http": 423, "locked": true},
+    "ha": {
+      "connected": false,
+      "locked": true,
+      "token_set": true,
+      "message": "Home Assistant is locked. Unlock Aria with your Master Password."
+    },
+    "openai_test": {"ok": false, "error": "key_missing"},
+    "gemini_test": {"ok": false, "error": "key_missing"},
+    "integrity": {"http": 200, "overall": 100, "status": "clean", "artifacts": 0},
+    "activity_timeout_or_qa_hits": [],
+    "lan_key_not_injected": true,
+    "loopback_live": 200
+  },
+  "live_after_jeff_unlock": {
+    "owner_state": "OWNER_UNLOCKED",
+    "idle_seconds": 0,
+    "auto_idle_lock": false,
+    "overlay_display": "none",
+    "navigation_stayed_unlocked": ["#journal", "#health", "#coding", "#chat"],
+    "front_door_to_journal": {"hash": "#journal", "locked": false}
+  },
+  "live_manual_lock_aria": {
+    "control": "Front Door footer #fdLockAria",
+    "screenshot_unlocked_button": "owner_session_lock_aria_footer.png",
+    "after": {
+      "owner_state": "OWNER_LOCKED",
+      "overlay_display": "flex",
+      "fdLockAria_hidden": true,
+      "screenshot": "owner_session_manual_lock_overlay.png"
+    },
+    "health_home": {"http": 423, "locked": true},
+    "ha": {
+      "connected": false,
+      "locked": true,
+      "token_set": true,
+      "message": "Home Assistant is locked. Unlock Aria with your Master Password."
+    },
+    "openai_test": {"ok": false, "error": "key_missing"},
+    "gemini_test": {"ok": false, "error": "key_missing"},
+    "integrity": {"http": 200, "overall": 100, "status": "clean", "artifacts": 0},
+    "activity_timeout_or_qa_hits": [],
+    "journal_bytes": 67547
+  },
+  "pending_jeff": null,
+  "live_after_second_unlock": {
+    "owner_state": "OWNER_UNLOCKED",
+    "idle_seconds": 0,
+    "auto_idle_lock": false,
+    "overlay_display": "none",
+    "navigation_stayed_unlocked": ["#chat", "#health", "#coding", "#journal"],
+    "front_door_lock_aria_visible": true,
+    "health_home_http": 200,
+    "ha_connected": true,
+    "ha_locked": false,
+    "openai_ok": true,
+    "integrity": {"overall": 100, "status": "clean", "artifacts": 0},
+    "activity_timeout_or_qa_hits": [],
+    "journal_bytes": 67547
+  },
+  "related": "docs/ARIA_OWNER_SESSION_DAILY_USE.md"
+}

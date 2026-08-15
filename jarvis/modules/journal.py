@@ -169,6 +169,21 @@ class BulletJournal(BujoMixin):
         if self._data.get("history") or self._data.get("redo"):
             self._persist_history_sidecar()
 
+    def _quarantine_corrupt_json(self) -> Path | None:
+        if not self.path.exists():
+            return None
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        quarantine = self.path.with_suffix(self.path.suffix + f".corrupt-{stamp}")
+        idx = 1
+        while quarantine.exists():
+            quarantine = self.path.with_suffix(self.path.suffix + f".corrupt-{stamp}.{idx}")
+            idx += 1
+        try:
+            self.path.rename(quarantine)
+            return quarantine
+        except OSError:
+            return None
+
     def _persist_history_sidecar(self) -> None:
         hist = self._data.get("history") or []
         redo = self._data.get("redo") or []
@@ -206,7 +221,10 @@ class BulletJournal(BujoMixin):
         if data is None and self.path.exists():
             try:
                 data = json.loads(self.path.read_text(encoding="utf-8"))
-            except (json.JSONDecodeError, OSError):
+            except json.JSONDecodeError:
+                self._quarantine_corrupt_json()
+                data = None
+            except OSError:
                 data = None
         if not isinstance(data, dict):
             data = self._empty()
@@ -632,6 +650,12 @@ class BulletJournal(BujoMixin):
         time: str | None = None,
     ) -> dict:
         d = day or _today()
+        from jarvis.production_guard import ProductionIsolationError, assert_owner_write_allowed
+
+        try:
+            assert_owner_write_allowed(content, store="journal")
+        except ProductionIsolationError as exc:
+            raise ValueError(str(exc)) from exc
         page = self._ensure_daily(d)
         if bullet_type == "event":
             parsed_time, body, _ = _parse_event_time(content)
@@ -651,13 +675,81 @@ class BulletJournal(BujoMixin):
         self._save()
         return b
 
-    def daily_get(self, day: str | None = None, *, enrich: bool = True) -> dict:
+    def daily_get(
+        self, day: str | None = None, *, enrich: bool = True, include_qa: bool = False
+    ) -> dict:
         self._sync_from_disk_if_newer()
         d = day or _today()
         page = self._ensure_daily(d)
         if enrich:
             self._enrich_daily_page(page)
-        return page
+        # Living Workspace Journal must show what Jeff just logged (BUG-016).
+        # Digests/briefings keep the default filtered view; Integrity purge still scrub.
+        return self._owner_safe_daily_page(page, include_qa=include_qa)
+
+    def _owner_safe_daily_page(self, page: dict, *, include_qa: bool = False) -> dict:
+        """Return a shallow copy; optionally strip certification/QA residue."""
+        out = dict(page)
+        bullets = page.get("bullets") or []
+        if include_qa:
+            out["bullets"] = list(bullets) if isinstance(bullets, list) else []
+            return out
+        from jarvis.integrity_product.tags import looks_like_dev_label
+
+        out["bullets"] = self._filter_qa_bullets(bullets)
+        gratitude = page.get("gratitude")
+        if isinstance(gratitude, list):
+            out["gratitude"] = [g for g in gratitude if not looks_like_dev_label(str(g))]
+        return out
+
+    def _filter_qa_bullets(self, bullets: list) -> list:
+        from jarvis.integrity_product.tags import looks_like_dev_label
+
+        kept: list = []
+        for b in bullets or []:
+            if not isinstance(b, dict):
+                continue
+            if looks_like_dev_label(str(b.get("content") or "")):
+                continue
+            nb = dict(b)
+            if nb.get("children"):
+                nb["children"] = self._filter_qa_bullets(nb.get("children") or [])
+            kept.append(nb)
+        return kept
+
+    def purge_qa_content(self) -> dict[str, int]:
+        """Remove certification/QA bullets and gratitude lines from the journal store."""
+        from jarvis.integrity_product.tags import looks_like_dev_label
+
+        removed_bullets = 0
+        removed_gratitude = 0
+
+        def scrub_page(page: dict) -> None:
+            nonlocal removed_bullets, removed_gratitude
+            if not isinstance(page, dict):
+                return
+            before = page.get("bullets") or []
+            page["bullets"] = self._filter_qa_bullets(before)
+            removed_bullets += max(0, len(before) - len(page["bullets"]))
+            # also count nested removals roughly via content walk before/after sizes
+            g = page.get("gratitude")
+            if isinstance(g, list):
+                kept = [x for x in g if not looks_like_dev_label(str(x))]
+                removed_gratitude += len(g) - len(kept)
+                page["gratitude"] = kept
+
+        for section in ("daily_log", "weekly_log", "monthly_log", "future_log"):
+            block = self._data.get(section) or {}
+            if isinstance(block, dict):
+                for page in block.values():
+                    scrub_page(page if isinstance(page, dict) else {})
+        collections = self._data.get("collections") or {}
+        if isinstance(collections, dict):
+            for page in collections.values():
+                scrub_page(page if isinstance(page, dict) else {})
+        if removed_bullets or removed_gratitude:
+            self._save()
+        return {"bullets": removed_bullets, "gratitude": removed_gratitude}
 
     def _enrich_daily_page(self, page: dict) -> dict:
         from jarvis.journal_prompts import prompts_for_day

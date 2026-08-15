@@ -1,0 +1,77 @@
+{
+  "updated_at": "2026-08-13T15:24:31.559803+00:00",
+  "phase": "lan_unlock_after_lock",
+  "status": "PROVEN",
+  "owner_state": "OWNER_UNLOCKED",
+  "entry_count": 5,
+  "jeff_entered_lan_key": false,
+  "jeff_entered_ha_token": false,
+  "unlock_ms": 61.73,
+  "ha": {
+    "http_status": 200,
+    "elapsed_ms": 4.48,
+    "connected": true,
+    "locked": false,
+    "conn_ok": true,
+    "conn_message": "API running.",
+    "secret_in_response": false
+  },
+  "ha_source": "vault",
+  "lan_source": "vault",
+  "lan_without_key": {
+    "http_status": 401
+  },
+  "lan_with_key": {
+    "http_status": 200,
+    "elapsed_ms": 3.71,
+    "ha_connected": true,
+    "secret_in_response": false
+  },
+  "timings": {
+    "lan": [
+      {
+        "op": "credential_put",
+        "ms": 4.74,
+        "vault_id": "lan.api_key"
+      },
+      {
+        "op": "credential_get",
+        "ms": 0.0,
+        "vault_id": "lan.api_key"
+      },
+      {
+        "op": "credential_get",
+        "ms": 0.0,
+        "vault_id": "lan.api_key"
+      },
+      {
+        "op": "credential_get",
+        "ms": 0.04,
+        "vault_id": "lan.api_key"
+      },
+      {
+        "op": "credential_get",
+        "ms": 0.0,
+        "vault_id": "lan.api_key"
+      }
+    ],
+    "ha": [
+      {
+        "op": "credential_get",
+        "ms": 0.06,
+        "vault_id": "ha.token"
+      },
+      {
+        "op": "credential_get",
+        "ms": 0.0,
+        "vault_id": "ha.token"
+      },
+      {
+        "op": "credential_get",
+        "ms": 0.0,
+        "vault_id": "ha.token"
+      }
+    ]
+  },
+  "secrets_in_evidence": false
+}

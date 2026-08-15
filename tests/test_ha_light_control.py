@@ -33,7 +33,8 @@ def test_build_light_service_data_rgb_and_brightness():
     assert svc == "turn_on"
     assert data["entity_id"] == "light.kitchen"
     assert data["rgb_color"] == [10, 20, 30]
-    assert data["brightness_pct"] == 40
+    assert data["brightness"] == 102
+    assert "brightness_pct" not in data
 
 
 def test_build_light_service_data_color_name():

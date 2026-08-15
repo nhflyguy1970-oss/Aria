@@ -1,0 +1,98 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "calendar",
+  "captured_at": "2026-08-13T16:28:00+00:00",
+  "entry": "Owner Front Door (ariaHouseBtn) → room:calendar",
+  "identity": {
+    "hash": "#calendar",
+    "h2": "Calendar",
+    "place": "· Wall calendar",
+    "enter_ms": 723
+  },
+  "front_door": {
+    "registry_count": 34,
+    "registry_has_home": true,
+    "front_door_room_tokens": 41,
+    "unique_named_rooms_in_foyer_list": 33,
+    "front_door_has_home": false,
+    "note": "Home/foyer is in the registry but not listed as a Front Door room door (recents duplicate other rooms)."
+  },
+  "capabilities": [
+    {
+      "name": "Month grid",
+      "result": "PASS",
+      "notes": "August 2026; 42 day cells; not stuck on Loading calendar…"
+    },
+    {
+      "name": "Week / Agenda / Timeline views",
+      "result": "PASS",
+      "notes": "Each tab becomes active; grid text length changes (week 315, agenda 875, timeline 197, month 342)"
+    },
+    {
+      "name": "Prev / Next / Today",
+      "result": "PASS",
+      "notes": "Prev → July 2026; Next/Today → August 2026"
+    },
+    {
+      "name": "Select a day",
+      "result": "PASS",
+      "notes": "Day panel leaves 'Select a day…'; 1 itemish node; counts only, no event titles recorded"
+    },
+    {
+      "name": "Filter holidays",
+      "result": "PASS",
+      "notes": "Grid shrinks (342 → 111) on holiday filter; restored to All"
+    },
+    {
+      "name": "Negative search",
+      "result": "PARTIAL",
+      "notes": "zzzz query shrinks grid (111) but no explicit no-match copy"
+    },
+    {
+      "name": "Work schedule panel",
+      "result": "FAIL",
+      "notes": "Details open; #calendarWorkSchedule innerHTML empty. renderWorkScheduleEditor no-ops when sched is missing — no honest empty state."
+    },
+    {
+      "name": "ICS",
+      "result": "PASS",
+      "notes": "Honest empty: 'No external calendar — add an ICS URL below.' URL field empty. Test with empty URL does not pretend success. Save not clicked."
+    },
+    {
+      "name": "Memory dates",
+      "result": "PARTIAL",
+      "notes": "Button click; implementation uses window.alert. Not owner-house UI. Not verified beyond click."
+    },
+    {
+      "name": "Vision import",
+      "result": "HARDWARE GATE",
+      "notes": "Control present; not exercised"
+    },
+    {
+      "name": "HA Meeting mode",
+      "result": "N/A — NOT EXERCISED",
+      "notes": "Would change live Home Assistant state"
+    },
+    {
+      "name": "New event (N)",
+      "result": "N/A — NOT EXERCISED",
+      "notes": "Would write live calendar"
+    },
+    {
+      "name": "Leave/return Planner",
+      "result": "PASS",
+      "notes": "#planner · Leather notebook → Front Door back to Wall calendar"
+    },
+    {
+      "name": "Leave/return Journal",
+      "result": "PASS",
+      "notes": "#journal · Bullet journal → Wall calendar"
+    },
+    {
+      "name": "Leave/return Documents",
+      "result": "PASS",
+      "notes": "#documents · Private library → Wall calendar August 2026"
+    }
+  ],
+  "integrity": "not re-scanned this slice; last scan clean / 100; no calendar writes performed"
+}

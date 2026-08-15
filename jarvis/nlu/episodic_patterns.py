@@ -30,12 +30,12 @@ EPISODIC_TEACHING = re.compile(
 
 EPISODIC_MEMORY_QUERY = re.compile(
     rf"\b(?:"
-    rf"what\s+happened(?:\s+{_TEMPORAL})?|"
+    # "what happened" alone is world knowledge — require temporal or first-person.
+    rf"what\s+happened\s+(?:{_TEMPORAL}|to\s+me|when\s+i|before|after)\b|"
     rf"what\s+did\s+i\s+\w+(?:\s+{_TEMPORAL})?|"
     rf"what\s+have\s+i\s+(?:caught|installed|bought|upgraded|visited|done|built)\b|"
     rf"where\s+did\s+i\s+go(?:\s+{_TEMPORAL})?|"
-    rf"what\s+happened\s+(?:before|after)|"
-    rf"explain\s+what\s+happened|"
+    rf"explain\s+what\s+happened\s+(?:to\s+me|when\s+i|{_TEMPORAL})\b|"
     rf"tell\s+me\s+about\s+(?:buying|cleaning|installing|visiting|going|catching|fishing)|"
     rf"did\s+i\s+tell\s+you\b|"
     rf"what\s+(?:gpu|ram|cpu|ssd|hardware|graphics\s+card|fish)\s+did\s+i\b|"
@@ -117,7 +117,26 @@ def is_episodic_teaching(text: str) -> bool:
 
 
 def is_episodic_memory_query(text: str) -> bool:
-    return bool(EPISODIC_MEMORY_QUERY.search(text or ""))
+    blob = (text or "").strip()
+    if not blob:
+        return False
+    # Workstation filesystem questions are not autobiography.
+    if re.search(
+        r"\b(download|downloaded|downloads|upload|uploaded|screenshot|screenshots|"
+        r"pdf|invoice|receipt|resume|license|folder|directory|desktop|documents)\b",
+        blob,
+        re.I,
+    ):
+        return False
+    # Software / world-event releases are not autobiographical episodic recall.
+    if re.search(
+        r"\b(?:release|version|changelog|python|ubuntu|linux|kernel|node\.?js|"
+        r"nvidia|driver|software|package|distro)\b",
+        blob,
+        re.I,
+    ) and not re.search(r"\b(?:i|me|my)\b.+\b(?:install|upgrade|bought|replaced)\b", blob, re.I):
+        return False
+    return bool(EPISODIC_MEMORY_QUERY.search(blob))
 
 
 def is_episodic_memory_utterance(text: str) -> bool:

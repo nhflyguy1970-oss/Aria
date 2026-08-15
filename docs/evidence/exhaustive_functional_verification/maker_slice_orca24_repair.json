@@ -1,0 +1,31 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "maker",
+  "capability": "Slice Hello cube c625705b89",
+  "captured_at": "2026-08-13T19:47:00+00:00",
+  "result": "IN PROGRESS — owner Slice attempted; Orca 2.4 rejected Prusa-era flags. Cause fixed. WAIT FOR JEFF unlock + printer model. Start print not clicked.",
+  "not_certification": true,
+  "owner_after_unlock": "OWNER_UNLOCKED then Slice clicked",
+  "slice_attempt": {
+    "ms": 741,
+    "slicingSeen": true,
+    "toast": "Invalid option --export-gcode / setup params error",
+    "print_clicked": false
+  },
+  "root_cause": "OrcaSlicer 2.4.2 CLI has --slice 0 and --outputdir, not --export-gcode/--export-slice. Flatpak also cannot read Home Lab STL unless --filesystem binds the data dir. Profile lookup expected nested preset folders; Orca 2.x uses system/Brand/machine/*.json. Bambu A1 Mini machine presets are not in this Flathub Orca install (Creality KE is).",
+  "repair": "slicer.py: --command=orca-slicer, --slice 0, filesystem binds, machine+process+PLA load, plate_1.gcode discovery; slice API + maker.js pass printer_model from Maker dropdown.",
+  "files": [
+    "jarvis/engineering/slicer.py",
+    "jarvis/extensions/engineering/api.py",
+    "jarvis/gui/static/maker.js",
+    "jarvis/gui/static/index.html"
+  ],
+  "local_cli_proof": "flatpak run --filesystem=/media/jeff/AI/jarvis --command=orca-slicer … --slice 0 produced plate_1.gcode (~93KB) then trial dir deleted",
+  "code_load": "POST /api/jarvis/restart-server 200 tray — second restart this gate",
+  "jeff_action_required": {
+    "gate": "Unlock after restart, then choose printer model in Maker, then Slice",
+    "action_in_aria_ui": "1) Unlock with the Aria Master Password (overlay will be up after restart). 2) Stay in Maker lab. 3) In the printer model dropdown choose the printer you actually slice for. This Orca install has Creality Ender-3 V3 KE presets; Bambu A1 Mini machine presets are not present. 4) You do not need Add unless you want the printer saved. 5) Say done. Slice will run on Hello cube. Start print will not be clicked."
+  },
+  "hello_cube_id": "c625705b89",
+  "next_exact_capability": "Maker Slice of Hello cube after printer model chosen — then STOP before Start print"
+}

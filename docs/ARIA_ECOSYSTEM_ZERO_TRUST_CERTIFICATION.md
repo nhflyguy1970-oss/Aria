@@ -1,3 +1,5 @@
+> **Superseded (2026-07-31):** Historical certification report, not current engineering authority. Use [`Architecture Bible`](architecture/ARCHITECTURE_BIBLE.md) and [`Engineering Roadmap`](architecture/ENGINEERING_ROADMAP.md) as the governing docs.
+
 # Aria Ecosystem Zero-Trust Certification
 
 **Date:** 2026-07-23  

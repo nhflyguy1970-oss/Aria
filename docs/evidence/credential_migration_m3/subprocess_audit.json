@@ -1,0 +1,26 @@
+{
+  "updated_at": "2026-08-13T15:28:00+00:00",
+  "requirement": "No blind os.environ.copy() leaking JARVIS_HA_TOKEN or JARVIS_API_KEY to unrelated processes",
+  "denylist_includes": ["JARVIS_HA_TOKEN", "HOME_ASSISTANT_TOKEN", "JARVIS_API_KEY"],
+  "tool_sandbox": "build_subprocess_env() allowlist — secrets never inherited",
+  "host_like_children": "copy_process_env() copies os.environ then strips secret keys",
+  "converted_from_os_environ_copy": [
+    "jarvis/services.py (_comfy_env, ollama)",
+    "jarvis/daemon.py (spawn serve — child loads jarvis.env itself)",
+    "jarvis/server_restart.py (helper + successor serve)",
+    "jarvis/gui/server.py (AnimateDiff install)",
+    "jarvis/application/desktop_launch.py",
+    "jarvis/electron_shell.py",
+    "jarvis/audio_device.py (ffmpeg)",
+    "jarvis/config.py (piper)",
+    "jarvis/audit_paths.py"
+  ],
+  "not_live_runtime_children": [
+    "scripts/phase1_runtime_certify.py",
+    "scripts/phase1_runtime_spike_measure.py",
+    "scripts/aria_core_compat.py"
+  ],
+  "ha_token_passed_to_unrelated_subprocess": false,
+  "lan_api_key_passed_to_unrelated_subprocess": false,
+  "explicit_env_only": "A subprocess receives a secret only if extra= is set after an explicit decision; extra secret keys are still skipped"
+}

@@ -154,50 +154,14 @@ def ask_stream(
     try:
         from jarvis.chat_cancel import is_cancelled
         from jarvis.inference.gateway import stream_chat
-        from jarvis.inference.policy import select_route
 
         role = kwargs.pop("role", "general")
-        route = select_route(model, role=role, messages=messages)
-        if route.backend == "litellm":
-            for content in _iter_blocking_cancellable(
-                stream_chat(model, messages, role=role, route=route, **kwargs),
-                cancel_key=cancel_key,
-            ):
-                if cancel_key and is_cancelled(cancel_key):
-                    break
-                if content:
-                    yield content
-            return
-
-        from jarvis.ollama_runtime import default_options
-
-        # Keep num_ctx aligned with warmup/gateway so Ollama does not reload
-        # the runner at the model's native 32k context on every chat turn.
-        normalized = _normalize_chat_kwargs(kwargs)
-        options = dict(normalized.get("options") or {})
-        for key, value in default_options().items():
-            options.setdefault(key, value)
-        normalized["options"] = options
-        # Keep the chat runner resident — under MAX_LOADED_MODELS=1 an immediate
-        # unload forces the next turn into a 45s+ cold load / FIRST_PROGRESS_TIMEOUT.
-        keep_alive = normalized.pop("keep_alive", None)
-        if keep_alive is None:
-            keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "30m").strip() or "30m"
-        stream = chat(
-            model=route.model,
-            messages=_with_system(messages),
-            stream=True,
-            keep_alive=keep_alive,
-            **normalized,
-        )
+        stream = stream_chat(model, messages, role=role, usage=usage, **kwargs)
         for chunk in _iter_blocking_cancellable(stream, cancel_key=cancel_key):
             if cancel_key and is_cancelled(cancel_key):
                 break
-            if usage is not None:
-                usage.update(usage_from_response(chunk))
-            content = chunk.get("message", {}).get("content", "")
-            if content:
-                yield content
+            if chunk:
+                yield chunk
     except Exception as e:
         raise RuntimeError(
             f"Ollama error with model '{model}': {e}. Is Ollama running? Try: ollama serve"
@@ -250,11 +214,9 @@ _EMBED_AVAIL_TTL_FAIL = float(os.getenv("JARVIS_EMBED_AVAIL_FAIL_TTL", "5"))
 
 def embed_text(text: str) -> list[float]:
     global _embed_warned
-    unload_fn = None
     try:
-        from jarvis.ollama_runtime import chat_priority_active, unload_model as _unload
+        from jarvis.ollama_runtime import chat_priority_active
 
-        unload_fn = _unload
         # Never steal the sole runner slot while a chat stream is in flight.
         if chat_priority_active():
             return []
@@ -265,6 +227,10 @@ def embed_text(text: str) -> list[float]:
         # keep_alive=0: do not leave nomic-embed resident. With
         # OLLAMA_MAX_LOADED_MODELS=1 it otherwise evicts the chat model and
         # forces a 45s+ cold reload on the next token stream.
+        #
+        # Do NOT follow with a synchronous unload_model(/api/generate,
+        # timeout=15): that alone exceeded the Search corpus wall (~12s) and
+        # made documents retrieval hang until timeout. keep_alive=0 is enough.
         response = embed(model=model_for("embed"), input=text, keep_alive=0)
         vectors = response["embeddings"][0]
     except TypeError:
@@ -292,20 +258,25 @@ def embed_text(text: str) -> list[float]:
             )
             _embed_warned = True
         return []
-    # Belt-and-suspenders: if keep_alive=0 left the embed runner up, unload it.
-    if unload_fn is not None:
-        try:
-            name = (model_for("embed") or "").strip()
-            if name:
-                unload_fn(name)
-        except Exception:
-            pass
     return vectors
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:
     if not a or not b or len(a) != len(b):
         return 0.0
+    # Fast path: numpy when available (conflict scan is O(n²)).
+    try:
+        import numpy as np
+
+        va = np.asarray(a, dtype=np.float64)
+        vb = np.asarray(b, dtype=np.float64)
+        na = float(np.linalg.norm(va))
+        nb = float(np.linalg.norm(vb))
+        if na == 0.0 or nb == 0.0:
+            return 0.0
+        return float(np.dot(va, vb) / (na * nb))
+    except Exception:
+        pass
     dot = sum(x * y for x, y in zip(a, b))
     norm_a = sum(x * x for x in a) ** 0.5
     norm_b = sum(x * x for x in b) ** 0.5
@@ -891,12 +862,17 @@ def vision_model_for_task(task: str = "describe") -> str:
         or _match_installed("moondream", installed)
         or model_for("vision")
     )
-    if quality == "fast" or tier == "light":
+    # Fast mode (or unknown) may use the light model for light-tier tasks.
+    # Quality mode must honor the heavier stack even for describe — moondream
+    # often returns useless stubs ("urn") that look like successful analyzes.
+    if quality == "fast":
+        return light
+    if quality != "quality" and tier == "light":
         return light
 
     order = _heavy_vision_order(low_vram=is_low_vram())
     if not order:
-        order = ("moondream:latest", "moondream", "llava:13b", "llava")
+        order = ("llava:13b", "llava", "moondream:latest", "moondream")
     for candidate in order:
         match = _match_installed(candidate, installed)
         if match:

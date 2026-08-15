@@ -23,6 +23,7 @@
     vision: "Vision",
     audio: "Audio",
     journal: "Journal",
+    health: "Health",
     memory: "Memory",
     gallery: "Gallery",
     video: "Video",

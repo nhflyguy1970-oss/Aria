@@ -105,10 +105,39 @@ def placement_config() -> dict[str, Any]:
     # Never block the hot path on run_benchmark — return cached/structure first.
     cached = _load_placement_file()
     if cached:
-        if unsuitable_classifier_model(str(cached.get("model") or "")):
+        model = str(cached.get("model") or "")
+        if unsuitable_classifier_model(model):
             _log.warning(
                 "Cached NLU classifier %s is unsuitable (vision/embed); using structure fallback",
-                cached.get("model"),
+                model,
+            )
+            _schedule_background_rebenchmark()
+            return _structure_fallback()
+        # C2: reject cached winners that failed the intent-accuracy gate.
+        min_acc = float(os.getenv("JARVIS_NLU_MIN_INTENT_ACCURACY", "0.5"))
+        acc = cached.get("intent_accuracy")
+        if acc is None:
+            # Older placement files: inspect nested results for the chosen model.
+            for row in cached.get("results") or []:
+                if str(row.get("model")) == model and str(row.get("device")) == str(
+                    cached.get("device")
+                ):
+                    acc = row.get("intent_accuracy")
+                    break
+        if model != "structure" and acc is not None and float(acc) < min_acc:
+            _log.warning(
+                "Cached NLU classifier %s intent_accuracy=%s < %s; using structure fallback",
+                model,
+                acc,
+                min_acc,
+            )
+            _schedule_background_rebenchmark()
+            return _structure_fallback()
+        if model != "structure" and acc is None and cached.get("source") == "benchmark":
+            # Unknown accuracy on a benchmark pick — demote until rebenchmark proves competence.
+            _log.warning(
+                "Cached NLU classifier %s has no intent_accuracy; using structure fallback",
+                model,
             )
             _schedule_background_rebenchmark()
             return _structure_fallback()
@@ -132,8 +161,9 @@ def save_placement(config: dict[str, Any]) -> None:
 
 
 def ollama_options_for_device(device: str) -> dict[str, Any]:
+    """Hardware routing options for Ollama (GPU layers). Sampling belongs to the caller."""
     dev = (device or "cpu").lower()
-    opts: dict[str, Any] = {"temperature": 0, "num_predict": 96}
+    opts: dict[str, Any] = {}
     if dev == "cpu":
         opts["num_gpu"] = 0
     elif dev.startswith("nvidia"):

@@ -1,0 +1,63 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "integrity",
+  "capability": "Integrity existing score without executing Guided Repair",
+  "captured_at": "2026-08-15T13:16:00Z",
+  "result": "PASS — Front Door → Integrity; Truth Score 100 · ready; No deductions; More → Refresh restored same score; Chat leave/return restored Truth. Repair overflow not clicked. Guided Repair overlay stayed closed. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Integrity (Whether things are true)",
+    "hash": "#integrity",
+    "h1": "Truth",
+    "place": "Quiet caretaker",
+    "first_paint": "Score 100 · ready + Gathering integrity… (cached score, list in flight)",
+    "usable": "Score 100 · ready · No deductions on record · Listening quietly"
+  },
+  "functions": {
+    "refresh": "PASS — More → Refresh; list briefly Gathering integrity…; ~2.0 s later Score 100 · ready and No deductions on record. Repair not clicked."
+  },
+  "leave_return": {
+    "leave": "Front Door recents → Chat → #chat h2 How can I help?; Send not clicked",
+    "return": "Front Door recents → Integrity → #integrity h1 Truth",
+    "return_first_paint": "Score 100 · ready + Gathering integrity…",
+    "return_state": "Score 100 · ready; No deductions on record; Quiet caretaker; overlay closed",
+    "front_door_copy": "stale — Talk with Aria / Production Integrity depending on when the door was opened",
+    "result": "PASS — room and score restored"
+  },
+  "guided_repair": {
+    "overlay_open": false,
+    "repair_overflow_clicked": false,
+    "execute_clicked": false
+  },
+  "not_clicked": [
+    "Repair",
+    "Guided Repair",
+    "Lock Aria",
+    "Open mini chat"
+  ],
+  "performance": {
+    "room_entry": "hash #integrity immediately on Front Door click",
+    "first_meaningful": "h1 Truth + Score 100 · ready on first paint (cached)",
+    "usable_list": "No deductions after /api/integrity/home",
+    "refresh": "~2.0 s owner-visible Gathering then restored",
+    "note": "Tool-roundtrip delays are not owner-visible time and were not recorded as room slowness."
+  },
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "guided_repair_execute": false,
+    "journal_post": false,
+    "journal_bytes": 67547,
+    "health_phr": false,
+    "chat_send": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "Connections existing graph without writing. Do not execute Guided Repair. Do not Lock Aria. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5."
+}

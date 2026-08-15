@@ -11,7 +11,7 @@
     ["jobs", "Jobs"],
     ["tools", "LSP & Git"],
     ["prefs", "Preferences"],
-    ["experimental", "Experimental"],
+    ["experimental", "Advanced"],
   ];
 
   function $(id) {
@@ -163,7 +163,7 @@
         <div id="codingBrief_${esc(p.id)}" class="coding-brief hidden"></div>
       </article>`
       )
-      .join("") || `<p class="muted coding-empty">No open proposals. Use Chat or Experimental workflows to create one.</p>`;
+      .join("") || `<p class="muted coding-empty">No open proposals. Use Chat or Advanced workflows to create one.</p>`;
     return `<section aria-label="Open proposals">${open}</section>`;
   }
 
@@ -272,7 +272,7 @@
 
   function renderExperimental() {
     return `
-      <section aria-label="Experimental coding workflows">
+      <section aria-label="Advanced coding workflows">
         <article class="coding-card">
           <h3>Vision-assisted bug fix</h3>
           <p class="muted">Screenshot → likely files → explanation → proposal. Never auto-applies.</p>
@@ -315,8 +315,10 @@
   async function refresh() {
     const status = $("codingHomeStatus");
     if (status) status.textContent = "Loading…";
+    const gen = (refresh._gen = (refresh._gen || 0) + 1);
     try {
       _data = await api("/api/coding/home");
+      if (gen !== refresh._gen) return;
       renderTabs();
       const body = $("codingHomeBody");
       if (body) body.innerHTML = renderBody();
@@ -324,6 +326,28 @@
       bindBody();
       if (status) status.textContent = "Ready";
     } catch (err) {
+      if (gen !== refresh._gen) return;
+      if (
+        window.AriaNet?.isRoomAbort?.(err) ||
+        err?.name === "AbortError" ||
+        /aborted/i.test(String(err?.message || ""))
+      ) {
+        const still =
+          document.body.classList.contains("house-coding") ||
+          /^#?coding\b/i.test(location.hash || "");
+        if (still) {
+          clearTimeout(refresh._retry);
+          refresh._retry = setTimeout(() => {
+            if (
+              document.body.classList.contains("house-coding") ||
+              /^#?coding\b/i.test(location.hash || "")
+            ) {
+              refresh();
+            }
+          }, 140);
+        }
+        return;
+      }
       if (status) status.textContent = err.message || "Failed";
       window.showAriaToast?.(err.message || "Coding Home failed", "err", 4000);
     }
@@ -371,11 +395,13 @@
       if (!ok) return;
       const form = new FormData();
       form.append("proposal_id", pid);
-      const res = await fetch("/api/apply", { method: "POST", body: form });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || data.ok === false) throw new Error(data.message || "Apply failed");
-      window.showAriaToast?.("Applied — choose Verify when ready", "ok", 4000);
-      if (data.verify_offer) window.AriaCodingVerify?.show?.(data.verify_offer);
+      const result = await window.ariaMutate({
+        request: () => fetch("/api/apply", { method: "POST", body: form }),
+        successToast: "Applied — choose Verify when ready",
+        failToast: "Apply failed",
+      });
+      if (!result.ok) return;
+      if (result.data?.verify_offer) window.AriaCodingVerify?.show?.(result.data.verify_offer);
       await refresh();
     } catch (err) {
       window.showAriaToast?.(err.message || "Apply failed", "err", 4000);

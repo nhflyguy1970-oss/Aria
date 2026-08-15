@@ -1,0 +1,25 @@
+{
+  "severity": "2026-08-12T20:37:05.795383+00:00",
+  "cause": "Isol server started with env DATA_DIR=... but jarvis.config reads JARVIS_DATA_DIR. Isol encrypted round-trip (including confirm_wipe cleanup) wrote to live data/journal/.",
+  "wiped_sha256": "cd29f516cd0efbccd9d456e9ae9d11f51fe567a762ff092fce66131f44557491",
+  "wiped_quarantine": "data/journal/bullet_journal.WIPES-QUARANTINE-20260812T203705Z.json",
+  "history_quarantine": "data/journal/bullet_journal.json.history.WIPES-QUARANTINE-20260812T203705Z",
+  "restored_from": "data/journal/bullet_journal.backup-20260812T171036Z.json",
+  "restored_sha256": "53339ba6fefba44d173ae2f0db73b6e9e4037bb11e24713f5adac0ade47ea219",
+  "note": "Pre-wipe in-memory hash ac372f96... was not found on disk; restored nearest backup (67571 bytes, 2026-08-12 13:10). Undo history sidecar was emptied by wipe and cannot be fully recovered.",
+  "status": "RESTORED \u2014 AWAITING JEFF ACK",
+  "restored_content_check": {
+    "daily_pages": 92,
+    "weekly_pages": 6,
+    "habits": 5,
+    "size": 67571,
+    "sha256": "ec7b5a3770ffbb55bfed18de1b70ca3b59e1bbd5a838a941960c76c7214855cd",
+    "note": "Content counts match backup; sha may differ slightly after server normalize/save"
+  },
+  "env_bug": {
+    "wrong": "DATA_DIR",
+    "correct": "JARVIS_DATA_DIR",
+    "config": "jarvis/config.py Path(os.getenv(\"JARVIS_DATA_DIR\", ...))"
+  },
+  "updated_at": "2026-08-12T20:39:45.928262+00:00"
+}

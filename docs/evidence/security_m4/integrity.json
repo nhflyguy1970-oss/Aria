@@ -1,0 +1,16 @@
+{
+  "updated_at": "2026-08-13T15:49:53.776989+00:00",
+  "ok": true,
+  "clean": true,
+  "score": 100,
+  "status": "clean",
+  "artifacts": 0,
+  "scan_elapsed_ms": 42.38,
+  "scan_http_status": 200,
+  "qa_mutating_post": {
+    "http": 403,
+    "message": "Test/QA harness headers are not allowed against the live workspace."
+  },
+  "note": "Production Integrity scan after M4 Health/session unification. Genuinely clean / 100.",
+  "secrets_in_evidence": false
+}

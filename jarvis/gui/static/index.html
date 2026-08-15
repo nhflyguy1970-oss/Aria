@@ -13,23 +13,89 @@
   <link rel="manifest" href="/static/manifest.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/static/style.css?v=5.18.0" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css?v=5.18.5-onepw" />
   <link rel="stylesheet" href="/static/shell_design.css?v=2.0.0" />
+  <link rel="stylesheet" href="/static/living_interface.css?v=1.1.0" />
+  <link rel="stylesheet" href="/static/living_atmosphere.css?v=1.0.2-e1" />
+  <link rel="stylesheet" href="/static/workspace/workspace.css?v=2.1.0-integrity" />
+  <link rel="stylesheet" href="/static/workspace/rooms/living_room.css?v=3.8.0-integrity" />
+  <link rel="stylesheet" href="/static/workspace/rooms/house.css?v=6.4.7-bujo-more-z" />
+  <link rel="stylesheet" href="/static/workspace/rooms/native_rooms.css?v=5.1.2-oc" />
+  <link rel="stylesheet" href="/static/workspace/rooms/flytying_room.css?v=5.0.0" />
+  <link rel="stylesheet" href="/static/workspace/rooms/health_room.css?v=5.0.0" />
+  <link rel="stylesheet" href="/static/workspace/rooms/mission_room.css?v=5.0.0" />
+  <link rel="stylesheet" href="/static/workspace/front_door.css?v=6.1.3-owner-lock" />
   <script>
     (function () {
+      var q = location.search || "";
       var standalone = window.matchMedia("(display-mode: standalone)").matches
         || window.navigator.standalone === true
-        || /[?&]app=1(?:&|$)/.test(location.search);
+        || /[?&]app=1(?:&|$)/.test(q);
       if (standalone) document.documentElement.classList.add("jarvis-app");
+      /* House Integrity: claim Living Workspace BEFORE first paint.
+         Without this, the legacy .app shell paints underneath Rooms.
+         BUG-001: also honor livingWorkspace pref (default true) on bare `/`.
+         Legacy escape: ?workspace=0 or prefs.livingWorkspace === false. */
+      var forceOff = /[?&]workspace=0(?:&|$)/.test(q);
+      var forceOn = /[?&]workspace=1(?:&|$)/.test(q);
+      var isApp = standalone || document.documentElement.classList.contains("jarvis-app");
+      var prefLiving = true;
+      try {
+        var raw = JSON.parse(localStorage.getItem("aria_ui_prefs_v1") || "{}");
+        if (raw && raw.livingWorkspace === false) prefLiving = false;
+      } catch (_) {}
+      if (!forceOff && (forceOn || isApp || prefLiving)) {
+        document.documentElement.classList.add("living-workspace");
+        document.documentElement.dataset.workspace = "1";
+      }
     })();
   </script>
+  <style id="aria-house-integrity-prepaint">
+    /* Demolish legacy shell from first paint when Workspace owns Aria */
+    html:not(.living-workspace) #ariaStage { display: none !important; }
+    html.living-workspace body { margin: 0; background: #0a0c10; }
+    html.living-workspace .app,
+    html.living-workspace .sidebar-backdrop,
+    html.living-workspace #jarvisBootFlash,
+    html.living-workspace #startupOverlay,
+    html.living-workspace .toast-container,
+    html.living-workspace #ariaStatusBar {
+      display: none !important;
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+    html.living-workspace #ariaStage {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      background: #0a0c10;
+      overflow: auto;
+    }
+    html.living-workspace #ariaStage > .view-panel {
+      display: flex !important;
+      flex-direction: column;
+      min-height: 100%;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      border: 0;
+      background: transparent;
+    }
+    html.living-workspace #ariaStage > .view-panel.hidden {
+      display: flex !important; /* mounted Room is never "hidden" on stage */
+    }
+  </style>
 </head>
 <body>
-  <a class="skip-link" href="#mainContent">Skip to main content</a>
+  <a class="skip-link" href="#ariaStage">Skip to workspace</a>
+  <!-- Living Workspace exclusive stage — ONE application root for Rooms -->
+  <div id="ariaStage" class="aria-stage" role="main" aria-label="Aria Living Workspace"></div>
   <div id="jarvisBootFlash" class="jarvis-boot-flash" aria-hidden="true"></div>
   <div class="sidebar-backdrop" aria-hidden="true"></div>
-  <div class="app">
+  <!-- Legacy shell inventory — demolished from layout under living-workspace (never painted) -->
+  <div class="app" id="ariaLegacyShell">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-icon brand-icon--arc">
@@ -128,6 +194,7 @@
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="planner">Planner</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="calendar">Calendar</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="journal">Journal</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="health">Health</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="memory">Memory</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="projects">Projects</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="documents">Documents</button>
@@ -198,6 +265,7 @@
           <button type="button" class="ghost-btn ws-menu-btn" data-ws-nav="workstationInference">Inference</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="memory">Memory</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="audit">Repair &amp; Logs</button>
+          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="certification">Certification</button>
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="actions">Report</button>
         </div>
       </div>
@@ -272,103 +340,9 @@
           </div>
         </div>
         <div class="sidebar-section-body">
-        <div id="haPanel" class="ha-panel">
-          <section id="smarthomeHomePanel" class="smarthome-home-panel" aria-label="Smart Home Home">
-            <div id="smarthomeRecoveryCard" class="smarthome-recovery-card hidden" role="status"></div>
-            <div class="smarthome-home-toolbar">
-              <input type="search" id="smarthomeSearchInput" class="audio-path-input" placeholder="Search devices…" autocomplete="off" aria-label="Search Smart Home entities" />
-              <button type="button" id="smarthomeSearchBtn" class="ghost-btn small">Search</button>
-              <button type="button" id="smarthomeOpenHaBtn" class="ghost-btn small" title="Open Home Assistant">Open HA</button>
-              <button type="button" id="smarthomeHouseStatusBtn" class="ghost-btn small">Status</button>
-            </div>
-            <p id="smarthomeHomeHealth" class="muted small">—</p>
-            <div class="smarthome-home-grid">
-              <div class="smarthome-home-card">
-                <h3 class="flytying-col-subtitle">Favorites</h3>
-                <ul id="smarthomeFavoritesList" class="smarthome-home-list muted small" role="list"></ul>
-              </div>
-              <div class="smarthome-home-card">
-                <h3 class="flytying-col-subtitle">Scenes</h3>
-                <div id="smarthomeSceneChips" class="ha-quick-actions" aria-label="Scene chips"></div>
-              </div>
-              <div class="smarthome-home-card">
-                <h3 class="flytying-col-subtitle">Rooms</h3>
-                <ul id="smarthomeRoomsList" class="smarthome-home-list muted small" role="list"></ul>
-              </div>
-            </div>
-            <ul id="smarthomeSearchResults" class="smarthome-home-list muted small" aria-live="polite"></ul>
-            <p id="smarthomeSuggestions" class="muted small"></p>
-            <label class="toggle-row">
-              <span>Profile</span>
-              <select id="smarthomeProfileSelect" class="personality-select" aria-label="Smart Home profile"></select>
-              <button type="button" id="smarthomeProfileActivateBtn" class="ghost-btn small">Apply</button>
-            </label>
-          </section>
-          <details id="smarthomeSetupDetails" class="smarthome-setup-details">
-            <summary class="nav-label">Setup &amp; connection</summary>
-          <p id="haStatusLine" class="ha-status-line muted">Checking…</p>
-          <label class="ha-field">
-            <span class="ha-field-label">Home Assistant URL</span>
-            <input type="url" id="haUrlInput" class="audio-path-input ha-url-input" value="http://127.0.0.1:8123" placeholder="http://127.0.0.1:8123" />
-          </label>
-          <label class="ha-field">
-            <span class="ha-field-label">Access token</span>
-            <textarea id="haTokenInput" class="ha-token-input" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="Paste token"></textarea>
-          </label>
-          <p id="haTokenPreview" class="ha-token-preview muted" aria-live="polite"></p>
-          <p id="haTokenHint" class="ha-token-hint muted"></p>
-          <p id="haPanelStatus" class="ha-panel-status muted" aria-live="polite"></p>
-          <div class="ha-token-actions">
-            <button type="button" id="haPasteTokenBtn" class="ghost-btn small">Paste</button>
-            <button type="button" id="haTokenModalBtn" class="ghost-btn small">Dialog…</button>
-          </div>
-          <label class="ha-field">
-            <span class="ha-field-label">Leaving scene</span>
-            <input type="text" id="haLeaveSceneInput" class="audio-path-input" placeholder="scene.leaving (optional)" />
-          </label>
-          <label class="toggle-row ha-enabled-row">
-            <span>Enabled</span>
-            <input type="checkbox" id="haEnabledToggle" checked />
-            <span class="toggle-slider"></span>
-          </label>
-          <div class="ha-actions">
-            <button type="button" id="haTestBtn" class="ghost-btn small">Test</button>
-            <button type="button" id="haSaveBtn" class="apply-btn small">Connect</button>
-          </div>
-          <p id="haWebhookLine" class="ha-webhook-line muted hidden"></p>
-          <button type="button" id="haCopyWebhookBtn" class="ghost-btn small hidden">Copy webhook</button>
-          <div class="ha-quick-actions">
-            <button type="button" class="ghost-btn small ha-quick-btn" data-msg="home status">Home status</button>
-            <button type="button" class="ghost-btn small ha-quick-btn" data-msg="I'm heading out">Heading out</button>
-          </div>
-          <button type="button" id="haSetupWizardBtn" class="ghost-btn small">Guided setup</button>
-          <p class="nav-label lsp-label">Leave scene</p>
-          <input type="text" id="haSceneComposerInput" class="audio-path-input" placeholder="scene.leaving" />
-          <button type="button" id="haSceneSaveBtn" class="ghost-btn small">Save leave scene</button>
-          </details>
-          <div class="ha-entity-browser">
-            <div class="ha-panel-head">
-              <select id="haDomainFilter" class="personality-select ha-domain-select" aria-label="Entity domain" title="Entity domain">
-                <option value="light">Lights</option>
-                <option value="switch">Switches</option>
-                <option value="scene">Scenes</option>
-                <option value="climate">Climate</option>
-                <option value="">All</option>
-              </select>
-              <button type="button" id="haEntitiesRefreshBtn" class="ghost-btn small">Refresh</button>
-            </div>
-            <ul id="haEntityList" class="ha-entity-list muted"></ul>
-          </div>
-          <p class="nav-label lsp-label">Scene presets</p>
-          <div id="scenePresetsBtns" class="ha-quick-actions"></div>
-          <p class="nav-label lsp-label">Kasa (TP-Link)</p>
-          <div id="kasaRoomFilters" class="ha-quick-actions"></div>
-          <p id="kasaStatusLine" class="ha-status-line muted">Kasa: checking…</p>
-          <div class="ha-actions">
-            <button type="button" id="kasaDiscoverBtn" class="ghost-btn small">Discover Kasa</button>
-            <button type="button" id="kasaRefreshBtn" class="ghost-btn small">Refresh</button>
-          </div>
-          <ul id="kasaDeviceList" class="ha-entity-list muted"></ul>
+        <div id="haSidebarStub" class="ha-sidebar-stub">
+          <p class="muted small">Lights, scenes, and Home Assistant live in the Home Automation room.</p>
+          <button type="button" id="sidebarOpenHomeAutoBtn" class="ghost-btn small">Open Home Automation</button>
         </div>
         </div>
       </div>
@@ -562,6 +536,15 @@
     </aside>
 
     <main id="mainContent" class="chat-panel" tabindex="-1">
+      <div id="wsBar" class="hidden" role="banner" aria-label="Living Workspace">
+        <span id="wsActivityLabel">Aria</span>
+        <span id="wsActivityRecipe" class="muted">Choose an activity · Ctrl+K</span>
+        <div class="ws-bar-actions">
+          <button type="button" id="wsSpotlightBtn" class="ghost-btn tiny" title="Activities &amp; tools (Ctrl+K)">Activity</button>
+          <button type="button" id="wsInspectActivityBtn" class="ghost-btn tiny" title="Inspect activity recipe">Recipe</button>
+        </div>
+      </div>
+      <div id="wsToolTray" class="hidden" aria-label="Contextual tools"></div>
       <div id="quickDock" class="quick-dock hidden" role="toolbar" aria-label="Quick Access Dock" data-new-feature="dock"></div>
       <nav class="view-tabs" aria-label="Primary views">
         <button type="button" id="favoriteCurrentViewBtn" class="view-fav-pin" aria-pressed="false" aria-label="Pin current view to Favorites" title="Pin current view to Favorites (★)">★</button>
@@ -580,6 +563,7 @@
         <button type="button" class="view-tab" data-view="security">Security</button>
         <button type="button" class="view-tab" data-view="presence">Presence</button>
         <button type="button" class="view-tab" data-view="audit">System</button>
+        <button type="button" class="view-tab" data-view="certification">Cert</button>
         <button type="button" class="view-tab" data-view="capabilities">Capabilities</button>
         <button type="button" class="view-tab" data-view="integrations">Integrations</button>
         <button type="button" class="view-tab" data-view="search">Search</button>
@@ -588,6 +572,7 @@
         <button type="button" class="view-tab" data-view="vision">Vision</button>
         <button type="button" class="view-tab" data-view="audio">Audio</button>
         <button type="button" class="view-tab" data-view="journal">Bullet Journal</button>
+        <button type="button" class="view-tab" data-view="health">Health</button>
         <button type="button" class="view-tab" data-view="memory">Memory</button>
         <button type="button" class="view-tab" data-view="gallery">Gallery</button>
         <button type="button" class="view-tab" data-view="video">Video</button>
@@ -747,7 +732,7 @@
           </div>
           <div class="input-row">
             <textarea id="messageInput" rows="1" placeholder="Ask Aria… paste or drop files · @memory @document @project" autofocus spellcheck="true"></textarea>
-            <button type="button" id="stopChatBtn" class="stop-chat-btn hidden" aria-label="Stop responding" title="Stop">
+            <button type="button" id="stopChatBtn" class="stop-chat-btn hidden" hidden aria-hidden="true" tabindex="-1" title="Stop">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
             </button>
             <button type="submit" id="sendBtn" aria-label="Send">
@@ -762,9 +747,9 @@
       <div id="uncensoredAuthModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="uncensoredAuthTitle">
         <div class="crop-modal-card profile-modal-card">
           <h3 id="uncensoredAuthTitle">Uncensored mode</h3>
-          <p id="uncensoredAuthIntro" class="profile-modal-intro">Enter your password to enable uncensored mode.</p>
+          <p id="uncensoredAuthIntro" class="profile-modal-intro">Confirm with your Aria Master Password to enable uncensored mode.</p>
           <label class="image-engine-field">
-            <span>Password</span>
+            <span>Aria Master Password</span>
             <input type="password" id="uncensoredPasswordInput" class="personality-select" autocomplete="off" />
           </label>
           <label class="image-engine-field hidden" id="uncensoredConfirmRow">
@@ -846,43 +831,8 @@
         </div>
       </div>
 
-      <dialog id="chatNewDialog" class="aria-dialog">
-        <form method="dialog" class="aria-dialog-card">
-          <h3>New Chat</h3>
-          <p class="muted">Start a fresh conversation. Aria creates the thread for you.</p>
-          <label class="image-engine-field">
-            <span>Title (optional)</span>
-            <input type="text" id="chatNewTitleInput" class="personality-select" placeholder="e.g. Weekend project" autocomplete="off" />
-          </label>
-          <div class="crop-actions profile-modal-actions">
-            <button type="button" value="cancel" class="ghost-btn" onclick="this.closest('dialog')?.close()">Cancel</button>
-            <button type="submit" id="chatNewConfirmBtn" class="apply-btn">Start</button>
-          </div>
-        </form>
-      </dialog>
 
-      <dialog id="ariaPromptDialog" class="aria-dialog">
-        <form method="dialog" class="aria-dialog-card">
-          <h3 id="ariaPromptTitle">Name</h3>
-          <p id="ariaPromptIntro" class="muted"></p>
-          <input type="text" id="ariaPromptInput" class="personality-select" autocomplete="off" />
-          <div class="crop-actions profile-modal-actions">
-            <button type="button" id="ariaPromptCancel" class="ghost-btn" value="cancel">Cancel</button>
-            <button type="submit" id="ariaPromptOk" class="apply-btn" value="ok">OK</button>
-          </div>
-        </form>
-      </dialog>
 
-      <dialog id="ariaConfirmDialog" class="aria-dialog">
-        <form method="dialog" class="aria-dialog-card">
-          <h3 id="ariaConfirmTitle">Confirm</h3>
-          <p id="ariaConfirmBody" class="muted"></p>
-          <div class="crop-actions profile-modal-actions">
-            <button type="button" id="ariaConfirmCancel" class="ghost-btn" value="cancel">Cancel</button>
-            <button type="submit" id="ariaConfirmOk" class="apply-btn" value="ok">Confirm</button>
-          </div>
-        </form>
-      </dialog>
 
       <div id="jobCenterModal" class="crop-modal hidden" role="dialog" aria-modal="true" aria-labelledby="jobCenterTitle">
         <div class="crop-modal-card profile-modal-card job-center-card">
@@ -984,7 +934,7 @@
               <button type="button" id="journalImportBtn" class="ghost-btn small">Import</button>
               <button type="button" id="journalImportEncBtn" class="ghost-btn small">Import encrypted</button>
               <button type="button" id="journalBackupBtn" class="ghost-btn small">Backup now</button>
-              <button type="button" id="journalVoiceLogBtn" class="ghost-btn small" title="Voice → rapid log draft">Voice log</button>
+              <button type="button" id="journalVoiceLogBtn" class="ghost-btn small" title="Voice → rapid log draft" aria-label="Voice draft">Voice draft</button>
               <button type="button" id="journalVisionImportBtn" class="ghost-btn small" title="Paste OCR / scan text">Vision import</button>
               <button type="button" id="journalShortcutsBtn" class="ghost-btn small">Shortcuts (?)</button>
               <button type="button" id="journalUndoBtn" class="ghost-btn small">Undo</button>
@@ -1001,27 +951,85 @@
         </div>
         <p id="journalStats" class="journal-stats"></p>
         <p class="bujo-role-hint muted">Journal = thoughts &amp; rapid log · Planner = actionable work · Calendar = commitments</p>
-        <div id="bujoContent" class="bujo-content"></div>
         <div class="bujo-rapid">
-          <textarea id="rapidLogInput" rows="3" placeholder="Rapid log — one line per entry. Indent 2 spaces to nest under the previous line."></textarea>
+          <textarea id="rapidLogInput" rows="3" placeholder="Rapid log — one line per entry. Indent 2 spaces to nest under the previous line." aria-label="Rapid log entry"></textarea>
           <div class="bujo-rapid-actions">
             <select id="rapidType" aria-label="Default bullet type">
               <option value="task">• Task</option>
               <option value="event">○ Event</option>
               <option value="note">— Note</option>
             </select>
-            <button type="button" id="rapidLogBtn" class="apply-btn small">Add</button>
+            <button type="button" id="rapidLogBtn" class="apply-btn small" aria-label="Add to journal">Add to journal</button>
             <label class="bujo-typewriter-toggle" title="Typewriter scroll">
               <input type="checkbox" id="bujoTypewriter" /> Typewriter
             </label>
           </div>
         </div>
+        <div id="bujoContent" class="bujo-content"></div>
         <div id="bujoWritingChrome" class="bujo-writing-chrome hidden" aria-hidden="true">
           <span id="bujoWordCount" class="bujo-word-count">0 words</span>
           <span id="bujoWriteTime" class="bujo-write-time"></span>
           <button type="button" id="bujoExitWriting" class="ghost-btn small">Exit writing (Esc)</button>
         </div>
         <div id="bujoShortcutOverlay" class="bujo-shortcut-overlay hidden" role="dialog" aria-label="Journal shortcuts"></div>
+      </div>
+
+      <div id="healthView" class="view-panel hidden" role="region" aria-label="Health">
+        <div class="health-header">
+          <div>
+            <h2>Health</h2>
+            <p class="muted tiny">Personal Health Record — local, private, printable. Not an EMR. Aria does not diagnose or prescribe.</p>
+          </div>
+          <div class="health-header-actions">
+            <button type="button" id="healthUploadBtn" class="ghost-btn small" title="Upload a medical document">Upload</button>
+            <input type="file" id="healthUploadInput" accept=".pdf,image/*,.txt,.docx,application/pdf" hidden aria-label="Upload health document" />
+            <button type="button" id="healthDoctorBtn" class="ghost-btn small">Doctor visit</button>
+            <button type="button" id="healthEmergencyBtn" class="ghost-btn small">Emergency</button>
+            <button type="button" id="healthRefreshBtn" class="ghost-btn small">Refresh</button>
+          </div>
+        </div>
+        <p id="healthDisclaimer" class="health-disclaimer muted tiny"></p>
+        <nav class="health-tabs" aria-label="Health sections">
+          <button type="button" class="health-tab active" data-htab="timeline">Timeline</button>
+          <button type="button" class="health-tab" data-htab="dashboard">Dashboard</button>
+          <button type="button" class="health-tab" data-htab="checkin">Check-in</button>
+          <button type="button" class="health-tab" data-htab="activity">Activity</button>
+          <button type="button" class="health-tab" data-htab="workouts">Workouts</button>
+          <button type="button" class="health-tab" data-htab="goals">Goals</button>
+          <button type="button" class="health-tab" data-htab="trends">Trends</button>
+          <button type="button" class="health-tab" data-htab="meds">Meds</button>
+          <button type="button" class="health-tab" data-htab="supps">Supplements</button>
+          <button type="button" class="health-tab" data-htab="recovery">Recovery</button>
+          <button type="button" class="health-tab" data-htab="history">History</button>
+          <button type="button" class="health-tab" data-htab="journal">Journal</button>
+          <button type="button" class="health-tab" data-htab="knowledge">Knowledge</button>
+          <button type="button" class="health-tab" data-htab="providers">Providers</button>
+          <button type="button" class="health-tab" data-htab="procedures">Procedures</button>
+          <button type="button" class="health-tab" data-htab="family">Family</button>
+          <button type="button" class="health-tab" data-htab="preventive">Preventive</button>
+          <button type="button" class="health-tab" data-htab="nutrition">Nutrition</button>
+          <button type="button" class="health-tab" data-htab="insights">Insights</button>
+          <button type="button" class="health-tab" data-htab="visitprep">Visit prep</button>
+          <button type="button" class="health-tab" data-htab="backups">Backups</button>
+          <button type="button" class="health-tab" data-htab="security">Security</button>
+          <button type="button" class="health-tab" data-htab="vitals">Vitals</button>
+          <button type="button" class="health-tab" data-htab="labs">Labs</button>
+          <button type="button" class="health-tab" data-htab="docs">Documents</button>
+          <button type="button" class="health-tab" data-htab="questions">Questions</button>
+          <button type="button" class="health-tab" data-htab="coach">Coach</button>
+          <button type="button" class="health-tab" data-htab="consult">Consult</button>
+          <button type="button" class="health-tab" data-htab="reminders">Reminders</button>
+          <button type="button" class="health-tab" data-htab="print">Print / Export</button>
+          <button type="button" class="health-tab" data-htab="profile">Profile</button>
+        </nav>
+        <div class="health-toolbar">
+          <input type="search" id="healthSearch" placeholder="Search Health…" aria-label="Search Health" />
+          <button type="button" id="healthSearchBtn" class="ghost-btn small">Search</button>
+          <input type="text" id="healthNl" placeholder="My sugar was 121 this morning…" aria-label="Natural language health update" />
+          <button type="button" id="healthNlBtn" class="apply-btn small">Log</button>
+        </div>
+        <p id="healthStatus" class="muted tiny" aria-live="polite"></p>
+        <div id="healthBody" class="health-body"></div>
       </div>
 
       <div id="memoryView" class="view-panel hidden">
@@ -1153,6 +1161,18 @@
             <div id="memoryList" class="memory-list" aria-busy="false"></div>
           </details>
 
+          <section class="memory-panel memory-panel-wide" id="memoryKnowledgePanel" aria-labelledby="memoryKnowledgeTitle">
+            <h3 id="memoryKnowledgeTitle">Knowledge Briefs</h3>
+            <p class="muted tiny">Nightly research briefs — not Memory, not Documents, not Connections. Run research only when you want a new pass.</p>
+            <div class="memory-toolbar">
+              <button type="button" id="knowledgeResearchRunBtn" class="ghost-btn small">Run research</button>
+              <button type="button" id="knowledgeResearchJobsBtn" class="ghost-btn small">Jobs</button>
+              <span id="knowledgeResearchStatus" class="muted tiny" aria-live="polite"></span>
+            </div>
+            <div id="knowledgeResearchTopics" class="muted tiny"></div>
+            <ul id="knowledgeResearchList" class="memory-candidate-list muted"><li class="muted">Loading briefs…</li></ul>
+          </section>
+
           <aside class="memory-knowledge-sep muted">
             <strong>Knowledge separation:</strong> Memory = autobiography about you.
             Knowledge / research / RAG / documents are separate — adopt into Memory only after review.
@@ -1193,7 +1213,7 @@
 
         <section id="galleryGenerateSection" class="image-engine-panel" aria-label="Generation">
           <h3>Generation</h3>
-          <p class="muted small">Stays in Gallery — same shared Image Generation pipeline as Chat / MCP / Automation.</p>
+          <p class="muted small">Stays in Gallery — same shared Image Generation pipeline as Chat / MCP / Automation. Chat command equivalent: generate image:</p>
           <div class="planner-add-row image-engine-generate-row">
             <input type="text" id="galleryPromptInput" class="audio-path-input" placeholder="Describe an image to generate…" aria-label="Image generation prompt" />
             <button type="button" id="galleryGenerateBtn" class="apply-btn small">Generate</button>
@@ -1984,6 +2004,7 @@
               <option value="holiday">Holidays</option>
             </select>
             <input type="search" id="calendarSearch" class="audio-path-input" placeholder="Search events…" aria-label="Search calendar" />
+            <p id="calendarSearchStatus" class="muted tiny" aria-live="polite"></p>
             <button type="button" id="calendarOpenPlannerBtn" class="ghost-btn small" title="Open Planner">Planner</button>
             <button type="button" id="calendarOpenJournalBtn" class="ghost-btn small" title="Open Bullet Journal">Journal</button>
             <button type="button" id="calendarOpenDocumentsBtn" class="ghost-btn small" title="Open Documents">Documents</button>
@@ -2018,6 +2039,7 @@
               <div class="sidebar-btn-row">
                 <button type="button" id="calendarVisionBtn" class="ghost-btn small">Vision import</button>
                 <button type="button" id="calendarMemoryBtn" class="ghost-btn small">Memory dates</button>
+                <div id="calendarMemoryPanel" class="muted tiny" hidden></div>
                 <button type="button" id="calendarHaMeetingBtn" class="ghost-btn small">HA Meeting mode</button>
               </div>
             </details>
@@ -2109,7 +2131,7 @@
               <div id="flytyingVideosBody" class="flytying-videos-body">
               <div class="flytying-add-video">
                 <input type="url" id="flytyingCustomVideoUrl" placeholder="Paste YouTube, Vimeo, or Fly Fish Food URL…" />
-                <button type="button" id="flytyingAddVideoBtn" class="ghost-btn small">Add</button>
+                <button type="button" id="flytyingAddVideoBtn" class="ghost-btn small" aria-label="Add video">Add video</button>
               </div>
               <input type="search" id="flytyingVideoSearch" class="flytying-video-search" placeholder="Filter videos…" />
               <ul id="flytyingVideoList" class="flytying-video-list"></ul>
@@ -2126,10 +2148,24 @@
               </div>
             </div>
             <div id="flytyingComparePanel" class="flytying-compare-panel hidden"></div>
-            <div id="flytyingVideoPlayer" class="flytying-video-player hidden" aria-label="Pattern video"></div>
-            <div id="flytyingStepPanel" class="flytying-step-panel hidden"></div>
-            <div id="flytyingRecipeDetail" class="flytying-recipe-detail">
-              <p class="muted">Select a pattern from the list.</p>
+            <div class="flytying-workflow-grid">
+              <section class="flytying-workflow-panel flytying-video-workflow" aria-labelledby="flytyingVideoHeading">
+                <div class="flytying-workflow-head">
+                  <h4 id="flytyingVideoHeading">Video</h4>
+                  <p class="muted small">Selected tying tutorial</p>
+                </div>
+                <div id="flytyingVideoPlayer" class="flytying-video-player hidden" aria-label="Pattern video"></div>
+              </section>
+              <section class="flytying-workflow-panel flytying-recipe-workflow" aria-labelledby="flytyingRecipeHeading">
+                <div class="flytying-workflow-head">
+                  <h4 id="flytyingRecipeHeading">Recipe</h4>
+                  <p class="muted small">Pattern information, materials, and written instructions</p>
+                </div>
+                <div id="flytyingStepPanel" class="flytying-step-panel hidden"></div>
+                <div id="flytyingRecipeDetail" class="flytying-recipe-detail">
+                  <p class="muted">Select a pattern from the list.</p>
+                </div>
+              </section>
             </div>
           </main>
           <aside class="flytying-col flytying-col-chat">
@@ -2157,12 +2193,12 @@
                         <th class="flytying-inv-actions-col"></th>
                       </tr>
                       <tr class="flytying-inv-entry-row">
-                        <td><input type="text" id="flytyingInvWhat" placeholder="hook, thread…" autocomplete="off" /></td>
-                        <td><input type="text" id="flytyingInvColor" placeholder="olive" autocomplete="off" /></td>
-                        <td><input type="text" id="flytyingInvSize" placeholder="14, 8/0" autocomplete="off" /></td>
-                        <td><input type="text" id="flytyingInvBrand" placeholder="Uni" autocomplete="off" /></td>
-                        <td><input type="text" id="flytyingInvNotes" placeholder="optional" autocomplete="off" /></td>
-                        <td><button type="button" id="flytyingManualAddBtn" class="apply-btn tiny">Add</button></td>
+                        <td><input type="text" id="flytyingInvWhat" name="material_what" placeholder="What (hook, thread…)" aria-label="Material what" autocomplete="off" /></td>
+                        <td><input type="text" id="flytyingInvColor" placeholder="olive" aria-label="Material color" autocomplete="off" /></td>
+                        <td><input type="text" id="flytyingInvSize" placeholder="14, 8/0" aria-label="Material size" autocomplete="off" /></td>
+                        <td><input type="text" id="flytyingInvBrand" placeholder="Uni" aria-label="Material brand" autocomplete="off" /></td>
+                        <td><input type="text" id="flytyingInvNotes" placeholder="optional" aria-label="Material notes" autocomplete="off" /></td>
+                        <td><button type="button" id="flytyingManualAddBtn" class="apply-btn tiny" aria-label="Add material">Add material</button></td>
                       </tr>
                     </thead>
                     <tbody id="flytyingInventoryBody"></tbody>
@@ -2383,9 +2419,35 @@
           <button type="button" id="securityOpenVoiceBtn" class="ghost-btn small" title="Open Voice">Voice</button>
         </div>
         <p id="securityStatusLine" class="muted">Loading…</p>
+        <section class="checklist-section" id="ownerSecuritySection">
+          <h3>Aria Master Password</h3>
+          <p class="muted">One password unlocks Aria. External service keys stay underneath — not extra Aria passwords.</p>
+          <div id="ownerSetupForm">
+            <label class="owner-pw-label" for="ownerMasterInput">Create Master Password</label>
+            <input type="password" id="ownerMasterInput" class="audio-path-input" autocomplete="new-password" minlength="12" placeholder="At least 12 characters" />
+            <label class="owner-pw-label" for="ownerMasterConfirm">Confirm Master Password</label>
+            <input type="password" id="ownerMasterConfirm" class="audio-path-input" autocomplete="new-password" minlength="12" placeholder="Confirm password" />
+            <div class="planner-add-row">
+              <button type="button" id="ownerSetupBtn" class="apply-btn">Create Master Password</button>
+            </div>
+          </div>
+          <div id="ownerRecoveryPanel" class="hidden">
+            <p><strong>Store this recovery key offline.</strong> Aria cannot recover a forgotten Master Password without it. This is shown once.</p>
+            <p id="ownerRecoveryKey" class="owner-recovery-key" aria-live="polite"></p>
+            <label class="owner-ack-row"><input type="checkbox" id="ownerRecoveryAck" /> I have stored this recovery key offline</label>
+            <button type="button" id="ownerRecoveryAckBtn" class="apply-btn">Continue</button>
+          </div>
+          <div id="ownerUnlockedPanel" class="hidden">
+            <p id="ownerSessionLine" class="muted">Owner session: …</p>
+            <div class="planner-add-row">
+              <button type="button" id="ownerLockBtn" class="ghost-btn small">Lock Aria</button>
+            </div>
+          </div>
+          <p id="ownerSecurityStatus" class="muted" aria-live="polite"></p>
+        </section>
         <section class="checklist-section">
-          <h3>PIN lock</h3>
-          <p class="muted">Set a PIN and enable <code>JARVIS_PIN_LOCK=1</code> in jarvis.env.</p>
+          <h3>Optional PIN</h3>
+          <p class="muted">Convenience only — never a second Aria password. Primary unlock is the Master Password. Enable <code>JARVIS_PIN_LOCK=1</code> only if you want PIN lock without a vault.</p>
           <div class="planner-add-row">
             <input type="password" id="securityPinInput" class="audio-path-input" inputmode="numeric" maxlength="6" placeholder="4–6 digit PIN" autocomplete="new-password" />
             <button type="button" id="securityPinBtn" class="ghost-btn small">Set PIN</button>
@@ -2435,7 +2497,114 @@
         <p id="gestureCalibSteps" class="muted" aria-live="polite"></p>
       </div>
 
-      <div id="searchView" class="view-panel hidden search-workspace" role="region" aria-label="Search Home">
+            <div id="homeAutomationView" class="view-panel hidden" role="region" aria-label="Home Automation">
+        <div class="presence-header-row">
+          <h2>Home Automation</h2>
+          <button type="button" id="homeAutoOpenPresenceBtn" class="ghost-btn small" title="Open Presence">Presence</button>
+          <button type="button" id="homeAutoOpenSecurityBtn" class="ghost-btn small" title="Open Security">Security</button>
+        </div>
+        <p class="muted tiny">Lights, scenes, and Home Assistant — control the room around you.</p>
+        <div id="haPanel" class="ha-panel">
+          <section id="smarthomeHomePanel" class="smarthome-home-panel" aria-label="Smart Home Home">
+            <div id="smarthomeRecoveryCard" class="smarthome-recovery-card hidden" role="status"></div>
+            <div class="smarthome-home-toolbar">
+              <input type="search" id="smarthomeSearchInput" class="audio-path-input" placeholder="Search devices…" autocomplete="off" aria-label="Search Smart Home entities" />
+              <button type="button" id="smarthomeSearchBtn" class="ghost-btn small">Search</button>
+              <button type="button" id="smarthomeOpenHaBtn" class="ghost-btn small" title="Open Home Assistant">Open HA</button>
+              <button type="button" id="smarthomeHouseStatusBtn" class="ghost-btn small">Status</button>
+            </div>
+            <p id="smarthomeHomeHealth" class="muted small">—</p>
+            <div class="smarthome-home-grid">
+              <div class="smarthome-home-card">
+                <h3 class="flytying-col-subtitle">Favorites</h3>
+                <ul id="smarthomeFavoritesList" class="smarthome-home-list muted small" role="list"></ul>
+              </div>
+              <div class="smarthome-home-card">
+                <h3 class="flytying-col-subtitle">Scenes</h3>
+                <div id="smarthomeSceneChips" class="ha-quick-actions" aria-label="Scene chips"></div>
+              </div>
+              <div class="smarthome-home-card">
+                <h3 class="flytying-col-subtitle">Rooms</h3>
+                <ul id="smarthomeRoomsList" class="smarthome-home-list muted small" role="list"></ul>
+              </div>
+            </div>
+            <ul id="smarthomeSearchResults" class="smarthome-home-list muted small" aria-live="polite"></ul>
+            <p id="smarthomeSuggestions" class="muted small"></p>
+            <label class="toggle-row">
+              <span>Profile</span>
+              <select id="smarthomeProfileSelect" class="personality-select" aria-label="Smart Home profile"></select>
+              <button type="button" id="smarthomeProfileActivateBtn" class="ghost-btn small">Apply</button>
+            </label>
+          </section>
+          <details id="smarthomeSetupDetails" class="smarthome-setup-details">
+            <summary class="nav-label">Setup &amp; connection</summary>
+          <p id="haStatusLine" class="ha-status-line muted">Checking…</p>
+          <label class="ha-field">
+            <span class="ha-field-label">Home Assistant URL</span>
+            <input type="url" id="haUrlInput" class="audio-path-input ha-url-input" value="http://127.0.0.1:8123" placeholder="http://127.0.0.1:8123" />
+          </label>
+          <label class="ha-field">
+            <span class="ha-field-label">Access token</span>
+            <textarea id="haTokenInput" class="ha-token-input" rows="3" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="Paste token"></textarea>
+          </label>
+          <p id="haTokenPreview" class="ha-token-preview muted" aria-live="polite"></p>
+          <p id="haTokenHint" class="ha-token-hint muted"></p>
+          <p id="haPanelStatus" class="ha-panel-status muted" aria-live="polite"></p>
+          <div class="ha-token-actions">
+            <button type="button" id="haPasteTokenBtn" class="ghost-btn small">Paste</button>
+            <button type="button" id="haTokenModalBtn" class="ghost-btn small">Dialog…</button>
+          </div>
+          <label class="ha-field">
+            <span class="ha-field-label">Leaving scene</span>
+            <input type="text" id="haLeaveSceneInput" class="audio-path-input" placeholder="scene.leaving (optional)" />
+          </label>
+          <label class="toggle-row ha-enabled-row">
+            <span>Enabled</span>
+            <input type="checkbox" id="haEnabledToggle" checked />
+            <span class="toggle-slider"></span>
+          </label>
+          <div class="ha-actions">
+            <button type="button" id="haTestBtn" class="ghost-btn small">Test</button>
+            <button type="button" id="haSaveBtn" class="apply-btn small">Connect</button>
+          </div>
+          <p id="haWebhookLine" class="ha-webhook-line muted hidden"></p>
+          <button type="button" id="haCopyWebhookBtn" class="ghost-btn small hidden">Copy webhook</button>
+          <div class="ha-quick-actions">
+            <button type="button" class="ghost-btn small ha-quick-btn" data-msg="home status">Home status</button>
+            <button type="button" class="ghost-btn small ha-quick-btn" data-msg="I'm heading out">Heading out</button>
+          </div>
+          <button type="button" id="haSetupWizardBtn" class="ghost-btn small">Guided setup</button>
+          <p class="nav-label lsp-label">Leave scene</p>
+          <input type="text" id="haSceneComposerInput" class="audio-path-input" placeholder="scene.leaving" />
+          <button type="button" id="haSceneSaveBtn" class="ghost-btn small">Save leave scene</button>
+          </details>
+          <div class="ha-entity-browser">
+            <div class="ha-panel-head">
+              <select id="haDomainFilter" class="personality-select ha-domain-select" aria-label="Entity domain" title="Entity domain">
+                <option value="light">Lights</option>
+                <option value="switch">Switches</option>
+                <option value="scene">Scenes</option>
+                <option value="climate">Climate</option>
+                <option value="">All</option>
+              </select>
+              <button type="button" id="haEntitiesRefreshBtn" class="ghost-btn small">Refresh</button>
+            </div>
+            <ul id="haEntityList" class="ha-entity-list muted"></ul>
+          </div>
+          <p class="nav-label lsp-label">Scene presets</p>
+          <div id="scenePresetsBtns" class="ha-quick-actions"></div>
+          <p class="nav-label lsp-label">Kasa (TP-Link)</p>
+          <div id="kasaRoomFilters" class="ha-quick-actions"></div>
+          <p id="kasaStatusLine" class="ha-status-line muted">Kasa: checking…</p>
+          <div class="ha-actions">
+            <button type="button" id="kasaDiscoverBtn" class="ghost-btn small">Discover Kasa</button>
+            <button type="button" id="kasaRefreshBtn" class="ghost-btn small">Refresh</button>
+          </div>
+          <ul id="kasaDeviceList" class="ha-entity-list muted"></ul>
+        </div>
+      </div>
+
+<div id="searchView" class="view-panel hidden search-workspace" role="region" aria-label="Search Home">
         <div id="searchHomeRoot">
           <header class="search-header">
             <div>
@@ -2547,6 +2716,11 @@
               <label class="toggle-row small"><span>Quick dock</span><input type="checkbox" id="settingsDockToggle" checked /></label>
               <label class="toggle-row small"><span>Status bar</span><input type="checkbox" id="settingsStatusToggle" checked /></label>
               <label class="toggle-row small"><span>Mini chat</span><input type="checkbox" id="settingsMiniChatToggle" checked /></label>
+              <h3 class="flytying-col-subtitle">Atmosphere</h3>
+              <label class="toggle-row small"><span>Room atmosphere</span><input type="checkbox" id="settingsAtmosphereToggle" checked /></label>
+              <label class="toggle-row small"><span>Weather light</span><input type="checkbox" id="settingsWeatherAtmToggle" checked /></label>
+              <label class="toggle-row small"><span>Season tint</span><input type="checkbox" id="settingsSeasonAtmToggle" checked /></label>
+              <label class="toggle-row small"><span>Soft UI sounds</span><input type="checkbox" id="settingsAmbientSoundToggle" /></label>
               <button type="button" id="settingsResetAppearanceBtn" class="ghost-btn tiny">Reset appearance</button>
               <h3 class="flytying-col-subtitle">Profiles</h3>
               <select id="settingsProfileSelect" class="personality-select" aria-label="Preference profile"></select>
@@ -2599,7 +2773,7 @@
           <ul id="integrationsUsageList" class="integrations-usage-list muted small"></ul>
         </section>
         <details class="integrations-experimental">
-          <summary>Experimental</summary>
+          <summary>Advanced options</summary>
           <div id="integrationsExperimental" class="muted small"></div>
         </details>
       </div>
@@ -2662,7 +2836,7 @@
           <ul id="capabilitiesActivity" class="capabilities-activity-list muted small"></ul>
         </section>
         <details class="capabilities-experimental">
-          <summary>Experimental</summary>
+          <summary>Advanced options</summary>
           <div id="capabilitiesExperimental" class="muted small"></div>
         </details>
       </div>
@@ -2682,6 +2856,50 @@
         <p class="muted audit-hint">14 phases: OS · packages · storage/SMART · memory · hardware/sensors · GPU · services/desktop · containers · dev tools · integrity · performance · security · network · Jarvis/AI.</p>
         <div id="auditReportBody" class="audit-report-body">
           <p class="muted">No audit run yet. <button type="button" class="ghost-btn tiny audit-empty-run">Run full audit</button></p>
+        </div>
+      </div>
+
+      <div id="certificationView" class="view-panel hidden" role="region" aria-label="Certification Dashboard">
+        <div class="audit-header cert-header">
+          <div>
+            <h2>Certification Dashboard</h2>
+            <p class="muted">Evidence-driven release gate — no PASS without assertions, API traces, files, and cross-system proof.</p>
+            <p id="certGateLine" class="cert-gate-line" aria-live="polite">—</p>
+            <p id="certStatusLine" class="muted" aria-live="polite">Load a run or start certification.</p>
+          </div>
+          <div class="audit-header-actions">
+            <button type="button" id="certOpenAuditBtn" class="ghost-btn small">System Audit</button>
+            <button type="button" id="certRefreshBtn" class="ghost-btn small">Refresh</button>
+            <button type="button" id="certRunBtn" class="ghost-btn small" title="Fast suites (skips long image gen)">Run cert</button>
+            <button type="button" id="certRunFullBtn" class="ghost-btn small" title="Includes image generate/delete/restore">Full (image)</button>
+          </div>
+        </div>
+        <div class="cert-grid" id="certHomeBody">
+          <section class="cert-card">
+            <h3>Blockers</h3>
+            <div id="certBlockers" class="muted">—</div>
+          </section>
+          <section class="cert-card">
+            <h3>Features</h3>
+            <div id="certFeatures" class="muted">—</div>
+          </section>
+          <section class="cert-card">
+            <h3>History</h3>
+            <div id="certHistory" class="muted">—</div>
+          </section>
+        </div>
+        <div class="cert-detail" id="certDetailBody">
+          <h3 id="certDetailTitle">Run detail</h3>
+          <p id="certDetailMeta" class="muted">Select a run from history.</p>
+          <label class="cert-search-label">Assertion search
+            <input type="search" id="certAssertSearch" class="personality-select" placeholder="Filter assertions…" />
+          </label>
+          <h4>Assertions</h4>
+          <div id="certAssertions" class="cert-scroll muted">—</div>
+          <h4>API evidence</h4>
+          <div id="certApiCalls" class="cert-scroll muted">—</div>
+          <h4>Evidence files</h4>
+          <div id="certEvidence" class="cert-scroll muted">—</div>
         </div>
       </div>
 
@@ -2763,6 +2981,7 @@
           <button type="button" id="visionHomeRefreshBtn" class="ghost-btn small">Refresh</button>
         </div>
         <p id="visionHomeStatus" class="muted" role="status">Loading…</p>
+        <p class="muted tiny">OCR entry point: enter an image/PDF page path, then choose <strong>OCR</strong> or <strong>Structured OCR</strong> below. Command Palette also knows “Run OCR in Vision Home”.</p>
         <div id="visionHonesty" class="vision-honesty-card" aria-live="polite"></div>
         <div class="vision-tab-settings">
           <label>Profile
@@ -2778,7 +2997,7 @@
             </select>
           </label>
           <label class="toggle-row"><span>Speak results (Voice)</span><input type="checkbox" id="visionHomeSpeak" /><span class="toggle-slider"></span></label>
-          <label>Image path <input type="text" id="visionHomePath" class="audio-path-input" placeholder="/path/or/upload" aria-label="Vision image path" /></label>
+          <label>Image/PDF page path for OCR <input type="text" id="visionHomePath" class="audio-path-input" placeholder="/path/to/image-or-page" aria-label="Vision image or PDF page path for OCR" /></label>
           <label>Compare path B <input type="text" id="visionHomePath2" class="audio-path-input" placeholder="optional second image" aria-label="Compare image path B" /></label>
           <label>Question <input type="text" id="visionHomeQuestion" class="audio-path-input" placeholder="optional question" /></label>
           <label>Import target
@@ -2793,7 +3012,7 @@
             </select>
           </label>
         </div>
-        <div id="visionHomeActions" class="sidebar-btn-row" role="toolbar" aria-label="Vision actions"></div>
+        <div id="visionHomeActions" class="sidebar-btn-row" role="toolbar" aria-label="Vision OCR and image actions"></div>
         <div class="sidebar-btn-row">
           <button type="button" id="visionHomeSpeakOcrBtn" class="ghost-btn small">Speak OCR (Voice)</button>
           <button type="button" id="visionHomeBatchBtn" class="ghost-btn small">Refresh batch</button>
@@ -2804,7 +3023,7 @@
         <h3 class="life-subheading">History</h3>
         <div id="visionHistoryList" class="vision-history-list"></div>
         <details class="vision-exp-details">
-          <summary>Experimental (env-gated)</summary>
+          <summary>Advanced vision options</summary>
           <pre id="visionExperimentalStatus" class="cheatsheet-content muted"></pre>
         </details>
         <p class="muted">Vision understands images — Image Generation creates them; Gallery stores them; Presence is gestures only. Shortcuts: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>I</kbd> Vision Home · action rail after attach.</p>
@@ -2866,7 +3085,7 @@
           <button type="button" id="commandPaletteRetryBtn" class="ghost-btn tiny command-palette-retry hidden">Retry search</button>
           <div id="commandPaletteHelp" class="command-palette-help muted hidden" role="region" aria-label="Palette help">
             <p><strong>Modes:</strong> <code>&gt;navigate</code> <code>&gt;action</code> <code>&gt;search</code> <code>&gt;ask</code> <code>&gt;context</code> <code>&gt;system</code> · Tab cycles modes</p>
-            <p><strong>Keys:</strong> ↑↓ move · Enter run · Ctrl+P pin · ? help · Esc close</p>
+            <p><strong>Keys:</strong> ↑↓ move · Enter run · Ctrl+P pin · Ctrl+L layouts · ? help · Esc close</p>
             <p>Natural-language sentences prefer <strong>Ask Aria</strong> (auto-sends to Chat).</p>
           </div>
           <ul id="commandPaletteList" class="command-palette-list" role="listbox" aria-label="Commands"></ul>
@@ -3198,6 +3417,45 @@
     </span>
   </footer>
 
+  <!-- Owner dialogs — must be outside #ariaLegacyShell so Living Workspace can show them -->
+  <dialog id="chatNewDialog" class="aria-dialog">
+    <form method="dialog" class="aria-dialog-card">
+      <h3>New Chat</h3>
+      <p class="muted">Start a fresh conversation. Aria creates the thread for you.</p>
+      <label class="image-engine-field">
+        <span>Title (optional)</span>
+        <input type="text" id="chatNewTitleInput" class="personality-select" placeholder="e.g. Weekend project" autocomplete="off" />
+      </label>
+      <div class="crop-actions profile-modal-actions">
+        <button type="submit" id="chatNewCancelBtn" value="cancel" class="ghost-btn">Cancel</button>
+        <button type="submit" id="chatNewConfirmBtn" class="apply-btn" value="ok">Start</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="ariaPromptDialog" class="aria-dialog">
+    <form method="dialog" class="aria-dialog-card">
+      <h3 id="ariaPromptTitle">Name</h3>
+      <p id="ariaPromptIntro" class="muted"></p>
+      <input type="text" id="ariaPromptInput" class="personality-select" autocomplete="off" />
+      <div class="crop-actions profile-modal-actions">
+        <button type="button" id="ariaPromptCancel" class="ghost-btn" value="cancel">Cancel</button>
+        <button type="submit" id="ariaPromptOk" class="apply-btn" value="ok">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="ariaConfirmDialog" class="aria-dialog">
+    <form method="dialog" class="aria-dialog-card">
+      <h3 id="ariaConfirmTitle">Confirm</h3>
+      <p id="ariaConfirmBody" class="muted"></p>
+      <div class="crop-actions profile-modal-actions">
+        <button type="button" id="ariaConfirmCancel" class="ghost-btn" value="cancel">Cancel</button>
+        <button type="button" id="ariaConfirmOk" class="apply-btn" value="ok">Confirm</button>
+      </div>
+    </form>
+  </dialog>
+
   <button type="button" id="miniChatFab" class="mini-chat-fab" title="Mini chat (Ctrl+Shift+K)" aria-label="Open mini chat">✦</button>
   <div id="miniChatPanel" class="mini-chat-panel hidden" role="dialog" aria-label="Mini chat">
     <div class="mini-chat-head">
@@ -3263,12 +3521,25 @@
     </div>
   </div>
   <div id="gestureCursor" class="gesture-cursor hidden" aria-hidden="true"></div>
+  <div id="wsSpotlight" class="hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Front Door (legacy host)">
+    <div class="ws-spot-card">
+      <p class="muted">Opening the Front Door…</p>
+      <div class="ws-bar-actions" style="margin-top:0.5rem">
+        <button type="button" id="wsSpotlightClose" class="ghost-btn tiny">Close</button>
+      </div>
+    </div>
+  </div>
   <div id="lockScreen" class="lock-screen hidden" role="dialog" aria-modal="true">
     <div class="lock-card">
-      <h2>ARIA locked</h2>
-      <p class="muted">Enter PIN, face unlock, or use a trusted device</p>
-      <input type="password" id="lockPinInput" class="audio-path-input" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="off" aria-label="PIN" />
-      <label class="toggle-row"><span>Trust this device</span><input type="checkbox" id="lockTrustDevice" /></label>
+      <h2 id="lockScreenTitle">ARIA locked</h2>
+      <p id="lockScreenHint" class="muted">Aria is locked. Enter your Aria Master Password to unlock the house.</p>
+      <div id="lockMasterBlock" class="hidden">
+        <input type="password" id="lockMasterInput" class="audio-path-input" placeholder="Aria Master Password" autocomplete="current-password" aria-label="Aria Master Password" />
+      </div>
+      <div id="lockPinBlock">
+        <input type="password" id="lockPinInput" class="audio-path-input" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="off" aria-label="PIN" />
+      </div>
+      <label id="lockTrustRow" class="toggle-row"><span>Trust this device</span><input type="checkbox" id="lockTrustDevice" /></label>
       <div class="ha-actions">
         <button type="button" id="lockUnlockBtn" class="apply-btn">Unlock</button>
         <button type="button" id="lockFaceBtn" class="ghost-btn">Unlock with face</button>
@@ -3277,127 +3548,156 @@
     </div>
   </div>
   <script src="/static/api_key_fetch.js?v=1.0.0"></script>
-  <script src="/static/lock_screen.js?v=5.16.102"></script>
+  <script src="/static/aria_mutate.js?v=1.0.0"></script>
+  <script src="/static/owner_experience.js?v=1.0.0-onepw"></script>
+  <script src="/static/lock_screen.js?v=5.17.3-daily-session"></script>
   <script src="/static/audio_studio.js?v=5.16.101"></script>
   <script src="/static/audio_advanced.js?v=1.5.4"></script>
-  <script src="/static/audio.js?v=5.16.160"></script>
-  <script src="/static/journal.js?v=5.17.0"></script>
-  <script src="/static/video_studio.js?v=5.16.160"></script>
-  <script src="/static/meme_studio.js?v=1.1.5"></script>
-  <script src="/static/smarthome.js?v=5.16.73"></script>
+  <script src="/static/audio.js?v=5.16.163-bug002"></script>
+  <script src="/static/journal.js?v=5.17.10-navfix"></script>
+  <script src="/static/health.js?v=1.4.3-residency"></script>
+  <script src="/static/video_studio.js?v=5.16.164-remount"></script>
+  <script src="/static/meme_studio.js?v=1.1.6-residency"></script>
+  <script src="/static/smarthome.js?v=5.16.74"></script>
   <script src="/static/chat_sessions.js?v=5.17.0"></script>
   <script src="/static/documents.js?v=2.1.0"></script>
-  <script src="/static/connections.js?v=1.0.0"></script>
-  <script src="/static/movie_tiers.js?v=5.16.141"></script>
-  <script src="/static/ha_extras.js?v=1.0.0"></script>
-  <script src="/static/actions_view.js?v=1.0.0"></script>
+  <script src="/static/connections.js?v=1.0.5-browse-all"></script>
+  <script src="/static/movie_tiers.js?v=6.5.2-residency"></script>
+  <script src="/static/ha_extras.js?v=1.0.4-retry"></script>
+  <script src="/static/actions_view.js?v=1.0.1-residency"></script>
   <script src="/static/gemini_live.js?v=5.16.70"></script>
-  <script src="/static/voice_bar.js?v=5.16.97"></script>
+  <script src="/static/voice_bar.js?v=5.16.98"></script>
   <script src="/static/jarvis_ambient.js?v=1.2.0"></script>
-  <script type="module" src="/static/modules/jobs.mjs?v=5.16.73"></script>
-  <script type="module" src="/static/modules/health.mjs?v=5.16.72"></script>
-  <script src="/static/planner.js?v=5.16.171"></script>
-  <script src="/static/dashboard_home.js?v=1.0.0"></script>
-  <script src="/static/planner_live.js?v=1.0.0"></script>
-  <script src="/static/mission_control.js?v=1.1.0"></script>
-  <script src="/static/mission_control_ux.js?v=1.0.0"></script>
-  <script src="/static/models_home.js?v=1.0.0"></script>
-  <script src="/static/coding_home.js?v=1.0.0"></script>
-  <script src="/static/calendar.js?v=5.17.0"></script>
-  <script src="/static/flytying.js?v=5.17.0"></script>
-  <script src="/static/flytying_home.js?v=1.0.0"></script>
+  <script type="module" src="/static/modules/jobs.mjs?v=6.5.0"></script>
+  <script type="module" src="/static/modules/health.mjs?v=5.16.75"></script>
+  <script src="/static/planner.js?v=5.16.175-tier2"></script>
+  <script src="/static/dashboard_home.js?v=1.0.5-abort-retry"></script>
+  <script src="/static/planner_live.js?v=1.0.3-tier2"></script>
+  <script src="/static/guided_repair.js?v=1.1.3-p7-openrace"></script>
+  <script src="/static/mission_control.js?v=1.2.4-route-count"></script>
+  <script src="/static/mission_control_ux.js?v=1.1.1-p72-owner"></script>
+  <script src="/static/models_home.js?v=1.0.1"></script>
+  <script src="/static/coding_home.js?v=1.0.2-residency"></script>
+  <script src="/static/calendar.js?v=5.17.5-search-memory"></script>
+  <script src="/static/flytying.js?v=5.17.4-bug014"></script>
+  <script src="/static/flytying_home.js?v=1.0.2-bug014"></script>
 
-  <script src="/static/projects.js?v=5.17.0"></script>
+  <script src="/static/projects.js?v=5.17.3-tier3b"></script>
   <script src="/static/vendor/three/three.min.js"></script>
   <script src="/static/vendor/three/STLLoader.js"></script>
-  <script src="/static/maker.js?v=5.16.120"></script>
+  <script src="/static/maker.js?v=5.16.122-print"></script>
   <script src="/static/browser_home.js?v=1.0.0"></script>
-  <script src="/static/browser_panel.js?v=5.16.160"></script>
+  <script src="/static/browser_panel.js?v=5.16.162-residency"></script>
   <script src="/static/presence.js?v=5.16.104"></script>
-  <script src="/static/security_settings.js?v=5.16.160"></script>
+  <script src="/static/security_settings.js?v=5.17.1-daily-session"></script>
   <script src="/static/tools_sidebar.js?v=5.16.103"></script>
   <script src="/static/floating_panels.js?v=5.16.71"></script>
   <script src="/static/world_state_hud.js?v=5.16.73"></script>
-  <script src="/static/audit.js?v=5.16.160"></script>
+  <script src="/static/audit.js?v=5.16.166-no-autorun"></script>
+  <script src="/static/certification_home.js?v=1.0.2"></script>
   <script src="/static/voice_tab.js?v=5.16.90"></script>
-  <script src="/api/shell/bundle.js?v=2.0.0"></script>
+  <script src="/api/shell/bundle.js?v=2.0.5-tier3cd"></script>
   <script src="/static/sidebar_favorites.js?v=1.0.1"></script>
-  <script src="/static/sidebar_search.js?v=1.0.0"></script>
+  <script src="/static/sidebar_search.js?v=6.5.0"></script>
   <script src="/static/context_menus.js?v=1.1.1"></script>
-  <script src="/static/dashboard_widgets.js?v=1.1.0"></script>
-  <script src="/static/workspace_layouts.js?v=1.1.0"></script>
-  <script src="/static/mini_chat.js?v=1.1.0"></script>
-  <script src="/static/keyboard_nav.js?v=1.0.0"></script>
+  <script src="/static/dashboard_widgets.js?v=1.1.1"></script>
+  <script src="/static/workspace_layouts.js?v=1.1.1-oc"></script>
+  <script src="/static/mini_chat.js?v=6.5.0"></script>
+  <script src="/static/keyboard_nav.js?v=6.5.2"></script>
   <script src="/static/workflow_recorder.js?v=2.0.0"></script>
-  <script src="/static/automation_home.js?v=1.0.0"></script>
+  <script src="/static/automation_home.js?v=1.0.3-residency"></script>
   <script src="/static/specialists_home.js?v=1.0.0"></script>
   <script src="/static/smart_welcome.js?v=1.1.0"></script>
   <script src="/static/modal_chrome.js?v=1.1.0"></script>
-  <script src="/static/aria_dialogs.js?v=1.0.0"></script>
+  <script src="/static/aria_dialogs.js?v=1.0.4-e1"></script>
   <script src="/static/command_registry.js?v=1.0.0"></script>
-  <script src="/static/aria_actions.js?v=1.0.0"></script>
-  <script src="/static/activity_store.js?v=1.0.0"></script>
-  <script src="/static/activity_actions.js?v=1.0.0"></script>
-  <script src="/static/activity_center.js?v=2.1.0"></script>
+  <script src="/static/aria_actions.js?v=6.5.2-daily-session"></script>
+  <script src="/static/activity_store.js?v=2.0.0-server"></script>
+  <script src="/static/activity_actions.js?v=1.1.0"></script>
+  <script src="/static/activity_center.js?v=6.5.5-inbox-honest"></script>
   <script src="/static/activity_producers.js?v=1.1.0"></script>
-  <script src="/static/command_catalog.js?v=1.0.0"></script>
-  <script src="/static/command_palette.js?v=2.0.0"></script>
-  <script src="/static/ha_panel.js?v=1.0.3"></script>
-  <script src="/static/smarthome_home.js?v=1.0.0"></script>
+  <script src="/static/command_catalog.js?v=1.0.2-daily-session"></script>
+  <script src="/static/command_palette.js?v=1.0.1-p72"></script>
+  <script src="/static/ha_panel.js?v=1.0.7-retry"></script>
+  <script src="/static/smarthome_home.js?v=1.0.3-navfix"></script>
   <script src="/static/capabilities_home.js?v=1.0.0"></script>
   <script src="/static/integrations_home.js?v=1.0.0"></script>
-  <script src="/static/search_home.js?v=1.0.0"></script>
-  <script src="/static/settings_home.js?v=1.0.0"></script>
-  <script src="/static/upgrade_wizard.js?v=1.0.3"></script>
+  <script src="/static/search_home.js?v=1.0.4-tier3cd"></script>
+  <script src="/static/settings_home.js?v=1.0.3"></script>
+  <script src="/static/upgrade_wizard.js?v=1.0.4-residency"></script>
   <script src="/static/image_engine.js?v=1.0.4"></script>
   <script src="/static/media_lightbox.js?v=1.0.1"></script>
-  <script src="/static/lan_access.js?v=1.0.0"></script>
+  <script src="/static/lan_access.js?v=1.0.1"></script>
   <script src="/static/media_urls.js?v=1.0.0"></script>
   <script src="/static/vision_settings.js?v=1.1.0"></script>
-  <script src="/static/vision_home.js?v=1.0.0"></script>
-  <script src="/static/free_vram.js?v=1.0.1"></script>
-  <script src="/static/view_router.js?v=1.1.0"></script>
-  <script src="/static/chat_format.js?v=1.0.0"></script>
+  <script src="/static/vision_home.js?v=1.0.1-residency"></script>
+  <script src="/static/free_vram.js?v=1.0.2-residency"></script>
+  <script src="/static/view_router.js?v=6.4.6-hash-alias"></script>
+  <script src="/static/aria_shared_fetch.js?v=3a.1"></script>
+  <script src="/static/living_interface.js?v=1.2.5-navfix"></script>
+  <script src="/static/workspace/contracts.js?v=2.0.0"></script>
+  <script src="/static/workspace/registry.js?v=6.4.5-navfix"></script>
+  <script src="/static/workspace/chrome_policy.js?v=2.0.0"></script>
+  <script src="/static/workspace/modal_portal.js?v=6.5.0"></script>
+  <script src="/static/workspace/activity_engine.js?v=4.0.2-navfix"></script>
+  <script src="/static/workspace/tools.js?v=1.0.2-tier2"></script>
+  <script src="/static/workspace/spotlight.js?v=6.1.0-door"></script>
+  <script src="/static/workspace/front_door_catalog.js?v=6.1.3-owner-lock"></script>
+  <script src="/static/workspace/front_door.js?v=6.1.3-owner-lock"></script>
+  <script src="/static/workspace/rooms/stage.js?v=1.1.1-bug009"></script>
+  <script src="/static/workspace/rooms/room_kit.js?v=5.1.5-bug009"></script>
+  <script src="/static/workspace/rooms/living_room.js?v=6.5.4-navfix"></script>
+  <script src="/static/workspace/rooms/living_room_presence.js?v=3.7.2-tier3a"></script>
+  <script src="/static/workspace/rooms/living_room_familiarity.js?v=3.7.0"></script>
+  <script src="/static/workspace/rooms/flytying_room.js?v=5.0.2-oc"></script>
+  <script src="/static/workspace/rooms/health_room.js?v=5.0.3-oc"></script>
+  <script src="/static/workspace/rooms/mission_room.js?v=5.0.3-residency"></script>
+  <script src="/static/workspace/rooms/priority2_rooms.js?v=5.1.5-residency"></script>
+  <script src="/static/workspace/rooms/priority3_rooms.js?v=5.1.14-tier3c"></script>
+  <script src="/static/workspace/rooms/furnish.js?v=6.5.6-navfix"></script>
+  <script src="/static/workspace/rooms/house_host.js?v=6.4.11-navfix"></script>
+  <script src="/static/workspace/workspace.js?v=6.5.4-navfix"></script>
+  <script src="/static/chat_format.js?v=1.0.1-truth"></script>
   <script src="/static/branding.js?v=1.0.0"></script>
   <script src="/static/chat_meta.js?v=1.0.0"></script>
   <script src="/static/chat_state.js?v=1.0.0"></script>
-  <script src="/static/chat_attach.js?v=1.0.0"></script>
-  <script src="/static/chat_input.js?v=1.0.0"></script>
-  <script src="/static/chat_controls.js?v=1.0.0"></script>
-  <script src="/static/app.js?v=5.16.160"></script>
+  <script src="/static/chat_attach.js?v=1.0.1"></script>
+  <script src="/static/chat_input.js?v=1.0.1"></script>
+  <script src="/static/chat_controls.js?v=1.0.1-audit"></script>
+  <script src="/static/app.js?v=5.16.165-hash-canon"></script>
   <script src="/static/editor_context.js?v=1.0.0"></script>
-  <script src="/static/chat_suggestions.js?v=1.1.0"></script>
+  <script src="/static/chat_suggestions.js?v=1.1.1-lr"></script>
   <script src="/static/chat_export.js?v=1.0.0"></script>
-  <script src="/static/chat_progress.js?v=1.1.0"></script>
-  <script src="/static/chat_messages.js?v=1.1.0"></script>
-  <script src="/static/chat_send.js?v=1.1.0"></script>
+  <script src="/static/chat_progress.js?v=1.1.1-bug005"></script>
+  <script src="/static/chat_messages.js?v=1.1.1-immersion"></script>
+  <script src="/static/chat_send.js?v=1.1.7-bug013"></script>
   <script src="/static/chat_images.js?v=1.0.1"></script>
   <script src="/static/chat_video.js?v=1.0.0"></script>
-  <script src="/static/attachment_compare.js?v=1.0.0"></script>
+  <script src="/static/attachment_compare.js?v=1.0.2"></script>
   <script src="/static/media_jobs.js?v=1.0.0"></script>
   <script src="/static/coding_jobs.js?v=1.0.0"></script>
-  <script src="/static/coding_proposals.js?v=1.0.2"></script>
+  <script src="/static/coding_proposals.js?v=1.0.3-residency"></script>
   <script src="/static/coding_quick.js?v=1.0.1"></script>
   <script src="/static/chat_media.js?v=1.1.0"></script>
-  <script src="/static/chat_done.js?v=1.1.0"></script>
+  <script src="/static/chat_done.js?v=1.1.1"></script>
   <script src="/static/crop_webcam.js?v=1.0.1"></script>
   <script src="/static/vision_drop.js?v=1.1.0"></script>
   <script src="/static/models_panel.js?v=1.0.3"></script>
-  <script src="/static/uncensored_mode.js?v=1.0.3"></script>
-  <script src="/static/startup_overlay.js?v=1.0.2"></script>
+  <script src="/static/uncensored_mode.js?v=6.5.1-residency"></script>
+  <script src="/static/startup_overlay.js?v=1.1.0-integrity"></script>
   <script src="/static/wakeword_chat.js?v=1.0.1"></script>
-  <script src="/static/chat_branches.js?v=1.1.0"></script>
-  <script src="/static/chat_os.js?v=1.0.0"></script>
-  <script src="/static/profile_controls.js?v=1.0.1"></script>
+  <script src="/static/chat_branches.js?v=1.1.2-lr"></script>
+  <script src="/static/chat_os.js?v=1.0.4-immersion"></script>
+  <script src="/static/profile_controls.js?v=1.0.2"></script>
   <script src="/static/video_sidebar.js?v=1.0.0"></script>
-  <script src="/static/sidebar_chrome.js?v=1.0.1"></script>
+  <script src="/static/sidebar_chrome.js?v=1.0.2-residency"></script>
   <script src="/static/notify.js?v=1.1.0"></script>
-  <script src="/static/notifications.js?v=1.0.0"></script>
+  <script src="/static/notifications.js?v=1.0.3-residency"></script>
   <script src="/static/git_panel.js?v=1.0.0"></script>
-  <script src="/static/chat_model_select.js?v=1.0.0"></script>
-  <script src="/static/theme.js?v=1.1.0"></script>
+  <script src="/static/chat_model_select.js?v=1.0.1"></script>
+  <script src="/static/theme.js?v=1.1.2-audit"></script>
   <script src="/static/coding_panel.js?v=1.0.2"></script>
-  <script src="/static/gallery_view.js?v=2.0.0"></script>
-  <script src="/static/memory_browser.js?v=2.0.0"></script>
+  <script src="/static/gallery_view.js?v=2.0.2-residency"></script>
+  <script src="/static/memory_browser.js?v=2.0.7-briefs-parallel"></script>
 </body>
 </html>

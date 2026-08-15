@@ -94,10 +94,12 @@ def test_create_update_delete_commitment(bj, planner_db):
 
     day = today_iso()
     created = create_commitment(bj, title="Call", day=day, time="16:00", target="journal")
+    assert created["target"] == "planner"
     item_id = created["item_id"]
     update_commitment(bj, item_id, title="Call mom", time="16:30")
     detail = schedule_for_day(bj, day)
     assert any(i["title"] == "Call mom" and i["time"] == "16:30" for i in detail["items"])
+    assert not bj.day_events(day[:7]).get(day)
     delete_commitment(bj, item_id)
     detail2 = schedule_for_day(bj, day)
     assert not any(i["id"] == item_id for i in detail2["items"])

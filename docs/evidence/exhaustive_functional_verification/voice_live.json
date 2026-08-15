@@ -1,0 +1,55 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "voice",
+  "captured_at": "2026-08-13T16:40:00+00:00",
+  "entry": "Owner Front Door → room:voice",
+  "identity": {
+    "hash": "#voice",
+    "h2": "Voice",
+    "place": "· Presence",
+    "place_mismatch": true,
+    "enter_ms": 5653
+  },
+  "capabilities": [
+    {
+      "name": "Status / model / cloud",
+      "result": "PASS_WITH_NOTE",
+      "notes": "Idle; TTS piper; STT whisper. Initial status said Duplex off while select was half; Refresh aligned status to half. Cloud copy changed from unavailable to ready (gemini live) after Refresh. Router pill stays '?'."
+    },
+    {
+      "name": "Refresh",
+      "result": "PASS",
+      "notes": "Status/model/cloud updated. Settings not saved."
+    },
+    {
+      "name": "Recovery advisor",
+      "result": "PASS",
+      "notes": "Healthy: whisper, piper, gemini_live_key, tts_queue (check names only; no secrets)."
+    },
+    {
+      "name": "Cheatsheet",
+      "result": "PASS",
+      "notes": "Command copy present (PTT/mute/speak class language)."
+    },
+    {
+      "name": "Leave Audio",
+      "result": "PASS",
+      "notes": "#audio · Audio studio"
+    },
+    {
+      "name": "Return to Voice (Front Door)",
+      "result": "PARTIAL",
+      "notes": "Hash #voice but house place stays · Presence"
+    },
+    {
+      "name": "Leave Presence",
+      "result": "PASS",
+      "notes": "#presence · Presence — indistinguishable from Voice place label"
+    },
+    {
+      "name": "PTT / mic / Speak replies / Save / Apply profile / Cloud toggle / Voice smoke / Warm router",
+      "result": "N/A — NOT EXERCISED",
+      "notes": "Hardware, persisted settings, cloud, or QA-smoke risk"
+    }
+  ]
+}

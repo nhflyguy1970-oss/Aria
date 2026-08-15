@@ -13,24 +13,77 @@ def _session_token(request: Request) -> str | None:
 def register_routes(app, assistant) -> None:
     @app.get("/api/security/lock/status")
     def security_lock_status(request: Request):
+        from jarvis.security.owner import get_owner_security
         from jarvis.security.pin_lock import lock_status
 
-        return lock_status(session_token=_session_token(request))
+        pin = lock_status(session_token=_session_token(request))
+        return get_owner_security().house_lock_status(
+            session_token=_session_token(request),
+            pin_status=pin,
+        )
 
     @app.post("/api/security/lock")
-    def security_lock():
-        from jarvis.security.pin_lock import revoke_all_sessions
+    async def security_lock(request: Request):
+        from jarvis.p4_flags import pin_lock_enabled
+        from jarvis.security.owner import get_owner_security
+        from jarvis.security.pin_lock import pin_configured, revoke_all_sessions
 
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        owner = get_owner_security()
+        if owner.vault.exists():
+            hard = bool(body.get("hard", True))
+            return owner.lock(hard=hard)
+        if not pin_lock_enabled():
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "ok": False,
+                    "locked": False,
+                    "message": "PIN lock is off — set JARVIS_PIN_LOCK=1 before locking.",
+                },
+            )
+        if not pin_configured():
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "ok": False,
+                    "locked": False,
+                    "message": "Set a PIN before locking Aria.",
+                },
+            )
         revoked = revoke_all_sessions()
         return {"ok": True, "locked": True, "revoked_sessions": revoked}
 
     @app.post("/api/security/unlock")
     async def security_unlock(request: Request):
         from jarvis.auth import client_ip
+        from jarvis.security.owner import get_owner_security
         from jarvis.security.pin_lock import create_session, verify_pin
         from jarvis.security.trusted_devices import trust_device
 
         body = await request.json()
+        owner = get_owner_security()
+        if owner.vault.exists():
+            master = str(body.get("master_password") or body.get("password") or "").strip()
+            pin = str(body.get("pin") or "").strip()
+            if master:
+                out = owner.unlock(master)
+                if not out.get("ok"):
+                    return JSONResponse(status_code=403, content=out)
+                return out
+            if pin:
+                out = owner.soft_unlock_with_pin(pin)
+                if not out.get("ok"):
+                    return JSONResponse(status_code=403, content=out)
+                return out
+            return JSONResponse(
+                status_code=400,
+                content={"ok": False, "message": "Enter your Aria Master Password"},
+            )
         pin = str(body.get("pin") or "").strip()
         if not verify_pin(pin):
             return JSONResponse(status_code=403, content={"ok": False, "message": "Invalid PIN"})
@@ -220,3 +273,128 @@ def register_routes(app, assistant) -> None:
             "camera_required": True,
             "backend": "client",
         }
+
+    # --- Owner Security Vault (M1 foundation) ---
+
+    @app.get("/api/owner-security/status")
+    def owner_security_status(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        return get_owner_security().status(session_token=_session_token(request))
+
+    @app.get("/api/owner-security/capabilities")
+    def owner_security_capabilities():
+        from jarvis.security.owner import get_owner_security
+
+        return {"ok": True, "capabilities": get_owner_security().catalog()}
+
+    @app.post("/api/owner-security/setup")
+    async def owner_security_setup(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        body = await request.json()
+        return get_owner_security().setup(
+            str(body.get("master_password") or ""),
+            confirm_password=body.get("confirm_password"),
+        )
+
+    @app.post("/api/owner-security/recovery/acknowledge")
+    async def owner_security_recovery_ack(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        body = await request.json()
+        return get_owner_security().acknowledge_recovery(stored=bool(body.get("stored")))
+
+    @app.post("/api/owner-security/unlock")
+    async def owner_security_unlock(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        body = await request.json()
+        return get_owner_security().unlock(str(body.get("master_password") or ""))
+
+    @app.post("/api/owner-security/unlock/pin")
+    async def owner_security_unlock_pin(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        body = await request.json()
+        return get_owner_security().soft_unlock_with_pin(str(body.get("pin") or ""))
+
+    @app.post("/api/owner-security/lock")
+    async def owner_security_lock(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        hard = bool(body.get("hard", True))
+        return get_owner_security().lock(hard=hard)
+
+    @app.post("/api/owner-security/recover")
+    async def owner_security_recover(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        body = await request.json()
+        return get_owner_security().recover(
+            str(body.get("recovery_key") or ""),
+            str(body.get("new_master_password") or ""),
+        )
+
+    @app.post("/api/owner-security/password/change")
+    async def owner_security_password_change(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        body = await request.json()
+        return get_owner_security().change_master_password(
+            str(body.get("current_password") or ""),
+            str(body.get("new_password") or ""),
+        )
+
+    @app.post("/api/owner-security/step-up")
+    async def owner_security_step_up(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        body = await request.json()
+        return get_owner_security().step_up(
+            master_password=str(body.get("master_password") or ""),
+            pin=str(body.get("pin") or ""),
+        )
+
+    @app.post("/api/owner-security/authorize")
+    async def owner_security_authorize(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        body = await request.json()
+        return get_owner_security().authorize(
+            str(body.get("capability") or ""),
+            room=(str(body.get("room") or "").strip() or None),
+            session_token=_session_token(request),
+        )
+
+    @app.get("/api/owner-security/vault/meta")
+    def owner_security_vault_meta(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        return get_owner_security().vault_meta()
+
+    @app.get("/api/owner-security/timings")
+    def owner_security_timings():
+        from jarvis.security.owner import get_owner_security
+
+        return {"ok": True, "timings": get_owner_security().timings()}
+
+    @app.get("/api/owner-security/migration/status")
+    def owner_security_migration_status(request: Request):
+        from jarvis.security.owner import get_owner_security
+
+        return get_owner_security().provider_migration_status()
+
+    @app.post("/api/owner-security/migrate-provider")
+    async def owner_security_migrate_provider(request: Request):
+        """Copy one env provider credential into the vault. Never accepts or returns the secret."""
+        from jarvis.security.owner import get_owner_security
+
+        body = await request.json()
+        field = str(body.get("field") or body.get("env") or "").strip()
+        return get_owner_security().migrate_provider_credential(field)

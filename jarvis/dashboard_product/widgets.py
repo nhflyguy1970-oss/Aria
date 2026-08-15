@@ -96,6 +96,16 @@ WIDGET_DEFS: list[dict[str, Any]] = [
         "deep_link": {"view": "journal"},
     },
     {
+        "id": "health_record",
+        "title": "Health",
+        "owner": "Health",
+        "category": "life",
+        "priority": 46,
+        "description": "Daily check-in and current medications — Health owns the PHR.",
+        "aliases": ["phr", "medications", "blood pressure", "vitals"],
+        "deep_link": {"view": "health"},
+    },
+    {
         "id": "memory_highlights",
         "title": "Memory",
         "owner": "Memory",

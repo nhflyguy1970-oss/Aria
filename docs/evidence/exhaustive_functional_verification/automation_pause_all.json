@@ -1,0 +1,47 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "automation",
+  "capability": "Owner UI Pause all then Resume — restore house not left paused",
+  "captured_at": "2026-08-14T18:09:19Z",
+  "jeff_authorized": "all",
+  "result": "PASS — Pause all toasted Automations paused; Resume toasted Automations resumed. Engine process stayed running (pause is a separate in-memory flag). NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked": true,
+  "health_home": 200,
+  "baseline_before_pause": {
+    "rules_enabled": 0,
+    "rules_disabled": 1,
+    "engine_running": true
+  },
+  "owner_ui": {
+    "hash": "#automation",
+    "h2": "Automation Home",
+    "pause_all": {
+      "clicked": "#autoPauseBtn Pause all",
+      "confirm": "none — POST /api/automation/pause { paused: true }",
+      "toast": "Automations paused",
+      "activity_center": "unread included Automations paused"
+    },
+    "resume": {
+      "clicked": "#autoResumeBtn Resume",
+      "toast": "Automations resumed"
+    },
+    "webhook_line_after_pause": "Engine: running (home summary does not surface paused; engine process stays alive)",
+    "not_clicked": [
+      "Delete",
+      "Run",
+      "Enable",
+      "Import",
+      "Webhook copy"
+    ]
+  },
+  "after_resume": {
+    "engine_running": true,
+    "rules_enabled": 0,
+    "rules_disabled": 1,
+    "health_engine": "running",
+    "paused_fields_in_home_payload": []
+  },
+  "webhook_secret": "Inbound webhook URL is visible in the owner UI with a query secret. Secret not recorded. Header X-Jarvis-Automation-Secret is the documented path.",
+  "integrity": "POST /api/integrity/scan 200 after remaining write gates; overall 100; clean; artifacts 0"
+}

@@ -226,6 +226,32 @@ def test_explain_relationship(graph_env):
     assert "source=" in exp["explanations"][0]["why"]
 
 
+def test_bolt_browse_lists_all_when_query_empty():
+    """Bolt browse must MATCH all entities — empty q is not a search."""
+    from jarvis.modules.graph_store import _bolt_list_edges_query, _bolt_list_nodes_query
+
+    cypher, params = _bolt_list_nodes_query(q="", namespace="", kind="", limit=40)
+    assert "MATCH (n:Entity)" in cypher
+    assert "WHERE" not in cypher
+    assert "CONTAINS" not in cypher
+    assert params["limit"] == 40
+    assert "q" not in params
+
+    filtered, fparams = _bolt_list_nodes_query(q="aria", namespace="default", kind="person")
+    assert "WHERE" in filtered
+    assert "n.namespace = $ns" in filtered
+    assert "n.kind = $kind" in filtered
+    assert "CONTAINS" in filtered
+    assert fparams["q"] == "aria"
+    assert fparams["ns"] == "default"
+    assert fparams["kind"] == "person"
+
+    edges, eparams = _bolt_list_edges_query(q="", namespace="")
+    assert "MATCH (a:Entity)-[rel]->(b:Entity)" in edges
+    assert "WHERE" not in edges
+    assert "q" not in eparams
+
+
 def test_home_and_health(graph_env):
     from jarvis.connections_services import connections_home, health
 

@@ -74,6 +74,12 @@ def _which(name: str) -> bool:
     return bool(shutil.which(name))
 
 
+def _tool_subprocess_env() -> dict[str, str]:
+    from jarvis.security.owner.env_boundary import build_subprocess_env
+
+    return build_subprocess_env()
+
+
 def _run_cli(binary: str, args: list[str], *, cwd: str = "", timeout: int = 300) -> dict[str, Any]:
     import subprocess
 
@@ -86,7 +92,7 @@ def _run_cli(binary: str, args: list[str], *, cwd: str = "", timeout: int = 300)
             capture_output=True,
             text=True,
             timeout=timeout,
-            env=os.environ.copy(),
+            env=_tool_subprocess_env(),
         )
         return {
             "ok": proc.returncode == 0,

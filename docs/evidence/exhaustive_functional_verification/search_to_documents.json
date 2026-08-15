@@ -1,0 +1,66 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "search",
+  "capability": "Federated documents-facet query → Open in context → Documents",
+  "captured_at": "2026-08-14T18:33:19Z",
+  "result": "PASS — documents facet; 3 Documents hits in 77 ms; Open in context landed #documents with query filled; library search after extra Search click returned 3 hits. Leave/return restored Search. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked": true,
+  "health_home": 200,
+  "lock_overlay": "hidden",
+  "identity": {
+    "hash": "#search",
+    "h2": "Search",
+    "facet": "documents"
+  },
+  "performance": {
+    "federated_documents_facet": "FAST — 3 result(s) · 77.12 ms · documents",
+    "classification": "FAST"
+  },
+  "query": {
+    "text": "woolly bugger",
+    "facet": "documents",
+    "hit_count": 3,
+    "source_counts": { "Documents": 3 },
+    "titles_in_evidence": false,
+    "note": "Hits are existing library notes in the Documents corpus. Titles and body not recorded."
+  },
+  "open_in_context": {
+    "clicked": "Open in context",
+    "destination_hash": "#documents",
+    "destination_h2": "Documents",
+    "place": "Private library",
+    "library_chrome": "288 docs · 396 chunks · hybrid (keyword + vector)",
+    "documents_search_input": "woolly bugger (filled by Open in context)",
+    "auto_ran_library_search": false,
+    "library_search_after_click": "3 hits (counts only; titles not recorded)"
+  },
+  "leave_return": {
+    "via": "Front Door → Search",
+    "hash": "#search",
+    "facet_restored": "documents",
+    "query_restored": "woolly bugger",
+    "results_restored": "3 result(s) · 77.12 ms · documents",
+    "result": "PASS"
+  },
+  "not_clicked": [
+    "Save search",
+    "Clear history",
+    "Delete saved search",
+    "Documents Upload",
+    "Import",
+    "Rebuild Search Index",
+    "Ask Aria",
+    "Learn → candidates",
+    "Summarize"
+  ],
+  "data_mutation": {
+    "search_history": "documents-facet woolly bugger 3 hits recorded in Search recent",
+    "documents_upload": false,
+    "journal_post": false,
+    "health_phr": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "next_exact_capability": "Search → Fly Tying and Search → Documents both PASS. Next unproven cross-room: Home → Home Automation or Repair → Guided Repair. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

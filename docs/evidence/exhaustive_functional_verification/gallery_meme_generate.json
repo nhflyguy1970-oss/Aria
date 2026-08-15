@@ -1,0 +1,56 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "gallery",
+  "capability": "Gallery generate + Meme empty/preview",
+  "captured_at": "2026-08-14T16:10:30Z",
+  "result": "PASS — Gallery Generate produced workbench cube image. Meme empty + caption preview PASS. AI meme generate not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner": "OWNER_UNLOCKED; lockScreen hidden",
+  "performance": {
+    "gallery_empty_generate": "FAST (~406 ms) — toast Enter an image description first",
+    "gallery_generate": "ACCEPTABLE (~76544 ms) — ComfyUI started; SDXL Turbo GPU",
+    "meme_empty_and_preview": "FAST (~1503 ms)"
+  },
+  "owner_ui": {
+    "gallery": {
+      "hash": "#gallery",
+      "heading": "Gallery",
+      "place": "Museum",
+      "before": "0 images · showing 0; ComfyUI offline",
+      "after": "2 images · showing 2; ComfyUI online · sd_xl_turbo_1.0_fp16.safetensors · GPU",
+      "empty_toast": "Enter an image description first",
+      "prompt": "a small green 10mm cube on a wooden workbench, soft workshop lighting, product photo",
+      "job": "Generated image_20260814_120830.png · seed 1610864908",
+      "items": ["jarvis_00094_.png", "image_20260814_120830.png"],
+      "note": "Same bytes twice — Comfy native dump plus Aria timestamped name. Not deleted.",
+      "negative_search": "zzzzqxnogallery999 → 0 images · showing 0; empty copy No images yet (PARTIAL vs dedicated no-match)",
+      "leave_return": "PASS — Chat then Gallery restores 2 images",
+      "screenshot": "gallery-generate-workbench-cube.png",
+      "image_engine_quirk": "Panel still showed No successful renders yet after generate — thumbs and job status are authority"
+    },
+    "meme": {
+      "hash": "#meme",
+      "heading": "Meme Generator",
+      "empty_generate_toast": "Need top text, bottom text, idea, or image_prompt",
+      "empty_preview_toast": "Preview needs top or bottom text.",
+      "caption_preview": "HELLO CUBE / 10mm; use_ai unchecked; toast Preview ready; preview img present",
+      "ai_generate_clicked": false,
+      "meme_gallery_cards": 0
+    }
+  },
+  "data_mutation": {
+    "gallery_images": [
+      "/media/jeff/AI/jarvis/data/generated/image_20260814_120830.png",
+      "/media/jeff/AI/jarvis/data/generated/jarvis_00094_.png"
+    ],
+    "bytes": 1091118,
+    "meme_preview": "/media/jeff/AI/jarvis/data/generated/memes/meme_preview_20260814_121018.png",
+    "deleted": false,
+    "journal_post": false,
+    "live_journal_size": 67547,
+    "live_journal_sha256": "8193626d1fe6683e9de6386461b13aafbb974c96032db26a1037b44a171937f6"
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "qa_header": "403 production_isolation",
+  "next_exact_capability": "Health PHR writes — STOP Jeff-attended (Log / Upload / Check-in submit). Do not click those unattended."
+}

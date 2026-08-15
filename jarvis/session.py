@@ -14,6 +14,10 @@ class SessionContext:
     last_knowledge_slug: str = ""
     last_proposal_id: str = ""
     last_search_query: str = ""
+    last_research_query: str = ""
+    research_entities: list[str] = field(default_factory=list)
+    last_subject: str = ""
+    last_memory_subject: str = ""
     last_module: str = "general"
     last_briefing_headlines: list[dict[str, str]] = field(default_factory=list)
     last_coding_mode: str = ""
@@ -52,6 +56,33 @@ class SessionContext:
 
     def note_search(self, query: str) -> None:
         self.last_search_query = query
+
+    def note_research(self, query: str, entities: list[str] | None = None) -> None:
+        """Remember the active research subject for bare follow-ups (torque, etc.)."""
+        q = (query or "").strip()
+        if not q:
+            return
+        self.last_research_query = q
+        if entities is not None:
+            self.research_entities = [e for e in entities if e][:12]
+        else:
+            try:
+                from jarvis.research_context import extract_research_entities
+
+                self.research_entities = extract_research_entities(q)[:12]
+            except Exception:
+                self.research_entities = []
+
+    def note_subject(self, subject: str) -> None:
+        self.last_subject = (subject or "").strip()[:200]
+
+    def note_memory_subject(self, subject: str) -> None:
+        """Active personal-memory topic for 'about that' narrowing (RW-004)."""
+        text = (subject or "").strip()[:200]
+        if not text:
+            return
+        self.last_memory_subject = text
+        self.last_subject = text
 
     def note_briefing_headlines(self, headlines: list[dict[str, str]]) -> None:
         slim: list[dict[str, str]] = []
@@ -165,6 +196,9 @@ class SessionContext:
         self.last_knowledge_slug = ""
         self.last_proposal_id = ""
         self.last_search_query = ""
+        self.last_research_query = ""
+        self.research_entities.clear()
+        self.last_subject = ""
         self.last_briefing_headlines = []
         self.last_coding_mode = ""
         self.coding_root = ""
@@ -183,6 +217,9 @@ class SessionContext:
             "last_knowledge_slug": self.last_knowledge_slug,
             "last_proposal_id": self.last_proposal_id,
             "last_search_query": self.last_search_query,
+            "last_research_query": self.last_research_query,
+            "research_entities": list(self.research_entities),
+            "last_subject": self.last_subject,
             "last_briefing_headlines": list(self.last_briefing_headlines),
             "last_module": self.last_module,
             "last_coding_mode": self.last_coding_mode,
@@ -208,6 +245,9 @@ class SessionContext:
             last_knowledge_slug=data.get("last_knowledge_slug", ""),
             last_proposal_id=data.get("last_proposal_id", ""),
             last_search_query=data.get("last_search_query", ""),
+            last_research_query=data.get("last_research_query", ""),
+            research_entities=list(data.get("research_entities") or []),
+            last_subject=data.get("last_subject", ""),
             last_briefing_headlines=list(data.get("last_briefing_headlines") or []),
             last_module=data.get("last_module", "general"),
             last_coding_mode=data.get("last_coding_mode", ""),

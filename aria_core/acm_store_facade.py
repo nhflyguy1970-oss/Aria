@@ -20,7 +20,10 @@ def acm_list_entries(
 
     if not acm_bridge.acm_is_authoritative():
         return None
-    rows = acm_bridge.project_list_entries(entry_type, namespace=namespace, query=query, limit=500)
+    # Scrub / Memory Home must see the full projection — a low cap hid cert probes.
+    rows = acm_bridge.project_list_entries(
+        entry_type, namespace=namespace, query=query, limit=50_000
+    )
     if include_embedding:
         for r in rows:
             r.setdefault("embedding", None)
@@ -48,6 +51,19 @@ def acm_get(entry_id: str) -> dict[str, Any] | None:
     if not acm_bridge.acm_is_authoritative():
         return None
     return acm_bridge.primary_get(entry_id)
+
+
+def acm_latest_checkpoint(namespace: str | None = None) -> dict[str, Any] | None:
+    """Latest checkpoint from ACM when authoritative; else None (caller uses legacy).
+
+    When authoritative and no checkpoint exists, returns None — callers must treat
+    that as empty ACM (do not read the legacy vault).
+    """
+    from aria_core import acm_bridge
+
+    if not acm_bridge.acm_is_authoritative():
+        return None
+    return acm_bridge.project_latest_checkpoint(namespace)
 
 
 def acm_similar_exists(content: str, threshold: float = 0.88) -> bool | None:
@@ -80,10 +96,26 @@ def acm_update(
     if not acm_bridge.acm_is_authoritative():
         return None
     if content is None:
-        return False
-    _ = (entry_type, tags, namespace)
+        out = acm_bridge.primary_update_metadata(
+            entry_id,
+            entry_type=entry_type,
+            tags=tags,
+            namespace=namespace,
+        )
+        return bool(out.get("ok"))
     out = acm_bridge.primary_correct(experience_id=entry_id, text=content)
-    return bool(out.get("ok"))
+    if not out.get("ok"):
+        return False
+    if entry_type is not None or tags is not None or namespace is not None:
+        new_id = str((out.get("entry") or {}).get("id") or entry_id)
+        meta = acm_bridge.primary_update_metadata(
+            new_id,
+            entry_type=entry_type,
+            tags=tags,
+            namespace=namespace,
+        )
+        return bool(meta.get("ok"))
+    return True
 
 
 def acm_stats() -> dict[str, Any] | None:

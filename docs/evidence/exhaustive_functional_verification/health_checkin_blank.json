@@ -1,0 +1,43 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "health",
+  "capability": "Blank daily check-in write after Jeff unlock",
+  "captured_at": "2026-08-14T16:22:51Z",
+  "result": "PASS — Save check-in with all fields blank. Dashboard Check-in On file. No vitals/doses/uploads. NOT CERTIFICATION.",
+  "not_certification": true,
+  "prior_blocked": "health_checkin_blocked_locked.json",
+  "owner": "OWNER_UNLOCKED; lockScreen hidden; /api/health/home 200; owner_unlocked true",
+  "performance": {
+    "save_checkin": "FAST (~825 ms) after initHealth"
+  },
+  "owner_ui": {
+    "hash": "#health",
+    "heading": "Health",
+    "place": "Wellness clinic",
+    "status": "Check-in saved.",
+    "dashboard_kpi": "Check-in On file",
+    "fields_submitted": [],
+    "leave_return": {
+      "via": "#chat",
+      "hash_after": "#health",
+      "kpi_restored": "Check-in On file"
+    },
+    "log_dose_clicked": false,
+    "upload_clicked": false,
+    "nl_log_clicked": false,
+    "doctor_clicked": false,
+    "emergency_clicked": false,
+    "screenshot": "health-checkin-on-file.png"
+  },
+  "data_mutation": {
+    "phr_checkin": true,
+    "checkin_has_day": true,
+    "measurement_fields_present": [],
+    "journal_post": false,
+    "live_journal_size": 67547,
+    "live_journal_sha256": "8193626d1fe6683e9de6386461b13aafbb974c96032db26a1037b44a171937f6"
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "qa_header": "403 production_isolation",
+  "next_exact_capability": "Aug 8 encrypted journal import remains BLOCKED — Jeff password, do not guess. Camera/mic and HA scenes still unclicked."
+}

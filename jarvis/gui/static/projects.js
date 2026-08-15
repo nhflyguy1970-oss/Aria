@@ -389,7 +389,12 @@ async function handleQuick(id, p) {
       window.showAriaToast?.("Restored", "ok", 2500);
       await loadProjectHome(p.slug);
     } else if (id === "rename") {
-      const title = prompt("New display name (slug stays the same):", p.title || p.slug);
+      const title = window.ariaPrompt
+        ? await window.ariaPrompt("New display name (slug stays the same):", p.title || p.slug, {
+            title: "Rename project",
+            okLabel: "Save",
+          })
+        : prompt("New display name (slug stays the same):", p.title || p.slug);
       if (!title) return;
       await p2Fetch(`/api/projects/${encodeURIComponent(p.slug)}`, {
         method: "PATCH",
@@ -420,16 +425,53 @@ async function handleQuick(id, p) {
   }
 }
 
+function projectsViewActive() {
+  return (
+    document.body.classList.contains("house-projects") ||
+    /^#?projects\b/i.test(location.hash || "") ||
+    !!document.getElementById("projectsHome")?.closest(".is-active, [data-active-room='projects'], #ariaStage")
+  );
+}
+
 async function loadProjectHome(slug) {
   const homeEl = $("projectsHome");
   if (homeEl) homeEl.innerHTML = `<div class="proj-skeleton" aria-busy="true"><div></div><div></div><div></div></div>`;
+  const gen = (loadProjectHome._gen = (loadProjectHome._gen || 0) + 1);
   try {
+    // Fast path: clear "Loading…" and show project list from registry before full home enrich.
+    if (!slug) {
+      try {
+        const snap = await p2Fetch("/api/projects");
+        if (gen !== loadProjectHome._gen) return;
+        const activeEl = $("projectsActive");
+        if (activeEl) {
+          activeEl.textContent = snap.active
+            ? `Active workspace: ${snap.active}`
+            : "No active project — pick one or create below.";
+        }
+        renderProjectList({ projects: snap.projects || [], active: snap.active || "" });
+      } catch (_) {
+        /* full home still loads below */
+      }
+    }
     const q = slug ? `?slug=${encodeURIComponent(slug)}` : "";
     const home = await p2Fetch(`/api/projects/home${q}`);
+    if (gen !== loadProjectHome._gen) return;
     if (!slug && home.active) projectsState.selected = home.active;
     else if (slug) projectsState.selected = slug;
     renderHome(home);
   } catch (e) {
+    if (gen !== loadProjectHome._gen) return;
+    if (window.AriaNet?.isRoomAbort?.(e) || e?.name === "AbortError" || /aborted/i.test(String(e?.message || ""))) {
+      // Room thrash cancelled this paint — never show AbortError to Jeff.
+      if (projectsViewActive() && homeEl?.querySelector(".proj-skeleton")) {
+        clearTimeout(loadProjectHome._retry);
+        loadProjectHome._retry = setTimeout(() => {
+          if (projectsViewActive()) loadProjectHome(slug);
+        }, 140);
+      }
+      return;
+    }
     if (homeEl) homeEl.innerHTML = `<p class="muted">${esc(e.message)}</p>`;
     toastErr(e);
   }

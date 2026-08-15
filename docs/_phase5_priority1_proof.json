@@ -1,0 +1,133 @@
+{
+  "url": "http://127.0.0.1:8765/?app=1&workspace=1&shell=electron#chat",
+  "walk": [
+    {
+      "room": "flytying",
+      "bodyRoom": "flytying",
+      "mountedId": "flytyingRoom",
+      "nativeAttr": "1",
+      "nativeClass": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "versions": {
+        "fly": "5.0.0-native",
+        "health": "5.0.0-native",
+        "mission": "5.0.0-native",
+        "house": "5.0.0-native"
+      },
+      "proof": {
+        "stageChildren": 1,
+        "mountedId": "flytyingRoom",
+        "nativeRoom": true,
+        "legacyDisplay": "none",
+        "legacyVisibility": "hidden",
+        "legacyInert": true,
+        "workspace": true,
+        "livingRoomVisibleUnderStage": false
+      }
+    },
+    {
+      "room": "health",
+      "bodyRoom": "health",
+      "mountedId": "healthRoom",
+      "nativeAttr": "1",
+      "nativeClass": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "versions": {
+        "fly": "5.0.0-native",
+        "health": "5.0.0-native",
+        "mission": "5.0.0-native",
+        "house": "5.0.0-native"
+      },
+      "proof": {
+        "stageChildren": 1,
+        "mountedId": "healthRoom",
+        "nativeRoom": true,
+        "legacyDisplay": "none",
+        "legacyVisibility": "hidden",
+        "legacyInert": true,
+        "workspace": true,
+        "livingRoomVisibleUnderStage": false
+      }
+    },
+    {
+      "room": "mission",
+      "bodyRoom": "mission",
+      "mountedId": "missionRoom",
+      "nativeAttr": "1",
+      "nativeClass": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "versions": {
+        "fly": "5.0.0-native",
+        "health": "5.0.0-native",
+        "mission": "5.0.0-native",
+        "house": "5.0.0-native"
+      },
+      "proof": {
+        "stageChildren": 1,
+        "mountedId": "missionRoom",
+        "nativeRoom": true,
+        "legacyDisplay": "none",
+        "legacyVisibility": "hidden",
+        "legacyInert": true,
+        "workspace": true,
+        "livingRoomVisibleUnderStage": false
+      }
+    },
+    {
+      "room": "chat",
+      "bodyRoom": "chat",
+      "mountedId": "chatView",
+      "nativeAttr": null,
+      "nativeClass": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "versions": {
+        "fly": "5.0.0-native",
+        "health": "5.0.0-native",
+        "mission": "5.0.0-native",
+        "house": "5.0.0-native"
+      },
+      "proof": {
+        "stageChildren": 1,
+        "mountedId": "chatView",
+        "nativeRoom": false,
+        "legacyDisplay": "none",
+        "legacyVisibility": "hidden",
+        "legacyInert": true,
+        "workspace": true,
+        "livingRoomVisibleUnderStage": false
+      }
+    }
+  ],
+  "flySmoke": {
+    "patternCount": 48,
+    "hasSearch": true,
+    "hero": "Adams dry fly #16",
+    "benchVisible": true,
+    "step": "Attach the thread about a third of the way back down the hook shank and wrap it "
+  },
+  "healthSmoke": {
+    "hero": "How you’re doing",
+    "checkin": true,
+    "disclaimer": "Aria is not a physician and does not diagnose or prescribe. "
+  },
+  "missionSmoke": {
+    "hero": "System presence",
+    "cards": 4
+  },
+  "pass": {
+    "flyNativeMounted": true,
+    "healthNativeMounted": true,
+    "missionNativeMounted": true,
+    "noLegacyOnStage": true,
+    "flyPatternsLoaded": true,
+    "flyDetailOpens": true,
+    "healthHero": true,
+    "missionHero": true,
+    "missionCards": true
+  },
+  "ok": true
+}

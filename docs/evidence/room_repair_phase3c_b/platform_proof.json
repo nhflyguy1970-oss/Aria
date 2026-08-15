@@ -1,0 +1,316 @@
+{
+  "rooms": {
+    "memory": {
+      "enter_ms": 4077,
+      "ui": {
+        "room": "memory",
+        "fail": false,
+        "hasConflicts": true,
+        "hasAbout": true,
+        "checkboxes": [
+          {
+            "id": "memoryBrainMode",
+            "exists": true,
+            "disabled": false,
+            "readOnly": false
+          },
+          {
+            "id": "memoryAutoJournalLearn",
+            "exists": true,
+            "disabled": false,
+            "readOnly": false
+          },
+          {
+            "id": "memoryAutoDocumentLearn",
+            "exists": true,
+            "disabled": false,
+            "readOnly": false
+          },
+          {
+            "id": "memoryAutoCheckpoint",
+            "exists": true,
+            "disabled": false,
+            "readOnly": false
+          },
+          {
+            "id": "memoryAutoNamespace",
+            "exists": true,
+            "disabled": false,
+            "readOnly": false
+          },
+          {
+            "id": "memoryInPrompt",
+            "exists": true,
+            "disabled": false,
+            "readOnly": false
+          }
+        ],
+        "head": "Aria \u00b7 Memory archive Listening quietly Memory What Aria knows about you \u2014 autobiographical cognition (ACM), not a note database. Search New Briefing Assist ? Auto-memory Smart \u2192 candidates Explicit only Off Brain learning Journal \u2192 candidates Docs \u2192 candidates Auto-checkpoint Per-repo namespace Profile in prompt Update profile About you User name is Jeff User's role or background: Warranty Admini"
+      },
+      "toggle": {
+        "before": true,
+        "mid": false,
+        "after": true,
+        "changed": true,
+        "restored": true
+      },
+      "search_ui": {
+        "exists": true,
+        "visible": true
+      },
+      "search_api": {
+        "all_status": 200,
+        "home_status": 200,
+        "home_ok": true
+      },
+      "return": {
+        "room": "memory"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "isol": {
+        "health": 200,
+        "create_try": {
+          "path": "/api/memory",
+          "status": 200,
+          "ok": true
+        },
+        "retrieve": {
+          "status": 200,
+          "found": true
+        },
+        "live_clean": true,
+        "no_old_probes": true
+      }
+    },
+    "coding": {
+      "enter_ms": 3531,
+      "ui": {
+        "room": "coding",
+        "fail": false,
+        "btns": [
+          "Refresh",
+          "Projects",
+          "Job Center",
+          "Models"
+        ],
+        "hasGit": false,
+        "head": "Aria \u00b7 Engineering studio Listening quietly Coding Propose \u2192 Review \u2192 Apply \u2192 Undo \u2192 Verify. Projects identify workspaces; Job Center tracks execution; Models configures the coding model. Refresh Projects Job Center Models Ctrl+Shift+C Loading\u2026"
+      },
+      "after_refresh": {
+        "head": "Aria \u00b7 Engineering studio Listening quietly Coding Propose \u2192 Review \u2192 Apply \u2192 Undo \u2192 Verify. Projects identify workspaces; Job Center tracks execution; Models configures the coding model. Refresh Projects Job Center Models Ctrl+Shift+C Loading\u2026"
+      },
+      "return": "coding",
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Authenticated git push/commit \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED"
+      ]
+    },
+    "settings": {
+      "enter_ms": 2516,
+      "ui": {
+        "room": "settings",
+        "btns": 11,
+        "head": "Aria \u00b7 Settings Listening quietly Settings Preference catalog and deep links. Products own their stores \u2014 Settings indexes them. Ctrl+, opens this Home. Refresh Voice & Chat Diagnostics Export Catalog 63 Stores 9/12 Corrupt 0 Profile 912010b3c0 Settings coach Secrets stored in plaintext jarvis.env I"
+      },
+      "theme": {
+        "before": {
+          "select": "dark",
+          "light": false,
+          "local": null
+        },
+        "mid": {
+          "select": "light",
+          "light": true,
+          "local": "light"
+        },
+        "after": {
+          "select": "dark",
+          "light": false
+        },
+        "effect": true
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "capabilities": {
+      "enter_ms": 3012,
+      "ui": {
+        "room": "capabilities",
+        "btns": 7,
+        "hasList": true,
+        "fail": false,
+        "head": "Aria \u00b7 Capabilities Listening quietly Capabilities Unified management for everything that extends Aria. Products stay product owners \u2014 Capabilities only extends them. Refresh Load enabled Diagnostics Capabilities does not isolate third-party code. In-process execution shares Aria's privileges. Review permissions before enabling. Search capabilities Layer All layers Host Local Cognitive Platform Ca"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "integrations": {
+      "enter_ms": 3011,
+      "ui": {
+        "room": "integrations",
+        "btns": 7,
+        "fail": false,
+        "head": "Aria \u00b7 Integrations Listening quietly Integrations Provider credentials, connection tests, and unlock matrix. Products own behavior \u2014 Integrations owns keys and health. Refresh Test configured Diagnostics Secrets are stored in plaintext in data/jarvis.env on this PC. Aria does not encrypt this file today. Prefer restrictive file permissions (0600). Keys are never synced to git and must not be stored in Memory or chat. Recovery Review secret permi"
+      },
+      "after": {
+        "head": "Aria \u00b7 Integrations Listening quietly Integrations Provider credentials, connection tests, and unlock matrix. Products own behavior \u2014 Integrations owns keys and health. Refresh Test configured Diagnostics Secrets are stored in plaintext in data/jarvis.env on this PC. Aria does not encrypt this file today. Prefer restrictive file permissions (0600)."
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Real credential connect/disconnect/remove \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED"
+      ]
+    },
+    "security": {
+      "enter_ms": 2512,
+      "ui": {
+        "room": "security",
+        "btns": 5,
+        "hasPin": true,
+        "fail": false,
+        "head": "Aria \u00b7 Security Listening quietly Security Presence Voice PIN lock off (set JARVIS_PIN_LOCK=1) PIN lock Set a PIN and enable JARVIS_PIN_LOCK=1 in jarvis.env. Set PIN Lock now Trusted devices No trusted devices yet. Unlock with PIN once, then use Presence / face enroll if available. Voice & presence Cloud live: ready (gemini_live) Gestures: off \u00b7 floating panels on Brain mode: Local + cloud"
+      },
+      "api": {
+        "ok": true,
+        "locked": false,
+        "pin_lock_enabled": false,
+        "pin_configured": false,
+        "face_auth_enabled": false,
+        "idle_seconds": 900,
+        "lock_capable": false,
+        "session_valid": true
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "PIN setup/lock/unlock lifecycle \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED"
+      ]
+    },
+    "actions": {
+      "enter_ms": 2511,
+      "ui": {
+        "room": "actions",
+        "btns": 4,
+        "rows": 50,
+        "fail": false,
+        "head": "Aria \u00b7 Action history Listening quietly Action history All modules Coding Home Assistant Documents Image Clear Chat Audit Mission Control 2026-08-12T15:37:57 api http /api/cheatsheets 2026-08-12T15:35:55 api http /api/cheatsheets 2026-08-12T14:47:07 api http /api/cheatsheets 2026-08-12T14:47:07 api http /api/cheatsheets 2026-08-12T13:00:10 api http /api/cheatsheets 2026-08-12T13:00:06 api http /ap"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "automation": {
+      "enter_ms": 3513,
+      "ui": {
+        "room": "automation",
+        "btns": 73,
+        "hasRules": true,
+        "fail": false,
+        "head": "Aria \u00b7 Automation loft Listening quietly Automation Home Orchestrates schedules, rules, skills, and workflows. Not Job Center, Activity Center, Mission Control, or Home Assistant. Refresh Pause all Resume New rule Specialist team Specialists Team history View Paths Webhook Export Import automation: Schedules and orchestrates work \u00b7 skills: Reusable procedures \u00b7 rules: Trigger \u2192 Action logic \u00b7 workflows: Multi-step execution pipelines \u00b7 view_paths"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Real-world device/service automation triggers \u2014 JEFF-ATTENDED"
+      ]
+    },
+    "search_deepen": {
+      "enter_ms": 2014,
+      "ui": {
+        "status": "4 result(s) \u00b7 2997.4 ms \u00b7 documents, memory",
+        "items": [
+          "DOCUMENTS automotive_warranty_cover_letter-v2 87% JEFF RICHARDSON Charlestown, NH | Automotive Admin",
+          "DOCUMENTS Resume 2026 87% Jeffrey Richardson Charlestown, NH 03603 | 603-276-6089 | firefightr54@gma",
+          "DOCUMENTS Resume 2026-2 87% Jeffrey Richardson Charlestown, NH 03603 | 603-276-6089 | firefightr54@g",
+          "DOCUMENTS Resume 2026 87% Jeffrey Richardson Charlestown, NH 03603 | 603-276-6089 | firefightr54@gma"
+        ],
+        "hasDoc": true
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "chat": {
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "enter_ms": null,
+      "send_ms": 90463,
+      "busy_seen": true,
+      "pong": true,
+      "cancel": {
+        "stop_visible": true,
+        "busy": false,
+        "stopHidden": true,
+        "status": "Listening quietly"
+      },
+      "note": "Owner UI send Reply with exactly PONG-3CB succeeded; leave/return retained; cancel via Stop worked. First-token cold ~90s.",
+      "surface_recheck": {
+        "room": "chat",
+        "living": true,
+        "hasInput": true
+      }
+    }
+  },
+  "systemic": {
+    "docs_warranty": {
+      "ms": 130.0,
+      "hits": 4,
+      "fail": [],
+      "titles": [
+        "automotive_warranty_cover_letter-v2",
+        "Resume 2026",
+        "Resume 2026-2"
+      ]
+    },
+    "adams": {
+      "ms": 3220.7,
+      "sources": [
+        "flytying",
+        "flytying",
+        "chat",
+        "chat"
+      ],
+      "hits": 7
+    }
+  },
+  "isolation": {
+    "qa_header": 403,
+    "test_shaped": 400
+  },
+  "integrity": {
+    "status": "clean",
+    "overall": 100,
+    "clean": true,
+    "counts": {
+      "total": 0,
+      "actionable": 0,
+      "by_category": {},
+      "safe_to_remove": 0,
+      "uncertain": 0
+    }
+  },
+  "activity": {
+    "unread": 28,
+    "owner_visible_room_leave": false
+  },
+  "cross": {
+    "chat_to_coding": {
+      "room": "coding"
+    },
+    "search_fly": {
+      "status": "7 result(s) \u00b7 3235.79 ms \u00b7 planner, dashboard, chat, journal, layouts, learned, notifications, flytying, settings, calendar, health, memory, projects",
+      "items": [
+        "FLY TYING Adams dry fly #16 75% terrestrial",
+        "FLY TYING Adams dry fly #18 75% dry",
+        "CHAT Main: user 66% Write me a one-paragraph project note for Adams Dry Fly Revival \u2014 status update for myself.",
+        "CHAT Main: assistant 66% Sure! Here\u2019s a one-paragraph project note for Adams Dry Fly Revival: \"Currently, the Adams Dry Fly Revival project is on track. We have completed the initial d",
+        "NOTIFICATIONS Open Notifications 56% 28 unread \u00b7 23 critical",
+        "HEALTH Open Health 56% Local PHR",
+        "HOME Home 56% Dashboard product"
+      ],
+      "hasFly": true
+    },
+    "settings_to_chat": {
+      "room": "chat",
+      "living": true
+    }
+  },
+  "jeff_attended": [
+    "Integrations credentials",
+    "Security PIN lock/unlock",
+    "Automation real-world actuation"
+  ],
+  "cleanup": {
+    "isol_note": "isol DATA_DIR /tmp/aria-tier3cb-isol \u2014 stop isol serve separately"
+  }
+}

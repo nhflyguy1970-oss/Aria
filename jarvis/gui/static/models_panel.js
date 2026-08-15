@@ -108,6 +108,7 @@ async function loadModelSettings() {
     renderModelSettings(settings);
     return settings;
   } catch (e) {
+    if (window.AriaNet?.isRoomAbort?.(e)) return null;
     if (editorStatus) {
       editorStatus.textContent = `Could not load models: ${e.message}`;
       editorStatus.classList.add("warn");

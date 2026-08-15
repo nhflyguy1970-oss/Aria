@@ -1,0 +1,37 @@
+{
+  "updated_at": "2026-08-13T14:58:42.777008+00:00",
+  "lock": {
+    "http_status": 200,
+    "ok": true,
+    "state": "OWNER_LOCKED",
+    "vault_unlocked": false,
+    "mode": "hard",
+    "lock_api_ms": 25.54,
+    "result_keys": [
+      "mode",
+      "ok",
+      "revoked_sessions",
+      "state",
+      "vault_unlocked"
+    ]
+  },
+  "while_locked": {
+    "http_status": 200,
+    "elapsed_ms": 2.39,
+    "configured": false,
+    "connected": false,
+    "token_set": false,
+    "url_set": true,
+    "conn_ok": false,
+    "conn_message": "No token saved yet \u2014 paste a long-lived access token from Home Assistant \u2192 Profile \u2192 Security.",
+    "enabled": true,
+    "secret_in_response": false
+  },
+  "ha_migration_row": null,
+  "legacy_env_retained": true,
+  "legacy_ha_length": 183,
+  "legacy_ha_fp8": "f76cc236",
+  "fail_closed": true,
+  "note": "Migrated HA token fails closed while locked even though jarvis.env still holds the plaintext copy.",
+  "secrets_in_evidence": false
+}

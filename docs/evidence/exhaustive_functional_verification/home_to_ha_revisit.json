@@ -1,0 +1,28 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "home_automation",
+  "capability": "Front Door → Home Automation after entity-list repair",
+  "captured_at": "2026-08-15T19:23:00Z",
+  "result": "PASS — Front Door Home Automation door landed #homeAutomation Connected with entity list populated. First paint of setup chrome briefly showed Smart home status unavailable / No token pasted, then vault placeholder recovered. Header stayed Connected. Lock Aria was visible on the door and not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door option Home Automation",
+    "hash": "#homeAutomation",
+    "h2": "Home Automation",
+    "status": "Connected · http://127.0.0.1:8123"
+  },
+  "first_paint": {
+    "header": "Connected",
+    "entities": "loaded",
+    "setup_chrome": "stale unavailable then recovered to vault ha.token placeholder"
+  },
+  "performance": {
+    "door_to_room": "FAST",
+    "setup_chrome_settle": "ACCEPTABLE — one beat of stale copy"
+  },
+  "not_clicked": ["Lock Aria", "Restart Server", "toggles", "Heading out"]
+}

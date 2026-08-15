@@ -37,8 +37,29 @@ def what_am_i_working_on(assistant: Any) -> dict[str, Any]:
             parts.append("**Open planner tasks:**")
             for task in tasks:
                 parts.append(f"- {task.get('title') or task.get('text') or task}")
-    except Exception:
-        pass
+        events = planner.get("events") or planner.get("events_today") or []
+        if events:
+            parts.append("**Today's planner events:**")
+            for ev in events[:4]:
+                t = (ev.get("start_time") or "")[11:16]
+                parts.append(f"- {t} {ev.get('title') or ''}".strip())
+        timers = planner.get("timers") or []
+        if timers:
+            parts.append("**Running timers:**")
+            for tm in timers[:4]:
+                rem = int(tm.get("remaining_seconds") or 0)
+                pause = " (paused)" if tm.get("paused") else ""
+                parts.append(f"- {tm.get('label') or 'timer'} — {rem // 60}m{rem % 60:02d}s{pause}")
+        alarms = planner.get("alarms") or []
+        if alarms:
+            parts.append("**Upcoming alarms:**")
+            for al in alarms[:4]:
+                parts.append(
+                    f"- {(al.get('fire_at') or '')[11:16]} {al.get('label') or 'alarm'}".strip()
+                )
+    except Exception as exc:
+        logger.warning("load_planner failed in morning workflow: %s", exc)
+        parts.append("_Planner unavailable — open Planner view to recover._")
 
     try:
         hits = assistant.memory.search("current project task working on", limit=5)
@@ -190,8 +211,8 @@ def what_should_i_work_on_next(assistant: Any) -> dict[str, Any]:
         if tasks:
             top = tasks[0]
             lines.append(f"1. **{top.get('title') or top.get('text')}** (planner)")
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("planner next-step failed: %s", exc)
 
     if len(lines) == 2:
         lines.append("1. Set an active project and describe what you want to accomplish today")

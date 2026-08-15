@@ -100,6 +100,41 @@ except Exception:
 " 2>/dev/null
 }
 
+jarvis_systemd_unit() {
+  [[ -f "${HOME}/.config/systemd/user/jarvis.service" ]]
+}
+
+jarvis_start_canonical_server() {
+  if ! jarvis_systemd_unit; then
+    return 1
+  fi
+  if jarvis_server_responsive; then
+    return 0
+  fi
+  jarvis_log "Starting systemd --user jarvis.service"
+  systemctl --user start jarvis.service
+  jarvis_wait_for_server ""
+}
+
+jarvis_restart_canonical_server() {
+  if ! jarvis_systemd_unit; then
+    return 1
+  fi
+  jarvis_log "Restarting systemd --user jarvis.service"
+  systemctl --user restart jarvis.service
+  jarvis_wait_for_server ""
+}
+
+jarvis_ensure_tray_client() {
+  if [[ "${JARVIS_TRAY:-1}" == "0" ]]; then
+    return 0
+  fi
+  if pgrep -f "${JARVIS_ROOT}/main.py tray" >/dev/null 2>&1; then
+    return 0
+  fi
+  jarvis_start_tray_background || true
+}
+
 jarvis_start_tray_background() {
   if [[ "${JARVIS_TRAY:-1}" == "0" ]]; then
     jarvis_log "Tray disabled (JARVIS_TRAY=0)"
@@ -108,6 +143,10 @@ jarvis_start_tray_background() {
   if ! jarvis_tray_available; then
     jarvis_log "Tray unavailable (DISPLAY/pystray) — continuing without tray icon"
     return 1
+  fi
+  if pgrep -f "${JARVIS_ROOT}/main.py tray" >/dev/null 2>&1; then
+    jarvis_log "Tray already running — not starting a second tray"
+    return 0
   fi
   export JARVIS_NO_BROWSER=1
   "$(jarvis_python)" "$JARVIS_ROOT/main.py" tray >>"$LOG_FILE" 2>&1 &
@@ -125,7 +164,7 @@ jarvis_start_serve_background() {
 }
 
 jarvis_open_gui_detached() {
-  export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-fluent}"
+  export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-electron}"
   export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-0}"
   export JARVIS_SHELL_FORCE_NEW="${JARVIS_SHELL_FORCE_NEW:-0}"
   "$(jarvis_python)" -m jarvis.gui_launcher "$URL"
@@ -133,7 +172,7 @@ jarvis_open_gui_detached() {
 
 jarvis_run_gui_foreground() {
   export JARVIS_NO_BROWSER=1
-  export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-fluent}"
+  export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-electron}"
   export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-0}"
   export JARVIS_SHELL_FORCE_NEW="${JARVIS_SHELL_FORCE_NEW:-0}"
   # FluentWindow crashes on some Linux/GPU stacks — stable Fusion QMainWindow by default.
@@ -141,9 +180,14 @@ jarvis_run_gui_foreground() {
   cd "$JARVIS_ROOT"
 
   if [[ "${JARVIS_GUI_MODE}" == "electron" ]]; then
-    jarvis_notify "$(jarvis_app_name)" "Ready — opening Electron shell"
-    jarvis_log "ARIA ready at $URL — Electron shell"
-    exec "$(jarvis_python)" -c "from jarvis.electron_shell import launch_electron_shell; import sys; sys.exit(0 if launch_electron_shell('${URL}') else 1)"
+    if [[ ! -x "$JARVIS_ROOT/scripts/electron-shell/node_modules/electron/dist/electron" ]]; then
+      jarvis_log "Electron R1 missing — run ./scripts/install-electron-shell.sh (falling back to fluent)"
+      export JARVIS_GUI_MODE="fluent"
+    else
+      jarvis_notify "$(jarvis_app_name)" "Ready — opening Aria"
+      jarvis_log "ARIA ready at $URL — Living Workspace R1 (Electron)"
+      exec "$(jarvis_python)" -c "from jarvis.electron_shell import launch_electron_shell; import sys; sys.exit(0 if launch_electron_shell('${URL}') else 1)"
+    fi
   fi
 
   if [[ "${JARVIS_GUI_MODE}" == "pyside" || "${JARVIS_GUI_MODE}" == "fluent" ]]; then
@@ -189,6 +233,9 @@ jarvis_wait_for_server() {
 }
 
 jarvis_stop_stale() {
+  if jarvis_systemd_unit; then
+    systemctl --user stop jarvis.service 2>/dev/null || true
+  fi
   pkill -f "${JARVIS_ROOT}/main.py tray" 2>/dev/null || true
   pkill -f "${JARVIS_ROOT}/main.py serve" 2>/dev/null || true
   pkill -f "${JARVIS_ROOT}/jarvis/pyside_shell" 2>/dev/null || true

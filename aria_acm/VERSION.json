@@ -6,7 +6,7 @@
   "source_commit": "b720cbb32d36f61af5287adef1aac0a4d5d5b7f2",
   "source_repo": "/media/jeff/AI/ACM",
   "copy_date": "2026-07-23",
-  "tree_sha256": "50759153c39cce73241e046f21b7e6567c6d740769bec1c77b54b5718b06be6e",
+  "tree_sha256": "c866791f380cb53124743d637ea71d2dea638e56e69f90b0089d720a86f50a68",
   "license": "Apache-2.0",
   "certification_ref": "Aria host production audit + ACM corrupt-load fail-closed (v0.45.1)",
   "promotion": "PLATFORM-PRACTICAL-COMPLETE",

@@ -173,6 +173,28 @@ def invalidate_all_sessions() -> None:
         _save_sessions()
 
 
+def _owner_for_uncensored():
+    try:
+        from jarvis.config import DATA_DIR
+        from jarvis.env_loader import PROJECT_ROOT
+        from jarvis.security.owner.service import get_owner_security, vault_paths
+
+        data_dir = Path(DATA_DIR)
+        expected = vault_paths(data_dir)["vault"]
+        if os.getenv("PYTEST_CURRENT_TEST"):
+            live = (PROJECT_ROOT / "data" / "security" / "owner").resolve()
+            if expected.resolve().is_relative_to(live):
+                return None
+        svc = get_owner_security()
+        if Path(svc.paths["vault"]) != Path(expected):
+            svc = get_owner_security(data_dir=data_dir)
+        if not svc.vault.exists():
+            return None
+        return svc
+    except Exception:
+        return None
+
+
 def try_enable(
     password: str = "",
     session_token: str = "",
@@ -180,10 +202,40 @@ def try_enable(
     *,
     client_id: str = "local",
 ) -> tuple[str | None, str | None]:
-    """Validate unlock for enabling uncensored mode. Returns (session_token, error)."""
+    """Validate unlock for enabling uncensored mode. Returns (session_token, error).
+
+    When the Owner Vault exists: Owner session + step-up (Master Password or PIN).
+    No second Aria password. Legacy uncensored_auth.json is left in place but not
+    required for enable.
+    """
     remaining = lockout_remaining(client_id)
     if remaining > 0:
         return None, f"Too many attempts — try again in {remaining // 60 + 1} min"
+
+    owner = _owner_for_uncensored()
+    if owner is not None and owner.vault.exists():
+        unlocked = bool(
+            owner.vault.is_unlocked()
+            and getattr(owner.sessions.state, "value", "") != "OWNER_LOCKED"
+        )
+        if not unlocked:
+            return None, "Unlock Aria with your Master Password first"
+        if validate_session(session_token):
+            return session_token or create_session(), None
+        auth = owner.authorize("uncensored.enable", room="security")
+        if auth.get("step_up_required"):
+            secret = (password or "").strip()
+            if not secret:
+                return None, "Confirm with your Aria Master Password"
+            up = owner.step_up(master_password=secret, pin=secret)
+            if not up.get("ok"):
+                _record_failure(client_id)
+                return None, "Incorrect Master Password or PIN"
+            auth = owner.authorize("uncensored.enable", room="security")
+        if not auth.get("ok"):
+            return None, str(auth.get("reason") or "Not authorized")
+        _clear_failures(client_id)
+        return create_session(), None
 
     if validate_session(session_token):
         return session_token or create_session(), None
@@ -211,11 +263,26 @@ def try_enable(
 
 
 def auth_status(session_token: str = "", *, client_id: str = "local") -> dict:
+    owner = _owner_for_uncensored()
+    owner_vault = bool(owner and owner.vault.exists())
+    owner_unlocked = False
+    if owner_vault:
+        try:
+            owner_unlocked = bool(
+                owner.vault.is_unlocked()
+                and getattr(owner.sessions.state, "value", "") != "OWNER_LOCKED"
+            )
+        except Exception:
+            owner_unlocked = False
     return {
-        "configured": is_configured(),
-        "session_valid": validate_session(session_token),
+        "configured": is_configured() if not owner_vault else True,
+        "session_valid": validate_session(session_token) and (owner_unlocked if owner_vault else True),
         "session_hours": SESSION_TTL // 3600,
         "lockout_seconds": lockout_remaining(client_id),
+        "owner_vault": owner_vault,
+        "owner_unlocked": owner_unlocked if owner_vault else True,
+        "auth_mode": "owner_security" if owner_vault else "legacy_password",
+        "prompt_class": "A" if owner_vault else "legacy_uncensored_password",
     }
 
 

@@ -10,8 +10,10 @@ from typing import Any
 from jarvis.response import err as _err, ok as _ok
 
 import logging
+import subprocess
 
 from jarvis import fs, llm
+from jarvis.code_context import format_context, gather_context
 from jarvis.coding_agent import CodingAgent
 from jarvis.diff_util import make_diff
 from jarvis.response import stream_done as _stream_done
@@ -22,8 +24,6 @@ logger = logging.getLogger("jarvis.behaviors.engineering")
 class EngineeringOperations:
     """Coding, git, LSP, and refactor handlers using engineering context."""
 
-
-    @classmethod
     @classmethod
     def store_refactor_proposal(
         cls,
@@ -98,12 +98,83 @@ class EngineeringOperations:
 
     @classmethod
     def coding_read(cls, ctx, params: dict, message: str) -> dict:
-        path = EngineeringOperations.resolve_coding_path(ctx, params.get("path", ""))
+        raw = (params.get("path") or "").strip()
+        # Natural "read my resume" — resolve without Jeff naming a folder.
+        if raw.lower() in ("resume", "my resume", "cv", "my cv"):
+            from pathlib import Path
+
+            roots = params.get("search_roots") or [
+                str(Path.home() / "Documents"),
+                str(Path.home() / "Downloads"),
+            ]
+            hits: list[str] = []
+            for root in roots:
+                try:
+                    hits.extend(fs.find_files("resume", root)[:20])
+                    hits.extend(fs.find_files("Resume", root)[:20])
+                except Exception:
+                    continue
+            # Prefer pdf/docx/txt under Documents
+            ranked = sorted(
+                set(hits),
+                key=lambda p: (
+                    0 if p.lower().endswith((".pdf", ".docx", ".txt", ".md")) else 1,
+                    0 if "/documents/" in p.lower() else 1,
+                    len(p),
+                ),
+            )
+            if not ranked:
+                return _err("I couldn't find a resume under Documents or Downloads.")
+            raw = ranked[0]
+        # Natural "open/read the invoice" — Downloads/Documents, not chat invention.
+        if raw.lower() in ("invoice", "the invoice", "that invoice", "my invoice"):
+            from pathlib import Path
+
+            roots = params.get("search_roots") or [
+                str(Path.home() / "Downloads"),
+                str(Path.home() / "Documents"),
+            ]
+            hits: list[str] = []
+            for root in roots:
+                try:
+                    hits.extend(fs.find_files("invoice", root)[:20])
+                    hits.extend(fs.find_files("Invoice", root)[:20])
+                except Exception:
+                    continue
+            ranked = sorted(
+                set(hits),
+                key=lambda p: (
+                    0 if p.lower().endswith((".pdf", ".png", ".jpg", ".jpeg", ".txt", ".md")) else 1,
+                    0 if "/downloads/" in p.lower() else 1,
+                    len(p),
+                ),
+            )
+            if not ranked:
+                return _err("I couldn't find an invoice under Downloads or Documents.")
+            raw = ranked[0]
+        path = EngineeringOperations.resolve_coding_path(ctx, raw)
+        if not path and raw:
+            # Absolute / home paths are first-class for a local workstation assistant.
+            try:
+                path = str(fs.resolve_path(raw, base=ctx.coding._base()))
+            except Exception as exc:
+                return _err(str(exc))
         if not path:
             return _err("Which file should I read?")
         content = fs.read_file(path, base=ctx.coding._base())
         if content.startswith("ERROR:"):
             return _err(content)
+        # PDFs are binary — Jeff expects readable text, not stream dumps.
+        if str(path).lower().endswith(".pdf") or content[:5] == "%PDF-":
+            try:
+                from jarvis.document_pipeline import parse_document
+
+                doc = parse_document(path)
+                text = (getattr(doc, "full_text", None) or getattr(doc, "text", None) or "").strip()
+                if text:
+                    content = text
+            except Exception as exc:
+                return _err(f"I found `{path}` but couldn't extract text ({exc}).")
         ctx.session.note_file(path)
         ctx.coding.conversation.add_system(f"Loaded file: {path}\n\n{content}")
         preview = content[:3000] + ("…" if len(content) > 3000 else "")
@@ -232,6 +303,30 @@ class EngineeringOperations:
         return original.strip() == (candidate or "").strip()
 
     @classmethod
+    def destructive_shrink_reason(
+        cls, original: str, candidate: str, *, path: str = ""
+    ) -> str | None:
+        """Refuse model outputs that collapse a real file to a stub."""
+        orig = original or ""
+        new = candidate or ""
+        o_lines = len(orig.splitlines())
+        n_lines = len(new.splitlines())
+        o_len = len(orig)
+        n_len = len(new)
+        label = path or "file"
+        if o_lines >= 40 and n_lines <= max(5, int(o_lines * 0.15)):
+            return (
+                f"Refusing proposal that shrinks `{label}` from {o_lines} lines "
+                f"to {n_lines}. Ask again with a smaller, explicit edit."
+            )
+        if o_len >= 2000 and n_len <= max(200, int(o_len * 0.1)):
+            return (
+                f"Refusing proposal that truncates `{label}` from {o_len} chars "
+                f"to {n_len}. The model likely returned a stub."
+            )
+        return None
+
+    @classmethod
     def coding_propose(
         cls,
         ctx,
@@ -241,17 +336,20 @@ class EngineeringOperations:
         task: str | None = None,
         editor_prompt: str = "",
     ) -> dict:
-        content = fs.read_file(path, base=ctx.coding._base())
+        from jarvis.code_context import _find_test_files, _is_sandbox_script
+        from jarvis.sandbox import run_sandboxed
+
+        base = ctx.coding._base()
+        content = fs.read_file(path, base=base)
         if content.startswith("ERROR:"):
             return _err(content)
 
-        ctx = gather_context(path, ctx.coding._base(), task=task or mode)
-        context_text = format_context(ctx)
-        from jarvis.code_context import _find_test_files, _is_sandbox_script
+        code_ctx = gather_context(path, base, task=task or mode)
+        context_text = format_context(code_ctx)
         if _is_sandbox_script(path):
             slim = [f"FILE: {path}\n{content}"]
-            for rel_test in _find_test_files(path, ctx.coding._base()):
-                t = fs.read_file(rel_test, base=ctx.coding._base())
+            for rel_test in _find_test_files(path, base):
+                t = fs.read_file(rel_test, base=base)
                 if not t.startswith("ERROR:"):
                     slim.append(f"--- {rel_test} (test) ---\n{t[:4000]}")
             context_text = "\n".join(slim)
@@ -260,7 +358,7 @@ class EngineeringOperations:
             context_text = f"{context_text}\n\n--- Editor (Cursor) ---\n{editor_prompt}"
 
         stderr = ""
-        resolved = fs.resolve_path(path, base=ctx.coding._base())
+        resolved = fs.resolve_path(path, base=base)
         if mode == "fix":
             try:
                 compile_check = subprocess.run(
@@ -270,7 +368,7 @@ class EngineeringOperations:
                 if compile_check.returncode == 0:
                     result = run_sandboxed(
                         ["python3", str(resolved)],
-                        cwd=str(ctx.coding._base()),
+                        cwd=str(base),
                         timeout=30,
                     )
                     stderr = result.stderr or (result.stdout if result.returncode != 0 else "")
@@ -280,7 +378,7 @@ class EngineeringOperations:
                 return _err(str(e))
             if not stderr:
                 from jarvis.coding_verify import collect_test_failures
-                stderr = collect_test_failures(resolved, ctx.coding._base())
+                stderr = collect_test_failures(resolved, base)
             if not stderr:
                 from jarvis import lsp
                 diag = lsp.check_python(resolved)
@@ -306,6 +404,12 @@ class EngineeringOperations:
                 improve_task, path=path, content=content, context=context_text,
             )
 
+        shrink = EngineeringOperations.destructive_shrink_reason(
+            content, new_code or "", path=path
+        )
+        if shrink:
+            return _err(shrink, module="coding")
+
         diff = make_diff(content, new_code)
         files = [{"path": path, "code": new_code}]
         proposal_id, payload = ctx._store_agent_proposal(
@@ -318,7 +422,7 @@ class EngineeringOperations:
         verb = "fixes" if mode == "fix" else "improvements"
         syntax_note = f"\n\n**Syntax check:**\n{diag_summary}" if diag_summary else ""
         intro = (
-            f"I found {verb} for **{path}** (used {len(ctx.get('related', []))} related files for context).\n\n"
+            f"I found {verb} for **{path}** (used {len(code_ctx.get('related', []))} related files for context).\n\n"
             f"{explanation}{syntax_note}\n\n"
             "Want me to apply these changes? Hit **Apply** or just say \"apply it\"."
         )
@@ -610,13 +714,104 @@ class EngineeringOperations:
     @classmethod
     def coding_find(cls, ctx, params: dict, message: str) -> dict:
         query = params.get("query") or message
-        matches = fs.find_files(query, ctx.coding._base())
+        roots = params.get("search_roots")
+        if roots and isinstance(roots, (list, tuple)):
+            from pathlib import Path
+
+            all_matches: list[str] = []
+            q = str(query or "").strip()
+            for root in roots:
+                try:
+                    root_path = Path(str(root)).expanduser().resolve()
+                    all_matches.extend(fs.find_files(q, root_path)[:40])
+                except Exception:
+                    continue
+            if not all_matches:
+                return _ok(
+                    f"I couldn't find anything matching '{q}' in Documents, Downloads, or Desktop.",
+                    module="coding",
+                )
+            uniq = list(dict.fromkeys(all_matches))
+            for m in uniq[:3]:
+                ctx.session.note_file(m)
+            lines = "\n".join(uniq[:30])
+            return _ok(f"Found {len(uniq)} file(s):\n\n{lines}", module="coding")
+
+        root = params.get("root") or ctx.coding._base()
+        try:
+            from pathlib import Path
+
+            root_path = Path(str(root)).expanduser().resolve()
+        except Exception:
+            root_path = ctx.coding._base()
+        q = str(query or "").strip()
+        newer_days = params.get("newer_days")
+        ext = (params.get("ext") or "").strip().lower()
+        if q in ("*", ".", "all", ""):
+            # Directory listing — local OS assistant behavior
+            import os
+            import time
+
+            entries: list[dict[str, str]] = []
+            cutoff = None
+            if newer_days:
+                try:
+                    cutoff = time.time() - float(newer_days) * 86400
+                except Exception:
+                    cutoff = None
+            try:
+                with os.scandir(root_path) as it:
+                    for entry in it:
+                        if entry.name.startswith("."):
+                            continue
+                        try:
+                            st = entry.stat(follow_symlinks=False)
+                        except Exception:
+                            continue
+                        if cutoff is not None and st.st_mtime < cutoff:
+                            continue
+                        entries.append(
+                            {
+                                "name": entry.name,
+                                "type": "dir" if entry.is_dir(follow_symlinks=False) else "file",
+                                "mtime": st.st_mtime,
+                            }
+                        )
+                        if len(entries) >= 80:
+                            break
+            except Exception as exc:
+                return _err(f"Could not list `{root_path}`: {exc}", module="coding")
+            if not entries:
+                when = f" from the last {newer_days} day(s)" if newer_days else ""
+                return _ok(f"No files found under `{root_path}`{when}.", module="coding")
+            entries.sort(key=lambda e: (-(e.get("mtime") or 0), e.get("type") != "dir", (e.get("name") or "").lower()))
+            lines = "\n".join(
+                f"- {'[dir] ' if e.get('type') == 'dir' else ''}{e.get('name')}" for e in entries[:80]
+            )
+            when = f" (last {newer_days} day(s))" if newer_days else ""
+            return _ok(f"**{root_path}**{when} — {len(entries)} entries:\n\n{lines}", module="coding")
+        matches = fs.find_files(q, root_path)
+        if ext:
+            matches = [m for m in matches if m.lower().endswith(ext)]
+        if newer_days:
+            import time
+            from pathlib import Path as _P
+
+            cutoff = time.time() - float(newer_days) * 86400
+            filtered = []
+            for m in matches:
+                try:
+                    if _P(m).stat().st_mtime >= cutoff:
+                        filtered.append(m)
+                except Exception:
+                    continue
+            matches = filtered
         if not matches:
-            return _ok(f"I couldn't find any files matching '{query}'.", module="coding")
+            return _ok(f"I couldn't find any files matching '{q}' under `{root_path}`.", module="coding")
         for m in matches[:3]:
             ctx.session.note_file(m)
         lines = "\n".join(matches[:30])
-        return _ok(f"Found {len(matches)} file(s):\n\n{lines}", module="coding")
+        return _ok(f"Found {len(matches)} file(s) under `{root_path}`:\n\n{lines}", module="coding")
 
     @classmethod
     def coding_search(cls, ctx, params: dict, message: str) -> dict:

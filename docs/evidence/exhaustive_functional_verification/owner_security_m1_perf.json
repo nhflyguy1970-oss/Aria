@@ -1,0 +1,21 @@
+{
+  "setup_ms": 120.07,
+  "recovery_key_present": true,
+  "lock_hard_ms": 0.18,
+  "unlock_ms": 60.44,
+  "lock_soft_ms": 0.15,
+  "re_unlock_ms": 50.08,
+  "authorize_low_ms": 0.02,
+  "authorize_ok": true,
+  "step_up_ms": 48.11,
+  "authorize_high_ms": 0.04,
+  "status_ms": 0.13,
+  "vault_init_from_timings": [
+    {
+      "op": "vault_initialize",
+      "ms": 120.05
+    }
+  ],
+  "data_dir": "/tmp/aria-owner-m1-perf-l0dpt2e5",
+  "note": "Argon2id 64MiB; KDF only on setup/unlock/step-up/recovery"
+}

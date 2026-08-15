@@ -3,15 +3,30 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from jarvis.config import DATA_DIR
 
+logger = logging.getLogger("jarvis.project_registry")
+
 PROJECTS_ROOT = DATA_DIR / "projects"
 SUBDIRS = ("cad", "exports", "browser", "images")
+
+# QA / certification / probe leftovers must never appear in the production picker.
+_QA_SLUG_RE = re.compile(
+    r"(^qa[-_]|[-_]qa[-_]|cert-proj[-_]|oc-cert|onetruth-proj[-_]|smoke[-_]|certification[-_]|[-_]probe[-_]|^probe[-_])",
+    re.I,
+)
+_QA_TITLE_RE = re.compile(
+    r"(qa\s+workflow|\boc\s*cert\b|cert\s+proj\b|cert\s+project\b|onetruth\s+proj\b|smoke\s+test\b|ship\s*probe|wf[_\s-]?probe)",
+    re.I,
+)
+_QA_DESC_RE = re.compile(r"(lead\s+qa\s+workflow\s+probe|workflow\s+probe|certification\s+test)", re.I)
 
 
 def _slugify(name: str | None) -> str:
@@ -30,6 +45,24 @@ def project_dir(slug: str | None) -> Path:
 
 def meta_path(slug: str | None) -> Path:
     return project_dir(slug) / "meta.json"
+
+
+def is_qa_artifact(meta: dict[str, Any] | None, *, title: str = "", description: str = "") -> bool:
+    """True for automated QA/cert/probe projects — never show in production UI."""
+    meta = meta or {}
+    if meta.get("qa_artifact") is True:
+        return True
+    origin = str(meta.get("origin") or "").strip().lower()
+    if origin in ("qa", "certification", "smoke", "demo", "test", "probe"):
+        return True
+    slug = str(meta.get("slug") or "")
+    tit = str(meta.get("title") or title or "")
+    desc = str(meta.get("description") or description or "")
+    if _QA_SLUG_RE.search(slug):
+        return True
+    if _QA_TITLE_RE.search(tit) or _QA_DESC_RE.search(desc) or _QA_DESC_RE.search(tit):
+        return True
+    return False
 
 
 def _read_meta(path: Path) -> dict[str, Any]:
@@ -65,7 +98,14 @@ def _identity_fields(slug: str) -> dict[str, str]:
     }
 
 
-def create_project(title: str | None, *, description: str = "", git_path: str | None = None) -> dict[str, Any]:
+def create_project(
+    title: str | None,
+    *,
+    description: str = "",
+    git_path: str | None = None,
+    qa_artifact: bool = False,
+    origin: str | None = None,
+) -> dict[str, Any]:
     slug = _slugify(title)
     if meta_path(slug).is_file():
         base = slug
@@ -75,10 +115,25 @@ def create_project(title: str | None, *, description: str = "", git_path: str | 
         slug = f"{base}-{n}"
     now = _now()
     title = str(title or slug).strip()
-    meta = {
+    desc = str(description or "").strip()
+    tagged = bool(qa_artifact) or is_qa_artifact(
+        {"slug": slug, "title": title, "description": desc, "origin": origin or ""}
+    )
+    from jarvis.production_guard import LIVE_DATA_ROOT, ProductionIsolationError, looks_like_test_payload
+
+    try:
+        live_projects = Path(PROJECTS_ROOT).resolve().relative_to(LIVE_DATA_ROOT)
+        live_projects = True
+    except (ValueError, OSError):
+        live_projects = False
+    if live_projects and (tagged or looks_like_test_payload(title, desc, slug, origin)):
+        raise ProductionIsolationError(
+            "Refusing to create a QA/certification project in the live workspace."
+        )
+    meta: dict[str, Any] = {
         "slug": slug,
         "title": title,
-        "description": str(description or "").strip(),
+        "description": desc,
         "created": now,
         "updated": now,
         "last_opened": "",
@@ -86,6 +141,11 @@ def create_project(title: str | None, *, description: str = "", git_path: str | 
         "git_path": git_path,
         **_identity_fields(slug),
     }
+    if tagged:
+        meta["qa_artifact"] = True
+        meta["origin"] = (origin or "qa").strip() or "qa"
+        # Keep cert suites able to search before archive, but never surface in the picker.
+        logger.info("Tagged project %s as QA artifact (origin=%s)", slug, meta["origin"])
     _write_meta(slug, meta)
     try:
         from jarvis.project_journal import ProjectJournal
@@ -160,16 +220,20 @@ def rename_project(slug: str, new_title: str) -> dict[str, Any] | None:
     return update_project(slug, title=new_title)
 
 
-def list_projects(*, include_archived: bool = False) -> list[dict[str, Any]]:
+def list_projects(*, include_archived: bool = False, include_qa: bool = False) -> list[dict[str, Any]]:
     PROJECTS_ROOT.mkdir(parents=True, exist_ok=True)
     out: list[dict[str, Any]] = []
     for child in sorted(PROJECTS_ROOT.iterdir()):
         if not child.is_dir():
             continue
+        if child.name.startswith("_"):
+            continue
         meta = get_project(child.name)
         if not meta:
             continue
         if meta.get("archived") and not include_archived:
+            continue
+        if not include_qa and is_qa_artifact(meta):
             continue
         out.append(meta)
     out.sort(key=lambda m: m.get("updated") or "", reverse=True)
@@ -181,8 +245,54 @@ def archive_project(slug: str, *, archived: bool = True) -> bool:
     if not meta:
         return False
     meta["archived"] = bool(archived)
-    _write_meta(slug, meta)
+    _write_meta(slug, {k: v for k, v in meta.items() if k != "paths"})
     return True
+
+
+def delete_project(slug: str) -> bool:
+    """Remove project workspace + journal entry. Used to purge QA leftovers."""
+    s = _slugify(slug)
+    root = project_dir(s)
+    if not root.is_dir() and not meta_path(s).is_file():
+        return False
+    try:
+        from jarvis.active_project import get_active_slug, set_active_slug
+
+        if get_active_slug() == s:
+            set_active_slug("")
+    except Exception:
+        pass
+    if root.is_dir():
+        shutil.rmtree(root, ignore_errors=True)
+    try:
+        from jarvis.project_journal import PROJECTS_DIR, INDEX_FILE, list_projects as journal_list
+
+        jp = PROJECTS_DIR / f"{s}.json"
+        if jp.is_file():
+            jp.unlink(missing_ok=True)
+        if INDEX_FILE.is_file():
+            remaining = [p for p in journal_list() if p.get("slug") != s]
+            INDEX_FILE.write_text(
+                json.dumps({"projects": remaining}, indent=2),
+                encoding="utf-8",
+            )
+    except Exception as exc:
+        logger.debug("Journal cleanup for %s: %s", s, exc)
+    return True
+
+
+def purge_qa_artifacts() -> list[str]:
+    """Delete known QA/cert/probe projects from the live registry. Returns removed slugs."""
+    PROJECTS_ROOT.mkdir(parents=True, exist_ok=True)
+    removed: list[str] = []
+    for child in list(PROJECTS_ROOT.iterdir()):
+        if not child.is_dir() or child.name.startswith("_"):
+            continue
+        meta = get_project(child.name) or {"slug": child.name, "title": child.name}
+        if is_qa_artifact(meta):
+            if delete_project(child.name):
+                removed.append(child.name)
+    return removed
 
 
 def import_git_repo(path: str | None, *, title: str | None = None) -> dict[str, Any]:
@@ -193,23 +303,35 @@ def import_git_repo(path: str | None, *, title: str | None = None) -> dict[str, 
         raise ValueError(f"Not a git repository: {repo}")
     name = str(title or repo.name).strip()
     meta = create_project(name, git_path=str(repo))
+    # Knowledge sync can take minutes on a large live checkout (e.g. Aria itself).
+    # Never block the Import Repository request — owner UI must stay responsive.
     try:
-        from jarvis.knowledge.git_sync import sync_repository
+        import threading
 
-        sync_repository(repo, force=True, label=meta.get("title") or name)
+        label = meta.get("title") or name
+
+        def _sync_bg() -> None:
+            try:
+                from jarvis.knowledge.git_sync import sync_repository
+
+                sync_repository(repo, force=False, label=label)
+            except Exception:
+                pass
+
+        threading.Thread(target=_sync_bg, name=f"project-git-sync:{meta.get('slug')}", daemon=True).start()
     except Exception:
         pass
     return meta
 
 
-def registry_snapshot() -> dict[str, Any]:
+def registry_snapshot(*, include_qa: bool = False, include_archived: bool = False) -> dict[str, Any]:
     from jarvis.active_project import get_active_slug
 
-    projects = list_projects()
+    projects = list_projects(include_archived=include_archived, include_qa=include_qa)
     return {
         "enabled": True,
         "root": str(PROJECTS_ROOT),
         "active": get_active_slug(),
         "projects": projects,
-        "count": len(list_projects(include_archived=True)),
+        "count": len(list_projects(include_archived=True, include_qa=include_qa)),
     }

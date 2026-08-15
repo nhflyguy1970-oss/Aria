@@ -44,26 +44,6 @@ def list_providers() -> list[dict[str, Any]]:
     except Exception:
         pass
 
-    # Capability stubs — credentials owned by Integrations / Models
-    for pid, name, caps in (
-        ("openai", "OpenAI", ["chat", "cloud"]),
-        ("anthropic", "Anthropic", ["chat", "cloud"]),
-        ("openrouter", "OpenRouter", ["chat", "cloud"]),
-        ("lmstudio", "LM Studio", ["chat", "stream", "local"]),
-        ("opencode", "OpenCode", ["chat", "tools"]),
-    ):
-        providers.append(
-            {
-                "id": pid,
-                "name": name,
-                "kind": "external",
-                "alive": None,
-                "health_state": "unknown",
-                "models": [],
-                "capabilities": caps,
-                "note": "Configured via Integrations / Models when enabled",
-            }
-        )
     return providers
 
 

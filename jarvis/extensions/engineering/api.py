@@ -242,7 +242,11 @@ def register_routes(app, assistant) -> None:
         try:
             from jarvis.engineering.slicer import slice_stl
 
-            return slice_stl(stl, slicer_id=str(body.get("slicer") or ""))
+            return slice_stl(
+                stl,
+                slicer_id=str(body.get("slicer") or ""),
+                printer_model=str(body.get("printer_model") or body.get("printer") or ""),
+            )
         except Exception as exc:
             return JSONResponse(status_code=500, content={"ok": False, "message": str(exc)})
 
@@ -255,7 +259,7 @@ def register_routes(app, assistant) -> None:
             row = add_printer(
                 name=str(body.get("name") or "Printer"),
                 host=str(body.get("host") or ""),
-                backend=str(body.get("backend") or "moonraker"),
+                backend=str(body.get("backend") or ""),
                 port=int(body.get("port") or 0),
                 api_key=str(body.get("api_key") or ""),
                 model=str(body.get("model") or body.get("model_id") or ""),
@@ -281,9 +285,9 @@ def register_routes(app, assistant) -> None:
         if not p:
             return {"ok": False, "message": "No printer configured"}
         try:
-            from jarvis.engineering.moonraker_client import printer_status
+            from jarvis.engineering.printer_client import printer_status
 
-            return {"ok": True, "printer": p, **printer_status(p["host"], api_key=p.get("api_key") or "")}
+            return {"ok": True, "printer": p, **printer_status(p)}
         except Exception as exc:
             return {"ok": False, "printer": p, "message": str(exc)}
 

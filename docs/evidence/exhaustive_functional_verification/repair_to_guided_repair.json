@@ -1,0 +1,76 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "repair",
+  "capability": "Repair → Guided Repair Scan overlay",
+  "captured_at": "2026-08-14T19:04:02Z",
+  "result": "PASS — Front Door → Repair; More → Scan opened Guided Repair; Preview ONLY then Close; Repair not executed; Dismiss. After Jeff unlock: leave Integrity (overlay did not cover); return Repair restored. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "health_home_at_end": 200,
+  "lock_overlay_at_end": "hidden",
+  "entry": {
+    "via": "Front Door → Repair (When something needs care)",
+    "hash": "#repair",
+    "body_room": "repair",
+    "house_class": "house-repair native-repair"
+  },
+  "identity": {
+    "hash": "#repair",
+    "h1": "Evidence",
+    "open_repairs": 2,
+    "integrity": "100 · ready",
+    "platform": "healthy",
+    "attention": "Proactive scheduler is not running · Home Assistant connection issue"
+  },
+  "scan": {
+    "control": "More → Scan",
+    "toast": "Scanning for repairable issues…",
+    "overlay": "Guided Repair is-open",
+    "issue_shown": "Proactive scheduler is not running",
+    "priority": "medium",
+    "state": "repair_ready",
+    "confidence": "55% — possible",
+    "second_issue_not_opened": "Home Assistant connection issue"
+  },
+  "preview": {
+    "clicked": true,
+    "copy": "PREVIEW ONLY — nothing will change.",
+    "duration": "4 seconds",
+    "outcome": "Scheduler thread running",
+    "affected": "jobs",
+    "closed": "Close — not executed"
+  },
+  "not_clicked": [
+    "Repair (execute)",
+    "Rollback",
+    "Export diagnostic",
+    "Integrity overflow",
+    "Mission overflow",
+    "Maintenance mode",
+    "Legacy safe recover"
+  ],
+  "dismiss": true,
+  "overlay_after_dismiss": "hidden / display none / not is-open",
+  "leave_return": {
+    "via": "Front Door → Integrity then Front Door recents → Repair",
+    "integrity_hash": "#integrity",
+    "integrity_identity": "Truth · Score 100 · ready · Quiet caretaker · No deductions on record",
+    "guided_repair_overlay_on_integrity": "not covering — hidden / display none / not is-open",
+    "front_door_stale_copy": "While Front Door stayed open after Scan, it said You're in the middle of Guided Repair even after Dismiss. Reopened Front Door on Integrity said Production Integrity.",
+    "return_hash": "#repair",
+    "return_cards": "Integrity 100 · ready; Open repairs 2; Platform healthy; same two attention items",
+    "overlay_after_return": "still closed",
+    "result": "PASS"
+  },
+  "data_mutation": {
+    "repair_executed": false,
+    "scheduler_restarted": false,
+    "journal_post": false,
+    "health_phr": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "Mission → platform data or Integrations → provider operation. Do not execute Guided Repair. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

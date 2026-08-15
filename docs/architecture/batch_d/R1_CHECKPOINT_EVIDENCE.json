@@ -1,0 +1,90 @@
+{
+  "results": [
+    {
+      "check": "authoritative",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "create_write_acm",
+      "ok": true,
+      "detail": "id=exp_942ccab6364a source=acm"
+    },
+    {
+      "check": "create_did_not_mutate_legacy_poison",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "create_did_not_add_legacy_row",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "lookup_after_create",
+      "ok": true,
+      "detail": "CREATE: first checkpoint body"
+    },
+    {
+      "check": "lookup_source_acm",
+      "ok": true,
+      "detail": "acm"
+    },
+    {
+      "check": "update_latest",
+      "ok": true,
+      "detail": "UPDATE: second checkpoint body"
+    },
+    {
+      "check": "namespace_isolation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "project_resume_workflow",
+      "ok": true,
+      "detail": "{\"ok\": true, \"message\": \"Here's where you left off:\\n\\nUPDATE: second checkpoint body\\n\\nCheckpoint namespace: `default`\", \"module\": \"memory\"}"
+    },
+    {
+      "check": "auto_checkpoint_lookup_api",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "restart_lookup",
+      "ok": true,
+      "detail": "UPDATE: second checkpoint body"
+    },
+    {
+      "check": "persist_file_exists",
+      "ok": true,
+      "detail": "size=4096"
+    },
+    {
+      "check": "sqlite_round_trip",
+      "ok": true,
+      "detail": "SQLITE_ACM_BODY"
+    },
+    {
+      "check": "rollback_not_authoritative",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "rollback_wrote_legacy",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "rollback_read_legacy",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "check": "caller_inventory_documented",
+      "ok": true,
+      "detail": "jarvis/behaviors/memory/engine.py:latest_checkpoint, jarvis/behaviors/memory/engine.py:upsert_checkpoint, jarvis/project_services.py:latest_checkpoint, jarvis/extensions/memory/api.py:auto-checkpoint, jarvis/gui/server.py:auto_checkpoint shutdown, jarvis/gui/static/app.js:sendBeacon auto-checkpoint"
+    }
+  ],
+  "failed": []
+}

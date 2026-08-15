@@ -10,7 +10,8 @@ BOUNDARIES = {
     "philosophy": (
         "Calendar is Aria’s unified scheduling hub. It presents commitments from Journal, "
         "Planner, ICS, work schedule, and holidays through a Schedule Abstraction Layer. "
-        "Each system keeps ownership of its data. Calendar publishes attention signals; "
+        "Planner is the single write owner for user-created events; Journal contributes "
+        "day notes and legacy event projections. Calendar publishes attention signals; "
         "Notifications deliver them. Planner owns tasks and execution."
     ),
     "owns": [
@@ -40,8 +41,8 @@ BOUNDARIES = {
 
 MENTAL_MODEL = {
     "calendar": "Scheduled commitments hub",
-    "planner": "Actionable work (consumed as events/tasks, not owned)",
-    "journal": "Notes and day events (owned by Journal)",
+    "planner": "Actionable work and user event write source",
+    "journal": "Notes and legacy day-event projections",
     "ics": "External read-only feed",
     "notifications": "Attention delivery for calendar signals",
 }

@@ -1,0 +1,82 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "home",
+  "capability": "Home foyer → Home Automation",
+  "captured_at": "2026-08-14T18:42:43Z",
+  "result": "PARTIAL — sidebar Open Home Automation from Home landed #homeAutomation Connected. Home scenes Smart Home button opens HA setup modal, not the room. Home first paint Load failed on entry and leave/return; Retry recovered widgets. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked": true,
+  "health_home": 200,
+  "lock_overlay": "hidden",
+  "entry": {
+    "via": "Front Door → Looking for something specific? → home → Home Orientation",
+    "note": "Home is not a Front Door Rooms door (foyer metaphor). Search-the-house is required."
+  },
+  "identity": {
+    "hash": "#dashboard",
+    "h2": "Home / Good afternoon",
+    "place": "Foyer"
+  },
+  "performance": {
+    "dashboard_api": "FAST — /api/dashboard/home 200 in 161 ms with greeting",
+    "home_first_paint": "SLOW / DEFECT — Home unavailable + Load failed on first paint; Retry recovered",
+    "sidebar_open_ha": "FAST — hash #homeAutomation in ~12 ms; Connected chrome present",
+    "integrity_scan": "FAST — 48 ms"
+  },
+  "home_header_deep_links": ["Mission Control", "Planner", "Journal", "Calendar"],
+  "home_scenes_widget": {
+    "copy": "No presets. Configure Home Assistant scene presets.",
+    "button": "Smart Home",
+    "data_view": "",
+    "data_action": "ha_setup",
+    "clicked": true,
+    "outcome": "Opened HA setup wizard modal — did not change hash; Home Automation view stayed hidden. Closed without pasting a token."
+  },
+  "sidebar_open_home_automation": {
+    "control": "Open Home Automation",
+    "clicked_from": "Home (#dashboard)",
+    "destination_hash": "#homeAutomation",
+    "destination_h2": "Home Automation",
+    "place": "Home control",
+    "health": "Connected · http://127.0.0.1:8123",
+    "vault": "Owner Vault ha.token; Paste hidden; token field empty",
+    "scenes_listed": ["Focus mode", "Relax", "Movie mode", "Work mode", "Sunlight"],
+    "scenes_clicked": false,
+    "toggles_clicked": false,
+    "apply_profile": false,
+    "heading_out": false,
+    "open_ha_external": false,
+    "copy_webhook": false,
+    "webhook_query_secret_visible": true,
+    "webhook_secret_recorded": false
+  },
+  "leave_return": {
+    "via": "Front Door recents → Home",
+    "hash": "#dashboard",
+    "place": "Foyer",
+    "first_paint": "Load failed again",
+    "after_retry": "widgets restored (16); Home scenes + Smart Home present; Load failed gone",
+    "result": "PARTIAL — identity restored; first paint defect repeated"
+  },
+  "not_clicked": [
+    "HA scene chips",
+    "device on/off",
+    "Apply profile",
+    "Heading out",
+    "Save leave scene",
+    "Home status",
+    "Open HA",
+    "Copy webhook",
+    "Paste token",
+    "Connect",
+    "Discover Kasa"
+  ],
+  "data_mutation": {
+    "ha_actuation": false,
+    "journal_post": false,
+    "health_phr": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "next_exact_capability": "Repair → Guided Repair (honest empty possible). Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

@@ -243,9 +243,12 @@ class KnowledgeOperations:
         if web_search_disabled():
             return _err("Web search is disabled (offline profile). Switch profile in the sidebar.", module="general")
         from jarvis import web_search
+        from jarvis.research_context import expand_followup_query, extract_research_entities
+
         query = params.get("query") or re.sub(r"^(search (the )?web for|web search)[:\s]+", "", message, flags=re.I).strip()
         if not query:
             return _err("What should I search for?")
+        query = expand_followup_query(query, getattr(ctx, "session", None))
         results = web_search.search(query)
         if not results:
             return _err(
@@ -253,7 +256,27 @@ class KnowledgeOperations:
                 "Try again or run: `./venv/bin/pip install ddgs`",
                 module="general",
             )
+        try:
+            results = web_search.enrich_results_with_pages(query, results)
+        except Exception:
+            pass
         answer = web_search.synthesize_answer(query, results)
+        try:
+            from jarvis.orchestration_policy import consequential_web_answer_ok
+
+            refused = consequential_web_answer_ok(message, answer, results)
+            if refused:
+                answer = refused
+        except Exception:
+            pass
+        try:
+            sess = getattr(ctx, "session", None)
+            if sess is not None:
+                sess.note_research(query, extract_research_entities(query or message))
+                if getattr(sess, "note_subject", None):
+                    sess.note_subject(query[:200])
+        except Exception:
+            pass
         return _ok(answer, module="general", type="web_search", results=results)
 
     @classmethod

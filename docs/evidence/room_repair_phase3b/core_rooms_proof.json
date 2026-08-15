@@ -1,0 +1,121 @@
+{
+  "api_timings": {
+    "/api/projects/home": {
+      "ms": 32.0,
+      "status": 200,
+      "ok": true
+    },
+    "/api/dashboard/home?stale_ok=true": {
+      "ms": 67.1,
+      "status": 200,
+      "ok": true
+    },
+    "/api/audio/status": {
+      "ms": 647.4,
+      "status": 200,
+      "ok": true
+    },
+    "/api/models/home": {
+      "ms": 706.3,
+      "status": 200,
+      "ok": true
+    },
+    "/api/smarthome/product/home": {
+      "ms": 5.2,
+      "status": 200,
+      "ok": true
+    },
+    "/api/mission-control": {
+      "ms": 4271.4,
+      "status": 200,
+      "ok": true
+    },
+    "/api/mission-control/health-brief": {
+      "ms": 4.3,
+      "status": 200,
+      "ok": true
+    }
+  },
+  "rooms": {
+    "home": {
+      "ok": true,
+      "ms": 4930.9,
+      "detail": {
+        "room": "home",
+        "fail": false,
+        "bodyLen": 2803,
+        "welcome": "Welcome back"
+      }
+    },
+    "projects": {
+      "ok": true,
+      "ms": 1635.6,
+      "detail": {
+        "active": "Active workspace: home-lab",
+        "hasList": true,
+        "loading": false,
+        "homeHead": "Home Lab\n\nWorkspace identity \u2014 not a task board. One slug, one room.\n\nActive\nContinue Project\nBriefing\nActive effects\n\nS"
+      }
+    },
+    "audio": {
+      "ok": true,
+      "ms": 1619.0,
+      "detail": {
+        "room": "audio",
+        "n": 90,
+        "fail": false,
+        "status": ""
+      }
+    },
+    "providers": {
+      "ok": true,
+      "ms": 5323.9,
+      "detail": {
+        "room": "providers",
+        "hasModels": true,
+        "fail": false,
+        "len": 5366,
+        "head": "Aria \u00b7 Provider bay\nListening quietly\nModels\n\nAI model configuration and routing center \u2014 roles, catalog, providers, presets. Mission Control owns health; Models owns configuration.\n\nRefresh\nMission Control \u00b7 Inference\nCtrl+Shift+.\nUpdated 10:37:15 AM\nOverview\nRoles\nCatalog\nProviders\nRecommend\nDownl"
+      }
+    },
+    "home_automation": {
+      "ok": true,
+      "ms": 1615.5,
+      "detail": {
+        "room": "home_automation",
+        "connected": true,
+        "lights": 9
+      }
+    },
+    "mission": {
+      "ok": true,
+      "ms": null,
+      "detail": {
+        "note": "Re-verified after refresh settle; Live degraded health visible; warm MC ~16ms",
+        "recheck": "2026-08-12T14:38"
+      }
+    }
+  },
+  "regression": {
+    "integrity": {
+      "status": "clean",
+      "score": 100,
+      "clean": true
+    },
+    "qa_header": 403,
+    "test_shaped": 400,
+    "activity_room_leave": false,
+    "health_meds": [
+      [
+        "med_39bcc7df3187",
+        "Vitamin D3"
+      ]
+    ]
+  },
+  "ok": true,
+  "mission_remeasure": {
+    "cold_full_ms": 3616.4,
+    "warm_full_ms": 16.3,
+    "health_brief_ms": 3.7
+  }
+}

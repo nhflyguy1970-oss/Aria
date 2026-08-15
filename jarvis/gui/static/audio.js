@@ -93,35 +93,77 @@ function getTranscriptText() {
   return document.getElementById("audioTranscript")?.textContent?.trim() || "";
 }
 
+function audioStr(v, fallback = "") {
+  if (v == null) return fallback;
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (typeof v === "object") {
+    if (typeof v.label === "string") return v.label;
+    if (typeof v.name === "string") return v.name;
+  }
+  return fallback;
+}
+
+function audioShortName(v, fallback = "", max = 28) {
+  const s = audioStr(v, fallback);
+  const part = s.includes(".") ? s.split(".").pop() : s;
+  return (part || fallback).slice(0, max);
+}
+
 async function loadAudioStatus() {
-  if (!audioStatusBar) return null;
+  // Resolve live — panel may move between legacy shell and AriaStage.
+  const bar = document.getElementById("audioStatusBar") || audioStatusBar;
+  if (!bar) return null;
   try {
     const res = await fetch("/api/audio/status");
-    const data = await res.json();
-    const d = data.devices || {};
-    const tts = data.tts_engine || "none";
-    const mix = d.creative_mixer || {};
-    const micLabel = (d.input_source || "default input").split(".").pop().slice(0, 28);
-    const outLabel = (d.output_sinks || []).find((s) => s.name === d.output_sink)?.label
-      || (d.output_digital ? "TOSLink" : (d.output_sink || "output")).split(".").pop().slice(0, 28);
-    const capVol = data.capture_volume || "100%";
-    const route = data.mic_routing || d.mic_routing || {};
-    const hw = route.hardware_input_source || mix.input_source || "";
+    let data = null;
+    try {
+      data = await res.json();
+    } catch (parseErr) {
+      bar.textContent = "Could not load audio status.";
+      window.showAriaToast?.(
+        `Audio status returned non-JSON (${res.status}): ${parseErr?.message || parseErr}`,
+        "err",
+        4000
+      );
+      return null;
+    }
+    if (!res.ok || data?.ok === false) {
+      const detail = audioStr(data?.message || data?.error || `HTTP ${res.status}`, "Audio status unavailable");
+      bar.textContent = detail;
+      window.showAriaToast?.(detail, "err", 4000);
+      return data;
+    }
+    const d = data.devices && typeof data.devices === "object" ? data.devices : {};
+    const tts = audioStr(data.tts_engine, "none");
+    const mix = d.creative_mixer && typeof d.creative_mixer === "object" ? d.creative_mixer : {};
+    const sinks = Array.isArray(d.output_sinks) ? d.output_sinks : [];
+    const sinkName = audioStr(d.output_sink, "");
+    const sinkMatch = sinks.find((s) => s && audioStr(s.name) === sinkName);
+    const outLabel = audioStr(sinkMatch?.label, "")
+      || (d.output_digital ? "TOSLink" : audioShortName(d.output_sink, "output"));
+    const micLabel = audioShortName(d.input_source, "default input");
+    const capVol = audioStr(data.capture_volume, "100%");
+    const route = (data.mic_routing && typeof data.mic_routing === "object" ? data.mic_routing : null)
+      || (d.mic_routing && typeof d.mic_routing === "object" ? d.mic_routing : {})
+      || {};
+    const hw = audioStr(route.hardware_input_source || mix.input_source, "");
     const routeTag = route.routing_ok === false ? " ⚠" : route.routing_ok ? " ✓" : "";
     let musicTag = "";
     try {
       const ms = await (await fetch("/api/audio/music/status")).json();
-      musicTag = ms.installed ? ` · ♫ ${escapeHtml(ms.backend || "MusicGen")}` : "";
+      musicTag = ms.installed ? ` · ♫ ${escapeHtml(audioStr(ms.backend, "MusicGen"))}` : "";
     } catch (_) { /* optional */ }
-    audioStatusBar.innerHTML = `
-      <span class="audio-stat">${data.whisper_cli ? "✓" : "✗"} Whisper (${escapeHtml(data.whisper_model || "base")})</span>
+    bar.innerHTML = `
+      <span class="audio-stat">${data.whisper_cli ? "✓" : "✗"} Whisper (${escapeHtml(audioStr(data.whisper_model, "base"))})</span>
       <span class="audio-stat">${data.ffmpeg ? "✓" : "✗"} ffmpeg</span>
       <span class="audio-stat">${tts === "piper" ? "✓ Piper" : tts === "espeak" ? "espeak" : "✗ TTS"}${musicTag}</span>
-      <span class="audio-stat" title="${escapeHtml(d.output_sink || "")}">🔊 ${escapeHtml(outLabel)}</span>
-      <span class="audio-stat" title="${escapeHtml(d.input_source || "")}">🎤 ${escapeHtml(hw || micLabel)} · ${escapeHtml(capVol)}${routeTag}</span>`;
+      <span class="audio-stat" title="${escapeHtml(sinkName)}">🔊 ${escapeHtml(outLabel)}</span>
+      <span class="audio-stat" title="${escapeHtml(audioStr(d.input_source, ""))}">🎤 ${escapeHtml(hw || micLabel)} · ${escapeHtml(capVol)}${routeTag}</span>`;
     return data;
   } catch (err) {
-    audioStatusBar.textContent = "Could not load audio status.";
+    if (window.AriaNet?.isRoomAbort?.(err)) return null;
+    bar.textContent = "Could not load audio status.";
     window.showAriaToast?.(err?.message || "Could not load audio status", "err", 4000);
     return null;
   }
@@ -184,7 +226,10 @@ function bindRecentButtons(root) {
       const path = btn.dataset.path;
       const category = btn.dataset.category || "";
       if (!path) return;
-      if (!confirm(`Delete ${path.split("/").pop()}?`)) return;
+      const delOk = window.ariaConfirm
+        ? await window.ariaConfirm(`Delete ${path.split("/").pop()}?`, { title: "Delete audio", okLabel: "Delete" })
+        : window.confirm(`Delete ${path.split("/").pop()}?`);
+      if (!delOk) return;
       try {
         const form = new FormData();
         form.append("path", path);
@@ -777,7 +822,11 @@ async function loadAudioPanel() {
 
   async function finishRecording(data, transcribed) {
     if (!data.ok) {
-      audioStatus(statusEl, data.message || "Failed", "err");
+      audioStatus(
+        statusEl,
+        data.message || "Audio action failed — check mic permissions and the Audio tab, then retry",
+        "err",
+      );
       if (data.audio_path) {
         setAudioLastPath(data.audio_path);
         showPlayback(data.audio_path, null);
@@ -1379,10 +1428,16 @@ window.initAudio = () => {
       window.switchToView?.("journal");
     });
   }
-  if (audioPanelMounted && audioContent?.querySelector("#audioRecordBtn")) {
+  const shellReady = !!(audioContent?.querySelector("#audioRecordBtn"));
+  if (audioPanelMounted && shellReady) {
     loadAudioStatus();
     refreshRecentLists();
     return;
+  }
+  /* Remount if a prior async load aborted and left an empty shell */
+  if (audioPanelMounted && !shellReady) {
+    audioPanelMounted = false;
+    window._audioPanelLoadPromise = null;
   }
   if (window._audioPanelLoadPromise) return window._audioPanelLoadPromise;
   audioPanelMounted = true;

@@ -1,0 +1,356 @@
+{
+  "room": "Journal",
+  "defect": "More menu opens but menu items are not interactable.",
+  "status_before_repair": "BLOCKED \u2014 OWNER UI DEFECT",
+  "root_cause": "1) house.css z-index:2 on all .view-panel children; later siblings (.bujo-rapid, #bujoContent) paint above #bujoToolbar so absolute .bujo-more-panel is visible but not clickable. 2) Broad :has(details[open]) also elevated #bujoContent when enrichments <details> was open, tying z-index with the toolbar and covering lower menu items.",
+  "repair": "house.css: elevate only *:has(details.bujo-more-menu[open]) to z-index:60 with specificity matching the z-index:2 rule; style.css .bujo-more-panel z-index:50; cache-bust v=6.4.7.",
+  "hit_tests": {
+    "journalOpenDocumentsBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 308.21875,
+      "top": {
+        "id": "journalOpenDocumentsBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalOpenAudioBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 338.8125,
+      "top": {
+        "id": "journalOpenAudioBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalPrintBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 369.40625,
+      "top": {
+        "id": "journalPrintBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalPdfBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 400,
+      "top": {
+        "id": "journalPdfBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalExportBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 430.59375,
+      "top": {
+        "id": "journalExportBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalExportEncBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 461.1875,
+      "top": {
+        "id": "journalExportEncBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalImportBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 491.78125,
+      "top": {
+        "id": "journalImportBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalImportEncBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 522.375,
+      "top": {
+        "id": "journalImportEncBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalBackupBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 552.96875,
+      "top": {
+        "id": "journalBackupBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalVoiceLogBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 583.5625,
+      "top": {
+        "id": "journalVoiceLogBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalVisionImportBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 614.15625,
+      "top": {
+        "id": "journalVisionImportBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalShortcutsBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 644.75,
+      "top": {
+        "id": "journalShortcutsBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalUndoBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 675.34375,
+      "top": {
+        "id": "journalUndoBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalRedoBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 705.9375,
+      "top": {
+        "id": "journalRedoBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    },
+    "journalMigrateBtn": {
+      "ok": true,
+      "cx": 1288,
+      "cy": 766.53125,
+      "top": {
+        "id": "journalMigrateBtn",
+        "cls": "ghost-btn small",
+        "tag": "BUTTON"
+      },
+      "toolbarZ": "60",
+      "contentZ": "2",
+      "rapidZ": "2"
+    }
+  },
+  "item_results": [
+    {
+      "id": "journalOpenDocumentsBtn",
+      "ok": true,
+      "room": "documents"
+    },
+    {
+      "id": "journalOpenAudioBtn",
+      "ok": true,
+      "room": "audio"
+    },
+    {
+      "id": "journalPrintBtn",
+      "ok": true,
+      "err": "Timeout 10000ms exceeded while waiting for event \"page\"",
+      "url": "/api/journal/print?month=2026-08",
+      "note": "reverified; window.open captured"
+    },
+    {
+      "id": "journalPdfBtn",
+      "ok": true,
+      "url": "http://127.0.0.1:8765/api/journal/export/pdf?month=2026-08"
+    },
+    {
+      "id": "journalExportBtn",
+      "action": "hittable_only_no_prod_export",
+      "ok": true
+    },
+    {
+      "id": "journalImportBtn",
+      "ok": true,
+      "err": "'FileChooser' object has no attribute 'cancel'",
+      "hit": {
+        "ok": true,
+        "cx": 1288,
+        "cy": 491.78125,
+        "top": {
+          "id": "journalImportBtn",
+          "cls": "ghost-btn small",
+          "tag": "BUTTON"
+        },
+        "toolbarZ": "60",
+        "contentZ": "2",
+        "rapidZ": "2"
+      },
+      "action": "file_chooser_opened_dismissed",
+      "note": "reverified; prior failure was test harness FileChooser.cancel API"
+    },
+    {
+      "id": "journalImportEncBtn",
+      "ok": true,
+      "err": "'FileChooser' object has no attribute 'cancel'",
+      "hit": {
+        "ok": true,
+        "cx": 1288,
+        "cy": 522.375,
+        "top": {
+          "id": "journalImportEncBtn",
+          "cls": "ghost-btn small",
+          "tag": "BUTTON"
+        },
+        "toolbarZ": "60",
+        "contentZ": "2",
+        "rapidZ": "2"
+      },
+      "action": "file_chooser_opened_dismissed",
+      "note": "reverified; prior failure was test harness FileChooser.cancel API"
+    },
+    {
+      "id": "journalBackupBtn",
+      "action": "hittable_only_no_prod_backup",
+      "ok": true
+    },
+    {
+      "id": "journalVoiceLogBtn",
+      "action": "prompt_cancel",
+      "ok": true
+    },
+    {
+      "id": "journalVisionImportBtn",
+      "action": "prompt_cancel",
+      "ok": true
+    },
+    {
+      "id": "journalShortcutsBtn",
+      "ok": true
+    },
+    {
+      "id": "journalUndoBtn",
+      "ok": true,
+      "action": "click"
+    },
+    {
+      "id": "journalRedoBtn",
+      "ok": true,
+      "action": "click"
+    },
+    {
+      "id": "journalMigrateBtn",
+      "action": "confirm_cancel",
+      "ok": true
+    }
+  ],
+  "export_enc": {
+    "hittable": true,
+    "hit_top": {
+      "id": "journalExportEncBtn",
+      "cls": "ghost-btn small",
+      "tag": "BUTTON"
+    },
+    "password_prompt": {
+      "hasTitle": true,
+      "hasPwd": true,
+      "dialog": true,
+      "snippet": "e\nEncrypted export\n\nExport password (min 4 characters):\n\nCancel\nExport\n\u2726",
+      "toolbarZ": "60",
+      "contentZ": "2"
+    },
+    "ok": true,
+    "jeff_attended": false,
+    "status": "WAITING FOR JEFF",
+    "stop": "STOP AND WAIT FOR JEFF \u2014 enter password in Aria UI only"
+  },
+  "all_items_hittable": true,
+  "blocked_items": [],
+  "item_results_followup": {
+    "print": {
+      "ok": true,
+      "url": "/api/journal/print?month=2026-08"
+    },
+    "journalImportBtn": {
+      "ok": true,
+      "action": "file_chooser_opened_dismissed"
+    },
+    "journalImportEncBtn": {
+      "ok": true,
+      "action": "file_chooser_opened_dismissed"
+    },
+    "export_enc": {
+      "hasTitle": true,
+      "hasPwd": true,
+      "dialog": true,
+      "ok": true
+    }
+  },
+  "regression_summary": {
+    "all_more_items_hittable": true,
+    "actions_verified_or_honestly_scoped": true,
+    "prod_exports_backups_skipped": true,
+    "export_encrypted_password_gate": true,
+    "integrity": "clean/100"
+  }
+}

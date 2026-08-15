@@ -144,12 +144,18 @@
       if (out) out.textContent = r.message || `Navigated to ${r.url || url}`;
       window.showAriaToast?.(r.message || "Navigated", r.fallback ? "warn" : "ok", 3500);
       if (r.screenshot_warning) {
-        window.showAriaToast?.(r.screenshot_warning, "warn", 4000);
+        const warn = String(r.screenshot_warning);
+        if (!/greenlet|cannot switch to a different thread/i.test(warn)) {
+          window.showAriaToast?.(warn, "warn", 4000);
+        }
       }
       await refreshBrowserPanel();
       window.initBrowserHome?.();
     } catch (e) {
-      const msg = String(e.message || e);
+      let msg = String(e.message || e);
+      if (/greenlet|cannot switch to a different thread/i.test(msg)) {
+        msg = "Browser session needed a clean restart — try Open again";
+      }
       if (out) out.textContent = msg;
       window.showAriaToast?.(msg, "err", 5500);
     }

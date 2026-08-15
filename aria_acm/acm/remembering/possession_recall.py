@@ -1,7 +1,7 @@
 """Adjacent possession / relationship fact recall (B47).
 
-Answers cues like "What's my dog's name?" from stored relationship facts
-without polluting Who am I / Who are you identity speech.
+Answers cues like "What's my dog's name?" / "Who is my fishing buddy?"
+from stored relationship facts without polluting Who am I / Who are you.
 """
 
 from __future__ import annotations
@@ -13,20 +13,7 @@ from acm.authority.mode import read_only
 
 SCHEMA = "acm.possession.recall.v1"
 
-_RELATION_NAME_Q = re.compile(
-    r"\b(?:what(?:'s|\s+is)|whats)\s+my\s+"
-    r"(?P<rel>dog|cat|pet|wife|husband|partner|friend|son|daughter|mom|dad|"
-    r"mother|father|brother|sister|child)"
-    r"(?:'s)?\s+name\b",
-    re.I,
-)
-_RELATION_WHO = re.compile(
-    r"\b(?:who\s+is\s+my|what(?:'s|\s+is)\s+the\s+name\s+of\s+my)\s+"
-    r"(?P<rel>dog|cat|pet|wife|husband|partner|friend|son|daughter)\b",
-    re.I,
-)
-
-_REL_TYPES = (
+_BUILTIN_RELS = (
     "dog",
     "cat",
     "pet",
@@ -34,6 +21,7 @@ _REL_TYPES = (
     "husband",
     "partner",
     "friend",
+    "buddy",
     "son",
     "daughter",
     "mom",
@@ -43,39 +31,63 @@ _REL_TYPES = (
     "brother",
     "sister",
     "child",
+    "colleague",
+)
+
+_RELATION_NAME_Q = re.compile(
+    r"\b(?:what(?:'s|\s+is)|whats)\s+my\s+"
+    r"(?P<rel>dog|cat|pet|wife|husband|partner|friend|buddy|son|daughter|mom|dad|"
+    r"mother|father|brother|sister|child|(?:\w+\s+){0,2}(?:buddy|friend|partner))"
+    r"(?:'s)?\s+name\b",
+    re.I,
+)
+_RELATION_WHO = re.compile(
+    r"\b(?:who\s+is\s+my|what(?:'s|\s+is)\s+the\s+name\s+of\s+my)\s+"
+    r"(?P<rel>dog|cat|pet|wife|husband|partner|friend|buddy|son|daughter|"
+    r"(?:\w+\s+){0,2}(?:buddy|friend|partner|colleague))"
+    r"(?:\s+for\s+\w+)?\b",
+    re.I,
 )
 
 
-def is_possession_relationship_query(cue: str) -> bool:
+def _relation_vocab(store: Any | None = None) -> list[str]:
+    vocab = list(_BUILTIN_RELS)
+    if store is not None:
+        for f in collect_relationship_name_facts(store):
+            rel = (f.get("relation_type") or "").lower().strip()
+            if rel and rel not in vocab:
+                vocab.append(rel)
+    # Longer phrases first for matching
+    vocab.sort(key=len, reverse=True)
+    return vocab
+
+
+def is_possession_relationship_query(cue: str, *, store: Any = None) -> bool:
     text = (cue or "").strip()
     if not text:
         return False
     if _RELATION_NAME_Q.search(text) or _RELATION_WHO.search(text):
         return True
     low = text.lower()
-    return bool(
-        re.search(
-            r"\bmy\s+(?:" + "|".join(_REL_TYPES) + r")(?:'s)?\s+name\b",
-            low,
-        )
-        and re.search(r"\b(?:what|who|whats)\b", low)
-    )
+    if not re.search(r"\b(?:what|who|whats)\b", low):
+        return False
+    for rel in _relation_vocab(store):
+        if re.search(rf"\bmy\s+{re.escape(rel)}\b", low):
+            return True
+    return False
 
 
-def _requested_relation(cue: str) -> str | None:
+def _requested_relation(cue: str, *, store: Any = None) -> str | None:
     m = _RELATION_NAME_Q.search(cue or "")
     if m:
-        return m.group("rel").lower().strip()
+        return re.sub(r"\s+", " ", m.group("rel").lower().strip())
     m = _RELATION_WHO.search(cue or "")
     if m:
-        return m.group("rel").lower().strip()
-    m = re.search(
-        r"\bmy\s+(" + "|".join(_REL_TYPES) + r")(?:'s)?\s+name\b",
-        cue or "",
-        re.I,
-    )
-    if m:
-        return m.group(1).lower()
+        return re.sub(r"\s+", " ", m.group("rel").lower().strip())
+    low = cue or ""
+    for rel in _relation_vocab(store):
+        if re.search(rf"\bmy\s+{re.escape(rel)}\b", low, re.I):
+            return rel
     return None
 
 
@@ -126,29 +138,35 @@ def collect_relationship_name_facts(store: Any) -> list[dict[str, str]]:
 
 def answer_possession_relationship_query(cue: str, *, store: Any) -> str | None:
     """Return spoken answer or None if not a possession/relationship name cue."""
-    if not is_possession_relationship_query(cue):
+    if not is_possession_relationship_query(cue, store=store):
         return None
-    rel = _requested_relation(cue)
+    rel = _requested_relation(cue, store=store)
     facts = collect_relationship_name_facts(store)
     if not facts:
         return None
     if rel:
         matches = [f for f in facts if f["relation_type"] == rel]
-        # pet → dog/cat
+        if not matches:
+            # Partial: "buddy" matches "fishing buddy"
+            matches = [
+                f
+                for f in facts
+                if rel in f["relation_type"] or f["relation_type"] in rel
+            ]
         if not matches and rel == "pet":
             matches = [f for f in facts if f["relation_type"] in {"dog", "cat", "pet"}]
     else:
         matches = facts
     if not matches:
         return None
-    fact = matches[-1]  # most recent experience order; list is chronological
+    fact = matches[-1]
     return f"Your {fact['relation_type']}'s name is {fact['name']}."
 
 
 def present_possession_recall(engine: Any, request: str) -> dict[str, Any]:
     """Public read-only possession/relationship recall."""
     with read_only():
-        if not is_possession_relationship_query(request):
+        if not is_possession_relationship_query(request, store=engine.store):
             return {
                 "schema": SCHEMA,
                 "status": "not_possession_query",
@@ -160,19 +178,15 @@ def present_possession_recall(engine: Any, request: str) -> dict[str, Any]:
         if not answer:
             return {
                 "schema": SCHEMA,
-                "status": "unknown",
+                "status": "no_match",
                 "memory": None,
                 "invents_experiences": False,
                 "store_write": False,
-                "confidence": 0.0,
             }
         return {
             "schema": SCHEMA,
-            "status": "known",
+            "status": "ok",
             "memory": answer,
             "invents_experiences": False,
             "store_write": False,
-            "confidence": 0.9,
-            "explanation_class": "experience",
-            "pollutes_identity_speech": False,
         }

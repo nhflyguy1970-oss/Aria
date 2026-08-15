@@ -13,6 +13,32 @@ def pin_lock_enabled() -> bool:
     return _env("JARVIS_PIN_LOCK", "0")
 
 
+def health_step_up_enabled() -> bool:
+    """Sensitive Health ops: Owner Security step-up when the vault exists."""
+    explicit = os.getenv("JARVIS_HEALTH_STEP_UP", "").strip().lower()
+    if explicit in ("0", "false", "no", "off"):
+        return False
+    if explicit in ("1", "true", "yes", "on"):
+        return True
+    try:
+        from pathlib import Path
+
+        from jarvis.config import DATA_DIR
+        from jarvis.security.owner.service import vault_paths
+
+        if vault_paths(Path(DATA_DIR))["vault"].is_file():
+            if os.getenv("PYTEST_CURRENT_TEST"):
+                from jarvis.env_loader import PROJECT_ROOT
+
+                live = (PROJECT_ROOT / "data" / "security" / "owner" / "vault.json").resolve()
+                if vault_paths(Path(DATA_DIR))["vault"].resolve() == live:
+                    return pin_lock_enabled()
+            return True
+    except Exception:
+        pass
+    return pin_lock_enabled()
+
+
 def face_auth_enabled() -> bool:
     return _env("JARVIS_FACE_AUTH", "0")
 
@@ -53,10 +79,17 @@ def pyside_shell_enabled() -> bool:
 
 
 def lock_idle_seconds() -> int:
+    """Owner idle re-lock in seconds. 0 = no automatic idle lock (daily-use default).
+
+    Opt-in only via JARVIS_OWNER_IDLE_SECONDS. PIN-era JARVIS_LOCK_IDLE / JARVIS_LOCK_IDLE_SEC
+    are ignored so a leftover 900s PIN idle in jarvis.env cannot lock the house.
+    Restart and explicit Lock Aria still lock the house.
+    """
+    raw = os.getenv("JARVIS_OWNER_IDLE_SECONDS") or "0"
     try:
-        return max(60, int(os.getenv("JARVIS_LOCK_IDLE_SEC", "900")))
+        return max(0, int(raw))
     except ValueError:
-        return 900
+        return 0
 
 
 def p4_flags() -> dict:
@@ -66,6 +99,7 @@ def p4_flags() -> dict:
     base.update(
         {
             "pin_lock": pin_lock_enabled(),
+            "health_step_up": health_step_up_enabled(),
             "face_auth": face_auth_enabled(),
             "trusted_lan": trusted_lan_enabled(),
             "gestures": gestures_enabled(),

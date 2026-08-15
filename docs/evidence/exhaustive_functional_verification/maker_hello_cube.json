@@ -1,0 +1,60 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "maker",
+  "capability": "Hello cube generate → select → preview → leave/return; slice/print boundary",
+  "captured_at": "2026-08-13T19:15:08+00:00",
+  "result": "PASS generation/preview/persist — NOT CERTIFICATION. Slice BLOCKED (no slicer). Print STOPPED.",
+  "not_certification": true,
+  "owner": "OWNER_UNLOCKED; overlay hidden",
+  "active_project": "home-lab (Home Lab)",
+  "will_create_before_write": {
+    "what": "10mm cube STL via POST /api/engineering/hello-cube (OpenSCAD cube(10))",
+    "where": "data/projects/home-lab/cad/{id}.stl + models.json register name Hello cube",
+    "qa_named": false,
+    "note": "CAD index was empty. Three unregistered prior cube(10) STLs already existed in the same folder from Aug 7; those files were not modified or deleted."
+  },
+  "performance": {
+    "room_entry_usable": "FAST (~10 ms) — CAD: OpenSCAD already painted",
+    "empty_generate": "FAST (~600 ms)",
+    "hello_cube": "FAST (~501 ms)",
+    "leave_return": "FAST (~9 ms) — model still listed",
+    "slice_error": "FAST (~751 ms)"
+  },
+  "owner_ui": {
+    "hash": "#maker",
+    "place": "Maker lab",
+    "cad_status": "CAD: OpenSCAD",
+    "empty_generate_toast": "Describe the part to generate (focus cadPromptInput)",
+    "empty_iterate": "Select a model first",
+    "hello_cube_toast": "Hello cube ready",
+    "model": {
+      "id": "c625705b89",
+      "name": "Hello cube",
+      "backend": "openscad",
+      "triangles": 12,
+      "bytes": 1503,
+      "stl": "data/projects/home-lab/cad/c625705b89.stl"
+    },
+    "viewer_canvas": {"w": 382, "h": 280},
+    "leave_return": "PASS — Chat #chat then Maker; Hello cube still selected, canvas present",
+    "empty_start_print_before_slice": "PASS — toast Slice a model first",
+    "slice": "BLOCKED — No slicer found — install OrcaSlicer (recommended for Bambu A1 / Creality KE) or set JARVIS_ORCASLICER_PATH",
+    "printer": "No printer configured"
+  },
+  "data_mutation": {
+    "created": "Hello cube c625705b89 in Home Lab CAD index",
+    "cleanup": false,
+    "reason": "Index was empty; Hello cube is the product first-run model, not a QA-named record. Clear gallery would unregister it and leave another orphan STL. Prior unregistered cubes were not deleted."
+  },
+  "not_clicked": ["printStartBtn with gcode", "cadClearBtn", "printerAddBtn", "printerDiscoverBtn", "cadIterateBtn with prompt"],
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "qa_header": "403 production_isolation",
+  "live_journal_size": 67555,
+  "live_journal_sha256": "2d914b51e1359d3ff67aa1a848a482dd869e9efa90eac526e2e6197d1fc6a431",
+  "jeff_action_required": {
+    "gate": "Maker slice + 3D print",
+    "action_in_aria_ui": "Do not print from chat. In Maker lab: install OrcaSlicer (or set JARVIS_ORCASLICER_PATH) so Slice can produce G-code. Optionally Add a printer (host/model). Then say done. Aria will not click Start print until you are ready at the printer.",
+    "do_not": ["guess paths", "auto-print", "add a fake printer"]
+  },
+  "next_exact_capability": "Maker Slice (blocked on OrcaSlicer) then Start print — WAIT FOR JEFF. Do not jump to Fly tying to avoid this gate."
+}

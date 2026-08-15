@@ -13,12 +13,22 @@ def brain_mode_status() -> dict[str, Any]:
     ollama = check_ollama()
     local_ok = bool(ollama.get("running"))
     cloud_bits: list[str] = []
-    if os.getenv("OPENAI_API_KEY", "").strip():
-        cloud_bits.append("OpenAI")
-    if os.getenv("GEMINI_API_KEY", "").strip() or os.getenv("GOOGLE_API_KEY", "").strip():
-        cloud_bits.append("Gemini")
-    if os.getenv("JARVIS_MESHY_API_KEY", "").strip() or os.getenv("MESHY_API_KEY", "").strip():
-        cloud_bits.append("Meshy")
+    try:
+        from jarvis.integrations_product.secrets_bus import is_set
+
+        if is_set("openai_api_key"):
+            cloud_bits.append("OpenAI")
+        if is_set("gemini_api_key"):
+            cloud_bits.append("Gemini")
+        if is_set("meshy_api_key"):
+            cloud_bits.append("Meshy")
+    except Exception:
+        if os.getenv("OPENAI_API_KEY", "").strip():
+            cloud_bits.append("OpenAI")
+        if os.getenv("GEMINI_API_KEY", "").strip() or os.getenv("GOOGLE_API_KEY", "").strip():
+            cloud_bits.append("Gemini")
+        if os.getenv("JARVIS_MESHY_API_KEY", "").strip() or os.getenv("MESHY_API_KEY", "").strip():
+            cloud_bits.append("Meshy")
 
     if local_ok and cloud_bits:
         mode = "hybrid"

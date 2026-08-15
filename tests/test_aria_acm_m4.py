@@ -44,18 +44,14 @@ def test_m4_01_ci_forbid_retired_sot_writers() -> None:
 
 
 @pytest.mark.m4
-def test_m4_02_dualwrite_authority_disabled() -> None:
-    """M4-02: DualWrite wrap is identity; platform never cognitive-authoritative."""
-    from jarvis.modules.memory_adapter_store import (
-        memory_adapter_enabled,
-        platform_data_authoritative,
-        wrap_memory_store,
-    )
+def test_m4_02_dualwrite_authority_disabled(tmp_path: Path) -> None:
+    """M4-02: DualWrite adapter is deleted; platform never cognitive-authoritative."""
+    from jarvis.modules.memory import create_memory_store
+    from jarvis.platform_cutover import platform_data_authoritative
 
-    assert memory_adapter_enabled() is False
     assert platform_data_authoritative() is False
-    sentinel = object()
-    assert wrap_memory_store(sentinel) is sentinel
+    store = create_memory_store(tmp_path / "legacy.json")
+    assert not hasattr(store, "_legacy")
 
 
 @pytest.mark.m4
@@ -112,6 +108,41 @@ def test_m4_store_add_redirects_to_acm(tmp_path: Path, monkeypatch: pytest.Monke
         "zeta99" in str(e.get("content") or "").lower() or e.get("id") == entry.get("id")
         for e in store.list_entries()
     )
+
+
+@pytest.mark.m4
+def test_m4_tags_only_update_persists_under_primary(tmp_path: Path) -> None:
+    from jarvis.modules.memory import create_memory_store
+
+    store = create_memory_store(tmp_path / "legacy.json")
+    entry = store.add("fact", "persistent autobiographical fact theta77", tags=["old"])
+    assert store.update(entry["id"], tags=["new", "hierarchy"], namespace="profile")
+
+    updated = store.get(entry["id"])
+    assert updated is not None
+    assert "new" in updated.get("tags", [])
+    assert updated.get("namespace") == "profile"
+
+    memory_manager.reset_for_tests()
+    acm_bridge.reset_for_tests()
+    restarted = create_memory_store(tmp_path / "legacy.json")
+    after_restart = restarted.get(entry["id"])
+    assert after_restart is not None
+    assert "hierarchy" in after_restart.get("tags", [])
+    assert after_restart.get("namespace") == "profile"
+
+
+@pytest.mark.m4
+def test_m4_memory_home_loads_acm_metrics(tmp_path: Path) -> None:
+    from jarvis.memory_services import build_memory_home
+    from jarvis.modules.memory import create_memory_store
+
+    store = create_memory_store(tmp_path / "legacy.json")
+    home = build_memory_home(store)
+    assert home["ok"] is True
+    assert home["safety"]["primary"] is True
+    assert isinstance(home["safety"]["metrics"], dict)
+
 
 @pytest.mark.m4
 def test_m4_hierarchy_consolidate_noop_under_acm(tmp_path: Path) -> None:

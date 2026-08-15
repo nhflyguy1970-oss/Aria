@@ -4,7 +4,6 @@ import os
 import subprocess
 import threading
 import time
-import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -27,22 +26,69 @@ STATIC_DIR = Path(__file__).parent / "static"
 ASSETS_DIR = Path(__file__).resolve().parent.parent.parent / "assets"
 APP_VERSION = "3.1.0"
 UI_VERSION = os.getenv("JARVIS_UI_VERSION", "5.16.74")
-assistant = JarvisAssistant(uncensored=is_uncensored())
 
 from jarvis.assistant_instance import set_assistant
 
-set_assistant(assistant)
 os.environ.setdefault("JARVIS_APP_VERSION", APP_VERSION)
 os.environ.setdefault("JARVIS_UI_VERSION", UI_VERSION)
 apply_system_default()
 
 
+_assistant_lock = threading.Lock()
+_assistant_instance: JarvisAssistant | None = None
+_assistant_registration_phase = True
+
+
+def get_server_assistant() -> JarvisAssistant:
+    global _assistant_instance
+    if _assistant_instance is None:
+        with _assistant_lock:
+            if _assistant_instance is None:
+                _assistant_instance = JarvisAssistant(uncensored=is_uncensored())
+                set_assistant(_assistant_instance)
+    return _assistant_instance
+
+
+class _AssistantProxy:
+    def __bool__(self) -> bool:
+        # Falsy only while routes are registering (avoid eager construct).
+        # After registration, must be truthy — engines use `if not assistant`.
+        return not _assistant_registration_phase
+
+    def __getattr__(self, name: str):
+        if _assistant_registration_phase:
+            raise AttributeError(name)
+        return getattr(get_server_assistant(), name)
+
+
+assistant = _AssistantProxy()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from jarvis import audio_wakeword
-    from jarvis.media_jobs import recover_stale_jobs
+    from jarvis.media_jobs import recover_stale_jobs, resume_interrupted_jobs
+    from jarvis.production_guard import ProductionIsolationError, assert_environment_consistent
+    import logging as _log
+
+    try:
+        assert_environment_consistent()
+    except ProductionIsolationError:
+        _log.getLogger("jarvis.gui.server").exception(
+            "Production isolation: test/QA environment is bound to live DATA_DIR"
+        )
+        raise
 
     recover_stale_jobs()
+    try:
+        # Re-queue resumable media work once the assistant proxy is live.
+        threading.Thread(
+            target=lambda: resume_interrupted_jobs(assistant),
+            daemon=True,
+            name="media-job-resume",
+        ).start()
+    except Exception:
+        pass
     try:
         from jarvis.platform_runtime import bootstrap_runtime_connection
 
@@ -78,11 +124,20 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=_warm_flytying_index, daemon=True, name="flytying-warm").start()
 
     yield
+    # C5: ordered shutdown — each step isolated and logged (never silent pass).
+    import logging
+
+    _shutdown_log = logging.getLogger("jarvis.gui.server.shutdown")
     try:
         assistant.branches.persist(session=assistant.session)
-        assistant.auto_checkpoint(reason="shutdown")
+        _shutdown_log.info("Shutdown: chat branches persisted")
     except Exception:
-        pass
+        _shutdown_log.exception("Shutdown: branch persist FAILED")
+    try:
+        assistant.auto_checkpoint(reason="shutdown")
+        _shutdown_log.info("Shutdown: auto_checkpoint complete")
+    except Exception:
+        _shutdown_log.exception("Shutdown: auto_checkpoint FAILED")
     try:
         from aria_core import acm_bridge
 
@@ -90,8 +145,18 @@ async def lifespan(app: FastAPI):
             eng = acm_bridge.get_engine()
             if getattr(eng, "durable", None) is not None:
                 eng.flush(kind="shutdown")
+                _shutdown_log.info("Shutdown: ACM durable flush complete")
     except Exception:
-        pass
+        _shutdown_log.exception("Shutdown: ACM flush FAILED")
+    try:
+        from jarvis.media_jobs import has_active_work
+
+        if has_active_work():
+            _shutdown_log.warning(
+                "Shutdown: media queue still active — jobs will recover_stale on next boot"
+            )
+    except Exception:
+        _shutdown_log.exception("Shutdown: media activity check FAILED")
 
 
 from jarvis.branding import assistant_name
@@ -110,28 +175,33 @@ except Exception:
 from jarvis.auth import APIKeyMiddleware
 from jarvis.network_guard import NetworkGuardMiddleware
 from jarvis.rate_limit import RateLimitMiddleware
-from jarvis.security.middleware import PinLockMiddleware
+from jarvis.security.middleware import PinLockMiddleware, ProductionIsolationMiddleware
 
-app.add_middleware(NetworkGuardMiddleware)
-app.add_middleware(RateLimitMiddleware)
-app.add_middleware(APIKeyMiddleware)
+# Starlette runs the last added middleware first.
 app.add_middleware(PinLockMiddleware)
+app.add_middleware(APIKeyMiddleware)
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(NetworkGuardMiddleware)
+app.add_middleware(ProductionIsolationMiddleware)
 
 from jarvis.gui.extra_routes import register_routes
 
 register_routes(app, assistant)
+_assistant_registration_phase = False
 
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     if request.url.path.startswith("/api/"):
+        from jarvis.error_handling import api_error_payload
+
         return JSONResponse(
             status_code=500,
-            content={
-                "ok": False,
-                "message": f"Server error: {exc}",
-                "detail": traceback.format_exc()[-500:] if app.debug else None,
-            },
+            content=api_error_payload(
+                exc,
+                request_path=request.url.path,
+                include_detail=bool(app.debug),
+            ),
         )
     raise exc
 
@@ -143,8 +213,10 @@ _health_refresh_lock = threading.Lock()
 
 
 def _build_health_lite() -> dict:
+    from jarvis.auth import api_key_enabled, localhost_key_exempt
     from jarvis.media_jobs import busy_state
     from jarvis.ollama_health import check_ollama
+    from jarvis.product_registration import registration_status
 
     # soft_probe=False: tags + cached probe only (no blocking generate on every poll)
     ollama = check_ollama(soft_probe=False)
@@ -152,17 +224,33 @@ def _build_health_lite() -> dict:
     probe = ollama.get("probe") if isinstance(ollama.get("probe"), dict) else {}
     detail = ollama.get("error") or (probe.get("detail") if probe else None)
     busy = busy_state()
+    reg = registration_status()
+    health_status = "ok" if state == "healthy" else ("degraded" if state == "degraded" else "unavailable")
+    if not reg["ok"] and health_status == "ok":
+        health_status = "degraded"
     return {
-        "status": "ok" if state == "healthy" else ("degraded" if state == "degraded" else "unavailable"),
+        "status": health_status,
         "version": APP_VERSION,
         "jarvis_running": True,
-        "ready": state == "healthy",
+        "ready": state == "healthy" and reg["ok"],
         "ollama_health": state,
         "ollama_detail": detail,
         "uncensored": is_uncensored(),
         "busy": busy["busy"] or busy["pending"] > 0,
         "busy_job": busy.get("label") or "",
         "media_queue": busy,
+        "product_registration": {
+            "ok": reg["ok"],
+            "registered_count": len(reg["registered"]),
+            "failed_count": len(reg["failed"]),
+            "failed": reg["failed"],
+        },
+        "auth_zones": {
+            "api_key_configured": api_key_enabled(),
+            "loopback_key_exempt": localhost_key_exempt(),
+            "lan_requires_key_when_configured": True,
+            "note": "Only loopback is exempt from API key; LAN/remote require key when JARVIS_API_KEY is set",
+        },
     }
 
 
@@ -180,18 +268,23 @@ def _live_payload() -> dict:
     from jarvis.auth import api_key_enabled, localhost_key_exempt
     from jarvis.branding import branding_dict
     from jarvis.ollama_health import check_ollama
+    from jarvis.product_registration import registration_status
 
     ollama = check_ollama(soft_probe=False)
     state = ollama.get("health_state") or "unavailable"
+    reg = registration_status()
     return {
-        "ok": True,
+        "ok": reg["ok"],
         "version": APP_VERSION,
         "ui_version": UI_VERSION,
-        "ready": state == "healthy",
+        "ready": state == "healthy" and reg["ok"],
         "ollama_health": state,
         "uncensored": is_uncensored(),
         "api_key_required": api_key_enabled(),
         "api_key_localhost_exempt": localhost_key_exempt(),
+        "auth_lan_requires_key": True,
+        "product_registration_ok": reg["ok"],
+        "product_registration_failed": len(reg["failed"]),
         **branding_dict(),
     }
 
@@ -233,11 +326,17 @@ def _build_health_payload() -> dict:
     resources = resource_snapshot()
     audio = detect_devices()
     status = assistant.get_status()
+    from jarvis.product_registration import registration_status
+
+    reg = registration_status()
+    health_status = "ok" if svc.get("ready") else ("degraded" if ollama_probe.get("health_state") == "degraded" else "starting")
+    if not reg["ok"] and health_status == "ok":
+        health_status = "degraded"
     return {
-        "status": "ok" if svc.get("ready") else ("degraded" if ollama_probe.get("health_state") == "degraded" else "starting"),
+        "status": health_status,
         "version": APP_VERSION,
         "jarvis_running": True,
-        "ready": svc.get("ready", False),
+        "ready": bool(svc.get("ready", False)) and reg["ok"],
         "ollama_health": ollama_probe.get("health_state") or svc.get("ollama_health") or "unavailable",
         "ollama_detail": ollama_probe.get("error"),
         "services": svc.get("services", []),
@@ -257,6 +356,7 @@ def _build_health_payload() -> dict:
             "firejail": firejail_available() if sandbox_enabled() else False,
             "api_key_required": api_key_enabled(),
         },
+        "product_registration": reg,
         **status,
     }
 
@@ -401,30 +501,31 @@ def runtime_section_api(section: str):
 def workstation_dashboard_api():
     from jarvis.mission_control import collect_mission_control
 
-    return collect_mission_control()
+    return collect_mission_control(enrich="full")
 
 
 @app.get("/api/mission-control")
 def mission_control_api():
     from jarvis.mission_control import collect_mission_control
 
-    return collect_mission_control()
+    return collect_mission_control(enrich="full")
 
 
 @app.get("/api/mission/overview")
 @app.get("/api/mission-control/health")
-def mission_control_health():
+def mission_control_health(force: bool = False):
     """Compact health for Activity producers, Automation, and status surfaces."""
     from jarvis.mission_control import health_summary
 
-    return health_summary()
+    return health_summary(force=force)
 
 
 @app.get("/api/mission-control/health-brief")
 def mission_control_health_brief():
     from jarvis.mission_control import collect_mission_control
 
-    snap = collect_mission_control(record_metrics=False)
+    # Lite enrich — health brief must not fan out every product mission panel (SYS-P01).
+    snap = collect_mission_control(record_metrics=False, enrich="lite")
     return {"ok": True, "health_brief": snap.get("health_brief"), "predictive_warnings": snap.get("predictive_warnings")}
 
 
@@ -926,6 +1027,16 @@ def agent_jobs_status_api(job_id: str):
     return job_status(job_id)
 
 
+@app.post("/api/agent-jobs/resume")
+def agent_jobs_resume_api():
+    """Resume incomplete checkpointed jobs inside the serve process (C6)."""
+    from jarvis.assistant_instance import get_assistant
+    from jarvis.jobs.checkpointed import resume_incomplete_jobs
+
+    resumed = resume_incomplete_jobs(get_assistant())
+    return {"ok": True, "resumed": resumed}
+
+
 @app.post("/api/agent-jobs/start")
 def agent_jobs_start(body: dict):
     from jarvis.assistant_instance import get_assistant
@@ -1277,7 +1388,9 @@ def comfyui_install_animatediff():
     log_path = log_dir / "animatediff-install.log"
     with open(log_path, "a", encoding="utf-8") as logf:
         logf.write(f"\n--- started {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
-        env = os.environ.copy()
+        from jarvis.security.owner.env_boundary import copy_process_env
+
+        env = copy_process_env()
         try:
             from jarvis.gpu_routing import gpu_env_for_subprocess
 
@@ -1826,6 +1939,15 @@ async def meme_generate(payload: dict = Body(...)):
         use_ai = use_ai.lower() not in ("0", "false", "no")
     if isinstance(preview_only, str):
         preview_only = preview_only.lower() in ("1", "true", "yes")
+
+    if not preview_only and not (top or bottom or idea or image_prompt):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "ok": False,
+                "message": "Need top text, bottom text, idea, or image_prompt",
+            },
+        )
 
     if preview_only:
         from jarvis.modules.meme import MemeEngine
@@ -3341,12 +3463,17 @@ async def set_mode(
 
         token, err = try_enable(password, session_token, confirm_password, client_id=client_id)
         if err:
+            locked = "Unlock Aria" in err
+            step_up = "Master Password" in err or "PIN" in err
             return JSONResponse(
-                status_code=403,
+                status_code=423 if locked else 403,
                 content={
                     "ok": False,
                     "message": err,
                     "auth_required": True,
+                    "locked": locked,
+                    "step_up_required": step_up and not locked,
+                    "prompt_class": "A",
                     "uncensored": is_uncensored(),
                 },
             )
@@ -3386,9 +3513,19 @@ def chat_model_get():
 @app.post("/api/chat/model")
 async def chat_model_set(model: str = Form("")):
     name = model.strip()
+    from jarvis import llm
+    from fastapi.responses import JSONResponse
+
+    if name and llm._is_embedding_model(name):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "ok": False,
+                "message": f"`{name}` is an embedding model and cannot be used for chat.",
+            },
+        )
     assistant.session.note_chat_model(name)
     assistant.branches.save_session(assistant.branches.active_id, assistant.session)
-    from jarvis import llm
 
     return {
         "ok": True,
@@ -3557,68 +3694,91 @@ async def chat(
 
             from jarvis.ollama_runtime import begin_chat_priority, end_chat_priority
 
-            # Hold runner priority for ensure + stream so background embeds cannot
-            # steal CUDA mid-load (measured: ngl=0 / concurrent /api/embed).
-            begin_chat_priority()
-            ensure_result: dict = {}
+            # Pre-route so coding/media/background streams do not steal the GPU
+            # loading the chat model (owner sees "loading chat model…" then wedged
+            # coding jobs). Chat still gets residency before first token.
+            pre_intent: dict = {}
+            pre_action = "chat"
             try:
-                # Cold chat load is ~46s on this host — just over first_progress_ms.
-                # Ensure GPU residency BEFORE the first-progress clock so provider_stream
-                # only measures inference, not model swap / VRAM load.
-                ensure_fut = None
+                from jarvis.router import route as _route_for_stream
+
+                pre_intent = _route_for_stream(message, assistant.session, attachment) or {}
+                act = pre_intent.get("action") or "chat"
+                if isinstance(act, dict):
+                    act = act.get("name") or act.get("action") or "chat"
+                pre_action = str(act or "chat")
+            except Exception:
+                pre_intent = {}
+                pre_action = "chat"
+
+            def _skips_chat_model(action: str) -> bool:
+                a = (action or "").strip()
+                if a.startswith("coding_"):
+                    return True
+                if a in ("undo_apply", "apply_proposal", "dismiss_proposal"):
+                    return True
+                # Deterministic memory actions do not need chat-model GPU residency.
+                # Waiting on ensure_chat_model_ready here blocked remember/recall and
+                # made Chat→Memory look like a store failure (BUG-013).
+                if a in (
+                    "remember",
+                    "recall",
+                    "memory_search",
+                    "memory_forget",
+                    "memory_correct",
+                    "memory_prune",
+                    "memory_hierarchy",
+                    "memory_namespace",
+                    "memory_about_user",
+                    "cheatsheet_list",
+                    "cheatsheet_show",
+                    "cheatsheet_reset",
+                    "project_checkpoint",
+                    "project_resume",
+                    "remember_image",
+                    "journal_remember",
+                    "learn_remember",
+                ):
+                    return True
                 try:
-                    loop = asyncio.get_running_loop()
+                    from jarvis.media_jobs import QUEUED_ACTIONS
 
-                    def _ensure():
-                        from jarvis.ollama_runtime import ensure_chat_model_ready
-
-                        return ensure_chat_model_ready(model_hint)
-
-                    ensure_fut = loop.run_in_executor(None, _ensure)
-                    while not ensure_fut.done():
-                        done, _pending = await asyncio.wait(
-                            {ensure_fut}, timeout=max(2.0, heartbeat_sec)
-                        )
-                        if done:
-                            break
-                        note_heartbeat(stream_rid)
-                        yield f"data: {_sse_payload({'type': 'heartbeat', 'message': 'loading chat model…'})}\n\n"
-                    try:
-                        ensure_result = ensure_fut.result() or {}
-                    except Exception as exc:
-                        ensure_result = {"ok": False, "detail": str(exc)[:160]}
-                    try:
-                        from jarvis.latency_observability.trace import get_by_request_id
-
-                        tr = get_by_request_id(rid or stream_rid)
-                        if tr is not None and isinstance(ensure_result, dict):
-                            tr.note_stage(
-                                "model_ready",
-                                float(ensure_result.get("elapsed_ms") or 0),
-                                action=ensure_result.get("action"),
-                                model=ensure_result.get("model") or model_hint,
-                                size_vram=ensure_result.get("size_vram"),
-                            )
-                    except Exception:
-                        pass
+                    if a in QUEUED_ACTIONS:
+                        return True
                 except Exception:
-                    if ensure_fut is not None:
-                        try:
-                            await ensure_fut
-                        except Exception:
-                            pass
+                    pass
+                try:
+                    from jarvis.background_jobs import BACKGROUND_ACTIONS
 
-                if not ensure_result.get("ok"):
-                    yield f"data: {_sse_payload({'type': 'status', 'message': 'Retrying model load…'})}\n\n"
+                    if a in BACKGROUND_ACTIONS:
+                        return True
+                except Exception:
+                    pass
+                return False
+
+            needs_chat_model = not _skips_chat_model(pre_action)
+            hold_chat_priority = False
+            if needs_chat_model:
+                # Hold runner priority for ensure + stream so background embeds cannot
+                # steal CUDA mid-load (measured: ngl=0 / concurrent /api/embed).
+                begin_chat_priority()
+                hold_chat_priority = True
+            ensure_result: dict = {"ok": True, "skipped": True, "action": pre_action}
+            try:
+                if needs_chat_model:
+                    # Cold chat load is ~46s on this host — just over first_progress_ms.
+                    # Ensure GPU residency BEFORE the first-progress clock so provider_stream
+                    # only measures inference, not model swap / VRAM load.
+                    ensure_fut = None
                     try:
                         loop = asyncio.get_running_loop()
 
-                        def _ensure_retry():
+                        def _ensure():
                             from jarvis.ollama_runtime import ensure_chat_model_ready
 
                             return ensure_chat_model_ready(model_hint)
 
-                        ensure_fut = loop.run_in_executor(None, _ensure_retry)
+                        ensure_fut = loop.run_in_executor(None, _ensure)
                         while not ensure_fut.done():
                             done, _pending = await asyncio.wait(
                                 {ensure_fut}, timeout=max(2.0, heartbeat_sec)
@@ -3627,14 +3787,17 @@ async def chat(
                                 break
                             note_heartbeat(stream_rid)
                             yield f"data: {_sse_payload({'type': 'heartbeat', 'message': 'loading chat model…'})}\n\n"
-                        ensure_result = ensure_fut.result() or {}
+                        try:
+                            ensure_result = ensure_fut.result() or {}
+                        except Exception as exc:
+                            ensure_result = {"ok": False, "detail": str(exc)[:160]}
                         try:
                             from jarvis.latency_observability.trace import get_by_request_id
 
                             tr = get_by_request_id(rid or stream_rid)
-                            if tr is not None:
+                            if tr is not None and isinstance(ensure_result, dict):
                                 tr.note_stage(
-                                    "model_ready_retry",
+                                    "model_ready",
                                     float(ensure_result.get("elapsed_ms") or 0),
                                     action=ensure_result.get("action"),
                                     model=ensure_result.get("model") or model_hint,
@@ -3642,18 +3805,59 @@ async def chat(
                                 )
                         except Exception:
                             pass
-                    except Exception as exc:
-                        ensure_result = {"ok": False, "detail": str(exc)[:160]}
+                    except Exception:
+                        if ensure_fut is not None:
+                            try:
+                                await ensure_fut
+                            except Exception:
+                                pass
 
-                if not ensure_result.get("ok"):
-                    msg = (
-                        "The chat model could not be loaded into the provider. "
-                        "Another process may be using the GPU, or Ollama is wedged."
-                    )
-                    complete_request(stream_rid, reason="model_load_failed", error=msg)
-                    yield f"data: {_sse_payload({'type': 'error', 'code': 'MODEL_LOAD_FAILED', 'message': msg})}\n\n"
-                    yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'code': 'MODEL_LOAD_FAILED', 'message': msg})}\n\n"
-                    return
+                    if not ensure_result.get("ok"):
+                        yield f"data: {_sse_payload({'type': 'status', 'message': 'Retrying model load…'})}\n\n"
+                        try:
+                            loop = asyncio.get_running_loop()
+
+                            def _ensure_retry():
+                                from jarvis.ollama_runtime import ensure_chat_model_ready
+
+                                return ensure_chat_model_ready(model_hint)
+
+                            ensure_fut = loop.run_in_executor(None, _ensure_retry)
+                            while not ensure_fut.done():
+                                done, _pending = await asyncio.wait(
+                                    {ensure_fut}, timeout=max(2.0, heartbeat_sec)
+                                )
+                                if done:
+                                    break
+                                note_heartbeat(stream_rid)
+                                yield f"data: {_sse_payload({'type': 'heartbeat', 'message': 'loading chat model…'})}\n\n"
+                            ensure_result = ensure_fut.result() or {}
+                            try:
+                                from jarvis.latency_observability.trace import get_by_request_id
+
+                                tr = get_by_request_id(rid or stream_rid)
+                                if tr is not None:
+                                    tr.note_stage(
+                                        "model_ready_retry",
+                                        float(ensure_result.get("elapsed_ms") or 0),
+                                        action=ensure_result.get("action"),
+                                        model=ensure_result.get("model") or model_hint,
+                                        size_vram=ensure_result.get("size_vram"),
+                                    )
+                            except Exception:
+                                pass
+                        except Exception as exc:
+                            ensure_result = {"ok": False, "detail": str(exc)[:160]}
+
+                    if not ensure_result.get("ok"):
+                        msg = (
+                            "The chat model could not be loaded into the provider. "
+                            "Another process may be using the GPU, or Ollama is wedged."
+                        )
+                        complete_request(stream_rid, reason="model_load_failed", error=msg)
+                        yield f"data: {_sse_payload({'type': 'error', 'code': 'MODEL_LOAD_FAILED', 'message': msg})}\n\n"
+                        yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'code': 'MODEL_LOAD_FAILED', 'message': msg})}\n\n"
+                        return
 
                 bridge = stream_sync_iter(
                     lambda: assistant.process_stream(
@@ -3663,6 +3867,7 @@ async def chat(
                         attachment2=attachment2,
                         request_id=rid,
                         lite_ui=use_lite_ui,
+                        intent=pre_intent or None,
                     ),
                     thread_name="jarvis-chat-stream",
                 )
@@ -3808,7 +4013,8 @@ async def chat(
                         pass
                     yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'message': str(e)})}\n\n"
             finally:
-                end_chat_priority()
+                if hold_chat_priority:
+                    end_chat_priority()
 
         return StreamingResponse(
             event_stream(),
@@ -3907,7 +4113,14 @@ def serve(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True):
         from jarvis.gui_launcher import open_gui
 
         open_gui(url)
-    uvicorn.run(app, host=host, port=port, log_level="info")
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        log_level="info",
+        # Long-lived SSE (Mission stream, etc.) must not block Restart Server.
+        timeout_graceful_shutdown=5,
+    )
 
 
 def main(host: str = "127.0.0.1", port: int = 8765, open_browser: bool = True):

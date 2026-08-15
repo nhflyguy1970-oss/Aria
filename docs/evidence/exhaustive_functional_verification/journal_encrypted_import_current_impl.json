@@ -1,0 +1,49 @@
+{
+  "updated_at": "2026-08-13T16:05:00+00:00",
+  "campaign": "final_34_room_functional_verification",
+  "checkpoint": "Journal → More → Import encrypted",
+  "live_journal_sha256": "3c86da4da8c8bcf455333eb87ffedf89f07a24e780de56439f6de30a9712d48a",
+  "live_journal_unchanged": true,
+  "live_stats_at_boot": {
+    "daily_pages": 92,
+    "weekly_pages": 6,
+    "habits": 5
+  },
+  "current_implementation": {
+    "result": "WORKING",
+    "where": "isolated Aria :18765 JARVIS_DATA_DIR=/tmp/aria-final34-journal-isol (NOT live data/)",
+    "owner_ui": {
+      "front_door_to_journal": true,
+      "room_title": "Bullet Journal",
+      "export_encrypted_prompt_class": "B",
+      "export_prompt_copy": "Password for this exported file (not your Aria Master Password). Min 4 characters. Aria does not store it.",
+      "import_encrypted_control_clicked": true,
+      "file_chooser": "native; automation cannot complete file pick — import proven via same-origin fetch the UI uses"
+    },
+    "same_origin_roundtrip": {
+      "export_http": 200,
+      "format": "jarvis-journal-v1",
+      "wrong_password_http": 400,
+      "wrong_password_message": "Wrong password or corrupt file",
+      "import_http": 200,
+      "merged": true
+    },
+    "isol_stopped": true,
+    "no_live_mutation": true
+  },
+  "aug08_historical_files": {
+    "result": "BLOCKED — JEFF ACTION REQUIRED",
+    "reason": "Ephemeral export-time password; Aria cannot recover it. Do not guess.",
+    "files_present_in_downloads": 3,
+    "do_not_auto_import": true
+  },
+  "live_import_owner_ui": {
+    "result": "BLOCKED — JEFF ACTION REQUIRED",
+    "reason": "Live house became OWNER_LOCKED (idle/lock overlay) before live Journal Import encrypted could be completed. Unlock required."
+  },
+  "prompt_audit": {
+    "encrypted_export_isol": "B portable-file password, not Master Password",
+    "lock_overlay_live": "A Aria Master Password"
+  },
+  "secrets_in_evidence": false
+}

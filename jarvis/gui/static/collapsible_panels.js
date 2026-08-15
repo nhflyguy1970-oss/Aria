@@ -68,7 +68,31 @@
     window.addEventListener("aria-view-change", () => setTimeout(enhance, 250));
   }
 
-  window.AriaCollapsiblePanels = { enhance };
+  /** Expand a collapsible section by heading text (e.g. "Tasks") so new items are visible. */
+  function expand(rootSelector, headingMatch) {
+    const rootEl = document.querySelector(rootSelector);
+    if (!rootEl) return false;
+    const needle = String(headingMatch || "").trim().toLowerCase();
+    if (!needle) return false;
+    let prefix = "panel";
+    if (rootSelector.includes("planner")) prefix = "planner";
+    else if (rootSelector.includes("dashboard")) prefix = "dash";
+    for (const section of rootEl.querySelectorAll("section")) {
+      const head = section.querySelector("h3");
+      if (!head) continue;
+      const label = (head.textContent || "").replace(/[▾▲▼▸◀▶]/g, "").trim().toLowerCase();
+      if (label !== needle && !label.startsWith(needle)) continue;
+      section.classList.remove("panel-collapsed");
+      head.setAttribute("aria-expanded", "true");
+      const m = stateMap();
+      m[keyFor(prefix, section, 0)] = false;
+      saveState(m);
+      return true;
+    }
+    return false;
+  }
+
+  window.AriaCollapsiblePanels = { enhance, expand };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

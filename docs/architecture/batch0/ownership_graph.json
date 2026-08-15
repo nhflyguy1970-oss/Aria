@@ -1,0 +1,95 @@
+{
+  "products": {
+    "browser_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"live_page_automation\",\n        \"navigation\",\n        \"screenshots\",\n        \"dom_interaction\",\n        \"vision_assisted_browsing\",\n        \"safe_browsing_policy\",\n        \"operator_sessions\",\n        \"browser_task_execution\",\n        \"browser_home\",\n        \"bookmarks_history\",\n    ",
+      "does_not_own_raw": "\n        \"projects_workspace_identity\",\n        \"documents_knowledge_store\",\n        \"memory_remembered_info\",\n        \"automation_orchestration\",\n        \"mission_control_health\",\n        \"chat_conversation\",\n        \"models_configuration\",\n        \"full_chrome_replacement\",\n    "
+    },
+    "capabilities_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"capability_registry\",\n        \"discovery\",\n        \"enable_disable_policy\",\n        \"trust_evaluation\",\n        \"permission_review\",\n        \"load_lifecycle\",\n        \"contribution_registration\",\n        \"capability_health\",\n        \"capability_diagnostics\",\n        \"capability_recovery\",\n        \"capability_activity\",\n        \"third_party_capability_management\",\n        \"first_party_capability_visibility\",\n    ",
+      "does_not_own_raw": "\n        \"voice\",\n        \"vision\",\n        \"browser\",\n        \"fly_tying\",\n        \"smart_home\",\n        \"planner\",\n        \"calendar\",\n        \"gallery\",\n        \"coding\",\n        \"models\",\n        \"automation\",\n        \"mission_control\",\n        \"knowledge_graph\",\n        \"public_marketplace\",\n        \"cloud_plugin_store\",\n    "
+    },
+    "certification_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"certification_dashboard\",\n        \"evidence_store\",\n        \"assertion_log\",\n        \"replay_scripts\",\n        \"coverage_report\",\n        \"release_gate\",\n        \"false_pass_sampling\",\n        \"mutation_check\",\n    ",
+      "does_not_own_raw": "\n        \"system_audit_hardware\",\n        \"product_feature_implementations\",\n        \"test_framework_pytest\",\n    "
+    },
+    "coding_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"propose\",\n        \"review\",\n        \"apply\",\n        \"undo\",\n        \"verify\",\n        \"lsp_helpers\",\n        \"git_helpers\",\n        \"coding_jobs_execution\",\n        \"proposal_history\",\n        \"coding_home\",\n        \"coding_root_guardrails\",\n    ",
+      "does_not_own_raw": "\n        \"projects_workspace_identity\",\n        \"job_center_queue_ux\",\n        \"activity_center_history\",\n        \"mission_control_health\",\n        \"models_configuration\",\n    "
+    },
+    "dashboard_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"home\",\n        \"widget_catalog\",\n        \"widget_schema\",\n        \"dashboard_aggregate_api\",\n        \"dashboard_routing\",\n        \"layout\",\n        \"dashboard_diagnostics\",\n        \"dashboard_search_registration\",\n        \"dashboard_personalization\",\n        \"home_presentation\",\n        \"dashboard_history\",\n        \"dashboard_api\",\n        \"dashboard_mission_control\",\n        \"attention_strip\",\n        \"daily_brief_presentation\",\n    ",
+      "does_not_own_raw": "\n        \"planner\",\n        \"calendar\",\n        \"journal\",\n        \"memory\",\n        \"search\",\n        \"mission_control\",\n        \"home_assistant\",\n        \"automation\",\n        \"coding\",\n        \"gallery\",\n        \"voice\",\n        \"vision\",\n        \"morning_briefing\",\n        \"settings_database\",\n        \"monolithic_dashboard_database\",\n        \"duplicate_product_uis\",\n    "
+    },
+    "flytying_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"pattern_library\",\n        \"recipes\",\n        \"materials_inventory\",\n        \"pattern_search\",\n        \"pattern_comparison\",\n        \"pattern_queue\",\n        \"tying_sessions\",\n        \"seasonal_hatch_guidance\",\n        \"flytying_rag\",\n        \"videos\",\n        \"barcode_management\",\n        \"materials_suggestions\",\n        \"flytying_profiles\",\n        \"flytying_history\",\n    ",
+      "does_not_own_raw": "\n        \"vision\",\n        \"voice\",\n        \"gallery\",\n        \"planner\",\n        \"calendar\",\n        \"documents\",\n        \"mission_control\",\n        \"models\",\n        \"separate_flytying_llm\",\n        \"always_on_bench_camera\",\n        \"social_feed\",\n        \"marketplace\",\n        \"auto_purchasing\",\n        \"gis_fishing_maps\",\n        \"emotion_analysis\",\n        \"silent_memory_ingestion\",\n    "
+    },
+    "gallery_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"image_generation\",\n        \"generated_stills\",\n        \"image_browsing\",\n        \"image_editing\",\n        \"prompt_history\",\n        \"image_organization\",\n        \"image_search\",\n        \"local_image_workflows\",\n    ",
+      "does_not_own_raw": "\n        \"google_photos_clone\",\n        \"cloud_sync\",\n        \"documents\",\n        \"memory\",\n        \"chat_conversation\",\n        \"video_studio\",\n        \"meme_studio\",\n        \"mission_control\",\n        \"automatic_memory_ingestion\",\n        \"second_generation_pipeline\",\n    "
+    },
+    "home_assistant_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"ha_connectivity\",\n        \"device_control\",\n        \"scenes\",\n        \"rooms\",\n        \"favorites\",\n        \"entity_search\",\n        \"home_status\",\n        \"home_profiles\",\n        \"home_history\",\n        \"ha_orchestration\",\n        \"ha_integrations\",\n        \"smart_home_dashboard\",\n    ",
+      "does_not_own_raw": "\n        \"home_assistant_automations\",\n        \"lovelace\",\n        \"vision\",\n        \"voice\",\n        \"planner\",\n        \"calendar\",\n        \"automation_engine\",\n        \"browser\",\n        \"coding\",\n        \"gallery\",\n        \"second_ha_implementation\",\n        \"cloud_smart_home_hub\",\n        \"marketplace\",\n        \"separate_home_llm\",\n        \"always_on_cameras\",\n        \"emotion_lighting\",\n        \"silent_memory_ingestion\",\n        \"auto_buy_devices\",\n    "
+    },
+    "integrations_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"provider_registry\",\n        \"api_keys\",\n        \"secrets_lifecycle\",\n        \"connection_testing\",\n        \"provider_health\",\n        \"unlock_matrix\",\n        \"secret_hygiene\",\n        \"usage_log_redacted\",\n        \"connector_registry_projection\",\n        \"inbound_webhook_visibility\",\n        \"integrations_diagnostics\",\n        \"integrations_recovery\",\n    ",
+      "does_not_own_raw": "\n        \"voice_cloud_live_behavior\",\n        \"model_inference\",\n        \"home_assistant_control\",\n        \"meshy_generation\",\n        \"browser_agent\",\n        \"automation_execution\",\n        \"planner\",\n        \"calendar\",\n        \"gallery\",\n        \"vision_analysis\",\n        \"public_api_marketplace\",\n        \"zapier_clone\",\n    "
+    },
+    "layouts_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"layout_catalog\",\n        \"layout_schema\",\n        \"snapshot_engine\",\n        \"layout_application_contract\",\n        \"layout_history\",\n        \"restore_engine\",\n        \"layout_diagnostics\",\n        \"layout_api\",\n        \"palette_integration\",\n        \"hotkeys\",\n        \"search_registration\",\n        \"settings_bridge\",\n        \"mission_control_bridge\",\n        \"export_import\",\n    ",
+      "does_not_own_raw": "\n        \"projects\",\n        \"chat_sessions\",\n        \"planner\",\n        \"calendar\",\n        \"journal\",\n        \"mission_control\",\n        \"search\",\n        \"dashboard_data\",\n        \"favorites_authoritative_store\",\n        \"product_data\",\n        \"secrets\",\n        \"settings_database\",\n        \"virtual_desktops\",\n        \"automatic_ai_layouts\",\n    "
+    },
+    "models_product": {
+      "has_terminology": false
+    },
+    "notifications_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"notification_pipeline\",\n        \"notification_schema\",\n        \"publish_api\",\n        \"activity_center_inbox\",\n        \"notification_routing\",\n        \"notification_history\",\n        \"notification_preferences\",\n        \"desktop_bridge\",\n        \"toast_bridge\",\n        \"grouping\",\n        \"correlation\",\n        \"digest_engine\",\n        \"diagnostics\",\n        \"settings_bridge\",\n        \"search_registration\",\n        \"mission_control_bridge\",\n        \"dashboard_bridge\",\n        \"outbox_dr",
+      "does_not_own_raw": "\n        \"jobs\",\n        \"mission_control\",\n        \"planner\",\n        \"calendar\",\n        \"gallery\",\n        \"browser\",\n        \"models\",\n        \"automation\",\n        \"projects\",\n        \"dashboard_data\",\n        \"second_notification_database\",\n        \"slack_clone\",\n        \"auto_dismiss_unread\",\n        \"ai_invented_alerts\",\n    "
+    },
+    "search_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"search_home\",\n        \"federated_search\",\n        \"search_sessions\",\n        \"ranking\",\n        \"result_presentation\",\n        \"search_history\",\n        \"saved_searches\",\n        \"search_diagnostics\",\n        \"search_health\",\n        \"search_apis\",\n        \"search_result_contract\",\n        \"intent_classification\",\n        \"parallel_retrieval\",\n        \"open_in_context\",\n    ",
+      "does_not_own_raw": "\n        \"documents_corpus\",\n        \"memory_store\",\n        \"knowledge_graph\",\n        \"projects_data\",\n        \"gallery_library\",\n        \"smart_home\",\n        \"voice_runtime\",\n        \"vision_runtime\",\n        \"browser_agent\",\n        \"coding_workspace\",\n        \"planner_tasks\",\n        \"calendar_schedule\",\n        \"automation_runtime\",\n        \"chat_synthesis\",\n        \"web_search_backend\",\n        \"elastic_solr_cluster\",\n        \"second_search_engine\",\n    "
+    },
+    "settings_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"settings_home\",\n        \"preference_catalog\",\n        \"preference_search_index\",\n        \"preference_schemas\",\n        \"global_preferences\",\n        \"appearance_preferences\",\n        \"settings_navigation\",\n        \"deep_link_routing\",\n        \"settings_diagnostics\",\n        \"preference_profiles\",\n        \"settings_apis\",\n        \"settings_mission_control\",\n        \"settings_coach\",\n    ",
+      "does_not_own_raw": "\n        \"voice_settings_store\",\n        \"vision_settings_store\",\n        \"models_settings_store\",\n        \"search_settings_store\",\n        \"integrations_secrets\",\n        \"capabilities_settings_store\",\n        \"smart_home_settings_store\",\n        \"coding_preferences_store\",\n        \"planner_settings\",\n        \"calendar_settings\",\n        \"security_implementation\",\n        \"product_preference_stores\",\n        \"monolithic_settings_database\",\n        \"duplicate_search_engine\",\n    "
+    },
+    "vision_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"image_understanding\",\n        \"ocr\",\n        \"structured_ocr\",\n        \"image_comparison\",\n        \"region_analysis\",\n        \"pdf_page_analysis\",\n        \"video_frame_analysis\",\n        \"webcam_capture_for_analysis\",\n        \"visual_reasoning\",\n        \"vision_profiles\",\n        \"vision_history\",\n        \"vision_import_pipeline\",\n        \"vision_routing\",\n    ",
+      "does_not_own_raw": "\n        \"image_generation\",\n        \"gallery_library\",\n        \"presence_gestures\",\n        \"browser_navigation\",\n        \"coding_apply\",\n        \"audio_studio\",\n        \"documents_store\",\n        \"memory_store\",\n        \"mission_control\",\n        \"always_on_ambient_camera\",\n        \"emotion_detection\",\n        \"auto_apply_coding\",\n        \"silent_memory_ingest\",\n    "
+    },
+    "voice_product": {
+      "has_terminology": true,
+      "owns_raw": "\n        \"speech_to_text\",\n        \"text_to_speech\",\n        \"push_to_talk\",\n        \"wake_word\",\n        \"duplex\",\n        \"voice_routing\",\n        \"voice_profiles\",\n        \"voice_settings\",\n        \"cloud_live\",\n        \"local_voice\",\n        \"voice_pipeline\",\n    ",
+      "does_not_own_raw": "\n        \"audio_studio\",\n        \"chat_conversation_ui\",\n        \"memory\",\n        \"documents\",\n        \"mission_control\",\n        \"gallery\",\n        \"browser\",\n        \"video\",\n        \"image_generation\",\n        \"daw_editing\",\n        \"always_on_cloud_listening\",\n        \"silent_memory_ingest\",\n        \"fake_duplex\",\n    "
+    }
+  },
+  "extensions": [
+    "browser",
+    "engineering",
+    "flytying",
+    "git",
+    "journal",
+    "memory",
+    "planner",
+    "projects",
+    "security",
+    "smarthome",
+    "voice"
+  ]
+}

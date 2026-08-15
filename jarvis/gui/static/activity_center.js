@@ -118,14 +118,42 @@
     activeIndex = Math.min(activeIndex, Math.max(0, rows.length - 1));
 
     if (!rows.length) {
+      const unread = store()?.unreadCount?.() || 0;
+      const prefs = store()?.getPrefs?.() || {};
+      const filter = prefs.filter || "all";
+      const q = String(prefs.query || "").trim();
+      const filteredAway = unread > 0 && (filter !== "all" || q);
+      const title = filteredAway
+        ? "No events match this filter"
+        : unread > 0
+          ? "Loading inbox…"
+          : "Inbox is clear";
+      const hint = filteredAway
+        ? `${unread} unread ${unread === 1 ? "event is" : "events are"} hidden by the current filter or search.`
+        : unread > 0
+          ? "Unread events exist — refreshing the list."
+          : "Notifications uses this Activity Center inbox for durable attention — not Job Center (live work) and not Mission Control (health). Items stay until you mark them read or dismiss them.";
       list.innerHTML = `<li class="empty-state" role="presentation"><div class="empty-state-icon" aria-hidden="true">◎</div>`
-        + `<p class="empty-state-title">Inbox is clear</p>`
-        + `<p class="muted">Notifications uses this Activity Center inbox for durable attention — not Job Center (live work) and not Mission Control (health). Items stay until you mark them read or dismiss them.</p>`
+        + `<p class="empty-state-title">${title}</p>`
+        + `<p class="muted">${hint}</p>`
         + `<div class="empty-state-actions">`
-        + `<button type="button" class="apply-btn small" id="activityEmptyJobsBtn">Open Job center</button>`
+        + (filteredAway
+          ? `<button type="button" class="apply-btn small" id="activityEmptyUnreadBtn">Show unread</button>`
+          : `<button type="button" class="apply-btn small" id="activityEmptyJobsBtn">Open Job center</button>`)
         + `<button type="button" class="ghost-btn small" id="activityEmptyMcBtn">Mission Control</button>`
         + `<button type="button" class="ghost-btn small" id="activityEmptyChatBtn">Ask what’s wrong</button>`
         + `</div></li>`;
+      $("activityEmptyUnreadBtn")?.addEventListener("click", () => {
+        store()?.setQuery?.("");
+        store()?.setFilter?.("unread");
+        if ($("activitySearchInput")) $("activitySearchInput").value = "";
+        syncFilterUi();
+        render();
+      });
+      if (unread > 0 && filter === "all" && !q) {
+        clearTimeout(render._retry);
+        render._retry = setTimeout(() => { if (isOpen()) render(); }, 200);
+      }
       $("activityEmptyJobsBtn")?.addEventListener("click", () => {
         close();
         window.AriaActions?.mission?.jobs?.();
@@ -268,6 +296,7 @@
   }
 
   function open() {
+    window.AriaModalPortal?.ensure?.();
     const modal = $("activityCenterModal");
     if (!modal) return;
     modal.classList.remove("hidden");
@@ -365,6 +394,35 @@
       if (!window.__ariaActivitySuppressToast && (t === "err" || t === "warn" || t === "error" || t === "warning")) {
         const text = String(msg || "Notification").slice(0, 280);
         const lower = text.toLowerCase();
+        // Ephemeral connect/health retries must not fill the unread inbox.
+        if (
+          /health check timed out|lost connection to aria|connection restored|retrying…|retrying\.\.\./i.test(
+            lower,
+          )
+        ) {
+          return orig.apply(this, arguments);
+        }
+        // Expected Room-leave cancellation is not an owner-visible error.
+        if (
+          window.AriaNet?.isRoomAbort?.(msg) ||
+          window.AriaNet?.isRoomAbort?.({ message: text }) ||
+          /signal is aborted|request cancelled|the operation was aborted|aborterror|aria-room-leave/i.test(
+            lower,
+          )
+        ) {
+          return;
+        }
+        // BUG-004: rapid Room thrash emits "X load failed" / checklist failed without
+        // abort wording. Swallow toast + inbox during the AriaNet absorb window.
+        if (
+          /load failed|checklist failed|work schedule unavailable/i.test(lower) &&
+          Date.now() - (window.AriaNet?.lastAbortAt || 0) < 2500
+        ) {
+          return;
+        }
+        if (!String(msg || "").trim()) {
+          return orig.apply(this, arguments);
+        }
         let category = "notification";
         let deepLink = "";
         if (/ollama|provider|inference|model/.test(lower)) { category = "providers"; deepLink = "providers"; }
@@ -429,7 +487,7 @@
     window.jarvisNotify._ariaActivityWrapped = true;
   }
 
-  function confirmClear(kind) {
+  async function confirmClear(kind) {
     const msg = kind === "read"
       ? "Clear all read events? Pinned items are kept."
       : "Clear all events? Pinned items are kept. This cannot be undone unless you use Undo.";
@@ -439,11 +497,10 @@
       render();
       announce("Cleared");
     };
-    if (window.ariaConfirm) {
-      window.ariaConfirm(msg, { title: "Clear Activity", okLabel: "Clear" }).then((ok) => { if (ok) run(); });
-      return;
-    }
-    if (window.confirm(msg)) run();
+    const ok = window.ariaConfirm
+      ? await window.ariaConfirm(msg, { title: "Clear Activity", okLabel: "Clear" })
+      : window.confirm(msg);
+    if (ok) run();
   }
 
   function onListKey(e) {

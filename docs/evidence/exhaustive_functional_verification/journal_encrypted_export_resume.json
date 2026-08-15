@@ -1,0 +1,59 @@
+{
+  "resumed_at": "2026-08-12T19:12:39.755797+00:00",
+  "resume_phrase": "RESUME exhaustive verification \u2014 Journal encrypted export completed.",
+  "workflow": "Journal \u2192 More \u2192 Export encrypted",
+  "verification": {
+    "jeff_attestation": true,
+    "live_api_log": "INFO:     127.0.0.1:33312 - \"POST /api/journal/export/encrypted HTTP/1.1\" 200 OK",
+    "live_api_success": true,
+    "journal_data_mtime_utc": "2026-08-12T17:26:26.292815+00:00",
+    "journal_unchanged_note": "Export is read-only client download; live bullet_journal.json mtime pre-dates resume and was not mutated by export.",
+    "download_file_in_Downloads": false,
+    "download_note": "Client blob download; no jarvis-journal-encrypted-2026-08-12* found under ~/Downloads \u2014 success based on Jeff attestation + live POST 200 OK.",
+    "integrity": {
+      "http": 200,
+      "status": "clean",
+      "score": 100,
+      "clean": true
+    },
+    "live_api_ok_count": 1
+  },
+  "status": "JEFF-ATTENDED \u2014 PROVEN",
+  "isol_encrypted_roundtrip": {
+    "health": {
+      "http": 200,
+      "ready": true
+    },
+    "export": {
+      "http": 200,
+      "ok": true,
+      "keys": [
+        "ok",
+        "export"
+      ]
+    },
+    "import": {
+      "http": 200,
+      "ok": true,
+      "body_keys": [
+        "ok",
+        "merged"
+      ]
+    }
+  },
+  "next_gate_probe": {
+    "import_enc": {
+      "present": true,
+      "hittable": true,
+      "text": "Import encrypted"
+    },
+    "file_chooser_opened": true,
+    "export_enc_btn": {
+      "present": true,
+      "text": "Export encrypted"
+    },
+    "stats": "0 open tasks \u00b7 92 daily \u00b7 6 weekly \u00b7 5 habits \u00b7 0 collections"
+  },
+  "jeff_attended": true,
+  "updated_at": "2026-08-12T19:13:24.111440+00:00"
+}

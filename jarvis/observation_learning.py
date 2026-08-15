@@ -415,29 +415,52 @@ def observe_screenshot(memory, vision, path: str) -> ObserveResult:
 
 
 def capture_camera_frame(*, device: str | None = None) -> Path:
-    """Grab one frame from a V4L2 device or RTSP URL via ffmpeg."""
-    dev = (device or os.getenv("JARVIS_CAMERA_DEVICE", "/dev/video0")).strip()
+    """Grab one frame from a V4L2 device or RTSP URL via ffmpeg.
+
+    When the preferred V4L2 node is busy (common with multi-node UVC cameras
+    where /dev/video0 is held by a WebEngine client), fall back to sibling
+    capture nodes so observation/webcam server paths still succeed.
+    """
+    preferred = (device or os.getenv("JARVIS_CAMERA_DEVICE", "/dev/video0")).strip()
     folder = observations_dir() / "camera"
     folder.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     dest = folder / f"camera_{stamp}.jpg"
 
-    if dev.startswith("rtsp://") or dev.startswith("http://") or dev.startswith("https://"):
+    if preferred.startswith("rtsp://") or preferred.startswith("http://") or preferred.startswith("https://"):
         cmd = [
-            "ffmpeg", "-y", "-rtsp_transport", "tcp", "-i", dev,
+            "ffmpeg", "-y", "-rtsp_transport", "tcp", "-i", preferred,
             "-frames:v", "1", "-q:v", "2", str(dest),
         ]
-    else:
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if proc.returncode != 0 or not dest.is_file():
+            err = (proc.stderr or proc.stdout or "").strip()[-400:]
+            raise ValueError(err or f"Camera capture failed for {preferred}")
+        return dest
+
+    candidates: list[str] = []
+    for d in [preferred, "/dev/video0", "/dev/video2", "/dev/video1", "/dev/video3"]:
+        if d and d not in candidates and Path(d).exists():
+            candidates.append(d)
+
+    errors: list[str] = []
+    for dev in candidates:
+        if dest.exists():
+            try:
+                dest.unlink()
+            except OSError:
+                pass
         cmd = [
             "ffmpeg", "-y", "-f", "v4l2", "-i", dev,
-            "-frames:v", "1", "-q:v", "2", str(dest),
+            "-frames:v", "1", "-q:v", "2", "-update", "1", str(dest),
         ]
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if proc.returncode == 0 and dest.is_file() and dest.stat().st_size > 0:
+            return dest
+        err = (proc.stderr or proc.stdout or "").strip()[-200:]
+        errors.append(f"{dev}: {err or 'failed'}")
 
-    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    if proc.returncode != 0 or not dest.is_file():
-        err = (proc.stderr or proc.stdout or "").strip()[-400:]
-        raise ValueError(err or f"Camera capture failed for {dev}")
-    return dest
+    raise ValueError("; ".join(errors) or f"Camera capture failed for {preferred}")
 
 
 def observe_camera(memory, vision, *, device: str | None = None) -> ObserveResult:

@@ -50,6 +50,7 @@
     const fileInput2 = document.getElementById("fileInput2");
     if (fileInput2) fileInput2.value = "";
     window.updateCompareButton?.();
+    try { window.loadBranches?.(); } catch (_) { /* ignore */ }
   }
 
   window.isVisionAttachment = isVisionAttachment;

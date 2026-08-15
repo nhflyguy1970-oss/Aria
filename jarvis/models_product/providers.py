@@ -40,16 +40,24 @@ def validate_provider(provider: str, *, url: str = "", api_key: str = "") -> dic
     if name == "litellm":
         return _probe_litellm(url or os.getenv("JARVIS_LITELLM_URL", "http://127.0.0.1:4000"))
     if name == "openai":
-        key = api_key or os.getenv("OPENAI_API_KEY", "")
+        from jarvis.integrations_product.secrets_bus import get_secret
+
+        key = api_key or get_secret("openai_api_key")
         return _key_present("openai", key, hint="Save via Integrations or OPENAI_API_KEY")
     if name == "gemini":
-        key = api_key or os.getenv("GEMINI_API_KEY", "") or os.getenv("GOOGLE_API_KEY", "")
+        from jarvis.integrations_product.secrets_bus import get_secret
+
+        key = api_key or get_secret("gemini_api_key")
         return _key_present("gemini", key, hint="Save via Integrations panel")
     if name == "openrouter":
-        key = api_key or os.getenv("OPENROUTER_API_KEY", "")
+        from jarvis.integrations_product.secrets_bus import get_secret
+
+        key = api_key or get_secret("openrouter_api_key")
         return _key_present("openrouter", key, hint="Set OPENROUTER_API_KEY; route via LiteLLM")
     if name == "huggingface":
-        key = api_key or os.getenv("HF_TOKEN", "") or os.getenv("HUGGING_FACE_HUB_TOKEN", "")
+        from jarvis.integrations_product.secrets_bus import get_secret
+
+        key = api_key or get_secret("hf_token")
         return _key_present("huggingface", key, hint="Save HF token in Integrations")
     return {"ok": False, "error": "unhandled"}
 

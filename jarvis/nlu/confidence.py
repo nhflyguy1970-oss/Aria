@@ -33,12 +33,19 @@ def confidence_band(confidence: float) -> str:
 def needs_clarification(result: NLUResult) -> bool:
     if result.learned_match:
         return False
-    from jarvis.nlu.mapping import infer_intent_from_structure, is_calendar_fact_question, resolve_memory_route
+    from jarvis.nlu.mapping import (
+        infer_intent_from_structure,
+        is_calendar_fact_question,
+        is_weather_forecast_question,
+        resolve_memory_route,
+    )
 
     # Resolved memory verbs are deterministic — do not ask for clarification.
     if resolve_memory_route(result.prompt):
         return False
     if is_calendar_fact_question(result.prompt):
+        return False
+    if is_weather_forecast_question(result.prompt):
         return False
     if infer_intent_from_structure(result) and (
         result.semantic.confidence >= REVIEW_ROUTE or result.semantic.model == "structure"
@@ -47,7 +54,10 @@ def needs_clarification(result: NLUResult) -> bool:
     # Clarification only when a live classifier produced an uncertain band.
     # Structure fallback / skipped classifiers must not trap chat in nlu_clarify.
     model = (result.semantic.model or "").strip().lower()
-    if model in ("", "structure", "calendar_fact") or result.semantic.confidence <= 0:
+    if (
+        model in ("", "structure", "calendar_fact", "weather_forecast")
+        or result.semantic.confidence <= 0
+    ):
         return False
     return result.semantic.confidence < CLARIFY_BELOW
 

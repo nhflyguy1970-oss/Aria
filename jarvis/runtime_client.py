@@ -119,6 +119,9 @@ class RuntimeClient:
             return False
 
     def heartbeat(self) -> bool:
+        if self._connection_mode == "in_process" and self._in_process_available():
+            self._last_heartbeat = time.time()
+            return True
         ok = self.is_mission_control_reachable()
         if ok:
             self._last_heartbeat = time.time()
@@ -234,7 +237,11 @@ class RuntimeClient:
         runtime_synced = bool(
             self._cached_snapshot and self._cached_snapshot.get("source") == "mission_control"
         )
-        mc_reachable = self.is_mission_control_reachable()
+        # In-process mode uses the aggregator directly — HTTP :8780 may be down
+        # without meaning Mission Control is unavailable to Aria.
+        mc_reachable = self.is_mission_control_reachable() or (
+            self._connection_mode == "in_process" and self._in_process_available()
+        )
 
         issues: list[str] = []
         if not self.platform_discovered():

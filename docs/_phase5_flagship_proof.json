@@ -1,0 +1,210 @@
+{
+  "url": "http://127.0.0.1:8765/?app=1&workspace=1&shell=electron#chat",
+  "registered": [
+    "flytying",
+    "health",
+    "mission",
+    "documents",
+    "coding",
+    "projects",
+    "planner",
+    "gallery",
+    "search",
+    "memory",
+    "voice",
+    "repair",
+    "integrity",
+    "automation",
+    "providers",
+    "home_automation",
+    "home",
+    "calendar"
+  ],
+  "walk": [
+    {
+      "room": "flytying",
+      "bodyRoom": "flytying",
+      "mountedId": "flytyingRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "health",
+      "bodyRoom": "health",
+      "mountedId": "healthRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "mission",
+      "bodyRoom": "mission",
+      "mountedId": "missionRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "documents",
+      "bodyRoom": "documents",
+      "mountedId": "documentsRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "coding",
+      "bodyRoom": "coding",
+      "mountedId": "codingRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "projects",
+      "bodyRoom": "projects",
+      "mountedId": "projectsRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "planner",
+      "bodyRoom": "planner",
+      "mountedId": "plannerRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "gallery",
+      "bodyRoom": "gallery",
+      "mountedId": "galleryRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "search",
+      "bodyRoom": "search",
+      "mountedId": "searchRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "memory",
+      "bodyRoom": "memory",
+      "mountedId": "memoryRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "voice",
+      "bodyRoom": "voice",
+      "mountedId": "voiceRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "repair",
+      "bodyRoom": "repair",
+      "mountedId": "repairRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "integrity",
+      "bodyRoom": "integrity",
+      "mountedId": "integrityRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "automation",
+      "bodyRoom": "automation",
+      "mountedId": "automationRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "providers",
+      "bodyRoom": "providers",
+      "mountedId": "providersRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "home_automation",
+      "bodyRoom": "home_automation",
+      "mountedId": "homeAutoRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "home",
+      "bodyRoom": "home",
+      "mountedId": "homeRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "calendar",
+      "bodyRoom": "calendar",
+      "mountedId": "calendarRoom",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    },
+    {
+      "room": "chat",
+      "bodyRoom": "chat",
+      "mountedId": "chatView",
+      "native": true,
+      "legacyOnStage": false,
+      "houseNative": true,
+      "stageKids": 1
+    }
+  ],
+  "pageErrors": [
+    "missing ) after argument list",
+    "object is not iterable (cannot read property Symbol(Symbol.iterator))"
+  ],
+  "pass": {
+    "allNativeOrChat": true,
+    "noLegacyOnStage": true,
+    "alwaysOneChild": true,
+    "houseNativeFlags": true,
+    "p2Mounted": true,
+    "registeredCount": true,
+    "p3Sample": true
+  },
+  "ok": true
+}

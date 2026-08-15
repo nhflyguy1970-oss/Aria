@@ -11,6 +11,7 @@
     const profileSel = $("visionProfileSelect");
     const batchEl = $("visionBatchList");
     if (!status) return;
+    const gen = (loadVisionHome._gen = (loadVisionHome._gen || 0) + 1);
     try {
       const [product, honesty, history, profiles, actions, batch, settings, experimental] = await Promise.all([
         fetch("/api/vision/product").then((r) => r.json()),
@@ -22,6 +23,7 @@
         fetch("/api/vision/settings/unified").then((r) => r.json()).catch(() => ({})),
         fetch("/api/vision/experimental").then((r) => r.json()).catch(() => ({})),
       ]);
+      if (gen !== loadVisionHome._gen) return;
       const st = product.state || {};
       status.textContent = `State: ${st.state || "idle"} · Model: ${honesty.model || "?"} · Mode: ${honesty.quality_mode || "?"}`;
       if (honestyEl) {
@@ -99,6 +101,19 @@
       }
       window.refreshVisionStrip?.(product, honesty);
     } catch (err) {
+      if (gen !== loadVisionHome._gen) return;
+      if (
+        window.AriaNet?.absorbAbort?.(err, () => {
+          if (
+            document.body.classList.contains("house-vision") ||
+            /^#?vision\b/i.test(location.hash || "")
+          ) {
+            loadVisionHome();
+          }
+        })
+      ) {
+        return;
+      }
       if (status) status.textContent = err.message || "Vision Home failed to load";
     }
   }

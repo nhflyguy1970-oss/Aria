@@ -51,7 +51,9 @@
     pushStack(currentView());
     window.addEventListener("aria-view-change", (e) => pushStack(e.detail?.view));
 
-    document.addEventListener("keydown", (e) => {
+    document.addEventListener(
+      "keydown",
+      (e) => {
       const mod = e.ctrlKey || e.metaKey;
       const typing = isTypingTarget(document.activeElement);
 
@@ -79,7 +81,8 @@
         return;
       }
 
-      if (typing) return;
+      /* Modifier chords must work while typing (Living Room keeps #messageInput focused). */
+      if (typing && !mod) return;
 
       // Ctrl+1..9 — jump favorites / ordered views
       if (mod && !e.shiftKey && e.key >= "1" && e.key <= "9") {
@@ -108,7 +111,7 @@
       // Ctrl+/ shortcuts
       if (mod && e.key === "/") {
         e.preventDefault();
-        document.getElementById("shortcutsBtn")?.click();
+        window.AriaActions?.system?.shortcuts?.() || document.getElementById("shortcutsBtn")?.click();
         return;
       }
 
@@ -191,12 +194,25 @@
         return;
       }
 
-      // Ctrl+\\ — split view
+      // Ctrl+\\ — split view (Living Workspace: deferred — furnish bypasses dual-pane)
       if (mod && (e.key === "\\" || e.code === "Backslash")) {
         e.preventDefault();
+        if (
+          document.body?.classList.contains("living-workspace") ||
+          document.documentElement.classList.contains("living-workspace")
+        ) {
+          window.showAriaToast?.(
+            "Split view stays in classic Aria for now — open a second window or use Front Door to switch Rooms",
+            "info",
+            4500,
+          );
+          return;
+        }
         window.AriaSplitView?.toggle?.();
       }
-    });
+      },
+      true,
+    );
   }
 
   window.AriaKeyboard = { goBack, goForward, VIEW_ORDER };

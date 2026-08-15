@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import re
 import subprocess
+import time
 from datetime import date, datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from jarvis.config import PROJECT_ROOT
 
@@ -24,6 +26,11 @@ _CODING_FILE_HINTS = re.compile(
     r"\.py\b.*\b(fix|debug|implement|patch|refactor|tests?)\b",
     re.I,
 )
+
+# Conflict scan is O(n²). Cache so Memory home + /conflicts do not double-pay.
+_CONFLICT_TTL_S = 45.0
+_CONFLICT_CACHE: dict[str, Any] = {"at": 0.0, "sig": "", "rows": None}
+
 
 AUTO_MEMORY_MODES = ("off", "explicit", "smart")
 GENERIC_AUTO_PATTERNS = (
@@ -132,8 +139,12 @@ def system_prompt_block(memory_store, *, max_chars: int = 2200) -> str:
     return block if len(lines) > 1 else ""
 
 
-def find_conflicts(memory_store, *, threshold: float = 0.82) -> list[dict]:
-    """Find likely contradictory or duplicate memory pairs."""
+def find_conflicts(memory_store, *, threshold: float = 0.82, force: bool = False) -> list[dict]:
+    """Find likely contradictory or duplicate memory pairs.
+
+    Results are TTL-cached: Memory Home and /api/memory/conflicts both call
+    this on enter; recomputing the O(n²) scan twice starves other Rooms.
+    """
     from jarvis import llm
     from jarvis.cheatsheets import is_cheatsheet_entry
 
@@ -141,11 +152,36 @@ def find_conflicts(memory_store, *, threshold: float = 0.82) -> list[dict]:
         e for e in memory_store.list_entries(include_embedding=True)
         if not is_cheatsheet_entry(e)
     ]
+    # Signature: count + newest id/timestamp — cheap invalidation.
+    newest = ""
+    if entries:
+        try:
+            newest = max(
+                str(e.get("updated") or e.get("timestamp") or e.get("created") or e.get("id") or "")
+                for e in entries
+            )
+        except Exception:
+            newest = str(entries[-1].get("id") or "")
+    sig = f"{len(entries)}:{newest}"
+    now = time.monotonic()
+    if (
+        not force
+        and _CONFLICT_CACHE.get("rows") is not None
+        and _CONFLICT_CACHE.get("sig") == sig
+        and now - float(_CONFLICT_CACHE.get("at") or 0) < _CONFLICT_TTL_S
+    ):
+        return list(_CONFLICT_CACHE["rows"] or [])
+
     conflicts: list[dict] = []
     seen: set[tuple[str, str]] = set()
+    limit = 20
 
     for i, a in enumerate(entries):
+        if len(conflicts) >= limit:
+            break
         for b in entries[i + 1 :]:
+            if len(conflicts) >= limit:
+                break
             if a.get("id") == b.get("id"):
                 continue
             key = tuple(sorted([a.get("id", ""), b.get("id", "")]))
@@ -185,7 +221,11 @@ def find_conflicts(memory_store, *, threshold: float = 0.82) -> list[dict]:
                 })
                 seen.add(key)
 
-    return conflicts[:20]
+    out = conflicts[:limit]
+    _CONFLICT_CACHE["at"] = now
+    _CONFLICT_CACHE["sig"] = sig
+    _CONFLICT_CACHE["rows"] = list(out)
+    return out
 
 
 def _looks_contradictory(a: str, b: str) -> bool:

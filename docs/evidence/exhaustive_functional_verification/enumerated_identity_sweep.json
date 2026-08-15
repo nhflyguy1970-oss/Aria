@@ -1,0 +1,60 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "kind": "identity_and_primary_chrome_only",
+  "not_certification": true,
+  "captured_at": "2026-08-13T16:42:00+00:00",
+  "entry": "Owner Front Door house button → each room: id",
+  "note": "This sweep proves each Room opens with a real heading and is not stuck on Loading. It does NOT exercise functions. Do not treat as PASS for the Room.",
+  "rooms": {
+    "automation": {
+      "hash": "#automation",
+      "h2": "Automation Home",
+      "place": "· Automation loft",
+      "ms": 1098,
+      "loading": false
+    },
+    "home_automation": {
+      "hash": "#homeAutomation",
+      "h2": "Home Automation",
+      "place": "· Home control",
+      "ms": 1101,
+      "loading": false
+    },
+    "presence": {
+      "hash": "#presence",
+      "h2": "Presence",
+      "place": "· Presence",
+      "ms": 1092,
+      "loading": false,
+      "hardware_controls_visible": ["Start camera", "Enroll face", "Calibrate gestures"]
+    },
+    "video": {
+      "hash": "#video",
+      "h2": "Video Studio",
+      "place": "· Video studio",
+      "ms": 1096,
+      "loading": false
+    },
+    "browser": {
+      "hash": "#browser",
+      "h2": "Browser",
+      "place": "· Browser",
+      "ms": 1106,
+      "loading": false
+    },
+    "vision": {
+      "hash": "#vision",
+      "h2": "Vision",
+      "place": "· Vision bench",
+      "ms": 1097,
+      "loading": false
+    },
+    "connections": {
+      "hash": "#connections",
+      "h2": "Connections",
+      "place": "· Connections",
+      "ms": 1088,
+      "loading": false
+    }
+  }
+}

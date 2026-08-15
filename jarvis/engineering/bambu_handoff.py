@@ -82,7 +82,7 @@ def handoff_gcode(printer: dict[str, Any], gcode_path: str | Path) -> dict[str, 
         "gcode_path": str(dest),
         "readme": str(readme),
         "message": (
-            f"G-code ready for **{printer.get('name', 'Bambu')}** — open `{dest}` in Bambu Studio "
+            f"G-code ready for {printer.get('name', 'Bambu')} — open {dest} in Bambu Studio "
             "or copy to SD card."
         ),
     }

@@ -1,0 +1,71 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "search",
+  "capability": "Federated owner query → Open in context → Fly Tying",
+  "captured_at": "2026-08-14T18:27:08Z",
+  "jeff_authorized": "done (unlock)",
+  "result": "PASS — Front Door → Search; query woolly bugger returned Fly Tying hits; Open in context landed #flytying. Leave/return restored Search results. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked": true,
+  "health_home": 200,
+  "lock_overlay": "hidden",
+  "entry": "Front Door → Search Look across everything (from #coding after unlock)",
+  "identity": {
+    "hash": "#search",
+    "h2": "Search",
+    "region": "Search Home"
+  },
+  "performance": {
+    "entry": "FAST — Search Home chrome on first snapshot",
+    "primary_operation": "ACCEPTABLE — 5 result(s) · 4219.39 ms federated (everything facet)",
+    "classification": "ACCEPTABLE"
+  },
+  "query": {
+    "text": "woolly bugger",
+    "facet": "everything",
+    "mode": "Browse",
+    "hit_count": 5,
+    "source_counts": { "Fly Tying": 2, "Notifications": 1, "Health": 1, "Home": 1 },
+    "selected": "Fly Tying (76%)",
+    "titles_in_evidence": false,
+    "note": "Health/Home/Notifications also ranked at 57% for a fly pattern query — ranking noise, not used. Duplicate Fly Tying rows."
+  },
+  "open_in_context": {
+    "clicked": "Open in context (not Open with query)",
+    "destination_hash": "#flytying",
+    "destination_h2": "Fly tying",
+    "place": "Streamside cabin",
+    "catalog": "271 patterns · library connected",
+    "flytying_search_input": "empty — Open in context did not fill Search patterns…",
+    "pattern_visible": "woolly bugger pattern control present in Fly Tying after open",
+    "start_session_clicked": false,
+    "existing_adams_session_chrome": "Adams dry fly #16 still present; not interrupted"
+  },
+  "leave_return": {
+    "via": "Front Door → Search",
+    "hash": "#search",
+    "query_restored": "woolly bugger",
+    "results_restored": "5 result(s) · 4219.39 ms; Fly Tying still selected",
+    "result": "PASS"
+  },
+  "not_clicked": [
+    "Save search",
+    "Clear history",
+    "Delete saved search",
+    "Open with query",
+    "Health result",
+    "Documents facet",
+    "Fly Tying Start session",
+    "Suggest a fly"
+  ],
+  "data_mutation": {
+    "search_history": "recent list gained woolly bugger (product history, not a fake corpus record)",
+    "saved_searches": false,
+    "journal_post": false,
+    "health_phr": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "qa_header": "403",
+  "next_exact_capability": "Search → Documents still unproven. Save search not clicked. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

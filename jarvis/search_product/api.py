@@ -22,6 +22,7 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
     @app.post("/api/search/product/query")
     async def search_query(request: Request):
         body = await request.json()
+        from jarvis.async_util import run_sync
         from jarvis.search_product.pipeline import format_search_message, run_search
 
         q = str(body.get("query") or body.get("q") or "").strip()
@@ -30,16 +31,23 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
         facets = body.get("facets") or body.get("facet")
         if isinstance(facets, str):
             facets = [facets] if facets else None
-        result = run_search(
-            q,
-            facets=facets,
-            limit=body.get("limit"),
-            mode=body.get("mode"),
-            code_mode=body.get("code_mode"),
-            record_history=body.get("record_history"),
-            context=body.get("context") if isinstance(body.get("context"), dict) else None,
-            parallel=body.get("parallel"),
-        )
+        try:
+            result = await run_sync(
+                run_search,
+                q,
+                facets=facets,
+                limit=body.get("limit"),
+                mode=body.get("mode"),
+                code_mode=body.get("code_mode"),
+                record_history=body.get("record_history"),
+                context=body.get("context") if isinstance(body.get("context"), dict) else None,
+                parallel=body.get("parallel"),
+            )
+        except Exception as exc:
+            return JSONResponse(
+                status_code=500,
+                content={"ok": False, "error": str(exc), "message": f"Search failed: {exc}", "results": []},
+            )
         result["message"] = format_search_message(result)
         return result
 

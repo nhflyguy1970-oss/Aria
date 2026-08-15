@@ -27,13 +27,16 @@ def register_routes(app, assistant) -> None:
     @app.post("/api/browser/navigate")
     async def browser_navigate(request: Request):
         from jarvis import browser_agent as ba
+        from jarvis.async_util import run_sync
         from jarvis.browser_product.history import record_visit
 
         body = await request.json()
         url = str(body.get("url") or "").strip()
         if not url:
             return JSONResponse(status_code=400, content={"ok": False, "message": "url required"})
-        result = ba.navigate(
+        # Playwright sync API cannot run on the FastAPI event-loop thread.
+        result = await run_sync(
+            ba.navigate,
             url,
             allow_risky=bool(body.get("allow_risky")),
             allow_system_fallback=bool(body.get("allow_system_fallback")),
@@ -57,6 +60,7 @@ def register_routes(app, assistant) -> None:
                 content={"ok": False, "message": "task or goal required — nothing was run"},
             )
         try:
+            from jarvis.async_util import run_sync
             from jarvis.p2_flags import browser_agent_enabled
 
             if not browser_agent_enabled():
@@ -97,18 +101,20 @@ def register_routes(app, assistant) -> None:
                     assistant=assistant,
                 )
 
-            if url:
-                nav = navigate(url, allow_risky=bool(body.get("allow_risky")))
-                if not nav.get("ok"):
-                    return nav
-            result = run_agent_task(
-                task,
-                mode=mode,
-                max_steps=int(body.get("max_steps") or 10),
-                assistant=assistant,
-            )
+            def _run_sync_browser():
+                if url:
+                    nav = navigate(url, allow_risky=bool(body.get("allow_risky")))
+                    if not nav.get("ok"):
+                        return nav
+                return run_agent_task(
+                    task,
+                    mode=mode,
+                    max_steps=int(body.get("max_steps") or 10),
+                    assistant=assistant,
+                )
+
             # Do not wrap failures as ok:True
-            return result
+            return await run_sync(_run_sync_browser)
         except Exception as exc:
             return {"ok": False, "message": str(exc), "recovery": "Retry after checking Playwright"}
 

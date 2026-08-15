@@ -192,14 +192,15 @@ class JsonMemoryStore:
         return entry
 
     def similar_exists(self, content: str, threshold: float = 0.88) -> bool:
-        try:
-            from aria_core.acm_store_facade import acm_similar_exists
+        from aria_core.acm_store_facade import acm_similar_exists
+        from jarvis.modules.memory_common import divert_acm_read
 
-            hit = acm_similar_exists(content, threshold=threshold)
-            if hit is not None:
-                return hit
-        except Exception:
-            pass
+        handled, hit = divert_acm_read(
+            lambda: acm_similar_exists(content, threshold=threshold),
+            op="similar_exists",
+        )
+        if handled:
+            return bool(hit)
         norm = content.lower().strip()
         if not norm:
             return True
@@ -230,19 +231,20 @@ class JsonMemoryStore:
         query: str | None = None,
         include_embedding: bool = False,
     ) -> list[dict]:
-        try:
-            from aria_core.acm_store_facade import acm_list_entries
+        from aria_core.acm_store_facade import acm_list_entries
+        from jarvis.modules.memory_common import divert_acm_read
 
-            projected = acm_list_entries(
+        handled, projected = divert_acm_read(
+            lambda: acm_list_entries(
                 entry_type,
                 namespace=namespace,
                 query=query,
                 include_embedding=include_embedding,
-            )
-            if projected is not None:
-                return projected
-        except Exception:
-            pass
+            ),
+            op="list_entries",
+        )
+        if handled:
+            return list(projected or [])
         entries = list(self._data["entries"])
         if entry_type:
             entries = [e for e in entries if e.get("type") == entry_type]
@@ -263,18 +265,15 @@ class JsonMemoryStore:
         return [to_public(e) for e in entries]
 
     def get(self, entry_id: str) -> dict | None:
-        try:
-            from aria_core.acm_store_facade import acm_get
+        from aria_core.acm_store_facade import acm_get
+        from jarvis.modules.memory_common import divert_acm_read
 
-            projected = acm_get(entry_id)
-            if projected is not None:
-                return projected
-            from aria_core import acm_bridge
-
-            if acm_bridge.acm_is_authoritative():
-                return None
-        except Exception:
-            pass
+        handled, projected = divert_acm_read(
+            lambda: acm_get(entry_id),
+            op="get",
+        )
+        if handled:
+            return projected  # type: ignore[return-value]
         for e in self._data["entries"]:
             if e.get("id") == entry_id:
                 return to_public(e)
@@ -350,16 +349,17 @@ class JsonMemoryStore:
         namespace: str | None = None,
         user_facing_only: bool = False,
     ) -> list[dict]:
-        try:
-            from aria_core.acm_store_facade import acm_search
+        from aria_core.acm_store_facade import acm_search
+        from jarvis.modules.memory_common import divert_acm_read
 
-            projected = acm_search(
+        handled, projected = divert_acm_read(
+            lambda: acm_search(
                 query, limit=limit, namespace=namespace, user_facing_only=user_facing_only
-            )
-            if projected is not None:
-                return projected
-        except Exception:
-            pass
+            ),
+            op="search",
+        )
+        if handled:
+            return list(projected or [])
         pool = list(self._data["entries"])
 
         def _get_emb(e: dict) -> list[float]:
@@ -523,6 +523,25 @@ class JsonMemoryStore:
         }
 
     def latest_checkpoint(self, namespace: str | None = None) -> dict | None:
+        from aria_core.acm_store_facade import acm_latest_checkpoint
+        from jarvis.modules.memory_common import divert_acm_read
+
+        # Facade returns None for both "not authoritative" and "authoritative miss".
+        # divert_acm_read treats authoritative miss as handled empty.
+        def _call():
+            from aria_core import acm_bridge
+
+            if not acm_bridge.acm_is_authoritative():
+                return None
+            hit = acm_latest_checkpoint(namespace)
+            # Sentinel empty dict → handled miss (never legacy under PRIMARY).
+            return hit if hit is not None else {}
+
+        handled, hit = divert_acm_read(_call, op="latest_checkpoint")
+        if handled:
+            if not hit:
+                return None
+            return to_public(hit)  # type: ignore[arg-type]
         candidates = [e for e in self._data["entries"] if "checkpoint" in (e.get("tags") or [])]
         if namespace:
             candidates = [c for c in candidates if c.get("namespace") == namespace]
@@ -701,16 +720,10 @@ def create_memory_store(path: Path | str | None = None):
     embeddings = create_embedding_sidecar(vectors_path)
 
     if p is not None and p.suffix == ".json":
-        store = JsonMemoryStore(path=p, embeddings=embeddings)
-        from jarvis.modules.memory_adapter_store import wrap_memory_store
-
-        return wrap_memory_store(store)
+        return JsonMemoryStore(path=p, embeddings=embeddings)
 
     if p is not None and p.suffix in (".db", ".sqlite", ".sqlite3"):
-        store = SqliteMemoryStore(path=p, embeddings=embeddings)
-        from jarvis.modules.memory_adapter_store import wrap_memory_store
-
-        return wrap_memory_store(store)
+        return SqliteMemoryStore(path=p, embeddings=embeddings)
 
     backend = jarvis_config.resolve_memory_backend()
     if backend == "sqlite":
@@ -721,9 +734,7 @@ def create_memory_store(path: Path | str | None = None):
     else:
         store = JsonMemoryStore(path=jarvis_config.MEMORY_FILE, embeddings=embeddings)
 
-    from jarvis.modules.memory_adapter_store import wrap_memory_store
-
-    return wrap_memory_store(store)
+    return store
 
 
 class MemoryStore:

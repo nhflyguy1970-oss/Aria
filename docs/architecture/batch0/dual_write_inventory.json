@@ -1,0 +1,7 @@
+{
+  "count": 2,
+  "files": [
+    "jarvis/modules/semantic_memory_adapter_store.py",
+    "jarvis/platform_cutover.py"
+  ]
+}

@@ -40,6 +40,14 @@
     else window.AriaActivity?.publish?.(payload) || window.AriaActivity?.add?.(payload);
   }
 
+  function isRoomAbort(err) {
+    return !!(
+      window.AriaNet?.isRoomAbort?.(err) ||
+      err?.name === "AbortError" ||
+      /aborted|aria-room-leave/i.test(String(err?.message || err?.reason || ""))
+    );
+  }
+
   async function api(path, opts) {
     const res = await fetch(path, {
       cache: "no-store",
@@ -47,7 +55,12 @@
       ...opts,
     });
     const data = await res.json().catch(() => ({}));
-    if (!res.ok && data.ok === false) throw new Error(data.error || data.message || res.statusText);
+    if (!res.ok) {
+      const detail = Array.isArray(data.detail)
+        ? data.detail.map((d) => d.msg || d.type || JSON.stringify(d)).join("; ")
+        : data.detail;
+      throw new Error(data.error || data.message || detail || res.statusText || "Request failed");
+    }
     return data;
   }
 
@@ -231,11 +244,31 @@
   }
 
   async function refresh() {
+    const gen = (refresh._gen = (refresh._gen || 0) + 1);
     try {
       const data = await api("/api/automation/home");
+      if (gen !== refresh._gen) return;
       render(data);
       announce("Automation Home refreshed");
     } catch (e) {
+      if (gen !== refresh._gen) return;
+      if (isRoomAbort(e)) {
+        const still =
+          document.body.classList.contains("house-automation") ||
+          /^#?automation\b/i.test(location.hash || "");
+        if (still) {
+          clearTimeout(refresh._retry);
+          refresh._retry = setTimeout(() => {
+            if (
+              document.body.classList.contains("house-automation") ||
+              /^#?automation\b/i.test(location.hash || "")
+            ) {
+              refresh();
+            }
+          }, 160);
+        }
+        return;
+      }
       window.showAriaToast?.(e.message || "Automation Home failed", "err", 4000);
     }
   }
@@ -489,7 +522,9 @@
       window.showAriaToast?.("Rules exported to clipboard", "ok", 2500);
     });
     $("autoImportBtn")?.addEventListener("click", async () => {
-      const text = prompt("Paste exported rules JSON");
+      const text = window.ariaPrompt
+        ? await window.ariaPrompt("Paste exported rules JSON", "", { title: "Import rules", okLabel: "Import" })
+        : prompt("Paste exported rules JSON");
       if (!text) return;
       try {
         const payload = JSON.parse(text);

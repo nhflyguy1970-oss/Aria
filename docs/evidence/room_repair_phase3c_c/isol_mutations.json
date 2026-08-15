@@ -1,0 +1,91 @@
+{
+  "create": {
+    "status": 200,
+    "id": "1366c115"
+  },
+  "edit": {
+    "status": 200,
+    "ok": true,
+    "content": "ARIA-3CC-ISOL-J3"
+  },
+  "search": {
+    "status": 200,
+    "n": 0
+  },
+  "delete": {
+    "status": 200,
+    "ok": true
+  },
+  "search_after_delete": {
+    "n": 0
+  },
+  "enc_export": {
+    "status": 200,
+    "ok": true,
+    "has_export": true
+  },
+  "enc_import_wrong": {
+    "status": 400,
+    "ok": false,
+    "message": "Wrong password or corrupt file"
+  },
+  "enc_import_ok": {
+    "status": 200,
+    "ok": true,
+    "merged": true
+  },
+  "cal_create": {
+    "status": 200,
+    "body": {
+      "ok": true,
+      "target": "planner",
+      "event": {
+        "id": "b59bab82d8",
+        "title": "ARIA-3CC-ISOL-CAL2",
+        "start_time": "2099-07-01T14:00:00",
+        "end_time": "2099-07-01T14:30:00"
+      },
+      "item_id": "planner:b59bab82d8"
+    }
+  },
+  "cal_update_tries": [
+    {
+      "id": "planner:b59bab82d8",
+      "status": 200,
+      "body": {
+        "ok": true,
+        "event": {
+          "id": "b59bab82d8",
+          "title": "ARIA-3CC-ISOL-CAL2-EDIT",
+          "start_time": "2099-07-01T14:00:00",
+          "end_time": "2099-07-01T14:30:00",
+          "description": "",
+          "recurrence": ""
+        }
+      }
+    }
+  ],
+  "cal_delete": {
+    "id": "planner:b59bab82d8",
+    "status": 200,
+    "body": {
+      "ok": true,
+      "event": {
+        "id": "b59bab82d8",
+        "title": "ARIA-3CC-ISOL-CAL2-EDIT",
+        "start_time": "2099-07-01T14:00:00",
+        "end_time": "2099-07-01T14:30:00",
+        "description": "",
+        "recurrence": ""
+      }
+    }
+  },
+  "live_journal_clean": true,
+  "live_planner_clean": true,
+  "live_calendar_clean": true,
+  "integrity": {
+    "status": "clean",
+    "overall": 100,
+    "clean": true
+  }
+}

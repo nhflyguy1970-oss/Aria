@@ -1,0 +1,39 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "maker",
+  "capability": "Slice Hello cube with owner-selected printer model",
+  "captured_at": "2026-08-13T20:16:21+00:00",
+  "result": "BLOCKED — no Orca machine/process profile for bambu_a1. Start print not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner": "OWNER_UNLOCKED; overlay hidden after Jeff unlocked",
+  "performance": {
+    "slice_attempt": "FAST (~501 ms) — failed closed before Orca process"
+  },
+  "owner_ui": {
+    "hash": "#maker",
+    "maker_js": "5.16.121-slice",
+    "cad_status": "CAD: OpenSCAD · Slicer: OrcaSlicer",
+    "printer_model": "bambu_a1",
+    "printer_label": "Bambu Lab A1 (Studio / SD)",
+    "hello_cube_id": "c625705b89",
+    "slice_toast": "No OrcaSlicer machine/process profile found for bambu_a1. Pick the printer you actually use, or install its Orca presets.",
+    "gcode_created": false,
+    "print_clicked": false
+  },
+  "data_mutation": {
+    "gcode": false,
+    "hello_cube_left_in_place": true,
+    "printers_json": "not modified this slice; existing Printer 2 left untouched",
+    "journal_post": false,
+    "live_journal_size": 67555,
+    "live_journal_sha256": "6f43b89177d3dff16a9ae884165ec3ee701f110968354d7841054b091875de08",
+    "journal_note": "Size unchanged vs prior 67555; sha differs from 2d914b51… recorded earlier this campaign. This slice did not POST journal."
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "qa_header": "403 production_isolation",
+  "jeff_action_required": {
+    "gate": "Maker Slice printer profile",
+    "action_in_aria_ui": "Stay in Maker lab. Bambu Lab A1 cannot Slice on this Orca 2.4.2 Flatpak — no A1 machine/process JSON. Either install Bambu A1 presets in Orca, or if you actually slice for the Creality Ender-3 V3 KE, choose that model in the dropdown. Then say done. Start print will not be clicked. Do not pick KE only to make a test pass."
+  },
+  "next_exact_capability": "Maker Slice of Hello cube once a slicable printer model is selected — then STOP before Start print"
+}

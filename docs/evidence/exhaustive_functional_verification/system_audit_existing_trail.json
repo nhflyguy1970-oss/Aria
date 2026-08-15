@@ -1,0 +1,69 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "audit",
+  "capability": "System Audit existing trail without Run",
+  "captured_at": "2026-08-14T23:58:00Z",
+  "result": "PARTIAL — identity and chrome PASS; no durable existing trail; entering the room auto-starts a 14-phase audit via GET /api/audit. Run audit was not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → System Audit (System audit trail)",
+    "hash": "#audit",
+    "h2": "System Audit",
+    "place": "System audit",
+    "first_paint": "Loading audit…; Preparing… · elapsed 0s · ~1m 30s remaining",
+    "run_audit": "present, disabled while auto-running; NOT clicked"
+  },
+  "pre_enter_api": {
+    "GET /api/audit/status": "ok false; running false; No audit cached",
+    "GET /api/audit/latest": "No audit cached",
+    "GET /api/audit/history": "history []"
+  },
+  "auto_start_finding": {
+    "cause": "audit.js loadAudit({force:false}) GETs /api/audit; extra_routes.audit_get starts run_audit(background=True) when no cache/running",
+    "cache_ttl": "JARVIS_AUDIT_CACHE_SEC default 30s — not a durable trail",
+    "run_button_clicked": false,
+    "run_full_audit_clicked": false,
+    "install_clicked": false
+  },
+  "after_enter_api": {
+    "GET /api/audit/status": "ok true; running true; message Audit in progress"
+  },
+  "leave_return": {
+    "leave": "System Audit → Mission Control button → #workstation h2 Mission Control",
+    "return": "Mission Control → Audit button → #audit h2 System Audit",
+    "return_ui": "Loading audit…; progress tick reset to elapsed 0s (client restart); Run still disabled",
+    "result": "PASS — room restored; backend still running; UI progress not persisted"
+  },
+  "owner_session": {
+    "after_enter": "OWNER_UNLOCKED; overlay none",
+    "after_leave_return": "OWNER_UNLOCKED; idle_seconds 0"
+  },
+  "performance": {
+    "room_entry": "hash #audit immediately",
+    "first_meaningful": "Loading audit… / progress bar on first paint",
+    "primary_operation": "auto GET /api/audit started background 14-phase; not waited to completion",
+    "eta_shown": "~1m 30s"
+  },
+  "not_clicked": [
+    "Run audit",
+    "Run full audit",
+    "Run install",
+    "Copy fix"
+  ],
+  "data_mutation": {
+    "journal_post": false,
+    "health_phr": false,
+    "coding_apply": false,
+    "repair_executed": false,
+    "audit_run_button": false,
+    "note": "Entering the room started a background system audit. That is product auto-start, not an owner click."
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "journal_bytes": 67547,
+  "jeff_action_required": false,
+  "next_exact_capability": "Settings existing owner chrome without Save. Do not Run audit. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

@@ -6,7 +6,8 @@ import logging
 import threading
 import time
 import uuid
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from jarvis.automation.pipelines.actions import describe_action, execute_action
 from jarvis.automation.pipelines.storage import get_pipeline, record_usage
@@ -23,7 +24,11 @@ def _eval_when(expr: str, variables: dict[str, Any]) -> bool:
         return bool(variables.get(key))
     if "==" in e:
         left, right = [x.strip() for x in e.split("==", 1)]
-        lv = variables.get(left.replace("vars.", "")) if left.startswith("vars.") else left.strip("'\"")
+        lv = (
+            variables.get(left.replace("vars.", ""))
+            if left.startswith("vars.")
+            else left.strip("'\"")
+        )
         rv = right.strip().strip("'\"")
         if rv in ("true", "True"):
             rv = True
@@ -306,7 +311,9 @@ def run_pipeline(
     elif status in ("permission_required", "failed"):
         pass  # keep status set in loop
     elif status == "running":
-        failed_rows = [r for r in log_rows if not r.get("ok") and not r.get("skipped") and not r.get("retry")]
+        failed_rows = [
+            r for r in log_rows if not r.get("ok") and not r.get("skipped") and not r.get("retry")
+        ]
         if dry_run:
             status = "dry_run"
         elif not failed_rows:
@@ -410,7 +417,9 @@ def _summarize(log_rows: list[dict[str, Any]], *, ok: bool) -> str:
     for r in log_rows:
         is_ok = bool(r.get("ok") or r.get("skipped"))
         if ok and is_ok:
-            parts.append(f"{r.get('name') or r.get('step')}: ok" + (" (skipped)" if r.get("skipped") else ""))
+            parts.append(
+                f"{r.get('name') or r.get('step')}: ok" + (" (skipped)" if r.get("skipped") else "")
+            )
         if not ok and not is_ok:
             parts.append(f"{r.get('name') or r.get('step')}: {r.get('error') or 'failed'}")
     return "; ".join(parts[:12])

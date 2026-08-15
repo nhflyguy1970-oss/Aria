@@ -61,6 +61,10 @@ WMO_LABELS: dict[int, str] = {
 }
 
 _GEO_CACHE: dict[str, tuple[float, float, str]] = {}
+_FORECAST_CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
+_FORECAST_TTL_S = 300.0
+_IP_LOC_CACHE: tuple[float, tuple[float, float, str]] | None = None
+_IP_LOC_TTL_S = 3600.0
 
 
 def _http_json(url: str, timeout: float = 12.0) -> dict[str, Any] | None:
@@ -106,12 +110,22 @@ def _resolve_location() -> tuple[float, float, str] | None:
             return la, lo, name
 
     if os.getenv("JARVIS_WEATHER_IP_LOOKUP", "1").lower() not in ("0", "false", "no"):
+        global _IP_LOC_CACHE
+        import time as _time
+
+        now = _time.time()
+        if _IP_LOC_CACHE is not None:
+            ts, cached = _IP_LOC_CACHE
+            if now - ts < _IP_LOC_TTL_S:
+                return cached
         data = _http_json("http://ip-api.com/json/?fields=status,lat,lon,city,regionName,countryCode")
         if data and data.get("status") == "success":
             la, lo = float(data["lat"]), float(data["lon"])
             parts = [data.get("city"), data.get("regionName"), data.get("countryCode")]
             name = ", ".join(p for p in parts if p) or "Local"
-            return la, lo, name
+            resolved = (la, lo, name)
+            _IP_LOC_CACHE = (now, resolved)
+            return resolved
     return None
 
 
@@ -164,12 +178,21 @@ def weather_forecast_text(day: str | None = None, *, message: str = "") -> str:
 
 def weather_for_day(day: str | None = None) -> dict[str, Any] | None:
     """Fetch high/low temp and conditions for a calendar day (ISO date)."""
+    import time as _time
+
     d = day or date.today().isoformat()
     loc = _resolve_location()
     if not loc:
         return None
     lat, lon, place = loc
     unit = _units()
+    cache_key = f"{d}|{lat:.4f}|{lon:.4f}|{unit}"
+    cached = _FORECAST_CACHE.get(cache_key)
+    if cached is not None:
+        ts, payload = cached
+        if _time.time() - ts < _FORECAST_TTL_S:
+            return dict(payload)
+
     params = urllib.parse.urlencode({
         "latitude": lat,
         "longitude": lon,
@@ -198,7 +221,7 @@ def weather_for_day(day: str | None = None) -> dict[str, Any] | None:
     condition = WMO_LABELS.get(code, f"Code {code}")
     icon = WMO_ICONS.get(code, "🌡️")
     hi, lo = round(high), round(low)
-    return {
+    payload = {
         "date": d,
         "location": place,
         "high": round(high, 1),
@@ -210,6 +233,8 @@ def weather_for_day(day: str | None = None) -> dict[str, Any] | None:
         "summary": f"{condition} · H {hi}{sym} / L {lo}{sym}",
         "source": "open-meteo",
     }
+    _FORECAST_CACHE[cache_key] = (_time.time(), dict(payload))
+    return payload
 
 
 def weather_icon(code: int | None) -> str:

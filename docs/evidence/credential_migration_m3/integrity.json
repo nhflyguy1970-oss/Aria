@@ -1,0 +1,12 @@
+{
+  "updated_at": "2026-08-13T15:27:18.745778+00:00",
+  "ok": true,
+  "clean": true,
+  "score": 100,
+  "status": "clean",
+  "artifacts": 0,
+  "scan_elapsed_ms": 54.17,
+  "scan_http_status": 200,
+  "note": "Production Integrity scan after M3 HA+LAN. Genuinely clean / 100.",
+  "secrets_in_evidence": false
+}

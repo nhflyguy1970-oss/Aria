@@ -1,0 +1,24 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-15T20:28:00Z",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "owner_session": "OWNER_UNLOCKED throughout",
+  "room": "health",
+  "capability": "Health Knowledge tab existing chrome without write",
+  "result": "PASS \u2014 Knowledge tab active; Health Knowledge heading; None recorded; 0 table rows; Save form present not submitted. No PHR / knowledge write.",
+  "not_clicked": [
+    "Save",
+    "Upload",
+    "Doctor visit",
+    "Emergency",
+    "Check-in write"
+  ],
+  "data_mutation": {
+    "phr": false,
+    "knowledge_save": false
+  }
+}

@@ -1,0 +1,332 @@
+{
+  "/api/journal/stats": {
+    "status": 200,
+    "ms": 28.7,
+    "ok": true,
+    "keys": [
+      "ok",
+      "stats"
+    ],
+    "msg": ""
+  },
+  "/api/journal/daily": {
+    "status": 200,
+    "ms": 3.6,
+    "ok": null,
+    "keys": [
+      "date",
+      "title",
+      "bullets",
+      "gratitude",
+      "mood",
+      "page_number",
+      "weather",
+      "quote",
+      "prompts",
+      "photos"
+    ],
+    "msg": ""
+  },
+  "/api/planner/focus": {
+    "status": 200,
+    "ms": 4.7,
+    "ok": true,
+    "keys": [
+      "ok",
+      "enabled",
+      "top_priorities",
+      "events",
+      "timers",
+      "alarms",
+      "focus_minutes_available",
+      "tasks_at_risk",
+      "suggested_next",
+      "recently_completed",
+      "health",
+      "morning_briefing"
+    ],
+    "msg": ""
+  },
+  "/api/planner/snapshot": {
+    "status": 200,
+    "ms": 3.6,
+    "ok": true,
+    "keys": [
+      "ok",
+      "enabled",
+      "tasks",
+      "events_today",
+      "timers",
+      "alarms"
+    ],
+    "msg": ""
+  },
+  "/api/calendar/month": {
+    "status": 200,
+    "ms": 24.7,
+    "ok": true,
+    "keys": [
+      "month",
+      "title",
+      "page_number",
+      "weeks",
+      "days",
+      "events",
+      "holidays",
+      "calendar_notes",
+      "monthly_bullets",
+      "today",
+      "work_days",
+      "ics_url"
+    ],
+    "msg": ""
+  },
+  "/api/documents/home": {
+    "status": 200,
+    "ms": 205.7,
+    "ok": true,
+    "keys": [
+      "ok",
+      "philosophy",
+      "health",
+      "documents",
+      "document_count",
+      "recent_searches",
+      "recent_imports",
+      "candidates",
+      "project_pack",
+      "quick_actions"
+    ],
+    "msg": ""
+  },
+  "/api/documents/search?q=warranty": {
+    "status": 200,
+    "ms": 48.2,
+    "ok": true,
+    "keys": [
+      "ok",
+      "query",
+      "hits",
+      "citations",
+      "markdown"
+    ],
+    "msg": ""
+  },
+  "/api/gallery": {
+    "status": 200,
+    "ms": 4.9,
+    "ok": true,
+    "keys": [
+      "ok",
+      "images",
+      "total",
+      "offset",
+      "limit",
+      "has_more",
+      "include_artifacts",
+      "scanned_at"
+    ],
+    "msg": ""
+  },
+  "/api/comfyui/settings": {
+    "status": 200,
+    "ms": 3.3,
+    "ok": null,
+    "keys": [
+      "mode",
+      "checkpoint",
+      "checkpoint_file",
+      "runtime_cpu",
+      "effective",
+      "label",
+      "checkpoint_label",
+      "checkpoint_file_active",
+      "installed",
+      "all_checkpoints",
+      "checkpoints_dir",
+      "comfyui_url"
+    ],
+    "msg": ""
+  },
+  "/api/browser/status": {
+    "status": 200,
+    "ms": 358.2,
+    "ok": true,
+    "keys": [
+      "ok",
+      "status",
+      "url",
+      "message",
+      "paused",
+      "takeover",
+      "last_screenshot",
+      "screenshot_stale",
+      "allow_downloads",
+      "blocked_download",
+      "fallback",
+      "last_error"
+    ],
+    "msg": ""
+  },
+  "/api/voice/product": {
+    "status": 200,
+    "ms": 68.6,
+    "ok": true,
+    "keys": [
+      "ok",
+      "product",
+      "boundaries",
+      "state",
+      "settings",
+      "duplex",
+      "cloud_live",
+      "queue",
+      "profiles",
+      "recovery",
+      "pipeline"
+    ],
+    "msg": ""
+  },
+  "/api/video/settings": {
+    "status": 200,
+    "ms": 720.5,
+    "ok": null,
+    "keys": [
+      "engine",
+      "duration_sec",
+      "fps",
+      "width",
+      "height",
+      "animatediff_frames",
+      "animatediff_checkpoint",
+      "keyframe_preset",
+      "keyframe_checkpoint",
+      "uncensored_auto_applied",
+      "animatediff",
+      "keyframe_checkpoint_active"
+    ],
+    "msg": ""
+  },
+  "/api/engineering/cad/status": {
+    "status": 200,
+    "ms": 33.1,
+    "ok": true,
+    "keys": [
+      "ok",
+      "enabled",
+      "printer_enabled",
+      "meshy_cad",
+      "openscad",
+      "openscad_path",
+      "build123d",
+      "meshy",
+      "ready",
+      "slicer"
+    ],
+    "msg": ""
+  },
+  "/api/engineering/cad_status": {
+    "status": 200,
+    "ms": 31.6,
+    "ok": true,
+    "keys": [
+      "ok",
+      "enabled",
+      "printer_enabled",
+      "meshy_cad",
+      "openscad",
+      "openscad_path",
+      "build123d",
+      "meshy",
+      "ready",
+      "slicer"
+    ],
+    "msg": ""
+  },
+  "/api/maker/cad/status": {
+    "status": 404,
+    "ms": 3.7,
+    "ok": null,
+    "keys": [
+      "detail"
+    ],
+    "msg": "Not Found"
+  },
+  "/api/audit": {
+    "status": null,
+    "ms": 45045.0,
+    "ok": null,
+    "keys": [
+      "error"
+    ],
+    "msg": "timed out"
+  },
+  "/api/connections/home": {
+    "status": 500,
+    "ms": 17.4,
+    "ok": false,
+    "keys": [
+      "ok",
+      "message",
+      "error_id"
+    ],
+    "msg": "Server error. Reference: 56a7c970"
+  },
+  "/api/meme-gallery": {
+    "status": 200,
+    "ms": 2.0,
+    "ok": null,
+    "keys": [
+      "memes"
+    ],
+    "msg": ""
+  },
+  "/api/vision/product": {
+    "status": 200,
+    "ms": 615.4,
+    "ok": true,
+    "keys": [
+      "ok",
+      "product",
+      "boundaries",
+      "state",
+      "settings",
+      "honesty",
+      "profiles",
+      "history_recent",
+      "actions",
+      "pipeline"
+    ],
+    "msg": ""
+  },
+  "/api/presence": {
+    "status": 200,
+    "ms": 1173.6,
+    "ok": true,
+    "keys": [
+      "ok",
+      "gestures_enabled",
+      "floating_panels",
+      "cpu_gestures",
+      "face_auth",
+      "camera_required",
+      "backend"
+    ],
+    "msg": ""
+  },
+  "/api/security/gestures/status": {
+    "status": 200,
+    "ms": 1.8,
+    "ok": true,
+    "keys": [
+      "ok",
+      "gestures_enabled",
+      "floating_panels",
+      "cpu_gestures",
+      "mode",
+      "calibration",
+      "sensitivity"
+    ],
+    "msg": ""
+  }
+}

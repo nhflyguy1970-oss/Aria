@@ -1,0 +1,25 @@
+{
+  "http": 200,
+  "ok": true,
+  "enabled": true,
+  "owner_vault": true,
+  "owner_unlocked": true,
+  "pin_convenience": false,
+  "portable_backup_distinct": true,
+  "ops": [
+    "backup_create",
+    "backup_restore",
+    "cloud_consult",
+    "delete_record",
+    "edit_allergies",
+    "edit_conditions",
+    "edit_emergency",
+    "edit_family_history",
+    "edit_medications",
+    "emergency_info",
+    "export_record",
+    "view_full_record"
+  ],
+  "ttl": 300,
+  "secrets_in_evidence": false
+}

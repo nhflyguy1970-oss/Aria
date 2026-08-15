@@ -333,6 +333,26 @@ def unload_model(model: str, *, timeout: float = 15) -> bool:
         return False
 
 
+def model_resident(model: str) -> bool:
+    """True if Ollama currently has ``model`` loaded (cheap /api/ps check)."""
+    name = (model or "").strip().lower()
+    if not name:
+        return False
+    host = ollama_host().rstrip("/")
+    try:
+        req = urllib.request.Request(f"{host}/api/ps", method="GET")
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            data = json.loads(resp.read().decode() or "{}")
+        base = name.split(":")[0]
+        for row in data.get("models") or []:
+            m = str(row.get("name") or row.get("model") or "").lower()
+            if m == name or m.startswith(base):
+                return True
+    except Exception as exc:
+        logger.debug("model_resident(%s) failed: %s", name, exc)
+    return False
+
+
 def metrics_from_response(payload: dict[str, Any], elapsed_s: float) -> dict[str, Any]:
     load_ms = round((payload.get("load_duration") or 0) / 1e6, 1)
     prompt_ms = round((payload.get("prompt_eval_duration") or 0) / 1e6, 1)
@@ -591,4 +611,103 @@ def ensure_chat_model_ready(
         "attempts": attempt,
         "cpu_fallback": bool(info and vram <= 0),
         "detail": "chat model did not reach GPU residency before warmup timeout",
+    }
+
+
+def free_slot_for_model(model: str) -> dict[str, Any]:
+    """Unload other runners so ``model`` can load under OLLAMA_MAX_LOADED_MODELS=1.
+
+    Coding propose hung for minutes with chat ``qwen2.5:7b`` resident and GPU at 0%:
+    Ollama never swapped to the coder model, Stop/cancel could not interrupt the wait.
+    """
+    want = (model or "").strip()
+    if not want:
+        return {"ok": False, "action": "noop", "detail": "no model"}
+
+    loaded = [r["name"] for r in list_loaded_runners()]
+    want_base = _model_base(want)
+    if any(_model_base(n) == want_base or n.lower() == want.lower() for n in loaded):
+        return {"ok": True, "action": "already_loaded", "loaded": loaded}
+
+    unloaded: list[str] = []
+    for name in loaded:
+        if _model_base(name) == want_base or name.lower() == want.lower():
+            continue
+        if unload_model(name):
+            unloaded.append(name)
+            logger.info("Unloaded %s to free Ollama slot for %s", name, want)
+
+    if unloaded:
+        deadline = time.monotonic() + 8.0
+        while time.monotonic() < deadline:
+            still = [
+                r["name"]
+                for r in list_loaded_runners()
+                if _model_base(r["name"]) != want_base
+                and r["name"].lower() != want.lower()
+            ]
+            if not still:
+                break
+            time.sleep(0.25)
+
+    return {
+        "ok": True,
+        "action": "freed" if unloaded else "noop",
+        "unloaded": unloaded,
+        "loaded_before": loaded,
+    }
+
+
+def ensure_coding_model_ready(
+    model: str | None = None,
+    *,
+    timeout: float | None = None,
+) -> dict[str, Any]:
+    """Make the coding model GPU-resident before a coding job calls the LLM."""
+    try:
+        from jarvis.llm import coder_model
+    except Exception:
+        coder_model = lambda: ""  # noqa: E731
+
+    name = (model or coder_model() or "").strip()
+    if not name:
+        return {"ok": False, "action": "noop", "detail": "no coding model"}
+    if timeout is None:
+        timeout = float(os.getenv("JARVIS_CODING_MODEL_READY_TIMEOUT", "180"))
+
+    t0 = time.perf_counter()
+    settle = float(os.getenv("JARVIS_OLLAMA_SLOT_SETTLE_S", "2.5"))
+    freed = free_slot_for_model(name)
+    if freed.get("action") == "freed" or freed.get("unloaded"):
+        time.sleep(settle)
+
+    info = runner_info(name)
+    if info and int(info.get("size_vram") or 0) > 0:
+        return {
+            "ok": True,
+            "action": "already_ready",
+            "model": name,
+            "size_vram": info.get("size_vram"),
+            "freed": freed,
+            "elapsed_ms": round((time.perf_counter() - t0) * 1000, 2),
+        }
+
+    warm = run_inference_probe(
+        name,
+        prompt="hi",
+        timeout=max(30.0, timeout),
+    )
+    info = runner_info(name)
+    # Probe success is authoritative — api/ps can lag briefly after keep_alive loads.
+    ok = bool(warm.get("ok"))
+    vram = int((info or {}).get("size_vram") or 0) if info else 0
+    return {
+        "ok": ok,
+        "action": "warmed" if ok else "warmup_failed",
+        "model": name,
+        "size_vram": vram or None,
+        "freed": freed,
+        "warmup": {k: warm.get(k) for k in ("ok", "load_ms", "total_s", "detail", "cold_start")},
+        "elapsed_ms": round((time.perf_counter() - t0) * 1000, 2),
+        "detail": None if ok else (warm.get("detail") or "coding model not ready"),
     }

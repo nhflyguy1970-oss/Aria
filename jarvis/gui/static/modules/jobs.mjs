@@ -75,12 +75,28 @@ export function renderJobCenter(data) {
   for (const job of data.recent || []) {
     const li = document.createElement("li");
     li.className = "job-center-item";
+    const resultOk = job.result_ok !== false && job.ok !== false && !job.error;
+    const mediaKind = /image|video|audio|meme|inpaint|edit/i.test(
+      String(job.kind || job.label || "")
+    );
+    const hasAsset = Boolean(
+      job.image_path || job.image_name || job.video_path || job.audio_path || job.output_path
+        || job.proposal_id || job.result_type === "proposal"
+    );
+    // Never paint green "Complete" for media jobs with no asset / failed result.
+    const outcomeOk = job.done && resultOk && (!mediaKind || hasAsset || job.queue === "coding");
     if (!job.done) li.classList.add("running");
-    else if (job.error) li.classList.add("done-err");
+    else if (!outcomeOk) li.classList.add("done-err");
     else li.classList.add("done-ok");
     const pct = job.done ? 100 : (job.pct || 0);
+    let statusMsg = job.message || "";
+    if (job.done && mediaKind && resultOk && !hasAsset) {
+      statusMsg = "Reported complete but no output asset";
+    } else if (job.done && !resultOk && !statusMsg) {
+      statusMsg = job.error || "Failed";
+    }
     li.innerHTML = `<strong>[${escapeHtml(job.queue)}]</strong> ${escapeHtml(job.label || job.id)}<br>`
-      + `<span class="muted">${escapeHtml(job.message || "")}</span> · ${pct}%`;
+      + `<span class="muted">${escapeHtml(statusMsg)}</span> · ${pct}%`;
     if (job.queue === "coding") {
       const links = document.createElement("div");
       links.className = "job-coding-links";
@@ -173,6 +189,7 @@ export async function refreshJobCenter() {
 }
 
 export function openJobCenter() {
+  window.AriaModalPortal?.ensure?.();
   const jobCenterModal = $("jobCenterModal");
   if (!jobCenterModal) return;
   jobCenterModal.classList.remove("hidden");

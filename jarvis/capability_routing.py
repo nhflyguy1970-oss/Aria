@@ -72,32 +72,93 @@ CAPABILITY_TO_ROLE: dict[str, str | None] = {
     "search": "web_research",
 }
 
-ACTION_TO_CAPABILITY: dict[str, str] = {
+_MODULE_TO_CAPABILITY: dict[str, str] = {
+    "coding": "coding",
+    "engineering": "coding",
+    "memory": "memory",
+    "journal": "reflection",
+    "health": "health",
+    "planner": "planning",
+    "document": "document_analysis",
+    "documents": "document_analysis",
+    "vision": "vision",
+    "audio": "speech",
+    "voice": "speech",
+    "browser": "web_research",
+    "search": "search",
+    "automation": "workflow_orchestration",
+    "projects": "planning",
+}
+
+_ACTION_CAPABILITY_OVERRIDES: dict[str, str] = {
     "chat": "conversation",
-    "coding_chat": "coding",
-    "coding_fix": "debugging",
-    "coding_generate": "coding",
-    "coding_review": "code_review",
-    "coding_diagnose": "debugging",
-    "coding_patch": "coding",
-    "coding_multi_edit": "coding",
+    "greeting": "greeting",
+    "capabilities": "conversation",
+    "models_info": "conversation",
     "web_search": "web_research",
-    "journal_reflect": "reflection",
-    "planner_plan": "planning",
-    "document_analyze": "document_analysis",
-    "memory_about_user": "memory",
-    "remember": "memory",
-    "memory_search": "memory",
-    "memory_correct": "memory",
-    "memory_forget": "memory",
-    "recall": "memory",
     "conversation_language": "conversation_language",
 }
 
 
+def _capability_from_action_name(action: str) -> str:
+    if action.startswith(("runtime_", "status_")):
+        return "mission_control"
+    if action.startswith(("coding_fix", "syntax_", "lsp_", "find_references")):
+        return "debugging"
+    if action.startswith(("coding_", "code_", "git_", "self_upgrade_", "upgrade_")):
+        return "coding"
+    if action.startswith(("memory_", "remember", "recall", "project_checkpoint", "project_resume")):
+        return "memory"
+    if action.startswith(("document_", "learn_from_document", "ingest_document")):
+        return "document_analysis"
+    if action.startswith(("describe_image", "analyze_image", "ocr_", "vision_", "image_to_code")):
+        return "vision"
+    if action.startswith(("generate_image", "edit_image", "inpaint_image", "upscale_image", "generate_meme")):
+        return "image_generation"
+    if action.startswith(("generate_audio", "transcribe", "speak", "record_", "edit_audio", "play_audio")):
+        return "speech"
+    if action.startswith(("journal_", "morning_briefing", "briefing_")):
+        return "reflection"
+    if action.startswith("health_"):
+        return "health"
+    if action.startswith(("planner_", "calendar_")):
+        return "planning"
+    if action.startswith(("workflow_", "skill_", "automation_")):
+        return "workflow_orchestration"
+    if action.startswith(("browser_", "browse_", "search_and_browse")):
+        return "web_research"
+    return "conversation"
+
+
+def action_capability_map() -> dict[str, str]:
+    """Derive action → capability from the handler registry metadata."""
+    derived = dict(_ACTION_CAPABILITY_OVERRIDES)
+    try:
+        from jarvis.handlers import ensure_handlers_loaded
+        from jarvis.handlers.registry import all_actions
+
+        ensure_handlers_loaded()
+        for row in all_actions():
+            action = str(row.get("action") or "").strip()
+            if not action:
+                continue
+            module = str(row.get("module") or row.get("extension") or "").strip()
+            inferred = _capability_from_action_name(action)
+            derived[action] = _ACTION_CAPABILITY_OVERRIDES.get(
+                action,
+                inferred if inferred != "conversation" else _MODULE_TO_CAPABILITY.get(module, "conversation"),
+            )
+    except Exception:
+        pass
+    return derived
+
+
+ACTION_TO_CAPABILITY: dict[str, str] = action_capability_map()
+
+
 def capability_for_action(action: str) -> str:
     key = (action or "chat").strip().lower()
-    return ACTION_TO_CAPABILITY.get(key, "conversation")
+    return action_capability_map().get(key, _capability_from_action_name(key))
 
 
 def capability_for_action_and_message(action: str, message: str = "") -> str:
@@ -161,11 +222,19 @@ def select_model_via_policy(
     return selection.selected_model, meta
 
 
-def apply_gateway_model(model: str, role: str, *, context_tokens: int = 0) -> str:
+def apply_gateway_model(
+    model: str,
+    role: str,
+    *,
+    context_tokens: int = 0,
+    user_model_override: str = "",
+) -> str:
     """Policy-selected model for a role (benchmark/hardware/personalization applied)."""
+    override = (user_model_override or "").strip()
     selected, _meta = select_model_via_policy(
         role,
         configured_hint=model,
+        user_model_override=override,
         context_tokens=context_tokens,
     )
     return str(selected or model)
@@ -208,7 +277,13 @@ def resolve_conversation_model(
         role = "fast_chat"
     elif not _needs_reasoning_role(message, action=action):
         role = "conversation"
-    model = apply_gateway_model(brain_model, role)
+    # Preserve explicit session/UI model through policy (BUG-018).
+    explicit = (params.get("model") or session_chat_model or "").strip()
+    model = apply_gateway_model(
+        brain_model,
+        role,
+        user_model_override=explicit if explicit == brain_model else "",
+    )
     _record_capability_trace(action, message, role, model)
     return model, role
 

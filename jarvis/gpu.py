@@ -54,22 +54,42 @@ def free_vram_mb(*, force: bool = False) -> int:
 
 
 def _gpu_from_lspci(lspci: str) -> tuple[str, str]:
-    """Return (vendor, name) from lspci, preferring actual display adapters."""
+    """Return (vendor, name) from lspci, preferring actual display adapters.
+
+    Vendor must come from the chosen adapter line — scanning the whole lspci
+    dump falsely marks NVIDIA systems as AMD when an AMD CPU/audio device exists.
+    """
     vendor = "unknown"
     name = "Unknown"
-    if "AMD" in lspci or "ATI" in lspci:
-        vendor = "amd"
-    elif "NVIDIA" in lspci:
-        vendor = "nvidia"
-
+    candidates: list[str] = []
     for line in lspci.splitlines():
         low = line.lower()
-        if "vga compatible controller" in low or "display controller" in low:
-            name = line.split(": ", 1)[-1].strip()
+        if "audio" in low:
+            continue
+        if (
+            "vga compatible controller" in low
+            or "display controller" in low
+            or "3d controller" in low
+            or "geforce" in low
+            or "radeon" in low
+        ):
+            candidates.append(line)
+    # Prefer NVIDIA/AMD 3D/VGA lines over generic bridges.
+    preferred = None
+    for line in candidates:
+        low = line.lower()
+        if "vga compatible controller" in low or "3d controller" in low or "display controller" in low:
+            preferred = line
             break
-        if vendor != "unknown" and ("radeon" in low or "geforce" in low) and "audio" not in low:
-            name = line.split(": ", 1)[-1].strip()
-            break
+    if preferred is None and candidates:
+        preferred = candidates[0]
+    if preferred:
+        name = preferred.split(": ", 1)[-1].strip()
+        low = preferred.lower()
+        if "nvidia" in low or "geforce" in low:
+            vendor = "nvidia"
+        elif "amd" in low or "ati" in low or "radeon" in low:
+            vendor = "amd"
     return vendor, name
 
 
@@ -161,10 +181,15 @@ def _detect_gpu_uncached() -> dict:
 
     if info.get("compute_vendor") == "nvidia":
         nv = info.get("nvidia") or {}
+        disp = (info.get("display_vendor") or "").lower()
+        disp_note = (
+            " Display adapter is AMD; compute uses NVIDIA."
+            if disp == "amd"
+            else ""
+        )
         info["recommendation"] = (
             f"NVIDIA compute: {nv.get('name', 'GPU')} "
-            f"({nv.get('free_vram_mb', nv.get('vram_mb', 0))}MB free). "
-            "Display GPU may be AMD — image gen and Ollama use NVIDIA when ComfyUI is restarted via ARIA."
+            f"({nv.get('free_vram_mb', nv.get('vram_mb', 0))}MB free).{disp_note}"
         )
     elif info["ollama_using_gpu"]:
         info["recommendation"] = f"GPU acceleration active{vram_note}."

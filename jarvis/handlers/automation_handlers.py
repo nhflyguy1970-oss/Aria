@@ -34,7 +34,7 @@ def automation_status(assistant, params: dict, message: str) -> dict:
 
 @register_action("automation_pause", module="general", description="Pause all automations")
 def automation_pause(assistant, params: dict, message: str) -> dict:
-    from jarvis.intelligence.automation_engine import set_paused
+    from jarvis.automation.engine import set_paused
 
     set_paused(True)
     return ok("Automations **paused**. Say **resume automations** when ready.", module="general")
@@ -42,7 +42,7 @@ def automation_pause(assistant, params: dict, message: str) -> dict:
 
 @register_action("automation_resume", module="general", description="Resume automations")
 def automation_resume(assistant, params: dict, message: str) -> dict:
-    from jarvis.intelligence.automation_engine import set_paused, start_engine
+    from jarvis.automation.engine import set_paused, start_engine
 
     set_paused(False)
     start_engine()

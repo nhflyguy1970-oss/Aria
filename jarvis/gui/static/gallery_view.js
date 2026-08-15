@@ -1,4 +1,4 @@
-/** Gallery Home — stay-in-Gallery generation, library, honest jobs, keyboard a11y. */
+/** Gallery Home — stay-in-Gallery generation, library, honest jobs, keyboard a11y. Chat command hint: generate image: */
 (function () {
   "use strict";
 
@@ -218,30 +218,51 @@
 
   async function trashImage(name) {
     try {
-      const res = await fetch(`/api/gallery/${encodeURIComponent(name)}`, { method: "DELETE" });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) throw new Error(data.message || "Trash failed");
-      const trashId = data.trash_id;
-      window.showAriaToast?.(`Moved ${name} to trash`, "ok", 4000);
+      const result = await window.ariaMutate({
+        request: () => fetch(`/api/gallery/${encodeURIComponent(name)}`, { method: "DELETE" }),
+        verify: async () => {
+          const listRes = await fetch("/api/gallery?limit=80");
+          if (!listRes.ok) return false;
+          const listData = await listRes.json().catch(() => ({}));
+          const names = (listData.images || []).map((i) => i.name);
+          return !names.includes(name);
+        },
+        successToast: `Moved ${name} to trash`,
+        failToast: "Trash failed",
+      });
+      if (!result.ok) return;
+      const trashId = result.data?.trash_id;
+      await loadGallery();
       // Inline undo like prompt history
       const bar = $("galleryUndoBar");
       if (bar && trashId) {
         bar.innerHTML = `Trashed ${esc(name)}. <button type="button" class="ghost-btn tiny" id="galleryUndoBtn">Undo</button>`;
         bar.classList.remove("hidden");
         $("galleryUndoBtn")?.addEventListener("click", async () => {
-          await fetch("/api/gallery/restore", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ trash_id: trashId }),
+          const restored = { name };
+          const restore = await window.ariaMutate({
+            request: () =>
+              fetch("/api/gallery/restore", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ trash_id: trashId }),
+              }),
+            verify: async (data) => {
+              restored.name = data.restored || data.name || name;
+              const check = await fetch(`/api/gallery/${encodeURIComponent(restored.name)}?max=64`);
+              return check.ok;
+            },
+            successToast: "Restored",
+            failToast: "Restore failed",
           });
+          if (!restore.ok) return;
           bar.classList.add("hidden");
-          loadGallery();
+          await loadGallery();
         });
-        setTimeout(() => bar.classList.add("hidden"), (data.undo_sec || 300) * 1000);
+        setTimeout(() => bar.classList.add("hidden"), 300 * 1000);
       }
-      loadGallery();
     } catch (err) {
-      window.showAriaToast?.(err.message || String(err), "err", 5000);
+      window.showAriaToast?.(err.message || "Trash failed", "err", 5000);
     }
   }
 
@@ -295,6 +316,20 @@
       if (more) more.classList.toggle("hidden", !data.has_more);
       loadPromptHistory();
     } catch (err) {
+      if (
+        window.AriaNet?.isRoomAbort?.(err) ||
+        err?.name === "AbortError" ||
+        /aborted/i.test(String(err?.message || ""))
+      ) {
+        if (
+          document.body.classList.contains("house-gallery") ||
+          /^#?gallery\b/i.test(location.hash || "")
+        ) {
+          clearTimeout(loadGallery._retry);
+          loadGallery._retry = setTimeout(() => loadGallery({ reset: true }), 140);
+        }
+        return;
+      }
       el.innerHTML = `<p class="warn">Could not load gallery — ${esc(String(err.message || err))}
         <button type="button" class="ghost-btn tiny" id="galleryRetryBtn">Retry</button></p>`;
       $("galleryRetryBtn")?.addEventListener("click", () => loadGallery({ reset: true }));
@@ -470,12 +505,23 @@
     state.lastParams = { ...params };
     try {
       const result = await runQueued("/api/gallery/generate", params);
-      const name = result.image_name || result.image_path?.split("/").pop() || "image";
+      const name = result.image_name || result.image_path?.split("/").pop() || "";
+      if (!name) throw new Error("Generation finished but no image name was returned");
+      // Outcome check — never toast success from job ok alone
+      const probe = await fetch(`/api/gallery/${encodeURIComponent(name)}?max=64`);
+      if (!probe.ok) {
+        throw new Error(`Image missing from Gallery after generate (${name}, HTTP ${probe.status})`);
+      }
       const seedMsg = result.seed != null ? ` · seed ${result.seed}` : "";
       setGenStatus(`Generated ${name}${seedMsg}`, "ok");
       if (result.seed != null && $("gallerySeedInput")) $("gallerySeedInput").value = String(result.seed);
       window.jarvisNotify?.("Image ready", name);
-      loadGallery({ reset: true });
+      await loadGallery({ reset: true });
+      const listed = (state.items || []).some((img) => img && img.name === name);
+      if (!listed) {
+        setGenStatus(`Generated file exists but Gallery list did not show ${name}`, "err");
+        throw new Error(`Gallery list missing ${name} after generate`);
+      }
     } catch (err) {
       setGenStatus(err.message || "Generation failed", "err");
       showRecovery(err.message || "");
@@ -718,11 +764,16 @@
     $("galleryCollectionBtn")?.addEventListener("click", async () => {
       const names = [...state.selected];
       if (!names.length) return window.showAriaToast?.("Select images", "warn");
-      await fetch("/api/gallery/collections", {
+      const colRes = await fetch("/api/gallery/collections", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: `Collection ${new Date().toLocaleString()}`, names }),
       });
+      const colData = await colRes.json().catch(() => ({}));
+      if (!colRes.ok || colData.ok === false) {
+        window.showAriaToast?.(colData.message || `Collection failed (${colRes.status})`, "err", 5000);
+        return;
+      }
       window.showAriaToast?.("Collection created", "ok");
     });
     document.addEventListener("keydown", onGalleryKeydown);

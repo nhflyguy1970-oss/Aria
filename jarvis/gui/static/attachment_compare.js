@@ -120,7 +120,7 @@
     document.getElementById("pdfPageInput")?.addEventListener("change", (e) => {
       a().pendingPdfPage = e.target.value || "1";
     });
-    attachmentPreview.querySelector("button[aria-label='Remove']")?.addEventListener("click", () => {
+    attachmentPreview.querySelector("button[aria-label='Remove attachment'], button[aria-label='Remove']")?.addEventListener("click", () => {
       a().pendingFile = null;
       a().pendingFile2 = null;
       a().pendingCrop = null;
@@ -325,6 +325,11 @@
           messageInput.value = "Compare these two images. Describe similarities and differences.";
           messageInput.focus();
         }
+        return;
+      }
+      // Second click exits compare mode when A/B are not both ready (button is a toggle).
+      if (a().compareMode) {
+        exitCompareMode();
         return;
       }
       enterCompareMode();

@@ -1,0 +1,71 @@
+---
+description: Aria Capability-Driven Development — highest engineering law. Grow from real Jeff friction only; expand products, prefer 10-line repairs, freeze mature products.
+alwaysApply: true
+---
+
+# ARIA ENGINEERING LAW — Capability-Driven Development
+
+Aria is a mature personal AI operating system. It is **not** in a feature race, architecture phase, or rewrite phase.
+
+## Golden rule
+
+Aria grows because **Jeff's life grows** — not because the codebase grows.
+
+Success is not feature count. Success is Jeff forgetting separate products and saying: **"I'll ask Aria."**
+
+## When to build
+
+Every new capability must come from one of:
+
+1. **Real friction Jeff discovers** (e.g. "I wish Aria tracked my blood pressure" → Health)
+2. **Repeated manual work** (e.g. doctor visit prep → Doctor Visit Mode)
+3. **Support for an existing flagship** (e.g. Guided Repair needed verification → repair learning)
+4. **Natural completion of an existing capability** (e.g. backups → integrity checking)
+
+## Forbidden
+
+Do **not** add capabilities because they would be cool, architecture could support them, we might need them someday, another AI has them, or someone else requested them.
+
+Before writing code, answer:
+
+- What problem does this solve?
+- Who experiences it, and how often?
+- Can the existing system already solve it?
+- Does it belong in an **existing** product?
+- Would Jeff naturally expect / ask Aria for this?
+
+If those cannot be answered honestly → **do not implement**. Record as a future idea only.
+
+## Expand products; don't spawn products
+
+Prefer deepening flagships over new products.
+
+**Flagships to protect:** Health, ACM, Documents, Coding, Mission Control, Fly Tying.
+
+Mature products: **freeze**. Change only for bugs, real friction, performance, security, reliability, or a real workflow weakness.
+
+## Platform vs product
+
+Shared needs → platform services (Execution Law, Guided Repair, Mission Control, Search, Auth, Notifications, Certification).
+
+Product-specific needs → expand that product.
+
+## No rewrites by default
+
+Prefer a **10-line repair** over a 1,000-line redesign.
+
+- Fix the **cause**, not the symptom.
+- Expand the **capability**, not the architecture.
+- Refactor only when necessary.
+
+## User test (all must lean yes)
+
+- Will Jeff actually use this?
+- Would Jeff naturally ask Aria for this?
+- Does this remove friction / save time / increase trust?
+
+If not → don't build it.
+
+## Continuous improvement
+
+Live inside Aria. When a genuine need appears, evaluate and build. When the thought is only "wouldn't it be neat if…", **don't**.

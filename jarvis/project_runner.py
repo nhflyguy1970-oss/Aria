@@ -113,6 +113,7 @@ _ALLOWED_CMD_PREFIXES = (
     "pytest", "python", "python3", "ruff", "mypy", "pyright",
     "npm test", "npm run", "node --check", "npx tsc",
     "cargo test", "cargo check", "go test", "go build",
+    "gh ",
 )
 
 
@@ -138,5 +139,15 @@ def run_project_command(command: str, base: Path, *, timeout: int = 120) -> subp
         run_cmd = [py, "-m", "pytest", *cmd.split()[1:]]
     else:
         run_cmd = cmd.split()
+
+    # gh needs host credentials + network; firejail --private/--net=none breaks auth.
+    if lower.startswith("gh "):
+        return subprocess.run(
+            run_cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=str(base),
+        )
 
     return run_sandboxed(run_cmd, cwd=str(base), timeout=timeout)

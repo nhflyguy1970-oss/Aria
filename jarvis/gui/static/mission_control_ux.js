@@ -162,7 +162,7 @@
       </div>`
       )
       .join("");
-    return `<section class="mc-card"><h3>Predictive health <span class="mc-badge mc-badge--info">Experimental</span></h3>
+    return `<section class="mc-card"><h3>Predictive health</h3>
       <p class="muted tiny">Warnings only — never auto-remediate.</p>${items}</section>`;
   }
 
@@ -379,19 +379,43 @@
   }
 
   function enhanceRecovery(d) {
+    const guided = window.AriaGuidedRepair?.renderRecoverySection?.(d) || "";
+    const integ = d.integrity || {};
+    const score = integ.score || {};
+    const sections = score.sections || integ.sections || {};
+    const sectionRows = Object.entries(sections)
+      .map(([k, v]) => {
+        const st = (v && v.status) || "unknown";
+        return `<li><strong>${esc(k)}</strong>: ${esc(st)} (${(v && v.artifacts) || 0})</li>`;
+      })
+      .join("");
+    const findings = (integ.findings_preview || [])
+      .map((f) => `<li>${esc(f.category || "")}: ${esc(f.title || "")} (${Math.round((f.confidence || 0) * 100)}%)</li>`)
+      .join("");
+    const integritySection = integ.product
+      ? mcCard(
+          "Production Integrity",
+          `<p>Score: <strong>${esc(integ.integrity_score ?? score.overall ?? "—")}/100</strong> · status <strong>${esc(integ.status || integ.state || "unknown")}</strong></p>
+           <p class="muted tiny">${esc(integ.detail || "")}</p>
+           ${sectionRows ? `<ul class="mc-list">${sectionRows}</ul>` : ""}
+           ${findings ? `<p class="muted tiny">Findings</p><ul class="mc-list">${findings}</ul>` : "<p class='muted'>Clean — no development artifacts.</p>"}
+           <p class="muted tiny">${esc(integ.note || "Scans never auto-delete. Score is informational only.")}</p>
+           <p class="mc-actions">
+             <button type="button" class="ghost-btn small" id="mcIntegrityScanBtn">Scan now</button>
+             <a class="ghost-btn small" href="/api/integrity/score" target="_blank">Score evidence</a>
+             <a class="ghost-btn small" href="/api/integrity/home" target="_blank">History</a>
+           </p>`
+        )
+      : "";
     const r = d.recovery || {};
     const actions = (r.recommended_actions || []).map((a) => `<li>${esc(a)}</li>`).join("");
     const issues = (r.known_issues || []).map((i) => `<li>${esc(i)}</li>`).join("");
     return `
-      <div class="mc-recovery-actions">
-        <button type="button" class="apply-btn small" id="mcRepairBtn">Repair (confirm)</button>
-        <button type="button" class="ghost-btn small" id="mcVerifyBtn">Verify after repair</button>
-        <button type="button" class="ghost-btn small" id="mcAcceptanceBtn">Run acceptance</button>
-        <button type="button" class="ghost-btn small" data-mc-nav="activity-center">Open Notifications</button>
-      </div>
-      <p class="muted tiny">Repairs require confirmation. Auto-verification publishes to Activity — it never remediates further.</p>
+      ${guided}
+      ${integritySection ? mcGrid([integritySection]) : ""}
+      <p class="muted tiny">Legacy workstation recovery remains available below for acceptance tests. Prefer Guided Repair for diagnosis + verified fixes.</p>
       ${mcGrid([
-        mcCard("Health", `<p>${mcBadge(r.health?.ok, "OK", "Issues")}</p><pre class="mc-pre">${esc(JSON.stringify(r.health || {}, null, 2).slice(0, 800))}</pre>`),
+        mcCard("Health snapshot", `<p>${mcBadge(r.health?.ok, "OK", "Issues")}</p><pre class="mc-pre">${esc(JSON.stringify(r.health || {}, null, 2).slice(0, 800))}</pre>`),
         mcCard("Backup", `<p>Latest: <code>${esc(r.latest_backup || "none")}</code></p>`),
         mcCard("Recommended", actions ? `<ul class="mc-list">${actions}</ul>` : emptyState("No recommendations", "System looks stable.", "")),
         mcCard("Known issues", issues ? `<ul class="mc-list">${issues}</ul>` : "<p class='muted'>None</p>"),
@@ -534,17 +558,29 @@
   }
 
   async function runRepair() {
-    const ok = await confirmAction("Repair", "Run safe recovery? This requires confirmation and will auto-verify afterward.");
+    // Prefer Guided Repair scan → panel → Jeff approval → verify
+    if (window.AriaGuidedRepair?.scanAndShow) {
+      try {
+        await window.AriaGuidedRepair.scanAndShow();
+        return;
+      } catch (err) {
+        window.showAriaToast?.(err.message, "err");
+      }
+    }
+    const ok = await confirmAction(
+      "Legacy safe recovery",
+      "Run legacy workstation recover_safe? This is not Guided Repair. Prefer Scan & diagnose when possible.",
+    );
     if (!ok) return;
     try {
       const data = await mcFetch("/api/workstation/recover", { method: "POST" });
       const issues = data.report?.warnings ?? data.report?.issues?.length ?? 0;
       const summary = data.ok
         ? issues
-          ? `Repair done · ${issues} warning(s)`
-          : "Repair done · healthy"
-        : "Repair finished with issues";
-      window.showAriaToast?.(summary, data.ok ? "ok" : "warn");
+          ? `Legacy recover finished · ${issues} warning(s) — not claiming healthy without Guided Repair verification`
+          : "Legacy recover finished — run Verify before claiming healthy"
+        : "Legacy recover finished with issues";
+      window.showAriaToast?.(summary, "warn");
       window.AriaActivityProducers?.mission?.recovery?.(summary);
       await runVerify(false);
       window.loadMissionControl?.();
@@ -636,6 +672,9 @@
 
     nav.setAttribute("role", "tablist");
     nav.setAttribute("aria-label", "Mission Control sections");
+    const living =
+      document.documentElement.classList.contains("living-workspace") ||
+      document.body?.classList.contains("living-workspace");
     nav.innerHTML = `
       <div class="mc-tab-group" data-group="primary">
         <span class="mc-tab-group__label muted">Primary</span>
@@ -647,7 +686,10 @@
         </button>
         <div class="mc-tab-group__tabs${advancedOpen ? "" : " hidden"}" role="presentation">${ADVANCED_TABS.map(mkBtn).join("")}</div>
       </div>
-      <div class="mc-tab-group" data-group="experimental">
+      ${
+        living
+          ? ""
+          : `<div class="mc-tab-group" data-group="experimental">
         <button type="button" class="mc-tab-group__toggle ghost-btn tiny" data-mc-toggle-group="experimental" aria-expanded="${experimentalOpen}" title="Platform cognitive tabs — read-only experimental">
           Experimental ${experimentalOpen ? "▾" : "▸"}
         </button>
@@ -655,7 +697,8 @@
           <p class="muted tiny mc-experimental-note">Platform features · read-only · experimental. Prefer Platform Mission Control for full labs.</p>
           ${EXPERIMENTAL_TABS.map(mkBtn).join("")}
         </div>
-      </div>`;
+      </div>`
+      }`;
 
     nav.querySelectorAll(".mc-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -970,6 +1013,26 @@
           window.loadMcSnapshot?.() || window.refreshMc?.();
         } catch (err) {
           window.showAriaToast?.(err.message || "Recover failed", "err");
+        }
+        return;
+      }
+      if (t.closest?.("#mcIntegrityScanBtn")) {
+        e.preventDefault();
+        try {
+          const res = await fetch("/api/integrity/scan", { method: "POST" });
+          const j = await res.json();
+          const n = j.counts?.total ?? 0;
+          window.showAriaToast?.(
+            j.clean ? "Production Integrity: clean" : `Integrity: ${n} artifact(s) — open Guided Repair`,
+            j.clean ? "ok" : "warn",
+            5000
+          );
+          if (!j.clean) {
+            await fetch("/api/integrity/recommend-repair", { method: "POST" }).catch(() => {});
+          }
+          window.loadMcSnapshot?.() || window.refreshMc?.();
+        } catch (err) {
+          window.showAriaToast?.(err.message || "Integrity scan failed", "err");
         }
       }
     },

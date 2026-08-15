@@ -130,7 +130,7 @@ def _no_api_key_in_tests(monkeypatch: pytest.MonkeyPatch):
         pass
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Point Jarvis data files at a temp directory."""
     tmp_path.mkdir(parents=True, exist_ok=True)
@@ -153,6 +153,7 @@ def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "jarvis.modules.journal.JOURNAL_PHOTOS_DIR": journal_dir / "photos",
         "jarvis.coding_tasks.TASKS_FILE": tmp_path / "coding_tasks.json",
         "jarvis.proposal_store.PROPOSALS_FILE": tmp_path / "pending_proposals.json",
+        "jarvis.proposal_store.APPLY_UNDO_FILE": tmp_path / "apply_undo_journal.json",
         "jarvis.action_log.LOG_FILE": tmp_path / "action_log.json",
         "jarvis.assistant.DATA_DIR": tmp_path,
         "jarvis.assistant.UPLOAD_DIR": tmp_path / "uploads",

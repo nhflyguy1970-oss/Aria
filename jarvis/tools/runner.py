@@ -18,6 +18,13 @@ from jarvis.config import DATA_DIR
 logger = logging.getLogger("jarvis.tools.runner")
 
 RUNS_DIR = DATA_DIR / "tools" / "runs"
+
+
+def _tool_env() -> dict[str, str]:
+    """Child env without Aria secrets (Owner Security M1 boundary)."""
+    from jarvis.security.owner.env_boundary import build_subprocess_env
+
+    return build_subprocess_env()
 _active: dict[str, subprocess.Popen[str]] = {}
 _lock = threading.Lock()
 
@@ -164,7 +171,7 @@ def run_sync(tool_id: str, params: dict[str, Any], *, timeout: int = 600) -> dic
             capture_output=True,
             text=True,
             timeout=timeout,
-            env=os.environ.copy(),
+            env=_tool_env(),
         )
         return {
             "ok": proc.returncode == 0,
@@ -233,7 +240,7 @@ def start_background(tool_id: str, params: dict[str, Any]) -> ToolRun:
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            env=os.environ.copy(),
+            env=_tool_env(),
         )
         run.pid = proc.pid or 0
         save_run(run)

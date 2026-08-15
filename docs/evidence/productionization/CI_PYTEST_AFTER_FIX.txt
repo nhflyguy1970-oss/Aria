@@ -1,0 +1,123 @@
+........................................................................ [  8%]
+........................................................................ [ 17%]
+.................................FF..............................F..F..F [ 25%]
+..F......F.............................................................. [ 34%]
+...........................................FF........................... [ 42%]
+....................................................................F... [ 51%]
+...............F..F.................................sF.................. [ 59%]
+........................................................................ [ 68%]
+...................................................F.................... [ 76%]
+........................................................................ [ 85%]
+..............................F......................................... [ 93%]
+.....................................................                    [100%]
+=================================== FAILURES ===================================
+____ test_nlu_variant_intent[How do I configure Docker Compose?-reference0] ____
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'chat' == 'reference'
+E     
+E     - reference
+E     + chat
+_____________ test_nlu_variant_intent[Configure nginx.-reference] ______________
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'chat' == 'reference'
+E     
+E     - reference
+E     + chat
+________ test_nlu_variant_intent[How do I configure Docker?-reference] _________
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'chat' == 'reference'
+E     
+E     - reference
+E     + chat
+____ test_nlu_variant_intent[How do I configure Docker Compose?-reference1] ____
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'chat' == 'reference'
+E     
+E     - reference
+E     + chat
+_________ test_nlu_variant_intent[How do I configure nginx?-reference] _________
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'chat' == 'reference'
+E     
+E     - reference
+E     + chat
+_______ test_nlu_variant_intent[How do I configure Postgres?-reference] ________
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'runtime' == 'reference'
+E     
+E     - reference
+E     + runtime
+_________________________ test_routing_accuracy_report _________________________
+tests/test_nlu_routing_variants.py:97: in test_routing_accuracy_report
+    assert accuracy >= 95.0, f"Accuracy {accuracy:.1f}% misses={misses[:10]}"
+E   AssertionError: Accuracy 91.0% misses=["'How do I configure Docker Compose?' -> chat (expected reference)", "'Configure nginx.' -> chat (expected reference)", "'How do I configure Docker?' -> chat (expected reference)", "'How do I configure Docker Compose?' -> chat (expected reference)", "'How do I configure nginx?' -> chat (expected reference)", "'How do I configure Postgres?' -> runtime (expected reference)"]
+E   assert 91.04477611940298 >= 95.0
+________________ test_apply_policy_uses_benchmark_when_present _________________
+tests/test_execution_routing.py:79: in test_apply_policy_uses_benchmark_when_present
+    assert overlay["model"] == "gemma3:4b"
+E   AssertionError: assert 'qwen2.5-coder:1.5b-base' == 'gemma3:4b'
+E     
+E     - gemma3:4b
+E     + qwen2.5-coder:1.5b-base
+________________ test_apply_policy_user_config_beats_benchmark _________________
+tests/test_execution_routing.py:109: in test_apply_policy_user_config_beats_benchmark
+    assert overlay["model"] == "qwen2.5-coder:7b"
+E   AssertionError: assert 'deepseek-coder:latest' == 'qwen2.5-coder:7b'
+E     
+E     - qwen2.5-coder:7b
+E     + deepseek-coder:latest
+_________________ test_tools_cwd_must_be_under_project_or_data _________________
+tests/test_aria_host_production_audit.py:163: in test_tools_cwd_must_be_under_project_or_data
+    assert built is None
+E   AssertionError: assert (['claude', '-p', 'hi', '--output-format', 'text'], '/tmp/pytest-of-jeff/pytest-21/test_tools_cwd_must_be_under_p0/outside') is None
+___________ test_mc_dollar_accepts_hash_ids_and_audit_controls_wired ___________
+tests/test_product_ui_api_wiring.py:156: in test_mc_dollar_accepts_hash_ids_and_audit_controls_wired
+    assert "Repair done" in mc
+E   assert 'Repair done' in '/** AI Platform Mission Control — operational console (not chat). */\n\nconst MC_TABS = [\n  "overview",\n  "routing"...rkstationInference") switchMcTab("inference");\n      else if (target) switchMcTab("overview");\n    });\n  });\n});\n'
+________________________ test_command_palette_is_wired _________________________
+tests/test_product_ui_api_wiring.py:635: in test_command_palette_is_wired
+    assert "document.hidden || window.mediaWorkActive" in Path("jarvis/gui/static/wakeword_chat.js").read_text(encoding="utf-8")
+E   assert 'document.hidden || window.mediaWorkActive' in '/** Wake-word → chat bridge — extracted from app.js. */\n(function () {\n  "use strict";\n\n  let lastWakewordEventId...  document.addEventListener("visibilitychange", () => {\n    if (!document.hidden) pollWakewordChat();\n  });\n})();\n'
+E    +  where '/** Wake-word → chat bridge — extracted from app.js. */\n(function () {\n  "use strict";\n\n  let lastWakewordEventId...  document.addEventListener("visibilitychange", () => {\n    if (!document.hidden) pollWakewordChat();\n  });\n})();\n' = read_text(encoding='utf-8')
+E    +    where read_text = PosixPath('jarvis/gui/static/wakeword_chat.js').read_text
+E    +      where PosixPath('jarvis/gui/static/wakeword_chat.js') = <class 'pathlib.Path'>('jarvis/gui/static/wakeword_chat.js')
+________________ test_m0_01_version_json_pin_matches_tree_hash _________________
+tests/test_aria_acm_m0.py:42: in test_m0_01_version_json_pin_matches_tree_hash
+    assert _tree_sha256(ACM_TREE) == meta["tree_sha256"]
+E   AssertionError: assert 'c866791f380c...d720a86f50a68' == '50759153c39c...4b5718b06be6e'
+E     
+E     - 50759153c39cce73241e046f21b7e6567c6d740769bec1c77b54b5718b06be6e
+E     + c866791f380cb53124743d637ea71d2dea638e56e69f90b0089d720a86f50a68
+______________ test_prediction_queries_route_to_memory_authority _______________
+tests/test_aria_acm_prediction.py:62: in test_prediction_queries_route_to_memory_authority
+    assert is_semantic_autobio_query(q), q
+E   AssertionError: What will happen in the stock market tomorrow?
+E   assert False
+E    +  where False = is_semantic_autobio_query('What will happen in the stock market tomorrow?')
+______________________ test_automation_rules_crud_and_run ______________________
+tests/test_intelligence_platform.py:91: in test_automation_rules_crud_and_run
+    assert delete_rule(rule["id"])["deleted"] == 1
+E   assert 0 == 1
+=========================== short test summary info ============================
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[How do I configure Docker Compose?-reference0]
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[Configure nginx.-reference]
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[How do I configure Docker?-reference]
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[How do I configure Docker Compose?-reference1]
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[How do I configure nginx?-reference]
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[How do I configure Postgres?-reference]
+FAILED tests/test_nlu_routing_variants.py::test_routing_accuracy_report - Ass...
+FAILED tests/test_execution_routing.py::test_apply_policy_uses_benchmark_when_present
+FAILED tests/test_execution_routing.py::test_apply_policy_user_config_beats_benchmark
+FAILED tests/test_aria_host_production_audit.py::test_tools_cwd_must_be_under_project_or_data
+FAILED tests/test_product_ui_api_wiring.py::test_mc_dollar_accepts_hash_ids_and_audit_controls_wired
+FAILED tests/test_product_ui_api_wiring.py::test_command_palette_is_wired - a...
+FAILED tests/test_aria_acm_m0.py::test_m0_01_version_json_pin_matches_tree_hash
+FAILED tests/test_aria_acm_prediction.py::test_prediction_queries_route_to_memory_authority
+FAILED tests/test_intelligence_platform.py::test_automation_rules_crud_and_run
+15 failed, 829 passed, 1 skipped in 88.80s (0:01:28)

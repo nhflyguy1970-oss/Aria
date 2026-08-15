@@ -75,7 +75,7 @@ def parse_nl_pipeline(text: str) -> dict[str, Any]:
     steps: list[dict[str, Any]] = []
 
     def add(action: str, name: str, **extra: Any) -> None:
-        sid = f"s{len(steps)+1}"
+        sid = f"s{len(steps) + 1}"
         step = {
             "id": sid,
             "name": name,

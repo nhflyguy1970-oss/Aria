@@ -86,6 +86,11 @@
     const autoSend = opts.autoSend !== false && !fillOnly;
     const switchView = opts.switchView !== false;
 
+    if (autoSend && window.jarvisChat?.chatRequestActive) {
+      window.showAriaToast?.("Wait for the current reply to finish, or press Stop", "warn", 3500);
+      return;
+    }
+
     if (Array.isArray(opts.context)) {
       opts.context.forEach((c) => addContext(c.kind, c.id, c.label));
     }
@@ -158,6 +163,8 @@
       if (typeof window.reloadBranchMessages === "function") await window.reloadBranchMessages();
       window.loadChatSessions?.();
       clearContext();
+      // New chat must not inherit sticky compare/attachment state from the prior thread.
+      try { window.finishSendUi?.(); } catch (_) { /* ignore */ }
       $("messageInput")?.focus();
       window.showAriaToast?.(data.message || "New chat started", "ok", 2500);
       return data;
@@ -167,9 +174,25 @@
     }
   }
 
+  /** Last user bubble in the thread (not :last-of-type — that fails when an assistant message is last). */
+  function lastUserMessageBody() {
+    const nodes = document.querySelectorAll("#messages .message.user .msg-body");
+    return nodes.length ? nodes[nodes.length - 1] : null;
+  }
+
+  function lastUserMessageText() {
+    const body = lastUserMessageBody();
+    if (!body) return "";
+    return String(body.dataset?.rawText || body.textContent || "").trim();
+  }
+
+  function noteUserPrompt(text) {
+    const t = String(text || "").trim();
+    if (t) lastUserPrompt = t;
+  }
+
   function regenerate() {
-    const prompt = lastUserPrompt || document.querySelector(".message.user:last-of-type .msg-body")?.dataset?.rawText
-      || document.querySelector(".message.user:last-of-type .msg-body")?.textContent || "";
+    const prompt = lastUserPrompt || lastUserMessageText();
     if (!prompt.trim()) {
       window.showAriaToast?.("Nothing to regenerate", "warn");
       return;
@@ -178,10 +201,13 @@
   }
 
   function editLastPrompt() {
-    const prompt = lastUserPrompt || document.querySelector(".message.user:last-of-type .msg-body")?.dataset?.rawText || "";
+    const prompt = lastUserPrompt || lastUserMessageText();
     const input = $("messageInput");
-    if (!input || !prompt.trim()) return;
-    input.value = prompt;
+    if (!input || !prompt.trim()) {
+      window.showAriaToast?.("Nothing to edit", "warn");
+      return;
+    }
+    input.value = prompt.replace(/^\[Context:[^\]]*\]\n/, "");
     window.resizeMessageInput?.();
     input.focus();
   }
@@ -279,6 +305,9 @@
 
   function attachReplyActions(bubble, meta = {}) {
     if (!bubble || bubble.querySelector(".chat-reply-actions")) return;
+    // Living Room immersion: reply chrome is software furniture
+    if (window.AriaLivingRoom?.isActive?.()) return;
+    if (meta?.type === "info" || bubble.closest?.(".message.welcome")) return;
     const actions = document.createElement("div");
     actions.className = "chat-reply-actions";
     const raw = bubble.querySelector(".msg-body")?.dataset?.rawText
@@ -387,6 +416,7 @@
     newChat,
     regenerate,
     editLastPrompt,
+    noteUserPrompt,
     addContext,
     clearContext,
     openCitation,

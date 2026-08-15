@@ -264,6 +264,7 @@ def run_audit(*, use_cache: bool = True, cache_ttl: float | None = None, backgro
                 _CACHE = dict(data)
                 _CACHE_AT = time.time()
                 _RUNNING = False
+                _finish_progress()
 
         threading.Thread(target=_worker, daemon=True, name="jarvis-audit").start()
         return _audit_running_response(message="Audit started")

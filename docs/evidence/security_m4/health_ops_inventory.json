@@ -1,0 +1,35 @@
+{
+  "updated_at": "2026-08-13T15:51:00+00:00",
+  "source": "jarvis/health_product/gate.py SENSITIVE_OPS + api.py wiring",
+  "normal_health_access": {
+    "gate": "require_owner only — house Owner session",
+    "examples": [
+      "GET /api/health/home",
+      "GET /api/health/overview",
+      "GET /api/health/product",
+      "timeline / check-in / ordinary viewing"
+    ],
+    "asks_second_aria_password": false
+  },
+  "sensitive_ops_owner_step_up_class_A": [
+    "export_record",
+    "edit_medications",
+    "edit_allergies",
+    "edit_conditions",
+    "edit_family_history",
+    "edit_emergency",
+    "delete_record",
+    "cloud_consult",
+    "backup_create",
+    "backup_restore",
+    "view_full_record",
+    "emergency_info"
+  ],
+  "portable_password_ops_class_B_in_addition_to_step_up": [
+    "backup_create",
+    "backup_restore"
+  ],
+  "not_authenticators": ["LAN API key", "HA token", "portable backup password"],
+  "live_destructive_ops_not_run": ["backup_restore", "delete_record", "synthetic PHR writes"],
+  "secrets_in_evidence": false
+}

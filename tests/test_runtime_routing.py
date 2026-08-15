@@ -29,6 +29,52 @@ RUNTIME_KEYWORD_PROMPTS = [
 ]
 
 
+def test_vendor_gpu_driver_research_not_runtime():
+    from jarvis.runtime_routing import is_runtime_routing_question, route_runtime_priority
+    from jarvis.router import route
+    from jarvis.session import SessionContext
+
+    prompt = "What is the current supported NVIDIA GPU driver for Linux x86_64 from NVIDIA?"
+    assert is_runtime_routing_question(prompt) is False
+    assert route_runtime_priority(prompt) is None
+    intent = route(prompt, SessionContext(), None)
+    assert intent.get("action") == "web_search", intent
+
+
+def test_official_docs_research_not_runtime_models():
+    from jarvis.runtime_routing import is_runtime_routing_question
+    from jarvis.router import route
+    from jarvis.session import SessionContext
+
+    prompt = "What does the official documentation say about Ollama model Modelfile FROM instruction?"
+    assert is_runtime_routing_question(prompt) is False
+    intent = route(prompt, SessionContext(), None)
+    assert intent.get("action") == "web_search", intent
+
+
+def test_policy_overrides_runtime_when_research_required():
+    from jarvis.orchestration_policy import route_override_for_policy
+
+    ov = route_override_for_policy(
+        "What is the current supported NVIDIA GPU driver for Linux?",
+        "runtime_gpu",
+    )
+    assert ov is not None
+    assert ov.get("action") == "web_search"
+
+
+def test_cpu_load_routes_to_runtime_cpu_not_gpu():
+    from jarvis.runtime_routing import route_runtime_priority
+    from jarvis.router import route
+    from jarvis.session import SessionContext
+
+    hit = route_runtime_priority("CPU load?")
+    assert hit is not None
+    assert hit.get("action") == "runtime_cpu"
+    intent = route("CPU load?", SessionContext(), None)
+    assert intent.get("action") == "runtime_cpu"
+
+
 @patch("jarvis.runtime_introspection.get_runtime_client")
 def test_runtime_keyword_prompts_never_route_web_search(mock_get_client):
     client = MagicMock()

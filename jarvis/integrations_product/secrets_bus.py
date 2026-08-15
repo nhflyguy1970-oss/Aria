@@ -47,15 +47,31 @@ def storage_info() -> dict[str, Any]:
             world_readable = bool(mode & stat.S_IROTH)
         except OSError:
             pass
+    vault_backed = False
+    try:
+        from jarvis.security.owner.provider_credentials import bound_owner_service, vault_has_entry
+        from jarvis.security.owner.provider_credentials import AUTHORIZED_PROVIDER_FIELDS
+
+        svc = bound_owner_service()
+        if svc.vault.exists():
+            vault_backed = any(
+                vault_has_entry(svc, spec["vault_id"])
+                for field, spec in AUTHORIZED_PROVIDER_FIELDS.items()
+                if not spec.get("alias_of")
+            )
+    except Exception:
+        vault_backed = False
     return {
-        "backend": "jarvis_env_file",
+        "backend": "owner_vault_then_jarvis_env" if vault_backed else "jarvis_env_file",
         "path": str(path),
         "encrypted": False,
+        "vault_dual_read": True,
+        "vault_backed": vault_backed,
         "os_keychain": False,
         "honest": True,
         "message": (
-            "Secrets are stored in plaintext in data/jarvis.env on this PC. "
-            "Aria does not encrypt this file today. Prefer restrictive file permissions (0600). "
+            "Provider credentials prefer the Owner Vault when migrated. "
+            "data/jarvis.env remains as plaintext rollback during M2 and is not deleted. "
             "Keys are never synced to git and must not be stored in Memory or chat."
         ),
         "exists": exists,
@@ -66,6 +82,7 @@ def storage_info() -> dict[str, Any]:
             if world_readable or (mode is not None and mode != 0o600)
             else "File permissions look restrictive."
         ),
+        "precedence": "VAULT FIRST; LEGACY FALLBACK ONLY IF NOT MIGRATED",
     }
 
 
@@ -79,7 +96,23 @@ def mask_preview(value: str, *, last4: bool = True) -> str:
 
 
 def get_secret(field_or_env: str) -> str:
-    """Read a secret by field id or env name. Never log the return value."""
+    """Read a secret by field id or env name. Never log the return value.
+
+    Precedence: Owner Vault if that credential is migrated; else jarvis.env.
+    Migrated + owner locked → empty (fail closed). No env fallback for migrated entries.
+    """
+    try:
+        from jarvis.security.owner.provider_credentials import resolve_provider_secret
+
+        resolved = resolve_provider_secret(field_or_env)
+        if resolved is not None:
+            if resolved.source in ("vault", "locked"):
+                return resolved.value
+            if resolved.source == "legacy":
+                return resolved.value
+    except Exception:
+        pass
+
     field = field_or_env
     if field_or_env in SECRET_FIELDS:
         env_name = SECRET_FIELDS[field_or_env]
@@ -175,11 +208,11 @@ def secrets_status(*, last4: bool = True) -> dict[str, Any]:
     gemini = get_secret("gemini_api_key")
     out["gemini_api_key_set"] = bool(gemini)
     out["gemini_api_key_preview"] = mask_preview(gemini, last4=last4) if gemini else ""
-    out["storage"] = "data/jarvis.env"
+    out["storage"] = "owner_vault_then_jarvis.env"
     out["storage_info"] = storage_info()
     out["hint"] = (
         "Keys are saved on this PC only (not synced to git). "
-        "Storage is plaintext today — see security banner in Integrations Home."
+        "Migrated provider keys live in the Owner Vault; data/jarvis.env is retained for rollback."
     )
     out["fields"] = list(SECRET_FIELDS.keys())
     out["policy"] = {
@@ -236,6 +269,29 @@ def save_secrets(patch: dict[str, Any]) -> dict[str, Any]:
     out = secrets_status()
     out["ok"] = True
     out["changed"] = changed
+    # Dual-write: if Owner Vault is unlocked, copy authorized fields into vault too.
+    # Does not remove jarvis.env. Failures here must not roll back the env write.
+    try:
+        from jarvis.security.owner.provider_credentials import bound_owner_service, migrate_field, normalize_field
+
+        svc = bound_owner_service()
+        if svc.vault.exists() and svc.vault.is_unlocked():
+            vault_writes = []
+            for field in updates:
+                canon = normalize_field(field)
+                if not canon:
+                    continue
+                result = migrate_field(svc, canon, overwrite=True)
+                vault_writes.append(
+                    {
+                        "field": canon,
+                        "ok": bool(result.get("ok")),
+                        "migrated": bool(result.get("migrated")),
+                    }
+                )
+            out["vault_dual_write"] = vault_writes
+    except Exception:
+        out["vault_dual_write"] = []
     return out
 
 

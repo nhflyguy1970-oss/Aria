@@ -1,0 +1,42 @@
+{
+  "phase": 1,
+  "certification": "runtime_live",
+  "purpose": "Runtime Certification evidence \u2014 not R1 selection by this script alone",
+  "backend_before": {
+    "ok": true,
+    "version": "3.1.0"
+  },
+  "url": "http://127.0.0.1:8765/",
+  "soak_sec": 1,
+  "results": [
+    {
+      "candidate": "E2",
+      "mode": "tauri_class_assessment",
+      "measured_live_aria": false,
+      "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "webkitgtk": "2.52.3",
+      "law2": {
+        "external_browser_required": false,
+        "engine_bundled_by_default_linux": false,
+        "engine_source_linux": "WebKitGTK (OS package) unless alternate pinning strategy",
+        "risk": "OS webview drift across distros; Windows WebView2 Evergreen may require runtime install \u2014 must be proven for Law 2",
+        "pass_if": "Pinned/bundled engine on all target OSes with Aria-owned updates"
+      },
+      "living_workspace": {
+        "can_host_stage": true,
+        "risk": "Smaller ecosystem; custom tooling for Python sidecar; easy to under-invest in polish"
+      },
+      "python_integration": "Separate process + HTTP/IPC (same as Electron)",
+      "reasons_to_continue_spike": [
+        "Potential smaller host binary",
+        "Rust security posture"
+      ],
+      "reasons_to_defer_r1": [
+        "No live Aria measurement yet",
+        "Law 2 not proven under pinning policy",
+        "Higher near-term delivery risk vs E1/E3 for Jeff's decade-local Linux daily driver"
+      ],
+      "feels_like_browser": "depends_on_webview_chrome_and_branding"
+    }
+  ]
+}

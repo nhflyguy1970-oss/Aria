@@ -1,0 +1,18 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "journal",
+  "capability": "Import Aug 8 owner encrypted journal files",
+  "captured_at": "2026-08-14T16:26:00Z",
+  "result": "SKIPPED BY JEFF — password not supplied. Files not modified. Live journal not POSTed. Isolated current-impl round trip already PASS. NOT CERTIFICATION.",
+  "not_certification": true,
+  "prior": "journal_encrypted_import_current_impl.json",
+  "aug08_files": {
+    "valid_format": "jarvis-journal-v1",
+    "password_recoverable_from_aria": false,
+    "do_not_modify": true,
+    "do_not_auto_import": true,
+    "status": "SKIPPED BY JEFF"
+  },
+  "live_journal_untouched": true,
+  "next_exact_capability": "Presence camera / Voice mic — completed in presence_camera_voice_mic.json"
+}

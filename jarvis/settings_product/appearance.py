@@ -28,8 +28,6 @@ APPEARANCE_DEFAULTS: dict[str, Any] = {
 GLOBAL_DEFAULTS: dict[str, Any] = {
     "language": "en",
     "keyboard_hints": True,
-    "notifications_enabled": True,
-    "soft_tips": True,
 }
 
 

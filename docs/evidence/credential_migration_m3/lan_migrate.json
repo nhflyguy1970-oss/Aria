@@ -1,0 +1,24 @@
+{
+  "updated_at": "2026-08-13T15:20:01.526727+00:00",
+  "http_status": 200,
+  "elapsed_ms": 6.61,
+  "result": {
+    "ok": true,
+    "field": "lan_api_key",
+    "vault_id": "lan.api_key",
+    "env": "JARVIS_API_KEY",
+    "migrated": true,
+    "already_migrated": false,
+    "legacy_retained": true,
+    "fingerprint": {
+      "configured": true,
+      "length": 30,
+      "sha256_8": "cec7e051",
+      "prefix_class": "other"
+    },
+    "provider_id": "lan"
+  },
+  "jeff_entered_lan_key": false,
+  "legacy_env_size_unchanged": true,
+  "legacy_env_size": 10616
+}

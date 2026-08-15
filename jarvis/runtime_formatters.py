@@ -215,6 +215,26 @@ def format_gpu(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def format_cpu(payload: dict[str, Any]) -> str:
+    hw = payload.get("hardware") if isinstance(payload.get("hardware"), dict) else {}
+    load = payload.get("cpu_load")
+    if load is None:
+        load = hw.get("cpu_load") or hw.get("cpu_percent") or hw.get("load_avg")
+    count = payload.get("cpu_count") or hw.get("cpu_count") or hw.get("cpus")
+    lines = ["CPU load", ""]
+    if isinstance(load, (list, tuple)) and load:
+        lines.append("Load average: " + ", ".join(f"{float(x):.2f}" for x in load[:3]))
+    elif isinstance(load, (int, float)):
+        lines.append(f"{float(load):.2f}")
+    elif load is not None:
+        lines.append(str(load))
+    else:
+        lines.append("Not reported by Mission Control")
+    if count is not None:
+        lines.extend(["", f"CPU count: {count}"])
+    return "\n".join(lines)
+
+
 def format_memory(payload: dict[str, Any]) -> str:
     """System RAM only — never VRAM."""
     hw = payload.get("hardware") if isinstance(payload.get("hardware"), dict) else {}
@@ -497,6 +517,7 @@ _FORMATTERS: dict[str, Callable[[dict[str, Any]], str]] = {
     "runtime_applications": format_applications,
     "runtime_jobs": format_jobs,
     "runtime_gpu": format_gpu,
+    "runtime_cpu": format_cpu,
     "runtime_ram": format_memory,
     "runtime_storage": format_storage,
     "runtime_network": format_network,

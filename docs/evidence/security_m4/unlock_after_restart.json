@@ -1,0 +1,100 @@
+{
+  "updated_at": "2026-08-13T15:45:33.378603+00:00",
+  "phase": "unlock_after_restart",
+  "status": "PROVEN",
+  "unlock_ms": 50.46,
+  "health_entry_ms": 22.68,
+  "rows": {
+    "health_home": {
+      "http": 200,
+      "ms": 22.68,
+      "ok": true,
+      "asked_password": false,
+      "secret_in_response": false
+    },
+    "health_auth": {
+      "http": 200,
+      "ms": 2.93,
+      "ok": true,
+      "enabled": true,
+      "owner_vault": true,
+      "owner_unlocked": true,
+      "sensitive_ops": [
+        "backup_create",
+        "backup_restore",
+        "cloud_consult",
+        "delete_record",
+        "edit_allergies",
+        "edit_conditions",
+        "edit_emergency",
+        "edit_family_history",
+        "edit_medications",
+        "emergency_info",
+        "export_record",
+        "view_full_record"
+      ],
+      "portable_backup_distinct": true
+    },
+    "health_export": {
+      "http": 423,
+      "ms": 5.88,
+      "ok": false,
+      "step_up_required": true,
+      "prompt_class": "A",
+      "dumped_record": false
+    },
+    "ha": {
+      "http": 200,
+      "ms": 3.85,
+      "connected": true,
+      "locked": false,
+      "conn_ok": true,
+      "secret_in_response": false
+    },
+    "lan_no_key": {
+      "http": 401
+    },
+    "lan_with_key": {
+      "http": 200,
+      "ms": 3.12,
+      "connected": true,
+      "secret_in_response": false
+    },
+    "openai": {
+      "http": 400,
+      "ms": 2.04,
+      "ok": false,
+      "error": null,
+      "message": "id required"
+    },
+    "gemini": {
+      "http": 400,
+      "ms": 1.48,
+      "ok": false,
+      "error": null,
+      "message": "id required"
+    },
+    "huggingface": {
+      "http": 400,
+      "ms": 1.52,
+      "ok": false,
+      "error": null,
+      "message": "id required"
+    },
+    "uncensored": {
+      "http": 200,
+      "ms": 2.49,
+      "owner_vault": true,
+      "owner_unlocked": true,
+      "auth_mode": "owner_security",
+      "prompt_class": "A"
+    },
+    "health_stepup_lan": {
+      "http": 200,
+      "ok": false,
+      "message": "Incorrect Master Password or PIN."
+    }
+  },
+  "jeff_second_aria_password_for_health_home": false,
+  "secrets_in_evidence": false
+}

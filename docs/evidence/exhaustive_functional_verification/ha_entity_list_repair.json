@@ -1,0 +1,55 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "home_automation",
+  "capability": "HA entity list vs Connected after first-paint retry repair",
+  "captured_at": "2026-08-15T19:20:00Z",
+  "result": "PASS — #homeAutomation first settled paint Connected · http://127.0.0.1:8123 with entity list populated (lights). No Home Assistant disabled. No stale locked copy. Webhook line redacts ?secret=••••. Presence leave/return restored Connected + list. Toggles/scenes/Heading out/Copy webhook/Open HA not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "hash #homeAutomation after Reload UI",
+    "hash": "#homeAutomation",
+    "h2": "Home Automation"
+  },
+  "status": {
+    "line": "Connected · http://127.0.0.1:8123",
+    "vault": "Using Owner Vault credential (ha.token). Token is not shown here.",
+    "api": "GET /api/homeassistant/status connected true locked false; entities?domain=light 5+"
+  },
+  "entity_list": {
+    "domain": "Lights",
+    "loaded": true,
+    "disabled_copy": false,
+    "count_visible": 9,
+    "names_not_recorded_beyond_identity": true
+  },
+  "webhook_line": "HA → ARIA webhook: http://127.0.0.1:8765/api/automation/inbound?secret=••••",
+  "leave_return": {
+    "leave": "Home Automation → Presence #presence h2 Presence; camera not started",
+    "return": "Presence → #homeAutomation",
+    "result": "PASS — Connected + entity list restored"
+  },
+  "performance": {
+    "first_settled_paint": "FAST — Connected and entities together"
+  },
+  "not_clicked": [
+    "Status",
+    "Open HA",
+    "Copy webhook",
+    "Heading out",
+    "Apply",
+    "Discover Kasa",
+    "entity toggles",
+    "Chat insert",
+    "scene chips"
+  ],
+  "data_mutation": {
+    "ha_control": false,
+    "journal_post": false,
+    "health_phr": false
+  },
+  "owner_session": "OWNER_UNLOCKED throughout"
+}

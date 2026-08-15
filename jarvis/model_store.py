@@ -345,12 +345,24 @@ def get_models() -> dict:
 
     if not data:
         result = optimized[mode].copy()
+        saved = {}
     else:
-        saved = data.get(mode, {})
+        saved = data.get(mode, {}) or {}
         result = optimized[mode].copy()
         for role in ROLES:
             if role in saved and saved[role]:
                 result[role] = saved[role]
+        # User-saved legacy keys (coder/general/embed) must win over optimized
+        # canonical defaults (coding/conversation/embedding). Otherwise a saved
+        # `coder: qwen2.5-coder:7b` is overwritten by optimized `coding: deepseek…`.
+        for legacy, canonical in LEGACY_ROLE_ALIASES.items():
+            if saved.get(legacy):
+                result[canonical] = saved[legacy]
+                result[legacy] = saved[legacy]
+            elif saved.get(canonical):
+                result[legacy] = saved[canonical]
+
+    result = _sync_legacy_keys(result)
 
     quality = load_vision_quality()
     if quality == "custom":
@@ -504,3 +516,29 @@ def model_for(role: str) -> str:
     canonical = canonical_role(role)
     models = get_models()
     return models.get(canonical, models.get(role, OPTIMIZED_STANDARD.get(canonical, "qwen2.5:7b")))
+
+
+def explicit_saved_model(role: str) -> str | None:
+    """Operator-saved model for a role from model_settings.json, if any.
+
+    Optimized defaults do not count — only values the user (or Settings UI) wrote.
+    Used so benchmark winners cannot silently replace the configured coder/chat model.
+    """
+    data = _load_raw()
+    if not data:
+        return None
+    mode = "uncensored" if is_uncensored() else "standard"
+    saved = data.get(mode) or {}
+    if not isinstance(saved, dict):
+        return None
+    canonical = canonical_role(role)
+    for key in (canonical, role):
+        val = str(saved.get(key) or "").strip()
+        if val:
+            return val
+    for legacy, canon in LEGACY_ROLE_ALIASES.items():
+        if canon == canonical:
+            val = str(saved.get(legacy) or "").strip()
+            if val:
+                return val
+    return None

@@ -241,14 +241,23 @@ function attachProposalExtras(bubble, meta, messageDiv) {
         ? "Apply anyway (tests failed in preview)"
         : (meta.syntax_ok === false ? "Apply anyway" : "Apply changes");
       applyBtn.onclick = async () => {
-        if (verifyFailed && !confirm("Pre-apply pytest failed. Apply these changes anyway?")) return;
+        if (verifyFailed) {
+          const ok = window.ariaConfirm
+            ? await window.ariaConfirm("Pre-apply pytest failed. Apply these changes anyway?", {
+                title: "Apply anyway",
+                okLabel: "Apply anyway",
+              })
+            : window.confirm("Pre-apply pytest failed. Apply these changes anyway?");
+          if (!ok) return;
+        }
         try {
           const res = await fetch(`/api/coding/proposals/${encodeURIComponent(meta.proposal_id)}/brief`);
           const brief = await res.json().catch(() => null);
           if (brief?.ok !== false && brief?.estimated_risk === "high") {
-            const ok = confirm(
-              `High-risk proposal (${brief.confidence_label} confidence).\nFiles: ${(brief.files_affected || []).join(", ")}\nApply anyway?`
-            );
+            const msg = `High-risk proposal (${brief.confidence_label} confidence).\nFiles: ${(brief.files_affected || []).join(", ")}\nApply anyway?`;
+            const ok = window.ariaConfirm
+              ? await window.ariaConfirm(msg, { title: "High-risk apply", okLabel: "Apply anyway" })
+              : window.confirm(msg);
             if (!ok) return;
           }
         } catch {
@@ -317,7 +326,15 @@ function shouldShowUndo(data) {
 }
 
 async function applyProposal(proposalId, messageEl, force = false) {
-  if (force && !confirm("This proposal has syntax errors. Apply anyway?")) return;
+  if (force) {
+    const ok = window.ariaConfirm
+      ? await window.ariaConfirm("This proposal has syntax errors. Apply anyway?", {
+          title: "Apply with syntax errors",
+          okLabel: "Apply anyway",
+        })
+      : window.confirm("This proposal has syntax errors. Apply anyway?");
+    if (!ok) return;
+  }
   const form = new FormData();
   form.append("proposal_id", proposalId);
   if (force) form.append("force", "true");

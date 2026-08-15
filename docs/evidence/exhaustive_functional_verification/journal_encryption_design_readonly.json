@@ -1,0 +1,93 @@
+{
+  "investigation": "Journal encryption design \u2014 READ ONLY",
+  "at": "2026-08-12T20:57:52.265415+00:00",
+  "no_mutations": true,
+  "no_password_attempts": true,
+  "no_code_changes_this_turn": true,
+  "answers": {
+    "1_persistent_journal_encryption_password_configured": {
+      "result": "no",
+      "how_determined": [
+        "No journal encryption password fields in data settings/prefs/credential JSON scans",
+        "No bullet_journal.json.enc at-rest file",
+        "Live server env has no JARVIS_JOURNAL_AT_REST_PASSWORD",
+        "Shell env has no JOURNAL* password vars (only JOURNAL_STREAM)",
+        "journal_key API is BuJo symbol legend, not encryption"
+      ]
+    },
+    "2_password_created_on_first_encrypted_export": {
+      "result": "ephemeral_per_export \u2014 not a saved owner credential",
+      "detail": "Export encrypted prompts for a password at export time, uses it once to encrypt the download, does not persist it as configured owner state."
+    },
+    "3_export_encrypted_password_ux": {
+      "requests_new_or_chosen_password": true,
+      "requests_existing_configured_password": false,
+      "requests_confirmation_of_new_password": false,
+      "uses_previously_configured_credential": false,
+      "prompt": "Export password (min 4 characters)",
+      "code": "jarvis/gui/static/journal.js journalExportEncBtn \u2192 Form password \u2192 POST /api/journal/export/encrypted \u2192 encrypt_export"
+    },
+    "4_import_requires_password_for_that_file": {
+      "result": true,
+      "detail": "Import decrypts with the password supplied at import time against the salt+ciphertext in THAT file. No global journal password."
+    },
+    "5_separate_journal_encryption_password_config_ui": {
+      "result": false,
+      "optional_at_rest_only": "JARVIS_JOURNAL_AT_REST_PASSWORD env enables optional on-disk .enc beside journal \u2014 not configured on this owner system"
+    },
+    "6_password_state_stores_checked": {
+      "ui_prefs": "no journal encryption password",
+      "settings": "no journal encryption password",
+      "journal_state": "no encryption password field (habits.journal is a habit name, unrelated)",
+      "credential_storage": "no journal encryption password found",
+      "encrypted_metadata_at_rest_file": "absent",
+      "browser_local_storage": "no journal encryption password keys in codebase for this feature",
+      "other": "JARVIS_JOURNAL_AT_REST_PASSWORD unset on live process"
+    },
+    "7_aug08_export_metadata": {
+      "format_identifier": "jarvis-journal-v1",
+      "version_field_separate": false,
+      "salt": "present (hex, 32 chars / 16 bytes)",
+      "ciphertext": "present (base64)",
+      "password_field_in_file": false,
+      "explicit_kdf_field_in_file": false,
+      "kdf_implied_by_code": "PBKDF2-HMAC-SHA256, 200000 iterations, dklen 32 \u2192 Fernet",
+      "algorithm_implied_by_code": "cryptography.fernet.Fernet",
+      "structurally_valid": true,
+      "files": [
+        "jarvis-journal-encrypted-2026-08-08.json",
+        "jarvis-journal-encrypted-2026-08-08 (1).json",
+        "jarvis-journal-encrypted-2026-08-08 (2).json"
+      ],
+      "note_copies": "(1) and (2) share ciphertext length 111948; original is 112912 \u2014 original is a distinct export instance from the duplicates"
+    },
+    "8_structure_valid_without_decrypt": {
+      "result": true,
+      "how": "normalize_encrypted_envelope / _is_envelope checks format==jarvis-journal-v1 and salt+ciphertext string types"
+    },
+    "9_why_not_a_jarvis_encrypted_journal_file": {
+      "stage": "format/envelope validation BEFORE password decrypt",
+      "meaning": "decrypt-root object lacked format=jarvis-journal-v1 (+ salt/ciphertext) after unwrap",
+      "not_meaning": "Jeff entered a wrong Journal encryption password",
+      "when_aug08_file_posted_correctly": "format passes; next failure mode would be Wrong password or corrupt file (password stage)",
+      "classification": "A for Aug 8 files themselves (valid; need password used at that export). Format error was B/F wire/selection issue, not invalid Aug 8 structure."
+    }
+  },
+  "design_contract": {
+    "no_persistent_owner_journal_password": true,
+    "export_password_is_ephemeral_per_file": true,
+    "import_needs_same_ephemeral_password_as_that_export": true,
+    "if_password_forgotten": "That specific export file cannot be decrypted by Aria; owner may create a NEW encrypted export by choosing a password at Export encrypted time. Do not guess old passwords.",
+    "correct_owner_workflow": [
+      "Export encrypted: choose a password (min 4) when prompted \u2192 download jarvis-journal-encrypted-*.json",
+      "Remember or record that password for that file (Aria does not store it)",
+      "Import encrypted: select that file \u2192 enter the same password used when that file was exported \u2192 Merge"
+    ]
+  },
+  "integrity": {
+    "status": "clean",
+    "score": 100,
+    "clean": true
+  },
+  "exhaustive_verification": "REMAINS STOPPED \u2014 no password request to Jeff pending design understanding"
+}

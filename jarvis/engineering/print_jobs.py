@@ -47,7 +47,11 @@ def pre_print_checklist(
     from jarvis.p3_flags import printer_enabled
 
     printer = get_printer()
-    backend = (printer or {}).get("backend", "")
+    backend = ""
+    if printer:
+        from jarvis.engineering.printer_client import effective_backend
+
+        backend = effective_backend(printer)
     slicers = slicer_status().get("slicers") or []
     checks: list[dict[str, Any]] = [
         {"name": "Printer enabled", "ok": printer_enabled()},
@@ -92,15 +96,31 @@ def enqueue_print(
         return {"ok": False, "message": "Pre-print checklist incomplete", "checklist": chk}
     if not printer:
         return {"ok": False, "message": "No printer configured", "checklist": chk}
+    from jarvis.engineering.printer_client import effective_backend, start_print_job
+
+    result = start_print_job(printer, gcode_path)
+    ok = bool(result.get("ok"))
+    backend = effective_backend(printer)
+    status = "failed"
+    if ok:
+        status = "handoff" if backend == "bambu_handoff" else "sent"
+    message = str(result.get("message") or result.get("error") or ("Print sent" if ok else "Print failed"))
     jid = uuid.uuid4().hex[:12]
     with _lock:
         _jobs[jid] = {
             "id": jid,
-            "status": "queued",
+            "status": status,
             "gcode_path": str(gcode_path),
-            "printer_id": printer_id,
+            "printer_id": printer.get("id") or printer_id,
             "created": time.time(),
-            "message": "Queued (print client not started in this build)",
+            "message": message,
+            "handoff_dir": result.get("handoff_dir") or "",
         }
         _save()
-    return {"ok": True, "job_id": jid, "status": "queued"}
+    out = {"ok": ok, "job_id": jid, "status": status, "message": message, "checklist": chk}
+    for key in ("handoff_dir", "gcode_path", "readme"):
+        if result.get(key):
+            out[key] = result[key]
+    if not ok and result.get("error"):
+        out["error"] = result["error"]
+    return out

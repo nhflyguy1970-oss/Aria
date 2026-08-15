@@ -95,7 +95,9 @@ def _comfy_python(comfy_root: Path) -> str:
 
 
 def _comfy_env() -> dict:
-    env = os.environ.copy()
+    from jarvis.security.owner.env_boundary import copy_process_env
+
+    env = copy_process_env()
     try:
         from jarvis.gpu_routing import gpu_env_for_subprocess, gpu_preference, nvidia_available
 
@@ -175,7 +177,9 @@ def ensure_ollama(timeout: float = 45) -> bool:
     if not shutil.which("ollama"):
         _log("Ollama: binary not found in PATH")
         return False
-    ollama_env = os.environ.copy()
+    from jarvis.security.owner.env_boundary import copy_process_env
+
+    ollama_env = copy_process_env()
     try:
         from jarvis.gpu_routing import gpu_env_for_subprocess
 
@@ -223,8 +227,9 @@ def ensure_comfyui(timeout: float = 120, *, block: bool = False, on_demand: bool
             return False
         try:
             log_path = PROJECT_ROOT / "data" / "logs" / "comfyui.log"
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            log_f = open(log_path, "a", encoding="utf-8")
+            from jarvis.logging_config import open_rotating_log
+
+            log_f = open_rotating_log(log_path)
             _comfy_proc = subprocess.Popen(
                 cmd,
                 cwd=str(cwd),
@@ -489,6 +494,7 @@ def get_status(*, force: bool = False) -> dict:
     ollama = check_ollama(soft_probe=False)
     # Kick a cached soft probe off-request so we don't block status on a wedged generate.
     try:
+
         def _bg_probe():
             try:
                 from jarvis.ollama_health import check_ollama as _co
@@ -500,7 +506,9 @@ def get_status(*, force: bool = False) -> dict:
         threading.Thread(target=_bg_probe, name="ollama-health-probe", daemon=True).start()
     except Exception:
         pass
-    health_state = ollama.get("health_state") or ("healthy" if ollama.get("running") else "unavailable")
+    health_state = ollama.get("health_state") or (
+        "healthy" if ollama.get("running") else "unavailable"
+    )
     ollama_msg = {
         "healthy": "ready",
         "degraded": "degraded",

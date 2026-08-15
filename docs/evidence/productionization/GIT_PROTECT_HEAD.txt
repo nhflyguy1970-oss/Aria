@@ -1,0 +1,606 @@
+=== branch ===
+main
+=== HEAD ===
+c325e5576aca62f71a800641ec1cb9652e6bb5cf
+=== log -1 ===
+commit c325e5576aca62f71a800641ec1cb9652e6bb5cf
+Author:     Jeff Richardson <your-email@example.com>
+AuthorDate: Thu Jul 30 13:27:32 2026 -0400
+Commit:     Jeff Richardson <your-email@example.com>
+CommitDate: Thu Jul 30 13:27:32 2026 -0400
+
+    fix(model-runtime): prevent alternating chat failures from model residency races
+    
+    Root cause:
+    - Background probes and embedding requests could evict or replace the
+      active chat runner immediately after a successful response.
+    - Subsequent requests raced a cold or CPU model load, leading to
+      intermittent FIRST_PROGRESS_TIMEOUT failures.
+    
+    Changes:
+    - Hold chat priority briefly after successful completion.
+    - Use consistent context length for health probes.
+    - Validate GPU residency and expected context before streaming.
+    - Prevent in-stream model reloads.
+    - Make embedding paths respect interactive chat priority.
+    
+    Results:
+    - Eliminates alternating success/failure behavior.
+    - Preserves warm GPU residency across consecutive chats.
+    - Verified with repeated multi-turn conversations and mixed workloads.
+    
+    Regression:
+    - 28/28 consecutive requests passed with stable GPU residency.
+    
+    Co-authored-by: Cursor <cursoragent@cursor.com>
+=== status -sb ===
+## main...origin/main [ahead 25]
+ M aria_acm/acm/remembering/possession_recall.py
+ M aria_acm/acm/remembering/semantic.py
+ M aria_acm/acm/semantic/facts.py
+ M aria_core/acm_bridge.py
+ M aria_core/acm_store_facade.py
+ M aria_core/memory_manager.py
+ M docs/ARIA_CERTIFICATION_MATRIX_V2.md
+ M docs/ARIA_CORE_CERTIFICATION.md
+ M docs/ARIA_ECOSYSTEM_ZERO_TRUST_CERTIFICATION.md
+ M docs/ARIA_FINAL_PRODUCT_CERTIFICATION_REPORT.md
+ M docs/ARIA_PRODUCT_CERTIFICATION.md
+ M docs/NLU_CLASSIFIER_BENCHMARK.md
+ M docs/PLATFORM_CUTOVER.md
+ M jarvis/application/desktop_launch.py
+ M jarvis/assistant.py
+ M jarvis/assistant_instance.py
+ M jarvis/audio_device.py
+ M jarvis/audio_diarize.py
+ M jarvis/audit_paths.py
+ M jarvis/auth.py
+ M jarvis/automation/home.py
+ M jarvis/automation/migrate.py
+ M jarvis/automation/nl.py
+ M jarvis/automation/paths.py
+ M jarvis/automation/pipeline_routes.py
+ M jarvis/automation/pipelines/actions.py
+ M jarvis/automation/pipelines/engine.py
+ M jarvis/automation/pipelines/jobs.py
+ M jarvis/automation/pipelines/nl.py
+ M jarvis/automation/pipelines/promote.py
+ M jarvis/automation/pipelines/runs.py
+ M jarvis/automation/pipelines/storage.py
+ M jarvis/automation/product_routes.py
+ M jarvis/automation/suggestions.py
+ M jarvis/behaviors/conversation.py
+ M jarvis/behaviors/engineering/_extracted.py
+ M jarvis/behaviors/knowledge/_extracted.py
+ M jarvis/behaviors/memory/cognitive_presentation.py
+ M jarvis/behaviors/memory/engine.py
+ M jarvis/behaviors/operations/__init__.py
+ M jarvis/behaviors/planning/engine.py
+ M jarvis/branches.py
+ M jarvis/browser_product/screenshots.py
+ M jarvis/browser_product/session.py
+ M jarvis/calendar_api.py
+ M jarvis/calendar_bridges.py
+ M jarvis/calendar_ics.py
+ M jarvis/calendar_schedule.py
+ M jarvis/calendar_services.py
+ M jarvis/calendar_terminology.py
+ M jarvis/capability_routing.py
+ M jarvis/chat_sessions.py
+ M jarvis/code_context.py
+ M jarvis/code_index.py
+ M jarvis/coding_jobs.py
+ M jarvis/coding_product/guardrails.py
+ M jarvis/coding_product/home.py
+ M jarvis/coding_verify.py
+ M jarvis/comfyui.py
+ M jarvis/comfyui_video.py
+ M jarvis/config.py
+ M jarvis/connections_services.py
+ M jarvis/context/policy.py
+ M jarvis/daemon.py
+ M jarvis/dashboard_product/aggregate.py
+ M jarvis/dashboard_product/engine.py
+ M jarvis/dashboard_product/widgets.py
+ M jarvis/device_router.py
+ M jarvis/document_services.py
+ M jarvis/documents_rag.py
+ M jarvis/electron_shell.py
+ M jarvis/engineering/bambu_handoff.py
+ M jarvis/engineering/print_jobs.py
+ M jarvis/engineering/printer_client.py
+ M jarvis/engineering/printer_profiles.py
+ M jarvis/engineering/printer_store.py
+ M jarvis/engineering/slicer.py
+ M jarvis/extensibility/loader.py
+ M jarvis/extensions/browser/api.py
+ M jarvis/extensions/browser/handlers.py
+ M jarvis/extensions/engineering/api.py
+ M jarvis/extensions/flytying/api.py
+ M jarvis/extensions/flytying/extension.py
+ M jarvis/extensions/flytying/handlers.py
+ M jarvis/extensions/git/extension.py
+ M jarvis/extensions/git/routes.py
+ M jarvis/extensions/planner/api.py
+ M jarvis/extensions/projects/api.py
+ M jarvis/extensions/security/api.py
+ M jarvis/extensions/smarthome/api.py
+ M jarvis/flytying/aliases.py
+ M jarvis/flytying/bridge.py
+ M jarvis/flytying/config.py
+ M jarvis/flytying/search.py
+ M jarvis/flytying_product/mission_bridge.py
+ M jarvis/fs.py
+ M jarvis/gallery_product/generate.py
+ M jarvis/gallery_product/metadata.py
+ M jarvis/gallery_product/soft_delete.py
+ D jarvis/gaming_shutdown.py
+ D jarvis/gesture_settings.py
+ M jarvis/gpu.py
+ M jarvis/gui/__init__.py
+ M jarvis/gui/extra_routes.py
+ M jarvis/gui/server.py
+ M jarvis/gui/static/actions_view.js
+ M jarvis/gui/static/activity_actions.js
+ M jarvis/gui/static/activity_center.js
+ M jarvis/gui/static/activity_producers.js
+ M jarvis/gui/static/activity_store.js
+ M jarvis/gui/static/app.js
+ M jarvis/gui/static/aria_actions.js
+ M jarvis/gui/static/aria_dialogs.js
+ M jarvis/gui/static/attachment_compare.js
+ M jarvis/gui/static/audio.js
+ M jarvis/gui/static/audit.js
+ M jarvis/gui/static/automation_home.js
+ M jarvis/gui/static/browser_panel.js
+ M jarvis/gui/static/calendar.js
+ M jarvis/gui/static/capabilities_home.js
+ M jarvis/gui/static/chat_attach.js
+ M jarvis/gui/static/chat_branches.js
+ M jarvis/gui/static/chat_controls.js
+ M jarvis/gui/static/chat_done.js
+ M jarvis/gui/static/chat_format.js
+ M jarvis/gui/static/chat_input.js
+ M jarvis/gui/static/chat_messages.js
+ M jarvis/gui/static/chat_model_select.js
+ M jarvis/gui/static/chat_os.js
+ M jarvis/gui/static/chat_progress.js
+ M jarvis/gui/static/chat_send.js
+ M jarvis/gui/static/chat_suggestions.js
+ M jarvis/gui/static/coding_home.js
+ M jarvis/gui/static/coding_proposals.js
+ M jarvis/gui/static/collapsible_panels.js
+ M jarvis/gui/static/command_catalog.js
+ M jarvis/gui/static/command_palette.js
+ M jarvis/gui/static/connections.js
+ M jarvis/gui/static/dashboard_home.js
+ M jarvis/gui/static/dashboard_widgets.js
+ M jarvis/gui/static/discoverability.js
+ M jarvis/gui/static/documents.js
+ M jarvis/gui/static/editor_context.js
+ M jarvis/gui/static/flytying.js
+ M jarvis/gui/static/flytying_home.js
+ M jarvis/gui/static/free_vram.js
+ M jarvis/gui/static/gallery_view.js
+ M jarvis/gui/static/ha_extras.js
+ M jarvis/gui/static/ha_panel.js
+ M jarvis/gui/static/image_engine.js
+ M jarvis/gui/static/index.html
+ M jarvis/gui/static/integrations_home.js
+ M jarvis/gui/static/journal.js
+ M jarvis/gui/static/keyboard_nav.js
+ M jarvis/gui/static/lan_access.js
+ M jarvis/gui/static/lock_screen.js
+ M jarvis/gui/static/maker.js
+ M jarvis/gui/static/media_lightbox.js
+ M jarvis/gui/static/meme_studio.js
+ M jarvis/gui/static/memory_browser.js
+ M jarvis/gui/static/mini_chat.js
+ M jarvis/gui/static/mission_control.js
+ M jarvis/gui/static/mission_control_ux.js
+ M jarvis/gui/static/models_home.js
+ M jarvis/gui/static/models_panel.js
+ M jarvis/gui/static/modules/health.mjs
+ M jarvis/gui/static/modules/jobs.mjs
+ M jarvis/gui/static/movie_tiers.js
+ M jarvis/gui/static/notifications.js
+ M jarvis/gui/static/planner.js
+ M jarvis/gui/static/planner_live.js
+ M jarvis/gui/static/profile_controls.js
+ M jarvis/gui/static/projects.js
+ M jarvis/gui/static/search_home.js
+ M jarvis/gui/static/security_settings.js
+ M jarvis/gui/static/settings_home.js
+ M jarvis/gui/static/shell_design.css
+ M jarvis/gui/static/sidebar_chrome.js
+ M jarvis/gui/static/sidebar_favorites.js
+ M jarvis/gui/static/sidebar_search.js
+ M jarvis/gui/static/smarthome.js
+ M jarvis/gui/static/smarthome_home.js
+ M jarvis/gui/static/split_view.js
+ M jarvis/gui/static/startup_overlay.js
+ M jarvis/gui/static/status_bar.js
+ M jarvis/gui/static/style.css
+ M jarvis/gui/static/theme.js
+ M jarvis/gui/static/ui_prefs.js
+ M jarvis/gui/static/uncensored_mode.js
+ M jarvis/gui/static/upgrade_wizard.js
+ M jarvis/gui/static/video_studio.js
+ M jarvis/gui/static/view_router.js
+ M jarvis/gui/static/vision_home.js
+ M jarvis/gui/static/voice_bar.js
+ M jarvis/gui/static/wakeword_chat.js
+ M jarvis/gui/static/workspace_layouts.js
+ M jarvis/gui_launcher.py
+ M jarvis/ha_light_control.py
+ M jarvis/handlers/__init__.py
+ M jarvis/handlers/automation_handlers.py
+ M jarvis/handlers/media.py
+ M jarvis/handlers/registry.py
+ M jarvis/home_assistant.py
+ M jarvis/home_assistant_product/engine.py
+ M jarvis/inference/execution_policy.py
+ M jarvis/inference/gateway.py
+ M jarvis/integrations_product/providers.py
+ M jarvis/integrations_product/secrets_bus.py
+ M jarvis/intelligence/__init__.py
+ M jarvis/intelligence/automation_engine.py
+ M jarvis/intelligence/platform_bus.py
+ M jarvis/intelligence/plugin_sdk.py
+ M jarvis/intelligence/routes.py
+ M jarvis/jarvis_mcp.py
+ M jarvis/jobs/checkpointed.py
+ M jarvis/jobs_center.py
+ M jarvis/journal_crypto.py
+ M jarvis/journal_services.py
+ M jarvis/journal_weather.py
+ M jarvis/lan.py
+ M jarvis/llm.py
+ M jarvis/logging_config.py
+ M jarvis/media_jobs.py
+ M jarvis/memory/retrieval_diagnostics.py
+ M jarvis/memory_context.py
+ M jarvis/memory_services.py
+ M jarvis/meshy_client.py
+ M jarvis/mission_control.py
+ M jarvis/mission_control_ops/automation_gate.py
+ M jarvis/mission_control_ops/enrich.py
+ M jarvis/mission_control_ops/health_brief.py
+ M jarvis/model_policy.py
+ M jarvis/model_store.py
+ M jarvis/models_product/providers.py
+ M jarvis/modules/graph_store.py
+ M jarvis/modules/journal.py
+ M jarvis/modules/knowledge_retrieval_adapter.py
+ M jarvis/modules/memory.py
+ D jarvis/modules/memory_adapter_store.py
+ M jarvis/modules/memory_common.py
+ M jarvis/modules/memory_sqlite.py
+ M jarvis/morning_briefing.py
+ M jarvis/nlu/benchmark.py
+ M jarvis/nlu/confidence.py
+ M jarvis/nlu/episodic_patterns.py
+ M jarvis/nlu/mapping.py
+ M jarvis/nlu/pipeline.py
+ M jarvis/nlu/placement.py
+ M jarvis/nlu/semantic_autobio_patterns.py
+ M jarvis/nlu/syntax.py
+ M jarvis/notifications_product/pipeline.py
+ M jarvis/notifications_product/preferences.py
+ M jarvis/notify_util.py
+ M jarvis/observation_learning.py
+ M jarvis/ollama_health.py
+ M jarvis/ollama_runtime.py
+ M jarvis/p4_flags.py
+ M jarvis/planner_store.py
+ M jarvis/platform_cutover.py
+ M jarvis/platform_runtime.py
+ M jarvis/proactive_scheduler.py
+ M jarvis/project_registry.py
+ M jarvis/project_runner.py
+ M jarvis/project_services.py
+ M jarvis/proposal_store.py
+ M jarvis/provider_health/api.py
+ M jarvis/provider_health/dashboard_bridge.py
+ M jarvis/provider_health/engine.py
+ M jarvis/provider_health/mission_bridge.py
+ M jarvis/provider_health/probe.py
+ M jarvis/reference_engine.py
+ M jarvis/resource_router.py
+ M jarvis/router.py
+ M jarvis/runtime_client.py
+ M jarvis/runtime_formatters.py
+ M jarvis/runtime_introspection.py
+ M jarvis/runtime_routing.py
+ M jarvis/sandbox.py
+ M jarvis/search_product/api.py
+ D jarvis/search_product/automation_bridge.py
+ M jarvis/search_product/bridges.py
+ D jarvis/search_product/calendar_bridge.py
+ M jarvis/search_product/diagnostics.py
+ M jarvis/search_product/history.py
+ M jarvis/search_product/intent.py
+ M jarvis/search_product/pipeline.py
+ D jarvis/search_product/planner_bridge.py
+ M jarvis/search_product/retrievers.py
+ M jarvis/search_product/sessions.py
+ M jarvis/search_product/settings.py
+ M jarvis/search_product/terminology.py
+ D jarvis/search_product/vision_bridge.py
+ D jarvis/search_product/voice_bridge.py
+ M jarvis/security/brain_mode.py
+ M jarvis/security/middleware.py
+ M jarvis/security/pin_lock.py
+ M jarvis/server_restart.py
+ D jarvis/server_shutdown.py
+ M jarvis/services.py
+ M jarvis/session.py
+ M jarvis/settings_product/api.py
+ M jarvis/settings_product/appearance.py
+ M jarvis/settings_product/catalog.py
+ M jarvis/specialists/routes.py
+ M jarvis/system_audit.py
+ M jarvis/system_audit_engine.py
+ M jarvis/system_monitor.py
+ M jarvis/tools/registry.py
+ M jarvis/tools/runner.py
+ M jarvis/trust_memory.py
+ M jarvis/uncensored_auth.py
+ M jarvis/vision_product/api.py
+ M jarvis/vision_product/history.py
+ M jarvis/vision_product/mission_bridge.py
+ M jarvis/voice_product/mission_bridge.py
+ M jarvis/voice_product/settings.py
+ M jarvis/web_search.py
+ M jarvis/workflow_learning.py
+ M jarvis/workflows/daily.py
+ M requirements.txt
+ M scripts/_jarvis-launch-lib.sh
+ M scripts/acm_supremacy_check.py
+ M scripts/ci_check.py
+ M tests/conftest.py
+ M tests/test_aria_acm_m4.py
+ M tests/test_automation_product.py
+ M tests/test_calendar_enhancements.py
+ M tests/test_chat_session_branches.py
+ M tests/test_coding.py
+ M tests/test_connections.py
+ M tests/test_engineering_printers.py
+ M tests/test_error_handling.py
+ M tests/test_execution_routing.py
+ M tests/test_extensions.py
+ M tests/test_first_token_latency.py
+ M tests/test_flytying_extension.py
+ M tests/test_flytying_features.py
+ M tests/test_greeting_latency.py
+ M tests/test_ha_light_control.py
+ M tests/test_journal.py
+ M tests/test_journal_crypto.py
+ M tests/test_layouts_product.py
+ M tests/test_logging_config.py
+ M tests/test_memory_adapter.py
+ M tests/test_memory_intent_routing.py
+ M tests/test_mission_control.py
+ M tests/test_mission_control_ops.py
+ M tests/test_nlu_routing.py
+ M tests/test_notifications_product.py
+ M tests/test_p0_planner.py
+ M tests/test_p2_projects.py
+ M tests/test_platform_cutover.py
+ M tests/test_product_ui_api_wiring.py
+ M tests/test_projects_workspace.py
+ M tests/test_provider_health.py
+ M tests/test_runtime_routing.py
+ M tests/test_search_product.py
+ M tests/test_server_restart.py
+ D tests/test_server_shutdown.py
+ M tests/test_skills_workflows_api.py
+ M tests/test_voice_product.py
+ M tests/test_workflow_dag_pipelines.py
+?? .cursor/
+?? 00000.log
+?? cooling_tower_chimney.scad
+?? cooling_tower_chimney_freecad.py
+?? design/
+?? docs/ARIA_1_0_ENGINEERING_CONSTITUTION.md
+?? docs/ARIA_BUG_025_026_REPAIR_REPORT.md
+?? docs/ARIA_CERTIFICATION_DASHBOARD.md
+?? docs/ARIA_COMPLETE_FUNCTION_BUG_REPORT.md
+?? docs/ARIA_COMPLETE_FUNCTION_COVERAGE.md
+?? docs/ARIA_COMPLETE_LIVE_ACCEPTANCE_REPORT.md
+?? docs/ARIA_COMPLETE_ROOM_FUNCTIONALITY_AUDIT.md
+?? docs/ARIA_CONSISTENCY_AUDIT_2026-07-31.md
+?? docs/ARIA_CREDENTIAL_MIGRATION_M2.md
+?? docs/ARIA_CREDENTIAL_MIGRATION_M3.md
+?? docs/ARIA_CREDENTIAL_MIGRATION_MATRIX.md
+?? docs/ARIA_CURRENT_RUNTIME_BASELINE.md
+?? docs/ARIA_DESIGN_SYSTEM.md
+?? docs/ARIA_E2E_WORKFLOW_MATRIX.md
+?? docs/ARIA_EXECUTION_BUG_REPORT.md
+?? docs/ARIA_EXECUTION_CLOSURE_MATRIX.md
+?? docs/ARIA_EXECUTION_CLOSURE_REPORT.md
+?? docs/ARIA_EXECUTION_STATE_CLOSURE.md
+?? docs/ARIA_EXHAUSTIVE_FUNCTIONAL_VERIFICATION.md
+?? docs/ARIA_EXPLORATORY_BUG_REPORT.md
+?? docs/ARIA_EXPLORATORY_DISCOVERY_INVENTORY.md
+?? docs/ARIA_FAILURE_TRIAGE_REPORT.md
+?? docs/ARIA_FINAL_34_ROOM_FUNCTIONAL_VERIFICATION.md
+?? docs/ARIA_FINAL_ACCEPTANCE_RECONCILIATION.md
+?? docs/ARIA_FINAL_ACCEPTANCE_REPORT.md
+?? docs/ARIA_FINAL_E2E_ACCEPTANCE.md
+?? docs/ARIA_FINAL_INVENTORY_TRIAGE.md
+?? docs/ARIA_FINAL_ORCHESTRATION_ACCEPTANCE.md
+?? docs/ARIA_FINAL_PRODUCT_POLISH.md
+?? docs/ARIA_FINAL_RELEASE_CERTIFICATION.md
+?? docs/ARIA_FINAL_SHIP_CERTIFICATION.md
+?? docs/ARIA_FRONTEND_ARCHITECTURE_REVIEW.md
+?? docs/ARIA_FRONTEND_FOUNDATION_REVIEW.md
+?? docs/ARIA_FRONT_DOOR.md
+?? docs/ARIA_FULL_EXECUTION_REGRESSION.md
+?? docs/ARIA_GALLERY_INFRA_FINAL_REPORT.md
+?? docs/ARIA_GUI_MODERNIZATION.md
+?? docs/ARIA_GUI_MODERNIZATION_PHASE2.md
+?? docs/ARIA_GUI_MODERNIZATION_PHASE3.md
+?? docs/ARIA_HOUSE_BUILD.md
+?? docs/ARIA_HOUSE_INTEGRITY.md
+?? docs/ARIA_INFRASTRUCTURE_FAILURE_REPORT.md
+?? docs/ARIA_INTERRUPTION_LOG.md
+?? docs/ARIA_JEFF_REAL_WORLD_ACCEPTANCE.md
+?? docs/ARIA_JEFF_REAL_WORLD_ACCEPTANCE_V2.md
+?? docs/ARIA_LIVE_ACCEPTANCE_TEST_REPORT.md
+?? docs/ARIA_LIVE_APPLICATION_BUG_REPORT.md
+?? docs/ARIA_LIVE_APPLICATION_INVENTORY.md
+?? docs/ARIA_LIVE_PRODUCTION_INSTANCE_VERIFICATION.md
+?? docs/ARIA_LIVING_ROOMS_EXPERIENCE_BRIEF.md
+?? docs/ARIA_LIVING_ROOM_CERTIFICATION.md
+?? docs/ARIA_LIVING_ROOM_FAMILIARITY.md
+?? docs/ARIA_LIVING_ROOM_IMMERSION.md
+?? docs/ARIA_LIVING_ROOM_PRESENCE.md
+?? docs/ARIA_NEXTGEN_INTELLIGENCE.md
+?? docs/ARIA_NEXT_GENERATION_CHARTER.md
+?? docs/ARIA_NEXT_GENERATION_DESIGN.md
+?? docs/ARIA_NEXT_GENERATION_MASTER.md
+?? docs/ARIA_NOT_TESTABLE_REVIEW.md
+?? docs/ARIA_ONETRUTH_CERTIFICATION_2026-07-31.md
+?? docs/ARIA_ONE_PASSWORD_OWNER_EXPERIENCE.md
+?? docs/ARIA_OWNER_SECURITY_VAULT_ARCHITECTURE.md
+?? docs/ARIA_OWNER_SECURITY_VAULT_ARCHITECTURE_REVIEW.md
+?? docs/ARIA_OWNER_SECURITY_VAULT_M1.md
+?? docs/ARIA_OWNER_SESSION_DAILY_USE.md
+?? docs/ARIA_PHASE1_RUNTIME_SPIKES.md
+?? docs/ARIA_PHASE5_NATIVE_ROOMS.md
+?? docs/ARIA_PHASE6_4_FURNISH_CERTIFICATION.md
+?? docs/ARIA_PHASE6_4_FURNISH_INVENTORY.md
+?? docs/ARIA_PHASE6_5_BEHAVIORAL_INVENTORY.md
+?? docs/ARIA_PHASE6_5_CERTIFICATION.md
+?? docs/ARIA_PHASE6_DAILY_DRIVER.md
+?? docs/ARIA_PHASE7_3_1_CREDENTIAL_OWNER_RESIDENCY.md
+?? docs/ARIA_PHASE7_3_2_FINAL_RESIDENCY.md
+?? docs/ARIA_PHASE7_3_CREDENTIAL_REVALIDATION.md
+?? docs/ARIA_PHASE7_OWNER_RESIDENCY_CERTIFICATION.md
+?? docs/ARIA_PHASE7_RESIDENCY_STATUS.md
+?? docs/ARIA_POST_ACCEPTANCE_REPAIR_REPORT.md
+?? docs/ARIA_POST_REPAIR_ACCEPTANCE_REPORT.md
+?? docs/ARIA_PRE_REPAIR_FINAL_REPORT.md
+?? docs/ARIA_PRINCIPAL_ENGINEERING_AUDIT_2026-07-31.md
+?? docs/ARIA_PRODUCT_CHANGELOG.md
+?? docs/ARIA_REALWORLD_REGRESSION.md
+?? docs/ARIA_REALWORLD_ROOT_CAUSE_REPAIR.md
+?? docs/ARIA_REGRESSION_MATRIX.md
+?? docs/ARIA_RELEASE_CANDIDATE_2026-07-30.md
+?? docs/ARIA_RELEASE_CERTIFICATION_2026-07-30.md
+?? docs/ARIA_REPAIR_CHANGELOG.md
+?? docs/ARIA_REPAIR_STATUS.md
+?? docs/ARIA_ROOM_REPAIR_PHASE1.md
+?? docs/ARIA_ROOM_REPAIR_PHASE2.md
+?? docs/ARIA_ROOM_REPAIR_PHASE3A.md
+?? docs/ARIA_ROOM_REPAIR_PHASE3B.md
+?? docs/ARIA_ROOM_REPAIR_PHASE3C.md
+?? docs/ARIA_ROOM_REPAIR_PHASE3C_B.md
+?? docs/ARIA_ROOM_REPAIR_PHASE3C_C.md
+?? docs/ARIA_ROOM_REPAIR_PHASE3C_D.md
+?? docs/ARIA_ROOT_CAUSE_REPAIR_QUEUE.md
+?? docs/ARIA_RUNTIME_R1_DECISION.md
+?? docs/ARIA_RUNTIME_R1_RECOMMENDATION.md
+?? docs/ARIA_SECURITY_M4_HEALTH_SESSION_UNIFICATION.md
+?? docs/ARIA_STABILIZATION_DIAGNOSTIC_REPORT.md
+?? docs/ARIA_TRUTH_VALIDATION_2026-07-31.md
+?? docs/ARIA_UI_CONTROL_INVENTORY.md
+?? docs/ARIA_UI_STATE_COVERAGE.md
+?? docs/ARIA_WORKSPACE_PHASE2_REVIEW.md
+?? docs/ARIA_ZERO_ASSUMPTION_ACCEPTANCE_REPORT.md
+?? docs/OPERATIONAL_CERTIFICATION_LEDGER.md
+?? docs/OPERATIONAL_CERTIFICATION_REPORT.md
+?? docs/PLANNER_IMPLEMENTATION.md
+?? docs/WEATHER_PIPELINE_RCA.md
+?? docs/_first_token_audit_raw.json
+?? docs/_front_door_foyer_proof.json
+?? docs/_front_door_proof.json
+?? docs/_house_integrity_proof.json
+?? docs/_phase5_flagship_proof.json
+?? docs/_phase5_priority1_proof.json
+?? docs/architecture/
+?? docs/evidence/
+?? docs/intelligence/README.md
+?? docs/phase1_runtime_spikes/
+?? jarvis/__init__.py.bak.20260807_155559
+?? jarvis/__init__.py.bak.20260807_160031
+?? jarvis/__init__.py.bak.20260807_163036
+?? jarvis/__init__.py.bak.20260807_165615
+?? jarvis/__init__.py.bak.20260807_182438
+?? jarvis/__init__.py.bak.20260807_185821
+?? jarvis/__init__.py.bak.20260807_210106
+?? jarvis/activity_api.py
+?? jarvis/activity_inbox.py
+?? jarvis/automation/engine.py
+?? jarvis/certification_product/
+?? jarvis/conversation_pipeline.py
+?? jarvis/gallery_product/consistency.py
+?? jarvis/gui/static/aria_mutate.js
+?? jarvis/gui/static/aria_shared_fetch.js
+?? jarvis/gui/static/cert_runner.js
+?? jarvis/gui/static/certification_home.js
+?? jarvis/gui/static/guided_repair.js
+?? jarvis/gui/static/health.js
+?? jarvis/gui/static/living_atmosphere.css
+?? jarvis/gui/static/living_interface.css
+?? jarvis/gui/static/living_interface.js
+?? jarvis/gui/static/owner_experience.js
+?? jarvis/gui/static/workspace/
+?? jarvis/health_product/
+?? jarvis/integrity_product/
+?? jarvis/intelligence/memory_platform.py
+?? jarvis/intelligence/reasoning.py
+?? jarvis/orchestration_policy.py
+?? jarvis/planner_services.py
+?? jarvis/product_registration.py
+?? jarvis/production_guard.py
+?? jarvis/repair_product/
+?? jarvis/research_context.py
+?? jarvis/research_verification.py
+?? jarvis/security/owner/
+?? result.json
+?? scripts/electron-shell/
+?? scripts/health_maturity_harness.py
+?? scripts/install-electron-shell.sh
+?? scripts/launch-aria-workspace.sh
+?? scripts/phase1_runtime_certify.py
+?? scripts/phase1_runtime_spike_measure.py
+?? scripts/repair_maturity_harness.py
+?? tests/test_action_catalog_registry.py
+?? tests/test_architecture_batch_abc.py
+?? tests/test_certification_product.py
+?? tests/test_checkpoint_r1.py
+?? tests/test_code_index_reliability.py
+?? tests/test_coding_propose_route.py
+?? tests/test_consistency_surfaces.py
+?? tests/test_conversation_pipeline_unify.py
+?? tests/test_destructive_system_refusal.py
+?? tests/test_health_maturity.py
+?? tests/test_health_phase4.py
+?? tests/test_health_product.py
+?? tests/test_intelligence_platform.py
+?? tests/test_jarvis_mcp_c6.py
+?? tests/test_memory_read_c3.py
+?? tests/test_onetruth_restore_search.py
+?? tests/test_owner_security_m1.py
+?? tests/test_owner_security_m2.py
+?? tests/test_owner_security_m3.py
+?? tests/test_owner_security_m4.py
+?? tests/test_owner_session_daily_use.py
+?? tests/test_phase1_foundation.py
+?? tests/test_phase2_tier2.py
+?? tests/test_phase3a_infrastructure.py
+?? tests/test_planner_enhancements.py
+?? tests/test_product_registration_strictness.py
+?? tests/test_production_integrity.py
+?? tests/test_realworld_trust.py
+?? tests/test_repair_phase2.py
+?? tests/test_repair_product.py
+?? tests/test_research_verification.py
+?? tests/test_trust_closure.py
+?? tests/test_truth_routing_image.py
+?? tests/test_weather_forecast_routing.py
+=== remotes ===
+origin	https://github.com/nhflyguy1970-oss/Aria.git (fetch)
+origin	https://github.com/nhflyguy1970-oss/Aria.git (push)

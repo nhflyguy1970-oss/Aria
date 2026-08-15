@@ -55,7 +55,8 @@
   --shell-density: standard;
 }
 
-/* Kill decorative atmosphere */
+/* Kill full-viewport decorative overlays from legacy themes.
+ * Living Interface atmospheres use #mainContent::before instead. */
 body::before,
 body::after,
 html.jarvis-alive.theme-jarvis-blue body::after {

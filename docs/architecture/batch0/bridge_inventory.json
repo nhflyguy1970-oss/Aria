@@ -1,0 +1,320 @@
+{
+  "count": 63,
+  "files": [
+    {
+      "file": "jarvis/flytying/bridge.py",
+      "bytes": 12935,
+      "lines": 358
+    },
+    {
+      "file": "jarvis/cursor_bridge.py",
+      "bytes": 10331,
+      "lines": 307
+    },
+    {
+      "file": "jarvis/gemini_live_bridge.py",
+      "bytes": 7358,
+      "lines": 222
+    },
+    {
+      "file": "jarvis/flytying_product/vision_bridge.py",
+      "bytes": 6827,
+      "lines": 187
+    },
+    {
+      "file": "jarvis/flytying_product/voice_bridge.py",
+      "bytes": 5573,
+      "lines": 135
+    },
+    {
+      "file": "jarvis/flytying_product/calendar_bridge.py",
+      "bytes": 4788,
+      "lines": 135
+    },
+    {
+      "file": "jarvis/calendar_bridges.py",
+      "bytes": 4512,
+      "lines": 136
+    },
+    {
+      "file": "jarvis/mission_control_ops/activity_bridge.py",
+      "bytes": 4183,
+      "lines": 129
+    },
+    {
+      "file": "jarvis/flytying_product/planner_bridge.py",
+      "bytes": 4099,
+      "lines": 119
+    },
+    {
+      "file": "jarvis/home_assistant_product/voice_bridge.py",
+      "bytes": 4068,
+      "lines": 97
+    },
+    {
+      "file": "jarvis/home_assistant_product/automation_bridge.py",
+      "bytes": 3707,
+      "lines": 113
+    },
+    {
+      "file": "jarvis/flytying_product/gallery_bridge.py",
+      "bytes": 3543,
+      "lines": 106
+    },
+    {
+      "file": "jarvis/integrations_product/bridges.py",
+      "bytes": 3375,
+      "lines": 94
+    },
+    {
+      "file": "jarvis/home_assistant_product/mission_bridge.py",
+      "bytes": 3242,
+      "lines": 92
+    },
+    {
+      "file": "jarvis/home_assistant_product/vision_bridge.py",
+      "bytes": 3196,
+      "lines": 94
+    },
+    {
+      "file": "jarvis/flytying_product/mission_bridge.py",
+      "bytes": 3175,
+      "lines": 82
+    },
+    {
+      "file": "jarvis/lsp_bridge.py",
+      "bytes": 3175,
+      "lines": 99
+    },
+    {
+      "file": "jarvis/automation/activity_bridge.py",
+      "bytes": 2914,
+      "lines": 94
+    },
+    {
+      "file": "jarvis/browser_product/activity_bridge.py",
+      "bytes": 2657,
+      "lines": 87
+    },
+    {
+      "file": "jarvis/models_product/activity_bridge.py",
+      "bytes": 2647,
+      "lines": 90
+    },
+    {
+      "file": "jarvis/search_product/mission_bridge.py",
+      "bytes": 2604,
+      "lines": 64
+    },
+    {
+      "file": "jarvis/capabilities_product/mission_bridge.py",
+      "bytes": 2503,
+      "lines": 64
+    },
+    {
+      "file": "jarvis/integrations_product/mission_bridge.py",
+      "bytes": 2385,
+      "lines": 60
+    },
+    {
+      "file": "jarvis/settings_product/mission_bridge.py",
+      "bytes": 2085,
+      "lines": 49
+    },
+    {
+      "file": "jarvis/capabilities_product/bridges.py",
+      "bytes": 2055,
+      "lines": 77
+    },
+    {
+      "file": "jarvis/notifications_product/mission_bridge.py",
+      "bytes": 1984,
+      "lines": 58
+    },
+    {
+      "file": "jarvis/search_product/bridges.py",
+      "bytes": 1949,
+      "lines": 70
+    },
+    {
+      "file": "jarvis/browser_product/voice_bridge.py",
+      "bytes": 1922,
+      "lines": 56
+    },
+    {
+      "file": "jarvis/gallery_product/activity_bridge.py",
+      "bytes": 1773,
+      "lines": 63
+    },
+    {
+      "file": "jarvis/video_generation/mission_bridge.py",
+      "bytes": 1740,
+      "lines": 73
+    },
+    {
+      "file": "jarvis/image_generation/mission_bridge.py",
+      "bytes": 1718,
+      "lines": 69
+    },
+    {
+      "file": "jarvis/home_assistant_product/planner_bridge.py",
+      "bytes": 1697,
+      "lines": 53
+    },
+    {
+      "file": "jarvis/vision_product/voice_bridge.py",
+      "bytes": 1677,
+      "lines": 62
+    },
+    {
+      "file": "jarvis/gallery_product/voice_bridge.py",
+      "bytes": 1674,
+      "lines": 43
+    },
+    {
+      "file": "jarvis/latency_observability/mission_bridge.py",
+      "bytes": 1673,
+      "lines": 43
+    },
+    {
+      "file": "jarvis/voice_product/mission_bridge.py",
+      "bytes": 1641,
+      "lines": 47
+    },
+    {
+      "file": "jarvis/dashboard_product/mission_bridge.py",
+      "bytes": 1580,
+      "lines": 40
+    },
+    {
+      "file": "jarvis/browser_product/job_bridge.py",
+      "bytes": 1552,
+      "lines": 52
+    },
+    {
+      "file": "jarvis/layouts_product/mission_bridge.py",
+      "bytes": 1548,
+      "lines": 42
+    },
+    {
+      "file": "jarvis/vision_product/mission_bridge.py",
+      "bytes": 1525,
+      "lines": 42
+    },
+    {
+      "file": "jarvis/provider_health/mission_bridge.py",
+      "bytes": 1315,
+      "lines": 40
+    },
+    {
+      "file": "jarvis/socketio_bridge.py",
+      "bytes": 1238,
+      "lines": 49
+    },
+    {
+      "file": "jarvis/specialists/platform_bridge.py",
+      "bytes": 1209,
+      "lines": 33
+    },
+    {
+      "file": "jarvis/notifications_product/dashboard_bridge.py",
+      "bytes": 1173,
+      "lines": 31
+    },
+    {
+      "file": "jarvis/home_assistant_product/calendar_bridge.py",
+      "bytes": 1170,
+      "lines": 37
+    },
+    {
+      "file": "jarvis/provider_health/dashboard_bridge.py",
+      "bytes": 1133,
+      "lines": 33
+    },
+    {
+      "file": "jarvis/search_product/voice_bridge.py",
+      "bytes": 232,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/capabilities_product/vision_bridge.py",
+      "bytes": 150,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/capabilities_product/voice_bridge.py",
+      "bytes": 146,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/capabilities_product/automation_bridge.py",
+      "bytes": 132,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/integrations_product/automation_bridge.py",
+      "bytes": 132,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/capabilities_product/calendar_bridge.py",
+      "bytes": 126,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/integrations_product/calendar_bridge.py",
+      "bytes": 126,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/capabilities_product/planner_bridge.py",
+      "bytes": 123,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/integrations_product/browser_bridge.py",
+      "bytes": 123,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/integrations_product/planner_bridge.py",
+      "bytes": 123,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/integrations_product/models_bridge.py",
+      "bytes": 120,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/integrations_product/vision_bridge.py",
+      "bytes": 120,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/integrations_product/voice_bridge.py",
+      "bytes": 117,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/search_product/automation_bridge.py",
+      "bytes": 116,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/search_product/calendar_bridge.py",
+      "bytes": 112,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/search_product/planner_bridge.py",
+      "bytes": 110,
+      "lines": 6
+    },
+    {
+      "file": "jarvis/search_product/vision_bridge.py",
+      "bytes": 108,
+      "lines": 6
+    }
+  ]
+}

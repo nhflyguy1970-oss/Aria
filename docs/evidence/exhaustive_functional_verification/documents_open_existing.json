@@ -1,0 +1,78 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "documents",
+  "capability": "Documents open an existing owner document (no Upload/Import)",
+  "captured_at": "2026-08-15T12:16:00Z",
+  "result": "PASS — Front Door → Documents; library chrome; search existing product cheatsheet; Preview opened type/modified/preview; leave Settings / return restored search + preview. Upload/Import/Summarize/Ask/Learn not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Documents (Your private library)",
+    "hash": "#documents",
+    "h2": "Documents",
+    "place": "Private library",
+    "chrome": "288 docs · 396 chunks · hybrid (keyword + vector) · embed online",
+    "library_visible_rows": 40
+  },
+  "functions": {
+    "library_list": "PASS — 40 visible rows; rows are not a11y options; clickable via list items",
+    "search_existing": "PASS — query product cheatsheet stem; results pane with 12 Preview buttons; library list hidden while searching",
+    "preview": "PASS — first Preview; select-hint gone; Type .md; Modified present; location_kind imports; preview_chars 501 nonempty; heading is the searched product cheatsheet stem",
+    "titles_paths_bodies_in_evidence": false
+  },
+  "leave_return": {
+    "leave": "Front Door → Settings #settings; h2 Settings; appearance filter still 13 (prior Settings gate state)",
+    "return": "Front Door Rooms → Documents Your private library → #documents h2 Documents",
+    "return_state": "search value persisted; search results visible; library hidden; preview still open (Type .md, Modified present, preview_chars 501, select-hint absent)",
+    "result": "PASS — room, search, and preview restored"
+  },
+  "not_clicked": [
+    "Upload",
+    "Drop files to upload",
+    "Import",
+    "Import Folder",
+    "Rebuild Search Index",
+    "Summarize",
+    "Ask Aria",
+    "Learn",
+    "Learn → candidates",
+    "Open Folder",
+    "Open in Chat",
+    "Add to Connections…",
+    "Document Briefing",
+    "Lock Aria"
+  ],
+  "not_opened": [
+    "resume PDFs",
+    "warranty",
+    "personal applications",
+    "ARIA-EXC-PROBE leftovers",
+    "credential-looking filenames"
+  ],
+  "performance": {
+    "room_entry": "hash #documents immediately on Front Door click",
+    "first_meaningful": "h2 Documents + library chrome on first paint",
+    "preview": "Preview click replaced empty hint with type/modified/preview text",
+    "note": "Tool-roundtrip delays are not owner-visible time and were not recorded as room slowness."
+  },
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false; Lock Aria present on Front Door; lock heading not visible"
+  },
+  "data_mutation": {
+    "journal_post": false,
+    "journal_bytes": 67547,
+    "health_phr": false,
+    "documents_upload": false,
+    "documents_import": false,
+    "documents_learn": false,
+    "rebuild_index": false,
+    "coding_apply": false,
+    "search_query_in_documents_box": "product cheatsheet stem used for this gate; recent-search chips already existed from prior Search gates"
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "Planner existing chrome without creating tasks. Do not Add/Promote. Do not Run audit. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5."
+}

@@ -58,6 +58,20 @@ def py_path_from_message(message: str) -> str:
     return paths[-1] if paths else ""
 
 
+_CODEISH_EXT = (
+    r"py|md|js|ts|tsx|jsx|mjs|cjs|json|toml|ya?ml|css|html|sh|bash|txt|rs|go|java|kt|swift"
+)
+
+
+def code_path_from_message(message: str) -> str:
+    """Extract a code/doc path (.py, .md, …) from natural language."""
+    pat = rf"[\w./-]+\.(?:{_CODEISH_EXT})"
+    if m := re.search(rf"\b(?:in|at|to|called|named|of)\s+[`'\"]?({pat})", message, re.I):
+        return m.group(1)
+    paths = re.findall(rf"[`'\"]?({pat})[`'\"]?", message, flags=re.I)
+    return paths[-1] if paths else ""
+
+
 def _image_generation_route(message: str, lower: str | None = None) -> dict | None:
     from jarvis.modules.image import normalize_image_prompt
 
@@ -150,128 +164,25 @@ def py_file_exists(path: str) -> bool:
         return False
 
 
-ACTIONS = """
-Available actions (respond with JSON only):
+def _registry_actions_text() -> str:
+    from jarvis.handlers import ensure_handlers_loaded
+    from jarvis.handlers.registry import action_catalog_text
 
-- chat: general conversation. params: {}
-- remember: store a fact. params: {"text": "..."}
-- recall: list stored facts. params: {}
-- memory_search: search memory. params: {"query": "..."}
-- memory_forget: delete matching memories. params: {"query": "..."}
-- memory_correct: replace a wrong fact. params: {"new_fact": "...", "search_hint": "..."}
-- memory_summarize: extract facts from recent chat. params: {}
-- memory_prune: drop stale auto memories. params: {}
-- memory_namespace: set active namespace. params: {"namespace": "work"}
-- apply_proposal: apply last code proposal. params: {}
-- dismiss_proposal: dismiss last proposal. params: {}
-- undo_apply: restore files from last apply backup. params: {}
+    ensure_handlers_loaded()
+    return action_catalog_text()
 
-- coding_read: read/load a file. params: {"path": "..."}
-- coding_fix: fix errors in a Python file. params: {"path": "..."}
-- coding_improve: improve a file. params: {"path": "..."}
-- coding_find: find files by name. params: {"query": "..."}
-- coding_search: search file contents. params: {"query": "..."}
-- coding_run: run a Python file. params: {"path": "..."}
-- coding_project: index a project folder. params: {"path": "..."}
-- coding_review: architecture review. params: {}
-- coding_show: show file. params: {"path": "..."}
-- coding_create: write a NEW Python script (not fix an existing file). params: {"description": "...", "path": "optional/filename.py"}
-- coding_agent: multi-step coding task (read, edit, test, retry). params: {"task": "...", "path": "optional", "max_steps": 5}
-- coding_refactor: multi-file refactor. params: {"task": "...", "path": "optional"}
-- coding_chat: ask about the codebase with semantic search. params: {"query": "..."}
-- coding_diagnose: explain what's wrong without changing code. params: {"path": "...", "task": "..."}
-- code_index: build semantic code search index. params: {"path": "optional project root"}
-- code_search: semantic code search. params: {"query": "..."}
-- syntax_check: full syntax/lint check (py_compile, ruff, pyright, mypy). params: {"path": "..."}
-- coding_task: list/pause/resume long-running coding tasks. params: {"action": "list|pause|resume", "task_id": "..."}
-- extract_function: AST extract lines into function. params: {"path": "...", "start_line": N, "end_line": N, "name": "..."}
-- move_module: move Python file and update imports. params: {"from": "...", "to": "..."}
-- git_commit: commit changes. params: {"message": "...", "files": ["optional paths"]}
-- git_branch: create and switch git branch. params: {"name": "..."}
-- git_summarize: summarize git diff in plain English. params: {"file": "optional"}
 
-- data_load: load CSV, JSON, XLSX, or SQLite. params: {"path": "..."}
-- data_query: ask about loaded data. params: {"question": "..."}
-- data_summary: summarize loaded data. params: {}
-- data_sql: run SELECT on loaded SQLite DB. params: {"query": "SELECT ..."}
+class _RegistryActions:
+    """Live string-like router catalog generated from handlers.registry."""
 
-- web_search: search the web (SearXNG/DuckDuckGo). params: {"query": "..."}
-- weather_forecast: local weather forecast (Open-Meteo). params: {"day": "optional YYYY-MM-DD"}
+    def __str__(self) -> str:
+        return _registry_actions_text()
 
-- rename_symbol: rename identifier across project. params: {"symbol": "...", "new_name": "..."}
-- coding_lsp: syntax/lint check on file (alias for syntax_check). params: {"path": "..."}
-- lsp_definition: go to definition. params: {"path": "...", "line": 1, "column": 1}
-- lsp_references: find references. params: {"path": "...", "line": 1}
-- lsp_hover: hover docs at position. params: {"path": "...", "line": 1}
-- lsp_format: format document via LSP. params: {"path": "...", "write": true}
-- lsp_symbols: document outline. params: {"path": "..."}
+    def __format__(self, format_spec: str) -> str:
+        return format(str(self), format_spec)
 
-- generate_music: create music from prompt (MusicGen). params: {"prompt": "...", "duration": 10}
 
-- branch_create: fork chat conversation. params: {"name": "..."}
-- branch_switch: switch active chat branch. params: {"branch_id": "..."}
-- branch_list: list chat branches. params: {}
-- branch_delete: delete chat branch(es). params: {"branch_ids": ["id1"]} or {"branch_id": "id"}
-
-- transcribe: speech-to-text. params: {"path": "...", "model": "base"}
-- analyze_audio: transcribe and summarize. params: {"path": "..."}
-- record_transcribe: record from mic then transcribe. params: {"duration": 5}
-- speak: text-to-speech (alias for generate_audio). params: {"text": "..."}
-- generate_audio: create speech from text. params: {"text": "...", "voice": "", "speed": 175}
-- edit_audio: edit audio file (trim, volume, speed, fade). params: {"path": "...", "instruction": "..."}
-- play_audio: play audio file through Sound Blaster. params: {"path": "..."}
-- generate_music: generate music (needs transformers+scipy or audiocraft). params: {"prompt": "...", "duration": 10}
-- transform_genre: remix audio into new genre (MusicGen-Melody). params: {"path": "...", "genre": "jazz rock"}
-- generate_song: AI lyrics + music. params: {"topic": "...", "genre": "pop", "mood": "uplifting"}
-- voice_to_song: turn voice recording into sung track. params: {"path": "...", "lyrics": "", "style": "pop ballad"}
-
-- describe_image: describe an image. params: {"path": "..."}
-- analyze_image: ask about an image. params: {"path": "...", "question": "..."}
-- generate_image: create image. params: {"prompt": "..."}
-- generate_video: create short video clip (keyframe + motion). params: {"prompt": "..."}
-- generate_meme: classic top/bottom meme with AI background. params: {"idea": "...", "top": "", "bottom": "", "use_ai_image": true}
-- upscale_image: 2× upscale last/given image. params: {"path": "...", "scale": 2}
-- inpaint_image: ComfyUI inpaint masked region. params: {"path": "...", "prompt": "...", "region": {"x":0.25,"y":0.25,"w":0.5,"h":0.5}}
-- enhance_prompt: improve image prompt. params: {"prompt": "..."}
-- process_audio_vst: apply AE-5 EQ/VST chain to audio file. params: {"path": "...", "chain": "voice|music|scout|gaming"}
-- set_vst_live: route all playback through live PipeWire EQ sink. params: {"preset": "voice|music|scout|gaming|off"}
-
-- journal_log: rapid log to today's bullet journal. params: {"text": "..."}
-- journal_today: show today's daily log. params: {}
-- journal_monthly: show current monthly log. params: {}
-- journal_open_tasks: list open journal tasks. params: {}
-- journal_reflect: AI reflection on journal. params: {}
-- journal_migrate: migrate open tasks to next month. params: {}
-- journal_search: search journal entries. params: {"query": "..."}
-- journal_remember: save journal bullet or today to memory. params: {"bullet_id": "..."}
-- journal_schedule: schedule open task to future month. params: {"month": "YYYY-MM", "task_query": "taxes", "bullet_id": "..."}
-- journal_thread: thread/migrate task to daily log. params: {"day": "YYYY-MM-DD", "task_query": "report", "duplicate": false}
-- journal_review: AI summary after month/week review checklist. params: {}
-
-- git_status: show git status. params: {}
-- git_diff: show git diff. params: {"file": "..."}
-- data_chart: generate chart from loaded data. params: {"column": ""}
-
-- clear: reset conversation. params: {}
-- capabilities: list what Jarvis can do. params: {}
-- models_info: recommend Ollama models for hardware. params: {}
-- greeting: friendly hello. params: {}
-- morning_briefing: daily summary — weather, open tasks, today's schedule. params: {}
-- briefing_news_detail: expand a headline from the morning briefing with web research. params: {"query": "...", "title": "optional headline"}
-- document_summarize: summarize attached or recent PDF/Word doc. params: {"path": "optional"}
-- document_query: answer question about a document. params: {"path": "optional", "question": "..."}
-- document_info: page count and preview of a document. params: {"path": "optional"}
-- upgrade_wizard: propose a self-upgrade (jarvis/ + tests/ only). params: {"task": "..."}
-- upgrade_verify: run isolated pytest/ruff on pending upgrade. params: {"proposal_id": "optional"}
-- upgrade_apply: apply verified upgrade with snapshot. params: {"proposal_id": "optional", "force": false}
-- upgrade_rollback: restore pre-upgrade snapshot. params: {"snapshot_id": "optional"}
-- learn_about: research a topic via web search and save brief to data/knowledge/. params: {"topic": "..."}
-- learn_remember: store key points from last learn-about brief into memory. params: {"slug": "optional"}
-- ha_status: Home Assistant connection and house snapshot. params: {}
-- ha_control: turn on/off/toggle a device. params: {"target": "...", "action": "on|off|toggle"}
-- ha_scene: activate a Home Assistant scene. params: {"scene": "..."}
-- ha_set_token: save Home Assistant long-lived token from chat. params: {"token": "..."}
-"""
+ACTIONS = _RegistryActions()
 
 ROUTER_PROMPT = """You route user requests for Jarvis AI assistant.
 Use session context for follow-ups ("fix it" = last file, "apply that" = apply_proposal).
@@ -375,20 +286,52 @@ def _maybe_downgrade_coding_chat(intent: dict, message: str, session: SessionCon
 def _follow_up_route(message: str, session: SessionContext) -> dict | None:
     lower = message.lower().strip()
 
+    # Conversational topic drop ("forget the truck, let's…") — reset research
+    # context so Ranger/Ubuntu follow-ups do not stick to the new topic (RW-009).
+    try:
+        from jarvis.nlu.mapping import _CONVERSATIONAL_SUBJECT_CHANGE
+
+        m = _CONVERSATIONAL_SUBJECT_CHANGE.search(message)
+        if m:
+            session.last_research_query = ""
+            session.research_entities = []
+            rest = message[m.end() :].strip() or message
+            session.note_subject(rest[:200] or message[:200])
+            return {
+                "action": "chat",
+                "params": {"context_subject": session.last_subject},
+                "thinking": "subject_change",
+                "route_reason": "conversational_subject_change",
+            }
+    except Exception:
+        pass
+
     from jarvis.briefing_news import briefing_news_intent
 
     news_intent = briefing_news_intent(message, session)
     if news_intent:
         return news_intent
 
-    if re.search(r"\b(apply (it|that|the changes?)|yes apply|go ahead|do it)\b", lower):
+    if re.search(
+        r"\b(apply (it|that|the changes?|the proposal|that proposal|this proposal)|yes apply|go ahead|do it)\b",
+        lower,
+    ):
         return {"action": "apply_proposal", "params": {}, "thinking": "follow-up"}
 
     if re.match(r"^apply[\s!.?,]*$", lower):
         return {"action": "apply_proposal", "params": {}, "thinking": "follow-up"}
 
-    if re.search(r"\bundo(\s+(last\s+)?apply|\s+(it|that|the changes?|last))\b", lower):
-        return {"action": "undo_apply", "params": {}, "thinking": "follow-up"}
+    # Jeff-speak undo — must execute undo_apply, never chat theater
+    # ("Sure, let's undo…" while the file stays changed).
+    if re.search(r"\bundo\b", lower) and not re.search(
+        r"\b(undo\s+upgrade|upgrade\s+rollback|rollback\s+upgrade)\b", lower
+    ):
+        if (
+            re.search(r"\b(apply|proposal|changes?)\b", lower)
+            or re.search(r"\bundo\s+(it|that|this|last)\b", lower)
+            or re.match(r"^undo[\s!.?,]*$", lower)
+        ):
+            return {"action": "undo_apply", "params": {}, "thinking": "follow-up"}
 
     if re.match(r"^undo[\s!.?,]*$", lower):
         return {"action": "undo_apply", "params": {}, "thinking": "follow-up"}
@@ -430,6 +373,32 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
             "params": {"path": session.last_file},
             "thinking": "follow-up",
         }
+
+    # Bare "fix it / can you fix it" with conversational subject, not a file path.
+    if re.search(r"\b(?:can you |could you |please )?(?:fix|repair|debug)(?:\s+it|\s+that)?\b", lower):
+        try:
+            from jarvis.research_context import bare_referent_request
+        except Exception:
+            bare_referent_request = None  # type: ignore
+        subject = (getattr(session, "last_subject", None) or "").strip()
+        if subject and not session.last_file:
+            return {
+                "action": "chat",
+                "params": {"context_subject": subject},
+                "thinking": "fix_followup_subject",
+                "route_reason": "referent_from_subject",
+            }
+        if bare_referent_request and bare_referent_request(message) and not session.last_file and not subject:
+            return {
+                "action": "clarify",
+                "params": {},
+                "needs_clarification": True,
+                "clarification_type": "referent",
+                "clarification_question": "What would you like me to fix?",
+                "choices": [],
+                "thinking": "bare_referent",
+                "route_reason": "clarify_referent",
+            }
 
     if re.search(r"\b(refactor (it|that)|refactor across)\b", lower) and session.last_file:
         if session.last_coding_mode == "refactor" or re.search(
@@ -608,6 +577,57 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
             "params": {"path": session.last_audio, "instruction": message},
             "thinking": "follow-up",
         }
+
+    # Active research topic binds short follow-ups / corrections (RW-001/002/008).
+    has_research = bool(
+        getattr(session, "last_research_query", None)
+        or getattr(session, "research_entities", None)
+    )
+    if has_research:
+        try:
+            from jarvis.research_context import (
+                expand_followup_query,
+                extract_research_entities,
+                is_research_followup,
+            )
+        except Exception:
+            is_research_followup = None  # type: ignore
+            expand_followup_query = None  # type: ignore
+            extract_research_entities = None  # type: ignore
+
+        # Explicit correction of the research entity ("No — I meant the Ubuntu LTS…").
+        if re.search(
+            r"\b(?:no[, ]+)?(?:i\s+)?meant\b|"
+            r"\bi\s+was\s+(?:asking|talking)\s+about\b|"
+            r"\bthe\s+.+\s+you\s+just\s+(?:mentioned|said|gave)\b",
+            lower,
+        ):
+            ents = list(getattr(session, "research_entities", None) or [])
+            if extract_research_entities is not None:
+                ents = list(dict.fromkeys(ents + extract_research_entities(message)))
+            if ents:
+                session.note_research(message, ents)
+                session.note_subject(message[:200])
+            q = message
+            if expand_followup_query is not None:
+                q = expand_followup_query(message, session)
+            return {
+                "action": "web_search",
+                "params": {"query": q or message},
+                "thinking": "research_correction",
+                "route_reason": "research_context_correction",
+            }
+
+        if is_research_followup and is_research_followup(message):
+            q = message
+            if expand_followup_query is not None:
+                q = expand_followup_query(message, session)
+            return {
+                "action": "web_search",
+                "params": {"query": q or message},
+                "thinking": "research_followup",
+                "route_reason": "research_context_followup",
+            }
 
     return None
 
@@ -789,7 +809,6 @@ def _maybe_inpaint_route(message: str, lower: str, session: SessionContext) -> d
 
 def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dict:
     """Last-line guards before executing the routed action."""
-    from jarvis.runtime_routing import is_runtime_routing_question, route_runtime_priority
     from jarvis.runtime_routing_trace import log_route_decision
 
     if intent.get("needs_clarification") or intent.get("action") == "clarify":
@@ -859,6 +878,18 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
         pass
 
     action = intent.get("action")
+
+    # General task policy — reject local-docs/runtime catch-alls for world/research asks.
+    try:
+        from jarvis.orchestration_policy import route_override_for_policy
+
+        override = route_override_for_policy(message, str(action or "chat"))
+        if override:
+            intent = {**intent, **override}
+            action = intent.get("action")
+    except Exception:
+        pass
+
     if action in ("reference_search",) or str(action or "").startswith("reference_"):
         return log_route_decision(
             message=message,
@@ -869,20 +900,54 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
             handler=intent.get("route_handler") or "ReferenceEngine",
         )
     if action in ("documentation_search",) or str(action or "").startswith("documentation_"):
-        intent = {**intent, "action": "reference_search", "route_handler": "ReferenceEngine"}
-        return log_route_decision(
-            message=message,
-            intent=intent,
-            stage="finalize",
-            reason="reference_compat",
-            confidence=intent.get("route_confidence"),
-            handler="ReferenceEngine",
-        )
-    if action == "web_search" and is_runtime_routing_question(message):
-        runtime = route_runtime_priority(message)
-        if runtime:
-            intent = runtime
-            action = intent.get("action")
+        # Only keep local-docs compat when the user asked about local corpus.
+        try:
+            from jarvis.orchestration_policy import prefers_local_reference
+
+            if not prefers_local_reference(message):
+                intent = {
+                    **intent,
+                    "action": "chat",
+                    "route_reason": "policy_reject_documentation_catchall",
+                    "route_handler": "Conversation",
+                }
+                action = "chat"
+            else:
+                intent = {**intent, "action": "reference_search", "route_handler": "ReferenceEngine"}
+                return log_route_decision(
+                    message=message,
+                    intent=intent,
+                    stage="finalize",
+                    reason="reference_compat",
+                    confidence=intent.get("route_confidence"),
+                    handler="ReferenceEngine",
+                )
+        except Exception:
+            intent = {**intent, "action": "reference_search", "route_handler": "ReferenceEngine"}
+            return log_route_decision(
+                message=message,
+                intent=intent,
+                stage="finalize",
+                reason="reference_compat",
+                confidence=intent.get("route_confidence"),
+                handler="ReferenceEngine",
+            )
+    # Only rewrite web_search → runtime when the prompt is truly a live MC probe.
+    # Never steal research/how-to/world questions (bare "models"/"job"/"disk").
+    if action == "web_search":
+        try:
+            from jarvis.runtime_routing import (
+                is_runtime_routing_question,
+                route_runtime_priority,
+            )
+
+            if is_runtime_routing_question(message):
+                runtime = route_runtime_priority(message)
+                if runtime:
+                    intent = runtime
+                    action = intent.get("action")
+        except Exception:
+            pass
 
     if action != "inpaint_image":
         return log_route_decision(
@@ -900,6 +965,1102 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
         intent = {"action": "chat", "params": {}, "thinking": "not an image edit"}
         return log_route_decision(message=message, intent=intent, stage="finalize_inpaint_guard")
     return log_route_decision(message=message, intent=intent, stage="finalize")
+
+
+def _local_fs_route(message: str) -> dict | None:
+    """Local workstation filesystem intents — must beat NLU structure_default_chat.
+
+    Aria is a desktop AI OS: open/list/find/index under home folders must act
+    on the real filesystem, not advise the user to run bash.
+    """
+    lower = (message or "").lower().strip()
+    if not lower:
+        return None
+
+    from pathlib import Path as _P
+
+    home = _P.home()
+
+    # Browser owns http(s) URLs — never treat them as local file paths.
+    if m := re.search(r"https?://[^\s]+", message, re.I):
+        if re.search(r"\b(open|browse|navigate|go to|visit|load)\b", lower) or re.search(
+            r"\bin (?:the )?browser\b", lower
+        ):
+            return {
+                "action": "browse_web",
+                "params": {"url": m.group(0).rstrip(".,)")},
+                "thinking": "browser open url",
+                "route_reason": "natural_browser_url",
+                "route_handler": "Browser",
+                "route_confidence": 1.0,
+            }
+
+    if m := re.search(
+        r"\b(?:open|read|load|show|cat)\b(?:\s+the)?(?:\s+file)?\s+[`'\"]?([~/][^\s`'\"]+|[^\s`'\"]+\.\w{1,8})",
+        message,
+        re.I,
+    ):
+        path_cand = m.group(1)
+        if re.match(r"https?://", path_cand, re.I) or "://" in path_cand:
+            return {
+                "action": "browse_web",
+                "params": {"url": path_cand.rstrip(".,)")},
+                "thinking": "browser open url",
+                "route_reason": "natural_browser_url",
+                "route_handler": "Browser",
+                "route_confidence": 1.0,
+            }
+        return {
+            "action": "coding_read",
+            "params": {"path": path_cand},
+            "thinking": "local file read",
+            "route_reason": "local_fs_open",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    # Natural document opens — Jeff should not name folders or products.
+    if re.search(r"\bread\s+(?:my\s+)?resume\b|\bopen\s+(?:my\s+)?resume\b", lower):
+        return {
+            "action": "coding_read",
+            "params": {"path": "resume", "search_roots": [str(home / "Documents"), str(home / "Downloads")]},
+            "thinking": "read resume",
+            "route_reason": "natural_resume",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(r"\b(?:find|locate|where(?:'s| is)|show)\b.*\b(fishing\s+license|license)\b", lower):
+        return {
+            "action": "coding_find",
+            "params": {
+                "query": "license",
+                "search_roots": [
+                    str(home / "Documents"),
+                    str(home / "Downloads"),
+                    str(home / "Desktop"),
+                ],
+            },
+            "thinking": "find license",
+            "route_reason": "natural_find_license",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(r"\b(?:show|find|list|get)\b.*\binvoices?\b", lower) or re.search(
+        r"\bfind every invoice\b", lower
+    ):
+        return {
+            "action": "coding_find",
+            "params": {"query": "invoice", "root": str(home / "Downloads")},
+            "thinking": "find invoices",
+            "route_reason": "natural_invoices",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    # Open/read the invoice Jeff already found — FS owns the file, not chat.
+    if re.search(
+        r"\b(?:open|read|show|load)\b(?:\s+the|\s+that|\s+my)?\s+invoice\b|"
+        r"\b(?:open|read)\s+it\b.*\binvoice\b",
+        lower,
+    ):
+        return {
+            "action": "coding_read",
+            "params": {
+                "path": "invoice",
+                "search_roots": [str(home / "Downloads"), str(home / "Documents")],
+            },
+            "thinking": "read invoice",
+            "route_reason": "natural_invoice_read",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(r"\b(?:what did i download|downloads?\s+today|downloaded today)\b", lower) or re.search(
+        r"\bsummarize\b.*\bdownloads?\b", lower
+    ):
+        return {
+            "action": "coding_find",
+            "params": {"query": "*", "root": str(home / "Downloads"), "newer_days": 1},
+            "thinking": "downloads today",
+            "route_reason": "natural_downloads_today",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(r"\b(?:open|show|find)\b.*\bscreenshots?\b", lower):
+        # Common Linux screenshot homes — try Pictures then Desktop.
+        shots = home / "Pictures" / "Screenshots"
+        root = shots if shots.is_dir() else home / "Pictures"
+        return {
+            "action": "coding_find",
+            "params": {
+                "query": "*",
+                "root": str(root),
+                "newer_days": 2,
+            },
+            "thinking": "screenshots",
+            "route_reason": "natural_screenshots",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(r"\bfind every pdf\b.*\binvoices?\b|\bpdfs?\b.*\binvoices?\b", lower):
+        return {
+            "action": "coding_find",
+            "params": {"query": "invoice", "root": str(home), "ext": ".pdf"},
+            "thinking": "pdf invoices",
+            "route_reason": "natural_pdf_invoices",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(r"\b(?:index|import|ingest)\b.*\b(documents?|downloads?|desktop|pictures?)\b", lower) or re.search(
+        r"\b(index|import)\s+my\s+(documents?|downloads?)\b", lower
+    ):
+        folder = "Documents"
+        if re.search(r"\bdownloads?\b", lower):
+            folder = "Downloads"
+        elif re.search(r"\bdesktop\b", lower):
+            folder = "Desktop"
+        elif re.search(r"\bpictures?\b", lower):
+            folder = "Pictures"
+        return {
+            "action": "documents_import_folder",
+            "params": {"path": str(home / folder)},
+            "thinking": "local folder import",
+            "route_reason": "local_fs_import",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(
+        r"\b(find|list|show)\b.*\b(invoice|invoices|receipts?)\b.*\b(downloads?|/home/|/Users/|~)",
+        lower,
+    ) or re.search(r"\bfind every invoice\b", lower):
+        return {
+            "action": "coding_find",
+            "params": {"query": "invoice", "root": str(home / "Downloads")},
+            "thinking": "local downloads find",
+            "route_reason": "local_fs_find",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    if m := re.search(
+        r"\b(?:list|show|summarize)\b(?:\s+files?\s+in)?\s+[`'\"]?([~/][^\s`'\"]+|Downloads|Documents|Desktop|Pictures|Videos|Music)",
+        message,
+        re.I,
+    ):
+        raw = m.group(1)
+        known = {
+            "downloads": home / "Downloads",
+            "documents": home / "Documents",
+            "desktop": home / "Desktop",
+            "pictures": home / "Pictures",
+            "videos": home / "Videos",
+            "music": home / "Music",
+        }
+        path = str(known.get(raw.lower(), _P(raw).expanduser()))
+        return {
+            "action": "coding_find",
+            "params": {"query": "*", "root": path},
+            "thinking": "local list",
+            "route_reason": "local_fs_list",
+            "route_handler": "LocalFilesystem",
+            "route_confidence": 1.0,
+        }
+
+    return None
+
+
+def _natural_intent_route(message: str) -> dict | None:
+    """Jeff-speak intents that must not force product/API choices."""
+    lower = (message or "").lower().strip()
+    if not lower:
+        return None
+
+    # Forget must reach ACM — never get captured by topic recall shortcuts.
+    if m := re.search(
+        r"^(?:please\s+)?(?:forget|delete memory|remove memory)\s+(?:about\s+|that\s+|the\s+)?(.+)$",
+        message.strip(),
+        re.I,
+    ):
+        return {
+            "action": "memory_forget",
+            "params": {"query": m.group(1).strip()},
+            "thinking": "forget memory",
+            "route_reason": "natural_forget",
+            "route_handler": "Memory",
+            "route_confidence": 1.0,
+        }
+
+    # Morning / day overview — never invent a task list in chat.
+    # Bare "good morning" stays a greeting; day-status asks get the real briefing.
+    if re.search(
+        r"\b("
+        r"what'?s going on today|"
+        r"what(?:'s| is) (?:on )?(?:for )?today|"
+        r"what do i (?:have|need) today|"
+        r"brief me|"
+        r"morning briefing|"
+        r"daily briefing|"
+        r"good morning.{0,40}\b(today|brief|status|going on)\b|"
+        r"\b(today|brief|status|going on)\b.{0,40}good morning"
+        r")\b",
+        lower,
+    ) or (
+        "good morning" in lower
+        and re.search(r"\b(today|brief|status|going on|agenda|schedule)\b", lower)
+    ):
+        return {
+            "action": "morning_briefing",
+            "params": {},
+            "thinking": "day overview",
+            "route_reason": "natural_morning",
+            "route_handler": "Briefing",
+            "route_confidence": 1.0,
+        }
+
+    # Add a task — chat must not pretend; write to Planner.
+    if m := re.search(
+        r"\b(?:add|create)\s+(?:a\s+)?task(?:\s+to\s+(?:my\s+)?(?:planner|list))?[:\s]+(.+)",
+        message,
+        re.I,
+    ):
+        return {
+            "action": "planner_add_task",
+            "params": {"text": m.group(1).strip()},
+            "thinking": "add planner task",
+            "route_reason": "natural_add_task",
+            "route_handler": "Planner",
+            "route_confidence": 1.0,
+        }
+
+    # Journal write — chat must not pretend.
+    if (m := re.search(
+        r"\b(?:log to journal|journal log|journal(?:\s+entry)?|add to journal)[:\s]+(.+)",
+        message,
+        re.I,
+    )) or (m := re.search(r"^journal[:\s]+(.+)", message, re.I)):
+        return {
+            "action": "journal_log",
+            "params": {"text": m.group(1).strip()},
+            "thinking": "journal log",
+            "route_reason": "natural_journal_log",
+            "route_handler": "Journal",
+            "route_confidence": 1.0,
+        }
+
+    # Journal read — chat must not invent entries (Execution Law).
+    if re.search(
+        r"\b("
+        r"read(?:\s+my)?\s+yesterday'?s?\s+journal|"
+        r"show(?:\s+me)?\s+yesterday'?s?\s+journal|"
+        r"yesterday'?s?\s+journal|"
+        r"what did i write\s+yesterday|"
+        r"journal\s+yesterday|"
+        r"what(?:'s| is| was)\s+(?:in\s+)?(?:my\s+)?journal\s+yesterday"
+        r")\b",
+        lower,
+    ):
+        from datetime import date, timedelta
+
+        yday = (date.today() - timedelta(days=1)).isoformat()
+        return {
+            "action": "journal_today",
+            "params": {"day": yday},
+            "thinking": "yesterday journal",
+            "route_reason": "natural_journal_yesterday",
+            "route_handler": "Journal",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(
+        r"\b("
+        r"read(?:\s+my)?\s+(?:today'?s?\s+)?journal|"
+        r"show(?:\s+me)?\s+(?:today'?s?\s+)?journal|"
+        r"today'?s?\s+journal|"
+        r"what did i write(?:\s+today)?|"
+        r"journal\s+today|"
+        r"daily\s+log"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "journal_today",
+            "params": {},
+            "thinking": "today journal",
+            "route_reason": "natural_journal_today",
+            "route_handler": "Journal",
+            "route_confidence": 1.0,
+        }
+
+    # Fly preference recall — ACM owns what Jeff said he was considering.
+    if re.search(
+        r"\b("
+        r"what fly (?:am i|was i) (?:considering|thinking|planning)|"
+        r"what (?:fly|pattern) (?:for|on) (?:the |my )?(?:next )?trip|"
+        r"which fly (?:am i|was i) (?:tying|considering)"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "memory_search",
+            "params": {"query": "fly next trip olive flash bugger"},
+            "thinking": "fly preference recall",
+            "route_reason": "natural_fly_preference",
+            "route_handler": "Memory",
+            "route_confidence": 1.0,
+        }
+
+    # Image / video generation must beat fly cues ("woolly bugger image").
+    if re.search(
+        r"\b("
+        r"(?:generate|create|make|draw|render)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|photo|illustration)|"
+        r"(?:generate|create|make)\s+(?:me\s+)?(?:a\s+)?(?:video|clip)|"
+        r"image\s+of\b|"
+        r"picture\s+of\b"
+        r")\b",
+        lower,
+    ):
+        if re.search(r"\b(video|clip)\b", lower) and not re.search(r"\b(image|picture|photo|illustration)\b", lower):
+            return {
+                "action": "generate_video",
+                "params": {"prompt": message},
+                "thinking": "generate video",
+                "route_reason": "natural_generate_video",
+                "route_handler": "Gallery",
+                "route_confidence": 1.0,
+            }
+        return {
+            "action": "generate_image",
+            "params": {"prompt": message},
+            "thinking": "generate image",
+            "route_reason": "natural_generate_image",
+            "route_handler": "Gallery",
+            "route_confidence": 1.0,
+        }
+
+    # Fly patterns — only when the user is actually asking the fly library.
+    # Do not steal "remember… fly-tying project…" or "remind me what fly project…".
+    if re.search(
+        r"\b(?:remember|don'?t forget|note that|keep in mind|remind me)\b",
+        lower,
+    ):
+        pass  # memory verbs win later / earlier — never fly_search
+    else:
+        fly_domain = bool(
+            re.search(
+                r"\b(fly[- ]?tying|woolly|wooly\s+bugger|nymph|streamer|emerger|"
+                r"dry\s+fly|cdc|marabou|hackle)\b|"
+                r"\b(?:fly)\s+(?:pattern|recipe|patterns|recipes)\b|"
+                r"\b(?:pattern|recipe)\s+(?:for|of)\s+(?:a\s+)?(?:fly|nymph|streamer|bugger)\b",
+                lower,
+            )
+        )
+        fly_ask_cue = bool(
+            re.search(
+                r"\b(what should i tie|need (?:a |an )?.{0,40}\b(?:fly|bugger|nymph|streamer)\b|"
+                r"tie (?:me )?(?:a |an )?|how (?:do|to) i tie|recommend .{0,30}fly)\b",
+                lower,
+            )
+        )
+        fly_search_cue = bool(
+            re.search(
+                r"\b(?:find|search)\b.+\b(?:fly|pattern|recipe|nymph|streamer|bugger)\b|"
+                r"\b(?:fly|pattern|recipe).+\b(?:mentioning|with|using)\b",
+                lower,
+            )
+        )
+        if fly_ask_cue or (fly_domain and fly_search_cue):
+            if fly_ask_cue or re.search(
+                r"\b(what should i tie|need |recommend|how (?:do|to) i tie)\b", lower
+            ):
+                return {
+                    "action": "fly_ask",
+                    "params": {"question": message},
+                    "thinking": "fly ask",
+                    "route_reason": "natural_fly_ask",
+                    "route_handler": "FlyTying",
+                    "route_confidence": 1.0,
+                }
+            q = message
+            m = re.search(r"(?:mentioning|with|using|about|for)\s+(.+)$", message, re.I)
+            if m:
+                q = m.group(1).strip().rstrip(".?!")
+            elif m2 := re.search(r"\b(?:find|search)\b(?:\s+every)?\s+(.+)", message, re.I):
+                q = re.sub(
+                    r"\b(fly[- ]?tying\s+)?(recipe|pattern|recipes|patterns)\b",
+                    "",
+                    m2.group(1),
+                    flags=re.I,
+                ).strip()
+            return {
+                "action": "fly_search",
+                "params": {"query": q or message},
+                "thinking": "fly pattern search",
+                "route_reason": "natural_fly_search",
+                "route_handler": "FlyTying",
+                "route_confidence": 1.0,
+            }
+
+    if re.search(r"\b(next meeting|what'?s on my (calendar|schedule)|when is my next)\b", lower):
+        return {
+            "action": "planner_today",
+            "params": {},
+            "thinking": "schedule / next meeting",
+            "route_reason": "natural_schedule",
+            "route_handler": "Planner",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(
+        r"\bwhat('s| is) on my (plate|list)\b|"
+        r"\bwhat(?:'s| is) left on my (plate|list)\b|"
+        r"\banything left (?:on my plate|for today|today)\b|"
+        r"\bmy todos?\b|\bto-?do list\b|"
+        r"\bwrap(?:\s+me)?\s+up(?:\s+for today)?\b|"
+        r"\bgood evening\b.*\b(plate|left|tasks?|today)\b",
+        lower,
+    ):
+        return {
+            "action": "planner_today",
+            "params": {},
+            "thinking": "daily plate",
+            "route_reason": "natural_plate",
+            "route_handler": "Planner",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(
+        r"\b(show|list|what are)\b.*\b(my\s+)?(tasks|planner)\b|"
+        r"\b(my tasks|show tasks|list tasks|open tasks)\b",
+        lower,
+    ):
+        return {
+            "action": "planner_today",
+            "params": {},
+            "thinking": "show tasks",
+            "route_reason": "natural_show_tasks",
+            "route_handler": "Planner",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(
+        r"\b("
+        r"what was i (?:working on|focusing|doing)|"
+        r"what am i (?:working on|focusing)|"
+        r"what(?:'s| is) my focus|"
+        r"where did i leave off|"
+        r"remind me what i(?:'m| am) working on|"
+        r"catch me up(?: on (?:the )?project)?"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "what_am_i_working_on",
+            "params": {},
+            "thinking": "active work overview",
+            "route_reason": "natural_working_on",
+            "route_handler": "DailyWorkflow",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(r"\bwhat(?:'s|\s+is|\s+do i)\b.*\b(color|favourite|favorite)\b", lower) or re.search(
+        r"\bwhat color do i like\b", lower
+    ):
+        return {
+            "action": "memory_search",
+            "params": {"query": "favorite color"},
+            "thinking": "preference recall",
+            "route_reason": "natural_preference",
+            "route_handler": "Memory",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(r"\binvoice number\b|\bfrom that ocr\b|\bocr (thing|invoice)\b", lower) and not re.search(
+        r"\b(forget|delete|remove)\b", lower
+    ):
+        return {
+            "action": "memory_search",
+            "params": {"query": "OCR invoice"},
+            "thinking": "invoice fact recall",
+            "route_reason": "natural_invoice_fact",
+            "route_handler": "Memory",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(r"\b(red circle|image i (made|generated)|gallery image|show me that .+ image)\b", lower):
+        from jarvis.config import DATA_DIR
+
+        return {
+            "action": "coding_find",
+            "params": {
+                "query": "image_",
+                "root": str(DATA_DIR / "generated"),
+                "newer_days": 7,
+            },
+            "thinking": "recent generated image",
+            "route_reason": "natural_gallery_recent",
+            "route_handler": "Gallery",
+            "route_confidence": 0.9,
+        }
+
+    # Health PHR — chat must retrieve from Health, never invent medical facts.
+    if re.search(r"^(yes|yep|yeah|confirm|please add(?: it)?|add it|do it|go ahead)\b", lower) and len(lower) < 80:
+        try:
+            from jarvis.health_product import store as _health_store
+            from jarvis.health_product.consult import latest_preview as _health_preview
+
+            if _health_store.latest_pending():
+                return {
+                    "action": "health_confirm",
+                    "params": {"confirm": True},
+                    "thinking": "confirm health mutation",
+                    "route_reason": "natural_health_confirm",
+                    "route_handler": "Health",
+                    "route_confidence": 1.0,
+                }
+            if _health_preview():
+                return {
+                    "action": "health_consult_send",
+                    "params": {},
+                    "thinking": "send health consultation",
+                    "route_reason": "natural_health_consult_send",
+                    "route_handler": "Health",
+                    "route_confidence": 0.95,
+                }
+        except Exception:
+            pass
+    if re.search(r"^(no|nope|cancel|don'?t|do not|never mind)\b", lower) and len(lower) < 80:
+        try:
+            from jarvis.health_product import store as _health_store
+            from jarvis.health_product.consult import latest_preview as _health_preview
+
+            if _health_store.latest_pending():
+                return {
+                    "action": "health_confirm",
+                    "params": {"confirm": False},
+                    "thinking": "reject health mutation",
+                    "route_reason": "natural_health_reject",
+                    "route_handler": "Health",
+                    "route_confidence": 1.0,
+                }
+            if _health_preview():
+                return {
+                    "action": "health_consult_cancel",
+                    "params": {},
+                    "thinking": "cancel health consultation",
+                    "route_reason": "natural_health_consult_cancel",
+                    "route_handler": "Health",
+                    "route_confidence": 0.95,
+                }
+        except Exception:
+            pass
+    if re.search(r"\b(send consultation|confirm consultation|approve consultation)\b", lower):
+        return {
+            "action": "health_consult_send",
+            "params": {},
+            "thinking": "send health consultation",
+            "route_reason": "natural_health_consult_send",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(cancel consultation|don'?t send|do not send)\b", lower):
+        return {
+            "action": "health_consult_cancel",
+            "params": {},
+            "thinking": "cancel health consultation",
+            "route_reason": "natural_health_consult_cancel",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(
+        r"\b("
+        r"consult(?: with)?(?: a)?(?: cloud)? ai|"
+        r"review my (?:last )?(?:six months|6 months|labs?|lab trends|blood pressure|medications?)|"
+        r"analyze my (?:lab|health|bp|blood pressure|medication)"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "health_consult",
+            "params": {
+                "question": message.strip(),
+                "level": "full" if re.search(r"\b(full|complete|send (?:my )?(?:labs?|documents?|reports?))\b", lower) else "sanitized",
+            },
+            "thinking": "health consultation preview",
+            "route_reason": "natural_health_consult",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(?:remind me to ask(?: my)? doctor(?: about)?|question for(?: my)? doctor)\b", lower):
+        return {
+            "action": "health_question",
+            "params": {"text": message.strip()},
+            "thinking": "doctor question",
+            "route_reason": "natural_health_question",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(health timeline|show(?: me)?(?: my)? health (?:history|timeline)|timeline of my health)\b", lower):
+        return {
+            "action": "health_timeline",
+            "params": {},
+            "thinking": "health timeline",
+            "route_reason": "natural_health_timeline",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(wellness coach|lifestyle (ideas|suggestions|recommendations)|health coach)\b", lower):
+        return {
+            "action": "health_coach",
+            "params": {},
+            "thinking": "wellness coach",
+            "route_reason": "natural_health_coach",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(second opinion|get a second opinion)\b", lower):
+        return {
+            "action": "health_second_opinion",
+            "params": {"question": message.strip()},
+            "thinking": "health second opinion",
+            "route_reason": "natural_health_second_opinion",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(
+        r"\b("
+        r"how(?:'?s| is) my health|"
+        r"how have i been doing|"
+        r"how am i doing(?: healthwise)?|"
+        r"health dashboard|"
+        r"what changed(?: this month)?|"
+        r"have i improved|"
+        r"what should i pay attention to"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "health_dashboard",
+            "params": {},
+            "thinking": "health dashboard",
+            "route_reason": "natural_health_dashboard",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(wellness scorecard|health scorecard|habit scorecard)\b", lower):
+        return {
+            "action": "health_scorecard",
+            "params": {},
+            "thinking": "health scorecard",
+            "route_reason": "natural_health_scorecard",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(health milestones?|show(?: me)?(?: my)? milestones?)\b", lower):
+        return {
+            "action": "health_milestones",
+            "params": {},
+            "thinking": "health milestones",
+            "route_reason": "natural_health_milestones",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(medication adherence|adherence|meds? (?:taken|due) today)\b", lower):
+        return {
+            "action": "health_adherence",
+            "params": {},
+            "thinking": "medication adherence",
+            "route_reason": "natural_health_adherence",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(what runs in my family|family medical history|show(?: me)?(?: my)? family history)\b", lower):
+        return {
+            "action": "health_family_history",
+            "params": {},
+            "thinking": "family medical history",
+            "route_reason": "natural_health_family_history",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\bdoes .+ run in my family\b", lower):
+        return {
+            "action": "health_family_history",
+            "params": {"text": message.strip()},
+            "thinking": "family condition query",
+            "route_reason": "natural_health_family_query",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(
+        r"\b("
+        r"am i due for|"
+        r"when was my last (?:colonoscopy|eye exam|mammogram|pap|psa|dental|physical|hearing|skin exam|bone density)|"
+        r"preventive care|"
+        r"screenings? due"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "health_preventive",
+            "params": {"text": message.strip()},
+            "thinking": "preventive care",
+            "route_reason": "natural_health_preventive",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(nutrition habits|what did i eat|eating habits|food habits)\b", lower):
+        return {
+            "action": "health_nutrition",
+            "params": {},
+            "thinking": "nutrition habits",
+            "route_reason": "natural_health_nutrition",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(do you see any patterns|health patterns|why do i keep getting)\b", lower):
+        return {
+            "action": "health_insights",
+            "params": {},
+            "thinking": "health insights",
+            "route_reason": "natural_health_insights",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(prepare me for|prep for my appointment)\b", lower):
+        return {
+            "action": "health_visit_prep",
+            "params": {},
+            "thinking": "visit preparation",
+            "route_reason": "natural_health_visit_prep",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(backup(?: my)? health|create health backup|health backup history)\b", lower):
+        return {
+            "action": "health_backup",
+            "params": {},
+            "thinking": "health backup",
+            "route_reason": "natural_health_backup",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(restore(?: my)? health|restore health backup)\b", lower):
+        return {
+            "action": "health_restore",
+            "params": {},
+            "thinking": "health restore",
+            "route_reason": "natural_health_restore",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(backup integrity|verify backups?|health backup integrity)\b", lower):
+        return {
+            "action": "health_integrity",
+            "params": {},
+            "thinking": "backup integrity",
+            "route_reason": "natural_health_integrity",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(when was my last (?:doctor|physician) (?:visit|appointment)|last (?:doctor|physician) visit)\b", lower):
+        return {
+            "action": "health_last_visit",
+            "params": {},
+            "thinking": "last doctor visit",
+            "route_reason": "natural_health_last_visit",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(health trends?|am i improving)\b", lower):
+        return {
+            "action": "health_trends",
+            "params": {},
+            "thinking": "health trends",
+            "route_reason": "natural_health_trends",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(medication (?:safety|interactions?)|interact with my (?:meds|medications|supplements))\b", lower):
+        return {
+            "action": "health_safety",
+            "params": {},
+            "thinking": "medication safety",
+            "route_reason": "natural_health_safety",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(have i exercised enough|activity (?:log|summary|history)|how(?:'?s| is) my activity)\b", lower):
+        return {
+            "action": "health_activity",
+            "params": {},
+            "thinking": "health activity",
+            "route_reason": "natural_health_activity",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(workout (?:history|summary|streak)|last workout|personal best|how(?:'?s| is) my training)\b", lower):
+        return {
+            "action": "health_workouts",
+            "params": {},
+            "thinking": "health workouts",
+            "route_reason": "natural_health_workouts",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(did i lose weight|how(?:'?s| is| am) i sleeping|how(?:'?s| is) my (?:weight|blood pressure|sleep|sugar))\b", lower):
+        kind = "weight"
+        if "pressure" in lower:
+            kind = "blood_pressure"
+        elif "sleep" in lower:
+            kind = "sleep"
+        elif "sugar" in lower:
+            kind = "blood_sugar"
+        return {
+            "action": "health_graph",
+            "params": {"kind": kind},
+            "thinking": f"health graph {kind}",
+            "route_reason": "natural_health_status_graph",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\bwhat should i ask my doctor\b", lower):
+        return {
+            "action": "health_doctor_visit",
+            "params": {},
+            "thinking": "doctor questions / visit prep",
+            "route_reason": "natural_health_ask_doctor",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(export(?: my)? health|download(?: my)? health record)\b", lower):
+        return {
+            "action": "health_export",
+            "params": {},
+            "thinking": "health export",
+            "route_reason": "natural_health_export",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(health reminders?|medication reminders?)\b", lower):
+        return {
+            "action": "health_reminders",
+            "params": {},
+            "thinking": "health reminders",
+            "route_reason": "natural_health_reminders",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(
+        r"\b("
+        r"prepare for (?:my )?doctor|"
+        r"doctor (?:visit|appointment)(?: summary)?|"
+        r"appointment summary"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "health_doctor_visit",
+            "params": {},
+            "thinking": "doctor visit summary",
+            "route_reason": "natural_health_doctor",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(emergency (?:summary|card|info|report)|wallet card)\b", lower):
+        return {
+            "action": "health_emergency",
+            "params": {},
+            "thinking": "emergency summary",
+            "route_reason": "natural_health_emergency",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(
+        r"\b("
+        r"what (?:meds|medications) am i (?:on|taking)|"
+        r"what medications am i take|"
+        r"current medications?|"
+        r"(?:show|list)(?:\s+me)?(?:\s+my)? medications?"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "health_medications",
+            "params": {"status": "current"},
+            "thinking": "current medications",
+            "route_reason": "natural_health_meds",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(r"\b(what supplements?(?: do i| am i)|(?:show|list)(?:\s+me)?(?:\s+my)? supplements?)\b", lower):
+        return {
+            "action": "health_supplements",
+            "params": {"status": "current"},
+            "thinking": "current supplements",
+            "route_reason": "natural_health_supps",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(
+        r"\b("
+        r"(?:last|latest|recent).{0,24}(?:lab|cholesterol|a1c|psa|vitamin d|glucose)|"
+        r"lab results?|cholesterol results?"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "health_labs",
+            "params": {},
+            "thinking": "lab results",
+            "route_reason": "natural_health_labs",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if m := re.search(
+        r"\b(?:show|graph|how (?:is|has)|trend).{0,40}\b"
+        r"(weight|blood pressure|pressure|sugar|glucose|sleep|mood|pain|energy|heart rate|a1c|cholesterol)\b"
+        r"|"
+        r"\b(weight|blood pressure|sugar|sleep) (?:log|history|graph|trend)\b",
+        lower,
+    ):
+        kind = (m.group(1) or m.group(2) or "weight").replace("pressure", "blood_pressure")
+        if kind == "blood blood_pressure":
+            kind = "blood_pressure"
+        if kind in ("pressure", "blood pressure"):
+            kind = "blood_pressure"
+        if kind in ("sugar", "glucose"):
+            kind = "blood_sugar"
+        return {
+            "action": "health_graph",
+            "params": {"kind": kind},
+            "thinking": f"health graph {kind}",
+            "route_reason": "natural_health_graph",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(
+        r"\b("
+        r"daily health(?: check-?in)?|"
+        r"health today|"
+        r"how (?:am i|did i) (?:do|feel) today|"
+        r"open health|"
+        r"personal health record|\bphr\b"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "health_today" if "today" in lower or "check" in lower or "feel" in lower else "health_home",
+            "params": {},
+            "thinking": "health home",
+            "route_reason": "natural_health_home",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+    if re.search(
+        r"\b("
+        r"(?:my )?(?:blood )?sugar(?: was| is|:)?\s+\d|"
+        r"(?:blood )?pressure(?: was| is|:)?\s+\d|"
+        r"(?:i )?(?:weighed|weight(?: was| is|:)?)\s+\d|"
+        r"slept\s+\d|"
+        r"(?:i )?(?:started|stopped|paused).{0,40}\b(?:taking\s+)?|"
+        r"doctor.{0,40}\b(?:increased|decreased|changed)\s+(?:my\s+)?|"
+        r"my .{0,40}hurt|"
+        r"(?:a1c|cholesterol|hdl|ldl|triglycerides|vitamin d)\s+(?:was|is|:)?\s+\d|"
+        r"(?:i )?(?:walked|ran|cycled|biked|swam|hiked|stretched)\b|"
+        r"(?:i )?(?:did|finished) .{0,20}workout|"
+        r"i felt (?:dizzy|fantastic|terrible)|i had a headache|i slept terribly|"
+        r"(?:i )?(?:had|ate|drank|drink).{0,40}(?:for breakfast|for lunch|for dinner|water|eggs|meal)|"
+        r"my (?:father|mother|sister|brother|grandmother|grandfather|grandma|grandpa|aunt|uncle|cousin|son|daughter) (?:had|has)|"
+        r".+ runs in my family|"
+        r"(?:i )?had (?:a |an |my )?(?:colonoscopy|eye exam|mammogram|pap|psa|dental|physical)"
+        r")",
+        lower,
+    ):
+        return {
+            "action": "health_log",
+            "params": {"text": message.strip()},
+            "thinking": "health log",
+            "route_reason": "natural_health_log",
+            "route_handler": "Health",
+            "route_confidence": 1.0,
+        }
+
+    # Notifications — chat must not invent empty/full inbox.
+    if re.search(
+        r"\b("
+        r"any notifications|"
+        r"my notifications|"
+        r"show(?:\s+me)?(?:\s+my)?\s+notifications|"
+        r"notifications? (?:i should see|for me)|"
+        r"any (?:unread )?alerts?|"
+        r"what alerts|"
+        r"unread (?:alerts?|notifications?)|"
+        r"activity (?:center|inbox)|"
+        r"what(?:'s| is) in (?:my )?(?:inbox|notifications)"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "notifications_digest",
+            "params": {"kind": "needs_attention"},
+            "thinking": "notifications digest",
+            "route_reason": "natural_notifications",
+            "route_handler": "Notifications",
+            "route_confidence": 1.0,
+        }
+
+    # Job / generation status — Jobs owns truth, chat must not guess "ready".
+    if re.search(
+        r"\b("
+        r"(?:is|has)\s+(?:my\s+)?(?:image|video|job|generation)\s+ready|"
+        r"(?:image|video|job)\s+(?:status|progress|done|finished|ready)|"
+        r"what(?:'s| is)\s+(?:the\s+)?(?:job|generation)\s+status|"
+        r"(?:any|what)\s+jobs?\s+(?:running|active)|"
+        r"are\s+(?:any\s+)?(?:jobs|images|videos)\s+(?:still\s+)?running|"
+        r"is\s+anything\s+still\s+running|"
+        r"anything\s+still\s+running"
+        r")\b",
+        lower,
+    ):
+        return {
+            "action": "jobs_status",
+            "params": {},
+            "thinking": "job status",
+            "route_reason": "natural_job_status",
+            "route_handler": "Jobs",
+            "route_confidence": 1.0,
+        }
+
+    if re.search(
+        r"\b("
+        r"show(?:\s+me)?\s+(?:the\s+)?(?:image|picture)\s+i\s+(?:just\s+)?(?:made|generated|created)|"
+        r"(?:my\s+)?(?:latest|recent|last)\s+(?:generated\s+)?(?:image|picture)|"
+        r"where(?:'s| is)\s+(?:my\s+)?(?:image|picture)"
+        r")\b",
+        lower,
+    ):
+        from jarvis.config import DATA_DIR
+
+        return {
+            "action": "coding_find",
+            "params": {
+                "query": "image_",
+                "root": str(DATA_DIR / "generated"),
+                "newer_days": 1,
+            },
+            "thinking": "latest generated image",
+            "route_reason": "natural_gallery_latest",
+            "route_handler": "Gallery",
+            "route_confidence": 1.0,
+        }
+
+    return None
 
 
 def _quick_route(
@@ -1331,6 +2492,24 @@ def _quick_route(
     ):
         return {"action": "coding_fix", "params": {"path": m.group(1)}}
 
+    # Natural propose language — local assistant should enter Coding, not chat advice.
+    if m := re.search(
+        r"\bpropose\b(?:\s+a)?(?:\s+(?:one[\s-]?line|small|quick))?\s+(?:fix|change|patch|update)\b.*?"
+        r"(?:in\s+|for\s+|to\s+)?[`'\"]?([^\s`'\"]+\.py)",
+        lower,
+    ):
+        return {"action": "coding_fix", "params": {"path": m.group(1)}, "thinking": "coding propose"}
+    if m := re.search(
+        r"\bpropose\b.*?\b(?:fix|change|patch)\b.*?\bfor\s+[`'\"]?([^\s`'\"]+\.py)",
+        lower,
+    ):
+        return {"action": "coding_fix", "params": {"path": m.group(1)}, "thinking": "coding propose"}
+    if m := re.search(
+        r"\bpropose\b.*?\bin\s+[`'\"]?([^\s`'\"]+\.py)",
+        lower,
+    ):
+        return {"action": "coding_fix", "params": {"path": m.group(1)}, "thinking": "coding propose"}
+
     if m := re.search(
         r"\b(?:improve|refactor|clean up)\s+(?:the\s+)?(?:file\s+)?[`'\"]?([^\s`'\"]+)", lower
     ):
@@ -1455,6 +2634,19 @@ def _quick_route(
             "thinking": "document path query",
         }
 
+    if re.search(
+        r"\b(yesterday'?s?\s+journal|what did i write\s+yesterday|journal\s+yesterday)\b",
+        lower,
+    ):
+        from datetime import date, timedelta
+
+        yday = (date.today() - timedelta(days=1)).isoformat()
+        return {
+            "action": "journal_today",
+            "params": {"day": yday},
+            "thinking": "yesterday journal",
+        }
+
     if re.search(r"\b(what did i write|journal today|today'?s journal|daily log)\b", lower):
         return {"action": "journal_today", "params": {}, "thinking": "journal today"}
 
@@ -1512,6 +2704,17 @@ def _quick_route(
     if m := re.search(r"\brun command[:\s]+(.+)", message, re.I):
         return {"action": "coding_run_command", "params": {"command": m.group(1).strip()}}
 
+    if m := re.search(
+        r"(?:^|\b(?:run|execute|please)\s+)(gh(?:\s+(?:api|auth|pr|repo|issue|run|release|gist|status)\b)[^\n]*)",
+        message,
+        re.I,
+    ):
+        cmd = m.group(1).strip()
+        cmd = re.split(r"\s+and\s+(?:tell|report|show|say)\b", cmd, maxsplit=1, flags=re.I)[0].strip()
+        cmd = re.sub(r"[.?!]+$", "", cmd).strip()
+        if cmd.lower().startswith("gh"):
+            return {"action": "coding_run_command", "params": {"command": cmd}}
+
     if re.search(r"\b(index code|build code index|reindex code)\b", lower):
         return {"action": "code_index", "params": {}}
 
@@ -1520,6 +2723,9 @@ def _quick_route(
 
     if m := re.search(r"\bfind files?(?: named| matching| called| like)?\s+(.+)", message, re.I):
         return {"action": "coding_find", "params": {"query": m.group(1).strip()}}
+
+    if fs_hit := _local_fs_route(message):
+        return fs_hit
 
     if m := re.search(
         r"\b(?:read|load)\s+(?:file\s+)?[`'\"]?([^\s`'\"]+\.\w+)",
@@ -1615,14 +2821,30 @@ def _quick_route(
 
         return {"action": "data_chart", "params": parse_chart_request(message)}
 
-    if re.search(r"\b(search (the )?web|web search|look up online|google)\b", lower):
+    if re.search(
+        r"\b(search (the )?web|web search|look up online|search up|google|research)\b",
+        lower,
+    ):
         q = re.sub(
-            r"^(please\s+)?(search (the )?web for|web search|look up online|google)\s*[:\-]?\s*",
+            r"^(please\s+)?(search (the )?web for|web search|look up online|search up|google|research)\s*[:\-]?\s*",
             "",
             message,
             flags=re.I,
         ).strip()
         return {"action": "web_search", "params": {"query": q or message}}
+
+    try:
+        from jarvis.orchestration_policy import research_required
+
+        if research_required(message):
+            return {
+                "action": "web_search",
+                "params": {"query": message},
+                "thinking": "orchestration_policy_research",
+                "route_reason": "policy_research_required",
+            }
+    except Exception:
+        pass
 
     from jarvis.runtime_routing import route_runtime_priority
 
@@ -1886,67 +3108,90 @@ def _resolve_ambiguous_path(path: str, session) -> dict | None:
 
 def route(message: str, session: SessionContext, attachment: dict | None = None) -> dict:
     if session.pending_clarification:
-        choice = message.strip()
-        pending = session.pending_clarification
-        session.pending_clarification = None
-        if pending.get("type") == "nlu_intent":
-            from jarvis.nlu.confidence import resolve_clarification_choice
+        # Explicit memory imperatives are new intents, not clarification answers.
+        # Stale NLU clarification must not demote "please remember…" to chat
+        # (BUG-013: LLM claims storage while ACM never writes).
+        try:
+            from jarvis.nlu.mapping import resolve_memory_route
 
-            resolved = resolve_clarification_choice(choice, pending)
-            if resolved:
+            mem_escape = resolve_memory_route(message)
+        except Exception:
+            mem_escape = None
+        _memory_escape_actions = {
+            "remember",
+            "recall",
+            "memory_search",
+            "memory_forget",
+            "memory_correct",
+            "memory_about_user",
+            "memory_prune",
+            "journal_remember",
+            "learn_remember",
+        }
+        if mem_escape and str(mem_escape.get("action") or "") in _memory_escape_actions:
+            session.pending_clarification = None
+        else:
+            choice = message.strip()
+            pending = session.pending_clarification
+            session.pending_clarification = None
+            if pending.get("type") == "nlu_intent":
+                from jarvis.nlu.confidence import resolve_clarification_choice
+
+                resolved = resolve_clarification_choice(choice, pending)
+                if resolved:
+                    return _finalize_intent(
+                        resolved, pending.get("original_prompt") or message, session
+                    )
+                from jarvis.nlu.learning import reject_correction
+
+                reject_correction(pending.get("original_prompt") or message)
                 return _finalize_intent(
-                    resolved, pending.get("original_prompt") or message, session
+                    {"action": "chat", "params": {}, "thinking": "clarification rejected"},
+                    message,
+                    session,
                 )
-            from jarvis.nlu.learning import reject_correction
-
-            reject_correction(pending.get("original_prompt") or message)
-            return _finalize_intent(
-                {"action": "chat", "params": {}, "thinking": "clarification rejected"},
-                message,
-                session,
-            )
-        if pending.get("type") == "tasks_destination":
+            if pending.get("type") == "tasks_destination":
+                if choice.isdigit():
+                    idx = int(choice) - 1
+                    choices = pending.get("choices", [])
+                    if 0 <= idx < len(choices):
+                        choice = choices[idx]
+                cl = choice.lower().strip()
+                if cl.startswith("plan"):
+                    return _finalize_intent(
+                        {"action": "planner_today", "params": {}, "thinking": "tasks→planner"},
+                        pending.get("original_prompt") or message,
+                        session,
+                    )
+                if cl.startswith("journ") or cl.startswith("bujo") or cl.startswith("bullet"):
+                    return _finalize_intent(
+                        {"action": "journal_open_tasks", "params": {}, "thinking": "tasks→journal"},
+                        pending.get("original_prompt") or message,
+                        session,
+                    )
+                # Re-ask
+                session.pending_clarification = pending
+                return {
+                    "action": "clarify",
+                    "params": {},
+                    "needs_clarification": True,
+                    "clarification_question": pending.get("clarification_question")
+                    or "Planner or Journal?",
+                    "choices": pending.get("choices") or ["Planner", "Journal"],
+                    "clarification_type": "tasks_destination",
+                    "thinking": "tasks destination retry",
+                }
             if choice.isdigit():
                 idx = int(choice) - 1
                 choices = pending.get("choices", [])
                 if 0 <= idx < len(choices):
                     choice = choices[idx]
-            cl = choice.lower().strip()
-            if cl.startswith("plan"):
-                return _finalize_intent(
-                    {"action": "planner_today", "params": {}, "thinking": "tasks→planner"},
-                    pending.get("original_prompt") or message,
-                    session,
-                )
-            if cl.startswith("journ") or cl.startswith("bujo") or cl.startswith("bullet"):
-                return _finalize_intent(
-                    {"action": "journal_open_tasks", "params": {}, "thinking": "tasks→journal"},
-                    pending.get("original_prompt") or message,
-                    session,
-                )
-            # Re-ask
-            session.pending_clarification = pending
+            action = pending.get("action", "coding_fix")
             return {
-                "action": "clarify",
-                "params": {},
-                "needs_clarification": True,
-                "clarification_question": pending.get("clarification_question")
-                or "Planner or Journal?",
-                "choices": pending.get("choices") or ["Planner", "Journal"],
-                "clarification_type": "tasks_destination",
-                "thinking": "tasks destination retry",
+                "action": action,
+                "params": {"path": choice},
+                "thinking": "clarification resolved",
             }
-        if choice.isdigit():
-            idx = int(choice) - 1
-            choices = pending.get("choices", [])
-            if 0 <= idx < len(choices):
-                choice = choices[idx]
-        action = pending.get("action", "coding_fix")
-        return {
-            "action": action,
-            "params": {"path": choice},
-            "thinking": "clarification resolved",
-        }
 
     try:
         from jarvis.routing_explain import try_routing_explain
@@ -2088,8 +3333,54 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
         except Exception:
             pass
 
-    # Memory verbs (Remember / Forget / Update / What is my… / Search memory…)
-    # before NLU so coarse "memory" never collapses into clarification or dump.
+    # Workstation + natural Jeff intents before Memory Authority —
+    # "What did I download today?" / invoices must not become episodic ACM unknown.
+    if not attachment:
+        if fs_hit := _local_fs_route(message):
+            return _finalize_intent(
+                normalize_route_intent(
+                    {
+                        **fs_hit,
+                        "router": "local_fs",
+                        "router_stage": "pre_memory_local_fs",
+                    }
+                ),
+                message,
+                session,
+            )
+        # Memory verbs before natural intent — "remember… fly-tying…" must not
+        # become fly_search, and "remind me what…" must hit Memory Authority.
+        try:
+            from jarvis.nlu.mapping import resolve_memory_route
+
+            mem = resolve_memory_route(message)
+            if mem:
+                intent = {
+                    **mem,
+                    "route_reason": "memory_verb",
+                    "route_handler": "MemoryEngine",
+                    "route_confidence": 1.0,
+                    "router": "memory_verb",
+                    "router_stage": "pre_natural_memory",
+                }
+                return _finalize_intent(normalize_route_intent(intent), message, session)
+        except Exception:
+            pass
+
+        if natural := _natural_intent_route(message):
+            return _finalize_intent(
+                normalize_route_intent(
+                    {
+                        **natural,
+                        "router": "natural_intent",
+                        "router_stage": "pre_nlu_natural",
+                    }
+                ),
+                message,
+                session,
+            )
+
+    # Memory verbs again when attachment path skipped the block above.
     try:
         from jarvis.nlu.mapping import resolve_memory_route
 
@@ -2106,6 +3397,115 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
             return _finalize_intent(normalize_route_intent(intent), message, session)
     except Exception:
         pass
+
+    # Explicit git / shell before NLU — "status" must not become Mission Control.
+    if not attachment:
+        lower_git = message.lower().strip()
+        if re.search(r"\bgit status\b|\bwhat changed in git\b", lower_git):
+            return _finalize_intent(
+                normalize_route_intent(
+                    {
+                        "action": "git_status",
+                        "params": {},
+                        "thinking": "git status",
+                        "route_reason": "pre_nlu_git",
+                        "route_handler": "Git",
+                        "route_confidence": 1.0,
+                        "router": "git",
+                        "router_stage": "pre_nlu_git",
+                    }
+                ),
+                message,
+                session,
+            )
+        if re.search(r"\bgit diff\b|\bshow diff\b", lower_git):
+            return _finalize_intent(
+                normalize_route_intent(
+                    {
+                        "action": "git_diff",
+                        "params": {},
+                        "thinking": "git diff",
+                        "route_reason": "pre_nlu_git",
+                        "route_handler": "Git",
+                        "route_confidence": 1.0,
+                    }
+                ),
+                message,
+                session,
+            )
+        if m := re.search(r"\brun command[:\s]+(.+)", message, re.I):
+            return _finalize_intent(
+                normalize_route_intent(
+                    {
+                        "action": "coding_run_command",
+                        "params": {"command": m.group(1).strip()},
+                        "thinking": "run command",
+                        "route_reason": "pre_nlu_run_command",
+                        "route_handler": "Shell",
+                        "route_confidence": 1.0,
+                    }
+                ),
+                message,
+                session,
+            )
+        # Natural "run gh …" / "gh api …" — authenticated GitHub CLI work (not LLM chat).
+        if m := re.search(
+            r"(?:^|\b(?:run|execute|please)\s+)(gh(?:\s+(?:api|auth|pr|repo|issue|run|release|gist|status)\b)[^\n]*)",
+            message,
+            re.I,
+        ):
+            cmd = m.group(1).strip()
+            cmd = re.split(r"\s+and\s+(?:tell|report|show|say)\b", cmd, maxsplit=1, flags=re.I)[0].strip()
+            cmd = re.sub(r"[.?!]+$", "", cmd).strip()
+            if cmd.lower().startswith("gh"):
+                return _finalize_intent(
+                    normalize_route_intent(
+                        {
+                            "action": "coding_run_command",
+                            "params": {"command": cmd},
+                            "thinking": "gh command",
+                            "route_reason": "pre_nlu_gh",
+                            "route_handler": "Shell",
+                            "route_confidence": 1.0,
+                            "router": "gh",
+                            "router_stage": "pre_nlu_gh",
+                        }
+                    ),
+                    message,
+                    session,
+                )
+        # Coding propose before NLU — Jeff-speak ("improvement", "docstring")
+        # must not fall through to chat or get stolen by runtime keywords (gpu.py).
+        lower_prop = message.lower()
+        if re.search(r"\bpropose\b", lower_prop):
+            path = code_path_from_message(message) or py_path_from_message(message)
+            coding_cue = bool(
+                path
+                or re.search(r"\bin coding\b", lower_prop)
+                or re.search(
+                    r"\b(change|fix|patch|comment|update|edit|improve|"
+                    r"improvement|docstring|refactor|suggest|rewrite|"
+                    r"tweak|adjust)\b",
+                    lower_prop,
+                )
+            )
+            if coding_cue:
+                return _finalize_intent(
+                    normalize_route_intent(
+                        {
+                            "action": "coding_propose",
+                            "params": {"path": path, "task": message},
+                            "thinking": "coding propose",
+                            "route_reason": "pre_nlu_coding_propose",
+                            "route_handler": "EngineeringEngine",
+                            "route_confidence": 1.0,
+                            "router": "coding_propose",
+                            "router_stage": "pre_nlu_coding_propose",
+                        }
+                    ),
+                    message,
+                    session,
+                )
 
     nlu_used = False
     from jarvis.nlu.pipeline import nlu_enabled, route_via_nlu
@@ -2125,6 +3525,101 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
             nlu_intent.setdefault("thinking", "nlu")
             nlu_intent = normalize_route_intent(nlu_intent)
             nlu_intent = _maybe_downgrade_coding_chat(nlu_intent, message, session)
+            # Deterministic image patterns ALWAYS beat NLU — including confident
+            # mislabels like web_search for "generate image: …" (known false success).
+            nlu_action = str(nlu_intent.get("action") or "")
+            media_actions = {
+                "generate_image",
+                "edit_image",
+                "inpaint_image",
+                "upscale_image",
+                "generate_video",
+                "generate_meme",
+                "storyboard_video",
+            }
+            if nlu_action not in media_actions:
+                img = _image_generation_route(message, message.lower())
+                if img:
+                    img = normalize_route_intent({**img, "thinking": "image generation"})
+                    img["route_reason"] = "pattern_over_nlu_image"
+                    session.pending_clarification = None
+                    return _finalize_intent(img, message, session)
+            # Deterministic product patterns beat coarse/low-confidence NLU.
+            nlu_weak = nlu_action in (
+                "coding_chat",
+                "chat",
+                "clarify",
+                "nlu_clarify",
+                "web_search",
+                "reference_search",
+            ) or bool(nlu_intent.get("needs_clarification"))
+            if nlu_weak:
+                # Live Mission Control must beat weak NLU chat defaults ("CPU load?").
+                if nlu_action in ("chat", "clarify", "nlu_clarify", "coding_chat"):
+                    try:
+                        from jarvis.runtime_routing import route_runtime_priority
+
+                        runtime_hit = route_runtime_priority(message)
+                        if runtime_hit:
+                            runtime_hit = normalize_route_intent(
+                                {
+                                    **runtime_hit,
+                                    "route_reason": "runtime_over_nlu_weak",
+                                    "router": "runtime",
+                                    "router_stage": "nlu_weak_runtime",
+                                }
+                            )
+                            session.pending_clarification = None
+                            return _finalize_intent(runtime_hit, message, session)
+                    except Exception:
+                        pass
+                    try:
+                        from jarvis.orchestration_policy import route_override_for_policy
+
+                        pol = route_override_for_policy(message, nlu_action)
+                        if pol and pol.get("action") not in (None, nlu_action):
+                            pol = normalize_route_intent(
+                                {
+                                    **pol,
+                                    "router": "orchestration_policy",
+                                    "router_stage": "nlu_weak_policy",
+                                }
+                            )
+                            session.pending_clarification = None
+                            return _finalize_intent(pol, message, session)
+                    except Exception:
+                        pass
+                quick_override = _quick_route(
+                    message, attachment, session, skip_runtime_priority=True
+                )
+                if quick_override and quick_override.get("action") in (
+                    "coding_fix",
+                    "coding_improve",
+                    "coding_create",
+                    "coding_agent",
+                    "coding_refactor",
+                    "coding_run",
+                    "coding_show",
+                    "coding_read",
+                    "coding_find",
+                    "documents_import_folder",
+                    "apply_proposal",
+                    "undo_apply",
+                    "generate_image",
+                    "generate_video",
+                    "generate_meme",
+                    "storyboard_video",
+                ):
+                    quick_override = normalize_route_intent(quick_override)
+                    quick_override.setdefault(
+                        "thinking", "pattern match overrides nlu chat/clarify"
+                    )
+                    quick_override["route_reason"] = "quick_over_nlu_weak"
+                    # Drop clarification trap so the real action runs.
+                    quick_override.pop("needs_clarification", None)
+                    session.pending_clarification = None
+                    nlu_intent = quick_override
+                    return _finalize_intent(nlu_intent, message, session)
             return _finalize_intent(nlu_intent, message, session)
 
     quick = _quick_route(message, attachment, session, skip_runtime_priority=nlu_used)

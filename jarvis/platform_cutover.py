@@ -1,4 +1,8 @@
-"""Platform migration cutover — safe authority switch with rollback."""
+"""Platform migration diagnostics.
+
+ACM is the permanent authoritative cognitive memory store. This module remains
+only for platform mirror/backfill diagnostics and must not claim memory authority.
+"""
 
 from __future__ import annotations
 
@@ -15,14 +19,18 @@ logger = logging.getLogger("jarvis.platform_cutover")
 
 _CUTOVER_FILE = DATA_DIR / "platform" / "cutover.json"
 _APPLICATION_ID = "aria"
-_MODES = frozenset({"legacy", "dual_write", "platform_authoritative"})
+_MODE = "acm_authoritative"
 _MIN_SHADOW_AGREEMENT_RATE = 0.95
 
 
 def _default_state() -> dict[str, Any]:
     return {
         "version": 1,
-        "mode": "dual_write",
+        "mode": _MODE,
+        "cognitive_memory": {
+            "authority": "acm",
+            "platform_cutover_applicable": False,
+        },
         "backfill_completed_at": "",
         "enabled_at": "",
         "rollback_count": 0,
@@ -36,7 +44,16 @@ def _load() -> dict[str, Any]:
     try:
         data = json.loads(_CUTOVER_FILE.read_text(encoding="utf-8"))
         if isinstance(data, dict):
-            return {**_default_state(), **data}
+            # Persisted dual_write/legacy modes must never override ACM authority (M2).
+            merged = {**_default_state(), **data}
+            merged["mode"] = _MODE
+            cogn = merged.get("cognitive_memory")
+            if not isinstance(cogn, dict):
+                cogn = {}
+            cogn["authority"] = "acm"
+            cogn["platform_cutover_applicable"] = False
+            merged["cognitive_memory"] = cogn
+            return merged
     except (json.JSONDecodeError, OSError):
         pass
     return _default_state()
@@ -52,33 +69,19 @@ def _env_truthy(name: str) -> bool:
 
 
 def current_mode() -> str:
-    if _env_truthy("JARVIS_PLATFORM_DATA_AUTHORITATIVE"):
-        return "platform_authoritative"
-    mode = str(_load().get("mode") or "dual_write")
-    return mode if mode in _MODES else "dual_write"
+    return _MODE
 
 
 def platform_data_authoritative() -> bool:
-    return current_mode() == "platform_authoritative"
+    return False
 
 
 def apply_cutover_state_on_startup() -> dict[str, Any]:
-    """Hydrate authoritative env from persisted cutover state before platform attach."""
-    state = _load()
-    mode = str(state.get("mode") or "dual_write")
-    if mode != "platform_authoritative":
-        return {"applied": False, "mode": mode}
-
-    if not _env_truthy("JARVIS_PLATFORM_DATA_AUTHORITATIVE"):
-        os.environ["JARVIS_PLATFORM_DATA_AUTHORITATIVE"] = "1"
-
-    logger.info(
-        "Platform cutover state hydrated from %s (mode=platform_authoritative)",
-        _CUTOVER_FILE,
-    )
+    """No-op compatibility hook; ACM authority is set by aria_core.acm_bridge."""
     return {
-        "applied": True,
-        "mode": "platform_authoritative",
+        "applied": False,
+        "mode": _MODE,
+        "authoritative": "acm",
         "cutover_file": str(_CUTOVER_FILE),
     }
 
@@ -629,12 +632,11 @@ def verify_semantic_parity(*, sample_size: int = 50) -> dict[str, Any]:
 
 
 def verify_cutover_complete(*, persist: bool = True) -> dict[str, Any]:
-    """Full cutover verification without enabling platform-authoritative mode."""
+    """Platform mirror diagnostics; cognitive memory authority remains ACM."""
     ensure_memory_namespaces()
     semantic_parity = verify_semantic_parity(sample_size=50)
     readiness = verify_readiness(persist=False)
     memory_records = verify_memory_records()
-    dual_read = verify_dual_read()
     parity = verify_data_parity()
 
     blockers = list(readiness.get("blockers") or [])
@@ -644,10 +646,6 @@ def verify_cutover_complete(*, persist: bool = True) -> dict[str, Any]:
             f"missing={memory_records.get('missing_count', 0)} "
             f"content={memory_records.get('content_mismatch_count', 0)} "
             f"metadata={memory_records.get('metadata_issue_count', 0)}"
-        )
-    if not dual_read.get("ok"):
-        blockers.append(
-            f"dual-read verification failed: {dual_read.get('mismatch_count', 0)} mismatches"
         )
     if os.getenv("JARVIS_PLATFORM_SEMANTIC_MEMORY_ATTACHED") == "1" and not semantic_parity.get(
         "ok"
@@ -666,10 +664,15 @@ def verify_cutover_complete(*, persist: bool = True) -> dict[str, Any]:
         "warnings": readiness.get("warnings") or [],
         "readiness": readiness,
         "memory_records": memory_records,
-        "dual_read": dual_read,
+        "legacy_platform_read_compare": {
+            "ok": False,
+            "skipped": True,
+            "reason": "acm_authoritative",
+        },
         "semantic_parity": semantic_parity,
         "parity": parity,
         "mode": current_mode(),
+        "authoritative": "acm",
         "ts": time.time(),
     }
     if persist:
@@ -788,61 +791,34 @@ def classify_cutover_failures(verification: dict[str, Any] | None = None) -> dic
 
 
 def enable_platform_authoritative(*, force_backfill: bool = False) -> dict[str, Any]:
-    """Switch to platform-authoritative reads. Legacy data is never deleted."""
-    verification = verify_readiness()
-    if not verification.get("ready"):
-        return {
-            "ok": False,
-            "error": "cutover blocked",
-            "verification": verification,
-        }
-
+    """Compatibility endpoint: ACM is already authoritative."""
+    _ = force_backfill
     state = _load()
-    if force_backfill or not state.get("backfill_completed_at"):
-        backfill = backfill_memory()
-        if not backfill.get("ok"):
-            return {"ok": False, "error": "backfill failed", "backfill": backfill}
-        verification = verify_readiness()
-        if not verification.get("ready"):
-            return {
-                "ok": False,
-                "error": "cutover blocked after backfill",
-                "verification": verification,
-                "backfill": backfill,
-            }
-
-    os.environ["JARVIS_PLATFORM_DATA_AUTHORITATIVE"] = "1"
-    platform_dir = os.getenv("JARVIS_PLATFORM_DATA_DIR", "")
-    if platform_dir:
-        os.environ["JARVIS_DATA_DIR"] = platform_dir
-
-    state["mode"] = "platform_authoritative"
+    state["mode"] = _MODE
     state["enabled_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     _save(state)
-    logger.info("Platform data cutover enabled — platform authoritative, legacy preserved")
+    logger.info("Platform cutover enable requested; ACM remains authoritative")
     return {
         "ok": True,
-        "mode": "platform_authoritative",
-        "message": "Platform is now authoritative. Legacy data preserved.",
+        "mode": _MODE,
+        "authoritative": "acm",
+        "message": "ACM is already authoritative for cognitive memory. Platform cutover is diagnostic only.",
     }
 
 
 def rollback_to_legacy() -> dict[str, Any]:
-    """Revert to legacy-authoritative mode without data loss."""
-    legacy_dir = os.getenv("JARVIS_LEGACY_DATA_DIR", str(DATA_DIR))
-    os.environ.pop("JARVIS_PLATFORM_DATA_AUTHORITATIVE", None)
-    os.environ["JARVIS_DATA_DIR"] = legacy_dir
-
+    """Compatibility endpoint; rollback cannot demote ACM cognitive authority."""
     state = _load()
-    state["mode"] = "dual_write"
+    state["mode"] = _MODE
     state["rollback_count"] = int(state.get("rollback_count") or 0) + 1
     state["last_rollback_at"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     _save(state)
-    logger.info("Rolled back to legacy-authoritative mode")
+    logger.info("Rollback requested; ACM remains authoritative")
     return {
         "ok": True,
-        "mode": "dual_write",
-        "message": "Rolled back to legacy-authoritative mode. Platform mirror continues on writes.",
+        "mode": _MODE,
+        "authoritative": "acm",
+        "message": "ACM remains authoritative. Legacy vault is forensic only.",
     }
 
 
@@ -852,6 +828,12 @@ def status() -> dict[str, Any]:
     return {
         "ok": True,
         "mode": current_mode(),
+        "authoritative": "acm",
+        "cognitive_memory": {
+            "authority": "acm",
+            "legacy_vault": "forensic_only",
+            "platform_cutover_applicable": False,
+        },
         "state": state,
         "verification": verification,
         "legacy_data_dir": os.getenv("JARVIS_LEGACY_DATA_DIR", str(DATA_DIR)),
@@ -866,10 +848,12 @@ def format_status_markdown() -> str:
     snap = status()
     ver = snap.get("verification") or {}
     lines = [
-        "## Platform Migration",
+        "## Platform Diagnostics",
         f"**Mode:** `{snap.get('mode')}`",
+        "**Cognitive memory authority:** `ACM`",
+        "**Platform cutover:** `not applicable to cognitive memory`",
         f"**Effective data:** `{snap.get('effective_data_dir')}`",
-        f"**Ready for cutover:** {'yes' if ver.get('ready') else 'no'}",
+        f"**Platform mirror diagnostics ready:** {'yes' if ver.get('ready') else 'no'}",
     ]
     for blocker in ver.get("blockers") or []:
         lines.append(f"- blocker: {blocker}")

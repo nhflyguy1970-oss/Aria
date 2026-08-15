@@ -183,7 +183,12 @@
 
   async function restartJarvisServer() {
     const name = typeof window.ariaName === "function" ? window.ariaName() : "ARIA";
-    if (!confirm(`Restart ${name} server now?\n\nChat will reconnect in a few seconds.`)) return;
+    const msg = `Restart ${name} server now?\n\nChat will reconnect in a few seconds.`;
+    if (window.ariaConfirm) {
+      if (!(await window.ariaConfirm(msg, { title: "Restart Aria", okLabel: "Restart" }))) return;
+    } else if (!confirm(msg)) {
+      return;
+    }
     setRestartUi("busy", "Restarting server…");
     const st = $("statusText");
     if (st) st.textContent = "Restarting server…";

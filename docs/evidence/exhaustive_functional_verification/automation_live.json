@@ -1,0 +1,85 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "automation",
+  "captured_at": "2026-08-13T16:48:00+00:00",
+  "entry": "Owner Front Door → room:automation",
+  "identity": {
+    "hash": "#automation",
+    "h2": "Automation Home",
+    "place": "· Automation loft",
+    "enter_ms": 1977,
+    "first_paint": "PARTIAL — lists/summary empty at ~2s; Refresh then filled via /api/automation/home 200 in 17ms"
+  },
+  "summary_counts": {
+    "enabled": 0,
+    "disabled": 1,
+    "recent_runs": 19,
+    "failures": 2,
+    "engine": "running",
+    "webhook": "ready"
+  },
+  "list_counts": {
+    "rules": 1,
+    "runs": 19,
+    "failures": 2,
+    "skills": 3,
+    "pipelines": 7
+  },
+  "capabilities": [
+    {
+      "name": "Refresh",
+      "result": "PASS",
+      "notes": "Fills summary + lists. Identity strip explains automation vs skills vs HA vs Mission Control."
+    },
+    {
+      "name": "Search",
+      "result": "PASS",
+      "notes": "/api/automation/search ~1100ms. Query 'brief' → 34 hits (kinds only: rule/skill/workflow_dag/template). Slow vs other rooms."
+    },
+    {
+      "name": "Negative search",
+      "result": "PASS",
+      "notes": "After search settles: 'No hits'. Earlier 500ms snapshot was a race with the previous query."
+    },
+    {
+      "name": "Empty NL draft",
+      "result": "PARTIAL",
+      "notes": "Click with empty field: no toast, no editor. Silent."
+    },
+    {
+      "name": "New rule editor",
+      "result": "PASS",
+      "notes": "Opens Rule editor modal. Closed without save."
+    },
+    {
+      "name": "View Paths",
+      "result": "PASS",
+      "notes": "workflowModal titled View Paths. Closed without recording/saving."
+    },
+    {
+      "name": "Webhook",
+      "result": "PASS",
+      "notes": "Modal opens; URL present (length 84, not recorded); status present. Closed."
+    },
+    {
+      "name": "Specialist gallery",
+      "result": "PASS",
+      "notes": "Specialist gallery modal; 13 rows. Names not recorded."
+    },
+    {
+      "name": "Specialist team history",
+      "result": "PASS",
+      "notes": "Specialist team history modal; 10 rows. Goals not recorded."
+    },
+    {
+      "name": "Leave/return Mission Control",
+      "result": "PASS",
+      "notes": "#workstation · Aerospace ops → Front Door back; summary and 1 rule row restored"
+    },
+    {
+      "name": "Pause all / Resume / Import / Export / NL confirm / Propose team run",
+      "result": "N/A — NOT EXERCISED",
+      "notes": "Would pause live engine, write rules, copy secrets, or start specialist runs"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "maker",
+  "capability": "Physical A1 print via Bambu Studio / SD",
+  "captured_at": "2026-08-14T15:57:21Z",
+  "result": "SKIPPED BY JEFF — Start print handoff already PASS. Physical send not done. NOT CERTIFICATION.",
+  "not_certification": true,
+  "prior": "maker_start_print_bambu_handoff.json",
+  "handoff_left_in_place": "/media/jeff/AI/jarvis/data/engineering/handoff/printer-2/latest.gcode",
+  "hello_cube_left_in_place": "c625705b89",
+  "next_exact_capability": "Fly tying session on existing Adams dry fly olive"
+}

@@ -166,6 +166,23 @@ def build_briefing(
             prefix = f"**{t}** " if t else ""
             lines.append(f"- {prefix}{summary} _(calendar)_")
 
+    # Planner scheduled events (commitments in Planner store)
+    try:
+        from jarvis.planner_store import events_for_day, planner_enabled
+
+        if planner_enabled():
+            pev = events_for_day(d_iso)
+            if pev:
+                if not (events or ics_events):
+                    lines.extend(["", "**Today's schedule**"])
+                for ev in pev[:6]:
+                    start = ev.get("start_time") or ""
+                    t = start[11:16] if len(start) >= 16 else ""
+                    prefix = f"**{t}** " if t else ""
+                    lines.append(f"- {prefix}{ev.get('title') or ''} _(planner)_")
+    except Exception:
+        pass
+
     if calendar_note:
         lines.extend(["", f"**Calendar note:** {calendar_note}"])
 
@@ -214,6 +231,58 @@ def build_briefing(
         home_lines = briefing_home_lines(limit=6)
         if home_lines:
             lines.extend(["", *home_lines])
+
+    planner_block: dict[str, Any] = {"enabled": False}
+    if os.getenv("JARVIS_BRIEFING_PLANNER", "1") != "0":
+        try:
+            from jarvis.planner_store import format_planner_lines, load_planner
+
+            planner = load_planner()
+            planner_block = {
+                "enabled": bool(planner.get("enabled")),
+                "tasks": planner.get("tasks") or [],
+                "events": planner.get("events") or planner.get("events_today") or [],
+                "timers": planner.get("timers") or [],
+                "alarms": planner.get("alarms") or [],
+            }
+            block = format_planner_lines()
+            if block:
+                lines.extend(["", "**Planner**", block])
+            elif planner.get("enabled"):
+                # Explicit empty — avoid silent omission when planner is on
+                lines.extend(["", "**Planner:** clear — no open tasks, timers, or alarms."])
+        except Exception as exc:
+            import logging
+
+            logging.getLogger("jarvis.morning_briefing").warning(
+                "planner briefing integration failed: %s", exc
+            )
+            lines.extend(["", "_Planner data unavailable — open Planner to retry._"])
+
+    if os.getenv("JARVIS_BRIEFING_HEALTH", "1") != "0":
+        try:
+            from jarvis.health_product import store as health_store
+
+            chk = health_store.get_checkin(d_iso)
+            meds = health_store.list_table("medications", "status=?", ("current",), limit=8)
+            if chk:
+                bits = []
+                if chk.get("overall") is not None:
+                    bits.append(f"overall {chk.get('overall')}")
+                if chk.get("bp_systolic") is not None:
+                    bits.append(f"BP {chk.get('bp_systolic')}/{chk.get('bp_diastolic')}")
+                if chk.get("blood_sugar") is not None:
+                    bits.append(f"sugar {chk.get('blood_sugar')}")
+                lines.extend(["", f"**Health:** check-in on file" + (f" — {', '.join(bits)}" if bits else "") + "."])
+            else:
+                lines.extend(["", "**Health:** no daily check-in yet — open Health when ready."])
+            if meds:
+                lines.append("Current meds: " + ", ".join(str(m.get("name") or "") for m in meds[:6] if m.get("name")))
+            questions = health_store.list_table("doctor_questions", "status=?", ("open",), limit=5)
+            if questions:
+                lines.append("Questions for the doctor: " + "; ".join(str(q.get("text") or "") for q in questions[:3]))
+        except Exception:
+            pass
 
     if os.getenv("JARVIS_BRIEFING_ENV", "1") != "0":
         try:
@@ -270,5 +339,6 @@ def build_briefing(
         "morning_reflection": morning_ref,
         "news": news,
         "briefing_headlines": briefing_headlines,
+        "planner": planner_block,
         "markdown": "\n".join(lines),
     }

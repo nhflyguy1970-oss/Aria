@@ -111,11 +111,13 @@ class BranchManager:
         from_index: int | None = None,
         *,
         copy_session: bool = True,
+        copy_messages: bool = True,
     ) -> str:
         bid = str(uuid.uuid4())[:8]
         messages: list = []
         parent = from_branch or self.active_id
-        if parent and parent in self._data["branches"]:
+        # New Chat must start empty. Fork / branch_create keep history via copy_messages=True.
+        if copy_messages and parent and parent in self._data["branches"]:
             src = self._data["branches"][parent].get("messages", [])
             messages = src[: from_index + 1] if from_index is not None else list(src)
         session_data = None
@@ -125,7 +127,7 @@ class BranchManager:
             "name": name,
             "messages": messages,
             "created": datetime.now(timezone.utc).isoformat(),
-            "forked_from": parent,
+            "forked_from": parent if copy_messages else None,
             "session": session_data,
         }
         self.active_id = bid

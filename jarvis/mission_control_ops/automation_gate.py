@@ -2,55 +2,18 @@
 
 from __future__ import annotations
 
-import time
 from typing import Any
 
 
-_cache: dict[str, Any] = {"at": 0.0, "health": None}
-_CACHE_TTL = 15.0
-
-
 def get_infrastructure_health(*, force: bool = False) -> dict[str, Any]:
-    """Lightweight health summary for Automation gates."""
-    now = time.time()
-    if not force and _cache["health"] is not None and now - float(_cache["at"]) < _CACHE_TTL:
-        return dict(_cache["health"])
+    """Lightweight health summary for Automation gates.
 
-    try:
-        from jarvis.mission_control import collect_mission_control
+    Delegates to the shared Mission Control lite path (Tier 3A) — do not re-collect
+    Platform MC independently from /api/mission-control/health.
+    """
+    from jarvis.mission_control import health_summary
 
-        snap = collect_mission_control(record_metrics=False)
-    except Exception as exc:
-        health = {
-            "ok": False,
-            "overall": "unknown",
-            "severity": "warning",
-            "reason": f"Mission Control unavailable: {exc}",
-            "dangerous": False,
-        }
-        _cache.update({"at": now, "health": health})
-        return dict(health)
-
-    brief = (snap or {}).get("health_brief")
-    if not brief:
-        from jarvis.mission_control_ops.health_brief import build_health_brief
-
-        brief = build_health_brief(snap)
-
-    overall = str(brief.get("overall") or "unknown")
-    severity = str(brief.get("severity") or "ok")
-    unhealthy = overall in ("degraded", "critical") or severity in ("error", "critical")
-    health = {
-        "ok": not unhealthy,
-        "overall": overall,
-        "severity": severity,
-        "reason": brief.get("headline") or overall,
-        "critical_issues": list(brief.get("critical_issues") or [])[:5],
-        "dangerous": overall == "critical" or severity == "critical",
-        "source": "mission_control",
-    }
-    _cache.update({"at": now, "health": health})
-    return dict(health)
+    return health_summary(force=force)
 
 
 def evaluate_health_gate(

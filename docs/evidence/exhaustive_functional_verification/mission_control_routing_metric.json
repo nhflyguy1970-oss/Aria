@@ -1,0 +1,34 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-15T20:15:00Z",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "owner_session": "OWNER_UNLOCKED throughout",
+  "integrity": "clean / 100; artifacts 0",
+  "room": "mission",
+  "capability": "Routing 20.8s metric honesty",
+  "result": "PASS honesty \u2014 Routing tab shows Avg chat-route latency 20851.7 ms (intent \u2192 handler over 1 sample; LLM replies are not this console\u2019s refresh). Not console refresh. Single ConversationEngine LLM chat sample 2026-08-15T13:40:56; route_latency_ms 0. Prompt not recorded.",
+  "classification": {
+    "owner_visible": "The one sample is a real LLM chat completion (~20.8s), not MC tab refresh.",
+    "not_a_console_bug": true,
+    "mean_of_one": true,
+    "repair": "UI now shows sample count so a single LLM reply is not presented as a house-wide average."
+  },
+  "api": {
+    "GET /api/mission-control/routing/stats": {
+      "count": 1,
+      "average_latency_ms": 20851.7
+    }
+  },
+  "sample_meta": {
+    "intent": "chat",
+    "route": "Chat",
+    "handler": "ConversationEngine",
+    "backend": "LLM",
+    "route_latency_ms": 0.0,
+    "error": null
+  }
+}

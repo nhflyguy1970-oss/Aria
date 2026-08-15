@@ -5,7 +5,6 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from jarvis.automation.execution import FAILED, SKIPPED, SUCCEEDED
 from jarvis.automation.history import list_runs, recent_failures
 from jarvis.automation.migrate import migrate_storage
 from jarvis.automation.registry import list_actions
@@ -54,7 +53,7 @@ def _mc_gate_status() -> dict[str, Any]:
 
 def _engine_status() -> dict[str, Any]:
     try:
-        from jarvis.intelligence.automation_engine import status
+        from jarvis.automation.engine import status
 
         return status()
     except Exception as exc:
@@ -90,7 +89,11 @@ def _learned() -> list[dict[str, Any]]:
 def _dags() -> dict[str, Any]:
     try:
         from jarvis.automation.pipelines.runs import list_pipeline_runs
-        from jarvis.automation.pipelines.storage import list_pipelines, list_templates, recent_pipelines
+        from jarvis.automation.pipelines.storage import (
+            list_pipelines,
+            list_templates,
+            recent_pipelines,
+        )
 
         return {
             "workflows": list_pipelines(sort="updated"),
@@ -221,9 +224,17 @@ def search_automation(q: str, *, limit: int = 40) -> dict[str, Any]:
             },
         )
     for run in snap.get("pipeline_runs") or []:
-        add("pipeline_run", run.get("name") or run.get("id"), {"id": run.get("id"), "status": run.get("status")})
+        add(
+            "pipeline_run",
+            run.get("name") or run.get("id"),
+            {"id": run.get("id"), "status": run.get("status")},
+        )
     for run in snap["recent_runs"]:
-        add("run", run.get("name") or run.get("id"), {"id": run.get("id"), "status": run.get("status")})
+        add(
+            "run",
+            run.get("name") or run.get("id"),
+            {"id": run.get("id"), "status": run.get("status")},
+        )
     for sug in snap["suggestions"]:
         add("suggestion", sug.get("title") or sug.get("id"), {"id": sug.get("id")})
 

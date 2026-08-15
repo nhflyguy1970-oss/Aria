@@ -247,10 +247,36 @@
     const orig = window.showAriaToast;
     if (typeof orig !== "function" || orig._ariaNotificationsWrapped) return;
     const wrapped = function (msg, tone, ms) {
+      const text = String(msg || "Notification").slice(0, 280);
+      const lower = text.toLowerCase();
+      // Room switches abort in-flight fetches — never surface that as an owner error.
+      if (
+        /signal is aborted|request cancelled|the operation was aborted|aborterror|aria-room-leave/i.test(
+          lower,
+        )
+      ) {
+        return;
+      }
+      // Brief quiet window after AriaNet room abort: product loaders often toast
+      // generic "Could not load…" / "… unavailable" when e.message is empty.
+      const sinceAbort = Date.now() - (window.AriaNet?.lastAbortAt || 0);
+      if (
+        sinceAbort >= 0 &&
+        sinceAbort < 2500 &&
+        /could not load|unavailable|failed to load|home failed|home unavailable/i.test(lower)
+      ) {
+        return;
+      }
       const t = tone || "info";
       if (!window.__ariaActivitySuppressToast && (t === "err" || t === "warn" || t === "error" || t === "warning")) {
-        const text = String(msg || "Notification").slice(0, 280);
-        const lower = text.toLowerCase();
+        // Ephemeral connect/health retries must not fill the unread inbox
+        if (
+          /health check timed out|lost connection to aria|connection restored|retrying…|retrying\.\.\./i.test(
+            lower,
+          )
+        ) {
+          return orig.apply(this, arguments);
+        }
         let category = "notification";
         let deepLink = "";
         if (/ollama|provider|inference|model/.test(lower)) {

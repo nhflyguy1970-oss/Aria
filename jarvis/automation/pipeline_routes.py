@@ -5,12 +5,11 @@ Pipelines remain a subsystem of Automation (not a separate product).
 
 from __future__ import annotations
 
-from typing import Any
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 
 def register_pipeline_routes(app, assistant) -> None:
-    from fastapi import Request
-    from fastapi.responses import JSONResponse
 
     @app.get("/api/automation/pipelines")
     def pipelines_list(
@@ -19,7 +18,11 @@ def register_pipeline_routes(app, assistant) -> None:
         sort: str = "name",
         favorites: bool = False,
     ):
-        from jarvis.automation.pipelines.storage import list_pipelines, list_templates, recent_pipelines
+        from jarvis.automation.pipelines.storage import (
+            list_pipelines,
+            list_templates,
+            recent_pipelines,
+        )
 
         return {
             "ok": True,
@@ -45,7 +48,9 @@ def register_pipeline_routes(app, assistant) -> None:
                 name=body.get("name"),
             )
         except KeyError as exc:
-            return JSONResponse(status_code=404, content={"ok": False, "error": f"unknown template: {exc}"})
+            return JSONResponse(
+                status_code=404, content={"ok": False, "error": f"unknown template: {exc}"}
+            )
         return {"ok": True, "pipeline": wf, "reused": bool(wf.get("reused"))}
 
     @app.get("/api/automation/pipelines/{pipeline_id}")
@@ -233,7 +238,9 @@ def register_pipeline_routes(app, assistant) -> None:
     async def pipelines_nl_save(request: Request):
         body = await request.json()
         if not body.get("confirm"):
-            return JSONResponse(status_code=400, content={"ok": False, "error": "confirm=true required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "error": "confirm=true required"}
+            )
         draft = body.get("draft")
         if not isinstance(draft, dict):
             return JSONResponse(status_code=400, content={"ok": False, "error": "draft required"})

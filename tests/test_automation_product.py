@@ -166,7 +166,7 @@ def test_suggestions_not_auto_enabled(data_dir, monkeypatch):
 
 
 def test_engine_unknown_action_is_skipped(data_dir, monkeypatch):
-    from jarvis.intelligence import automation_engine as eng
+    from jarvis.automation import engine as eng
 
     eng._rules = []
     rule = eng.upsert_rule(
@@ -183,6 +183,27 @@ def test_engine_unknown_action_is_skipped(data_dir, monkeypatch):
     assert out.get("ok") is False
 
 
+def test_engine_writes_single_rules_file(data_dir):
+    from jarvis.automation import engine as eng
+    from jarvis.automation import paths as p
+
+    legacy = p.LEGACY_RULES_FILE
+    if legacy.exists():
+        legacy.unlink()
+    eng._rules = []
+    eng.upsert_rule(
+        {
+            "name": "Single file",
+            "kind": "interval",
+            "expression": "99999",
+            "action": "briefing",
+            "enabled": False,
+        }
+    )
+    assert p.RULES_FILE.is_file()
+    assert not legacy.exists()
+
+
 def test_api_routes_documented_in_product_routes():
     src = (ROOT / "jarvis" / "automation" / "product_routes.py").read_text(encoding="utf-8")
     for path in (
@@ -194,6 +215,31 @@ def test_api_routes_documented_in_product_routes():
         "/api/automation/actions",
     ):
         assert path in src, path
+
+
+def test_automation_request_annotation_resolves():
+    """Regression: local Request import + future annotations made FastAPI treat
+    `request` as a required query param, breaking rule/pipeline dry-run and run."""
+    import inspect
+
+    from fastapi import FastAPI, Request
+    from jarvis.automation.product_routes import register_automation_product_routes
+
+    app = FastAPI()
+    register_automation_product_routes(app, None)
+    for path in (
+        "/api/automation/rules",
+        "/api/automation/rules/{rule_id}/run",
+        "/api/automation/pipelines/{pipeline_id}/run",
+    ):
+        route = next(
+            r
+            for r in app.routes
+            if getattr(r, "path", None) == path and "POST" in (getattr(r, "methods", None) or set())
+        )
+        hints = inspect.get_annotations(route.endpoint, eval_str=True)
+        assert hints.get("request") is Request, path
+        assert not route.dependant.query_params, path
 
 
 def test_webhook_docs_header_only():

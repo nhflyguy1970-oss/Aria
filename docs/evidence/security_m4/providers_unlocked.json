@@ -1,0 +1,27 @@
+{
+  "updated_at": "2026-08-13T15:45:58.655637+00:00",
+  "providers": {
+    "openai": {
+      "http": 200,
+      "ms": 1929.43,
+      "ok": true,
+      "error": null,
+      "status": 200
+    },
+    "gemini": {
+      "http": 200,
+      "ms": 230.63,
+      "ok": true,
+      "error": null,
+      "status": 200
+    },
+    "huggingface": {
+      "http": 200,
+      "ms": 171.06,
+      "ok": true,
+      "error": null,
+      "status": 200
+    }
+  },
+  "secrets_in_evidence": false
+}

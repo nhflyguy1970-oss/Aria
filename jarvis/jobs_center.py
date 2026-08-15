@@ -7,6 +7,8 @@ from typing import Any
 
 
 def _sanitize_job(job: dict, *, queue: str) -> dict:
+    from pathlib import Path
+
     out = {
         "id": job.get("id"),
         "queue": queue,
@@ -24,11 +26,67 @@ def _sanitize_job(job: dict, *, queue: str) -> dict:
         res = job["result"]
         if isinstance(res, dict):
             out["result_ok"] = res.get("ok")
+            out["ok"] = res.get("ok")
             out["result_message"] = (res.get("message") or "")[:200]
             if res.get("proposal_id"):
                 out["proposal_id"] = res["proposal_id"]
             if res.get("type"):
                 out["result_type"] = res["type"]
+            # Outcome fields required for Chat/Gallery to show the real asset
+            for key in (
+                "image_path",
+                "image_name",
+                "output_path",
+                "image_paths",
+                "video_path",
+                "audio_path",
+            ):
+                if res.get(key):
+                    out[key] = res[key]
+                    out.setdefault("result", {})
+                    if isinstance(out["result"], dict):
+                        out["result"][key] = res[key]
+            # Consistency: never advertise Complete when the asset file is gone
+            asset_paths = []
+            for key in ("image_path", "video_path", "audio_path", "output_path"):
+                p = res.get(key) or out.get(key)
+                if p:
+                    asset_paths.append(str(p))
+            iname = res.get("image_name") or out.get("image_name")
+            if iname and not asset_paths:
+                from jarvis.config import DATA_DIR
+
+                asset_paths.append(str(DATA_DIR / "generated" / Path(str(iname)).name))
+            missing = False
+            for p in asset_paths:
+                try:
+                    if not Path(p).is_file():
+                        missing = True
+                        break
+                except Exception:
+                    missing = True
+                    break
+            if missing and queue == "media" and res.get("ok"):
+                out["result_ok"] = False
+                out["ok"] = False
+                out["asset_missing"] = True
+                msg = (
+                    f"Asset missing on disk ({Path(asset_paths[0]).name if asset_paths else 'unknown'}). "
+                    "Not shown as Complete."
+                )
+                out["error"] = msg
+                out["message"] = msg
+                out["result_message"] = msg
+            elif res.get("ok") and res.get("image_path") and not missing:
+                out["result"] = {
+                    "ok": True,
+                    "message": out.get("result_message") or res.get("message") or "",
+                    "type": res.get("type") or "image_result",
+                    "image_path": res.get("image_path"),
+                    "image_name": res.get("image_name"),
+                    "output_path": res.get("output_path") or res.get("image_path"),
+                    "module": res.get("module") or "image",
+                }
     if queue == "coding":
         try:
             from jarvis.coding_product.job_links import enrich_coding_job

@@ -412,19 +412,16 @@ def disambiguate_tasks_intent(message: str) -> dict[str, Any]:
         return {"action": "journal_open_tasks", "params": {}, "thinking": "journal tasks (explicit)"}
     if p and not j:
         return {"action": "planner_today", "params": {}, "thinking": "planner tasks (explicit)"}
-    # Ambiguous generic phrases → ask
+    # Ambiguous generic phrases → Planner is the daily action surface.
+    # Asking Planner vs Journal forces Jeff to think about products — don't.
     if re.search(
         r"\b(open tasks|my todos?|to-?do list|things to do|what('s| is) on my (plate|list))\b",
         lower,
     ):
         return {
-            "action": "clarify",
+            "action": "planner_today",
             "params": {},
-            "needs_clarification": True,
-            "clarification_question": "Did you mean Planner (actionable work) or Journal (bullet log)?",
-            "choices": ["Planner", "Journal"],
-            "thinking": "tasks destination ambiguous",
-            "clarification_type": "tasks_destination",
+            "thinking": "daily plate → planner (no product quiz)",
         }
     return {"action": "journal_open_tasks", "params": {}, "thinking": "journal tasks default"}
 

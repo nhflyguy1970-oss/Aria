@@ -31,6 +31,7 @@ def test_unified_settings_roundtrip(tmp_path, monkeypatch):
     loaded = vs.load_unified_settings()
     assert loaded["speak_replies"] is True
     assert loaded["duplex_mode"] == "half"
+    assert not (tmp_path / "legacy.json").exists()
 
 
 def test_voice_settings_adapter_uses_unified(tmp_path, monkeypatch):
@@ -43,6 +44,36 @@ def test_voice_settings_adapter_uses_unified(tmp_path, monkeypatch):
     data = legacy.load_voice_settings()
     assert data["duplex_mode"] == "full"
     assert legacy.stt_backend() == "whisper"
+
+
+def test_legacy_voice_settings_migrate_once(tmp_path, monkeypatch):
+    from jarvis.voice_product import settings as vs
+
+    voice_file = tmp_path / "settings.json"
+    legacy_file = tmp_path / "voice_settings.json"
+    legacy_file.write_text('{"duplex_mode": "full", "stt_backend": "vosk"}', encoding="utf-8")
+    monkeypatch.setattr(vs, "VOICE_FILE", voice_file)
+    monkeypatch.setattr(vs, "LEGACY_VOICE_FILE", legacy_file)
+
+    data = vs.load_unified_settings()
+
+    assert data["duplex_mode"] == "full"
+    assert data["stt_backend"] == "vosk"
+    assert voice_file.is_file()
+    assert not legacy_file.exists()
+
+
+def test_voice_save_does_not_mirror_audio_settings(tmp_path, monkeypatch):
+    from jarvis import audio_settings
+    from jarvis.voice_product import settings as vs
+
+    monkeypatch.setattr(vs, "VOICE_FILE", tmp_path / "settings.json")
+    monkeypatch.setattr(vs, "LEGACY_VOICE_FILE", tmp_path / "legacy.json")
+    monkeypatch.setattr(audio_settings, "SETTINGS_FILE", tmp_path / "audio_settings.json")
+
+    vs.save_unified_settings({"duplex_mode": "full"})
+
+    assert not audio_settings.SETTINGS_FILE.exists()
 
 
 def test_intent_router_gallery_and_chat_fallback():

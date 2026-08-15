@@ -1,0 +1,90 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "browser",
+  "capability": "Browser actual page load",
+  "captured_at": "2026-08-14T19:32:00Z",
+  "result": "PASS — Front Door → Browser; Open https://example.com (not empty Open); session live with URL restored after leave Documents / return. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "health_home_at_end": 200,
+  "lock_overlay_at_end": "hidden",
+  "entry": {
+    "via": "Front Door → Browser (The open web)",
+    "hash": "#browser",
+    "body_room": "browser",
+    "h2": "Browser",
+    "place": "Browser"
+  },
+  "prior_empty_open": {
+    "evidence": "enumerated_rooms_rerun.json",
+    "status": "idle · Playwright",
+    "url_line": "No page loaded. Enter URL or ask Chat"
+  },
+  "navigate": {
+    "url_typed": "https://example.com",
+    "control": "Open (#browserNavigateBtn)",
+    "empty_open": false,
+    "task": "Navigated to https://example.com/",
+    "toast": "Navigated to https://example.com/",
+    "url_line": "https://example.com/",
+    "overview": "Playwright ready · status running · session live",
+    "profile": "home-lab",
+    "engine": "running · Playwright",
+    "headless": true,
+    "step_log": [
+      "screenshot after_navigate → nav-1786735749600.png",
+      "navigate https://example.com/",
+      "launch profile=home-lab headless=True"
+    ],
+    "history_before_this_click": "Example Domain already present (prior visits)"
+  },
+  "leave_return": {
+    "via": "Front Door Rooms → Documents then Front Door recents → Browser",
+    "documents_hash": "#documents",
+    "documents_leftover_search": "woolly bugger (from Search → Documents; Search/Import not clicked)",
+    "front_door_from_browser_before_leave": "stale — You're in the middle of Mission Control (did not name Browser)",
+    "front_door_from_documents": "stale — You're in the middle of Research (did not name Documents)",
+    "return_hash": "#browser",
+    "return_url": "https://example.com/",
+    "return_session": "Playwright ready · status running · session live",
+    "return_profile": "home-lab",
+    "return_task": "Navigated to https://example.com/",
+    "overlay_after_return": "Front Door still open immediately after recents click; later snapshot Front Door closed; Browser chrome (URL, Pause/Stop, tabs) interactive; overlay did not cover the Room after settle",
+    "result": "PASS"
+  },
+  "not_clicked": [
+    "Run",
+    "Queue",
+    "Takeover",
+    "Save to Documents",
+    "Vision→Coding",
+    "Screenshot button",
+    "Bookmark ★",
+    "Install Playwright",
+    "Pause",
+    "Resume",
+    "Stop",
+    "Research",
+    "Notes"
+  ],
+  "data_mutation": {
+    "browser_session_launched": true,
+    "navigated_public_example": true,
+    "auto_screenshot_after_navigate": true,
+    "journal_post": false,
+    "health_phr": false,
+    "coding_apply": false,
+    "repair_executed": false,
+    "documents_save": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "notes": [
+    "Empty Open already proven idle. This gate is actual navigate to a public page (not localhost — SSRF guard).",
+    "Live session left running (Stop not clicked).",
+    "Front Door copy stale: Mission Control from Browser; Research from Documents.",
+    "Guided Repair overlay remains in accessibility tree while hidden."
+  ],
+  "jeff_action_required": false,
+  "next_exact_capability": "Capabilities loader (identity/refresh already proven; functions still UNKNOWN). Do not Run Browser agent. Do not execute Guided Repair. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

@@ -210,9 +210,13 @@ async function refreshHaPanel() {
       enabledToggle.checked = data.feature_on !== false && data.enabled !== false;
     }
     const conn = data.connection || {};
-    if (data.connected || conn.ok) {
+    if (data.locked || conn.locked) {
+      line.textContent = conn.message || "Home Assistant is locked. Unlock Aria with your Master Password.";
+      line.classList.add("warn");
+    } else if (data.connected || conn.ok) {
       line.textContent = `Connected${conn.version ? ` · v${conn.version}` : ""}`;
       line.classList.remove("warn");
+      if (typeof window.loadHaEntities === "function") window.loadHaEntities();
     } else if (data.token_set) {
       const host = data.url || "Home Assistant";
       line.textContent = conn.message
@@ -225,9 +229,21 @@ async function refreshHaPanel() {
       line.textContent = "Paste token below (Ctrl+V) or run ./scripts/set-ha-token.sh";
       line.classList.add("warn");
     }
+    if (data.token_set) {
+      const preview = document.getElementById("haTokenPreview");
+      const typed = document.getElementById("haTokenInput")?.value?.trim();
+      if (preview && !typed) {
+        preview.textContent = data.locked
+          ? "Owner Vault holds ha.token — unlock Aria to use it."
+          : "Using Owner Vault credential (ha.token). Token is not shown here.";
+      }
+      document.getElementById("haPasteTokenBtn")?.classList.add("hidden");
+      document.getElementById("haTokenModalBtn")?.classList.add("hidden");
+    }
     haWebhookUrl = data.automation_webhook_url || "";
     if (webhookLine && haWebhookUrl) {
-      webhookLine.textContent = `HA → ${(window.ariaName?.() || "Aria")} webhook: ${haWebhookUrl}`;
+      const shown = haWebhookUrl.replace(/([?&]secret=)[^&]*/i, "$1••••");
+      webhookLine.textContent = `HA → ${(window.ariaName?.() || "Aria")} webhook: ${shown}`;
       webhookLine.classList.remove("hidden");
       copyBtn?.classList.remove("hidden");
     } else {
@@ -276,9 +292,21 @@ function initHaPanel() {
   document.getElementById("haTestBtn")?.addEventListener("click", async () => {
     const body = haConfigBody();
     if (!body.token) {
-      haPanelStatus("Paste your token in the box above first (Ctrl+V).", "warn");
-      document.getElementById("haTokenInput")?.focus();
-      return;
+      try {
+        const st = await (await fetch("/api/homeassistant/status")).json();
+        if (st.locked) {
+          haPanelStatus("Unlock Aria to use the vault-backed Home Assistant credential.", "warn");
+          return;
+        }
+        if (!st.token_set) {
+          haPanelStatus("Paste your token in the box above first (Ctrl+V).", "warn");
+          document.getElementById("haTokenInput")?.focus();
+          return;
+        }
+      } catch (_) {
+        haPanelStatus("Could not read Home Assistant status.", "warn");
+        return;
+      }
     }
     haPanelStatus("Testing Home Assistant…");
     try {
@@ -313,12 +341,37 @@ function initHaPanel() {
       const st = document.getElementById("statusText"); if (st) st.textContent = "Webhook URL copied";
       window.showAriaToast?.("Webhook URL copied", "ok", 2500);
     } catch (_) {
-      prompt("Copy webhook URL:", haWebhookUrl);
+      if (window.ariaPrompt) {
+        await window.ariaPrompt("Copy webhook URL:", haWebhookUrl, { title: "Webhook URL", okLabel: "Close" });
+      } else {
+        prompt("Copy webhook URL:", haWebhookUrl);
+      }
     }
   });
   document.querySelectorAll(".ha-quick-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
+    btn.addEventListener("click", async () => {
       const msg = btn.dataset.msg || "";
+      if (/i'?m heading out/i.test(msg)) {
+        const scene =
+          document.getElementById("haLeaveSceneInput")?.value?.trim() ||
+          document.getElementById("haSceneComposerInput")?.value?.trim() ||
+          "scene.leaving";
+        try {
+          const res = await fetch("/api/smarthome/product/scene", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scene, confirmed: true, source: "ha_panel" }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.ok === false) {
+            throw new Error(data.message || data.detail || `Heading out failed (${res.status})`);
+          }
+          window.showAriaToast?.(data.message || "Heading out", "ok", 2500);
+        } catch (err) {
+          window.showAriaToast?.(err.message || "Heading out failed", "err", 5000);
+        }
+        return;
+      }
       if (msg) window.sendMessage?.(msg);
     });
   });

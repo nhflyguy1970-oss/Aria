@@ -564,4 +564,7 @@ def generate(
     if auto_fallback_enabled():
         return result + " (already on CPU — check ComfyUI logs or Mission Control)"
 
-    return result + " Switch ComfyUI to CPU or Auto (GPU → CPU) in Image Engine, or open Mission Control."
+    return (
+        result
+        + " Switch ComfyUI to CPU or Auto (GPU → CPU) in Image Engine, or open Mission Control."
+    )

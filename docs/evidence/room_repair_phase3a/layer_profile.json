@@ -1,0 +1,15 @@
+{
+  "platform_mc_no_metrics_ms": 5254.5,
+  "platform_mc_metrics_ms": 1098.2,
+  "enrich_ms": 2489.4,
+  "health_summary_cold_ms": 854.7,
+  "health_summary_warm_ms": 0.0,
+  "collect_metrics_false_cold_ms": 1329.9,
+  "collect_metrics_false_warm_ms": 0.0,
+  "collect_metrics_true_after_false_ms": 1337.1,
+  "collect_metrics_true_warm_ms": 0.0,
+  "daily_focus_total_ms": 2.0,
+  "focus_ok": true,
+  "briefing_len": 0,
+  "planner_store_only_ms": 1.6
+}

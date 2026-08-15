@@ -44,7 +44,7 @@ def platform_status() -> dict[str, Any]:
     )
     probe(
         "automation",
-        lambda: __import__("jarvis.intelligence.automation_engine", fromlist=["status"]).status(),
+        lambda: __import__("jarvis.automation.engine", fromlist=["status"]).status(),
     )
     probe(
         "workflows",
@@ -236,7 +236,7 @@ def bootstrap_platform(*, start_automation: bool = True) -> dict[str, Any]:
     automation = {"running": False}
     disable_auto = os.getenv("JARVIS_DISABLE_INTEL_AUTOMATION", "").strip().lower() in ("1", "true", "yes")
     if start_automation and not disable_auto:
-        from jarvis.intelligence.automation_engine import start_engine
+        from jarvis.automation.engine import start_engine
 
         automation = start_engine()
 

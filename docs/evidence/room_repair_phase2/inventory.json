@@ -1,0 +1,2372 @@
+{
+  "health": {
+    "db": "/media/jeff/AI/jarvis/data/health_product/health.db",
+    "tables": {
+      "medications": {
+        "count": 1,
+        "rows": [
+          {
+            "id": "med_39bcc7df3187",
+            "name": "Vitamin D3",
+            "brand_name": null,
+            "generic_name": null,
+            "strength": "2000 IU",
+            "dose": "1 capsule",
+            "units": null,
+            "frequency": "daily morning",
+            "purpose": "General wellness",
+            "physician": null,
+            "pharmacy": null,
+            "start_date": null,
+            "stop_date": null,
+            "status": "current",
+            "instructions": null,
+            "reason_discontinued": null,
+            "side_effects": null,
+            "notes": null,
+            "updated_at": 1786109138.3353956,
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": "manual",
+            "provenance_detail": "",
+            "recorded_by": "user",
+            "confidence": "user_entered",
+            "confirmed": 0,
+            "confirmed_at": null
+          }
+        ]
+      },
+      "dose_logs": {
+        "count": 3,
+        "rows": [
+          {
+            "id": "dose_6b1d8df5280b",
+            "day": "2026-08-07",
+            "name": "Vitamin D3",
+            "kind": "medication",
+            "status": "taken",
+            "notes": "Phase 7 walk2 afternoon dose",
+            "created_at": 1786110230.1010745,
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "dose_b7b3e3c3b1c1",
+            "day": "2026-08-07",
+            "name": "Vitamin D3",
+            "kind": "medication",
+            "status": "taken",
+            "notes": "residency morning",
+            "created_at": 1786114867.5979948,
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "dose_d79ad2f5dce9",
+            "day": "2026-08-07",
+            "name": "Vitamin D3",
+            "kind": "medication",
+            "status": "taken",
+            "notes": "Phase 7 residency morning dose",
+            "created_at": 1786109220.0,
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          }
+        ]
+      },
+      "checkins": {
+        "count": 1,
+        "rows": [
+          {
+            "id": "chk_df57c3a42785",
+            "day": "2026-08-07",
+            "recorded_at": 1786146011.611357,
+            "payload": "{\"bp_systolic\": 118, \"bp_diastolic\": 76, \"heart_rate\": 72, \"day\": \"2026-08-07\", \"id\": \"chk_df57c3a42785\", \"weight\": 182, \"overall\": 7, \"energy\": 7, \"mood\": 7, \"stress\": 4, \"pain\": 1, \"sleep_hours\": 7, \"exercise\": \"Walking\"}"
+          }
+        ]
+      },
+      "activities": {
+        "count": 1,
+        "rows": [
+          {
+            "id": "act_bc278fd2891d",
+            "day": "2026-08-07",
+            "kind": "walking",
+            "title": "Walking",
+            "start_time": "",
+            "end_time": "",
+            "duration_min": 20.0,
+            "intensity": "",
+            "calories": 101.0,
+            "distance": null,
+            "distance_units": "",
+            "steps": null,
+            "heart_rate": null,
+            "notes": "BP 120/78, walked 20 minutes",
+            "created_at": 1786116700.0816395,
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          }
+        ]
+      },
+      "vitals": {
+        "count": 33,
+        "rows": [
+          {
+            "id": "vit_b4347594840f",
+            "kind": "energy",
+            "day": "2026-08-06",
+            "recorded_at": 1786059037.6616538,
+            "value": 7.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_42621995e386",
+            "kind": "energy",
+            "day": "2026-08-06",
+            "recorded_at": 1786063988.0721626,
+            "value": 7.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_72da86f971f4",
+            "kind": "energy",
+            "day": "2026-08-06",
+            "recorded_at": 1786064462.1541283,
+            "value": 8.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_8ee6a8611e08",
+            "kind": "energy",
+            "day": "2026-08-06",
+            "recorded_at": 1786064480.9266796,
+            "value": 9.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_97b5246c2e80",
+            "kind": "energy",
+            "day": "2026-08-06",
+            "recorded_at": 1786064493.644632,
+            "value": 9.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_ad4cc6a4e21c",
+            "kind": "energy",
+            "day": "2026-08-06",
+            "recorded_at": 1786064496.1446664,
+            "value": 9.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_a4ec5fe90073",
+            "kind": "blood_pressure",
+            "day": "2026-08-07",
+            "recorded_at": 1786109254.759244,
+            "value": 118.0,
+            "value2": 76.0,
+            "units": "mmHg",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_7c174a5d67f8",
+            "kind": "heart_rate",
+            "day": "2026-08-07",
+            "recorded_at": 1786109254.77953,
+            "value": 68.0,
+            "value2": null,
+            "units": "bpm",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_0d80d3d4de7e",
+            "kind": "weight",
+            "day": "2026-08-07",
+            "recorded_at": 1786110218.2239103,
+            "value": 182.0,
+            "value2": null,
+            "units": "lb",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_80d067b2188b",
+            "kind": "heart_rate",
+            "day": "2026-08-07",
+            "recorded_at": 1786110218.2370033,
+            "value": 72.0,
+            "value2": null,
+            "units": "bpm",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_08e17e45e10d",
+            "kind": "weight",
+            "day": "2026-08-07",
+            "recorded_at": 1786116698.7401676,
+            "value": 182.0,
+            "value2": null,
+            "units": "lb",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_5abf2ea9f863",
+            "kind": "heart_rate",
+            "day": "2026-08-07",
+            "recorded_at": 1786116698.747934,
+            "value": 72.0,
+            "value2": null,
+            "units": "bpm",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_35eca6c93ff3",
+            "kind": "sleep_hours",
+            "day": "2026-08-07",
+            "recorded_at": 1786116698.7596457,
+            "value": 7.0,
+            "value2": null,
+            "units": "hr",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_1701f2038cbc",
+            "kind": "pain",
+            "day": "2026-08-07",
+            "recorded_at": 1786116698.7672987,
+            "value": 1.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_8dd48a54aa5b",
+            "kind": "mood",
+            "day": "2026-08-07",
+            "recorded_at": 1786116698.7750943,
+            "value": 7.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_3bacf5fb0611",
+            "kind": "energy",
+            "day": "2026-08-07",
+            "recorded_at": 1786116698.7839117,
+            "value": 6.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_68221b4ad3b1",
+            "kind": "stress",
+            "day": "2026-08-07",
+            "recorded_at": 1786116698.7948854,
+            "value": 4.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_deed94b18758",
+            "kind": "blood_pressure",
+            "day": "2026-08-07",
+            "recorded_at": 1786116698.8099473,
+            "value": 118.0,
+            "value2": 76.0,
+            "units": "mmHg",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_f43e46bc65c6",
+            "kind": "weight",
+            "day": "2026-08-07",
+            "recorded_at": 1786145528.4707847,
+            "value": 182.0,
+            "value2": null,
+            "units": "lb",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_9e729efba006",
+            "kind": "heart_rate",
+            "day": "2026-08-07",
+            "recorded_at": 1786145528.4822738,
+            "value": 72.0,
+            "value2": null,
+            "units": "bpm",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_cae1ac813c07",
+            "kind": "sleep_hours",
+            "day": "2026-08-07",
+            "recorded_at": 1786145528.492204,
+            "value": 7.0,
+            "value2": null,
+            "units": "hr",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_48f7d07361a9",
+            "kind": "pain",
+            "day": "2026-08-07",
+            "recorded_at": 1786145528.5003295,
+            "value": 1.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_f0ee7dabf1c4",
+            "kind": "energy",
+            "day": "2026-08-07",
+            "recorded_at": 1786145528.5079634,
+            "value": 7.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_0d645fe5c287",
+            "kind": "stress",
+            "day": "2026-08-07",
+            "recorded_at": 1786145528.5155416,
+            "value": 4.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_e5e3d6a8c666",
+            "kind": "blood_pressure",
+            "day": "2026-08-07",
+            "recorded_at": 1786145528.5230553,
+            "value": 118.0,
+            "value2": 76.0,
+            "units": "mmHg",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_01d69c765a0f",
+            "kind": "weight",
+            "day": "2026-08-07",
+            "recorded_at": 1786146011.623741,
+            "value": 182.0,
+            "value2": null,
+            "units": "lb",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_e074b47ff074",
+            "kind": "heart_rate",
+            "day": "2026-08-07",
+            "recorded_at": 1786146011.6326926,
+            "value": 72.0,
+            "value2": null,
+            "units": "bpm",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_5f7a46d6e4fb",
+            "kind": "sleep_hours",
+            "day": "2026-08-07",
+            "recorded_at": 1786146011.6403904,
+            "value": 7.0,
+            "value2": null,
+            "units": "hr",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_904b52e7082b",
+            "kind": "pain",
+            "day": "2026-08-07",
+            "recorded_at": 1786146011.6484492,
+            "value": 1.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_227f0037994e",
+            "kind": "mood",
+            "day": "2026-08-07",
+            "recorded_at": 1786146011.6558707,
+            "value": 7.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_c69d153263d9",
+            "kind": "energy",
+            "day": "2026-08-07",
+            "recorded_at": 1786146011.6634865,
+            "value": 7.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_4d3aefb463cf",
+            "kind": "stress",
+            "day": "2026-08-07",
+            "recorded_at": 1786146011.6708987,
+            "value": 4.0,
+            "value2": null,
+            "units": "",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          },
+          {
+            "id": "vit_0363b17d8d76",
+            "kind": "blood_pressure",
+            "day": "2026-08-07",
+            "recorded_at": 1786146011.681627,
+            "value": 118.0,
+            "value2": 76.0,
+            "units": "mmHg",
+            "notes": "",
+            "person_id": null,
+            "source_system": null,
+            "external_id": null,
+            "device_id": null,
+            "provenance": null,
+            "provenance_detail": null,
+            "recorded_by": null,
+            "confidence": null,
+            "confirmed": 0,
+            "confirmed_at": null
+          }
+        ]
+      },
+      "events": {
+        "count": 56,
+        "rows": [
+          {
+            "id": "evt_f5fdea46db79",
+            "ts": 1786059037.6583314,
+            "verb": "checkin",
+            "detail": "2026-08-06"
+          },
+          {
+            "id": "evt_7d2a31a4422b",
+            "ts": 1786059037.6672838,
+            "verb": "vital",
+            "detail": "energy=7.0"
+          },
+          {
+            "id": "evt_d2f18e88ce28",
+            "ts": 1786063988.0691724,
+            "verb": "checkin",
+            "detail": "2026-08-06"
+          },
+          {
+            "id": "evt_3b4547424968",
+            "ts": 1786063988.0771413,
+            "verb": "vital",
+            "detail": "energy=7.0"
+          },
+          {
+            "id": "evt_d8c0ae1bf670",
+            "ts": 1786064462.1484327,
+            "verb": "checkin",
+            "detail": "2026-08-06"
+          },
+          {
+            "id": "evt_07b31cbfbec2",
+            "ts": 1786064462.1643116,
+            "verb": "vital",
+            "detail": "energy=8.0"
+          },
+          {
+            "id": "evt_ea7a09d23a23",
+            "ts": 1786064480.923706,
+            "verb": "checkin",
+            "detail": "2026-08-06"
+          },
+          {
+            "id": "evt_b78e7920d1a1",
+            "ts": 1786064480.9315634,
+            "verb": "vital",
+            "detail": "energy=9.0"
+          },
+          {
+            "id": "evt_1d6bee3c88f9",
+            "ts": 1786064493.6416051,
+            "verb": "checkin",
+            "detail": "2026-08-06"
+          },
+          {
+            "id": "evt_070081f243b9",
+            "ts": 1786064493.6492226,
+            "verb": "vital",
+            "detail": "energy=9.0"
+          },
+          {
+            "id": "evt_0bfef6492b3d",
+            "ts": 1786064496.1417508,
+            "verb": "checkin",
+            "detail": "2026-08-06"
+          },
+          {
+            "id": "evt_986067cb5881",
+            "ts": 1786064496.1493053,
+            "verb": "vital",
+            "detail": "energy=9.0"
+          },
+          {
+            "id": "evt_4cc4e57648c2",
+            "ts": 1786069333.9112246,
+            "verb": "vital",
+            "detail": "blood_sugar=118.0"
+          },
+          {
+            "id": "evt_c0e6f9fb03ce",
+            "ts": 1786069333.9196775,
+            "verb": "checkin",
+            "detail": "2026-08-06"
+          },
+          {
+            "id": "evt_9e9eab28a327",
+            "ts": 1786069333.928895,
+            "verb": "vital",
+            "detail": "blood_sugar=118.0"
+          },
+          {
+            "id": "evt_2f1162f82f27",
+            "ts": 1786069333.9366763,
+            "verb": "checkin",
+            "detail": "2026-08-06"
+          },
+          {
+            "id": "evt_279120bdd995",
+            "ts": 1786109138.3484902,
+            "verb": "medications_upsert",
+            "detail": "Vitamin D3"
+          },
+          {
+            "id": "evt_727570765311",
+            "ts": 1786109227.4364064,
+            "verb": "dose_log",
+            "detail": "taken:Vitamin D3"
+          },
+          {
+            "id": "evt_8061a176880d",
+            "ts": 1786109254.7725558,
+            "verb": "vital",
+            "detail": "blood_pressure=118.0"
+          },
+          {
+            "id": "evt_6fc241a8c3a0",
+            "ts": 1786109254.795282,
+            "verb": "vital",
+            "detail": "heart_rate=68.0"
+          },
+          {
+            "id": "evt_0061f4a00606",
+            "ts": 1786109254.8140755,
+            "verb": "checkin",
+            "detail": "2026-08-07"
+          },
+          {
+            "id": "evt_a8f435086012",
+            "ts": 1786110218.2340167,
+            "verb": "vital",
+            "detail": "weight=182.0"
+          },
+          {
+            "id": "evt_f2853ca0c138",
+            "ts": 1786110218.2417824,
+            "verb": "vital",
+            "detail": "heart_rate=72.0"
+          },
+          {
+            "id": "evt_522669bc6211",
+            "ts": 1786110218.249707,
+            "verb": "checkin",
+            "detail": "2026-08-07"
+          },
+          {
+            "id": "evt_1de3ccbca9db",
+            "ts": 1786110230.1188974,
+            "verb": "dose_log",
+            "detail": "taken:Vitamin D3"
+          },
+          {
+            "id": "evt_4f5ea6a5df37",
+            "ts": 1786114867.608434,
+            "verb": "dose_log",
+            "detail": "taken:Vitamin D3"
+          },
+          {
+            "id": "evt_32222107e6a1",
+            "ts": 1786116698.737215,
+            "verb": "checkin",
+            "detail": "2026-08-07"
+          },
+          {
+            "id": "evt_267bb78a439a",
+            "ts": 1786116698.7449756,
+            "verb": "vital",
+            "detail": "weight=182.0"
+          },
+          {
+            "id": "evt_b022bcaab1a6",
+            "ts": 1786116698.7524724,
+            "verb": "vital",
+            "detail": "heart_rate=72.0"
+          },
+          {
+            "id": "evt_f0660d32086e",
+            "ts": 1786116698.7642865,
+            "verb": "vital",
+            "detail": "sleep_hours=7.0"
+          },
+          {
+            "id": "evt_1ae2ee0da39a",
+            "ts": 1786116698.7720675,
+            "verb": "vital",
+            "detail": "pain=1.0"
+          },
+          {
+            "id": "evt_d3adb0e33c10",
+            "ts": 1786116698.7806065,
+            "verb": "vital",
+            "detail": "mood=7.0"
+          },
+          {
+            "id": "evt_c208c41905c9",
+            "ts": 1786116698.789912,
+            "verb": "vital",
+            "detail": "energy=6.0"
+          },
+          {
+            "id": "evt_551e03d0afef",
+            "ts": 1786116698.8045113,
+            "verb": "vital",
+            "detail": "stress=4.0"
+          },
+          {
+            "id": "evt_1cbcb747cd9b",
+            "ts": 1786116698.819455,
+            "verb": "vital",
+            "detail": "blood_pressure=118.0"
+          },
+          {
+            "id": "evt_ac693c73a6be",
+            "ts": 1786116700.0877647,
+            "verb": "activity",
+            "detail": "walking 2026-08-07"
+          },
+          {
+            "id": "evt_7741ff0a151a",
+            "ts": 1786116700.0959294,
+            "verb": "checkin",
+            "detail": "2026-08-07"
+          },
+          {
+            "id": "evt_e06391b7cf7d",
+            "ts": 1786145528.4674659,
+            "verb": "checkin",
+            "detail": "2026-08-07"
+          },
+          {
+            "id": "evt_2386d5ad12dd",
+            "ts": 1786145528.4772966,
+            "verb": "vital",
+            "detail": "weight=182.0"
+          },
+          {
+            "id": "evt_aa9220562033",
+            "ts": 1786145528.4891536,
+            "verb": "vital",
+            "detail": "heart_rate=72.0"
+          },
+          {
+            "id": "evt_c2e255380932",
+            "ts": 1786145528.4973958,
+            "verb": "vital",
+            "detail": "sleep_hours=7.0"
+          },
+          {
+            "id": "evt_64aea13ae586",
+            "ts": 1786145528.5050619,
+            "verb": "vital",
+            "detail": "pain=1.0"
+          },
+          {
+            "id": "evt_4d913a51d455",
+            "ts": 1786145528.512576,
+            "verb": "vital",
+            "detail": "energy=7.0"
+          },
+          {
+            "id": "evt_e8a0a80adb46",
+            "ts": 1786145528.5201392,
+            "verb": "vital",
+            "detail": "stress=4.0"
+          },
+          {
+            "id": "evt_457de1cbf1fa",
+            "ts": 1786145528.5279894,
+            "verb": "vital",
+            "detail": "blood_pressure=118.0"
+          },
+          {
+            "id": "evt_978eaee0f052",
+            "ts": 1786146011.6207135,
+            "verb": "checkin",
+            "detail": "2026-08-07"
+          },
+          {
+            "id": "evt_d2fd59029753",
+            "ts": 1786146011.6296656,
+            "verb": "vital",
+            "detail": "weight=182.0"
+          },
+          {
+            "id": "evt_9ff41b2014b1",
+            "ts": 1786146011.6374793,
+            "verb": "vital",
+            "detail": "heart_rate=72.0"
+          },
+          {
+            "id": "evt_2e302384b7a9",
+            "ts": 1786146011.6455374,
+            "verb": "vital",
+            "detail": "sleep_hours=7.0"
+          },
+          {
+            "id": "evt_bd2b2886c9f9",
+            "ts": 1786146011.6529403,
+            "verb": "vital",
+            "detail": "pain=1.0"
+          },
+          {
+            "id": "evt_f131cb14e62b",
+            "ts": 1786146011.660544,
+            "verb": "vital",
+            "detail": "mood=7.0"
+          },
+          {
+            "id": "evt_0ec75c988e16",
+            "ts": 1786146011.6679416,
+            "verb": "vital",
+            "detail": "energy=7.0"
+          },
+          {
+            "id": "evt_7d155b39075c",
+            "ts": 1786146011.6786935,
+            "verb": "vital",
+            "detail": "stress=4.0"
+          },
+          {
+            "id": "evt_64aba9c7a5fa",
+            "ts": 1786146011.6862147,
+            "verb": "vital",
+            "detail": "blood_pressure=118.0"
+          },
+          {
+            "id": "evt_ff518279fead",
+            "ts": 1786195299.617277,
+            "verb": "backup",
+            "detail": "aria-health-20260808-092139.json"
+          },
+          {
+            "id": "evt_e6dca64ad690",
+            "ts": 1786537749.1336987,
+            "verb": "dose_log_restore",
+            "detail": "dose_d79ad2f5dce9"
+          }
+        ]
+      },
+      "backups": {
+        "count": 1,
+        "rows": [
+          {
+            "id": "bak_7a69c9914d45",
+            "created_at": 1786195299.607722,
+            "path": "/media/jeff/AI/jarvis/data/health_product/backups/aria-health-20260808-092139.json",
+            "filename": "aria-health-20260808-092139.json",
+            "format": "jarvis-health-v1",
+            "encrypted": 1,
+            "size_bytes": 42784.0,
+            "sha256": "afcc3c4f574f4993aed275e8937ce895bc173c06d3ddf16fc5f1054c2c0e675f",
+            "record_counts": "{\"checkins\": 2, \"medical_notes\": 0, \"medications\": 1, \"supplements\": 0, \"conditions\": 0, \"allergies\": 0, \"vitals\": 35, \"labs\": 0, \"symptoms\": 0, \"vaccinations\": 0, \"documents\": 0, \"reminders\": 0, \"doctor_questions\": 0, \"consultations\": 0, \"visits\": 0, \"missed_doses\": 0, \"activities\": 1, \"workouts\": 0, \"workout_sets\": 0, \"goals\": 0, \"health_journal\": 0, \"knowledge\": 0, \"providers\": 0, \"procedures\": 0, \"dose_logs\": 6, \"recovery_events\": 0, \"milestones\": 0, \"family_history\": 0, \"preventive_care\": 0, \"nutrition_log\": 0, \"health_observations\": 0, \"pending_mutations\": 0, \"events\": 57, \"backups\": 0, \"restore_log\": 0}",
+            "schema_version": 4.0,
+            "app_version": "",
+            "kind": "manual",
+            "verified_at": 1786195337.201027,
+            "verify_status": "ok",
+            "restored_at": null,
+            "notes": "C731 residency encrypted backup"
+          }
+        ]
+      },
+      "restore_log": {
+        "count": 0,
+        "rows": []
+      },
+      "schema_meta": {
+        "count": 1,
+        "rows": [
+          {
+            "key": "schema_version",
+            "value": "4"
+          }
+        ]
+      }
+    },
+    "backup_files": [
+      "aria-health-20260808-092139.json"
+    ]
+  },
+  "planner": {
+    "db": "/media/jeff/AI/jarvis/data/planner.db",
+    "task_count": 50,
+    "wool": [
+      {
+        "id": "9e3ace063d",
+        "text": "pick up wool yarn for fly tying",
+        "completed": 1,
+        "created_at": "2026-08-07T15:09:27",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 0,
+        "source": "planner"
+      },
+      {
+        "id": "64165768f9",
+        "text": "pick up wool yarn for fly tying",
+        "completed": 0,
+        "created_at": "2026-08-07T15:09:27",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "a449d226ee",
+        "text": "pick up wool yarn for fly tying",
+        "completed": 0,
+        "created_at": "2026-08-07T15:09:42",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "43e4d3f799",
+        "text": "pick up wool yarn for fly tying",
+        "completed": 0,
+        "created_at": "2026-08-07T15:09:42",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "44fdbbaab8",
+        "text": "pick up wool yarn for fly tying",
+        "completed": 0,
+        "created_at": "2026-08-07T15:09:43",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      }
+    ],
+    "token_hits": [
+      {
+        "id": "541c32f9ed",
+        "text": "Tie ARIA-REPAIR-FLYMAT-1786456105310",
+        "completed": 0,
+        "created_at": "2026-08-11T09:48:30",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "1de35a0089",
+        "text": "ARIA-REPAIR-PLAN-1786460432852",
+        "completed": 0,
+        "created_at": "2026-08-11T11:00:32",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "533bceef11",
+        "text": "ARIA-REPAIR-PLAN-1786460450242",
+        "completed": 0,
+        "created_at": "2026-08-11T11:00:50",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "34fc57065f",
+        "text": "ARIA-REPAIR-PLAN-1786460450242-BTN",
+        "completed": 0,
+        "created_at": "2026-08-11T11:00:51",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "8fc37925b5",
+        "text": "ARIA-REPAIR-PLAN-1786460450242-API",
+        "completed": 0,
+        "created_at": "2026-08-11T11:00:52",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "043ba0cbfb",
+        "text": "ARIA-REPAIR-PLAN-TRACE-1786460498097",
+        "completed": 0,
+        "created_at": "2026-08-11T11:01:38",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "3808b56282",
+        "text": "ARIA-REPAIR-PLAN-API-1786460509",
+        "completed": 0,
+        "created_at": "2026-08-11T11:01:49",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "512f6902b7",
+        "text": "ARIA-REPAIR-PLAN-VISIBLE-TEST",
+        "completed": 0,
+        "created_at": "2026-08-11T11:02:08",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "12ae7816fa",
+        "text": "ARIA-REPAIR-PLAN-1786460646340",
+        "completed": 0,
+        "created_at": "2026-08-11T11:04:06",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "c3897ad516",
+        "text": "ARIA-REPAIR-PLAN-1786460649895",
+        "completed": 0,
+        "created_at": "2026-08-11T11:04:10",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "71bffc31da",
+        "text": "ARIA-REPAIR-PLAN-1786460695221",
+        "completed": 0,
+        "created_at": "2026-08-11T11:04:55",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "602ead91e0",
+        "text": "ARIA-REPAIR-FINAL-1786464250730",
+        "completed": 1,
+        "created_at": "2026-08-11T12:04:10",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "8a5d846563",
+        "text": "ARIA-REPAIR-E2E-PLAN-1786468681142",
+        "completed": 0,
+        "created_at": "2026-08-11T13:18:01",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "995583d509",
+        "text": "ARIA-REPAIR-E2E-PLAN-1786468805144",
+        "completed": 0,
+        "created_at": "2026-08-11T13:20:05",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      },
+      {
+        "id": "7b2fd89909",
+        "text": "ARIA-FINAL-PLAN-1786473674",
+        "completed": 0,
+        "created_at": "2026-08-11T14:41:15",
+        "due_date": null,
+        "priority": 0,
+        "deleted": 1,
+        "source": "planner"
+      }
+    ],
+    "all_texts": [
+      {
+        "id": "59ca3a5605",
+        "text": "visible-check-1785442785639",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "5775c6cbb9",
+        "text": "force-add-1785442803034",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "22b8009579",
+        "text": "ship-adv-1785447178424",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "7b8e77328b",
+        "text": "rapid-0-1785447179628",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "683c7a09f5",
+        "text": "rapid-1-1785447179629",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "5f4ef71ad5",
+        "text": "rapid-2-1785447179629",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "decabc105d",
+        "text": "rapid-3-1785447179629",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "7e5630af39",
+        "text": "rapid-4-1785447179630",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "0b3ce66eb8",
+        "text": "CONSIS_TASK_1785504452",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "7e4d44e6ec",
+        "text": "ONETRUTH_TASK_1785509085",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "f9ff7674b2",
+        "text": "workflow-planner-task",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "aef3802972",
+        "text": "QA-TASK-1785580115615",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "c364e5b51a",
+        "text": "QA_FULL planner task 20260801",
+        "deleted": 1,
+        "completed": 1
+      },
+      {
+        "id": "82ed26c46d",
+        "text": "finish Aria daily-driver friction pass",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "6811495786",
+        "text": "review woolly bugger olive flash materials",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "c94f4af41d",
+        "text": "Phase 7 residency \u2014 buy tippet 5X",
+        "deleted": 1,
+        "completed": 1
+      },
+      {
+        "id": "586aee148b",
+        "text": "Phase 7 residency A \u2014 finish whole-house walk",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "9e3ace063d",
+        "text": "pick up wool yarn for fly tying",
+        "deleted": 0,
+        "completed": 1
+      },
+      {
+        "id": "64165768f9",
+        "text": "pick up wool yarn for fly tying",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "a449d226ee",
+        "text": "pick up wool yarn for fly tying",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "43e4d3f799",
+        "text": "pick up wool yarn for fly tying",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "44fdbbaab8",
+        "text": "pick up wool yarn for fly tying",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "a6dc119889",
+        "text": "\u2022 residency note \u2014 Journal hash must match the room",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "7dcf878918",
+        "text": "Residency A34 \u2014 evening walk",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "79ff9034e2",
+        "text": "Residency A35 walk the dog",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "872c503401",
+        "text": "Residency A35 evening walk",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "672e8d1338",
+        "text": "Evening residency walk",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "582afcc745",
+        "text": "Residency evening walk",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "c419df9166",
+        "text": "QA ACCEPT task 1786383926",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "fd7d1df488",
+        "text": "ARIA-TRIAGE-E2E-PLAN-1786419226161",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "541c32f9ed",
+        "text": "Tie ARIA-REPAIR-FLYMAT-1786456105310",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "e5c761aef3",
+        "text": "Tie ARIA-TRIAGE-FLYMAT-1786456259777",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "1de35a0089",
+        "text": "ARIA-REPAIR-PLAN-1786460432852",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "533bceef11",
+        "text": "ARIA-REPAIR-PLAN-1786460450242",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "34fc57065f",
+        "text": "ARIA-REPAIR-PLAN-1786460450242-BTN",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "8fc37925b5",
+        "text": "ARIA-REPAIR-PLAN-1786460450242-API",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "7a72060c2d",
+        "text": "ARIA-TRIAGE-PLAN-1786460473689",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "043ba0cbfb",
+        "text": "ARIA-REPAIR-PLAN-TRACE-1786460498097",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "3808b56282",
+        "text": "ARIA-REPAIR-PLAN-API-1786460509",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "3987f702b7",
+        "text": "Buy milk ARIAOK-110207",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "512f6902b7",
+        "text": "ARIA-REPAIR-PLAN-VISIBLE-TEST",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "12ae7816fa",
+        "text": "ARIA-REPAIR-PLAN-1786460646340",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "c3897ad516",
+        "text": "ARIA-REPAIR-PLAN-1786460649895",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "71bffc31da",
+        "text": "ARIA-REPAIR-PLAN-1786460695221",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "602ead91e0",
+        "text": "ARIA-REPAIR-FINAL-1786464250730",
+        "deleted": 1,
+        "completed": 1
+      },
+      {
+        "id": "8a5d846563",
+        "text": "ARIA-REPAIR-E2E-PLAN-1786468681142",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "995583d509",
+        "text": "ARIA-REPAIR-E2E-PLAN-1786468805144",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "7b2fd89909",
+        "text": "ARIA-FINAL-PLAN-1786473674",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "cd655c55ea",
+        "text": "ARIA-JEFF-RW-PLAN-1786480591",
+        "deleted": 1,
+        "completed": 0
+      },
+      {
+        "id": "a35a24d0bb",
+        "text": "AUDIT-ROOM-1786504544420",
+        "deleted": 1,
+        "completed": 1
+      }
+    ]
+  },
+  "acm": {
+    "db": "/media/jeff/AI/jarvis/data/acm/cognitive.db",
+    "snapshot_count": 32,
+    "snapshots": [
+      {
+        "id": 4963,
+        "kind": "host_forget",
+        "created": 1786480784.6597042,
+        "schema_version": 1,
+        "nbytes": 9159491
+      },
+      {
+        "id": 4964,
+        "kind": "boot",
+        "created": 1786481958.9029267,
+        "schema_version": 1,
+        "nbytes": 9159491
+      },
+      {
+        "id": 4965,
+        "kind": "shutdown",
+        "created": 1786481963.7341585,
+        "schema_version": 1,
+        "nbytes": 9162236
+      },
+      {
+        "id": 4966,
+        "kind": "encode",
+        "created": 1786481967.613039,
+        "schema_version": 1,
+        "nbytes": 9168932
+      },
+      {
+        "id": 4967,
+        "kind": "encode",
+        "created": 1786481968.4946907,
+        "schema_version": 1,
+        "nbytes": 9176486
+      },
+      {
+        "id": 4968,
+        "kind": "encode",
+        "created": 1786482248.5240848,
+        "schema_version": 1,
+        "nbytes": 9185295
+      },
+      {
+        "id": 4969,
+        "kind": "host_forget",
+        "created": 1786482421.3003714,
+        "schema_version": 1,
+        "nbytes": 9217760
+      },
+      {
+        "id": 4970,
+        "kind": "shutdown",
+        "created": 1786482558.6462507,
+        "schema_version": 1,
+        "nbytes": 9224632
+      },
+      {
+        "id": 4971,
+        "kind": "boot",
+        "created": 1786482559.607101,
+        "schema_version": 1,
+        "nbytes": 9224632
+      },
+      {
+        "id": 4972,
+        "kind": "encode",
+        "created": 1786482567.3466806,
+        "schema_version": 1,
+        "nbytes": 9234064
+      },
+      {
+        "id": 4973,
+        "kind": "encode",
+        "created": 1786482568.2566595,
+        "schema_version": 1,
+        "nbytes": 9241618
+      },
+      {
+        "id": 4974,
+        "kind": "encode",
+        "created": 1786482635.71559,
+        "schema_version": 1,
+        "nbytes": 9252721
+      },
+      {
+        "id": 4975,
+        "kind": "host_forget",
+        "created": 1786483115.0586228,
+        "schema_version": 1,
+        "nbytes": 9281184
+      },
+      {
+        "id": 4976,
+        "kind": "shutdown",
+        "created": 1786488121.7581365,
+        "schema_version": 1,
+        "nbytes": 9287130
+      },
+      {
+        "id": 4977,
+        "kind": "boot",
+        "created": 1786488137.6862326,
+        "schema_version": 1,
+        "nbytes": 9287130
+      },
+      {
+        "id": 4978,
+        "kind": "encode",
+        "created": 1786488149.8669784,
+        "schema_version": 1,
+        "nbytes": 9296568
+      },
+      {
+        "id": 4979,
+        "kind": "encode",
+        "created": 1786488150.7321043,
+        "schema_version": 1,
+        "nbytes": 9304108
+      },
+      {
+        "id": 4980,
+        "kind": "encode",
+        "created": 1786488697.8342493,
+        "schema_version": 1,
+        "nbytes": 9349871
+      },
+      {
+        "id": 4981,
+        "kind": "host_forget",
+        "created": 1786488718.684808,
+        "schema_version": 1,
+        "nbytes": 9354909
+      },
+      {
+        "id": 4982,
+        "kind": "encode",
+        "created": 1786488870.6117213,
+        "schema_version": 1,
+        "nbytes": 9391641
+      },
+      {
+        "id": 4983,
+        "kind": "host_forget",
+        "created": 1786488884.7355914,
+        "schema_version": 1,
+        "nbytes": 9400946
+      },
+      {
+        "id": 4984,
+        "kind": "boot",
+        "created": 1786537669.4227986,
+        "schema_version": 1,
+        "nbytes": 9400946
+      },
+      {
+        "id": 4985,
+        "kind": "encode",
+        "created": 1786537670.064579,
+        "schema_version": 1,
+        "nbytes": 9410395
+      },
+      {
+        "id": 4986,
+        "kind": "encode",
+        "created": 1786537670.7309477,
+        "schema_version": 1,
+        "nbytes": 9417950
+      },
+      {
+        "id": 4987,
+        "kind": "boot",
+        "created": 1786538948.0024123,
+        "schema_version": 1,
+        "nbytes": 9417950
+      },
+      {
+        "id": 4988,
+        "kind": "encode",
+        "created": 1786538956.0153954,
+        "schema_version": 1,
+        "nbytes": 9427384
+      },
+      {
+        "id": 4989,
+        "kind": "encode",
+        "created": 1786538957.221873,
+        "schema_version": 1,
+        "nbytes": 9434948
+      },
+      {
+        "id": 4990,
+        "kind": "shutdown",
+        "created": 1786538966.9679034,
+        "schema_version": 1,
+        "nbytes": 9434948
+      },
+      {
+        "id": 4991,
+        "kind": "shutdown",
+        "created": 1786539066.1906219,
+        "schema_version": 1,
+        "nbytes": 9434387
+      },
+      {
+        "id": 4992,
+        "kind": "boot",
+        "created": 1786539070.235911,
+        "schema_version": 1,
+        "nbytes": 9434387
+      },
+      {
+        "id": 4993,
+        "kind": "encode",
+        "created": 1786539078.9978747,
+        "schema_version": 1,
+        "nbytes": 9443837
+      },
+      {
+        "id": 4994,
+        "kind": "encode",
+        "created": 1786539079.8860123,
+        "schema_version": 1,
+        "nbytes": 9451393
+      }
+    ],
+    "token_snapshot_ids": [
+      4963,
+      4964,
+      4965,
+      4966,
+      4967,
+      4968,
+      4969,
+      4970,
+      4971,
+      4972,
+      4973,
+      4974,
+      4975,
+      4976,
+      4977,
+      4978,
+      4979,
+      4980,
+      4981,
+      4982,
+      4983,
+      4984,
+      4985,
+      4986,
+      4987,
+      4988,
+      4989,
+      4990,
+      4991,
+      4992,
+      4993,
+      4994
+    ],
+    "latest_id": 4994,
+    "latest_token_hits": [
+      {
+        "bucket": "experiences",
+        "key": "exp_04f52a170181",
+        "snippet": "{\"id\": \"exp_04f52a170181\", \"summary\": \"Fix verified for `data/qa_wf/wf_probe.py`. Script ready to apply.\", \"sequence\": 3, \"t_start\": 1785844123.438925, \"t_encoded\": 1785844123.438925, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\""
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_cc2a2104a235",
+        "snippet": "{\"id\": \"exp_cc2a2104a235\", \"summary\": \"OC memory write 744205\", \"sequence\": 3, \"t_start\": 1786064744.2127402, \"t_encoded\": 1786064744.2127402, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attention\": 1.0, \"n"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_7ec932b82c6f",
+        "snippet": "{\"id\": \"exp_7ec932b82c6f\", \"summary\": \"OC memory api probe 123\", \"sequence\": 4, \"t_start\": 1786064774.6628127, \"t_encoded\": 1786064774.6628127, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attention\": 1.0, \""
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_d776c31f312a",
+        "snippet": "{\"id\": \"exp_d776c31f312a\", \"summary\": \"Fix verified for `data/qa_wf/wf_probe.py`. Script ready to apply.\", \"sequence\": 4, \"t_start\": 1786153487.3462472, \"t_encoded\": 1786153487.3462472, \"external_kind\": \"text\", \"cognitive_kind\": \"observatio"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_2bee9d527286",
+        "snippet": "{\"id\": \"exp_2bee9d527286\", \"summary\": \"Fix verified for `wf_probe_residency.py`. Script ready to apply.\", \"sequence\": 5, \"t_start\": 1786153906.4884768, \"t_encoded\": 1786153906.4884768, \"external_kind\": \"text\", \"cognitive_kind\": \"observation"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_815e7d8f736b",
+        "snippet": "{\"id\": \"exp_815e7d8f736b\", \"summary\": \"Fix verified for `wf_probe_residency.py`. Script ready to apply.\", \"sequence\": 6, \"t_start\": 1786154122.699031, \"t_encoded\": 1786154122.699031, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\","
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_943b21278fa4",
+        "snippet": "{\"id\": \"exp_943b21278fa4\", \"summary\": \"Fix verified for `wf_probe_residency.py`. Script ready to apply.\", \"sequence\": 7, \"t_start\": 1786154472.88661, \"t_encoded\": 1786154472.88661, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \""
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_12666fb9c53a",
+        "snippet": "{\"id\": \"exp_12666fb9c53a\", \"summary\": \"Fix verified for `wf_probe_residency.py`. Script ready to apply.\", \"sequence\": 8, \"t_start\": 1786155078.7026799, \"t_encoded\": 1786155078.7026799, \"external_kind\": \"text\", \"cognitive_kind\": \"observation"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_75d8a33ce9a0",
+        "snippet": "{\"id\": \"exp_75d8a33ce9a0\", \"summary\": \"Fix verified for `wf_probe_residency.py`. Script ready to apply.\", \"sequence\": 9, \"t_start\": 1786155273.0028331, \"t_encoded\": 1786155273.0028331, \"external_kind\": \"text\", \"cognitive_kind\": \"observation"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_e929d9028933",
+        "snippet": "{\"id\": \"exp_e929d9028933\", \"summary\": \"Fix verified for `wf_probe_residency.py`. Script ready to apply.\", \"sequence\": 10, \"t_start\": 1786156544.3776877, \"t_encoded\": 1786156544.3776877, \"external_kind\": \"text\", \"cognitive_kind\": \"observatio"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_e763a219d06e",
+        "snippet": "{\"id\": \"exp_e763a219d06e\", \"summary\": \"ARIA-REPAIR-MEM-UIAPI-55\", \"sequence\": 3, \"t_start\": 1786452421.8058538, \"t_encoded\": 1786452421.8058538, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attention\": 1.0, "
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_dbb2a4208461",
+        "snippet": "{\"id\": \"exp_dbb2a4208461\", \"summary\": \"ARIA-REPAIR-MEM-DIRECT-1786452617\", \"sequence\": 4, \"t_start\": 1786452617.8633926, \"t_encoded\": 1786452617.8633926, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attentio"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_1094308bb53d",
+        "snippet": "{\"id\": \"exp_1094308bb53d\", \"summary\": \"exactly: ARIA-REPAIR-MEM-CHAT-1786452969\", \"sequence\": 3, \"t_start\": 1786452971.8343594, \"t_encoded\": 1786452971.8343594, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"a"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_a7c60a8e62a8",
+        "snippet": "{\"id\": \"exp_a7c60a8e62a8\", \"summary\": \"exactly: ARIA-REPAIR-MEM-1786452992659\", \"sequence\": 4, \"t_start\": 1786452995.478385, \"t_encoded\": 1786452995.478385, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"atten"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_86aee6ccbcb2",
+        "snippet": "{\"id\": \"exp_86aee6ccbcb2\", \"summary\": \"exactly: ARIA-REPAIR-MEM-POSTRESTART-1786453540\", \"sequence\": 3, \"t_start\": 1786453542.9775908, \"t_encoded\": 1786453542.9775908, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birt"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_11b84af52e9f",
+        "snippet": "{\"id\": \"exp_11b84af52e9f\", \"summary\": \"exactly: ARIA-REPAIR-MEM-MAIN2-1786453547\", \"sequence\": 4, \"t_start\": 1786453549.6889286, \"t_encoded\": 1786453549.6889286, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\""
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_2cdb27fb2b05",
+        "snippet": "{\"id\": \"exp_2cdb27fb2b05\", \"summary\": \"exactly: ARIA-REPAIR-MEM-1786453684489\", \"sequence\": 3, \"t_start\": 1786453687.6165206, \"t_encoded\": 1786453687.6165206, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"att"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_c08f44fe953e",
+        "snippet": "{\"id\": \"exp_c08f44fe953e\", \"summary\": \"exactly: ARIA-REPAIR-MEM-1786454053979\", \"sequence\": 4, \"t_start\": 1786454058.846865, \"t_encoded\": 1786454058.846865, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"atten"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_8a9af201c309",
+        "snippet": "{\"id\": \"exp_8a9af201c309\", \"summary\": \"exactly: ARIA-REPAIR-MEM-1786454144169\", \"sequence\": 5, \"t_start\": 1786454147.974886, \"t_encoded\": 1786454147.974886, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"atten"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_50f68fb34549",
+        "snippet": "{\"id\": \"exp_50f68fb34549\", \"summary\": \"exactly: ARIA-REPAIR-MEM-TRACE-1786454236\", \"sequence\": 6, \"t_start\": 1786454239.1200483, \"t_encoded\": 1786454239.1200483, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\""
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_1ec16f4f8927",
+        "snippet": "{\"id\": \"exp_1ec16f4f8927\", \"summary\": \"exactly: ARIA-REPAIR-MEM-APIVS-1786454256\", \"sequence\": 7, \"t_start\": 1786454256.2362058, \"t_encoded\": 1786454256.2362058, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\""
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_be11229e03ce",
+        "snippet": "{\"id\": \"exp_be11229e03ce\", \"summary\": \"exactly: ARIA-REPAIR-MEM-CHATVS-1786454260\", \"sequence\": 8, \"t_start\": 1786454260.4117112, \"t_encoded\": 1786454260.4117112, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_08457b53bbbe",
+        "snippet": "{\"id\": \"exp_08457b53bbbe\", \"summary\": \"ARIA-REPAIR-MEM-FIX-1786454475\", \"sequence\": 3, \"t_start\": 1786454478.1735957, \"t_encoded\": 1786454478.1735957, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attention\":"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_f3283c59d13f",
+        "snippet": "{\"id\": \"exp_f3283c59d13f\", \"summary\": \"ARIA-REPAIR-MEM-1786454507044\", \"sequence\": 4, \"t_start\": 1786454510.8801017, \"t_encoded\": 1786454510.8801017, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attention\": "
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_e0488a3fb04d",
+        "snippet": "{\"id\": \"exp_e0488a3fb04d\", \"summary\": \"ARIA-REPAIR-MEM-LISTUI-1786454654\", \"sequence\": 5, \"t_start\": 1786454654.8156805, \"t_encoded\": 1786454654.8156805, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attentio"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_6cfd4410c5c8",
+        "snippet": "{\"id\": \"exp_6cfd4410c5c8\", \"summary\": \"ARIA-REPAIR-MEM-1786454769434\", \"sequence\": 6, \"t_start\": 1786454773.1199183, \"t_encoded\": 1786454773.1199183, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attention\": "
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_322413716fa7",
+        "snippet": "{\"id\": \"exp_322413716fa7\", \"summary\": \"ARIA-REPAIR-MEM-1786455139487\", \"sequence\": 7, \"t_start\": 1786455143.1342776, \"t_encoded\": 1786455143.1342776, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attention\": "
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_714587d63d4c",
+        "snippet": "{\"id\": \"exp_714587d63d4c\", \"summary\": \"ARIA-REPAIR-MEM-FINAL-1786455335\", \"sequence\": 8, \"t_start\": 1786455337.282552, \"t_encoded\": 1786455337.282552, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attention\":"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_9171e2a91139",
+        "snippet": "{\"id\": \"exp_9171e2a91139\", \"summary\": \"ARIA-REPAIR-MEM-UI_1786455350568\", \"sequence\": 9, \"t_start\": 1786455353.467902, \"t_encoded\": 1786455353.467902, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attention\":"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_48d8315f2da2",
+        "snippet": "{\"id\": \"exp_48d8315f2da2\", \"summary\": \"ARIA-REPAIR-MEM-FG-1786455611438\", \"sequence\": 10, \"t_start\": 1786455614.3092062, \"t_encoded\": 1786455614.3092062, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attentio"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_845db21de187",
+        "snippet": "{\"id\": \"exp_845db21de187\", \"summary\": \"my acceptance token is ARIA-REPAIR-TOK-1786457356\", \"sequence\": 3, \"t_start\": 1786457359.3711166, \"t_encoded\": 1786457359.3711166, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_bi"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_7be58b1c5acc",
+        "snippet": "{\"id\": \"exp_7be58b1c5acc\", \"summary\": \"ARIA-REPAIR-ACCEPT-TOKEN-1786463000\", \"sequence\": 3, \"t_start\": 1786464092.8826861, \"t_encoded\": 1786464092.8826861, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attent"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_0efe1b091d29",
+        "snippet": "{\"id\": \"exp_0efe1b091d29\", \"summary\": \"ARIA-REPAIR-ACCEPT-TOKEN-1786463001\", \"sequence\": 4, \"t_start\": 1786464112.0086663, \"t_encoded\": 1786464112.0086663, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_birth\": {\"attent"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_b7d6072faa8c",
+        "snippet": "{\"id\": \"exp_b7d6072faa8c\", \"summary\": \"my stonefly nickname is ARIA-FINAL-INV-XJ-1786473599692\", \"sequence\": 11, \"t_start\": 1786473602.4356334, \"t_encoded\": 1786473602.4356334, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"sali"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_58908469cee7",
+        "snippet": "{\"id\": \"exp_58908469cee7\", \"summary\": \"exact fact for later: ARIA-FINAL-MEMORY-1786473683-UNIQUE\", \"sequence\": 12, \"t_start\": 1786473689.0189283, \"t_encoded\": 1786473689.0189283, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"sa"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_bbc23e05add3",
+        "snippet": "{\"id\": \"exp_bbc23e05add3\", \"summary\": \"What exact ARIA-FINAL-MEMORY marker did I ask you to remember? Reply with the full marker\", \"sequence\": 13, \"t_start\": 1786473698.6037395, \"t_encoded\": 1786473698.6037395, \"external_kind\": \"text\", \"cog"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_f63f85f4ddc5",
+        "snippet": "{\"id\": \"exp_f63f85f4ddc5\", \"summary\": \"exact fact for later: ARIA-FINAL-MEMORY-1786473891-ZETA\", \"sequence\": 18, \"t_start\": 1786473899.2241943, \"t_encoded\": 1786473899.2241943, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"sali"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_115042217711",
+        "snippet": "{\"id\": \"exp_115042217711\", \"summary\": \"Recall only: what exact marker string did I ask you to remember that starts with ARIA-FINAL-MEMORY- and ends with -ZETA?\", \"sequence\": 19, \"t_start\": 1786473910.2111237, \"t_encoded\": 1786473910.2111237"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_a3ef1d58b5e2",
+        "snippet": "{\"id\": \"exp_a3ef1d58b5e2\", \"summary\": \"exact fact for later: ARIA-FINAL-MEMORY-1786474977-UNIQUE\", \"sequence\": 3, \"t_start\": 1786474983.9646356, \"t_encoded\": 1786474983.9646356, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"sal"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_cf3073f8f095",
+        "snippet": "{\"id\": \"exp_cf3073f8f095\", \"summary\": \"exact fact for later: ARIA-FINAL-MEMORY-1786475720-FORGET\", \"sequence\": 5, \"t_start\": 1786475740.9235053, \"t_encoded\": 1786475740.9235053, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"sal"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_d20723ed97a2",
+        "snippet": "{\"id\": \"exp_d20723ed97a2\", \"summary\": \"exact fact for later: ARIA-FINAL-MEMORY-1786476050-FORGET2\", \"sequence\": 3, \"t_start\": 1786476057.511412, \"t_encoded\": 1786476057.511412, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"sali"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_28870ec84cd2",
+        "snippet": "{\"id\": \"exp_28870ec84cd2\", \"summary\": \"exact fact for later: ARIA-FINAL-MEMORY-1786476211-FORGET3\", \"sequence\": 3, \"t_start\": 1786476218.932276, \"t_encoded\": 1786476218.932276, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"sali"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_14128b927b21",
+        "snippet": "{\"id\": \"exp_14128b927b21\", \"summary\": \"exact fact for later: ARIA-FINAL-MEMORY-1786476413-FORGET4\", \"sequence\": 3, \"t_start\": 1786476421.722243, \"t_encoded\": 1786476421.722243, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"sali"
+      },
+      {
+        "bucket": "experiences",
+        "key": "exp_85bef6e9fa03",
+        "snippet": "{\"id\": \"exp_85bef6e9fa03\", \"summary\": \"exact fact for later: ARIA-FINAL-MEMORY-1786476499-LW\", \"sequence\": 4, \"t_start\": 1786476513.186971, \"t_encoded\": 1786476513.186971, \"external_kind\": \"text\", \"cognitive_kind\": \"observation\", \"salience_"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_f4e8adfd660e",
+        "snippet": "{\"id\": \"con_f4e8adfd660e\", \"labels\": [\"wf_probe\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"wf_probe\", \"confidence\": 0.8500000000000001, \"importance\": 1.0, \"context_tags\": [\"coding\", \"fix-verified\", \"ns:jarvis\", \"lega"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_cbc3c86abdda",
+        "snippet": "{\"id\": \"con_cbc3c86abdda\", \"labels\": [\"write\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"write\", \"confidence\": 0.9500000000000002, \"importance\": 1.0, \"context_tags\": [\"ns:oc-cert-project-596282\", \"legacy_type:fact\"], "
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_3c98c9679753",
+        "snippet": "{\"id\": \"con_3c98c9679753\", \"labels\": [\"probe\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"probe\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:oc-cert-project-596282\", \"legacy_type:fact\"], \"evidence_ids\":"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_4c924f155ca0",
+        "snippet": "{\"id\": \"con_4c924f155ca0\", \"labels\": [\"wf_probe_residency\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"wf_probe_residency\", \"confidence\": 1.0, \"importance\": 1.0, \"context_tags\": [\"coding\", \"fix-verified\", \"ns:jarvis\", "
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_2d927401a779",
+        "snippet": "{\"id\": \"con_2d927401a779\", \"labels\": [\"aria-repair-mem-uiapi-55\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-uiapi-55\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:profile\", \"legacy_type:"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_38d7c12db4b9",
+        "snippet": "{\"id\": \"con_38d7c12db4b9\", \"labels\": [\"aria-repair-mem-direct-1786452617\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-direct-1786452617\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:profi"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_b66566200ace",
+        "snippet": "{\"id\": \"con_b66566200ace\", \"labels\": [\"aria-repair-mem-chat-1786452969\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-chat-1786452969\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:default\","
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_49af1d09cb5e",
+        "snippet": "{\"id\": \"con_49af1d09cb5e\", \"labels\": [\"aria-repair-mem-1786452992659\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-1786452992659\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-lab\", \"l"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_7a9ad77e7e45",
+        "snippet": "{\"id\": \"con_7a9ad77e7e45\", \"labels\": [\"aria-repair-mem-postrestart-1786453540\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-postrestart-1786453540\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": "
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_b2e78537e3ff",
+        "snippet": "{\"id\": \"con_b2e78537e3ff\", \"labels\": [\"aria-repair-mem-main2-1786453547\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-main2-1786453547\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-la"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_d23fc25bd315",
+        "snippet": "{\"id\": \"con_d23fc25bd315\", \"labels\": [\"aria-repair-mem-1786453684489\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-1786453684489\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-lab\", \"l"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_107ef5517d2d",
+        "snippet": "{\"id\": \"con_107ef5517d2d\", \"labels\": [\"aria-repair-mem-1786454053979\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-1786454053979\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-lab\", \"l"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_892288612011",
+        "snippet": "{\"id\": \"con_892288612011\", \"labels\": [\"aria-repair-mem-1786454144169\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-1786454144169\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-lab\", \"l"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_1894702c383b",
+        "snippet": "{\"id\": \"con_1894702c383b\", \"labels\": [\"aria-repair-mem-trace-1786454236\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-trace-1786454236\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:default"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_d2b43fc1d882",
+        "snippet": "{\"id\": \"con_d2b43fc1d882\", \"labels\": [\"aria-repair-mem-apivs-1786454256\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-apivs-1786454256\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:default"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_0fa623835b53",
+        "snippet": "{\"id\": \"con_0fa623835b53\", \"labels\": [\"aria-repair-mem-chatvs-1786454260\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-chatvs-1786454260\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:defau"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_8531bbcef3ab",
+        "snippet": "{\"id\": \"con_8531bbcef3ab\", \"labels\": [\"aria-repair-mem-fix-1786454475\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-fix-1786454475\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:default\", \""
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_9a9121f665f6",
+        "snippet": "{\"id\": \"con_9a9121f665f6\", \"labels\": [\"aria-repair-mem-1786454507044\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-1786454507044\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-lab\", \"l"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_66fe8ea72b3c",
+        "snippet": "{\"id\": \"con_66fe8ea72b3c\", \"labels\": [\"aria-repair-mem-listui-1786454654\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-listui-1786454654\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:defau"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_d47722d23444",
+        "snippet": "{\"id\": \"con_d47722d23444\", \"labels\": [\"aria-repair-mem-1786454769434\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-1786454769434\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-lab\", \"l"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_8cbc47997019",
+        "snippet": "{\"id\": \"con_8cbc47997019\", \"labels\": [\"aria-repair-mem-1786455139487\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-1786455139487\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-lab\", \"l"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_b99efab4a03c",
+        "snippet": "{\"id\": \"con_b99efab4a03c\", \"labels\": [\"aria-repair-mem-final-1786455335\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-final-1786455335\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:default"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_eca8ae84b081",
+        "snippet": "{\"id\": \"con_eca8ae84b081\", \"labels\": [\"aria-repair-mem-ui_1786455350568\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-ui_1786455350568\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-la"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_65ba57b17f42",
+        "snippet": "{\"id\": \"con_65ba57b17f42\", \"labels\": [\"aria-repair-mem-fg-1786455611438\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-mem-fg-1786455611438\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-la"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_a09af54133da",
+        "snippet": "{\"id\": \"con_a09af54133da\", \"labels\": [\"aria-repair-tok-1786457356\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-tok-1786457356\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:default\", \"legacy_t"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_0e8b6f6c66b7",
+        "snippet": "{\"id\": \"con_0e8b6f6c66b7\", \"labels\": [\"aria-repair-accept-token-1786463000\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-accept-token-1786463000\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:d"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_a22fa807b37b",
+        "snippet": "{\"id\": \"con_a22fa807b37b\", \"labels\": [\"aria-repair-accept-token-1786463001\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-repair-accept-token-1786463001\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:d"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_4db9293dc3b4",
+        "snippet": "{\"id\": \"con_4db9293dc3b4\", \"labels\": [\"aria-final-inv-xj-1786473599692\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-final-inv-xj-1786473599692\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-lab\""
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_3bdc53b4db1c",
+        "snippet": "{\"id\": \"con_3bdc53b4db1c\", \"labels\": [\"aria-final-memory-1786473683-unique\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-final-memory-1786473683-unique\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:h"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_b01227efa7cd",
+        "snippet": "{\"id\": \"con_b01227efa7cd\", \"labels\": [\"aria-final-memory\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-final-memory\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-lab\", \"legacy_type:fact\"], \"evid"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_4aec698705fb",
+        "snippet": "{\"id\": \"con_4aec698705fb\", \"labels\": [\"aria-final-memory-1786473891-zeta\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-final-memory-1786473891-zeta\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:home-"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_1ac9d5be0622",
+        "snippet": "{\"id\": \"con_1ac9d5be0622\", \"labels\": [\"aria-final-memory-1786474977-unique\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-final-memory-1786474977-unique\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:h"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_c51c71086add",
+        "snippet": "{\"id\": \"con_c51c71086add\", \"labels\": [\"aria-final-memory-1786475720-forget\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-final-memory-1786475720-forget\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns:h"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_b302a50a944d",
+        "snippet": "{\"id\": \"con_b302a50a944d\", \"labels\": [\"aria-final-memory-1786476050-forget2\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-final-memory-1786476050-forget2\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_948c7a73b9bc",
+        "snippet": "{\"id\": \"con_948c7a73b9bc\", \"labels\": [\"aria-final-memory-1786476211-forget3\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-final-memory-1786476211-forget3\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns"
+      },
+      {
+        "bucket": "concepts",
+        "key": "con_826f040e015d",
+        "snippet": "{\"id\": \"con_826f040e015d\", \"labels\": [\"aria-final-memory-1786476413-forget4\"], \"role\": \"entity\", \"attributes\": [{\"key\": \"mentioned\", \"value\": \"aria-final-memory-1786476413-forget4\", \"confidence\": 0.8, \"importance\": 1.0, \"context_tags\": [\"ns"
+      }
+    ],
+    "latest_token_hit_count": 85,
+    "ops_hits": []
+  }
+}

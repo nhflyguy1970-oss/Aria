@@ -6,34 +6,13 @@ import json
 from typing import Any
 
 from jarvis.config import DATA_DIR
+from jarvis.search_product.terminology import FACETS
 
 SETTINGS_FILE = DATA_DIR / "search_product" / "settings.json"
 
-# Always-on cores vs privacy-sensitive opt-ins
-DEFAULT_ENABLED = [
-    "documents",
-    "memory",
-    "projects",
-    "journal",
-    "code",
-    "graph",
-    "connections",
-    "audio",
-    "learned",
-    "planner",
-    "calendar",
-    "web",
-    "flytying",
-    "automation",
-    "settings",
-    "dashboard",
-    "layouts",
-    "notifications",
-    "provider_health",
-    "latency",
-]
-
-OPT_IN_DEFAULT_OFF = ["gallery", "home_assistant"]
+# Default federation follows the public facet catalog.
+DEFAULT_ENABLED = [f for f in FACETS if f != "everything"]
+OPT_IN_DEFAULT_OFF: list[str] = []
 
 DEFAULTS: dict[str, Any] = {
     "enabled_corpora": DEFAULT_ENABLED,
@@ -93,7 +72,14 @@ def save_settings(patch: dict[str, Any] | None = None) -> dict[str, Any]:
 def enabled_corpora_set(settings: dict[str, Any] | None = None) -> set[str]:
     s = settings or load_settings()
     enabled = set(s.get("enabled_corpora") or DEFAULT_ENABLED)
+    # Corpora that graduated from opt-in to default-on must not stay discarded
+    # by stale settings.json opt_in_corpora flags.
+    for corp in DEFAULT_ENABLED:
+        if corp not in OPT_IN_DEFAULT_OFF:
+            enabled.add(corp)
     for corp, on in (s.get("opt_in_corpora") or {}).items():
+        if corp in DEFAULT_ENABLED and corp not in OPT_IN_DEFAULT_OFF:
+            continue
         if on:
             enabled.add(str(corp))
         else:

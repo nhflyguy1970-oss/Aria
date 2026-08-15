@@ -1,0 +1,77 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "coding",
+  "captured_at": "2026-08-13T16:35:00+00:00",
+  "entry": "Owner Front Door → room:coding",
+  "identity": {
+    "hash": "#coding",
+    "h2": "Coding",
+    "place": "· Engineering studio",
+    "banner": "Project: Home Lab → [path] · main",
+    "first_paint_ms": 1201,
+    "ready_status": "Ready (after ~2s; first snapshot was still Loading… with empty body)"
+  },
+  "capabilities": [
+    {
+      "name": "Overview",
+      "result": "PASS",
+      "notes": "Open proposals, Recent jobs, Repository, Continue task, Quick actions"
+    },
+    {
+      "name": "Proposals tab",
+      "result": "PASS",
+      "notes": "Shows an existing owner proposal (commit prefix 603973e7, jarvis/__init__.py, Script ready to apply). Apply/Export not clicked."
+    },
+    {
+      "name": "History tab",
+      "result": "PASS",
+      "notes": "Rendered existing history (2148 chars). Content not copied into evidence."
+    },
+    {
+      "name": "Jobs tab",
+      "result": "PASS",
+      "notes": "Honest empty: No coding jobs. Long agent runs appear here and in Job Center."
+    },
+    {
+      "name": "LSP & Git",
+      "result": "PASS",
+      "notes": "LSP tools + Git summary headings; ~1095 chars"
+    },
+    {
+      "name": "Preferences",
+      "result": "PASS",
+      "notes": "Suggestions only copy; No active suggestions. Save not clicked."
+    },
+    {
+      "name": "Advanced",
+      "result": "PASS",
+      "notes": "Vision-assisted bug fix + Spec → code visible. Those workflows not started (hardware / would write code)."
+    },
+    {
+      "name": "Refresh",
+      "result": "PASS",
+      "notes": "Status Ready after refresh"
+    },
+    {
+      "name": "Open Projects",
+      "result": "PASS",
+      "notes": "#projects · Creative workshop; Front Door return to Engineering studio"
+    },
+    {
+      "name": "Job Center",
+      "result": "PASS",
+      "notes": "In-room modal jobCenterModal; Close works. While open it intercepts Coding tab clicks."
+    },
+    {
+      "name": "Models",
+      "result": "PASS",
+      "notes": "#models · Provider bay; return to Coding Ready"
+    },
+    {
+      "name": "Apply proposal / Continue task / Quick actions / Spec→code",
+      "result": "N/A — NOT EXERCISED",
+      "notes": "Would mutate the live repo or start jobs"
+    }
+  ],
+  "integrity": "clean / 100"
+}

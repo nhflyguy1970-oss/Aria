@@ -62,40 +62,24 @@
     return window.AriaActions?.askAria?.(prompt, { autoSend: true, switchView: true }) ?? false;
   }
 
-  function suggestFix(event) {
-    const hay = `${event?.title || ""} ${event?.detail || ""} ${event?.category || ""}`.toLowerCase();
-    if (/ollama|provider|model|inference|timeout/.test(hay)) {
-      window.AriaActions?.goMc?.("inference");
-      toast("Opening Mission Control · inference", "info");
-      return true;
+  async function suggestFix(event) {
+    // Guided Repair — never a blind retry. Diagnose → plan → Jeff approves.
+    try {
+      if (window.AriaGuidedRepair?.planFromEvent) {
+        const ok = await window.AriaGuidedRepair.planFromEvent(event);
+        if (ok) return true;
+      }
+    } catch (e) {
+      toast(e.message || "Guided Repair failed", "err");
     }
-    if (/job|media|comfy|video|image|coding/.test(hay)) {
-      window.AriaActions?.mission?.jobs?.();
-      return true;
-    }
-    if (/home assistant|ha |device/.test(hay)) {
-      window.AriaActions?.system?.haTest?.();
-      return true;
-    }
-    return askAbout(event);
+    // Fallback: open Mission Control recovery for a full scan
+    window.AriaActions?.goMc?.("recovery");
+    toast("Opening Mission Control · Guided Repair", "info");
+    return true;
   }
 
-  function retry(event) {
-    const hay = `${event?.title || ""} ${event?.category || ""}`.toLowerCase();
-    if (/job/.test(hay) || event?.category === "job") {
-      window.AriaActions?.system?.resumeMedia?.();
-      window.AriaActions?.mission?.jobs?.();
-      return true;
-    }
-    if (/document|index/.test(hay)) {
-      window.AriaActions?.documents?.rebuild?.();
-      return true;
-    }
-    if (/provider|ollama|router/.test(hay)) {
-      window.AriaActions?.system?.warmRouter?.();
-      window.AriaActions?.goMc?.("recovery");
-      return true;
-    }
+  async function retry(event) {
+    // Retry is still not a repair — route into Guided Repair with the same evidence.
     return suggestFix(event);
   }
 

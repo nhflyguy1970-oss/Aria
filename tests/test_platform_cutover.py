@@ -39,29 +39,26 @@ def _ready_state() -> dict:
 
 
 class TestPlatformCutover(unittest.TestCase):
-    def test_default_mode_dual_write(self):
+    def test_default_mode_acm_authoritative(self):
         with tempfile.TemporaryDirectory() as tmp:
             cutover_file = Path(tmp) / "cutover.json"
             with patch("jarvis.platform_cutover._CUTOVER_FILE", cutover_file):
-                self.assertEqual(current_mode(), "dual_write")
+                self.assertEqual(current_mode(), "acm_authoritative")
 
-    def test_apply_cutover_state_on_startup_hydrates_env(self):
+    def test_apply_cutover_state_on_startup_reports_acm(self):
         with tempfile.TemporaryDirectory() as tmp:
             cutover_file = Path(tmp) / "cutover.json"
             cutover_file.write_text(
-                json.dumps({"mode": "platform_authoritative"}),
+                json.dumps({"mode": "obsolete_platform_mode"}),
                 encoding="utf-8",
             )
             with patch("jarvis.platform_cutover._CUTOVER_FILE", cutover_file):
                 with patch.dict("os.environ", {}, clear=True):
                     result = apply_cutover_state_on_startup()
-                    self.assertTrue(result.get("applied"))
-                    self.assertEqual(
-                        __import__("os").environ.get("JARVIS_PLATFORM_DATA_AUTHORITATIVE"),
-                        "1",
-                    )
+                    self.assertFalse(result.get("applied"))
+                    self.assertEqual(result.get("authoritative"), "acm")
 
-    def test_rollback_restores_legacy(self):
+    def test_rollback_keeps_acm_authoritative(self):
         with tempfile.TemporaryDirectory() as tmp:
             cutover_file = Path(tmp) / "cutover.json"
             legacy = Path(tmp) / "legacy"
@@ -70,13 +67,15 @@ class TestPlatformCutover(unittest.TestCase):
                 with patch.dict("os.environ", {"JARVIS_LEGACY_DATA_DIR": str(legacy)}, clear=False):
                     result = rollback_to_legacy()
                     self.assertTrue(result.get("ok"))
-                    self.assertEqual(current_mode(), "dual_write")
+                    self.assertEqual(current_mode(), "acm_authoritative")
+                    self.assertEqual(result.get("authoritative"), "acm")
 
     def test_status_shape(self):
         with patch("jarvis.platform_cutover.verify_readiness", return_value={"ready": False}):
             snap = status()
             self.assertIn("mode", snap)
             self.assertIn("verification", snap)
+            self.assertEqual(snap.get("authoritative"), "acm")
 
     def test_verify_readiness_blocks_without_attachment(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -123,17 +122,14 @@ class TestPlatformCutover(unittest.TestCase):
                                     result = verify_readiness(persist=False)
             self.assertTrue(result.get("ready"), result.get("blockers"))
 
-    def test_enable_blocked_without_readiness(self):
+    def test_enable_reports_acm_authoritative_without_cutover(self):
         with tempfile.TemporaryDirectory() as tmp:
             cutover_file = Path(tmp) / "cutover.json"
             with patch("jarvis.platform_cutover._CUTOVER_FILE", cutover_file):
-                with patch(
-                    "jarvis.platform_cutover.verify_readiness",
-                    return_value={"ready": False, "blockers": ["test blocker"]},
-                ):
-                    result = enable_platform_authoritative()
-            self.assertFalse(result.get("ok"))
-            self.assertEqual(result.get("error"), "cutover blocked")
+                result = enable_platform_authoritative()
+            self.assertTrue(result.get("ok"))
+            self.assertEqual(result.get("mode"), "acm_authoritative")
+            self.assertEqual(result.get("authoritative"), "acm")
 
     def test_enable_success_when_ready(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -151,7 +147,7 @@ class TestPlatformCutover(unittest.TestCase):
                     ):
                         result = enable_platform_authoritative()
                         self.assertTrue(result.get("ok"))
-                        self.assertEqual(current_mode(), "platform_authoritative")
+                        self.assertEqual(current_mode(), "acm_authoritative")
 
     def test_backfill_memory_dry_run(self):
         mock_mem = MagicMock(spec=["list_entries"])

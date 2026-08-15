@@ -1,0 +1,162 @@
+{
+  "pass1": {
+    "/api/mission-control/health": {
+      "ms": 1745.7,
+      "bytes": 204,
+      "status": 200,
+      "ok": false
+    },
+    "/api/mission-control/health-brief": {
+      "ms": 4.6,
+      "bytes": 550,
+      "status": 200,
+      "ok": true
+    },
+    "/api/mission-control": {
+      "ms": 785.1,
+      "bytes": 192782,
+      "status": 200,
+      "ok": true
+    },
+    "/api/planner/focus": {
+      "ms": 5.3,
+      "bytes": 435,
+      "status": 200,
+      "ok": true
+    },
+    "/api/resources": {
+      "ms": 248.9,
+      "bytes": 1134,
+      "status": 200,
+      "ok": true
+    },
+    "/api/dashboard/home?stale_ok=true": {
+      "ms": 12.4,
+      "bytes": 18292,
+      "status": 200,
+      "ok": true
+    },
+    "/api/integrity/home": {
+      "ms": 64.2,
+      "bytes": 4753,
+      "status": 200,
+      "ok": true
+    },
+    "/api/activity/inbox?limit=20": {
+      "ms": 108.0,
+      "bytes": 7531,
+      "status": 200,
+      "ok": true
+    }
+  },
+  "pass2": {
+    "/api/mission-control/health": {
+      "ms": 3.2,
+      "bytes": 203,
+      "status": 200,
+      "ok": false
+    },
+    "/api/mission-control/health-brief": {
+      "ms": 1.9,
+      "bytes": 550,
+      "status": 200,
+      "ok": true
+    },
+    "/api/mission-control": {
+      "ms": 15.0,
+      "bytes": 192781,
+      "status": 200,
+      "ok": true
+    },
+    "/api/planner/focus": {
+      "ms": 3.1,
+      "bytes": 435,
+      "status": 200,
+      "ok": true
+    },
+    "/api/resources": {
+      "ms": 233.5,
+      "bytes": 1134,
+      "status": 200,
+      "ok": true
+    },
+    "/api/dashboard/home?stale_ok=true": {
+      "ms": 3.6,
+      "bytes": 18292,
+      "status": 200,
+      "ok": true
+    },
+    "/api/integrity/home": {
+      "ms": 2.2,
+      "bytes": 4753,
+      "status": 200,
+      "ok": true
+    },
+    "/api/activity/inbox?limit=20": {
+      "ms": 2.3,
+      "bytes": 7531,
+      "status": 200,
+      "ok": true
+    }
+  },
+  "pass3": {
+    "/api/mission-control/health": {
+      "ms": 15.9,
+      "bytes": 203,
+      "status": 200,
+      "ok": false
+    },
+    "/api/mission-control/health-brief": {
+      "ms": 4.0,
+      "bytes": 550,
+      "status": 200,
+      "ok": true
+    },
+    "/api/mission-control": {
+      "ms": 15.5,
+      "bytes": 192782,
+      "status": 200,
+      "ok": true
+    },
+    "/api/planner/focus": {
+      "ms": 3.2,
+      "bytes": 435,
+      "status": 200,
+      "ok": true
+    },
+    "/api/resources": {
+      "ms": 245.2,
+      "bytes": 1134,
+      "status": 200,
+      "ok": true
+    },
+    "/api/dashboard/home?stale_ok=true": {
+      "ms": 4.4,
+      "bytes": 18292,
+      "status": 200,
+      "ok": true
+    },
+    "/api/integrity/home": {
+      "ms": 3.2,
+      "bytes": 4753,
+      "status": 200,
+      "ok": true
+    },
+    "/api/activity/inbox?limit=20": {
+      "ms": 3.9,
+      "bytes": 7531,
+      "status": 200,
+      "ok": true
+    }
+  },
+  "markers": {
+    "health_cached": true,
+    "health_overall": "degraded",
+    "brief_has_health_brief": true,
+    "full_enrich_mode": "full",
+    "full_has_voice": true,
+    "full_voice_cached": false,
+    "focus_briefing_len": 30,
+    "focus_open_tasks": 0
+  }
+}

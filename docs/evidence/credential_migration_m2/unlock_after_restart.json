@@ -1,0 +1,22 @@
+{
+  "test": "M2-H unlock after restart + provider ops",
+  "at": "2026-08-13T13:34:30+00:00",
+  "owner_state_after_unlock": "OWNER_UNLOCKED",
+  "unlock_kdf_ms": 50.9,
+  "vault_entry_count": 3,
+  "source": "vault",
+  "first_provider_ops_after_unlock": {
+    "openai": {"ok": true, "http_status": 200, "latency_ms": 954},
+    "gemini": {"ok": true, "http_status": 200, "latency_ms": 240},
+    "huggingface": {"ok": true, "http_status": 200, "latency_ms": 172}
+  },
+  "first_credential_get_ms": {
+    "provider.openai.api_key": 0.09,
+    "provider.gemini.api_key": 0.06,
+    "provider.huggingface.token": 0.05
+  },
+  "no_provider_key_prompt": true,
+  "legacy_env_retained": true,
+  "note": "A hard lock occurred during a subsequent OpenAI network timeout (~8s). First-after-unlock operations were already proven. Unlock Aria for daily use.",
+  "secrets_in_evidence": false
+}

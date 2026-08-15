@@ -34,7 +34,7 @@ def learned_to_dag_draft(slug: str) -> dict[str, Any]:
             continue
         # Map free actions toward registry when possible
         mapped = _map_action(action)
-        sid = f"s{i+1}"
+        sid = f"s{i + 1}"
         step = {
             "id": sid,
             "name": name,
@@ -49,7 +49,11 @@ def learned_to_dag_draft(slug: str) -> dict[str, Any]:
         steps.append(step)
 
     if not steps:
-        return {"ok": False, "error": "learned_workflow_has_no_steps", "confirmation_required": True}
+        return {
+            "ok": False,
+            "error": "learned_workflow_has_no_steps",
+            "confirmation_required": True,
+        }
 
     draft = {
         "id": f"draft_{uuid.uuid4().hex[:8]}",

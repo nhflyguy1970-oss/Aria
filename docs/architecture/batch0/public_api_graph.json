@@ -1,0 +1,621 @@
+{
+  "total": 1088,
+  "by_prefix": {
+    "/api/journal": 86,
+    "/api/flytying": 85,
+    "/api/audio": 63,
+    "/api/smarthome": 35,
+    "/api/memory": 32,
+    "/api/planner": 32,
+    "/api/integrations": 31,
+    "/api/voice": 31,
+    "/api/mission-control": 30,
+    "/api/vision": 30,
+    "/api/models": 30,
+    "/api/capabilities": 29,
+    "/api/browser": 28,
+    "/api/engineering": 27,
+    "/api/gallery": 26,
+    "/api/settings": 26,
+    "/api/coding": 25,
+    "/api/search": 25,
+    "/api/notifications": 21,
+    "/api/layouts": 20,
+    "/api/connections": 19,
+    "/api/video-generation": 17,
+    "/api/security": 17,
+    "/api/projects": 16,
+    "/api/image-generation": 15,
+    "/api/dashboard": 14,
+    "/api/certification": 14,
+    "/api/documents": 13,
+    "/api/provider": 12,
+    "/api/knowledge": 11,
+    "/api/chat": 11,
+    "/api/workstation": 10,
+    "/api/video": 8,
+    "/api/branches": 8,
+    "/api/lsp": 8,
+    "/api/comfyui": 7,
+    "/api/latency": 7,
+    "/api/router": 7,
+    "/api/homeassistant": 6,
+    "/api/upgrade": 6,
+    "/api/git": 6,
+    "/api/audit": 6,
+    "/api/shell": 6,
+    "/api/platform": 5,
+    "/api/interfaces": 5,
+    "/api/registry": 5,
+    "/api/tools": 4,
+    "/api/prompts": 4,
+    "/api/movie": 4,
+    "/api/kasa": 4,
+    "/api/cheatsheets": 4,
+    "/api/services": 3,
+    "/api/runtime": 3,
+    "/api/agent-jobs": 3,
+    "/api/automation": 3,
+    "/api/image": 3,
+    "/api/media": 3,
+    "/api/video-gallery": 3,
+    "/api/meme-gallery": 3,
+    "/api/workflows": 3,
+    "/api/profile": 3,
+    "/api/health": 2,
+    "/api/metrics": 2,
+    "/api/resources": 2,
+    "/api/gpu": 2,
+    "/api/uncensored": 2,
+    "/api/briefing": 2,
+    "/api/actions": 2,
+    "/api/personality": 2,
+    "/api/editor": 2,
+    "/api/profiles": 2,
+    "/api/skills": 2,
+    "/api/scenes": 2,
+    "/api/room-aliases": 2,
+    "/api/presence": 2,
+    "/api/ping": 1,
+    "/api/live": 1,
+    "/api/mission": 1,
+    "/api/daily": 1,
+    "/api/personalization": 1,
+    "/api/context": 1,
+    "/api/agents": 1,
+    "/api/training": 1,
+    "/api/jobs": 1,
+    "/api/debug": 1,
+    "/api/vram": 1,
+    "/api/meme": 1,
+    "/api/suggestions": 1,
+    "/api/mode": 1,
+    "/api/apply": 1,
+    "/api/proposals": 1,
+    "/favicon.ico": 1,
+    "/": 1,
+    "/api/lan": 1,
+    "/api/environment": 1,
+    "/api/uploads": 1,
+    "/api/undo-apply": 1,
+    "/api/rag": 1,
+    "/api/code": 1,
+    "/api/admin": 1,
+    "/api/jarvis": 1,
+    "/api/background-jobs": 1,
+    "/api/activity-center": 1,
+    "/api/workspace-layouts": 1,
+    "/api/devices": 1,
+    "/api/system-info": 1,
+    "/api/monitor": 1,
+    "/api/checklist": 1,
+    "/api/world-state": 1,
+    "/api/world_state": 1,
+    "/api/curated-news": 1,
+    "/api/tool-confirm": 1,
+    "/ws/gemini-live": 1,
+    "/ws/events": 1
+  },
+  "routes_sample": [
+    {
+      "method": "GET",
+      "path": "/api/ping",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/live",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/full",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/services",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workstation",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workstation/diagnose",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/workstation/up",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/workstation/down",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/workstation/restart",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/workstation/recover",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workstation/inference",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runtime/status",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runtime/connection",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/runtime/{section}",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workstation/dashboard",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission/overview",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/health",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/health-brief",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/mission-control/inference/action",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/inference/audit",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/mission-control/verify",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/activity-correlation",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/automation-gate",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/platform-link",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/stream",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/activity/export",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/routing/export",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/routing/stats",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/routing",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/routing/{record_id}",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/timeline/export",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/timeline/stats",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/timeline",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/intent-registry",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/intent-analytics",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/performance-lab",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/mission-control/performance-lab/run",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/startup",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/sessions",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/release",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/diagnostics",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/endurance",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/bug-report/export",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mission-control/{tab}",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workstation/startup-summary",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/workstation/activity",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/knowledge/registry",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge/sync",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/knowledge/search",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge/ingest",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/knowledge/git-sync",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/memory/hierarchy",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/memory/consolidate",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/platform/cutover",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/platform/cutover/enable",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/platform/cutover/rollback",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/platform/cutover/backfill",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/platform/cutover/verify",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/daily/{intent}",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/personalization",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/context/build",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/agent-jobs",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/agent-jobs/{job_id}",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/agent-jobs/start",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/knowledge/git-sync",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tools",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tools/execute",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tools/runs",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tools/runs/{run_id}",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/agents/chain",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/services/ensure",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/metrics",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/metrics/prometheus",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/automation/maintenance",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/automation/maintenance",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/interfaces/openwebui",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/interfaces/openwebui/start",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/interfaces/n8n",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/interfaces/n8n/start",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/interfaces/grafana",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/training/status",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/jobs",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/registry/actions",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/registry/router/rules",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/debug/bundle",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/vram/preflight",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/resources",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/comfyui/settings",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/comfyui/settings",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/comfyui/settings/job/{job_id}",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/comfyui/install-nsfw/status",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/comfyui/install-nsfw",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/comfyui/install-animatediff/status",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/comfyui/install-animatediff",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/video/settings",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/video/settings",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/video/upload",
+      "file": "jarvis/gui/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/video/probe",
+      "file": "jarvis/gui/server.py"
+    }
+  ]
+}

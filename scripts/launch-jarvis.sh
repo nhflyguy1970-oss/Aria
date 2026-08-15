@@ -31,24 +31,34 @@ fi
 
 if jarvis_server_responsive; then
   jarvis_notify "$ARIA_NAME" "Opening…"
+  jarvis_ensure_tray_client
   jarvis_run_gui_foreground
   exit 0
 fi
 
 if jarvis_port_open; then
-  jarvis_log "Port ${PORT} open but API not responding — restarting stuck server"
+  jarvis_log "Port ${PORT} open but API not responding — restarting stuck canonical server"
   jarvis_notify "$ARIA_NAME" "Restarting (server was stuck)…"
-  jarvis_stop_stale
+  if ! jarvis_restart_canonical_server; then
+    jarvis_stop_stale
+  fi
 fi
 
 jarvis_notify "$ARIA_NAME" "Starting…"
-jarvis_stop_stale
 unset JARVIS_UNCENSORED
 
-# Tray daemon owns the API server — do not also start `main.py serve` (causes port fights + watchdog loop).
-if ! jarvis_start_tray_background; then
-  jarvis_log "Tray unavailable — starting headless serve"
+# systemd owns the HTTP server. Tray/GUI attach. Never spawn a second serve.
+if jarvis_start_canonical_server; then
+  :
+elif ! jarvis_start_tray_background; then
+  jarvis_log "No systemd unit and tray unavailable — starting headless serve"
   jarvis_start_serve_background
+else
+  jarvis_log "Legacy fallback: tray will own serve (systemd unit not installed)"
+fi
+
+if jarvis_server_responsive || jarvis_wait_for_server ""; then
+  jarvis_ensure_tray_client
 fi
 
 if ! jarvis_wait_for_server "${SERVE_PID:-${TRAY_PID:-}}"; then

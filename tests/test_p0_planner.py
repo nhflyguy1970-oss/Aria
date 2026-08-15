@@ -12,28 +12,10 @@ import pytest
 def planner_db(tmp_path, monkeypatch):
     db = tmp_path / "planner.db"
     monkeypatch.setattr("jarvis.planner_store.DB_PATH", db)
-    monkeypatch.setattr("jarvis.planner_store._init_db", lambda: None)
+    monkeypatch.setenv("JARVIS_PLANNER", "1")
     import jarvis.planner_store as ps
 
-    with ps._conn() as conn:
-        conn.executescript(
-            """
-            CREATE TABLE IF NOT EXISTS tasks (
-                id TEXT PRIMARY KEY, text TEXT NOT NULL, completed INTEGER DEFAULT 0, created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS events (
-                id TEXT PRIMARY KEY, title TEXT NOT NULL, start_time TEXT NOT NULL, end_time TEXT,
-                description TEXT, created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS timers (
-                id TEXT PRIMARY KEY, label TEXT, ends_at TEXT NOT NULL, created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS alarms (
-                id TEXT PRIMARY KEY, label TEXT, fire_at TEXT NOT NULL,
-                enabled INTEGER DEFAULT 1, fired INTEGER DEFAULT 0, created_at TEXT NOT NULL
-            );
-            """
-        )
+    ps._init_db()
     return ps
 
 
@@ -74,16 +56,20 @@ def test_tool_permissions_defaults():
 
 
 def test_system_info_builds():
+    from unittest.mock import MagicMock
+
     from jarvis.system_info import build_system_info
 
-    info = build_system_info()
+    info = build_system_info(assistant=MagicMock())
     assert "greeting" in info
     assert "feature_flags" in info
 
 
 def test_checklist():
+    from unittest.mock import MagicMock
+
     from jarvis.p0_checklist import run_checklist
 
-    result = run_checklist()
+    result = run_checklist(assistant=MagicMock())
     assert "checks" in result
     assert result["total"] >= 3

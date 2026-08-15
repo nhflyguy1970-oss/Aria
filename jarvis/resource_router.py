@@ -316,9 +316,7 @@ def chat_busy_hint() -> str | None:
         hint = None
     else:
         label = media.get("label") or "media render"
-        hint = (
-            f"Note: GPU queue busy ({label}) — chat still works; heavy image/video jobs are serialized."
-        )
+        hint = f"Note: GPU queue busy ({label}) — chat still works; heavy image/video jobs are serialized."
     _BUSY_HINT_CACHE = (now, hint)
     return hint
 

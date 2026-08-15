@@ -16,6 +16,20 @@ def bootstrap_runtime_connection() -> dict[str, Any]:
     report = client.connect()
     validation = validate_runtime_startup()
     merged = {**report, **validation}
+    # Soft-start intelligence platform (connectors + automation); never block boot
+    try:
+        from jarvis.intelligence.platform_bus import bootstrap_platform
+
+        intel = bootstrap_platform(start_automation=True)
+        merged["intelligence"] = {
+            "ok": bool(intel.get("ok")),
+            "connectors": intel.get("connectors"),
+            "workflows_seeded": intel.get("workflows_seeded"),
+            "automation": (intel.get("automation") or {}).get("running"),
+        }
+    except Exception as exc:
+        logger.warning("Intelligence platform bootstrap skipped: %s", exc)
+        merged["intelligence"] = {"ok": False, "error": str(exc)}
     if not merged.get("ok"):
         logger.warning(
             "Runtime connection incomplete: %s",

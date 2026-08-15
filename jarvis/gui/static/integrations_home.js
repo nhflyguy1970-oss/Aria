@@ -222,6 +222,13 @@
           .join("") || "<li class='muted'>No activity yet</li>";
       }
     } catch (e) {
+      if (
+        window.AriaNet?.isRoomAbort?.(e) ||
+        e?.name === "AbortError" ||
+        /aborted|aria-room-leave/i.test(String(e?.message || ""))
+      ) {
+        return;
+      }
       window.showAriaToast?.(e.message || "Integrations load failed", "err");
     }
   }

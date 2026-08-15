@@ -1,0 +1,50 @@
+{
+  "houseBtn": {
+    "exists": true,
+    "visible": true,
+    "label": "Open the Front Door"
+  },
+  "foyer": {
+    "open": true,
+    "title": "Where would you like to go?",
+    "welcome": "You’re in the middle of Talk with Aria. The rest of the house is through these doors.",
+    "doorCount": 18,
+    "titles": [
+      "Chat",
+      "Fly Tying",
+      "Health",
+      "Mission Control",
+      "Documents",
+      "Planner",
+      "Calendar",
+      "Gallery",
+      "Search",
+      "Coding",
+      "Projects",
+      "Memory",
+      "Voice",
+      "Repair",
+      "Integrity",
+      "Automation",
+      "AI Providers",
+      "Home Automation"
+    ],
+    "searchHidden": true,
+    "findVisible": true,
+    "hallIsDetails": true,
+    "hallOpen": false,
+    "searchFocused": false,
+    "stageSoft": true,
+    "version": "6.1.1-foyer"
+  },
+  "pass": {
+    "houseIconVisible": true,
+    "foyerOpens": true,
+    "roomsAreDoors": true,
+    "searchNotHero": true,
+    "controlsInHallway": true,
+    "arrivalSoftensRoom": true,
+    "foyerVersion": true
+  },
+  "ok": true
+}

@@ -26,12 +26,16 @@ API_VERSION = 3
 _blackfly_ready: bool | None = None
 _blackfly_checked_at: float = 0
 _BLACKFLY_RETRY_SEC = 120
+_STATUS_CACHE: dict[str, object] = {"at": 0.0, "value": None}
+_STATUS_TTL_S = 15.0
 
 
 def reset_blackfly_cache() -> None:
     global _blackfly_ready, _blackfly_checked_at
     _blackfly_ready = None
     _blackfly_checked_at = 0
+    _STATUS_CACHE["at"] = 0.0
+    _STATUS_CACHE["value"] = None
 
 
 def _prepare_blackfly(*, force: bool = False) -> bool:
@@ -61,7 +65,16 @@ def gold_available() -> bool:
     return blackfly_data_available()
 
 
-def status() -> dict[str, Any]:
+def status(*, force: bool = False) -> dict[str, Any]:
+    now = time.monotonic()
+    cached = _STATUS_CACHE.get("value")
+    if (
+        not force
+        and isinstance(cached, dict)
+        and now - float(_STATUS_CACHE.get("at") or 0) < _STATUS_TTL_S
+    ):
+        return dict(cached)
+
     st = read_status()
     st["api_version"] = API_VERSION
     st["blackfly_import"] = _prepare_blackfly()
@@ -86,7 +99,9 @@ def status() -> dict[str, Any]:
         st["hatch"] = hatch_context()
     except Exception:
         pass
-    return st
+    _STATUS_CACHE["at"] = now
+    _STATUS_CACHE["value"] = st
+    return dict(st)
 
 
 def build_gold(**kwargs) -> dict[str, Any]:

@@ -1,0 +1,47 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "home_automation",
+  "capability": "Owner UI scene chips — Movie mode",
+  "captured_at": "2026-08-14T17:30:21Z",
+  "jeff_authorized": "scenes",
+  "result": "PASS — Movie mode applied via HA. Table lamp 25% (brightness 64). NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_ui": {
+    "hash": "#homeAutomation",
+    "h2": "Home Automation",
+    "health": "Connected · http://127.0.0.1:8123",
+    "chips": ["Focus mode", "Relax", "Movie mode", "Work mode", "Sunlight"],
+    "clicked": "Movie mode",
+    "not_clicked": ["Focus mode", "Sunlight", "Heading out", "device on/off", "Apply profile"]
+  },
+  "first_click": {
+    "toast": "**Movie mode** failed: [kasa] light.table_lamp: No Kasa device matches 'light.table_lamp'",
+    "cause": "device_router fell through HA entity ids to Kasa"
+  },
+  "repair_router": {
+    "file": "jarvis/device_router.py",
+    "change": "HA entity ids skip Kasa; HA errors stay HA"
+  },
+  "reclick_after_router": {
+    "toast": "**Movie mode** failed: [ha] light.table_lamp: Home Assistant HTTP 400: 400: Bad Request",
+    "router_repair": "PROVEN — error is HA not Kasa",
+    "cause": "light.turn_on sent both brightness_pct and brightness"
+  },
+  "repair_light_payload": {
+    "file": "jarvis/ha_light_control.py",
+    "change": "send brightness 0-255 only, not also brightness_pct"
+  },
+  "apply_after_payload_repair": {
+    "toast": "**Movie mode:** [ha] **Table lamp** (`light.table_lamp`) — 25%",
+    "via": "scene_presets / ha",
+    "table_lamp": {"id": "light.table_lamp", "state": "on", "brightness": 64, "pct": 25},
+    "result": "PASS"
+  },
+  "leave_return": {
+    "left": "#presence / Presence",
+    "returned": "#homeAutomation / Home Automation / Connected · http://127.0.0.1:8123",
+    "result": "PASS"
+  },
+  "lamp_left_at": "25% — Jeff can raise it from HA or a brighter scene; Work mode / Heading out not clicked",
+  "next_exact_capability": "HA device toggles and Heading out still unclicked unless Jeff authorizes. Do not start Owner Residency. Do not certify 34/34."
+}

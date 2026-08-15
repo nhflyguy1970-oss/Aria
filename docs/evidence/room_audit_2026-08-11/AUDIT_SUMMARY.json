@@ -1,0 +1,15 @@
+{
+  "date": "2026-08-11",
+  "runtime": "http://127.0.0.1:8765/?workspace=1",
+  "pid": 3255320,
+  "tab": "3b1a59",
+  "rooms_total": 34,
+  "certified_functional": 0,
+  "not_certified_functional": 22,
+  "unknown": 12,
+  "owner_na": 0,
+  "dependency_blocked_room_level": 0,
+  "final_question": "NO",
+  "report": "docs/ARIA_COMPLETE_ROOM_FUNCTIONALITY_AUDIT.md",
+  "no_application_code_changed": true
+}

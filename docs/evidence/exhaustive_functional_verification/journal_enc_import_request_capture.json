@@ -1,0 +1,48 @@
+{
+  "requests": [
+    {
+      "export": {
+        "keys": [
+          "ciphertext",
+          "format",
+          "salt"
+        ],
+        "format": "jarvis-journal-v1",
+        "has_salt": true,
+        "has_ciphertext": true,
+        "extra_keys": [],
+        "nested": null
+      },
+      "password": "***",
+      "merge": true
+    }
+  ],
+  "responses": [
+    {
+      "status": 400,
+      "data": {
+        "ok": false,
+        "message": "Wrong password or corrupt file"
+      }
+    }
+  ],
+  "steps": [
+    "file_set",
+    "prompt_open",
+    {
+      "prompt_title": "Encrypted import"
+    },
+    "prompt_ok",
+    "confirm_open",
+    {
+      "confirm_body": "Merge with existing journal? Cancel replaces all."
+    },
+    "confirm_merge"
+  ],
+  "toast": {
+    "journalToast": "Wrong password or corrupt file",
+    "toastHidden": false
+  },
+  "journal_unchanged": true,
+  "mtime_unchanged": true
+}

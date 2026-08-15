@@ -61,13 +61,25 @@ def knowledge_search(
 
     results = legacy_search(query, **kwargs)
     if knowledge_retrieval_enabled():
+        # Shadow verification must never block the owner Search path. Legacy
+        # results are authoritative until platform cutover; run verify async.
         try:
+            import threading
+
             from aiplatform.applications.knowledge_retrieval.bridge import shadow_verify_retrieval
             from aiplatform.applications.knowledge_retrieval.metrics import record_legacy_retrieval
 
             record_legacy_retrieval(_APPLICATION_ID, corpus)
             limit = int(kwargs.get("limit", 5))
-            shadow_verify_retrieval(_APPLICATION_ID, corpus, query, results, limit=limit)
+            snapshot = list(results)
+
+            def _shadow() -> None:
+                try:
+                    shadow_verify_retrieval(_APPLICATION_ID, corpus, query, snapshot, limit=limit)
+                except Exception as exc:
+                    logger.debug("Knowledge shadow retrieval skipped: %s", exc)
+
+            threading.Thread(target=_shadow, name="kr-shadow", daemon=True).start()
         except Exception as exc:
             logger.debug("Knowledge shadow retrieval skipped: %s", exc)
     return results

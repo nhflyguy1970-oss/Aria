@@ -11,6 +11,36 @@
     html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
     html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
     html = html.replace(/```([\s\S]*?)```/g, "<pre><code>$1</code></pre>");
+    // Render only trusted local media markdown as real images (reload must show the asset).
+    // External ![…](https://…) is a known LLM lie — never embed; surface as a failure.
+    html = html.replace(
+      /!\[([^\]]*)\]\(([^)\s]+)\)/g,
+      (_m, alt, url) => {
+        const u = String(url || "").trim();
+        const local =
+          /^\/api\/(gallery|meme-gallery|uploads|video-gallery|audio\/file)\b/i.test(u) ||
+          /^\/media\//i.test(u);
+        if (!local) {
+          return (
+            `<p class="chat-fake-media warn" role="status">` +
+            `Image link was not a real Aria asset (blocked external URL). ` +
+            `Generation did not produce a Gallery file.</p>`
+          );
+        }
+        const name = (u.split("/").pop() || "image").split("?")[0];
+        const src = typeof window.apiAuthUrl === "function" ? window.apiAuthUrl(u) : u;
+        const altEsc = escapeHtml(alt || name);
+        // Path shape must include /generated/ so resolveImageUrl maps to Gallery.
+        const pathGuess = `data/generated/${decodeURIComponent(name)}`;
+        return (
+          `<figure class="gen-image" data-image-path="${escapeHtml(pathGuess)}">` +
+          `<img class="clickable-image" src="${escapeHtml(src)}" alt="${altEsc}" ` +
+          `loading="lazy" decoding="async" data-full-src="${escapeHtml(src)}" ` +
+          `data-image-path="${escapeHtml(pathGuess)}" title="Click to view and edit" />` +
+          `<figcaption>${escapeHtml(name)}</figcaption></figure>`
+        );
+      }
+    );
     html = html.replace(/\n/g, "<br>");
     return html;
   }

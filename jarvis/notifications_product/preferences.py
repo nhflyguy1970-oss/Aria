@@ -39,17 +39,6 @@ def _ensure() -> None:
 
 def load_preferences() -> dict[str, Any]:
     data = dict(DEFAULT_PREFS)
-    # Mirror Settings global flags when present
-    try:
-        from jarvis.settings_product.appearance import load_global
-
-        g = load_global()
-        if "notifications_enabled" in g:
-            data["enabled"] = bool(g.get("notifications_enabled"))
-        if "soft_tips" in g:
-            data["soft_tips"] = bool(g.get("soft_tips"))
-    except Exception:
-        pass
     if PREFS_FILE.is_file():
         try:
             raw = json.loads(PREFS_FILE.read_text(encoding="utf-8"))
@@ -72,18 +61,6 @@ def save_preferences(patch: dict[str, Any] | None = None) -> dict[str, Any]:
                 data[k] = v
     _ensure()
     PREFS_FILE.write_text(json.dumps(data, indent=2, default=str), encoding="utf-8")
-    # Sync Settings global mirror for enable/soft_tips
-    try:
-        from jarvis.settings_product.appearance import save_global
-
-        save_global(
-            {
-                "notifications_enabled": bool(data.get("enabled")),
-                "soft_tips": bool(data.get("soft_tips")),
-            }
-        )
-    except Exception:
-        pass
     return data
 
 
@@ -178,7 +155,11 @@ def route_decision(evt: dict[str, Any], prefs: dict[str, Any] | None = None) -> 
     )
     voice = bool(prefs.get("voice_summaries")) and critical
 
-    if quiet and not critical:
+    if prefs.get("dnd"):
+        toast = False
+        desktop = False
+        voice = False
+    elif quiet and not critical:
         toast = False
         desktop = False
         voice = False

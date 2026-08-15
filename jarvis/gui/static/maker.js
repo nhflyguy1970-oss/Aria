@@ -166,10 +166,15 @@
       const data = await engFetch("/api/engineering/slice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model_id: selectedModelId }),
+        body: JSON.stringify({
+          model_id: selectedModelId,
+          printer_model: $("printerModelSelect")?.value || "",
+        }),
       });
       if (log) log.textContent = `G-code: ${data.gcode_path}`;
-      wrap.dataset.lastGcode = data.gcode_path;
+      lastGcode = data.gcode_path || "";
+      const viewer = $("cadViewer");
+      if (viewer) viewer.dataset.lastGcode = lastGcode;
       window.showAriaToast?.("Slice complete", "ok", 2500);
     } catch (e) {
       if (log) log.textContent = e.message;
@@ -177,16 +182,20 @@
     }
   }
 
-  const wrap = { dataset: {} };
+  let lastGcode = "";
 
   async function refreshPrinter() {
     const line = $("printerStatusLine");
     try {
       const st = await engFetch("/api/engineering/printer/status");
       if (line) {
-        line.textContent = st.ok
-          ? `${st.printer?.name || "Printer"} — ${st.state} · bed ${st.bed_c}°C · nozzle ${st.nozzle_c}°C`
-          : (st.message || st.error || "No printer");
+        if (st.ok && (st.mode === "no_lan" || st.state === "handoff")) {
+          line.textContent = `${st.printer?.name || st.model || "Printer"} — Bambu Studio / SD handoff`;
+        } else {
+          line.textContent = st.ok
+            ? `${st.printer?.name || "Printer"} — ${st.state} · bed ${st.bed_c}°C · nozzle ${st.nozzle_c}°C`
+            : (st.message || st.error || "No printer");
+        }
       }
     } catch (e) {
       if (line) line.textContent = e.message;
@@ -244,7 +253,7 @@
   }
 
   async function startPrint() {
-    const gcode = wrap.dataset.lastGcode || "";
+    const gcode = lastGcode || $("cadViewer")?.dataset?.lastGcode || "";
     if (!gcode) {
       window.showAriaToast?.("Slice a model first", "warn", 3500);
       return;

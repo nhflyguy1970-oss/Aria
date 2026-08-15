@@ -1,0 +1,501 @@
+{
+  "phase": 1,
+  "certification": "runtime_live",
+  "purpose": "Runtime Certification evidence \u2014 not R1 selection by this script alone",
+  "backend_before": {
+    "ok": true,
+    "version": "3.1.0"
+  },
+  "url": "http://127.0.0.1:8765/",
+  "soak_sec": 180,
+  "results": [
+    {
+      "candidate": "E3",
+      "mode": "stage_only_webengine",
+      "fluent_chrome": false,
+      "url": "http://127.0.0.1:8765/",
+      "events": [
+        {
+          "t": 0.4,
+          "msg": "window_shown"
+        },
+        {
+          "t": 1.42,
+          "msg": "loadFinished ok=True"
+        },
+        {
+          "t": 2.09,
+          "msg": "navigate chat"
+        },
+        {
+          "t": 7.51,
+          "msg": "navigate health"
+        },
+        {
+          "t": 12.49,
+          "msg": "navigate flytying"
+        },
+        {
+          "t": 17.5,
+          "msg": "navigate workstation"
+        },
+        {
+          "t": 22.49,
+          "msg": "navigate planner"
+        },
+        {
+          "t": 27.49,
+          "msg": "navigate gallery"
+        },
+        {
+          "t": 32.5,
+          "msg": "navigate documents"
+        },
+        {
+          "t": 37.51,
+          "msg": "navigate coding"
+        },
+        {
+          "t": 42.48,
+          "msg": "navigate search"
+        },
+        {
+          "t": 47.49,
+          "msg": "navigate dashboard"
+        },
+        {
+          "t": 189.67,
+          "msg": "cert_complete"
+        }
+      ],
+      "rss_samples_kb": [
+        613168,
+        621296,
+        628524,
+        670508,
+        695700,
+        702396,
+        710020,
+        722284,
+        725400,
+        731476,
+        741408,
+        741412,
+        743004,
+        743004,
+        746308,
+        746312,
+        746992,
+        746996,
+        747764,
+        747764,
+        748828,
+        748828,
+        749644,
+        749644,
+        750420,
+        750420,
+        751956,
+        751964,
+        752888,
+        752892,
+        753736,
+        753740,
+        754848,
+        754864,
+        755768,
+        755768,
+        756668,
+        756672,
+        757936,
+        757940,
+        758832,
+        758832,
+        759852,
+        759852,
+        760900,
+        760900,
+        761796,
+        761796,
+        762696,
+        762700,
+        764012,
+        763972,
+        764912,
+        764912,
+        765808,
+        765808,
+        766640,
+        766640,
+        770920,
+        770936,
+        772588,
+        772616
+      ],
+      "gpu_samples": [
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 576,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 576,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 5,
+          "mem_used_mb": 127,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 548,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 127,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 138,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 576,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 576,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 576,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 576,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 1,
+          "mem_used_mb": 236,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 1,
+          "mem_used_mb": 548,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 3,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 572,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 572,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 127,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 152,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 576,
+          "mem_total_mb": 12288
+        }
+      ],
+      "room_tour": [
+        {
+          "room": "chat",
+          "t": 2.09
+        },
+        {
+          "room": "health",
+          "t": 7.51
+        },
+        {
+          "room": "flytying",
+          "t": 12.49
+        },
+        {
+          "room": "workstation",
+          "t": 17.5
+        },
+        {
+          "room": "planner",
+          "t": 22.49
+        },
+        {
+          "room": "gallery",
+          "t": 27.49
+        },
+        {
+          "room": "documents",
+          "t": 32.5
+        },
+        {
+          "room": "coding",
+          "t": 37.51
+        },
+        {
+          "room": "search",
+          "t": 42.48
+        },
+        {
+          "room": "dashboard",
+          "t": 47.49
+        }
+      ],
+      "errors": [
+        "backend_after: timed out"
+      ],
+      "feels_like_browser": "risk_medium_chromium_engine_but_native_window",
+      "backend_live_after": false,
+      "invisible_computer_notes": "Native window title controllable; no browser URL bar. Still Chromium under the hood \u2014 identity depends on branding/packaging.",
+      "peak_rss_mb": 754.5,
+      "load_ok": true,
+      "load_sec": 1.42,
+      "wall_sec": 189.7
+    }
+  ]
+}

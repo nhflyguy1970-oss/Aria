@@ -71,11 +71,21 @@ async function reloadBranchMessages() {
     if (!(data.messages || []).length) {
       const showed = await maybeShowMorningBriefing();
       if (!showed) {
-        window.addMessage?.(
-          "assistant",
-          `Hello! I'm ${(window.ariaName?.() || "ARIA")}. Ask **what can you do?** to see my abilities, or say **morning briefing** for today's summary.`,
-          { type: "info" }
-        );
+        if (window.AriaLivingRoom?.isActive?.()) {
+          window.addMessage?.(
+            "assistant",
+            "Come in. Sit down.\n\nI'm here whenever you are.",
+            { type: "info" }
+          );
+          document.querySelector("#messages .message.assistant")?.classList.add("welcome");
+          window.AriaLivingRoom?.setStatus?.("Listening quietly");
+        } else {
+          window.addMessage?.(
+            "assistant",
+            `Hello! I'm ${(window.ariaName?.() || "ARIA")}. Ask **what can you do?** to see my abilities, or say **morning briefing** for today's summary.`,
+            { type: "info" }
+          );
+        }
       }
     }
     return true;
@@ -189,11 +199,39 @@ clearMainBranchBtn?.addEventListener("click", async () => {
       );
       return;
     }
+    // Outcome check — never trust API ok alone; never treat verify failure as empty
+    const verify = await fetch("/api/branches/main/messages");
+    if (!verify.ok) {
+      window.showError?.(
+        `Clear Main verify failed (HTTP ${verify.status}) — Main not confirmed empty.`,
+      );
+      window.showAriaToast?.("Clear Main failed verification", "err", 5000);
+      return;
+    }
+    const verified = await verify.json().catch(() => null);
+    if (!verified || !Array.isArray(verified.messages)) {
+      window.showError?.("Clear Main verify returned invalid payload — Main not confirmed empty.");
+      window.showAriaToast?.("Clear Main failed verification", "err", 5000);
+      return;
+    }
+    const remaining = verified.messages.filter(
+      (m) => m && (m.role === "user" || m.role === "assistant")
+    );
+    if (remaining.length) {
+      window.showError?.(
+        `Clear Main reported success but ${remaining.length} message(s) remain on Main.`,
+      );
+      window.showAriaToast?.("Clear Main failed verification", "err", 5000);
+      return;
+    }
     await loadBranches();
     if (window.activeBranchId === "main") {
       await reloadBranchMessages();
+      window.showAriaToast?.("Main cleared", "ok", 2500);
     } else {
-      (document.getElementById("statusText") || {}).textContent = "Main branch cleared (still on current branch)";
+      (document.getElementById("statusText") || {}).textContent =
+        "Main branch cleared (still on current branch)";
+      window.showAriaToast?.("Main cleared (you are on another branch)", "ok", 3500);
     }
   } catch (e) {
     window.showError?.(`Clear failed: ${e.message || e}`);

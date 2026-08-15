@@ -76,11 +76,12 @@ SEMANTIC_AUTOBIO_QUERY = re.compile(
     r"how\s+sure\s+are\s+you\s+that\b|"
     r"how\s+certain\s+are\s+you\s+that\b|"
     r"when\s+should\s+i\s+(?:work|fish|hike|go)\b|"
-    r"what\s+should\s+i\s+(?:do|work)\b|"
+    # Bare "what should I do?" is troubleshooting, not autobiography.
+    r"what\s+should\s+i\s+(?:do|work)\s+(?:about|with|for)\s+my\b|"
     r"will\s+i\s+(?:definitely|certainly|probably|likely)\b|"
     r"am\s+i\s+(?:definitely|certainly|probably)\s+going\s+to\b|"
-    r"what\s+will\s+happen\b|"
-    r"will\s+(?:it|i|we)\b|"
+    r"what\s+will\s+happen\s+(?:to\s+me|if\s+i)\b|"
+    r"will\s+i\b|"
     r"am\s+i\s+(?:going\s+to|likely\s+to)\b"
     r")",
     re.I,

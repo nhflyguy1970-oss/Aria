@@ -258,6 +258,22 @@ def test_settings_catalog_registers_layouts():
     assert (restore.get("deep_link") or {}).get("action") == "open_layouts"
 
 
+def test_layout_ui_keeps_server_as_source_of_truth():
+    from pathlib import Path
+
+    workspace = Path("jarvis/gui/static/workspace_layouts.js").read_text(encoding="utf-8")
+    dashboard_home = Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8")
+    dashboard_widgets = Path("jarvis/gui/static/dashboard_widgets.js").read_text(encoding="utf-8")
+    prefs = Path("jarvis/gui/static/ui_prefs.js").read_text(encoding="utf-8")
+
+    assert '"workspaceLayouts"' not in workspace
+    assert "workspaceLayouts" not in prefs
+    assert 'fetch("/api/layouts/save"' in workspace
+    assert 'fetch("/api/dashboard/layout"' in dashboard_widgets
+    assert "Prefer local customize prefs" not in dashboard_home
+    assert 'window.AriaUiPrefs?.set?.("dashboardLayout", next)' not in dashboard_widgets
+
+
 def test_honest_starter_note_in_catalog(tmp_path, monkeypatch):
     _patch_store(tmp_path, monkeypatch)
     cat = catalog_payload()

@@ -57,10 +57,41 @@ function mc$(id) {
 }
 
 async function mcFetch(url, opts = {}) {
-  const res = await fetch(url, opts);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.message || data.detail || res.statusText);
-  return data;
+  const timeoutMs = opts.timeoutMs ?? 20000;
+  const { timeoutMs: _drop, ...fetchOpts } = opts;
+  const ctrl = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    try {
+      ctrl.abort("aria-mc-timeout");
+    } catch (_) {
+      ctrl.abort();
+    }
+  }, timeoutMs);
+  try {
+    const res = await fetch(url, { ...fetchOpts, signal: ctrl.signal });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || data.detail || res.statusText);
+    return data;
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      // Room thrash aborts via AriaNet — never mislabel as Mission timeout.
+      if (!timedOut) throw err;
+      throw new Error(`Timed out loading ${url}`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function mcIsAbort(err) {
+  return !!(
+    window.AriaNet?.isRoomAbort?.(err) ||
+    err?.name === "AbortError" ||
+    /aborted|aria-room-leave/i.test(String(err?.message || ""))
+  );
 }
 
 function mcEsc(s) {
@@ -287,6 +318,20 @@ function renderOverview(d) {
          </p>`
       )
     : "";
+  const integrity = d.integrity || {};
+  const integrityCard = integrity.product
+    ? mcCard(
+        "Production Integrity",
+        `<p>Score: <strong>${mcEsc(integrity.integrity_score ?? integrity.score?.overall ?? "—")}/100</strong> · status <strong>${mcEsc(integrity.status || integrity.state || "unknown")}</strong></p>
+         <p>Artifacts ${integrity.artifacts_found ?? integrity.pending_issues ?? 0} · ${mcEsc(integrity.detail || "")}</p>
+         <p class="muted tiny">${mcEsc(integrity.note || "Scans never auto-delete. Score never hides problems.")}</p>
+         <p class="mc-actions">
+           <button type="button" class="ghost-btn small" data-mc-tab="recovery">Guided Repair</button>
+           <a class="ghost-btn small" href="/api/integrity/score" target="_blank">Score</a>
+           <a class="ghost-btn small" href="/api/integrity/home" target="_blank">Integrity Home</a>
+         </p>`
+      )
+    : "";
   const latency = d.latency || {};
   const cur = latency.current || {};
   const ft = latency.first_token || {};
@@ -333,6 +378,7 @@ function renderOverview(d) {
       layoutsCard,
       notificationsCard,
       providerHealthCard,
+      integrityCard,
       latencyCard,
     ].filter(Boolean))}
     ${renderNotifications(d.notifications)}
@@ -613,7 +659,7 @@ function renderRoutingOverviewCard(stats) {
   return mcCard(
     "Routing",
     `<p><strong>Last route:</strong> ${mcEsc(last.intent || "—")} → ${mcEsc(last.route || "—")}</p>
-     <p>Avg latency: <strong>${s.average_latency_ms ?? "—"}</strong> ms</p>
+     <p>Avg chat-route latency: <strong>${s.average_latency_ms ?? "—"}</strong> ms <span class="muted tiny">(intent → handler over ${s.count} sample${s.count === 1 ? "" : "s"}; LLM replies are not this console’s refresh)</span></p>
      <p>Runtime ${s.runtime_pct ?? 0}% · Search ${s.search_pct ?? 0}% · Knowledge ${s.knowledge_pct ?? 0}% · Tools ${s.tool_pct ?? 0}%</p>
      <p>Fallback ${s.fallback_pct ?? 0}% · Errors ${s.error_pct ?? 0}%</p>`
   );
@@ -751,7 +797,12 @@ function renderConnection(conn) {
       "Runtime connection",
       `<table class="mc-table">
         ${row("Platform discovered", conn.platform_discovered)}
-        ${row("Mission Control reachable", conn.mission_control_reachable)}
+        ${row(
+          conn.connection_mode === "in_process"
+            ? "Mission Control (in-process)"
+            : "Mission Control reachable",
+          conn.mission_control_reachable
+        )}
         ${row("ApplicationHost connected", conn.application_host_connected)}
         ${row("Application registered", conn.application_registered)}
         ${row("Runtime synced", conn.runtime_synced)}
@@ -847,9 +898,16 @@ async function renderMcTab(tab) {
       const conn = await mcFetch("/api/runtime/connection");
       html = (window.renderConnection || renderConnection)(conn);
     } catch (e) {
+      if (mcIsAbort(e)) return;
       html = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
-    if (!stillCurrent()) return;
+    if (!stillCurrent()) {
+      /* Newer render superseded us — only apply if that render left us stranded on Loading for this tab */
+      if (_mcTab === tab && /^Loading/i.test((body.textContent || "").trim())) {
+        body.innerHTML = html;
+      }
+      return;
+    }
     body.innerHTML = html;
     return;
   }
@@ -857,12 +915,18 @@ async function renderMcTab(tab) {
     body.innerHTML = "<p class='muted'>Loading routing inspector…</p>";
     try {
       const { records, stats } = await loadRoutingInspector();
-      if (!stillCurrent()) return;
+      if (!stillCurrent()) {
+        if (_mcTab === tab && /^Loading/i.test((body.textContent || "").trim())) {
+          body.innerHTML = renderRoutingInspector(records, stats);
+          wireRoutingInspector();
+        }
+        return;
+      }
       body.innerHTML = renderRoutingInspector(records, stats);
       wireRoutingInspector();
       if (_mcRoutingLive) body.scrollTop = body.scrollHeight;
     } catch (e) {
-      if (!stillCurrent()) return;
+      if (!stillCurrent() || mcIsAbort(e)) return;
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
     return;
@@ -874,7 +938,7 @@ async function renderMcTab(tab) {
       if (!stillCurrent()) return;
       body.innerHTML = renderIntentAnalytics(data);
     } catch (e) {
-      if (!stillCurrent()) return;
+      if (!stillCurrent() || mcIsAbort(e)) return;
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
     return;
@@ -887,7 +951,7 @@ async function renderMcTab(tab) {
       body.innerHTML = renderReleaseDashboard(data);
       wireMcTabActions();
     } catch (e) {
-      if (!stillCurrent()) return;
+      if (!stillCurrent() || mcIsAbort(e)) return;
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
     return;
@@ -900,7 +964,7 @@ async function renderMcTab(tab) {
       body.innerHTML = renderTimelineInspector(events, stats);
       wireTimelineInspector();
     } catch (e) {
-      if (!stillCurrent()) return;
+      if (!stillCurrent() || mcIsAbort(e)) return;
       body.innerHTML = `<p class="muted">${mcEsc(e.message)}</p>`;
     }
     return;
@@ -1052,12 +1116,19 @@ function ensureMcDelegates() {
     }
     if (e.target.closest?.("#mcRepairBtn")) {
       try {
+        if (window.AriaGuidedRepair?.scanAndShow) {
+          await window.AriaGuidedRepair.scanAndShow();
+          loadMissionControl();
+          return;
+        }
         const data = await mcFetch("/api/workstation/recover", { method: "POST" });
         const issues = data.report?.warnings ?? data.report?.issues?.length ?? 0;
         const summary = data.ok
-          ? (issues ? `Repair done · ${issues} warning(s)` : "Repair done · healthy")
-          : "Repair finished with issues";
-        window.showAriaToast?.(summary, data.ok ? "ok" : "warn");
+          ? (issues
+            ? `Legacy recover finished · ${issues} warning(s) — not verified`
+            : "Legacy recover finished — verify before claiming healthy")
+          : "Legacy recover finished with issues";
+        window.showAriaToast?.(summary, "warn");
         loadMissionControl();
       } catch (err) {
         window.showAriaToast?.(err.message, "err");

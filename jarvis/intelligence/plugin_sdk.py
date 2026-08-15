@@ -181,7 +181,7 @@ class PluginContext:
 
     def manage_automation(self, action: str, **kwargs: Any) -> dict[str, Any]:
         self.require("automation.manage")
-        from jarvis.intelligence import automation_engine
+        from jarvis.automation import engine as automation_engine
 
         allowed = {
             "list_rules": automation_engine.list_rules,

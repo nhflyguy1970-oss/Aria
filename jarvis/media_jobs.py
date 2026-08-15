@@ -171,18 +171,36 @@ def _load_persisted_state() -> None:
 
 
 def recover_stale_jobs() -> int:
-    """Mark jobs left incomplete after a server crash/restart as failed."""
+    """After restart: requeue resumable media jobs; mark non-resumable as interrupted."""
     global _recovered
     if _recovered:
         return 0
     _recovered = True
     _load_persisted_state()
-    count = 0
+    interrupted = 0
+    pending_resume: list[dict] = []
     with _lock:
-        for job in _jobs.values():
+        for job in list(_jobs.values()):
             if job.get("done"):
                 continue
-            count += 1
+            resume = job.get("resume") if isinstance(job.get("resume"), dict) else None
+            if resume and resume.get("action") in QUEUED_ACTIONS:
+                # Keep visible as queued — resume_interrupted_jobs() re-enqueues work.
+                job["done"] = False
+                job["pct"] = 0
+                job["cancelled"] = False
+                job["error"] = ""
+                job["message"] = "Resuming after restart…"
+                job["result"] = None
+                job["_needs_resume"] = True
+                pending_resume.append(dict(job))
+                logger.info(
+                    "Will resume media job %s (%s) after restart",
+                    job.get("id"),
+                    job.get("kind"),
+                )
+                continue
+            interrupted += 1
             job["done"] = True
             job["pct"] = 100
             job["error"] = "Interrupted by server restart"
@@ -190,18 +208,82 @@ def recover_stale_jobs() -> int:
             job["result"] = {
                 "ok": False,
                 "message": (
-                    "Image job was interrupted when the server restarted. "
-                    "Check **Gallery** — your image may still be there."
+                    "Job was interrupted when the server restarted and could not be resumed. "
+                    "Ask Aria to run it again — check Gallery if media may already exist."
                 ),
                 "module": ACTION_MODULES.get(job.get("kind") or "", "image"),
             }
             _stats["failed"] += 1
             logger.warning("Recovered stale media job %s (%s)", job.get("id"), job.get("kind"))
-    if count:
+    if interrupted or pending_resume:
         from jarvis.action_log import log_event
 
-        log_event("media_jobs_recovered", count=count)
+        log_event(
+            "media_jobs_recovered",
+            count=interrupted,
+            resume_pending=len(pending_resume),
+        )
         _persist_state()
+    return interrupted + len(pending_resume)
+
+
+def resume_interrupted_jobs(assistant) -> int:
+    """Re-enqueue jobs marked _needs_resume after assistant is available."""
+    to_resume: list[dict] = []
+    with _lock:
+        for job in _jobs.values():
+            if job.get("_needs_resume") and not job.get("done"):
+                to_resume.append(dict(job))
+                job.pop("_needs_resume", None)
+                job["message"] = "Re-queued after restart…"
+    if not to_resume:
+        return 0
+    _ensure_worker()
+    from jarvis.handlers.media import MediaHandler
+
+    handler = MediaHandler(assistant)
+    runners = {
+        "generate_image": "generate_image",
+        "generate_video": "generate_video",
+        "storyboard_video": "storyboard_video",
+        "generate_meme": "generate_meme",
+        "upscale_image": "upscale_image",
+        "inpaint_image": "inpaint_image",
+        "edit_image": "edit_image",
+    }
+    count = 0
+    for job in to_resume:
+        resume = job.get("resume") or {}
+        action = str(resume.get("action") or job.get("kind") or "")
+        method = runners.get(action)
+        if not method:
+            with _lock:
+                j = _jobs.get(job["id"])
+                if j:
+                    j["done"] = True
+                    j["error"] = "Could not resume"
+                    j["message"] = j["error"]
+            continue
+        params = dict(resume.get("params") or {})
+        message = str(resume.get("message") or "")
+        fn = getattr(handler, method)
+        job_id = job["id"]
+
+        def _make(fn=fn, params=params, message=message):
+            return lambda: fn(params, message)
+
+        assert _queue is not None
+        _queue.put((job_id, _make()))
+        count += 1
+        logger.info("Resumed media job %s (%s)", job_id, action)
+    if count:
+        _persist_state()
+        try:
+            from jarvis.action_log import log_event
+
+            log_event("media_jobs_resumed", count=count)
+        except Exception:
+            pass
     return count
 
 
@@ -291,6 +373,56 @@ def _worker_loop() -> None:
                     job["done"] = True
                     job["pct"] = 100
                     job["result"] = result
+                    # Never claim Complete when the user-visible asset is missing.
+                    if result.get("ok"):
+                        from pathlib import Path
+
+                        missing = None
+                        for key in ("image_path", "video_path", "audio_path", "output_path"):
+                            p = result.get(key)
+                            if not p:
+                                continue
+                            try:
+                                if not Path(str(p)).is_file():
+                                    missing = Path(str(p)).name
+                                    break
+                            except Exception:
+                                missing = str(p)
+                                break
+                        media_kinds = {
+                            "generate_image",
+                            "edit_image",
+                            "inpaint_image",
+                            "upscale_image",
+                            "generate_video",
+                            "generate_meme",
+                            "generate_audio",
+                        }
+                        if (
+                            kind in media_kinds
+                            and not any(
+                                result.get(k)
+                                for k in (
+                                    "image_path",
+                                    "video_path",
+                                    "audio_path",
+                                    "output_path",
+                                    "image_name",
+                                    "video_name",
+                                )
+                            )
+                        ):
+                            missing = missing or "no output path"
+                        if missing:
+                            result = {
+                                "ok": False,
+                                "message": (
+                                    f"Job finished but output missing on disk ({missing}). "
+                                    "Not marked Complete."
+                                ),
+                                "module": result.get("module") or "media",
+                            }
+                            job["result"] = result
                     if not result.get("ok"):
                         job["error"] = result.get("message") or "Failed"
                         job["message"] = job["error"]
@@ -348,7 +480,7 @@ def _notify_busy_start(label: str, kind: str) -> None:
     try:
         from jarvis.notify_util import notify_jarvis
 
-        notify_jarvis(f"{name} busy", body)
+        notify_jarvis(f"{name} busy", body, severity="info", source="media_jobs", category="media")
     except Exception:
         pass
 
@@ -361,23 +493,29 @@ def _notify_busy_done(label: str, result: dict) -> None:
     try:
         from jarvis.notify_util import notify_jarvis
 
-        notify_jarvis(f"{assistant_name()} ready", f"{label} finished — {short}")
+        notify_jarvis(
+            f"{assistant_name()} ready",
+            f"{label} finished — {short}",
+            severity="success",
+            source="media_jobs",
+            category="media",
+        )
     except Exception:
         pass
 
 
-def submit(action: str, label: str, fn: Callable[[], dict]) -> str:
+def submit(action: str, label: str, fn: Callable[[], dict], *, resume: dict | None = None) -> str:
     from jarvis.modules.workflow_orchestration_adapter import workflow_enqueue
 
-    return workflow_enqueue("media", action, _submit_impl, action, label, fn)
+    return workflow_enqueue("media", action, _submit_impl, action, label, fn, resume=resume)
 
 
-def _submit_impl(action: str, label: str, fn: Callable[[], dict]) -> str:
+def _submit_impl(action: str, label: str, fn: Callable[[], dict], *, resume: dict | None = None) -> str:
     """Enqueue work; returns job id."""
     _ensure_worker()
     job_id = uuid.uuid4().hex[:12]
     with _lock:
-        _jobs[job_id] = {
+        record = {
             "id": job_id,
             "kind": action,
             "label": label or ACTION_LABELS.get(action, action),
@@ -389,6 +527,14 @@ def _submit_impl(action: str, label: str, fn: Callable[[], dict]) -> str:
             "result": None,
             "started": time.time(),
         }
+        if resume:
+            # Serializable resume payload — lets jobs survive process restart.
+            record["resume"] = {
+                "action": str(resume.get("action") or action),
+                "params": dict(resume.get("params") or {}),
+                "message": str(resume.get("message") or ""),
+            }
+        _jobs[job_id] = record
         _history.append(job_id)
     assert _queue is not None
     _queue.put((job_id, fn))
@@ -413,7 +559,12 @@ def submit_assistant_action(assistant, action: str, params: dict, message: str) 
     if not fn:
         raise ValueError(f"Unknown media action: {action}")
     label = ACTION_LABELS.get(action, action)
-    return submit(action, label, fn)
+    return submit(
+        action,
+        label,
+        fn,
+        resume={"action": action, "params": params, "message": message},
+    )
 
 
 def get_job(job_id: str) -> dict | None:
@@ -499,3 +650,97 @@ def list_recent(limit: int = 10) -> list[dict]:
     with _lock:
         ids = list(_history)[-limit:]
         return [dict(_jobs[i]) for i in reversed(ids) if i in _jobs]
+
+
+def mark_asset_missing(image_name: str, *, path: str | None = None) -> dict[str, Any]:
+    """After Gallery delete: Job Center must not claim Complete with a live file path."""
+    from pathlib import Path
+
+    name = Path(str(image_name or "")).name
+    path_s = str(path or "")
+    updated = 0
+    with _lock:
+        for job in _jobs.values():
+            if not job.get("done"):
+                continue
+            res = job.get("result")
+            if not isinstance(res, dict):
+                continue
+            ip = str(res.get("image_path") or res.get("output_path") or "")
+            iname = str(res.get("image_name") or (Path(ip).name if ip else ""))
+            hit = bool(name and (iname == name or ip.endswith(name) or name in ip))
+            if path_s and (ip == path_s or path_s in ip):
+                hit = True
+            if not hit:
+                continue
+            if res.get("asset_missing") and not res.get("ok"):
+                continue
+            res = dict(res)
+            res["ok"] = False
+            res["asset_missing"] = True
+            res["message"] = (
+                f"Output removed from Gallery (`{name or Path(ip).name}`). "
+                "Job history kept for audit — asset is no longer available."
+            )
+            job["result"] = res
+            job["error"] = res["message"]
+            job["message"] = res["message"]
+            updated += 1
+    if updated:
+        _persist_state()
+    return {"ok": True, "updated": updated, "name": name}
+
+
+def clear_asset_missing(
+    original_name: str,
+    *,
+    restored_name: str | None = None,
+    path: str | None = None,
+) -> dict[str, Any]:
+    """After Gallery restore: Job Center agrees the asset exists again."""
+    from pathlib import Path
+
+    original = Path(str(original_name or "")).name
+    restored = Path(str(restored_name or original)).name
+    path_s = str(path or "")
+    updated = 0
+    with _lock:
+        for job in _jobs.values():
+            if not job.get("done"):
+                continue
+            res = job.get("result")
+            if not isinstance(res, dict):
+                continue
+            ip = str(res.get("image_path") or res.get("output_path") or "")
+            iname = str(res.get("image_name") or (Path(ip).name if ip else ""))
+            msg = str(res.get("message") or job.get("message") or "")
+            hit = bool(
+                original
+                and (
+                    iname == original
+                    or iname == restored
+                    or original in ip
+                    or restored in ip
+                    or original in msg
+                    or restored in msg
+                )
+            )
+            if not hit and not res.get("asset_missing"):
+                continue
+            if not hit:
+                continue
+            res = dict(res)
+            res["ok"] = True
+            res.pop("asset_missing", None)
+            if path_s:
+                res["image_path"] = path_s
+                res["output_path"] = path_s
+            res["image_name"] = restored
+            res["message"] = f"Restored to Gallery (`{restored}`)."
+            job["result"] = res
+            job["error"] = ""
+            job["message"] = "Complete"
+            updated += 1
+    if updated:
+        _persist_state()
+    return {"ok": True, "updated": updated, "name": restored}

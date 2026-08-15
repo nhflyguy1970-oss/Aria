@@ -1,0 +1,7 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-15T21:12:00Z",
+  "result": "PASS \u2014 34 rooms open after unlock. Repair/Integrity are native rooms (not Chat fallthrough). #missionRoom \u2192 #workstation. Knowledge Briefs 5. Notifications 79 shown \u00b7 79 unread. Lock Aria present not clicked. HA Connected. Home foyer welcome. Integrity 100.",
+  "owner_session": "OWNER_UNLOCKED",
+  "integrity": "clean / 100; artifacts 0"
+}

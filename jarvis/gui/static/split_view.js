@@ -166,6 +166,20 @@
   }
 
   function toggle() {
+    if (
+      document.body?.classList.contains("living-workspace") ||
+      document.documentElement.classList.contains("living-workspace")
+    ) {
+      if (enabled) disable();
+      else {
+        window.showAriaToast?.(
+          "Split view stays in classic Aria for now — open a second window or use Front Door to switch Rooms",
+          "info",
+          4500,
+        );
+      }
+      return;
+    }
     if (enabled) disable();
     else openPicker();
   }

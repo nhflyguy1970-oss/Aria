@@ -1,0 +1,65 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "home_automation",
+  "captured_at": "2026-08-13T16:52:00+00:00",
+  "entry": "Owner Front Door → room:home_automation",
+  "identity": {
+    "hash": "#homeAutomation",
+    "h2": "Home Automation",
+    "place": "· Home control"
+  },
+  "api_vs_ui": {
+    "homeassistant_status": "configured true, connected true, token_set (key present, value not recorded)",
+    "smarthome_product_home_health": "connected true, ready true, hint Ready — control devices from Smart Home Home",
+    "owner_ui_health": "Unavailable — Follow guided connect steps: URL → Token → Test → Save",
+    "owner_ui_recovery": "Smart Home unavailable / URL and token required / controls disabled",
+    "token_input_filled": false,
+    "verdict": "FAIL — owner UI contradicts live HA status"
+  },
+  "capabilities": [
+    {
+      "name": "Identity",
+      "result": "PASS"
+    },
+    {
+      "name": "Health / Status",
+      "result": "FAIL",
+      "notes": "House status button keeps Unavailable copy while /api/homeassistant/status and /api/smarthome/product/home report connected/ready. Token field empty is expected (vault). Recovery card tells Jeff to paste a token."
+    },
+    {
+      "name": "Scene chips / favorites / rooms chrome",
+      "result": "PARTIAL",
+      "notes": "5 scene chips, 1 favorite child, rooms emptyish. Scene chips not clicked (would change live lights)."
+    },
+    {
+      "name": "Negative device search",
+      "result": "PARTIAL",
+      "notes": "zzzz query; results children=1 len=10; no clear no-match copy"
+    },
+    {
+      "name": "Entity domain filter",
+      "result": "PARTIAL",
+      "notes": "Lights/scenes lists stay at 1 item (unavailable chrome). Refresh clicked. No entity toggles."
+    },
+    {
+      "name": "Test",
+      "result": "PARTIAL",
+      "notes": "Click; status lines stayed empty at 1.2s"
+    },
+    {
+      "name": "Kasa",
+      "result": "PARTIAL",
+      "notes": "Stuck on 'Kasa: checking…'"
+    },
+    {
+      "name": "Leave Presence / Security",
+      "result": "PASS",
+      "notes": "#presence · Presence; #security · Security; Front Door return · Home control"
+    },
+    {
+      "name": "Connect / Paste token / Apply profile / Heading out / scene chips / Copy webhook",
+      "result": "N/A — NOT EXERCISED",
+      "notes": "Credentials or live house control"
+    }
+  ]
+}

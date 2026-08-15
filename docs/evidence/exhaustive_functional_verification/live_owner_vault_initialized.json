@@ -1,0 +1,82 @@
+{
+  "campaign": "live_owner_vault_initialize",
+  "updated_at": "2026-08-13T00:48:18+00:00",
+  "verdict": "PROVEN",
+  "live_owner_vault": "INITIALIZED",
+  "live_one_password_experience": "PROVEN",
+  "secrets_in_evidence": false,
+  "credential_migration": false,
+  "journal_crypto_changed": false,
+  "exhaustive_resumed": false,
+  "vault": {
+    "exists": true,
+    "path": "data/security/owner/vault.json",
+    "mode": "600",
+    "format": "aria-owner-vault-v1",
+    "kdf": "argon2id",
+    "entry_count": 0,
+    "meta_empty": true,
+    "recovery_configured": true,
+    "recovery_acknowledged": true
+  },
+  "session": {
+    "state": "OWNER_UNLOCKED",
+    "owner_unlocked": true,
+    "one_password": true,
+    "unlock_with": "master_password",
+    "failed_attempts": 0,
+    "lockout_active": false
+  },
+  "proven": {
+    "setup_in_live_security_ui": true,
+    "recovery_shown_once_not_copied_to_chat": true,
+    "recovery_acknowledged": true,
+    "rooms_without_extra_aria_password": ["journal", "health", "flytying"],
+    "lock_aria": true,
+    "wrong_password_stays_locked": true,
+    "unlock_after_lock": true,
+    "process_restart_locks": true,
+    "unlock_after_restart": true,
+    "rooms_after_restart_unlock": {
+      "overlay_hidden": true,
+      "journal": {"room": "journal", "asks_extra_password": false, "lock_hidden": true},
+      "health": {"room": "health", "lock_hidden": true},
+      "flytying": {"room": "flytying", "lock_hidden": true}
+    }
+  },
+  "performance_ms": {
+    "setup_approx": 125,
+    "lock": "<1",
+    "unlock_after_lock": 48.44,
+    "wrong_password": 89,
+    "unlock_after_restart": 65.37,
+    "note": "Post-restart in-memory timings retain only unlock 65.37 ms. Earlier live KDF times were measured in this owner-attended session before restart."
+  },
+  "integrity": {
+    "status": "clean",
+    "score": 100,
+    "artifacts_found": 0
+  },
+  "production_isolation": {
+    "qa_header_mutating_post": 403,
+    "reason": "production_isolation"
+  },
+  "jarvis_env": {
+    "untouched": true,
+    "mode": "600",
+    "mtime_utc": "2026-08-12T23:01:41+00:00",
+    "note": "mtime is before vault create (2026-08-13T00:32:16Z)"
+  },
+  "not_done": [
+    "M2 Integrations migration",
+    "M3 HA/LAN migration",
+    "M4 unified revoke",
+    "M5 Journal UX beyond prompt wording",
+    "M6 plaintext-write removal"
+  ],
+  "checkpoint_preserved": {
+    "file": "docs/evidence/exhaustive_functional_verification/EXHAUSTIVE_CHECKPOINT.json",
+    "workflow": "Journal → More → Import encrypted",
+    "do_not_restart_from_room_1": true
+  }
+}

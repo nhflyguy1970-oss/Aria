@@ -1,0 +1,10 @@
+{
+  "updated_at": "2026-08-13T13:35:00+00:00",
+  "secret_leak_found": "no",
+  "files_checked_prior": 55,
+  "acm_text_files_checked": 9,
+  "subprocess_has_provider_keys": false,
+  "integrity": "clean / 100",
+  "qa_mutating_post": 403,
+  "secrets_in_evidence": false
+}

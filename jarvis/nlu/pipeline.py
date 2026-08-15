@@ -117,13 +117,24 @@ def route_via_nlu(
     # Deterministic calendar/clock facts must never pay for a semantic LLM call.
     # Placement has previously selected vision models as classifiers, which can
     # unload the chat model and stall first-token by tens of seconds.
-    from jarvis.nlu.mapping import is_calendar_fact_question, nlu_to_router_intent
-    from jarvis.nlu.types import GrammarAnalysis, MorphologyAnalysis, NLUResult, SemanticClassification, SyntaxAnalysis
+    from jarvis.nlu.mapping import (
+        is_calendar_fact_question,
+        is_weather_forecast_question,
+    )
+    from jarvis.nlu.types import (
+        GrammarAnalysis,
+        MorphologyAnalysis,
+        NLUResult,
+        SemanticClassification,
+        SyntaxAnalysis,
+    )
 
     if is_calendar_fact_question(text):
         stub = NLUResult(
             prompt=text,
-            grammar=GrammarAnalysis(sentence_type="interrogative", question_type="what", mood="neutral"),
+            grammar=GrammarAnalysis(
+                sentence_type="interrogative", question_type="what", mood="neutral"
+            ),
             morphology=MorphologyAnalysis(stems=[]),
             syntax=SyntaxAnalysis(subject="", verb="", object="", modifiers=[]),
             semantic=SemanticClassification(
@@ -135,6 +146,29 @@ def route_via_nlu(
             ),
             conversation_context="",
             keyword_hint="",
+        )
+        return nlu_to_router_intent(stub)
+
+    # Weather must hit weather_forecast (Open-Meteo) — not chat/Ollama.
+    # NLU structure_default_chat previously shadowed _quick_route weather patterns,
+    # forcing a full LLM turn and FIRST_PROGRESS_TIMEOUT under VRAM pressure.
+    if is_weather_forecast_question(text):
+        stub = NLUResult(
+            prompt=text,
+            grammar=GrammarAnalysis(
+                sentence_type="interrogative", question_type="what", mood="neutral"
+            ),
+            morphology=MorphologyAnalysis(stems=[]),
+            syntax=SyntaxAnalysis(subject="", verb="", object="weather", modifiers=[]),
+            semantic=SemanticClassification(
+                intent="weather",
+                confidence=0.99,
+                model="weather_forecast",
+                device="local",
+                latency_ms=0.0,
+            ),
+            conversation_context="",
+            keyword_hint="weather",
         )
         return nlu_to_router_intent(stub)
 

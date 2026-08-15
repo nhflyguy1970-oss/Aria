@@ -16,5 +16,10 @@ class GitExtension(Extension):
 
         return git_routes()
 
+    def register_api(self, app, assistant) -> None:
+        from jarvis.extensions.git.api import register_routes
+
+        register_routes(app, assistant)
+
 
 EXTENSION = GitExtension()

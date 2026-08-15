@@ -59,6 +59,87 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _bolt_list_nodes_query(
+    *,
+    namespace: str = "",
+    kind: str = "",
+    limit: int = 50,
+    offset: int = 0,
+    q: str = "",
+) -> tuple[str, dict[str, Any]]:
+    """Cypher for browsing Entity nodes. Empty q lists all (unlike search_nodes)."""
+    conds: list[str] = []
+    params: dict[str, Any] = {
+        "limit": max(1, min(int(limit or 50), 2000)),
+        "offset": max(0, int(offset or 0)),
+    }
+    if namespace:
+        conds.append("n.namespace = $ns")
+        params["ns"] = namespace
+    if kind:
+        conds.append("n.kind = $kind")
+        params["kind"] = kind
+    needle = (q or "").strip()
+    if needle:
+        conds.append("toLower(n.name) CONTAINS toLower($q)")
+        params["q"] = needle
+    where = ("WHERE " + " AND ".join(conds)) if conds else ""
+    cypher = f"""
+        MATCH (n:{ENTITY_LABEL})
+        {where}
+        RETURN n.name AS name,
+               coalesce(n.kind, 'entity') AS kind,
+               coalesce(n.namespace, 'default') AS namespace,
+               coalesce(n.memory_id, '') AS memory_id
+        ORDER BY n.name
+        SKIP $offset LIMIT $limit
+        """
+    return cypher, params
+
+
+def _bolt_list_edges_query(
+    *,
+    namespace: str = "",
+    limit: int = 50,
+    offset: int = 0,
+    q: str = "",
+) -> tuple[str, dict[str, Any]]:
+    """Cypher for browsing relationships. Empty q lists all."""
+    conds: list[str] = []
+    params: dict[str, Any] = {
+        "limit": max(1, min(int(limit or 50), 2000)),
+        "offset": max(0, int(offset or 0)),
+    }
+    if namespace:
+        conds.append("coalesce(rel.namespace, startNode(rel).namespace, 'default') = $ns")
+        params["ns"] = namespace
+    needle = (q or "").strip()
+    if needle:
+        conds.append(
+            "("
+            "toLower(type(rel)) CONTAINS toLower($q) OR "
+            "toLower(startNode(rel).name) CONTAINS toLower($q) OR "
+            "toLower(endNode(rel).name) CONTAINS toLower($q)"
+            ")"
+        )
+        params["q"] = needle
+    where = ("WHERE " + " AND ".join(conds)) if conds else ""
+    cypher = f"""
+        MATCH (a:{ENTITY_LABEL})-[rel]->(b:{ENTITY_LABEL})
+        {where}
+        RETURN startNode(rel).name AS subject,
+               type(rel) AS predicate,
+               endNode(rel).name AS object,
+               coalesce(rel.namespace, 'default') AS namespace,
+               coalesce(rel.memory_id, '') AS memory_id,
+               coalesce(rel.confidence, 0.0) AS confidence,
+               coalesce(rel.source, 'unknown') AS source
+        ORDER BY subject, predicate, object
+        SKIP $offset LIMIT $limit
+        """
+    return cypher, params
+
+
 def _parse_props(raw: Any) -> dict[str, Any]:
     if isinstance(raw, dict):
         return dict(raw)
@@ -851,10 +932,39 @@ class BoltGraphStore:
             return [{"namespace": r["namespace"], "nodes": int(r["nodes"]), "edges": 0} for r in result]
 
     def list_nodes(self, *, namespace: str = "", kind: str = "", limit: int = 50, offset: int = 0, q: str = "") -> list[dict]:
-        return self.search_nodes(q or "a", limit=limit, namespace=namespace) if (q or namespace) else []
+        cypher, params = _bolt_list_nodes_query(
+            namespace=namespace, kind=kind, limit=limit, offset=offset, q=q
+        )
+        with self._driver.session() as session:
+            return [dict(rec) for rec in session.run(cypher, **params)]
 
     def list_edges(self, *, namespace: str = "", limit: int = 50, offset: int = 0, q: str = "") -> list[dict]:
-        return []
+        cypher, params = _bolt_list_edges_query(
+            namespace=namespace, limit=limit, offset=offset, q=q
+        )
+        with self._driver.session() as session:
+            out = []
+            for rec in session.run(cypher, **params):
+                if not rec["subject"] or not rec["object"]:
+                    continue
+                out.append(
+                    {
+                        "subject": rec["subject"],
+                        "predicate": rec["predicate"],
+                        "object": rec["object"],
+                        "namespace": rec["namespace"],
+                        "memory_id": rec["memory_id"],
+                        "confidence": float(rec["confidence"] or 0),
+                        "source": rec["source"],
+                        "provenance": {
+                            "source": rec["source"],
+                            "memory_id": rec["memory_id"],
+                            "confidence": float(rec["confidence"] or 0),
+                            "namespace": rec["namespace"],
+                        },
+                    }
+                )
+            return out
 
     def get_edge(self, edge_id: str) -> dict[str, Any] | None:
         return None

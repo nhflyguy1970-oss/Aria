@@ -1,0 +1,60 @@
+{
+  "integrity": {
+    "status": "warning",
+    "clean": false,
+    "score": 80,
+    "counts": {
+      "total": 4,
+      "actionable": 0,
+      "by_category": {
+        "health": 4
+      },
+      "safe_to_remove": 0,
+      "uncertain": 4
+    },
+    "findings": [
+      {
+        "title": "Ambiguous Health dose_logs: Phase 7 walk2 afternoon dose",
+        "category": "health",
+        "safe_to_remove": false,
+        "uncertain": true
+      },
+      {
+        "title": "Ambiguous Health dose_logs: residency morning",
+        "category": "health",
+        "safe_to_remove": false,
+        "uncertain": true
+      },
+      {
+        "title": "Ambiguous Health dose_logs: Phase 7 residency morning dose",
+        "category": "health",
+        "safe_to_remove": false,
+        "uncertain": true
+      },
+      {
+        "title": "Ambiguous Health backup: bak_7a69c9914d45",
+        "category": "health",
+        "safe_to_remove": false,
+        "uncertain": true
+      }
+    ]
+  },
+  "activity_owner": {
+    "count": 27,
+    "unread": 27,
+    "titles": [
+      "Automations paused",
+      "EQ failed",
+      "Edit failed",
+      "Generation failed",
+      "Kasa unavailable",
+      "Missed: Work",
+      "PIN lock is off \u2014 set JARVIS_PIN_LOCK=1 and a PIN before locking.",
+      "Planner timer",
+      "Provider recovered",
+      "Record+transcribe failed",
+      "Voice\u2192song failed"
+    ]
+  },
+  "activity_engineering_count": 476
+}

@@ -50,6 +50,17 @@ def _focus_score(entry: dict, query_lower: str) -> float:
     if query_lower and query_lower in content.lower():
         share = min(1.0, len(query_lower) / max(1, length))
         focus += 0.15 * share
+    cl = content.lower()
+    # Exact marker / distinctive token matches dominate QA noise (BUG-025).
+    import re
+
+    for m in re.findall(r"aria-[a-z0-9-]{8,}", query_lower or ""):
+        if m in cl:
+            focus += 1.5
+    if "aria-final-memory" in (query_lower or "") and "aria-final-memory" in cl:
+        focus += 1.0
+        if re.search(r"aria-repair-accept-token", cl):
+            focus *= 0.2
     return focus
 
 

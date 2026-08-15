@@ -42,7 +42,9 @@ def describe_action(action_id: str) -> dict[str, Any]:
     }
 
 
-def dry_run_action(action: str, params: dict[str, Any], variables: dict[str, Any]) -> dict[str, Any]:
+def dry_run_action(
+    action: str, params: dict[str, Any], variables: dict[str, Any]
+) -> dict[str, Any]:
     """Predict step outcome without side effects."""
     meta = describe_action(action)
     if action.startswith(BUILTIN_PREFIX):
@@ -124,7 +126,9 @@ def execute_action(
     return _execute_registry(action, p, variables)
 
 
-def _execute_builtin(action: str, params: dict[str, Any], variables: dict[str, Any]) -> dict[str, Any]:
+def _execute_builtin(
+    action: str, params: dict[str, Any], variables: dict[str, Any]
+) -> dict[str, Any]:
     name = action[len(BUILTIN_PREFIX) :]
     if name == "log":
         msg = params.get("msg") or params.get("message") or ""
@@ -167,7 +171,9 @@ def _execute_builtin(action: str, params: dict[str, Any], variables: dict[str, A
     return {"ok": False, "error": f"unknown builtin {action}"}
 
 
-def _execute_registry(action: str, params: dict[str, Any], variables: dict[str, Any]) -> dict[str, Any]:
+def _execute_registry(
+    action: str, params: dict[str, Any], variables: dict[str, Any]
+) -> dict[str, Any]:
     """Dispatch known registry actions without going through rule validation loops."""
     try:
         if action in ("maintenance", "system_maintenance"):
@@ -230,7 +236,9 @@ def _execute_registry(action: str, params: dict[str, Any], variables: dict[str, 
             try:
                 from jarvis import journal as journal_mod
 
-                fn = getattr(journal_mod, "append_entry", None) or getattr(journal_mod, "add_entry", None)
+                fn = getattr(journal_mod, "append_entry", None) or getattr(
+                    journal_mod, "add_entry", None
+                )
                 if callable(fn):
                     result = fn(str(text))
                     if isinstance(result, dict):
@@ -265,7 +273,10 @@ def _execute_registry(action: str, params: dict[str, Any], variables: dict[str, 
             wid = params.get("workflow_id") or variables.get("workflow_id")
             if not wid:
                 return {"ok": False, "error": "workflow_id required"}
-            nested_vars = {**variables, "_pipeline_depth": int(variables.get("_pipeline_depth", 0)) + 1}
+            nested_vars = {
+                **variables,
+                "_pipeline_depth": int(variables.get("_pipeline_depth", 0)) + 1,
+            }
             return run_pipeline(str(wid), variables=nested_vars, dry_run=False, emit_bridges=False)
 
         return {"ok": False, "error": f"no pipeline handler for action {action}"}
@@ -273,7 +284,9 @@ def _execute_registry(action: str, params: dict[str, Any], variables: dict[str, 
         return {"ok": False, "error": str(exc)}
 
 
-def _execute_browser_read(params: dict[str, Any], variables: dict[str, Any], *, approve: bool) -> dict[str, Any]:
+def _execute_browser_read(
+    params: dict[str, Any], variables: dict[str, Any], *, approve: bool
+) -> dict[str, Any]:
     """Allowlisted Browser navigate+extract — never silent; requires experimental approval."""
     if not approve:
         return {
@@ -320,7 +333,9 @@ def _execute_browser_read(params: dict[str, Any], variables: dict[str, Any], *, 
         return {"ok": False, "error": str(exc)}
 
 
-def _execute_agent_step(params: dict[str, Any], variables: dict[str, Any], *, approve: bool) -> dict[str, Any]:
+def _execute_agent_step(
+    params: dict[str, Any], variables: dict[str, Any], *, approve: bool
+) -> dict[str, Any]:
     if not approve:
         return {"ok": False, "permission_required": True, "error": "agent_step requires approval"}
     prompt = str(params.get("prompt") or variables.get("goal") or "")
@@ -362,9 +377,15 @@ def _execute_agent_step(params: dict[str, Any], variables: dict[str, Any], *, ap
     }
 
 
-def _execute_vision(params: dict[str, Any], variables: dict[str, Any], *, approve: bool) -> dict[str, Any]:
+def _execute_vision(
+    params: dict[str, Any], variables: dict[str, Any], *, approve: bool
+) -> dict[str, Any]:
     if not approve:
-        return {"ok": False, "permission_required": True, "error": "vision_analyze requires approval"}
+        return {
+            "ok": False,
+            "permission_required": True,
+            "error": "vision_analyze requires approval",
+        }
     path = str(params.get("path") or variables.get("path") or "")
     action = str(params.get("action") or "describe")
     question = str(params.get("question") or params.get("prompt") or "")
@@ -388,4 +409,3 @@ def _execute_vision(params: dict[str, Any], variables: dict[str, Any], *, approv
         }
     except Exception as exc:
         return {"ok": False, "error": str(exc)}
-

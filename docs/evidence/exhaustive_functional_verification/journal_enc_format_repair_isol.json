@@ -1,0 +1,98 @@
+{
+  "at": "2026-08-12T20:35:02.497811+00:00",
+  "marker": "ARIA-ISOL-ENC-1786566902",
+  "live_before": {
+    "sha256": "ac372f964488b00969c8342977bb8ff56d371524930893ac30c64f605ab3a6b9",
+    "mtime": 1786555586.292815
+  },
+  "steps": {
+    "create": {
+      "http": 422,
+      "ok": false,
+      "body_keys": [
+        "detail"
+      ]
+    },
+    "export": {
+      "http": 200,
+      "ok": true,
+      "envelope_keys": [
+        "ciphertext",
+        "format",
+        "salt"
+      ],
+      "format": "jarvis-journal-v1"
+    },
+    "structure": {
+      "matches_contract": true
+    },
+    "wrote_isol_file": "/tmp/aria-exhaustive-isol/jarvis-journal-encrypted-isol-roundtrip.json",
+    "import_merge": {
+      "http": 200,
+      "ok": true,
+      "body": {
+        "ok": true,
+        "merged": true,
+        "message": null
+      }
+    },
+    "verify_content": {
+      "http": 200,
+      "marker_present": false
+    },
+    "wrong_password": {
+      "http": 400,
+      "message": "Wrong password or corrupt file",
+      "ok": true
+    },
+    "plain_journal_rejected": {
+      "http": 400,
+      "message": "This looks like an unencrypted Journal JSON export. Use Import (not Import encrypted), or choose a jarvis-journal-encrypted-*.json file.",
+      "ok": true
+    },
+    "wrapped_api_response_import": {
+      "http": 200,
+      "ok": true,
+      "message": null
+    },
+    "owner_aug08_on_isol": {
+      "http": 400,
+      "message": "Wrong password or corrupt file",
+      "format_accepted": true,
+      "not_format_error": true
+    },
+    "replace_without_wipe": {
+      "http": 400,
+      "message": "Non-merge import wipes journal data. Set confirm_wipe=true to proceed.",
+      "ok": true
+    },
+    "replace_with_wipe": {
+      "http": 200,
+      "ok": true,
+      "merged": false
+    },
+    "isol_cleanup_wipe": {
+      "http": 200,
+      "ok": true
+    },
+    "isol_file_removed": true
+  },
+  "live_after": {
+    "sha256": "cd29f516cd0efbccd9d456e9ae9d11f51fe567a762ff092fce66131f44557491",
+    "mtime": 1786566903.7505052
+  },
+  "live_untouched": false,
+  "integrity": {
+    "http": 200,
+    "status": "clean",
+    "score": 100,
+    "clean": true
+  },
+  "live_owner_wrong_pw": {
+    "http": 400,
+    "message": "Wrong password or corrupt file",
+    "format_ok": true
+  },
+  "live_still_untouched": false,
+  "overall_ok": false
+}

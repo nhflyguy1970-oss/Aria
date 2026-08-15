@@ -98,6 +98,24 @@ function populateVideoCheckpointFiles(settings) {
   }
 }
 
+function isVideoRoomAbort(err) {
+  return (
+    window.AriaNet?.isRoomAbort?.(err) ||
+    err?.name === "AbortError" ||
+    /aborted|aria-room-leave|failed to fetch/i.test(String(err?.message || ""))
+  );
+}
+
+function clearStaleVideoJobChrome() {
+  if (videoActiveJobId) return;
+  const el = document.getElementById("videoJobStatus");
+  if (el && /generation failed|could not load video settings/i.test(el.textContent || "")) {
+    el.textContent = "";
+    el.classList.remove("warn");
+    el.querySelector(".gallery-recovery-actions")?.remove();
+  }
+}
+
 async function loadVideoSettings() {
   const status = document.getElementById("videoEngineStatus");
   const banner = document.getElementById("videoEngineUncensoredBanner");
@@ -110,7 +128,9 @@ async function loadVideoSettings() {
   const adFrames = document.getElementById("videoAdFramesInput");
   try {
     const res = await fetch("/api/video/settings");
+    if (!res.ok) throw new Error(`Settings unavailable (${res.status})`);
     const s = await res.json();
+    loadVideoSettings._retries = 0;
     const dur = document.getElementById("videoDurationInput");
     const fps = document.getElementById("videoFpsInput");
     if (dur) dur.value = s.duration_sec ?? 4;
@@ -178,6 +198,18 @@ async function loadVideoSettings() {
     if (engineSel) engineSel.disabled = videoSettingsBusy;
     if (adFrames) adFrames.disabled = videoSettingsBusy;
   } catch (err) {
+    if (isVideoRoomAbort(err)) {
+      window.AriaNet?.absorbAbort?.(err, () => loadVideoSettings(), 180);
+      return;
+    }
+    if ((loadVideoSettings._retries || 0) < 2) {
+      loadVideoSettings._retries = (loadVideoSettings._retries || 0) + 1;
+      if (status) status.textContent = "Loading video settings…";
+      clearTimeout(loadVideoSettings._retry);
+      loadVideoSettings._retry = setTimeout(() => loadVideoSettings(), 250);
+      return;
+    }
+    loadVideoSettings._retries = 0;
     if (status) status.textContent = "Could not load video settings";
     window.showAriaToast?.(err?.message || "Could not load video settings", "err", 4000);
   }
@@ -241,6 +273,7 @@ async function setVideoKeyframeFile(file) {
 async function loadVideoGallery() {
   const grid = document.getElementById("videoGalleryGrid");
   if (!grid) return;
+  clearStaleVideoJobChrome();
   grid.innerHTML = "<p class=\"muted\">Loading…</p>";
   await loadVideoSettings();
   try {
@@ -248,8 +281,12 @@ async function loadVideoGallery() {
     const data = await res.json();
     const videos = data.videos || [];
     if (!videos.length) {
-      grid.innerHTML = `<p class="muted">No videos yet. <button type="button" class="ghost-btn tiny" id="videoEmptyPromptBtn">Focus prompt</button> — generate stays in Video Studio.</p>`;
+      grid.innerHTML = `<p class="muted">No videos yet. <button type="button" class="ghost-btn tiny" id="videoEmptyPromptBtn">Focus prompt</button> <button type="button" class="ghost-btn tiny" id="videoEmptyChatBtn">Ask Aria</button> — generate stays in Video Studio.</p>`;
       grid.querySelector("#videoEmptyPromptBtn")?.addEventListener("click", () => document.getElementById("videoPromptInput")?.focus());
+      grid.querySelector("#videoEmptyChatBtn")?.addEventListener("click", () => {
+        window.switchToView?.("chat");
+        setTimeout(() => window.jarvisSendToChat?.("Help me create a video prompt"), 80);
+      });
       return;
     }
     grid.innerHTML = videos.map((v) => {
@@ -286,7 +323,11 @@ async function loadVideoGallery() {
         ev.preventDefault();
         ev.stopPropagation();
         const name = btn.dataset.name;
-        if (!name || !confirm("Delete this video?")) return;
+        if (!name) return;
+        const delOk = window.ariaConfirm
+          ? await window.ariaConfirm("Delete this video?", { title: "Delete video", okLabel: "Delete" })
+          : window.confirm("Delete this video?");
+        if (!delOk) return;
         btn.disabled = true;
         try {
           const res = await fetch(`/api/video-gallery/${encodeURIComponent(name)}`, { method: "DELETE" });
@@ -301,8 +342,12 @@ async function loadVideoGallery() {
           btn.closest(".video-gallery-item")?.remove();
           if (window.showAriaToast) window.showAriaToast(`Deleted ${name}`, "info");
           if (!grid.querySelector(".video-gallery-item")) {
-            grid.innerHTML = `<p class="muted">No videos yet. <button type="button" class="ghost-btn tiny" id="videoEmptyPromptBtn">Focus prompt</button></p>`;
+            grid.innerHTML = `<p class="muted">No videos yet. <button type="button" class="ghost-btn tiny" id="videoEmptyPromptBtn">Focus prompt</button> <button type="button" class="ghost-btn tiny" id="videoEmptyChatBtn">Ask Aria</button></p>`;
             grid.querySelector("#videoEmptyPromptBtn")?.addEventListener("click", () => document.getElementById("videoPromptInput")?.focus());
+            grid.querySelector("#videoEmptyChatBtn")?.addEventListener("click", () => {
+              window.switchToView?.("chat");
+              setTimeout(() => window.jarvisSendToChat?.("Help me create a video prompt"), 80);
+            });
           }
         } catch (e) {
           btn.disabled = false;
@@ -317,6 +362,14 @@ async function loadVideoGallery() {
       btn.addEventListener("click", () => trimVideoPrompt(btn.dataset.path));
     });
   } catch (err) {
+    // Room leave / abort is not a gallery failure — do not paint error empty-state or toast.
+    const msg = String(err?.message || err?.name || err || "");
+    if (
+      window.AriaNet?.isRoomAbort?.(err) ||
+      /aborted|aria-room-leave|AbortError|the operation was aborted/i.test(msg)
+    ) {
+      return;
+    }
     grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon" aria-hidden="true">▶</div><p class="empty-state-title">Couldn’t load videos</p><p class="muted">${String(err?.message || "Network or server error").slice(0, 160)}</p><div class="empty-state-actions"><button type="button" class="apply-btn small" id="videoGalleryRetryBtn">Retry</button><button type="button" class="ghost-btn small" id="videoGalleryChatBtn">Ask Aria</button></div></div>`;
     document.getElementById("videoGalleryRetryBtn")?.addEventListener("click", () => loadVideoGallery());
     document.getElementById("videoGalleryChatBtn")?.addEventListener("click", () => {
@@ -328,9 +381,20 @@ async function loadVideoGallery() {
 }
 
 async function analyzeVideoFrame(path) {
-  const sec = prompt("Analyze at second (e.g. 0 or 12.5):", "0");
+  const sec = window.ariaPrompt
+    ? await window.ariaPrompt("Analyze at second (e.g. 0 or 12.5):", "0", {
+        title: "Frame analysis",
+        okLabel: "Analyze",
+      })
+    : prompt("Analyze at second (e.g. 0 or 12.5):", "0");
   if (sec === null) return;
-  const question = prompt("Question about this frame:", "Describe this video frame.") || "Describe this video frame.";
+  const question =
+    (window.ariaPrompt
+      ? await window.ariaPrompt("Question about this frame:", "Describe this video frame.", {
+          title: "Frame question",
+          okLabel: "Ask",
+        })
+      : prompt("Question about this frame:", "Describe this video frame.")) || "Describe this video frame.";
   try {
     const form = new FormData();
     form.append("path", path);
@@ -355,9 +419,13 @@ async function analyzeVideoFrame(path) {
 }
 
 async function trimVideoPrompt(path) {
-  const start = prompt("Trim start (seconds):", "0");
+  const start = window.ariaPrompt
+    ? await window.ariaPrompt("Trim start (seconds):", "0", { title: "Trim video", okLabel: "Next" })
+    : prompt("Trim start (seconds):", "0");
   if (start === null) return;
-  const duration = prompt("Duration (seconds):", "5");
+  const duration = window.ariaPrompt
+    ? await window.ariaPrompt("Duration (seconds):", "5", { title: "Trim video", okLabel: "Trim" })
+    : prompt("Duration (seconds):", "5");
   if (duration === null) return;
   try {
     const form = new FormData();
@@ -704,14 +772,22 @@ async function videoGenerateInStudio(opts = {}) {
     const data = await res.json();
     if (!res.ok || data.ok === false) throw new Error(data.message || "Queue failed");
     const result = data.pending && data.job_id ? await pollVideoMediaJob(data.job_id) : data;
-    const name = result.video_name || result.video_path?.split(/[/\\]/).pop() || "video";
+    const name = result.video_name || result.video_path?.split(/[/\\]/).pop() || "";
+    if (!name) throw new Error("Generation finished but no video name was returned");
+    const probe = await fetch(`/api/video-gallery/${encodeURIComponent(name)}`, {
+      method: "GET",
+      headers: { Range: "bytes=0-0" },
+    });
+    if (!probe.ok && probe.status !== 206) {
+      throw new Error(`Video missing from gallery after generate (${name}, HTTP ${probe.status})`);
+    }
     const method = result.generation_method ? ` · ${result.generation_method}` : "";
     setVideoJobStatus(`Generated ${name}${method}`, "ok");
     if (result.seed != null && document.getElementById("videoSeedInput")) {
       document.getElementById("videoSeedInput").value = String(result.seed);
     }
     window.jarvisNotify?.("Video ready", name);
-    loadVideoGallery();
+    await loadVideoGallery();
   } catch (err) {
     setVideoJobStatus(err.message || "Generation failed", "err");
     showVideoRecovery(err.message || "");
@@ -730,7 +806,6 @@ async function videoGenerateAnother() {
       const data = await res.json();
       if (data.prompt) {
         params = { prompt: data.prompt, negative: data.negative || "", enhanced_prompt: data.enhanced || "", random_seed: true };
-        if (document.getElementById("videoPromptInput")) document.getElementById("videoPromptInput").value = data.prompt;
       }
     } catch { /* ignore */ }
   }

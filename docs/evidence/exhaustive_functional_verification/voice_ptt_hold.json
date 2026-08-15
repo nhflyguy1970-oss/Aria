@@ -1,0 +1,35 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "voice / audio",
+  "capability": "Owner UI Voice PTT / Audio Hold to talk",
+  "captured_at": "2026-08-14T18:09:19Z",
+  "jeff_authorized": "all",
+  "result": "PASS — Hold to talk reached Audio studio PTT; recorded with no speech. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked": true,
+  "health_home": 200,
+  "owner_ui": {
+    "voice_hash": "#voice",
+    "voice_hold": "chrome #pttBtn hidden in living workspace; Hold lives in Audio studio",
+    "audio_hash": "#audio",
+    "record_mode": "ptt (Push-to-talk) via #audioRecordMode",
+    "clicked": "#audioPttBtn Hold to talk held ~1500 ms",
+    "toast": "Recorded (peak -30.0 dB) but no speech detected",
+    "not_clicked": [
+      "Send to chat",
+      "Add to journal",
+      "Delete recordings",
+      "Test mic",
+      "Record + transcribe",
+      "Save Voice settings",
+      "Voice smoke"
+    ]
+  },
+  "data_mutation": {
+    "speech_detected": false,
+    "sent_to_chat": false,
+    "added_to_journal": false,
+    "voice_settings_saved": false
+  },
+  "integrity": "POST /api/integrity/scan 200 after remaining write gates; overall 100; clean; artifacts 0"
+}

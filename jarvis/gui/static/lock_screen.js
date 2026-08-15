@@ -1,4 +1,4 @@
-/** P4 PIN lock + idle re-lock */
+/** House lock screen — one Aria Master Password (PIN only as optional convenience). */
 (function () {
   const DEVICE_KEY = "jarvis_device_id";
   const SESSION_KEY = "jarvis_session";
@@ -24,70 +24,201 @@
   window.jarvisDeviceId = deviceId;
   window.jarvisSession = session;
   window.jarvisSetSession = setSession;
-  /** True only when PIN lock is enabled and configured — UI gates use this, not session alone. */
+  /** True when a house lock can actually be unlocked (vault or PIN). */
   window.jarvisLockCapable = false;
 
   const $ = (id) => document.getElementById(id);
   let idleTimer = null;
+  let lastStatus = null;
+  let lockEpoch = 0;
+  let idleEnabled = false;
+
+  function idleSecondsFromStatus(d) {
+    const n = Number(d?.idle_seconds);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return n;
+  }
+
+  window.jarvisLockHouse = async (opts = {}) => {
+    const hard = opts.hard !== false;
+    try {
+      const st = await (window.AriaOwner?.status?.(true) || fetch("/api/security/lock/status").then((r) => r.json()));
+      if (!st?.lock_capable) {
+        window.showAriaToast?.(
+          st?.owner_vault
+            ? "Owner lock is not available"
+            : "Set a Master Password before locking Aria",
+          "warn",
+          4000,
+        );
+        return { ok: false, message: "lock_not_capable" };
+      }
+      const res = await fetch("/api/security/lock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hard }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) {
+        window.showAriaToast?.(data.message || "Lock failed", "err", 4000);
+        return data;
+      }
+      setSession("");
+      await window.jarvisShowLock?.();
+      return data;
+    } catch (e) {
+      const msg = String(e.message || e);
+      window.showAriaToast?.(msg, "err", 5000);
+      return { ok: false, message: msg };
+    }
+  };
 
   function showLock(show) {
     $("lockScreen")?.classList.toggle("hidden", !show);
+    if (show) {
+      const master = $("lockMasterInput");
+      const pin = $("lockPinInput");
+      if (lastStatus?.unlock_with === "master_password") {
+        master?.focus();
+      } else {
+        pin?.focus();
+      }
+    }
   }
 
-  window.jarvisShowLock = () => {
+  function applyLockMode(data) {
+    lastStatus = data;
+    const masterMode = data.owner_vault === true;
+    const pinSoft = !!data.pin_soft_unlock_available;
+    $("lockScreen")?.classList.toggle("lock-mode-master", masterMode);
+    $("lockScreen")?.classList.toggle("lock-mode-pin", !masterMode);
+    const title = $("lockScreenTitle");
+    const hint = $("lockScreenHint");
+    if (title) title.textContent = "ARIA locked";
+    if (hint) {
+      hint.textContent = masterMode
+        ? "Aria is locked. Enter your Aria Master Password to unlock the house."
+        : "Enter PIN, face unlock, or use a trusted device";
+    }
+    const masterWrap = $("lockMasterBlock");
+    const pinWrap = $("lockPinBlock");
+    const faceBtn = $("lockFaceBtn");
+    const trust = $("lockTrustRow");
+    if (masterWrap) masterWrap.classList.toggle("hidden", !masterMode);
+    if (pinWrap) pinWrap.classList.toggle("hidden", masterMode && !pinSoft);
+    if (faceBtn) faceBtn.classList.toggle("hidden", masterMode);
+    if (trust) trust.classList.toggle("hidden", masterMode);
+    const pinInput = $("lockPinInput");
+    if (pinInput) {
+      pinInput.placeholder = pinSoft ? "Optional PIN" : "PIN";
+    }
+  }
+
+  window.jarvisShowLock = async () => {
+    try {
+      const data = await (window.AriaOwner?.status?.(true) || fetch("/api/security/lock/status").then((r) => r.json()));
+      applyLockMode(data);
+      if (!data.lock_capable) {
+        showLock(false);
+        window.showAriaToast?.(
+          data.owner_vault
+            ? "Owner lock is not available"
+            : (!data.pin_lock_enabled
+              ? "PIN lock is off — enable JARVIS_PIN_LOCK=1 and set a PIN first"
+              : "Set a PIN before locking Aria"),
+          "warn",
+          4500,
+        );
+        return;
+      }
+    } catch (_) {
+      showLock(false);
+      return;
+    }
     setSession("");
     showLock(true);
+    window.AriaOwner?.notifyLocked?.();
   };
 
   async function checkLock() {
+    const epoch = ++lockEpoch;
     try {
-      const res = await fetch("/api/security/lock/status");
-      const data = await res.json();
-      if (!data.pin_lock_enabled || !data.pin_configured) {
+      const data = await (window.AriaOwner?.status?.(true) || fetch("/api/security/lock/status").then((r) => r.json()));
+      if (epoch !== lockEpoch) return;
+      applyLockMode(data);
+      window.jarvisLockCapable = !!data.lock_capable;
+      idleEnabled = idleSecondsFromStatus(data) > 0;
+      if (!data.lock_capable) {
         showLock(false);
         return;
       }
-      const unlockRes = await fetch("/api/security/unlock", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Jarvis-Device": deviceId() },
-        body: JSON.stringify({ device_id: deviceId() }),
-      });
-      if (unlockRes.ok) {
-        const u = await unlockRes.json();
-        if (u.session) setSession(u.session);
-        showLock(false);
-        resetIdle();
+      if (data.owner_vault) {
+        try { sessionStorage.setItem("aria_owner_vault", "1"); } catch (_) { /* ignore */ }
+        if (data.locked) {
+          setSession("");
+          showLock(true);
+        } else {
+          showLock(false);
+          resetIdle();
+        }
         return;
       }
-      showLock(true);
+      if (data.locked) {
+        showLock(true);
+        return;
+      }
+      showLock(false);
+      resetIdle();
     } catch (_) {
+      if (epoch !== lockEpoch) return;
+      try {
+        if (sessionStorage.getItem("aria_owner_vault") === "1") {
+          showLock(true);
+          return;
+        }
+      } catch (_) { /* ignore */ }
       showLock(false);
     }
   }
 
-  async function unlockWithPin() {
-    const pin = $("lockPinInput")?.value?.trim();
-    const trust = $("lockTrustDevice")?.checked;
+  async function unlockHouse() {
     const err = $("lockError");
+    const master = $("lockMasterInput")?.value || "";
+    const pin = $("lockPinInput")?.value?.trim() || "";
+    const trust = $("lockTrustDevice")?.checked;
+    const body = { device_id: deviceId(), trust_device: trust, label: navigator.platform };
+    if (lastStatus?.owner_vault) {
+      if (master) body.master_password = master;
+      else if (pin) body.pin = pin;
+      else {
+        if (err) err.textContent = "Aria is locked. Enter your Aria Master Password to unlock the house.";
+        return;
+      }
+    } else {
+      body.pin = pin;
+    }
     try {
       const res = await fetch("/api/security/unlock", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pin, device_id: deviceId(), trust_device: trust, label: navigator.platform }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) {
+      if (!res.ok || data.ok === false) {
         const msg = data.message || "Unlock failed";
         if (err) err.textContent = msg;
         window.showAriaToast?.(msg, "err", 4000);
         return;
       }
-      setSession(data.session);
+      setSession(data.session || data.session_token);
+      lockEpoch += 1;
+      if ($("lockMasterInput")) $("lockMasterInput").value = "";
+      if ($("lockPinInput")) $("lockPinInput").value = "";
       showLock(false);
       if (err) err.textContent = "";
       resetIdle();
       notifyUnlocked();
-      window.showAriaToast?.("Unlocked", "ok", 2000);
+      window.showAriaToast?.("Aria unlocked", "ok", 2000);
     } catch (e) {
       const msg = String(e.message || e);
       if (err) err.textContent = msg;
@@ -95,15 +226,33 @@
     }
   }
 
+  function notifyUnlocked() {
+    window.AriaOwner?.notifyUnlocked?.();
+  }
+
   function resetIdle() {
-    if (idleTimer) clearTimeout(idleTimer);
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+      idleTimer = null;
+    }
+    if (!idleEnabled) return;
     fetch("/api/security/lock/status")
       .then((r) => r.json())
       .then((d) => {
-        const sec = d.idle_seconds || 900;
+        const sec = idleSecondsFromStatus(d);
+        idleEnabled = sec > 0;
+        if (sec <= 0) return;
         idleTimer = setTimeout(() => {
           setSession("");
-          checkLock();
+          if (d.owner_vault) {
+            fetch("/api/security/lock", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ hard: true }),
+            }).finally(() => checkLock());
+          } else {
+            checkLock();
+          }
         }, sec * 1000);
       })
       .catch(() => {});
@@ -111,6 +260,7 @@
 
   ["click", "keydown", "touchstart"].forEach((ev) => {
     document.addEventListener(ev, () => {
+      if (!idleEnabled) return;
       if (!$("lockScreen")?.classList.contains("hidden")) return;
       resetIdle();
     }, { passive: true });
@@ -142,7 +292,7 @@
         window.showAriaToast?.(msg, "err", 4000);
         return;
       }
-      setSession(data.session);
+      setSession(data.session || data.session_token);
       showLock(false);
       if (err) err.textContent = "";
       resetIdle();
@@ -156,10 +306,13 @@
   }
 
   function initLockScreen() {
-    $("lockUnlockBtn")?.addEventListener("click", unlockWithPin);
+    $("lockUnlockBtn")?.addEventListener("click", unlockHouse);
     $("lockFaceBtn")?.addEventListener("click", unlockWithFace);
     $("lockPinInput")?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") unlockWithPin();
+      if (e.key === "Enter") unlockHouse();
+    });
+    $("lockMasterInput")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") unlockHouse();
     });
     $("pinSetupBtn")?.addEventListener("click", async () => {
       const pin = $("pinSetupInput")?.value?.trim();
@@ -195,5 +348,12 @@
   }
 
   window.initLockScreen = initLockScreen;
-  document.addEventListener("DOMContentLoaded", initLockScreen);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initLockScreen);
+  } else {
+    initLockScreen();
+  }
+  window.addEventListener("pageshow", () => {
+    if (typeof checkLock === "function") checkLock();
+  });
 })();

@@ -1,0 +1,15 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-13T16:58:00+00:00",
+  "defect": "URL hash stuck at #homeAutomation after visiting Home Automation",
+  "evidence": {
+    "href": "http://127.0.0.1:8765/?workspace=1#homeAutomation",
+    "views_still_switch": true,
+    "body_dataset_room_updates": true,
+    "examples": [
+      { "visible": "calendarView", "bodyRoom": "calendar", "hash": "#homeAutomation", "place": "· Wall calendar" },
+      { "visible": "chatView", "bodyRoom": "chat", "hash": "#homeAutomation", "place": "· Audio studio" }
+    ]
+  },
+  "result": "FAIL — address bar / refresh / bookmark identity is Home Automation while Jeff is in another Room. Chat place label Audio studio is also wrong."
+}

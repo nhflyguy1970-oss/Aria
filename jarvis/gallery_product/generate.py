@@ -8,6 +8,12 @@ from typing import Any
 def submit_generate(assistant, prompt: str = "", *, negative: str = "", **extra) -> dict[str, Any]:
     """Enqueue via the one Image Generation engine (never a separate Gallery stack)."""
     from jarvis.image_generation.engine import submit_generation
+    from jarvis.production_guard import ProductionIsolationError, assert_owner_write_allowed
+
+    try:
+        assert_owner_write_allowed(prompt, extra.get("project") if extra else "", store="gallery")
+    except ProductionIsolationError as exc:
+        return {"ok": False, "error": str(exc)}
 
     params = dict(extra or {})
     if prompt:

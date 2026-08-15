@@ -1,0 +1,25 @@
+{
+  "updated_at": "2026-08-13T15:25:03.212811+00:00",
+  "phase": "restart_locked",
+  "new_serve_observed": true,
+  "owner_state": "OWNER_LOCKED",
+  "entry_count": 5,
+  "ha": {
+    "http_status": 200,
+    "elapsed_ms": 25.18,
+    "connected": false,
+    "locked": true,
+    "conn_ok": false,
+    "conn_message": "Home Assistant is locked. Unlock Aria with your Master Password."
+  },
+  "lan_without_key": {
+    "http_status": 401
+  },
+  "lan_with_correct_key": {
+    "http_status": 401,
+    "elapsed_ms": 0.91,
+    "message": "Invalid or missing API key"
+  },
+  "fail_closed": true,
+  "secrets_in_evidence": false
+}

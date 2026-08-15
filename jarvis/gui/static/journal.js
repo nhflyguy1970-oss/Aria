@@ -38,6 +38,12 @@ function showBujoLoading() {
 
 function showBujoError(message, retryFn) {
   if (!bujoContent) return;
+  // Never paint Journal errors into a Room Jeff already left.
+  const inJournal =
+    document.body?.dataset?.room === "journal" ||
+    document.body?.classList?.contains("house-journal") ||
+    !!document.getElementById("ariaStage")?.contains(bujoContent);
+  if (!inJournal) return;
   bujoContent.innerHTML =
     `<p class="bujo-empty" role="alert">${escapeHtml(message || "Could not load this view.")} `
     + `<button type="button" class="ghost-btn tiny" id="bujoRetryBtn">Retry</button></p>`;
@@ -46,17 +52,44 @@ function showBujoError(message, retryFn) {
       Promise.resolve(retryFn()).catch(() => {});
     });
   }
-  window.showAriaToast?.(message || "Could not load journal view", "err", 5000);
+  // Inline retry is enough — toast after leave becomes Living Room contamination.
+  if (inJournal && document.body?.dataset?.room === "journal") {
+    window.showAriaToast?.(message || "Could not load journal view", "err", 5000);
+  }
 }
 
 // Run an async BuJo view loader; never leave the panel stuck on the loading spinner.
+let bujoLoadSeq = 0;
 function bujoDispatch(fn, label) {
+  const seq = ++bujoLoadSeq;
   Promise.resolve()
     .then(fn)
     .catch((err) => {
+      if (seq !== bujoLoadSeq) return;
       showBujoError(err?.message || `Could not load ${label || "view"}.`, fn);
     });
+  // Slow-network / hung-fetch safety: never leave "Loading…" forever.
+  // Only surface the retry while Journal is still the lived-in Room — otherwise
+  // a hung daily-log fetch paints into bujo DOM after Jeff already left.
+  setTimeout(() => {
+    if (seq !== bujoLoadSeq || !bujoContent) return;
+    const inJournal =
+      document.body?.dataset?.room === "journal" ||
+      (document.body?.classList?.contains("house-journal") &&
+        !!document.getElementById("ariaStage")?.contains(bujoContent));
+    if (!inJournal) return;
+    if (bujoContent.querySelector?.(".bujo-loading")) {
+      showBujoError(`Still loading ${label || "view"} — retry?`, fn);
+    }
+  }, 12000);
 }
+
+/** Invalidate in-flight Journal loaders when leaving the Room. */
+function bujoCancelPending() {
+  bujoLoadSeq += 1;
+}
+window.AriaJournalCancelPending = bujoCancelPending;
+
 
 const nativeFetch = window.fetch.bind(window);
 
@@ -72,6 +105,12 @@ async function journalPost(url, init = {}) {
   if (!res.ok) {
     const msg = body.message || body.error || body.detail || `Request failed (${res.status})`;
     journalNotify(typeof msg === "string" ? msg : "Request failed");
+    return { ok: false, res, body };
+  }
+  // HTTP 200 with body.ok === false is still a failure (never toast "saved" on that)
+  if (body && typeof body === "object" && Object.prototype.hasOwnProperty.call(body, "ok") && body.ok === false) {
+    const msg = body.message || body.error || body.detail || "Journal request rejected";
+    journalNotify(typeof msg === "string" ? msg : "Journal request rejected");
     return { ok: false, res, body };
   }
   return { ok: true, res, body };
@@ -276,7 +315,7 @@ function renderWellnessBlock(day, data) {
     <div class="bujo-gratitude-add">
       <span class="bujo-gratitude-prefix">${escapeHtml(GRATITUDE_PREFIX)}</span>
       <input type="text" id="bujoGratitudeInput" placeholder="sunshine, coffee, a good walk…" aria-label="Gratitude completion" />
-      <button type="button" id="bujoGratitudeBtn" class="ghost-btn small">Add</button>
+      <button type="button" id="bujoGratitudeBtn" class="ghost-btn small" aria-label="Add gratitude">Add gratitude</button>
     </div>
   </div>`;
 }
@@ -400,7 +439,11 @@ async function postDaily(content, bulletType, day) {
   form.append("content", content);
   form.append("bullet_type", bulletType);
   if (day) form.append("day", day);
-  return journalPost("/api/journal/daily", { method: "POST", body: form });
+  const out = await journalPost("/api/journal/daily", { method: "POST", body: form });
+  try {
+    window.refreshCalendar?.();
+  } catch (_) { /* ignore */ }
+  return out;
 }
 
 async function postWeekly(content, bulletType, week) {
@@ -1262,9 +1305,11 @@ async function loadCollections() {
 }
 
 async function loadSearchResults(q) {
+  const seq = ++bujoLoadSeq;
   try {
     const res = await fetch(`/api/journal/search?q=${encodeURIComponent(q)}`);
     const data = await res.json().catch(() => ({}));
+    if (seq !== bujoLoadSeq || currentBujo !== "search") return;
     if (!res.ok) {
       bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><div class="empty-state"><div class="empty-state-icon" aria-hidden="true">⌕</div><p class="empty-state-title">Search failed</p><p class="muted">${escapeHtml(data.message || data.error || `Server returned ${res.status}`)}</p><div class="empty-state-actions"><button type="button" class="apply-btn tiny" id="bujoSearchRetryBtn">Retry</button><button type="button" class="ghost-btn tiny" id="bujoSearchEmptyDailyBtn">Open daily log</button></div></div>`;
       document.getElementById("bujoSearchRetryBtn")?.addEventListener("click", () => loadSearchResults(q));
@@ -1273,6 +1318,7 @@ async function loadSearchResults(q) {
       return;
     }
     const hits = data.results || [];
+    if (seq !== bujoLoadSeq || currentBujo !== "search") return;
     if (!hits.length) {
       bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><p class="bujo-empty">No matches. <button type="button" class="ghost-btn tiny" id="bujoSearchEmptyDailyBtn">Open daily log</button></p>`;
       document.getElementById("bujoSearchEmptyDailyBtn")?.addEventListener("click", () => setBujoTab("daily"));
@@ -1305,6 +1351,7 @@ async function loadSearchResults(q) {
       };
     });
   } catch (err) {
+    if (seq !== bujoLoadSeq || currentBujo !== "search") return;
     bujoContent.innerHTML = `<h3>Search: ${escapeHtml(q)}</h3><p class="bujo-empty">Search unavailable.</p>`;
     journalNotify(err?.message || "Journal search failed");
   }
@@ -1646,14 +1693,15 @@ function refreshBujo() {
   else if (currentBujo === "future") bujoDispatch(loadFuture, "future log");
   else if (currentBujo === "index") bujoDispatch(loadIndex, "index");
   else if (currentBujo === "collections") bujoDispatch(loadCollections, "collections");
-  else if (currentBujo === "projects") bujoDispatch(loadProjects, "projects");
+  else if (currentBujo === "projects") bujoDispatch(loadJournalProjects, "projects");
   else if (currentBujo === "key") bujoDispatch(loadKey, "key");
 }
 
 let projectJournalSlug = null;
 let projectJournalDay = null;
 
-async function loadProjects() {
+async function loadJournalProjects() {
+  // Named to avoid colliding with projects.js global loadProjects (classic scripts share window).
   showBujoLoading();
   const day = projectJournalDay || journalDate?.value || new Date().toISOString().slice(0, 10);
   const res = await fetch("/api/journal/projects");
@@ -1700,7 +1748,7 @@ async function loadProjects() {
   bujoContent.querySelectorAll(".bujo-project-row").forEach((btn) => {
     btn.onclick = () => {
       projectJournalSlug = btn.dataset.slug;
-      loadProjects();
+      loadJournalProjects();
     };
   });
   document.getElementById("bujoProjectEmptyChatBtn")?.addEventListener("click", () => {
@@ -1710,7 +1758,7 @@ async function loadProjects() {
 
   document.getElementById("projectJournalDay")?.addEventListener("change", (e) => {
     projectJournalDay = e.target.value;
-    loadProjects();
+    loadJournalProjects();
   });
 
   document.getElementById("projectLogBtn")?.addEventListener("click", async () => {
@@ -1726,7 +1774,7 @@ async function loadProjects() {
     });
     document.getElementById("projectLogText").value = "";
     journalNotify("Logged to project journal", false);
-    loadProjects();
+    loadJournalProjects();
   });
 
   document.getElementById("projectLogText")?.addEventListener("keydown", (e) => {
@@ -1777,6 +1825,7 @@ window.openProjectJournal = function openProjectJournal(slug) {
 
 function setBujoTab(name) {
   currentBujo = name;
+  if (name !== "search") bujoCancelPending();
   if (name !== "monthly") monthlySelectedDay = null;
   document.querySelectorAll(".bujo-tab").forEach((t) => {
     t.classList.toggle("active", t.dataset.bujo === name);
@@ -1904,7 +1953,13 @@ document.getElementById("journalAssistPromoteBtn")?.addEventListener("click", as
       ).join("")}</ul>`;
     bujoContent.querySelectorAll(".bujo-confirm-promote").forEach((btn) => {
       btn.onclick = async () => {
-        if (!confirm("Create a Planner task from this bullet?")) return;
+        const ok = window.ariaConfirm
+          ? await window.ariaConfirm("Create a Planner task from this bullet?", {
+              title: "Promote to Planner",
+              okLabel: "Promote",
+            })
+          : window.confirm("Create a Planner task from this bullet?");
+        if (!ok) return;
         const out = await journalPost(`/api/journal/bullet/${btn.dataset.id}/promote`, { method: "POST" });
         journalNotify(out.ok ? "Promoted" : "Failed", !out.ok);
         if (out.ok) refreshBujo();
@@ -1939,7 +1994,13 @@ document.getElementById("journalMonthWizardBtn")?.addEventListener("click", asyn
       <button type="button" id="bujoWizMigrateAll" class="apply-btn small">Run month migrate…</button>`;
     bujoContent.querySelectorAll(".bujo-wiz-migrate").forEach((btn) => {
       btn.onclick = async () => {
-        if (!confirm(`Migrate this bullet to ${btn.dataset.target}?`)) return;
+        const ok = window.ariaConfirm
+          ? await window.ariaConfirm(`Migrate this bullet to ${btn.dataset.target}?`, {
+              title: "Migrate bullet",
+              okLabel: "Migrate",
+            })
+          : window.confirm(`Migrate this bullet to ${btn.dataset.target}?`);
+        if (!ok) return;
         const form = new FormData();
         form.append("target", btn.dataset.target);
         const out = await journalPost(`/api/journal/bullet/${btn.dataset.id}/migrate`, { method: "POST", body: form });
@@ -1963,7 +2024,12 @@ document.getElementById("journalBackupBtn")?.addEventListener("click", async () 
 });
 
 document.getElementById("journalVoiceLogBtn")?.addEventListener("click", async () => {
-  const transcript = prompt("Paste or dictate voice transcript for Rapid Log:");
+  const transcript = window.ariaPrompt
+    ? await window.ariaPrompt("Paste or dictate voice transcript for Rapid Log:", "", {
+        title: "Voice → Rapid Log",
+        okLabel: "Draft",
+      })
+    : window.prompt("Paste or dictate voice transcript for Rapid Log:");
   if (!transcript) return;
   const form = new FormData();
   form.append("transcript", transcript);
@@ -1974,7 +2040,12 @@ document.getElementById("journalVoiceLogBtn")?.addEventListener("click", async (
     journalNotify("Nothing recognized");
     return;
   }
-  const accept = confirm(`Add this draft to Rapid Log?\n\n${text}`);
+  const accept = window.ariaConfirm
+    ? await window.ariaConfirm(`Add this draft to Rapid Log?\n\n${text}`, {
+        title: "Add Rapid Log draft",
+        okLabel: "Add",
+      })
+    : window.confirm(`Add this draft to Rapid Log?\n\n${text}`);
   if (!accept) return;
   const rapid = document.getElementById("rapidLogInput");
   if (rapid) rapid.value = text;
@@ -1982,7 +2053,12 @@ document.getElementById("journalVoiceLogBtn")?.addEventListener("click", async (
 });
 
 document.getElementById("journalVisionImportBtn")?.addEventListener("click", async () => {
-  const ocr = prompt("Paste OCR / notebook scan text to import:");
+  const ocr = window.ariaPrompt
+    ? await window.ariaPrompt("Paste OCR / notebook scan text to import:", "", {
+        title: "Vision import",
+        okLabel: "Import",
+      })
+    : window.prompt("Paste OCR / notebook scan text to import:");
   if (!ocr) return;
   const form = new FormData();
   form.append("ocr_text", ocr);
@@ -1994,7 +2070,13 @@ document.getElementById("journalVisionImportBtn")?.addEventListener("click", asy
   const out = await journalPost("/api/journal/assist/vision", { method: "POST", body: form });
   if (!out.ok) return;
   const text = out.body?.text || "";
-  if (!confirm(`Import these lines into ${out.body?.section || "daily"}?\n\n${text.slice(0, 400)}`)) return;
+  const ok = window.ariaConfirm
+    ? await window.ariaConfirm(
+        `Import these lines into ${out.body?.section || "daily"}?\n\n${text.slice(0, 400)}`,
+        { title: "Import OCR lines", okLabel: "Import" }
+      )
+    : window.confirm(`Import these lines into ${out.body?.section || "daily"}?\n\n${text.slice(0, 400)}`);
+  if (!ok) return;
   const rapid = document.getElementById("rapidLogInput");
   if (rapid) rapid.value = text;
   document.getElementById("rapidLogBtn")?.click();
@@ -2117,7 +2199,13 @@ document.getElementById("journalMigrateBtn")?.addEventListener("click", async ()
     : `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, "0")}`;
   const dest = document.getElementById("journalMigrateDest")?.value || "monthly";
   const destLabel = dest === "future" ? "future log" : "next monthly log";
-  if (!confirm(`Migrate open monthly tasks from ${from} to ${nm} (${destLabel})?`)) return;
+  const ok = window.ariaConfirm
+    ? await window.ariaConfirm(
+        `Migrate open monthly tasks from ${from} to ${nm} (${destLabel})?`,
+        { title: "Migrate month", okLabel: "Migrate" }
+      )
+    : window.confirm(`Migrate open monthly tasks from ${from} to ${nm} (${destLabel})?`);
+  if (!ok) return;
   const form = new FormData();
   form.append("from_month", from);
   form.append("to_month", nm);
@@ -2188,7 +2276,18 @@ document.getElementById("journalExportBtn")?.addEventListener("click", async () 
 });
 
 document.getElementById("journalExportEncBtn")?.addEventListener("click", async () => {
-  const password = prompt("Export password (min 4 characters):");
+  const password = window.ariaPrompt
+    ? await window.ariaPrompt(
+        "Password for this exported file (not your Aria Master Password). Min 4 characters. Aria does not store it.",
+        "",
+        {
+        title: "Encrypted export",
+        okLabel: "Export",
+        password: true,
+      })
+    : window.prompt(
+        "Password for this exported file (not your Aria Master Password). Min 4 characters. Aria does not store it.",
+      );
   if (!password || password.length < 4) {
     if (password !== null) journalNotify("Password must be at least 4 characters");
     return;
@@ -2197,7 +2296,13 @@ document.getElementById("journalExportEncBtn")?.addEventListener("click", async 
   form.append("password", password);
   const out = await journalPost("/api/journal/export/encrypted", { method: "POST", body: form });
   if (!out.ok) return;
-  const blob = new Blob([JSON.stringify(out.body.export, null, 2)], { type: "application/json" });
+  // Download the envelope only ({format,salt,ciphertext}) — never the API wrapper.
+  const envelope = out.body?.export;
+  if (!envelope || typeof envelope !== "object" || !envelope.format || !envelope.ciphertext) {
+    journalNotify("Encrypted export missing envelope — try again");
+    return;
+  }
+  const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = `jarvis-journal-encrypted-${new Date().toISOString().slice(0, 10)}.json`;
@@ -2213,7 +2318,13 @@ journalImportFile?.addEventListener("change", async () => {
   if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    const merge = confirm("Merge with existing journal? Cancel replaces all.");
+    const merge = window.ariaConfirm
+      ? await window.ariaConfirm("Merge with existing journal? Cancel replaces all.", {
+          title: "Import journal",
+          okLabel: "Merge",
+          cancelLabel: "Replace all",
+        })
+      : window.confirm("Merge with existing journal? Cancel replaces all.");
     const out = await journalPost("/api/journal/import", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2230,30 +2341,66 @@ journalImportFile?.addEventListener("change", async () => {
 });
 
 document.getElementById("journalImportEncBtn")?.addEventListener("click", () => journalImportEncFile?.click());
+let _journalEncImportBusy = false;
 journalImportEncFile?.addEventListener("change", async () => {
   const file = journalImportEncFile.files?.[0];
   if (!file) return;
-  const password = prompt("Import password:");
-  if (!password) {
-    journalImportEncFile.value = "";
-    return;
-  }
+  if (_journalEncImportBusy) return;
+  _journalEncImportBusy = true;
   try {
-    const payload = JSON.parse(await file.text());
-    const merge = confirm("Merge with existing journal? Cancel replaces all.");
-    const out = await journalPost("/api/journal/import/encrypted", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ export: payload, password, merge }),
-    });
-    if (out.ok) {
-      journalNotify("Encrypted journal imported", false);
-      refreshBujo();
+    const password = window.ariaPrompt
+      ? await window.ariaPrompt(
+          "Password for this encrypted Journal file (chosen at export — not your Aria Master Password):",
+          "",
+          {
+          title: "Encrypted import",
+          okLabel: "Import",
+          password: true,
+        })
+      : window.prompt(
+          "Password for this encrypted Journal file (chosen at export — not your Aria Master Password):",
+        );
+    if (!password) {
+      return;
     }
-  } catch (_) {
-    journalNotify("Invalid encrypted journal file");
+    try {
+      const payload = JSON.parse(await file.text());
+      // Prefer Merge. Replace-all requires an explicit second confirm + confirm_wipe for the API.
+      let merge = window.ariaConfirm
+        ? await window.ariaConfirm("Merge with existing journal? Cancel replaces all.", {
+            title: "Import encrypted journal",
+            okLabel: "Merge",
+            cancelLabel: "Replace all",
+          })
+        : window.confirm("Merge with existing journal? Cancel replaces all.");
+      const body = { export: payload, password, merge: merge !== false };
+      if (merge === false) {
+        const wipe = window.ariaConfirm
+          ? await window.ariaConfirm(
+              "Replace ALL journal data with this import? This cannot be undone.",
+              { title: "Replace journal", okLabel: "Replace all", cancelLabel: "Cancel" }
+            )
+          : window.confirm("Replace ALL journal data with this import? This cannot be undone.");
+        if (!wipe) return;
+        body.merge = false;
+        body.confirm_wipe = true;
+      }
+      const out = await journalPost("/api/journal/import/encrypted", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (out.ok) {
+        journalNotify("Encrypted journal imported", false);
+        refreshBujo();
+      }
+    } catch (_) {
+      journalNotify("Invalid encrypted journal file");
+    }
+  } finally {
+    _journalEncImportBusy = false;
+    journalImportEncFile.value = "";
   }
-  journalImportEncFile.value = "";
 });
 
 if (journalDate) journalDate.value = new Date().toISOString().slice(0, 10);

@@ -27,7 +27,9 @@ def git_routes():
             24,
             "git commit",
             lambda m, lower, _s: bool(re.match(r"^commit:\s*.+", lower)),
-            params=lambda m: {"message": re.sub(r"^commit:\s*", "", m, count=1, flags=re.I).strip()},
+            params=lambda m: {
+                "message": re.sub(r"^commit:\s*", "", m, count=1, flags=re.I).strip()
+            },
         ),
         RouteRule(
             "git_branch",

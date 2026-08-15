@@ -1,0 +1,41 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "connections",
+  "capability": "Browse/Search vs Overview 59/53 discrepancy",
+  "captured_at": "2026-08-15T19:22:00Z",
+  "result": "PARTIAL — Overview/namespaces still 59 nodes (system 1 + default 58) and API relationships 53. Browse and GET /api/connections/search?mode=entities&q= still count 0 / No entities yet. Repair is in tree (Bolt list_nodes/list_edges MATCH-all) and unit-tested; live process has not loaded it. Did not create fake graph data. New/Import/Cleanup not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "hash #connections",
+    "hash": "#connections",
+    "h2": "Connections"
+  },
+  "overview": {
+    "api_nodes": 59,
+    "api_relationships": 53,
+    "ui_namespaces": ["system · 1 nodes", "default · 58 nodes"],
+    "backend_live": "memgraph (prior evidence); search response backend field not yet live"
+  },
+  "browse": {
+    "clicked": true,
+    "ui": "No entities yet. Press N to create one, or Import text for review.",
+    "api_count": 0,
+    "cause": "BoltGraphStore.list_nodes still the old empty-q→[] in the running process"
+  },
+  "repair_in_tree": {
+    "file": "jarvis/modules/graph_store.py",
+    "test": "tests/test_connections.py::test_bolt_browse_lists_all_when_query_empty PASSED",
+    "live": false,
+    "needs": "process load — do not Restart Server / Lock Aria unless Jeff asks"
+  },
+  "not_clicked": ["New (N)", "Import", "Cleanup", "Assistant", "Undo"],
+  "data_mutation": {
+    "graph_write": false,
+    "journal_post": false
+  },
+  "owner_session": "OWNER_UNLOCKED throughout"
+}

@@ -53,6 +53,22 @@
     return esc(text || "").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\n/g, "<br>");
   }
 
+  function isRoomAbort(err) {
+    return !!(
+      window.AriaNet?.isRoomAbort?.(err) ||
+      err?.name === "AbortError" ||
+      /aborted|aria-room-leave/i.test(String(err?.message || err?.reason || ""))
+    );
+  }
+
+  function flyViewActive() {
+    return (
+      document.body.classList.contains("house-flytying") ||
+      /^#?flytying\b/i.test(location.hash || "") ||
+      !!document.getElementById("flytyingView")?.offsetParent
+    );
+  }
+
   async function fetchJson(url, opts) {
     const res = await fetch(url, opts);
     let data = {};
@@ -89,8 +105,10 @@
   }
 
   async function loadUserState() {
+    const gen = (loadUserState._gen = (loadUserState._gen || 0) + 1);
     try {
       const data = await fetchJson("/api/flytying/user");
+      if (gen !== loadUserState._gen) return;
       _favorites = new Set(data.favorites || []);
       _queue = data.queue || [];
       _inventory = (data.inventory?.length ? data.inventory : materialsToInventory(data.materials || [])).map(
@@ -99,6 +117,16 @@
       renderInventory();
       renderQueue();
     } catch (err) {
+      if (gen !== loadUserState._gen) return;
+      if (isRoomAbort(err)) {
+        if (flyViewActive()) {
+          clearTimeout(loadUserState._retry);
+          loadUserState._retry = setTimeout(() => {
+            if (flyViewActive()) loadUserState();
+          }, 160);
+        }
+        return;
+      }
       window.showAriaToast?.(err.message || "Could not load fly-tying user state", "err", 5000);
     }
   }
@@ -712,16 +740,16 @@
       stepBtn.disabled = !steps.length;
     }
     if (!steps.length) {
-      section.innerHTML = `<h4>Instructions</h4><ol class="flytying-steps"><li class="muted">No steps listed for this pattern.</li></ol>`;
+      section.innerHTML = `<h4>Written instructions</h4><ol class="flytying-steps"><li class="muted">No steps listed for this pattern.</li></ol>`;
       return;
     }
     if (!_stepMode) {
-      section.innerHTML = `<h4>Instructions</h4><ol class="flytying-steps">${steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>`;
+      section.innerHTML = `<h4>Written instructions</h4><ol class="flytying-steps">${steps.map((s) => `<li>${esc(s)}</li>`).join("")}</ol>`;
       return;
     }
     const idx = Math.max(0, Math.min(_stepIdx, steps.length - 1));
     section.innerHTML = `
-      <h4>Instructions <span class="muted small">· step ${idx + 1} of ${steps.length}</span></h4>
+      <h4>Written instructions <span class="muted small">· step ${idx + 1} of ${steps.length}</span></h4>
       <div class="flytying-step-box">
         <p class="flytying-step-text">${fmt(steps[idx])}</p>
         <div class="flytying-step-nav">
@@ -917,41 +945,35 @@
         .map(([k, v]) => `${k} ${v}`)
         .join(" · ");
       const lib = st.library || {};
-      const libBit = lib.recipe_files ? ` · library ${lib.recipe_files} docs` : "";
-      const bfBit = st.blackfly_import ? "Blackfly ✓" : "Blackfly ✗";
-      const semBit = st.semantic_usable ? "semantic" : "keyword only";
-      const modeBit = st.index_note ? ` · ${st.index_note}` : "";
+      const libBit = lib.recipe_files ? ` · ${lib.recipe_files} recipe docs` : "";
+      const libReady = st.blackfly_import ? "library connected" : "library offline";
+      const searchBit = st.semantic_usable ? "smart search on" : "keyword search";
+      const indexBit = st.index_built ? "index ready" : "index building";
       const apiWarn =
         st.api_version && st.api_version < EXPECTED_API_VERSION
-          ? " · restart ARIA for latest fly tying API"
+          ? " · restart Aria for the latest fly tools"
           : "";
       const enable = st.blackfly_enablement || {};
       const hint = enable.hint || "";
-      const srcLabel =
-        st.recipe_source === "gold"
-          ? `${st.gold_count || st.record_count || 0} gold`
-          : `${st.record_count || 0} scraped`;
+      const count = st.gold_count || st.record_count || 0;
+      const quality = st.recipe_source === "gold" ? "curated" : "catalog";
       el.textContent = st.ok
-        ? `${srcLabel} · ${bfBit} · ${semBit} · index ${st.index_built ? "on" : "off"}${typeBits ? " · " + typeBits : ""}${libBit}${modeBit}${apiWarn}${hint ? " · ⚠ " + hint : ""}`
-        : "Dataset not ready — set JARVIS_FLYTYING_ROOT in data/jarvis.env";
+        ? `${count} ${quality} patterns · ${libReady} · ${searchBit} · ${indexBit}${typeBits ? " · " + typeBits : ""}${libBit}${apiWarn}${hint ? " · ⚠ " + hint : ""}`
+        : "Pattern library not ready — open Fly Setup to connect your recipe collection";
       const warnEl = $("flytyingDataWarn");
       if (warnEl) {
         const gold = Number(st.gold_count || 0);
         const scraped = Number(st.scraped_count || st.record_count || 0);
-        const root = st.root || (st.blackfly_enablement || {}).project_root || "";
         const onStub = st.recipe_source !== "gold" && gold < 50 && scraped < 150;
         if (onStub) {
           warnEl.classList.remove("hidden");
           warnEl.innerHTML =
-            `<strong>Limited pattern library (${scraped} scraped, no gold).</strong> ` +
-            `Your full Blackfly library (~271+ recipes) lives at <code>/media/jeff/C/fly_fishing_project</code>. ` +
-            `Mount that drive, add <code>export JARVIS_FLYTYING_ROOT="/media/jeff/C/fly_fishing_project"</code> to ` +
-            `<code>data/jarvis.env</code>, restart ARIA, then click <strong>Rebuild</strong>.` +
-            (root ? ` <span class="muted">(currently: ${esc(root)})</span>` : "");
+            `<strong>Limited pattern library (${scraped} patterns).</strong> ` +
+            `Open <strong>Setup</strong> to connect your full recipe collection, then click <strong>Rebuild</strong>.`;
         } else if (!st.ok) {
           warnEl.classList.remove("hidden");
           warnEl.textContent =
-            "Fly tying data not found. Set JARVIS_FLYTYING_ROOT in data/jarvis.env to your Blackfly project folder.";
+            "Pattern library not found. Open Setup to choose your fly-fishing recipe folder.";
         } else {
           warnEl.classList.add("hidden");
           warnEl.textContent = "";
@@ -971,7 +993,16 @@
         hatchEl.textContent = `Season (${hatch.region}, month ${hatch.month}): ${hatch.hatches.join(", ")} — ${hatch.notes || ""}`;
       }
     } catch (e) {
-      el.textContent = `Unavailable — ${e.message}`;
+      if (isRoomAbort(e)) {
+        if (flyViewActive()) {
+          clearTimeout(refreshStatus._retry);
+          refreshStatus._retry = setTimeout(() => {
+            if (flyViewActive()) refreshStatus();
+          }, 160);
+        }
+        return;
+      }
+      el.textContent = `Unavailable — ${e.message || "try Refresh"}`;
     }
   }
 
@@ -1178,21 +1209,24 @@
         : "";
       const favOn = isFavorite(data.recipe_id || data.name);
       detail.innerHTML = `
-        <header class="flytying-detail-head">
-          <h3>${esc(data.name)}</h3>
-          <p class="muted">${esc(data.type || "")}${data.hook ? " · hook " + esc(data.hook) : ""}${data.quality_score ? " · Q" + esc(String(Math.round(data.quality_score))) : ""}</p>
-          <div class="flytying-recipe-actions">
-            <button type="button" class="ghost-btn small" id="flytyingFavRecipeBtn">${favOn ? "★ Favorited" : "☆ Favorite"}</button>
-            <button type="button" class="ghost-btn small" id="flytyingQueueRecipeBtn">+ Queue</button>
-            <button type="button" class="ghost-btn small" id="flytyingStepModeBtn">Step mode</button>
-          </div>
-          ${data.source_url ? `<p class="flytying-source"><a href="${esc(data.source_url)}" target="_blank" rel="noopener">Source</a></p>` : ""}
-          ${videoBtns}
-        </header>
+        <section class="flytying-pattern-info">
+          <h4>Pattern information</h4>
+          <header class="flytying-detail-head">
+            <h3>${esc(data.name)}</h3>
+            <p class="muted">${esc(data.type || "")}${data.hook ? " · hook " + esc(data.hook) : ""}${data.quality_score ? " · Q" + esc(String(Math.round(data.quality_score))) : ""}</p>
+            <div class="flytying-recipe-actions">
+              <button type="button" class="ghost-btn small" id="flytyingFavRecipeBtn">${favOn ? "★ Favorited" : "☆ Favorite"}</button>
+              <button type="button" class="ghost-btn small" id="flytyingQueueRecipeBtn" aria-label="Add to queue">Add to queue</button>
+              <button type="button" class="ghost-btn small" id="flytyingStepModeBtn">Step mode</button>
+            </div>
+            ${data.source_url ? `<p class="flytying-source"><a href="${esc(data.source_url)}" target="_blank" rel="noopener">Source</a></p>` : ""}
+            ${videoBtns}
+          </header>
+        </section>
         ${recipeImagesHtml(data)}
-        <section><h4>Materials</h4><ul class="flytying-steps">${mats || "<li class='muted'>—</li>"}</ul></section>
+        <section class="flytying-materials-section"><h4>Materials</h4><ul class="flytying-steps">${mats || "<li class='muted'>—</li>"}</ul></section>
         ${subHtml}
-        <section id="flytyingStepsSection"><h4>Instructions</h4><ol class="flytying-steps"><li class="muted">…</li></ol></section>
+        <section id="flytyingStepsSection" class="flytying-instructions-section"><h4>Written instructions</h4><ol class="flytying-steps"><li class="muted">…</li></ol></section>
         ${similar ? `<section><h4>Similar</h4><div class="flytying-similar-row">${similar}</div></section>` : ""}
         <section><h4>Your notes</h4><textarea id="flytyingNoteInput" rows="2" placeholder="Bench notes…"></textarea><button type="button" class="ghost-btn small" id="flytyingSaveNoteBtn">Save note</button></section>
         <button type="button" class="ghost-btn small" id="flytyingAskRecipeBtn">Ask ARIA about this pattern</button>
@@ -1473,7 +1507,13 @@
   }
 
   async function rebuildGold() {
-    if (!confirm("Rebuild gold dataset and semantic index? This may take a while.")) return;
+    const rebuildOk = window.ariaConfirm
+      ? await window.ariaConfirm("Rebuild the pattern library? This may take a while.", {
+          title: "Rebuild library",
+          okLabel: "Rebuild",
+        })
+      : window.confirm("Rebuild the pattern library? This may take a while.");
+    if (!rebuildOk) return;
     const status = $("flytyingChatStatus");
     if (status) status.textContent = "Rebuilding gold…";
     try {

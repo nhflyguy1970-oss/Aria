@@ -1,0 +1,101 @@
+{
+  "url": "http://127.0.0.1:8765/?app=1&workspace=1&shell=electron#chat",
+  "openState": {
+    "open": true,
+    "title": "Where do you want to go?",
+    "sectionCount": 4,
+    "itemCount": 56
+  },
+  "mustFind": [
+    "Health",
+    "Fly Tying",
+    "Mission Control",
+    "Coding",
+    "Projects",
+    "Planner",
+    "Gallery",
+    "Documents",
+    "Search",
+    "Memory",
+    "Voice",
+    "Repair",
+    "Restart Server",
+    "Model Selection",
+    "AI Providers",
+    "Uncensored Mode",
+    "Appearance",
+    "Settings",
+    "System / Logs"
+  ],
+  "missing": [],
+  "searchHits": [
+    {
+      "query": "health",
+      "titles": [
+        "Health"
+      ],
+      "count": 1
+    },
+    {
+      "query": "tie flies",
+      "titles": [
+        "Fly Tying"
+      ],
+      "count": 1
+    },
+    {
+      "query": "restart server",
+      "titles": [
+        "Restart Server"
+      ],
+      "count": 1
+    },
+    {
+      "query": "uncensored",
+      "titles": [
+        "Uncensored Mode"
+      ],
+      "count": 1
+    },
+    {
+      "query": "providers",
+      "titles": [
+        "AI Providers"
+      ],
+      "count": 1
+    },
+    {
+      "query": "mission control",
+      "titles": [
+        "Mission Control"
+      ],
+      "count": 1
+    },
+    {
+      "query": "gallery",
+      "titles": [
+        "Gallery"
+      ],
+      "count": 1
+    },
+    {
+      "query": "gpu",
+      "titles": [
+        "GPU / Free VRAM"
+      ],
+      "count": 1
+    }
+  ],
+  "afterHealth": {
+    "doorClosed": true,
+    "room": "health",
+    "mounted": "healthRoom"
+  },
+  "pass": {
+    "doorOpens": true,
+    "allMustFindPresent": true,
+    "searchesNeverEmpty": true,
+    "healthReachable": true
+  },
+  "ok": true
+}

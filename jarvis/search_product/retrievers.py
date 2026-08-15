@@ -16,7 +16,7 @@ def _safe(fn: Callable[[], list[dict[str, Any]]], label: str) -> list[dict[str, 
         return fn()
     except Exception as exc:
         logger.warning("Search retriever %s failed: %s", label, exc)
-        return []
+        raise
 
 
 def retrieve_documents(query: str, limit: int) -> list[dict[str, Any]]:
@@ -48,6 +48,16 @@ def retrieve_documents(query: str, limit: int) -> list[dict[str, Any]]:
 
 
 def retrieve_memory(query: str, limit: int) -> list[dict[str, Any]]:
+    def _is_empty_acm_hit(content: str) -> bool:
+        c = (content or "").strip().lower()
+        if not c:
+            return True
+        return (
+            "no_reliable_reconstruction" in c
+            or c.startswith("i don't currently know")
+            or c.startswith("i do not currently know")
+        )
+
     def _run():
         out: list[dict[str, Any]] = []
         try:
@@ -57,6 +67,8 @@ def retrieve_memory(query: str, limit: int) -> list[dict[str, Any]]:
                 hits = acm_bridge.primary_search(query, limit=limit)
                 for h in hits:
                     content = h.get("content") or h.get("text") or str(h)
+                    if _is_empty_acm_hit(str(content)):
+                        continue
                     out.append(
                         make_result(
                             source="memory",
@@ -84,6 +96,8 @@ def retrieve_memory(query: str, limit: int) -> list[dict[str, Any]]:
             if mem and hasattr(mem, "search"):
                 for h in mem.search(query, limit=limit) or []:
                     content = h.get("content") or h.get("text") or str(h)
+                    if _is_empty_acm_hit(str(content)):
+                        continue
                     out.append(
                         make_result(
                             source="memory",
@@ -203,12 +217,13 @@ def retrieve_journal(query: str, limit: int) -> list[dict[str, Any]]:
     def _run():
         out = []
         try:
-            from jarvis.modules.journal import JournalStore
+            from jarvis.modules.journal import BulletJournal
 
-            store = JournalStore()
+            store = BulletJournal()
             for h in store.search(query, limit=limit) or []:
                 title = h.get("title") or h.get("content") or h.get("date") or "journal"
                 text = h.get("text") or h.get("content") or h.get("excerpt") or ""
+                loc = h.get("location") or h.get("section") or h.get("date") or h.get("id") or ""
                 out.append(
                     make_result(
                         source="journal",
@@ -216,10 +231,15 @@ def retrieve_journal(query: str, limit: int) -> list[dict[str, Any]]:
                         title=str(title)[:120],
                         summary=str(text)[:280],
                         preview=str(text)[:400],
-                        location=str(h.get("date") or h.get("section") or h.get("id") or ""),
+                        location=str(loc),
                         score=0.7,
                         strategy="keyword",
-                        open_action={"view": "journal", "query": query, "id": h.get("id"), "date": h.get("date")},
+                        open_action={
+                            "view": "journal",
+                            "query": query,
+                            "id": h.get("id"),
+                            "date": h.get("date") or str(loc).split(":")[-1],
+                        },
                         icon="journal",
                     )
                 )
@@ -563,6 +583,54 @@ def retrieve_gallery(query: str, limit: int) -> list[dict[str, Any]]:
         return out
 
     return _safe(_run, "gallery")
+
+
+def retrieve_chat(query: str, limit: int) -> list[dict[str, Any]]:
+    """Search live chat branch transcripts so Search agrees with Chat history."""
+
+    def _run():
+        import json
+
+        from jarvis.branches import BRANCHES_FILE
+
+        q = (query or "").strip().lower()
+        if not q or not BRANCHES_FILE.is_file():
+            return []
+        try:
+            data = json.loads(BRANCHES_FILE.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+        tokens = [t for t in re.split(r"\s+", q) if t]
+        out = []
+        for bid, branch in (data.get("branches") or {}).items():
+            bname = branch.get("name") or bid
+            for idx, m in enumerate(branch.get("messages") or []):
+                if m.get("role") not in ("user", "assistant"):
+                    continue
+                content = str(m.get("content") or "")
+                low = content.lower()
+                if not all(t in low for t in tokens):
+                    continue
+                title = f"{bname}: {m.get('role')}"
+                out.append(
+                    make_result(
+                        source="chat",
+                        source_label="Chat",
+                        title=title[:120],
+                        summary=content[:280],
+                        preview=content[:400],
+                        location=f"branch:{bid}#{idx}",
+                        score=0.75,
+                        strategy="keyword",
+                        open_action={"view": "chat", "branch_id": bid, "query": query},
+                        icon="chat",
+                    )
+                )
+                if len(out) >= limit:
+                    return out
+        return out
+
+    return _safe(_run, "chat")
 
 
 def retrieve_home_assistant(query: str, limit: int) -> list[dict[str, Any]]:
@@ -934,6 +1002,68 @@ def retrieve_provider_health(query: str, limit: int) -> list[dict[str, Any]]:
     return _safe(_run, "provider_health")
 
 
+def retrieve_health(query: str, limit: int) -> list[dict[str, Any]]:
+    """Health facet — Search indexes; Health owns the PHR."""
+
+    def _run():
+        from jarvis.health_product import store
+        from jarvis.health_product.engine import search_summary
+
+        q = (query or "").strip()
+        out = [
+            make_result(
+                source="health",
+                source_label="Health",
+                title="Open Health",
+                summary="Personal Health Record — daily check-in, meds, vitals, labs",
+                preview="Local PHR",
+                location="health",
+                score=0.96,
+                strategy="catalog",
+                open_action={"view": "health"},
+                icon="health",
+            )
+        ]
+        if q:
+            hits = (search_summary(q).get("hits") or [])[: max(1, limit - 1)]
+            for h in hits:
+                rec = h.get("record") or {}
+                out.append(
+                    make_result(
+                        source="health",
+                        source_label="Health",
+                        title=str(h.get("title") or rec.get("name") or "Health record"),
+                        summary=str(h.get("source") or "")[:160],
+                        preview=str(rec.get("notes") or rec.get("purpose") or rec.get("day") or "")[:200],
+                        location=str(h.get("source") or "health"),
+                        score=0.82,
+                        strategy="keyword",
+                        open_action={"view": "health", "query": q},
+                        icon="health",
+                        metadata={"source": h.get("source"), "id": rec.get("id")},
+                    )
+                )
+        else:
+            meds = store.list_table("medications", "status=?", ("current",), limit=8)
+            for m in meds:
+                out.append(
+                    make_result(
+                        source="health",
+                        source_label="Health",
+                        title=str(m.get("name") or "Medication"),
+                        summary=f"{m.get('strength') or ''} {m.get('dose') or ''} {m.get('frequency') or ''}".strip(),
+                        preview=str(m.get("purpose") or "current medication"),
+                        score=0.78,
+                        strategy="catalog",
+                        open_action={"view": "health", "tab": "meds"},
+                        icon="health",
+                    )
+                )
+        return out[:limit]
+
+    return _safe(_run, "health")
+
+
 def retrieve_latency(query: str, limit: int) -> list[dict[str, Any]]:
     def _run():
         from jarvis.latency_observability.store import search_traces
@@ -988,6 +1118,7 @@ RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "planner": retrieve_planner,
     "calendar": retrieve_calendar,
     "gallery": retrieve_gallery,
+    "chat": retrieve_chat,
     "home_assistant": retrieve_home_assistant,
     "flytying": retrieve_flytying,
     "automation": retrieve_automation,
@@ -995,6 +1126,7 @@ RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "dashboard": retrieve_dashboard,
     "layouts": retrieve_layouts,
     "notifications": retrieve_notifications,
+    "health": retrieve_health,
     "provider_health": retrieve_provider_health,
     "latency": retrieve_latency,
 }

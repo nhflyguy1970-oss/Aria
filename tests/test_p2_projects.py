@@ -40,7 +40,7 @@ def test_device_router_ha_fallback(monkeypatch):
     monkeypatch.setattr("jarvis.p2_flags.kasa_enabled", lambda: False)
     monkeypatch.setattr("jarvis.home_assistant.ha_enabled", lambda: True)
 
-    def fake_control(target, action):
+    def fake_control(target, action, **kwargs):
         return True, f"HA {target} {action}"
 
     monkeypatch.setattr("jarvis.home_assistant.control_entity", fake_control)
@@ -48,6 +48,46 @@ def test_device_router_ha_fallback(monkeypatch):
 
     ok, msg, backend = control_device("office lights", "on")
     assert ok and backend == "ha"
+
+
+def test_device_router_ha_entity_id_skips_kasa(monkeypatch):
+    monkeypatch.setattr("jarvis.p2_flags.device_router_enabled", lambda: True)
+    monkeypatch.setattr("jarvis.p2_flags.kasa_enabled", lambda: True)
+    monkeypatch.setattr("jarvis.home_assistant.ha_enabled", lambda: True)
+
+    def fake_control(target, action, **kwargs):
+        return True, f"HA {target} bp={kwargs.get('brightness_pct')}"
+
+    def boom(*_a, **_k):
+        raise AssertionError("Kasa must not run for HA entity ids")
+
+    monkeypatch.setattr("jarvis.home_assistant.control_entity", fake_control)
+    monkeypatch.setattr("jarvis.kasa_devices._match_device", lambda _t: {"host": "1.2.3.4"})
+    monkeypatch.setattr("jarvis.kasa_devices.control_device", boom)
+    from jarvis.device_router import control_device
+
+    ok, msg, backend = control_device("light.table_lamp", "on", brightness=25)
+    assert ok and backend == "ha"
+    assert "25" in msg
+
+
+def test_device_router_ha_entity_id_keeps_ha_error(monkeypatch):
+    monkeypatch.setattr("jarvis.p2_flags.device_router_enabled", lambda: True)
+    monkeypatch.setattr("jarvis.p2_flags.kasa_enabled", lambda: True)
+    monkeypatch.setattr("jarvis.home_assistant.ha_enabled", lambda: True)
+    monkeypatch.setattr(
+        "jarvis.home_assistant.control_entity",
+        lambda *_a, **_k: (False, "HA said no"),
+    )
+    monkeypatch.setattr(
+        "jarvis.kasa_devices.control_device",
+        lambda *_a, **_k: (False, "No Kasa device matches 'light.table_lamp'"),
+    )
+    from jarvis.device_router import control_device
+
+    ok, msg, backend = control_device("light.table_lamp", "on", brightness=25)
+    assert not ok and backend == "ha"
+    assert "HA said no" in msg
 
 
 def test_shopping_parse():

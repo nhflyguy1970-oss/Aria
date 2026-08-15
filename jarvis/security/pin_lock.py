@@ -104,7 +104,7 @@ def session_valid(token: str | None) -> bool:
     if not row:
         return False
     idle = lock_idle_seconds()
-    if time.time() - float(row.get("last_active", 0)) > idle:
+    if idle > 0 and time.time() - float(row.get("last_active", 0)) > idle:
         revoke_session(token)
         return False
     return True
@@ -136,6 +136,7 @@ def lock_status(*, session_token: str | None = None) -> dict[str, Any]:
         "pin_configured": pin_configured(),
         "face_auth_enabled": face_auth_enabled(),
         "idle_seconds": lock_idle_seconds(),
-        "lock_capable": pin_configured(),
+        "auto_idle_lock": lock_idle_seconds() > 0,
+        "lock_capable": bool(pin_lock_enabled() and pin_configured()),
         "session_valid": valid,
     }

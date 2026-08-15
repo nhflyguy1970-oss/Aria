@@ -1,0 +1,62 @@
+{
+  "status": "STOPPED \u2014 OWNER EXPORTS LOCATED; AWAITING JEFF UI SELECTION",
+  "not": [
+    "WAITING FOR OWNER EXPORT (files were found)",
+    "passed",
+    "failed",
+    "skipped",
+    "auto-imported"
+  ],
+  "searched_at": "2026-08-12T19:38:06.814096+00:00",
+  "pattern": "jarvis-journal-encrypted-*.json",
+  "locations_searched": [
+    "/home/jeff/Downloads",
+    "/home/jeff/Desktop",
+    "/home/jeff/Documents",
+    "/media/jeff/AI/jarvis/data/exports",
+    "/media/jeff/AI/jarvis/data/journal",
+    "/media/jeff/AI/jarvis/data (top-level)",
+    "browser Default/Downloads paths (absent on this host)"
+  ],
+  "aug12_session_download_found": false,
+  "note_aug12": "No jarvis-journal-encrypted-2026-08-12*.json on disk; earlier session POST 200 OK may not have landed in Downloads.",
+  "legitimate_owner_exports_found": [
+    {
+      "path": "/home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08.json",
+      "size_bytes": 113013,
+      "mtime_local": "2026-08-08T09:14:50",
+      "shape": [
+        "ciphertext",
+        "format",
+        "salt"
+      ]
+    },
+    {
+      "path": "/home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08 (1).json",
+      "size_bytes": 112049,
+      "mtime_local": "2026-08-08T09:50:13",
+      "shape": [
+        "ciphertext",
+        "format",
+        "salt"
+      ]
+    },
+    {
+      "path": "/home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08 (2).json",
+      "size_bytes": 112049,
+      "mtime_local": "2026-08-08T09:50:26",
+      "shape": [
+        "ciphertext",
+        "format",
+        "salt"
+      ]
+    }
+  ],
+  "action": "Do not import automatically. Jeff must select a file through Journal \u2192 More \u2192 Import encrypted.",
+  "integrity": {
+    "status": "clean",
+    "score": 100,
+    "clean": true
+  },
+  "files_modified": false
+}

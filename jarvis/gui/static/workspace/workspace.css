@@ -1,0 +1,226 @@
+/**
+ * Living Workspace chrome — Phase 2 + House Integrity.
+ * Exclusive stage owns paint. Legacy .app is demolished under living-workspace.
+ */
+
+html.living-workspace .app,
+body.living-workspace .app {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+#ariaStage.aria-stage {
+  display: none;
+}
+
+html.living-workspace #ariaStage,
+body.living-workspace #ariaStage {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  overflow: auto;
+  background: var(--bg-deep, #0a0c10);
+}
+
+html.living-workspace #ariaStage > .view-panel,
+body.living-workspace #ariaStage > .view-panel {
+  display: flex !important;
+  flex-direction: column;
+  min-height: 100%;
+  width: 100%;
+  margin: 0;
+  border: 0;
+}
+
+body.living-workspace {
+  --ws-bar-h: 36px;
+}
+
+#wsBar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: var(--ws-bar-h);
+  padding: 0.25rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #333) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-deep, #0c0908) 92%, transparent);
+  backdrop-filter: blur(8px);
+  font-size: 0.82rem;
+}
+
+#wsBar.hidden {
+  display: none !important;
+}
+
+#wsActivityLabel {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text, #f3ebe0);
+}
+
+#wsActivityRecipe {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted, #8f7d6a);
+  font-size: 0.72rem;
+}
+
+.ws-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.ws-bar-actions .ghost-btn {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+}
+
+#wsToolTray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0.35rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--border, #333) 70%, transparent);
+  background: transparent;
+}
+
+#wsToolTray.hidden {
+  display: none !important;
+}
+
+.ws-tool-chip {
+  border: 1px solid color-mix(in srgb, var(--border, #444) 90%, transparent);
+  background: transparent;
+  color: var(--text-muted, #a09080);
+  font: inherit;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.ws-tool-chip:hover,
+.ws-tool-chip:focus-visible {
+  color: var(--text, #f3ebe0);
+  border-color: color-mix(in srgb, var(--accent, #d4a574) 50%, transparent);
+}
+
+body.living-workspace.ws-hide-view-tabs .view-tabs {
+  display: none !important;
+}
+
+body.living-workspace.ws-hide-voice-eng #ariaVoiceStrip .voice-mute-btn,
+body.living-workspace.ws-hide-voice-eng #duplexModeSelect,
+body.living-workspace.ws-hide-voice-eng #sttBackendSelect,
+body.living-workspace.ws-hide-voice-eng #cloudLiveBtn,
+body.living-workspace.ws-hide-voice-eng #audioStopBtn,
+body.living-workspace.ws-hide-voice-eng #voiceBarMode {
+  display: none !important;
+}
+
+body.living-workspace.ws-hide-vision-strip #ariaVisionStrip {
+  display: none !important;
+}
+
+body.living-workspace.ws-hide-world-bar #globalWorldStateBar {
+  display: none !important;
+}
+
+body.living-workspace.ws-hide-sidebar-heavy .sidebar-section--coding,
+body.living-workspace.ws-hide-sidebar-heavy .sidebar-section[data-section="models"],
+body.living-workspace.ws-hide-sidebar-heavy .sidebar-section[data-section="maker"],
+body.living-workspace.ws-hide-sidebar-heavy .sidebar-section[data-section="video"],
+body.living-workspace.ws-hide-sidebar-heavy .sidebar-section[data-section="workstation"] {
+  display: none !important;
+}
+
+body.living-workspace.ws-compact-status #ariaStatusBar .status-seg:not(.status-seg--activity):not(.status-seg--provider) {
+  opacity: 0.55;
+}
+
+#wsSpotlight {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+#wsSpotlight.hidden {
+  display: none !important;
+}
+
+.ws-spot-card {
+  width: min(560px, 92vw);
+  border: 1px solid color-mix(in srgb, var(--border, #444) 90%, transparent);
+  border-radius: 12px;
+  background: var(--bg-panel, #16120f);
+  padding: 0.75rem;
+}
+
+.ws-spot-card input {
+  width: 100%;
+  font: inherit;
+  font-size: 1.05rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border, #333);
+  background: var(--bg-elevated, #1c1713);
+  color: var(--text, #f3ebe0);
+}
+
+#wsSpotlightList {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  max-height: 50vh;
+  overflow: auto;
+}
+
+.ws-spot-section {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #8f7d6a);
+  padding: 0.45rem 0.35rem 0.2rem;
+}
+
+.ws-spot-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ws-spot-item:hover,
+.ws-spot-item:focus {
+  background: color-mix(in srgb, var(--accent, #d4a574) 12%, transparent);
+}
+
+.ws-spot-item .muted {
+  font-size: 0.72rem;
+  color: var(--text-muted, #8f7d6a);
+}
+
+.ws-spot-empty {
+  padding: 0.75rem;
+}
+
+body.living-workspace #quickDock {
+  display: none !important;
+}

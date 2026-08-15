@@ -369,8 +369,29 @@ def parse_remember(text: str) -> tuple[str, str, str | None]:
         r"^(please\s+)?(remember|don't forget|note that|keep in mind)\s*(that\s+)?",
         r"^(these|the following)\s+facts?\s*:?\s*",
         r"^facts?\s*:?\s*",
+        # "remember exactly: TOKEN" must store TOKEN, not a shared "exactly" concept
+        # that later forgets can poison across all similar memories (BUG-013).
+        r"^(exactly|literally)\s*:\s*",
+        # Drop QA/testing framing left after "Please remember for testing: …" (BUG-008).
+        r"^(?:for\s+(?:testing|qa|acceptance|triage)\s*:?\s*)",
     ):
         text = re.sub(prefix, "", text, flags=re.I).strip()
+    # Strip leftover "remember: fact" punctuation and confirmational tails (BUG-008).
+    text = re.sub(r"^[:\-–—]\s*", "", text).strip()
+    text = re.sub(
+        r"[.!]?\s*(?:please\s+)?"
+        r"(?:"
+        r"confirm(?:\s+you\s+stored\s+it)?|"
+        r"let\s+me\s+know(?:\s+when\s+you(?:'ve| have)\s+(?:saved|stored)\s+it)?|"
+        r"tell\s+me\s+when\s+(?:it(?:'s| is)\s+)?(?:stored|saved)|"
+        r"reply\s+with\s+confirmation|"
+        r"acknowledge(?:\s+storage)?"
+        r")\s*\.?$",
+        "",
+        text,
+        flags=re.I,
+    ).strip()
+    text = re.sub(r"[.!\s]+$", "", text).strip()
     entry_type = "fact"
     if re.search(r"\b(preference|prefer|favorite|favourite)\b", lower):
         entry_type = "preference"
@@ -392,3 +413,48 @@ def split_remember_facts(content: str) -> list[str]:
     if len(lines) >= 2:
         return lines
     return [text] if text else []
+
+
+def divert_acm_read(call: Callable[[], object], *, op: str = "read") -> tuple[bool, object]:
+    """C3: ACM-first read with no silent legacy fallthrough under PRIMARY.
+
+    Returns ``(handled, value)``:
+    - ``(True, value)`` — caller must return ``value`` (ACM projection or intentional empty)
+    - ``(False, None)`` — not authoritative; caller may use legacy vault
+
+    Under PRIMARY, ACM exceptions raise unless ``ARIA_ACM_LEGACY_READ_FALLBACK`` is on
+    (then increments ``legacy_fallback_reads`` and returns ``(False, None)`` for legacy).
+    """
+    import logging
+
+    log = logging.getLogger("jarvis.modules.memory")
+    try:
+        from aria_core import acm_bridge
+
+        try:
+            projected = call()
+        except Exception as exc:
+            if not acm_bridge.acm_is_authoritative():
+                return False, None
+            if acm_bridge.legacy_read_fallback_enabled():
+                acm_bridge.note_legacy_fallback_read()
+                log.warning(
+                    "ACM %s failed (%s); LEGACY_READ_FALLBACK enabled — using vault",
+                    op,
+                    type(exc).__name__,
+                )
+                return False, None
+            log.exception("ACM authoritative %s failed; refusing legacy vault", op)
+            raise RuntimeError(
+                f"ACM authoritative: {op} failed ({type(exc).__name__})"
+            ) from exc
+        if projected is not None:
+            return True, projected
+        if acm_bridge.acm_is_authoritative():
+            # Authoritative empty / miss — never read legacy vault.
+            return True, projected
+        return False, None
+    except ImportError:
+        return False, None
+    except RuntimeError:
+        raise

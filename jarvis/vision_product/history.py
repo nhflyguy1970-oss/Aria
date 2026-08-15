@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 import uuid
 from pathlib import Path
@@ -12,6 +13,31 @@ from jarvis.config import DATA_DIR
 
 HISTORY_FILE = DATA_DIR / "vision_product" / "history.jsonl"
 MAX_ENTRIES = 500
+
+# Certification / smoke OCR probes must never surface in owner history.
+_QA_VISION_RE = re.compile(
+    r"qa_ocr_sample|"
+    r"QA_OCR_|"
+    r"ARIAQAOCR|"
+    r"QAOCRINVOICE|"
+    r"AriaCross\d+|"
+    r"/qa_wf/|"
+    r"data/certification|"
+    r"\bsample\s+ocr\b|"
+    r"\bocr\s+sample\b",
+    re.I,
+)
+
+
+def is_qa_history_row(row: dict[str, Any] | None) -> bool:
+    """True when a history row is certification/QA probe residue."""
+    if not isinstance(row, dict):
+        return False
+    blob = " ".join(
+        str(row.get(k) or "")
+        for k in ("path", "thumbnail", "prompt", "analysis", "ocr", "import_target", "source")
+    )
+    return bool(_QA_VISION_RE.search(blob))
 
 
 def add_entry(entry: dict[str, Any]) -> dict[str, Any]:
@@ -33,6 +59,9 @@ def add_entry(entry: dict[str, Any]) -> dict[str, Any]:
         "compare_paths": entry.get("compare_paths") or [],
         "diff_path": entry.get("diff_path") or "",
     }
+    if is_qa_history_row(row):
+        # Never persist certification probes into the owner ledger.
+        return row
     HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     with HISTORY_FILE.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
@@ -51,7 +80,33 @@ def _trim() -> None:
         pass
 
 
-def list_history(*, limit: int = 50, q: str = "") -> list[dict[str, Any]]:
+def purge_qa_history() -> int:
+    """Rewrite history.jsonl without QA/certification probe rows. Returns removed count."""
+    if not HISTORY_FILE.is_file():
+        return 0
+    kept: list[str] = []
+    removed = 0
+    try:
+        for line in HISTORY_FILE.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                kept.append(line)
+                continue
+            if is_qa_history_row(row):
+                removed += 1
+                continue
+            kept.append(json.dumps(row, ensure_ascii=False))
+        if removed:
+            HISTORY_FILE.write_text(("\n".join(kept) + ("\n" if kept else "")), encoding="utf-8")
+    except OSError:
+        return 0
+    return removed
+
+
+def list_history(*, limit: int = 50, q: str = "", include_qa: bool = False) -> list[dict[str, Any]]:
     if not HISTORY_FILE.is_file():
         return []
     q = (q or "").strip().lower()
@@ -63,6 +118,8 @@ def list_history(*, limit: int = 50, q: str = "") -> list[dict[str, Any]]:
             try:
                 row = json.loads(line)
             except json.JSONDecodeError:
+                continue
+            if not include_qa and is_qa_history_row(row):
                 continue
             if q:
                 blob = " ".join(

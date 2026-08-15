@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 import shutil
-from pathlib import Path
 from typing import Any
 
 from jarvis.automation.paths import (
@@ -23,9 +22,14 @@ log = logging.getLogger("jarvis.automation.migrate")
 
 
 def _is_dag_schema(data: dict[str, Any]) -> bool:
-    return isinstance(data.get("steps"), list) and (
-        "entry" in data or any(isinstance(s, dict) and "action" in s for s in data.get("steps") or [])
-    ) and "slug" not in data
+    return (
+        isinstance(data.get("steps"), list)
+        and (
+            "entry" in data
+            or any(isinstance(s, dict) and "action" in s for s in data.get("steps") or [])
+        )
+        and "slug" not in data
+    )
 
 
 def _is_learned_schema(data: dict[str, Any]) -> bool:

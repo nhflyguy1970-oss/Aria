@@ -1,0 +1,24 @@
+{
+  "updated_at": "2026-08-13T15:20:01.516500+00:00",
+  "phase": "unlock_after_restart",
+  "status": "PROVEN",
+  "owner_state": "OWNER_UNLOCKED",
+  "entry_count": 4,
+  "jeff_entered_ha_token": false,
+  "unlock_with": "master_password",
+  "unlock_ms": 49.43,
+  "ha": {
+    "http_status": 200,
+    "elapsed_ms": 4.01,
+    "configured": true,
+    "connected": true,
+    "token_set": true,
+    "locked": false,
+    "conn_ok": true,
+    "conn_message": "API running.",
+    "secret_in_response": false
+  },
+  "ha_source": "vault",
+  "lan_still_unmigrated_before_lan_phase": true,
+  "secrets_in_evidence": false
+}

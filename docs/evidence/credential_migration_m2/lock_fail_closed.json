@@ -1,0 +1,19 @@
+{
+  "test": "M2-G lock fail-closed",
+  "at": "2026-08-13T13:21:30+00:00",
+  "lock": {
+    "ok": true,
+    "state": "OWNER_LOCKED",
+    "vault_unlocked": false,
+    "mode": "hard",
+    "lock_api_ms": 19.32
+  },
+  "while_locked": {
+    "openai": {"ok": false, "error": "key_missing", "ms": 3.16},
+    "gemini": {"ok": false, "error": "key_missing", "ms": 2.23},
+    "huggingface": {"ok": false, "error": "key_missing", "ms": 2.17}
+  },
+  "legacy_env_retained": true,
+  "note": "Migrated credentials fail closed while locked even though jarvis.env still holds the plaintext copies.",
+  "secrets_in_evidence": false
+}

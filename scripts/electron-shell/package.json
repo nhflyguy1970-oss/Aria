@@ -1,0 +1,14 @@
+{
+  "name": "aria-electron-shell-spike",
+  "version": "0.1.0-spike",
+  "private": true,
+  "description": "Phase 1 runtime spike — not a product selection",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "spike:measure": "node measure_spike.js"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0"
+  }
+}

@@ -135,7 +135,13 @@ def analyze_syntax(text: str, grammar: GrammarAnalysis) -> SyntaxAnalysis:
     if grammar.mood == "comparison" and not obj:
         obj = raw
         verb = "compare"
+    # Do not invent verb="configure" for every instruction mood — that historically
+    # forced unrelated how-tos into local reference_search.
     if grammar.mood == "instruction" and not verb:
-        verb = "configure"
+        if re.search(
+            r"\b(?:docs?|documentation|readme|configure|setup|install)\b",
+            lower,
+        ):
+            verb = "configure"
 
     return SyntaxAnalysis(subject=subject, verb=verb, object=obj, modifiers=modifiers)

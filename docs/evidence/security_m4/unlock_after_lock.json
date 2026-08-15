@@ -1,0 +1,114 @@
+{
+  "updated_at": "2026-08-13T15:49:53.776989+00:00",
+  "phase": "unlock_after_lock",
+  "status": "PROVEN",
+  "owner": {
+    "http": 200,
+    "state": "OWNER_UNLOCKED",
+    "unlocked": null,
+    "ms": 17.97,
+    "keys": [
+      "acm_boundary",
+      "credential_migration",
+      "ok",
+      "owner_unlocked",
+      "phase",
+      "pin_model",
+      "recovery_acknowledged",
+      "session",
+      "vault"
+    ]
+  },
+  "rows": {
+    "health_home": {
+      "http": 200,
+      "ms": 18.89,
+      "ok": true,
+      "asked_password": false,
+      "locked": null,
+      "secret_in_response": false
+    },
+    "health_overview": {
+      "http": 200,
+      "ms": 425.08,
+      "ok": true,
+      "locked": null
+    },
+    "health_auth": {
+      "http": 200,
+      "path": "/api/health/auth/status",
+      "ok": true,
+      "enabled": true,
+      "owner_vault": true,
+      "owner_unlocked": true,
+      "pin_convenience": false,
+      "portable_backup_distinct": true
+    },
+    "health_export": {
+      "http": 423,
+      "ms": 16.17,
+      "ok": false,
+      "step_up_required": true,
+      "prompt_class": "A",
+      "locked": null,
+      "dumped_record": false
+    },
+    "ha": {
+      "http": 200,
+      "ms": 8.66,
+      "connected": true,
+      "locked": false,
+      "conn_ok": true
+    },
+    "lan_no_key": {
+      "http": 401
+    },
+    "lan_with_key": {
+      "http": 200,
+      "ms": 8.58,
+      "connected": true
+    },
+    "openai": {
+      "http": 200,
+      "ms": 669.23,
+      "ok": true,
+      "error": null,
+      "status": 200
+    },
+    "gemini": {
+      "http": 200,
+      "ms": 249.07,
+      "ok": true,
+      "error": null,
+      "status": 200
+    },
+    "huggingface": {
+      "http": 200,
+      "ms": 168.51,
+      "ok": true,
+      "error": null,
+      "status": 200
+    },
+    "uncensored": {
+      "http": 200,
+      "ms": 6.84,
+      "owner_vault": true,
+      "owner_unlocked": true,
+      "auth_mode": "owner_security",
+      "prompt_class": "A",
+      "session_valid": false
+    },
+    "health_stepup_lan": {
+      "http": 200,
+      "ok": false,
+      "message": "Incorrect Master Password or PIN."
+    },
+    "health_stepup_ha": {
+      "http": 200,
+      "ok": false,
+      "message": "Incorrect Master Password or PIN."
+    }
+  },
+  "jeff_second_aria_password_for_health_home": false,
+  "secrets_in_evidence": false
+}

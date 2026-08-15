@@ -106,7 +106,8 @@ _RUNTIME_ACTION_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (re.compile(r"\b(?:disk|storage)\b", re.I), "runtime_storage"),
     (re.compile(r"\bnetwork\b", re.I), "runtime_network"),
-    (re.compile(r"\bgpu\b|vram\b|graphics\b|hardware\b|\bcpu\b", re.I), "runtime_gpu"),
+    (re.compile(r"\bcpu\b", re.I), "runtime_cpu"),
+    (re.compile(r"\bgpu\b|vram\b|graphics\b|hardware\b", re.I), "runtime_gpu"),
     (re.compile(r"\bjobs?\b|background tasks?\b|queues?\b", re.I), "runtime_jobs"),
     (re.compile(r"\bplatform\b|cutover\b|attachment\b", re.I), "runtime_platform"),
     (re.compile(r"\bapplications?\b", re.I), "runtime_applications"),
@@ -133,6 +134,7 @@ def classify_runtime_action(message: str) -> str:
         "runtime_databases": "runtime_databases",
         "runtime_models": "runtime_models",
         "runtime_gpu": "runtime_gpu",
+        "runtime_cpu": "runtime_cpu",
         "runtime_ram": "runtime_ram",
         "runtime_storage": "runtime_storage",
         "runtime_network": "runtime_network",
@@ -334,6 +336,29 @@ def collect_runtime_gpu() -> dict[str, Any]:
         },
         "cpu_load": ov.get("cpu_load") or hw.get("cpu_load"),
         "ram_available_gb": ov.get("ram_available_gb") or hw.get("ram_available_gb"),
+        "hardware": hw,
+    }
+
+
+def collect_runtime_cpu() -> dict[str, Any]:
+    """CPU load / host CPU — not GPU/VRAM."""
+    data = collect_runtime_gpu()
+    load = data.get("cpu_load")
+    hw = data.get("hardware") if isinstance(data.get("hardware"), dict) else {}
+    if load is None:
+        load = hw.get("cpu_load") or hw.get("cpu_percent") or hw.get("load_avg")
+    if load is None:
+        try:
+            import os
+
+            load = list(os.getloadavg())
+        except (AttributeError, OSError):
+            load = None
+    return {
+        "ok": True,
+        "source": data.get("source") or "mission_control",
+        "cpu_load": load,
+        "cpu_count": hw.get("cpu_count") or hw.get("cpus"),
         "hardware": hw,
     }
 
@@ -569,6 +594,7 @@ _COLLECTORS: dict[str, Any] = {
     "runtime_databases": collect_runtime_databases,
     "runtime_models": collect_runtime_models,
     "runtime_gpu": collect_runtime_gpu,
+    "runtime_cpu": collect_runtime_cpu,
     "runtime_ram": collect_runtime_ram,
     "runtime_storage": collect_runtime_storage,
     "runtime_network": collect_runtime_network,
@@ -665,6 +691,7 @@ def is_status_command(message: str) -> str | None:
         "runtime_databases": "runtime_databases",
         "runtime_models": "runtime_models",
         "runtime_gpu": "runtime_gpu",
+        "runtime_cpu": "runtime_cpu",
         "runtime_ram": "runtime_ram",
         "runtime_storage": "runtime_storage",
         "runtime_network": "runtime_network",

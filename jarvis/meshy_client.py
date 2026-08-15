@@ -15,7 +15,12 @@ DEFAULT_TIMEOUT_S = 300
 
 
 def meshy_api_key() -> str:
-    return (os.getenv("JARVIS_MESHY_API_KEY") or os.getenv("MESHY_API_KEY") or "").strip()
+    try:
+        from jarvis.integrations_product.secrets_bus import get_secret
+
+        return get_secret("meshy_api_key")
+    except Exception:
+        return (os.getenv("JARVIS_MESHY_API_KEY") or os.getenv("MESHY_API_KEY") or "").strip()
 
 
 def meshy_available() -> bool:

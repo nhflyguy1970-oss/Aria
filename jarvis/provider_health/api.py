@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
 
 def register_product_routes(app, assistant) -> None:  # noqa: ARG001
-    from fastapi import Request
-    from fastapi.responses import JSONResponse
-
     @app.get("/api/provider/health")
     def provider_health():
         from jarvis.provider_health.engine import product_status
@@ -20,10 +20,11 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
         return stats_payload()
 
     @app.get("/api/provider/diagnostics")
-    def provider_diagnostics():
+    def provider_diagnostics(probe: bool = False):
+        """Diagnostics without generate probe by default. ?probe=1 for explicit refresh."""
         from jarvis.provider_health.engine import diagnostics
 
-        return diagnostics()
+        return diagnostics(force_probe=bool(probe))
 
     @app.get("/api/provider/providers")
     def provider_providers():
@@ -45,6 +46,8 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
             body = await request.json()
         except Exception:
             body = {}
+        if not isinstance(body, dict):
+            body = {}
         return recover(
             code=body.get("code") or "",
             message=body.get("message") or "",
@@ -62,6 +65,8 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
         try:
             body = await request.json()
         except Exception:
+            body = {}
+        if not isinstance(body, dict):
             body = {}
         if not body.get("confirmed"):
             return JSONResponse(
@@ -82,7 +87,10 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
     async def provider_prefs_set(request: Request):
         from jarvis.provider_health.prefs import save_preferences
 
-        body = await request.json()
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
         return {"ok": True, **save_preferences(body if isinstance(body, dict) else {})}
 
     @app.post("/api/provider/classify")
@@ -93,6 +101,8 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
         try:
             body = await request.json()
         except Exception:
+            body = {}
+        if not isinstance(body, dict):
             body = {}
         ping = ping_provider(body.get("provider") or "ollama", force_probe=bool(body.get("probe", True)))
         return classify_failure(

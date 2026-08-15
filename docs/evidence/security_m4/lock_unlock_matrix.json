@@ -1,0 +1,35 @@
+{
+  "updated_at": "2026-08-13T15:51:00+00:00",
+  "status": "PROVEN",
+  "matrix": {
+    "health_home": {"unlocked": "200 no extra password", "locked": "423 locked", "unlock_again": "200"},
+    "health_export": {"unlocked": "423 step-up class A", "locked": "423 locked", "unlock_again": "423 step-up class A"},
+    "openai": {"unlocked": "ok true ~669-1929ms", "locked": "key_missing", "unlock_again": "ok true 669ms"},
+    "gemini": {"unlocked": "ok true ~230-249ms", "locked": "key_missing", "unlock_again": "ok true 249ms"},
+    "huggingface": {"unlocked": "ok true ~168-171ms", "locked": "key_missing", "unlock_again": "ok true 169ms"},
+    "ha": {"unlocked": "connected true ~4-9ms", "locked": "connected false locked", "unlock_again": "connected true 8.7ms"},
+    "lan_with_key": {"unlocked": "200", "locked": "401 even with correct key", "unlock_again": "200"},
+    "lan_no_key": {"unlocked": "401", "locked": "401", "unlock_again": "401"},
+    "uncensored": {"unlocked": "owner_security class A; not enabled live", "locked": "owner_unlocked false sessions revoked", "unlock_again": "owner_security class A session_valid false"}
+  },
+  "restart": {
+    "after_restart": "OWNER_LOCKED",
+    "health_home": "423",
+    "health_export": "423 locked (after _gate_or_response repair)",
+    "ha": "locked not connected",
+    "lan_with_key": "401",
+    "unlock_after_restart": "PROVEN health 200 / HA connected / LAN 200 / export class A"
+  },
+  "not_authenticators": {
+    "lan_key_health_step_up": "ok false Incorrect Master Password or PIN",
+    "ha_token_health_step_up": "ok false Incorrect Master Password or PIN"
+  },
+  "evidence": [
+    "unlock_after_restart.json",
+    "restart_locked_matrix.json",
+    "providers_unlocked.json",
+    "lock_fail_closed.json",
+    "unlock_after_lock.json"
+  ],
+  "secrets_in_evidence": false
+}

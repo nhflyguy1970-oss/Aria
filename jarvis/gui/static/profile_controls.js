@@ -74,7 +74,14 @@
         if (st) st.textContent = "Debug bundle copied to clipboard";
         window.showAriaToast?.("Debug bundle copied", "ok", 2500);
       } else {
-        prompt("Copy debug bundle:", text.slice(0, 8000));
+        if (window.ariaPrompt) {
+          await window.ariaPrompt("Copy debug bundle:", text.slice(0, 8000), {
+            title: "Debug bundle",
+            okLabel: "Close",
+          });
+        } else {
+          prompt("Copy debug bundle:", text.slice(0, 8000));
+        }
       }
     } catch (e) {
       window.showError?.(`Debug bundle failed: ${e.message || e}`);

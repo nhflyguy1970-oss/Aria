@@ -12,7 +12,11 @@ export function renderGpuStatus(gpu) {
   if (gpu.ollama_using_gpu) {
     status += " · active";
     cls += " ok";
-  } else if (gpu.rocm_available) {
+  } else if (gpu.nvidia_available || gpu.compute_vendor === "nvidia" || gpu.vendor === "nvidia") {
+    const free = gpu.free_vram_mb != null ? `${Math.round(Number(gpu.free_vram_mb))}MB free` : "idle";
+    status += ` · ${free}`;
+    cls += " ok";
+  } else if (gpu.rocm_available && gpu.vendor === "amd") {
     status += " · ROCm ready";
     cls += " ok";
   } else if (gpu.vendor === "amd") {
@@ -64,6 +68,8 @@ let serverWasDown = false;
 let knownVersion = null;
 let liveTimer = null;
 let healthTimer = null;
+let liveFailStreak = 0;
+let liveDownSince = 0;
 
 function mediaWorkActive() {
   return window.mediaWorkActive?.() === true;
@@ -82,6 +88,11 @@ function fetchWithTimeout(url, timeoutMs) {
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
 }
+
+/** Live poll: allow brief server stalls (chat/media) without false "down" toasts. */
+const LIVE_TIMEOUT_MS = 12000;
+const LIVE_FAIL_TOAST_AFTER = 2;
+const LIVE_RESTORE_TOAST_AFTER_MS = 15000;
 
 export function renderServices(services, comfySettings) {
   const panel = $("servicesPanel");
@@ -119,9 +130,13 @@ export async function pollLive() {
   if (document.hidden || mediaWorkActive()) return null;
   const status = $("statusText");
   try {
-    const res = await fetchWithTimeout("/api/live", 5000);
+    const res = await fetchWithTimeout("/api/live", LIVE_TIMEOUT_MS);
     if (!res.ok) throw new Error(`Live check failed (${res.status})`);
     const data = await res.json();
+    const wasDownLong =
+      serverWasDown && liveDownSince && (Date.now() - liveDownSince) >= LIVE_RESTORE_TOAST_AFTER_MS;
+    liveFailStreak = 0;
+    liveDownSince = 0;
     if (serverWasDown) {
       serverWasDown = false;
       window.__ariaLiveFailToast = false;
@@ -130,7 +145,8 @@ export async function pollLive() {
           ? "Server back — finishing media job…"
           : `Ready · v${data.version || "?"}`;
       }
-      window.showAriaToast?.("Connection restored", "ok", 2500);
+      // Only announce restore after a sustained outage — not brief poll stalls.
+      if (wasDownLong) window.showAriaToast?.("Connection restored", "ok", 2500);
     }
     knownVersion = data.version || knownVersion;
     window.applyBranding?.(data);
@@ -148,8 +164,11 @@ export async function pollLive() {
     }
     return data;
   } catch (error) {
+    liveFailStreak += 1;
+    if (!liveDownSince) liveDownSince = Date.now();
     serverWasDown = true;
-    if (!window.__ariaLiveFailToast) {
+    // Require consecutive failures so a single slow /api/live does not spam.
+    if (liveFailStreak >= LIVE_FAIL_TOAST_AFTER && !window.__ariaLiveFailToast) {
       window.__ariaLiveFailToast = true;
       window.showAriaToast?.(
         error?.name === "AbortError" ? "Aria health check timed out — retrying…" : (error?.message || "Lost connection to Aria — retrying…"),

@@ -1,0 +1,146 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "journal",
+  "captured_at": "2026-08-13T16:20:00+00:00",
+  "runtime": "http://127.0.0.1:8765/?workspace=1#journal",
+  "owner": "OWNER_UNLOCKED",
+  "vault_unlocked": true,
+  "vault_entries": 5,
+  "integrity": "clean / 100",
+  "qa_header": 403,
+  "live_journal_sha256": "3c86da4da8c8bcf455333eb87ffedf89f07a24e780de56439f6de30a9712d48a",
+  "live_journal_size": 67555,
+  "stats": "0 open tasks · 92 daily · 6 weekly · 5 habits · 0 collections",
+  "structure_counts_only": {
+    "daily_log": 92,
+    "weekly_log": 6,
+    "habits": 5,
+    "monthly_log": 3,
+    "collections": 0,
+    "future_log": 0,
+    "index": 3
+  },
+  "do_not_include": [
+    "journal bullet text",
+    "search query strings from owner content",
+    "assist/memory query text"
+  ],
+  "capabilities": [
+    {
+      "name": "Identity",
+      "result": "PASS",
+      "notes": "Bullet Journal; house place · Bullet journal"
+    },
+    {
+      "name": "Daily log with existing owner data",
+      "result": "PASS",
+      "notes": "2026-08-10 loads after date input + change event; quiet=false; 5 .bujo-text items; ~2003 chars. Setting the date value alone does not load the page."
+    },
+    {
+      "name": "Weekly",
+      "result": "PASS",
+      "notes": "Week 33 · 2026-08-10 — 2026-08-16; /api/journal/weekly 200 in 9ms"
+    },
+    {
+      "name": "Monthly",
+      "result": "PASS",
+      "notes": "August 2026 heading rendered"
+    },
+    {
+      "name": "Habits",
+      "result": "PASS",
+      "notes": "Habit tracker · 2026-08; 6 rows; emptyClass=false; stats report 5 habits"
+    },
+    {
+      "name": "Wellness",
+      "result": "PASS",
+      "notes": "Wellness · 2026-08 heading rendered"
+    },
+    {
+      "name": "Future",
+      "result": "PASS",
+      "notes": "Future Log heading; store future_log empty — honest empty"
+    },
+    {
+      "name": "Index",
+      "result": "PASS",
+      "notes": "Index heading; store index length 3"
+    },
+    {
+      "name": "Collections",
+      "result": "PASS",
+      "notes": "Collections heading; 0 collections — honest empty"
+    },
+    {
+      "name": "Projects tab",
+      "result": "FAIL",
+      "notes": "Tab chrome becomes Projects but #bujoContent stays on the previous view (Search/Key/Collections). No .bujo-loading. /api/journal/projects returns 200 ok with 2 projects. window.openProjectJournal() same miss. Not a missing-API problem."
+    },
+    {
+      "name": "Symbol Key",
+      "result": "PASS",
+      "notes": "Symbol Key + Custom symbols headings"
+    },
+    {
+      "name": "Search existing owner bullets",
+      "result": "PASS",
+      "notes": "Token taken from .bujo-text (length 4); Search heading; 5 hit items; /api/journal/search 200 in 7ms; no error toast"
+    },
+    {
+      "name": "Negative search",
+      "result": "PASS",
+      "notes": "Query zzzznotajournalterm999 → Search heading + empty/no-match copy"
+    },
+    {
+      "name": "Empty rapid-log add",
+      "result": "PASS",
+      "notes": "Add with empty field does not create a bullet; journal sha unchanged"
+    },
+    {
+      "name": "Writing mode",
+      "result": "PASS",
+      "notes": "journalWritingModeBtn toggles writing chrome; restored"
+    },
+    {
+      "name": "Leave/return Calendar",
+      "result": "PASS",
+      "notes": "journalOpenCalendarBtn → #calendar · Wall calendar (~527ms); Front Door goRoom journal restores Bullet journal + stats"
+    },
+    {
+      "name": "Leave/return Planner",
+      "result": "PASS_WITH_NOTE",
+      "notes": "→ #planner · Leather notebook. One return showed 'Journal stats unavailable' then recovered on the next Journal load."
+    },
+    {
+      "name": "Leave/return Memory",
+      "result": "PASS",
+      "notes": "→ #memory · Memory archive; return stats 92/6/5"
+    },
+    {
+      "name": "Import encrypted control",
+      "result": "PASS",
+      "notes": "journalImportEncBtn visible in More; file input click fired; accept=application/json,.json. Native picker not completed. Aug 8 files still BLOCKED."
+    },
+    {
+      "name": "Import Aug 8 historical encrypted files",
+      "result": "BLOCKED — JEFF ACTION REQUIRED",
+      "notes": "Ephemeral export-time password; Aria cannot recover it. Do not guess. Do not auto-import."
+    },
+    {
+      "name": "Voice draft",
+      "result": "HARDWARE GATE",
+      "notes": "journalVoiceLogBtn present and enabled; click observed overlay. Mic not exercised."
+    },
+    {
+      "name": "Vision import",
+      "result": "HARDWARE GATE",
+      "notes": "journalVisionImportBtn present and enabled. Camera/file not completed."
+    },
+    {
+      "name": "Reflect / Assist promote / Migrate month / gratitude add / photo add",
+      "result": "N/A — NOT EXERCISED",
+      "notes": "Would write live journal. Existing owner data used instead."
+    }
+  ],
+  "contamination": "none — sha256 unchanged from campaign baseline"
+}

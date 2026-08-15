@@ -17,11 +17,14 @@ from jarvis.notifications_product.terminology import BOUNDARIES, MENTAL_MODEL, T
 def _patch(tmp_path, monkeypatch):
     from jarvis.notifications_product import history as hist_mod
     from jarvis.notifications_product import preferences as pref_mod
+    import jarvis.activity_inbox as inbox
 
     monkeypatch.setattr(pref_mod, "ROOT", tmp_path)
     monkeypatch.setattr(pref_mod, "PREFS_FILE", tmp_path / "preferences.json")
     monkeypatch.setattr(hist_mod, "ROOT", tmp_path)
     monkeypatch.setattr(hist_mod, "HISTORY_FILE", tmp_path / "history.jsonl")
+    monkeypatch.setattr(inbox, "INBOX_DIR", tmp_path / "activity")
+    monkeypatch.setattr(inbox, "INBOX_FILE", tmp_path / "activity" / "inbox.jsonl")
 
 
 def test_terminology_boundaries():
@@ -65,6 +68,20 @@ def test_publish_and_aliases(tmp_path, monkeypatch):
     assert recent(limit=5)
 
 
+def test_publish_writes_activity_inbox_without_browser_echo(tmp_path, monkeypatch):
+    _patch(tmp_path, monkeypatch)
+    from jarvis.activity_inbox import list_items
+
+    save_preferences({"enabled": True, "activity_enabled": True, "toast_enabled": False, "desktop_enabled": False})
+
+    result = publish({"id": "notif-inbox-1", "title": "Server event", "severity": "warning", "source": "jobs", "category": "job"})
+    items = list_items()["items"]
+
+    assert result["ok"] is True
+    assert result["activity_inbox"]["ok"] is True
+    assert any(item["id"] == "notif-inbox-1" and item["title"] == "Server event" for item in items)
+
+
 def test_preferences_gate_delivery(tmp_path, monkeypatch):
     _patch(tmp_path, monkeypatch)
     save_preferences({"enabled": False})
@@ -94,9 +111,30 @@ def test_quiet_hours_and_route(tmp_path, monkeypatch):
     assert in_quiet_hours(prefs, now_minutes=23 * 60) is True
     assert in_quiet_hours(prefs, now_minutes=12 * 60) is False
     route = route_decision({"severity": "warning", "source": "toast"}, {**prefs, "dnd": True})
-    assert route["toast"] is False or route["deliver"] is False or route.get("quiet") or True
+    assert route["toast"] is False
+    assert route["desktop"] is False
+    critical = route_decision({"severity": "critical", "source": "providers"}, {**prefs, "dnd": True})
+    assert critical["activity"] is True
+    assert critical["desktop"] is False
     # DND → quiet
     assert in_quiet_hours({**prefs, "dnd": True}) is True
+
+
+def test_preferences_do_not_mirror_settings_global(tmp_path, monkeypatch):
+    _patch(tmp_path, monkeypatch)
+    from jarvis.settings_product import appearance
+
+    global_file = tmp_path / "settings_product" / "global.json"
+    monkeypatch.setattr(appearance, "GLOBAL_FILE", global_file)
+    appearance.save_global({"notifications_enabled": False, "soft_tips": False})
+
+    prefs = save_preferences({"enabled": True, "soft_tips": True})
+
+    assert prefs["enabled"] is True
+    assert prefs["soft_tips"] is True
+    assert load_preferences()["enabled"] is True
+    assert appearance.load_global().get("notifications_enabled") is False
+    assert appearance.load_global().get("soft_tips") is False
 
 
 def test_digest_and_groups(tmp_path, monkeypatch):

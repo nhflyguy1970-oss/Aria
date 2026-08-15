@@ -13,9 +13,18 @@
       .replace(/>/g, "&gt;");
   }
 
+  function isRoomAbort(err) {
+    return !!(
+      window.AriaNet?.isRoomAbort?.(err) ||
+      err?.name === "AbortError" ||
+      /aborted|aria-room-leave/i.test(String(err?.message || err?.reason || ""))
+    );
+  }
+
   async function fetchJson(url, opts) {
     const res = await fetch(url, opts);
     const data = await res.json().catch(() => ({}));
+    // /api/actions returns {actions} without ok — only treat explicit false as failure.
     if (!res.ok || data.ok === false) {
       throw new Error(data.message || data.detail || `Request failed (${res.status})`);
     }
@@ -36,10 +45,12 @@
   window.loadActions = async function (moduleFilter) {
     const el = $("actionsList");
     if (!el) return;
+    const gen = (window.loadActions._gen = (window.loadActions._gen || 0) + 1);
     const mod = moduleFilter ?? $("actionsFilter")?.value ?? "";
     const q = mod ? `?module=${encodeURIComponent(mod)}` : "";
     try {
       const data = await fetchJson(`/api/actions${q}`);
+      if (gen !== window.loadActions._gen) return;
       const acts = data.actions || [];
       el.innerHTML = acts.length
         ? acts
@@ -54,6 +65,24 @@
         : "<li class='muted'>No actions logged yet. <button type='button' class='ghost-btn tiny' id='actionsEmptyChatBtn'>Open Chat</button></li>";
       el.querySelector("#actionsEmptyChatBtn")?.addEventListener("click", () => window.switchToView?.("chat"));
     } catch (err) {
+      if (gen !== window.loadActions._gen) return;
+      if (isRoomAbort(err)) {
+        const still =
+          document.body.classList.contains("house-actions") ||
+          /^#?actions\b/i.test(location.hash || "");
+        if (still) {
+          clearTimeout(window.loadActions._retry);
+          window.loadActions._retry = setTimeout(() => {
+            if (
+              document.body.classList.contains("house-actions") ||
+              /^#?actions\b/i.test(location.hash || "")
+            ) {
+              window.loadActions?.(mod);
+            }
+          }, 160);
+        }
+        return;
+      }
       el.innerHTML = "<li>Could not load actions.</li>";
       window.showAriaToast?.(err?.message || "Could not load actions", "err", 5000);
     }

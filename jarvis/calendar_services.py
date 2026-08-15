@@ -335,7 +335,7 @@ def import_vision_events(journal, candidates: list[dict[str, Any]]) -> dict[str,
                 title=c.get("title") or c.get("raw") or "",
                 day=c.get("day"),
                 time=c.get("time"),
-                target=c.get("target") or "journal",
+                target=c.get("target") or "planner",
             )
             added.append(row)
         except Exception as exc:

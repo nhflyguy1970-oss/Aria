@@ -1,0 +1,87 @@
+{
+  "url": "http://127.0.0.1:8765/?app=1&workspace=1&shell=electron#chat",
+  "baseline": {
+    "htmlHasLW": true,
+    "bodyHasLW": true,
+    "stageChildCount": 1,
+    "stageMountedId": "chatView",
+    "stageDisplay": "block",
+    "legacyDisplay": "none",
+    "legacyVisibility": "hidden",
+    "legacyPointerEvents": "none",
+    "legacyInert": true,
+    "legacyAriaHidden": "true",
+    "sidebarVisible": false,
+    "viewTabsVisible": false,
+    "statusBarVisible": false,
+    "chatOnStage": true,
+    "chatInLegacy": false,
+    "proof": {
+      "stageChildren": 1,
+      "mountedId": "chatView",
+      "legacyDisplay": "none",
+      "legacyVisibility": "hidden",
+      "legacyInert": true,
+      "workspace": true,
+      "livingRoomVisibleUnderStage": false
+    },
+    "houseVersion": "4.1.0-integrity",
+    "stageVersion": "1.0.0-integrity"
+  },
+  "invisibleTest": {
+    "stageEmpty": true,
+    "stageBg": "rgb(10, 12, 16)",
+    "legacyStillHidden": true,
+    "legacyVisible": false,
+    "anyLegacyPanelPainted": false
+  },
+  "roomWalk": [
+    {
+      "room": "flytying",
+      "bodyRoom": "flytying",
+      "stageKids": 1,
+      "mounted": "flytyingView",
+      "legacyDisplay": "none",
+      "duplicateChat": false
+    },
+    {
+      "room": "health",
+      "bodyRoom": "health",
+      "stageKids": 1,
+      "mounted": "healthView",
+      "legacyDisplay": "none",
+      "duplicateChat": false
+    },
+    {
+      "room": "mission",
+      "bodyRoom": "mission",
+      "stageKids": 1,
+      "mounted": "workstationView",
+      "legacyDisplay": "none",
+      "duplicateChat": false
+    },
+    {
+      "room": "chat",
+      "bodyRoom": "chat",
+      "stageKids": 1,
+      "mounted": "chatView",
+      "legacyDisplay": "none",
+      "duplicateChat": false
+    }
+  ],
+  "consoleErrors": [
+    "SyntaxError: missing ) after argument list",
+    "TypeError: object is not iterable (cannot read property Symbol(Symbol.iterator))"
+  ],
+  "pass": {
+    "workspaceClaimed": true,
+    "legacyDemolished": true,
+    "chromeGone": true,
+    "chatOnStageOnly": true,
+    "invisibleEmpty": true,
+    "invisibleNoOldAria": true,
+    "noDuplicateChat": true,
+    "alwaysOneStageChild": true
+  },
+  "ok": true
+}

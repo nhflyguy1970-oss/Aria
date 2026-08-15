@@ -125,7 +125,8 @@ def create_new_chat(*, title: str | None = None, branch_name: str | None = None)
 
     name = (branch_name or title or "New chat").strip() or "New chat"
     assistant = get_assistant()
-    branch_id = assistant.create_branch(name)
+    # Fresh conversation — do not clone the active thread's history (Fork does that).
+    branch_id = assistant.create_branch(name, copy_messages=False, copy_session=False)
     session = create_session(title or name, branch_id=branch_id)
     return {
         "ok": True,

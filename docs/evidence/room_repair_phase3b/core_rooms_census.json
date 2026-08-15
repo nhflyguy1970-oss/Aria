@@ -1,0 +1,122 @@
+[
+  {
+    "room": "home",
+    "enter": {
+      "ok": true
+    },
+    "ms": 2319,
+    "snap": {
+      "room": "home",
+      "activity": "home",
+      "furnished": "1",
+      "hash": "#dashboard",
+      "textHead": "Aria \u00b7 Foyer Listening quietly Welcome back Home Mission Control Planner Journal Calendar Ctrl+Home GOOD MORNING. Continue where you left off Your favorites and recent work are ready. Chat Planner Mission Control Layouts Home unavailable Load failed Retry Mission Control First-flight checklist \u25be First-flight checks available \u2014 run when validating a new install. Run checks Skills & learned workflows \u25be Reusable procedures and learned sequences. Pre",
+      "failCue": true,
+      "loadingCue": false,
+      "btnCount": 18,
+      "onStage": true,
+      "panelExists": true
+    },
+    "api_failures": []
+  },
+  {
+    "room": "audio",
+    "enter": {
+      "ok": true
+    },
+    "ms": 2217,
+    "snap": {
+      "room": "audio",
+      "activity": "audio",
+      "furnished": "1",
+      "hash": "#audio",
+      "textHead": "Aria \u00b7 Audio studio Listening quietly Audio Voice Journal",
+      "failCue": false,
+      "loadingCue": false,
+      "btnCount": 2,
+      "onStage": true,
+      "panelExists": true
+    },
+    "api_failures": []
+  },
+  {
+    "room": "projects",
+    "enter": {
+      "ok": true
+    },
+    "ms": 2236,
+    "snap": {
+      "room": "projects",
+      "activity": "projects",
+      "furnished": "1",
+      "hash": "#projects",
+      "textHead": "Aria \u00b7 Creative workshop Listening quietly Projects Workspace identity layer \u2014 one slug connects coding, memory, journal, knowledge, browser, and AI. Not a task tracker. Loading\u2026 ? Create Import",
+      "failCue": false,
+      "loadingCue": false,
+      "btnCount": 3,
+      "onStage": true,
+      "panelExists": true
+    },
+    "api_failures": []
+  },
+  {
+    "room": "providers",
+    "enter": {
+      "ok": true
+    },
+    "ms": 2219,
+    "snap": {
+      "room": "providers",
+      "activity": "providers",
+      "furnished": "1",
+      "hash": "#models",
+      "textHead": "Aria \u00b7 Provider bay Listening quietly Models AI model configuration and routing center \u2014 roles, catalog, providers, presets. Mission Control owns health; Models owns configuration. Refresh Mission Control \u00b7 Inference Ctrl+Shift+.",
+      "failCue": false,
+      "loadingCue": false,
+      "btnCount": 2,
+      "onStage": true,
+      "panelExists": true
+    },
+    "api_failures": []
+  },
+  {
+    "room": "home_automation",
+    "enter": {
+      "ok": true
+    },
+    "ms": 2223,
+    "snap": {
+      "room": "home_automation",
+      "activity": "home_automation",
+      "furnished": "1",
+      "hash": "#homeAutomation",
+      "textHead": "Aria \u00b7 Home control Listening quietly Home Automation Presence Security Lights, scenes, and Home Assistant \u2014 control the room around you. Search Open HA Status Connected \u00b7 http://127.0.0.1:8123 Favorites Pin devices from search Scenes Focus mode Relax Movie mode Work mode Sunlight Rooms No rooms yet Pin favorites for one-tap control \u00b7 Add room cards for kitchen, office, workshop Profile Home Away Office Workshop Night Vacation Quiet Hours Apply S",
+      "failCue": false,
+      "loadingCue": false,
+      "btnCount": 41,
+      "onStage": true,
+      "panelExists": true
+    },
+    "api_failures": []
+  },
+  {
+    "room": "mission",
+    "enter": {
+      "ok": true
+    },
+    "ms": 2222,
+    "snap": {
+      "room": "mission",
+      "activity": "systems",
+      "furnished": "1",
+      "hash": "#workstation",
+      "textHead": "Aria \u00b7 Aerospace ops Listening quietly Mission Control Infrastructure health console \u2014 providers, runtime, hardware, recovery, routing, and performance. Not Job Center or Activity Center. Refresh Open Job Center Open Notifications Chat Audit Home Ctrl+Shift+M PRIMARY Overview Routing Performance Recovery Connection Advanced \u25be Hardware Inference Memory Knowledge Databases Settings Timeline Release Applications Queue Snapshot Operations Event Log I",
+      "failCue": false,
+      "loadingCue": false,
+      "btnCount": 24,
+      "onStage": true,
+      "panelExists": true
+    },
+    "api_failures": []
+  }
+]

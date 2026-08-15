@@ -1,0 +1,40 @@
+{
+  "updated_at": "2026-08-13T14:58:28.795605+00:00",
+  "ha_related": [
+    {
+      "op": "credential_put",
+      "ms": 6.54,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    },
+    {
+      "op": "credential_get",
+      "ms": 0.0,
+      "vault_id": "ha.token"
+    }
+  ]
+}

@@ -60,6 +60,12 @@ def soft_delete(path: Path, *, source: str = "generated") -> dict[str, Any]:
         invalidate_gallery()
     except Exception:
         pass
+    try:
+        from jarvis.gallery_product.consistency import on_gallery_asset_removed
+
+        on_gallery_asset_removed(path.name, path=str(path))
+    except Exception:
+        pass
     return {"ok": True, "deleted": path.name, "trash_id": row["id"], "undo_sec": UNDO_WINDOW_SEC, "entry": row}
 
 
@@ -79,6 +85,7 @@ def restore(trash_id: str) -> dict[str, Any]:
     if dest.exists():
         dest = dest_dir / f"restored_{match['original_name']}"
     shutil.move(str(src), str(dest))
+    original_name = match.get("original_name") or dest.name
     _save_index([r for r in rows if r.get("id") != trash_id])
     try:
         from jarvis.cache_state import invalidate_gallery
@@ -86,7 +93,26 @@ def restore(trash_id: str) -> dict[str, Any]:
         invalidate_gallery()
     except Exception:
         pass
-    return {"ok": True, "restored": dest.name, "path": str(dest)}
+    try:
+        from jarvis.gallery_product.consistency import on_gallery_asset_restored
+
+        on_gallery_asset_restored(
+            original_name, restored_name=dest.name, path=str(dest)
+        )
+    except Exception:
+        pass
+    try:
+        from jarvis.gallery_product.activity_bridge import emit_gallery_event
+
+        emit_gallery_event(
+            "gallery_restore",
+            f"Restored {dest.name}",
+            original_name=original_name,
+            restored_name=dest.name,
+        )
+    except Exception:
+        pass
+    return {"ok": True, "restored": dest.name, "path": str(dest), "original_name": original_name}
 
 
 def purge(trash_id: str) -> dict[str, Any]:

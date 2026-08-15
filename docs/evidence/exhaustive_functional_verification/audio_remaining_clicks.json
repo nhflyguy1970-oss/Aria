@@ -1,0 +1,73 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "audio",
+  "capability": "Audio remaining clicks Jeff authorized after chrome gate",
+  "captured_at": "2026-08-15T17:46:30Z",
+  "result": "PASS WITH LIVE WRITES — Test mic / Record only / Play / empty generate / real Piper TTS / EQ / wake start-stop / Voice nav proven. Session-restored transcript made Send to chat and Add to journal fire (not no-ops). Apply trim wrote an edited wav because waveform was already loaded. Filenames/transcripts not recorded here. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "clicked": {
+    "empty_generate_speech": "PASS — silent no-op when text empty",
+    "empty_generate_play": "PASS — silent no-op when text empty",
+    "empty_generate_music": "PASS — silent no-op when prompt empty",
+    "empty_generate_song": "PASS — toast Enter a song topic first",
+    "empty_convert": "PASS — Need source path and output path",
+    "empty_transcribe_upload": "PASS — Choose a file first",
+    "empty_transcribe_path": "PASS — silent no-op",
+    "empty_transcribe_all": "PASS — Enter one path per line to batch-transcribe",
+    "empty_transform_genre": "PASS — Pick a song file and enter a target genre",
+    "empty_mix_tracks": "PASS — Enter a backing track path",
+    "empty_copy": "PASS — Copy failed toast (no clipboard transcript path)",
+    "test_mic": "PASS — Mic OK — peak -22.1 dB (PipeWire 100%)",
+    "record_only_1s": "PASS — Done (peak -38.4 dB); new recording created this gate",
+    "play_on_sound_blaster": "PASS — POST /api/audio/play after new recording; no error toast",
+    "generate_speech_real": "PASS — Piper saved generated speech for text 'Aria check.'",
+    "eq_voice_music_flat": "PASS — flat applied last",
+    "install_live_eq": "PASS — Live EQ off — default sink TOSLink/iec958",
+    "wake_word_start_stop": "PASS — Listening for Hey Jarvis then Stopped",
+    "voice_header_nav": "PASS — #voice h2 Voice · State idle · Duplex off · STT whisper · Cloud live unavailable"
+  },
+  "unintended_live_writes": {
+    "send_to_chat": "FIRED — session restore had a transcript; navigated to #chat. Transcript not recorded.",
+    "add_to_journal": "FIRED — live daily_log 2026-08-15 gained one note at 17:40:15Z; journal 67547 → 68340 bytes. Content not recorded. Not deleted.",
+    "apply_trim": "FIRED — waveState already loaded from session; wrote edited wav of existing PTT recording. Not deleted."
+  },
+  "not_clicked": [
+    "Lock Aria",
+    "Delete (any library file)",
+    "Ask Chat",
+    "Record + transcribe (Whisper medium; skipped for time)",
+    "Make my voice a song (would GPU-job existing path)",
+    "Process file (would write existing path)",
+    "Detect language / Diarize / Stream transcribe (Whisper-heavy on existing path)",
+    "Summarize / Normalize / Edit (would write existing owner audio)",
+    "Generate music/song for real (GPU)",
+    "Journal header (skipped after accidental journal POST)"
+  ],
+  "still_not_clicked_from_chrome_gate": [
+    "Hold to talk (already proven earlier in voice_ptt_hold.json)"
+  ],
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "record": true,
+    "generate_speech": true,
+    "edit_trim": true,
+    "delete": false,
+    "journal_post": true,
+    "journal_bytes_before": 67547,
+    "journal_bytes_after": 68340,
+    "chat_send": true,
+    "health_phr": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "activity_center": "unread rose 77 → 82 during Audio empties (Copy failed / batch-transcribe / convert / audio library refresh). Not dismissed.",
+  "jeff_action_required": true,
+  "jeff_action": "A live Journal note was added from a restored Audio transcript, and that transcript was sent to Chat. Say if you want those left or Guided Repair to remove only that note. The edited wav and new 1s recording were also written and were not deleted.",
+  "next_exact_capability": "Video existing studio chrome. Do not Lock Aria. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5."
+}

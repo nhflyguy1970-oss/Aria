@@ -302,6 +302,12 @@
     const view = window.AriaCommandCatalog?.currentView?.() || "chat";
     let commands = reg?.list?.() || [];
 
+    // Living Workspace: owner must never see certification / smoke / engineering probes.
+    if (document.body?.classList?.contains("living-workspace")) {
+      const blocked = /^(nav:certification|act:voice-smoke|act:router-warm|act:debug-bundle|act:checklist|act:reload-ui)$/;
+      commands = commands.filter((c) => !blocked.test(String(c?.id || "")));
+    }
+
     if (mode === "pinned") {
       const byId = new Map(commands.map((c) => [c.id, c]));
       filtered = pins.map((id) => byId.get(id)).filter(Boolean).slice(0, MAX_VISIBLE);
@@ -642,6 +648,13 @@
     document.addEventListener("keydown", (e) => {
       if (!(e.ctrlKey || e.metaKey)) return;
       if (String(e.key).toLowerCase() !== "k") return;
+      /* Living Workspace: Front Door owns Ctrl+K */
+      if (
+        document.documentElement.classList.contains("living-workspace") ||
+        document.body?.classList.contains("living-workspace")
+      ) {
+        return;
+      }
       e.preventDefault();
       if (isOpen()) closePalette();
       else openPalette(document.activeElement);

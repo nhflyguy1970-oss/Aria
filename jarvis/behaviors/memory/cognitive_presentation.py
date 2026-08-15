@@ -35,6 +35,14 @@ def format_teaching_acknowledgement(prompt: str) -> str:
     text = (prompt or "").strip()
     if not text:
         return ""
+    # Forget / remove-from-memory must never produce "I'll remember…" (RW-011).
+    if re.search(
+        r"\b(?:forget|don'?t\s+remember|remove\s+.+\s+from\s+memory|"
+        r"take\s+.+\s+out\s+of\s+memory|delete\s+memory)\b",
+        text,
+        re.I,
+    ):
+        return ""
     detected = detect_teaching(text)
     if not detected.is_teaching or not detected.facts:
         return ""

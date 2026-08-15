@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -156,7 +157,13 @@ def classify_document(title: str, text: str = "") -> dict[str, Any]:
     }
 
 
-def save_upload(filename: str, content: bytes, *, subdir: str = "uploads") -> dict[str, Any]:
+def save_upload(
+    filename: str,
+    content: bytes,
+    *,
+    subdir: str = "uploads",
+    reindex: bool = True,
+) -> dict[str, Any]:
     documents_dir()
     safe = Path(filename or "upload.bin").name
     if Path(safe).suffix.lower() not in DOCUMENT_EXTENSIONS:
@@ -182,14 +189,16 @@ def save_upload(filename: str, content: bytes, *, subdir: str = "uploads") -> di
             "suggested_type": suggestion["suggested_type"],
         }
     )
-    from jarvis.documents_rag import build_index
+    chunk_count = 0
+    if reindex:
+        from jarvis.documents_rag import build_index
 
-    try:
-        chunks = build_index(force=True)
-        chunk_count = len(chunks)
-    except Exception as exc:
-        chunk_count = 0
-        log.warning("reindex after upload: %s", exc)
+        try:
+            chunks = build_index(force=True)
+            chunk_count = len(chunks)
+        except Exception as exc:
+            chunk_count = 0
+            log.warning("reindex after upload: %s", exc)
     return {
         "ok": True,
         "path": str(dest),
@@ -200,42 +209,103 @@ def save_upload(filename: str, content: bytes, *, subdir: str = "uploads") -> di
     }
 
 
-def import_folder(folder: str) -> dict[str, Any]:
+def import_folder(folder: str, *, reindex: bool = True) -> dict[str, Any]:
     root = Path(folder or "").expanduser().resolve()
     if not root.is_dir():
         return {"ok": False, "message": f"Not a folder: {folder}"}
-    # Confine: allow under home or absolute paths that exist; reject obvious escapes later via copy
+    # Hard caps — unrestricted rglob of Downloads/Desktop wedged the whole serve process.
+    # Walk with depth limit; never materialize the full tree first.
+    # Do NOT reindex per file — that rebuilt the full RAG index N times under the chat lock.
+    max_files = 40
+    max_depth = 4
+    max_scan = 2500
+    max_bytes = 8_000_000
     imported: list[dict[str, Any]] = []
     errors: list[str] = []
-    for path in sorted(root.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in DOCUMENT_EXTENSIONS:
-            continue
-        if path.name.startswith("."):
-            continue
+    scanned = 0
+    try:
+        for dirpath, dirnames, filenames in os.walk(root):
+            rel = Path(dirpath).relative_to(root)
+            depth = 0 if str(rel) == "." else len(rel.parts)
+            if depth >= max_depth:
+                dirnames[:] = []
+                continue
+            dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+            for name in sorted(filenames):
+                scanned += 1
+                if scanned > max_scan or len(imported) >= max_files:
+                    break
+                if name.startswith("."):
+                    continue
+                path = Path(dirpath) / name
+                if path.suffix.lower() not in DOCUMENT_EXTENSIONS:
+                    continue
+                try:
+                    if path.stat().st_size > max_bytes:
+                        errors.append(f"{path.name}: skipped (>{max_bytes} bytes)")
+                        continue
+                    data = path.read_bytes()
+                    result = save_upload(path.name, data, subdir="imports", reindex=False)
+                    if result.get("ok"):
+                        imported.append({"name": result["name"], "path": result["path"]})
+                    else:
+                        errors.append(result.get("message") or path.name)
+                except Exception as exc:
+                    errors.append(f"{path.name}: {exc}")
+            if scanned > max_scan or len(imported) >= max_files:
+                break
+    except Exception as exc:
+        return {"ok": False, "message": f"Could not scan folder: {exc}"}
+
+    chunk_count = 0
+    if imported and reindex:
+        from jarvis.documents_rag import build_index
+
         try:
-            data = path.read_bytes()
-            result = save_upload(path.name, data, subdir="imports")
-            if result.get("ok"):
-                imported.append({"name": result["name"], "path": result["path"]})
-            else:
-                errors.append(result.get("message") or path.name)
+            chunks = build_index(force=True)
+            chunk_count = len(chunks)
         except Exception as exc:
-            errors.append(f"{path.name}: {exc}")
-        if len(imported) >= 100:
-            break
+            log.warning("reindex after folder import: %s", exc)
+            errors.append(f"reindex: {exc}")
+    elif imported and not reindex:
+        # Schedule a single background rebuild so chat never holds the request lock on RAG.
+        import threading
+
+        def _bg_reindex() -> None:
+            try:
+                from jarvis.documents_rag import build_index
+
+                build_index(force=True)
+            except Exception as exc:
+                log.warning("background reindex after folder import: %s", exc)
+
+        threading.Thread(target=_bg_reindex, name="doc-import-reindex", daemon=True).start()
+
+    msg = (
+        f"Imported {len(imported)} file(s) from `{root}` "
+        f"(cap {max_files}, depth {max_depth}"
+        + (f", index chunks {chunk_count}" if reindex else ", reindex queued")
+        + ")."
+    )
+    if len(imported) >= max_files or scanned > max_scan:
+        msg += " Scan capped — import again or narrow the folder for more."
     return {
         "ok": True,
         "imported": imported,
         "count": len(imported),
         "errors": errors[:20],
-        "message": f"Imported {len(imported)} file(s) from `{root}`.",
+        "message": msg,
+        "capped": len(imported) >= max_files or scanned > max_scan,
+        "chunks": chunk_count,
     }
 
 
 def preview_document(path: str) -> dict[str, Any]:
     from jarvis.document_learning import resolve_document_path
 
-    resolved = resolve_document_path(path) or path
+    resolved = resolve_document_path(path)
+    if not resolved:
+        return {"ok": False, "message": "Document path not allowed or not found"}
     p = Path(resolved)
     if not p.is_file():
         return {"ok": False, "message": "Document not found"}
@@ -314,12 +384,12 @@ def stage_learn_candidates(
         source_path = ing.path
         source_type = "text"
     else:
-        resolved = resolve_document_path(path) or path
-        if not Path(resolved).is_file():
-            # try ingest/copy
+        resolved = resolve_document_path(path)
+        if not resolved or not Path(resolved).is_file():
+            # try ingest/copy only when caller provided a path that resolve accepts later via ingest
             ing = ingest_file(path, copy_to_library=True)
             if not ing.ok:
-                return {"ok": False, "message": ing.message}
+                return {"ok": False, "message": ing.message or "Document path not allowed or not found"}
             resolved = ing.path
         doc = parse_document(resolved)
         source_path = str(resolved)

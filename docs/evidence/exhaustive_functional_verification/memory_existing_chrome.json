@@ -1,0 +1,81 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "memory",
+  "capability": "Memory existing chrome without writing",
+  "captured_at": "2026-08-15T12:49:00Z",
+  "result": "PASS — Front Door → Memory; archive stats + cards present; Search opened Browse; negative search honest empty; Projects leave/return restored query + no-match. New/Edit/Forget/Save not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Memory (What we’ve learned together)",
+    "hash": "#memory",
+    "h2": "Memory",
+    "place": "Memory archive"
+  },
+  "archive": {
+    "stats": "1088 · fact: 270 · preference: 8 · note: 805 · project: 3 · ACM PRIMARY",
+    "visible_cards_unfiltered": 1086,
+    "beliefs_cards": 24,
+    "candidates": 1,
+    "contents_in_evidence": false
+  },
+  "settings_honesty": {
+    "first_paint_auto_memory": "Smart → candidates (HTML default)",
+    "after_load_auto_memory": "explicit (owner stored preference)",
+    "save_preferences_clicked": false
+  },
+  "functions": {
+    "search_focus": "PASS — Search button opened Browse & tools and focused Search memories",
+    "negative_search": "PASS — query zzzznonexistentxyz; 0 cards; empty copy No memories match. Ask Chat; Ask Chat not clicked; ~2.4 s after input including 180 ms debounce"
+  },
+  "leave_return": {
+    "leave": "Front Door recents → Projects → #projects h2 Projects; active home-lab; Create not clicked",
+    "return": "Projects Open Memory → #memory h2 Memory",
+    "return_state": "search still zzzznonexistentxyz; Browse open; 0 cards; No memories match. Ask Chat; stats unchanged 1088",
+    "result": "PASS — room and negative search restored"
+  },
+  "not_clicked": [
+    "New",
+    "Briefing",
+    "Assist",
+    "Update profile",
+    "Edit answers",
+    "Save preferences",
+    "Edit",
+    "Forget",
+    "Ask Chat",
+    "Export",
+    "Import",
+    "Prune stale",
+    "Scrub test junk",
+    "Lock Aria"
+  ],
+  "performance": {
+    "room_entry": "hash #memory immediately on Front Door click",
+    "first_meaningful": "h2 Memory + settings chrome on first paint; archive cards already present when measured (~22 ms after evaluate start; prior slice needed ~6 s when measured too early)",
+    "negative_search": "~2.4 s after input event (debounce 180 ms + /api/memory/all)",
+    "note": "Tool-roundtrip delays are not owner-visible time and were not recorded as room slowness."
+  },
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "memory_add": false,
+    "memory_edit": false,
+    "memory_forget": false,
+    "memory_import": false,
+    "memory_prefs_save": false,
+    "journal_post": false,
+    "journal_bytes": 67547,
+    "health_phr": false,
+    "planner_task_create": false,
+    "project_create": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "Chat existing composer without sending. Do not Add/Edit/Forget Memory. Do not Lock Aria. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5."
+}

@@ -2,6 +2,19 @@
 (function () {
   "use strict";
 
+function memoryViewActive() {
+  return (
+    document.body.classList.contains("house-memory") ||
+    /^#?memory\b/i.test(location.hash || "")
+  );
+}
+
+function absorbMemoryAbort(err, retryFn) {
+  return !!window.AriaNet?.absorbAbort?.(err, () => {
+    if (memoryViewActive() && typeof retryFn === "function") retryFn();
+  });
+}
+
 async function loadCheatsheets(selectKey) {
   const sel = document.getElementById("cheatsheetSelect");
   if (!sel) return;
@@ -14,6 +27,7 @@ async function loadCheatsheets(selectKey) {
     ).join("")}`;
     if (selectKey) sel.value = selectKey;
   } catch (err) {
+    if (absorbMemoryAbort(err, () => loadCheatsheets(selectKey))) return;
     window.showAriaToast?.(err?.message || "Could not load cheatsheets", "err", 4000);
   }
 }
@@ -31,6 +45,7 @@ async function showCheatsheet(key) {
     box.textContent = data.cheatsheet?.content || "";
     box.classList.remove("hidden");
   } catch (err) {
+    if (absorbMemoryAbort(err, () => showCheatsheet(key))) return;
     window.showAriaToast?.(err?.message || "Could not load cheatsheet", "err", 5000);
   }
 }
@@ -74,6 +89,7 @@ async function loadMemorySettings() {
     }
     applyMemorySettingsToUi(data);
   } catch (err) {
+    if (absorbMemoryAbort(err, () => loadMemorySettings())) return;
     window.showAriaToast?.(err?.message || "Could not load memory settings", "err", 4000);
   }
 }
@@ -81,19 +97,23 @@ async function loadMemorySettings() {
 async function saveMemorySettings(patch) {
   memorySettingsSaveInFlight += 1;
   try {
-    const res = await fetch("/api/memory/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
+    const result = await window.ariaMutate({
+      request: () =>
+        fetch("/api/memory/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        }),
+      failToast: "Could not save memory setting",
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.ok === false) {
-      const err = new Error(data.message || `Could not save settings (HTTP ${res.status})`);
-      err.locked = res.status === 423 || data.locked;
+    if (!result.ok) {
+      const err = new Error(result.error || "Could not save memory setting");
+      err.locked = result.res?.status === 423 || result.data?.locked;
+      err.toastShown = true;
       throw err;
     }
-    applyMemorySettingsToUi(data);
-    return data;
+    applyMemorySettingsToUi(result.data);
+    return result.data;
   } finally {
     memorySettingsSaveInFlight = Math.max(0, memorySettingsSaveInFlight - 1);
   }
@@ -110,7 +130,7 @@ function bindMemorySettingCheckbox(id, key) {
     } catch (err) {
       target.checked = !want;
       if (err.locked) window.jarvisShowLock?.();
-      window.showAriaToast?.(err.message || "Could not save memory setting", "warn", 6000);
+      if (!err.toastShown) window.showAriaToast?.(err.message || "Could not save memory setting", "warn", 6000);
     }
   });
 }
@@ -149,15 +169,18 @@ async function loadMemoryConflicts() {
         if (!drop) return;
         const ok = await memoryConfirm("Cool the other belief? Prefer Cool over erase.", "Resolve conflict");
         if (!ok) return;
-        const res = await fetch("/api/memory/conflicts/resolve", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ drop_id: drop }),
+        const result = await window.ariaMutate({
+          request: () =>
+            fetch("/api/memory/conflicts/resolve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ drop_id: drop }),
+            }),
+          successToast: "Conflict resolved",
+          failToast: "Failed",
         });
-        const data = await res.json().catch(() => ({}));
-        window.showAriaToast?.(data.ok ? "Conflict resolved" : (data.error || "Failed"), data.ok ? "ok" : "err", 3500);
-        if (data.ok) window.AriaActivityProducers?.memory?.repair?.("Memory conflict resolved");
-        else window.AriaActivityProducers?.memory?.conflict?.(data.error || "Memory conflict");
+        if (result.ok) window.AriaActivityProducers?.memory?.repair?.("Memory conflict resolved");
+        else window.AriaActivityProducers?.memory?.conflict?.(result.error || "Memory conflict");
         loadMemoryBrowser();
       };
     });
@@ -226,17 +249,17 @@ async function saveEnvironmentPreferences() {
     if (key && ta) preferences.push({ key, content: ta.value });
   });
   try {
-    const res = await fetch("/api/memory/environment/preferences", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ preferences }),
+    const result = await window.ariaMutate({
+      request: () =>
+        fetch("/api/memory/environment/preferences", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ preferences }),
+        }),
+      successToast: "Environment preferences saved",
+      failToast: "Could not save preferences",
     });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok || data.ok === false) {
-      window.showAriaToast?.(data.error || data.message || `Save failed (${res.status})`, "err", 5000);
-      return;
-    }
-    window.showAriaToast?.("Environment preferences saved", "ok", 2500);
+    if (!result.ok) return;
     loadMemoryBrowser();
   } catch (err) {
     window.showAriaToast?.(err?.message || "Could not save preferences", "err", 5000);
@@ -459,6 +482,7 @@ async function loadProfileInlinePanel() {
       });
     }
   } catch (e) {
+    if (window.AriaNet?.isRoomAbort?.(e)) return;
     el.textContent = e.message || "Could not load profile";
   }
 }
@@ -575,15 +599,22 @@ async function loadCognitiveHome() {
         btn.onclick = async () => {
           const ok = await memoryConfirm("Adopt this into autobiographical memory (ACM)?", "Adopt");
           if (!ok) return;
-          const r = await fetch(`/api/memory/candidates/${btn.dataset.id}/adopt`, { method: "POST" });
-          const d = await r.json().catch(() => ({}));
-          window.showAriaToast?.(d.ok ? "Adopted into ACM" : (d.error || "Failed"), d.ok ? "ok" : "err", 3500);
+          const result = await window.ariaMutate({
+            request: () => fetch(`/api/memory/candidates/${btn.dataset.id}/adopt`, { method: "POST" }),
+            successToast: "Adopted into ACM",
+            failToast: "Failed",
+          });
+          if (!result.ok) return;
           loadMemoryBrowser();
         };
       });
       candList.querySelectorAll(".mem-dismiss").forEach((btn) => {
         btn.onclick = async () => {
-          await fetch(`/api/memory/candidates/${btn.dataset.id}/dismiss`, { method: "POST" });
+          const result = await window.ariaMutate({
+            request: () => fetch(`/api/memory/candidates/${btn.dataset.id}/dismiss`, { method: "POST" }),
+            failToast: "Dismiss failed",
+          });
+          if (!result.ok) return;
           loadMemoryBrowser();
         };
       });
@@ -600,6 +631,18 @@ async function loadCognitiveHome() {
       bindMemoryCardActions(beliefs);
     }
   } catch (err) {
+    if (
+      window.AriaNet?.absorbAbort?.(err, () => {
+        if (
+          document.body.classList.contains("house-memory") ||
+          /^#?memory\b/i.test(location.hash || "")
+        ) {
+          loadMemoryBrowser();
+        }
+      })
+    ) {
+      return;
+    }
     window.showAriaToast?.(err?.message || "Memory Home unavailable", "err", 4000);
   }
 }
@@ -652,15 +695,19 @@ async function openForgetFlow(id) {
       }
       const sure = await memoryConfirm(`Confirm ${act}? This changes what Aria believes.`, "Confirm forget");
       if (!sure) return;
-      const res = await fetch(`/api/memory/${id}/forget`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: act, confirm: true, correction_text: correction }),
+      const result = await window.ariaMutate({
+        request: () =>
+          fetch(`/api/memory/${id}/forget`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: act, confirm: true, correction_text: correction }),
+          }),
+        failToast: "Failed",
       });
-      const data = await res.json().catch(() => ({}));
+      if (!result.ok) return;
       closeMemoryDialog();
-      window.showAriaToast?.(data.ok ? (data.message || "Done") : (data.error || "Failed"), data.ok ? "ok" : "err", 4000);
-      if (data.ok) loadMemoryBrowser();
+      window.showAriaToast?.(result.data?.message || "Done", "ok", 4000);
+      loadMemoryBrowser();
     };
   });
 }
@@ -705,15 +752,18 @@ async function openEditMemoryDialog(id, itemEl) {
     };
     if (!payload.content) return;
     try {
-      const res = await fetch(id ? `/api/memory/${id}` : "/api/memory", {
-        method: id ? "PUT" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      const result = await window.ariaMutate({
+        request: () =>
+          fetch(id ? `/api/memory/${id}` : "/api/memory", {
+            method: id ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          }),
+        successToast: id ? "Updated" : "Encoded into ACM",
+        failToast: "Save failed",
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || data.message || "Save failed");
+      if (!result.ok) return;
       closeMemoryDialog();
-      window.showAriaToast?.(id ? "Updated" : "Encoded into ACM", "ok", 2500);
       loadMemoryBrowser();
     } catch (err) {
       window.showAriaToast?.(err.message || "Save failed", "err", 5000);
@@ -745,15 +795,19 @@ async function openCorrectFlowFixed(id) {
     if (!text) return;
     const sure = await memoryConfirm("Apply correction?", "Confirm");
     if (!sure) return;
-    const res = await fetch(`/api/memory/${id}/forget`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "correct", confirm: true, correction_text: text }),
+    const result = await window.ariaMutate({
+      request: () =>
+        fetch(`/api/memory/${id}/forget`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "correct", confirm: true, correction_text: text }),
+        }),
+      successToast: "Corrected",
+      failToast: "Failed",
     });
-    const data = await res.json().catch(() => ({}));
+    if (!result.ok) return;
     closeMemoryDialog();
-    window.showAriaToast?.(data.ok ? "Corrected" : (data.error || "Failed"), data.ok ? "ok" : "err", 3500);
-    if (data.ok) loadMemoryBrowser();
+    loadMemoryBrowser();
   };
   acts.append(cancel, go);
 }
@@ -768,6 +822,12 @@ async function loadMemoryListOnly() {
   const q = document.getElementById("memorySearch")?.value || "";
   const type = document.getElementById("memoryTypeFilter")?.value || "";
   const namespace = document.getElementById("memoryNsFilter")?.value || "";
+  // Search results live inside a <details> — keep it open so matches are visible
+  // in the Living Workspace Memory room (BUG-013: inMem false while API had hits).
+  const browse = document.getElementById("memoryBrowseSection");
+  if (browse && (q || type || namespace)) {
+    browse.open = true;
+  }
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (type) params.set("type", type);
@@ -811,6 +871,7 @@ async function loadMemoryListOnly() {
     });
     bindMemoryCardActions(el);
   } catch (err) {
+    if (window.AriaNet?.isRoomAbort?.(err)) return;
     el.innerHTML = `<p class="memory-empty">${window.escapeHtml(err.message || "Failed")}</p>`;
   } finally {
     el.setAttribute("aria-busy", "false");
@@ -818,14 +879,28 @@ async function loadMemoryListOnly() {
 }
 
 async function loadMemoryBrowser() {
+  // Briefs are a visible Memory section — do not wait for the archive list.
+  const briefsP = loadKnowledgeResearchPanel();
   await loadMemorySettings();
   await loadEnvironmentPreferences();
-  await loadCognitiveHome();
-  await loadMemoryConflicts();
-  await loadMemoryTrustStatus();
-  await loadProfileInlinePanel();
-  await loadCheatsheets(document.getElementById("cheatsheetSelect")?.value || "");
+  // Searchable archive first — secondary panels must not block Chat→Memory verify
+  // (BUG-013: About you / cheatsheet hangs left #memoryList empty).
   await loadMemoryListOnly();
+  await Promise.allSettled([
+    loadCognitiveHome(),
+    loadMemoryConflicts(),
+    loadMemoryTrustStatus(),
+    loadProfileInlinePanel(),
+    loadCheatsheets(document.getElementById("cheatsheetSelect")?.value || ""),
+    briefsP,
+  ]);
+  // Preserve an active search across leave/return (re-open browse + refresh hits).
+  const q = document.getElementById("memorySearch")?.value || "";
+  if (q.trim()) {
+    const browse = document.getElementById("memoryBrowseSection");
+    if (browse) browse.open = true;
+    await loadMemoryListOnly();
+  }
 }
 
 
@@ -870,11 +945,10 @@ function initMemoryBrowser() {
     document.getElementById("memCloseShortcuts")?.addEventListener("click", () => o.classList.add("hidden"));
   });
   document.getElementById("memoryOpenKnowledgeBtn")?.addEventListener("click", () => {
-    window.switchToView?.("documents");
-    window.showAriaToast?.("Knowledge Briefs live with Documents / research — not Memory, not Connections.", "info", 4000);
+    window.openKnowledgeBriefs?.();
   });
   document.getElementById("memoryOpenKnowledgeBtn2")?.addEventListener("click", () => {
-    document.getElementById("memoryOpenKnowledgeBtn")?.click();
+    window.openKnowledgeBriefs?.();
   });
   document.getElementById("memoryOpenConnectionsBtn")?.addEventListener("click", () => {
     window.switchToView?.("connections");
@@ -1266,6 +1340,14 @@ document.getElementById("profileSkipBtn")?.addEventListener("click", async () =>
 });
 
 
+  window.openKnowledgeBriefs = function openKnowledgeBriefs() {
+    window.switchToView?.("memory");
+    const panel = document.getElementById("memoryKnowledgePanel");
+    panel?.scrollIntoView?.({ block: "nearest" });
+    window.showAriaToast?.("Knowledge Briefs — research, not Memory or Connections.", "info", 3500);
+    void loadKnowledgeResearchPanel();
+  };
+  window.loadKnowledgeResearchPanel = loadKnowledgeResearchPanel;
   window.loadMemoryBrowser = loadMemoryBrowser;
   window.initMemoryBrowser = initMemoryBrowser;
   window.maybeShowProfileQuestionnaire = maybeShowProfileQuestionnaire;

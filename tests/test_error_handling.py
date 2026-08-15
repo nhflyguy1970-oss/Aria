@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import json
 
 import pytest
 
@@ -46,3 +47,21 @@ def test_api_error_payload_debug_detail(monkeypatch):
     assert payload["ok"] is False
     assert payload["error_id"]
     assert "detail" in payload
+
+
+def test_global_api_exception_handler_sanitizes_message(data_dir, monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+
+    monkeypatch.setattr("jarvis.error_handling.new_error_id", lambda: "facefeed")
+    from jarvis.gui.server import global_exception_handler
+
+    request = SimpleNamespace(url=SimpleNamespace(path="/api/fail"))
+    response = asyncio.run(global_exception_handler(request, RuntimeError("secret stack detail")))
+    body = json.loads(response.body.decode("utf-8"))
+
+    assert response.status_code == 500
+    assert body["ok"] is False
+    assert body["error_id"] == "facefeed"
+    assert "secret stack detail" not in body["message"]
+    assert "facefeed" in body["message"]

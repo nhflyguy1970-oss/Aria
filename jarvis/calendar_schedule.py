@@ -103,6 +103,23 @@ def _journal_items(journal, day: str) -> list[dict[str, Any]]:
                         meta={"bullet_id": b.get("id"), "status": b.get("status")},
                     )
                 )
+            elif btype in ("note", "fact", "explore", "reflection") or (
+                btype and btype not in ("event", "task") and (b.get("content") or "").strip()
+            ):
+                # Notes and other journal bullets must appear on Calendar day —
+                # otherwise Journal and Calendar disagree about the same day.
+                items.append(
+                    _item(
+                        id=f"journal-note:{b.get('id')}",
+                        title=b.get("content") or "",
+                        day=day,
+                        source="journal",
+                        time=b.get("time") or "",
+                        kind="note",
+                        all_day=not b.get("time"),
+                        meta={"bullet_id": b.get("id"), "status": b.get("status"), "bullet_type": btype},
+                    )
+                )
             walk(b.get("children") or [])
 
     walk(page.get("bullets") or [])
@@ -506,28 +523,27 @@ def create_commitment(
     title: str,
     day: str | None = None,
     time: str | None = None,
-    target: str = "journal",
+    target: str = "planner",
     duration_min: int = 30,
 ) -> dict[str, Any]:
-    """Create a scheduled commitment in Journal or Planner. Never silent."""
+    """Create a scheduled user event in the Planner event store.
+
+    Calendar is a read model over several sources, but Planner owns durable user
+    event writes. Journal bullets may still project into Calendar for historical
+    notes/events, never as the target for new Calendar event creation.
+    """
     title = (title or "").strip()
     if not title:
         raise ValueError("Title required")
     d = (day or today_iso())[:10]
     hm = validate_time_hm(time) if time else None
     target = (target or "journal").lower().strip()
-    if target == "planner":
-        from jarvis.planner_store import add_event
+    if target not in ("planner", "journal", "calendar", "event", ""):
+        raise ValueError("target must be planner/calendar/journal")
+    from jarvis.planner_store import add_event
 
-        ev = add_event(title, when=d, time_str=hm or "09:00", duration_min=duration_min)
-        return {"ok": True, "target": "planner", "event": ev, "item_id": f"planner:{ev.get('id')}"}
-    bullet = journal.daily_add(title, "event", day=d, time=hm)
-    return {
-        "ok": True,
-        "target": "journal",
-        "bullet": bullet,
-        "item_id": f"journal:{bullet.get('id')}",
-    }
+    ev = add_event(title, when=d, time_str=hm or "09:00", duration_min=duration_min)
+    return {"ok": True, "target": "planner", "event": ev, "item_id": f"planner:{ev.get('id')}"}
 
 
 def update_commitment(

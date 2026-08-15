@@ -30,15 +30,23 @@ def _save(items: list[dict[str, Any]]) -> None:
 
 
 def start_session(query: str, *, facets: list[str] | None = None, mode: str = "browse") -> dict[str, Any]:
+    from jarvis.search_product.history import is_qa_search_query
+
+    q = (query or "").strip()
     session = {
         "id": uuid.uuid4().hex[:12],
-        "query": (query or "").strip(),
+        "query": q,
         "facets": list(facets or []),
         "mode": mode,
         "created": time.time(),
         "updated": time.time(),
         "result_ids": [],
     }
+    if is_qa_search_query(q):
+        from jarvis.production_guard import is_production_workspace
+
+        if is_production_workspace():
+            return session
     items = _load()
     items.insert(0, session)
     _save(items[:MAX_SESSIONS])
@@ -65,4 +73,7 @@ def get_session(session_id: str) -> dict[str, Any] | None:
 
 
 def list_sessions(limit: int = 10) -> list[dict[str, Any]]:
-    return _load()[: max(1, min(limit, MAX_SESSIONS))]
+    from jarvis.search_product.history import is_qa_search_query
+
+    items = [s for s in _load() if not is_qa_search_query(str(s.get("query") or ""))]
+    return items[: max(1, min(limit, MAX_SESSIONS))]

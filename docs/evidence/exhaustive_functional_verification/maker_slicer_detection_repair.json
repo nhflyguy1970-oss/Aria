@@ -1,0 +1,27 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "maker",
+  "capability": "OrcaSlicer detection so Slice can run",
+  "captured_at": "2026-08-13T19:28:00+00:00",
+  "result": "CAUSE FIXED — detection now sees Flatpak OrcaSlicer. Slice owner-UI not yet re-run (house locked after code-load restart).",
+  "not_certification": true,
+  "root_cause": "slicer.py called invalid `flatpak which` and looked up legacy id com.softfever.OrcaSlicer. Jeff already has Flathub OrcaSlicer 2.4.2 as com.orcaslicer.OrcaSlicer. Slice therefore always said No slicer found.",
+  "repair": "Detect via `flatpak info` for com.orcaslicer.OrcaSlicer and com.softfever.OrcaSlicer; use the detected id when invoking; include both Flatpak config system dirs.",
+  "files": ["jarvis/engineering/slicer.py", "tests/test_engineering_printers.py"],
+  "api_after_restart": {
+    "slicers": [{"id": "orcaslicer", "label": "OrcaSlicer", "path": "flatpak run com.orcaslicer.OrcaSlicer"}],
+    "orca_system_dirs": ["/home/jeff/.var/app/com.orcaslicer.OrcaSlicer/config/OrcaSlicer/system"]
+  },
+  "code_load": "POST /api/jarvis/restart-server 200 mode=tray; cad_status ready with slicers after ~12 s",
+  "owner_ui": {
+    "after_restart": "ARIA locked overlay visible; session empty; Hello cube still listed in Maker chrome",
+    "slice_clicked_after_repair": false,
+    "print_clicked": false
+  },
+  "jeff_action_required": {
+    "gate": "Owner unlock after code-load restart, then Maker Slice of existing Hello cube",
+    "action_in_aria_ui": "Unlock with the Aria Master Password (overlay is up). Stay in Maker lab. Say done. Slice will run on Hello cube c625705b89. Start print will not be clicked."
+  },
+  "hello_cube_id": "c625705b89",
+  "integrity_pending": "re-scan after unlock + slice"
+}

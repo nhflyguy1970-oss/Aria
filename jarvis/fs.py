@@ -94,19 +94,49 @@ def find_files(name: str, root: str | Path) -> list[str]:
     return matches
 
 
-def search_files(text: str, root: str | Path) -> list[tuple[str, int, str]]:
+def search_files(
+    text: str,
+    root: str | Path,
+    *,
+    limit: int = 200,
+    max_file_bytes: int | None = None,
+) -> list[tuple[str, int, str]]:
+    """Substring search across text files under root.
+
+    Skips oversized files (logs/DBs can be multi-GB) and stops once ``limit``
+    hits are collected so coding context gather cannot hang the propose path.
+    """
+    import os
+    import time
+
     root = Path(root).resolve()
-    results = []
+    results: list[tuple[str, int, str]] = []
+    needle = (text or "").lower()
+    if not needle:
+        return results
+    cap = max(1, int(limit or 200))
+    max_bytes = max_file_bytes
+    if max_bytes is None:
+        max_bytes = int(os.getenv("JARVIS_SEARCH_MAX_FILE_BYTES", str(2_000_000)))
+    deadline = time.monotonic() + float(os.getenv("JARVIS_SEARCH_TIMEOUT_SEC", "8"))
     for dirpath, filenames in _walk(root):
+        if time.monotonic() > deadline:
+            break
         for filename in filenames:
+            if time.monotonic() > deadline:
+                break
             if _is_blocked(Path(filename)):
                 continue
             path = Path(dirpath) / filename
             try:
+                if path.stat().st_size > max_bytes:
+                    continue
                 with open(path, "r", encoding="utf-8", errors="ignore") as f:
                     for line_num, line in enumerate(f, start=1):
-                        if text.lower() in line.lower():
+                        if needle in line.lower():
                             results.append((str(path), line_num, line.strip()))
+                            if len(results) >= cap:
+                                return results
             except OSError:
                 pass
     return results

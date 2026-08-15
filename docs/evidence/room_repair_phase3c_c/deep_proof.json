@@ -1,0 +1,364 @@
+{
+  "isol_deep": {
+    "journal_create2": {
+      "status": 200,
+      "id": "c383db43",
+      "ok": true
+    },
+    "journal_delete": {
+      "status": 404,
+      "body": "{'detail': 'Not Found'}"
+    },
+    "journal_live_clean": true,
+    "planner_create2": {
+      "status": 200,
+      "id": "59ac3c19c9"
+    },
+    "planner_complete": {
+      "status": 200,
+      "ok": true
+    },
+    "planner_delete": {
+      "status": 200,
+      "ok": true
+    },
+    "planner_live_clean": true,
+    "calendar_create": {
+      "status": 200,
+      "body": {
+        "ok": true,
+        "target": "planner",
+        "event": {
+          "id": "473677b4c1",
+          "title": "ARIA-3CC-ISOL-CAL",
+          "start_time": "2099-06-15T10:00:00",
+          "end_time": "2099-06-15T10:30:00"
+        },
+        "item_id": "planner:473677b4c1"
+      }
+    },
+    "calendar_update": {
+      "status": 400,
+      "ok": false
+    },
+    "calendar_delete": {
+      "status": 400,
+      "ok": false
+    },
+    "calendar_live_clean": true,
+    "calendar_agenda_live_clean": true,
+    "gallery_isol": {
+      "status": 200,
+      "total": 0
+    },
+    "gallery_live": {
+      "status": 200,
+      "total": 0,
+      "images": 0
+    },
+    "journal_enc_export_isol": {
+      "status": 422,
+      "ok": null,
+      "keys": [
+        "detail"
+      ]
+    }
+  },
+  "vision": {
+    "snap": {
+      "room": "vision",
+      "realFail": false,
+      "hasModel": true,
+      "hasControls": 17,
+      "head": "Aria \u00b7 Vision bench Listening quietly Vision Chat attach Gallery Refresh State: idle \u00b7 Model: moondream:latest \u00b7 Mode: quality OCR entry point: enter an image/PDF page path, then choose OCR or Structured OCR below. Command Palette also knows \u201cRun OCR in Vision Home\u201d. moondream:latest \u00b7 1\u20133s Est. VRAM ~1500MB \u00b7 Free 11837MB \u00b7 OCR: hybrid (tesseract ok) Fallba"
+    },
+    "after_refresh": {
+      "head": "Aria \u00b7 Vision bench Listening quietly Vision Chat attach Gallery Refresh State: idle \u00b7 Model: moondream:latest \u00b7 Mode: quality OCR entry point: enter an image/PDF page path, then choose OCR or Structured OCR below. Command Palette also knows \u201cRun OCR in Vision Home\u201d. moondream:la",
+      "state": "State: idle"
+    },
+    "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+  },
+  "docs_rag": {
+    "default": {
+      "status": 200,
+      "ms": 102.9,
+      "hits": 8,
+      "meta": {
+        "ok": true
+      },
+      "sample_keys": [
+        "ok",
+        "query",
+        "hits",
+        "citations",
+        "markdown"
+      ]
+    },
+    "keyword_hint": {
+      "status": 200,
+      "ms": 54.5,
+      "hits": 8,
+      "meta": {
+        "ok": true
+      },
+      "sample_keys": [
+        "ok",
+        "query",
+        "hits",
+        "citations",
+        "markdown"
+      ]
+    },
+    "semantic_hint": {
+      "status": 200,
+      "ms": 55.5,
+      "hits": 8,
+      "meta": {
+        "ok": true
+      },
+      "sample_keys": [
+        "ok",
+        "query",
+        "hits",
+        "citations",
+        "markdown"
+      ]
+    },
+    "warm_repeat": {
+      "status": 200,
+      "ms": 52.9,
+      "hits": 8
+    }
+  },
+  "controls_deep": {
+    "calendar": {
+      "hasMonth": true,
+      "addPresent": true,
+      "btns": 57
+    },
+    "maker": {
+      "tabs": [
+        "\u29c9",
+        "Generate",
+        "Iterate",
+        "Hello cube",
+        "Slice",
+        "Download STL",
+        "Refresh",
+        "Gallery",
+        "Documents",
+        "Clear gallery",
+        "Hello cube",
+        "ask Chat",
+        "\u29c9",
+        "Add",
+        "Discover KE",
+        "Status",
+        "Start print"
+      ],
+      "cad": "CAD: OpenSCAD",
+      "hasUndefined": false
+    },
+    "meme": {
+      "btns": 6,
+      "hasGen": true,
+      "fail": false,
+      "head": "Aria \u00b7 Meme studio Listening quietly Meme Generator Classic top/bottom captions \u00b7 AI background optional \u00b7 safe / uncensored follows global toggle Generate in chat Gallery Video MEME IDEA (OPTIONAL \u2014 AI WRITES CAPTIONS) TOP TEXT BOTTOM TEXT"
+    },
+    "browser": {
+      "idle": true,
+      "fail": false,
+      "head": "Aria \u00b7 Browser Listening quietly Browser Live web interaction agent \u2014 Playwright navigation, screenshots, DOM/Vision tasks. Not a full Chrome replacement. Documents store knowledge; Chat converses. Refresh Projects Job C"
+    },
+    "video": {
+      "btns": 18,
+      "hasMedia": true,
+      "fail": false,
+      "head": "Aria \u00b7 Video studio Listening quietly Video Studio Stay-in-Studio generation \u00b7 AnimateDiff or Ken Burns \u00b7 shared media queue Gallery Meme Mission Control Generate Enhance prompt Preset \u2014 none \u2014 Fast Draft Portrait Motion Landscape Pan Storyboard Preview Cinema"
+    },
+    "audit": {
+      "progress": true,
+      "qaLeak": false,
+      "head": "Aria \u00b7 System audit Listening quietly System Audit Audit in progress\u2026 Mission Control Actions Run audit 14 phases: OS \u00b7 packages \u00b7 storage/SMART \u00b7 memory \u00b7 hardware/sensors \u00b7 GPU \u00b7 services/desktop \u00b7 containers \u00b7 dev tools \u00b7 integrity \u00b7 performance \u00b7 security \u00b7 network \u00b7 Jarvis/AI. 0% Starting audit"
+    },
+    "documents": {
+      "hasLibrary": true,
+      "btns": 29,
+      "inputs": 3
+    },
+    "gallery": {
+      "comfyFail": false,
+      "count": "0",
+      "btns": 55
+    },
+    "presence": {
+      "identity": "presence",
+      "hash": "#presence",
+      "hasGestures": true,
+      "head": "Aria \u00b7 Presence Listening quietly Presence Security Voice Gestures enabled \u2014 pick Control mode to move floating panels Start camera Stop Enroll face Gestures Off Preview only Control \u2014 pinch click, fist drag panels CPU-only (low FPS) Calibr"
+    },
+    "journal_enc_controls": {
+      "exportEnc": true,
+      "importEnc": true,
+      "moreOpen": true
+    }
+  },
+  "leave_return": {
+    "journal": "journal",
+    "planner": "planner",
+    "documents": "documents",
+    "gallery": "gallery",
+    "connections": "connections",
+    "vision": "vision"
+  },
+  "vision_api": {
+    "/api/vision/product": {
+      "status": 200,
+      "ms": 629.6,
+      "ok": true,
+      "keys": [
+        "ok",
+        "product",
+        "boundaries",
+        "state",
+        "settings",
+        "honesty",
+        "profiles",
+        "history_recent",
+        "actions",
+        "pipeline"
+      ]
+    },
+    "/api/vision/honesty": {
+      "status": 200,
+      "ms": 205.7,
+      "ok": true,
+      "keys": [
+        "ok",
+        "task",
+        "model",
+        "quality_mode",
+        "ocr_mode",
+        "classic_ocr_available",
+        "estimated_vram_mb",
+        "free_vram_mb",
+        "low_vram",
+        "expected_latency",
+        "fallback",
+        "warnings"
+      ]
+    },
+    "/api/vision/history?limit=5": {
+      "status": 200,
+      "ms": 2.3,
+      "ok": true,
+      "keys": [
+        "ok",
+        "history"
+      ]
+    },
+    "/api/vision/profiles": {
+      "status": 200,
+      "ms": 1.6,
+      "ok": true,
+      "keys": [
+        "ok",
+        "profiles",
+        "active"
+      ]
+    },
+    "/api/vision/actions": {
+      "status": 200,
+      "ms": 1.2,
+      "ok": true,
+      "keys": [
+        "ok",
+        "actions"
+      ]
+    }
+  },
+  "activity": {
+    "unread": 28,
+    "kinds": {
+      "warning": 9,
+      "info": 5,
+      "error": 14
+    },
+    "sample": [
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Missed: Work"
+      },
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Missed: Work"
+      },
+      {
+        "kind": "info",
+        "ownerVisible": null,
+        "title": "Provider recovered"
+      },
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Missed: Work"
+      },
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Planner timer"
+      },
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Planner timer"
+      },
+      {
+        "kind": "error",
+        "ownerVisible": null,
+        "title": "Generation failed"
+      },
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Automations paused"
+      },
+      {
+        "kind": "error",
+        "ownerVisible": null,
+        "title": "EQ failed"
+      },
+      {
+        "kind": "error",
+        "ownerVisible": null,
+        "title": "Voice\u2192song failed"
+      }
+    ]
+  },
+  "integrity": {
+    "status": "clean",
+    "overall": 100,
+    "clean": true,
+    "counts": {
+      "total": 0,
+      "actionable": 0,
+      "by_category": {},
+      "safe_to_remove": 0,
+      "uncertain": 0
+    }
+  },
+  "cross_extra": {
+    "calendar_focus_suggestions": {
+      "status": 200,
+      "keys": [
+        "ok",
+        "day",
+        "suggestions",
+        "priorities",
+        "requires_confirmation"
+      ]
+    }
+  }
+}

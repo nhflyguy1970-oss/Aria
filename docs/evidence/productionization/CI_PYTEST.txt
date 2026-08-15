@@ -1,0 +1,418 @@
+........................................................................ [  9%]
+........................................................................ [ 18%]
+.................................FF..............................F..F..F [ 28%]
+..F......F....................................F......................... [ 37%]
+...........................................FF........................... [ 46%]
+....................................FFFFF....................FF......F.. [ 56%]
+...............F..F.................................sF....F............. [ 65%]
+...F..........F......................................................... [ 74%]
+...................................................F.................... [ 84%]
+........................................................................ [ 93%]
+..................FF.F.FF.F...F...................                       [100%]
+=================================== FAILURES ===================================
+____ test_nlu_variant_intent[How do I configure Docker Compose?-reference0] ____
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'chat' == 'reference'
+E     
+E     - reference
+E     + chat
+_____________ test_nlu_variant_intent[Configure nginx.-reference] ______________
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'chat' == 'reference'
+E     
+E     - reference
+E     + chat
+________ test_nlu_variant_intent[How do I configure Docker?-reference] _________
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'chat' == 'reference'
+E     
+E     - reference
+E     + chat
+____ test_nlu_variant_intent[How do I configure Docker Compose?-reference1] ____
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'chat' == 'reference'
+E     
+E     - reference
+E     + chat
+_________ test_nlu_variant_intent[How do I configure nginx?-reference] _________
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'chat' == 'reference'
+E     
+E     - reference
+E     + chat
+_______ test_nlu_variant_intent[How do I configure Postgres?-reference] ________
+tests/test_nlu_routing_variants.py:83: in test_nlu_variant_intent
+    assert apply_intent_guards(result) == expected
+E   AssertionError: assert 'runtime' == 'reference'
+E     
+E     - reference
+E     + runtime
+_________________________ test_routing_accuracy_report _________________________
+tests/test_nlu_routing_variants.py:97: in test_routing_accuracy_report
+    assert accuracy >= 95.0, f"Accuracy {accuracy:.1f}% misses={misses[:10]}"
+E   AssertionError: Accuracy 91.0% misses=["'How do I configure Docker Compose?' -> chat (expected reference)", "'Configure nginx.' -> chat (expected reference)", "'How do I configure Docker?' -> chat (expected reference)", "'How do I configure Docker Compose?' -> chat (expected reference)", "'How do I configure nginx?' -> chat (expected reference)", "'How do I configure Postgres?' -> runtime (expected reference)"]
+E   assert 91.04477611940298 >= 95.0
+_________________________ test_memory_add_via_governor _________________________
+jarvis/modules/memory.py:155: in add
+    redirected = redirect_legacy_write_to_acm(
+aria_core/acm_bridge.py:95: in redirect_legacy_write_to_acm
+    return memory_manager.remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+
+The above exception was the direct cause of the following exception:
+tests/test_learning_governor.py:76: in test_memory_add_via_governor
+    entry = store.add("fact", "Jeff prefers barbless hooks for trout")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jarvis/modules/memory.py:161: in add
+    raise RuntimeError(
+E   RuntimeError: ACM authoritative: legacy MemoryStore write refused (RuntimeError)
+________________ test_apply_policy_uses_benchmark_when_present _________________
+tests/test_execution_routing.py:79: in test_apply_policy_uses_benchmark_when_present
+    assert overlay["model"] == "gemma3:4b"
+E   AssertionError: assert 'qwen2.5-coder:1.5b-base' == 'gemma3:4b'
+E     
+E     - gemma3:4b
+E     + qwen2.5-coder:1.5b-base
+________________ test_apply_policy_user_config_beats_benchmark _________________
+tests/test_execution_routing.py:109: in test_apply_policy_user_config_beats_benchmark
+    assert overlay["model"] == "qwen2.5-coder:7b"
+E   AssertionError: assert 'deepseek-coder:latest' == 'qwen2.5-coder:7b'
+E     
+E     - qwen2.5-coder:7b
+E     + deepseek-coder:latest
+____________________ test_remember_search_forget_roundtrip _____________________
+tests/test_aria_core_phase7.py:62: in test_remember_search_forget_roundtrip
+    entry = remember(
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+_________________ test_propose_commit_and_history_no_contents __________________
+tests/test_aria_core_phase7.py:99: in test_propose_commit_and_history_no_contents
+    commit_memory(p)
+aria_core/memory_manager.py:512: in commit_memory
+    entry = remember(
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+___________________________ test_merge_and_rollback ____________________________
+tests/test_aria_core_phase7.py:113: in test_merge_and_rollback
+    a = remember("alpha merge keep", entry_type="teaching", namespace="phase7")
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+_______________________ test_cap_bus_remember_uses_core ________________________
+tests/test_aria_core_phase7.py:128: in test_cap_bus_remember_uses_core
+    entry = cap_remember("via cap bus", entry_type="teaching", namespace="phase7")
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/capability_bus.py:119: in remember
+    return _orchestrate("remember", _body)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/capability_bus.py:32: in _orchestrate
+    return _run(capability, fn, meta=meta)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/cognitive_orchestrator.py:147: in run
+    result = fn()
+             ^^^^
+aria_core/capability_bus.py:117: in _body
+    return core_remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+__________________ test_mission_control_panel_hides_contents ___________________
+tests/test_aria_core_phase7.py:137: in test_mission_control_panel_hides_contents
+    remember("do-not-show-this-body", entry_type="teaching", namespace="phase7")
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+________________________ test_lan_bind_requires_api_key ________________________
+tests/test_aria_host_production_audit.py:76: in test_lan_bind_requires_api_key
+    with pytest.raises(SystemExit, match="JARVIS_API_KEY"):
+E   Failed: DID NOT RAISE <class 'SystemExit'>
+_________________ test_primary_import_routes_via_add_arg_order _________________
+jarvis/modules/memory.py:155: in add
+    redirected = redirect_legacy_write_to_acm(
+aria_core/acm_bridge.py:95: in redirect_legacy_write_to_acm
+    return memory_manager.remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+
+The above exception was the direct cause of the following exception:
+tests/test_aria_host_production_audit.py:87: in test_primary_import_routes_via_add_arg_order
+    n = store.import_data(
+jarvis/modules/memory.py:621: in import_data
+    self.add(entry_type, content, tags=tags, namespace=namespace)
+jarvis/modules/memory.py:161: in add
+    raise RuntimeError(
+E   RuntimeError: ACM authoritative: legacy MemoryStore write refused (RuntimeError)
+____________ test_upsert_checkpoint_primary_does_not_delete_legacy _____________
+jarvis/modules/memory.py:155: in add
+    redirected = redirect_legacy_write_to_acm(
+aria_core/acm_bridge.py:95: in redirect_legacy_write_to_acm
+    return memory_manager.remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+
+The above exception was the direct cause of the following exception:
+tests/test_aria_host_production_audit.py:187: in test_upsert_checkpoint_primary_does_not_delete_legacy
+    store.upsert_checkpoint("new checkpoint state")
+jarvis/modules/memory.py:559: in upsert_checkpoint
+    return self.add(
+jarvis/modules/memory.py:161: in add
+    raise RuntimeError(
+E   RuntimeError: ACM authoritative: legacy MemoryStore write refused (RuntimeError)
+___________ test_mc_dollar_accepts_hash_ids_and_audit_controls_wired ___________
+tests/test_product_ui_api_wiring.py:156: in test_mc_dollar_accepts_hash_ids_and_audit_controls_wired
+    assert "Repair done" in mc
+E   assert 'Repair done' in '/** AI Platform Mission Control — operational console (not chat). */\n\nconst MC_TABS = [\n  "overview",\n  "routing"...rkstationInference") switchMcTab("inference");\n      else if (target) switchMcTab("overview");\n    });\n  });\n});\n'
+________________________ test_command_palette_is_wired _________________________
+tests/test_product_ui_api_wiring.py:635: in test_command_palette_is_wired
+    assert "document.hidden || window.mediaWorkActive" in Path("jarvis/gui/static/wakeword_chat.js").read_text(encoding="utf-8")
+E   assert 'document.hidden || window.mediaWorkActive' in '/** Wake-word → chat bridge — extracted from app.js. */\n(function () {\n  "use strict";\n\n  let lastWakewordEventId...  document.addEventListener("visibilitychange", () => {\n    if (!document.hidden) pollWakewordChat();\n  });\n})();\n'
+E    +  where '/** Wake-word → chat bridge — extracted from app.js. */\n(function () {\n  "use strict";\n\n  let lastWakewordEventId...  document.addEventListener("visibilitychange", () => {\n    if (!document.hidden) pollWakewordChat();\n  });\n})();\n' = read_text(encoding='utf-8')
+E    +    where read_text = PosixPath('jarvis/gui/static/wakeword_chat.js').read_text
+E    +      where PosixPath('jarvis/gui/static/wakeword_chat.js') = <class 'pathlib.Path'>('jarvis/gui/static/wakeword_chat.js')
+________________ test_m0_01_version_json_pin_matches_tree_hash _________________
+tests/test_aria_acm_m0.py:42: in test_m0_01_version_json_pin_matches_tree_hash
+    assert _tree_sha256(ACM_TREE) == meta["tree_sha256"]
+E   AssertionError: assert 'c866791f380c...d720a86f50a68' == '50759153c39c...4b5718b06be6e'
+E     
+E     - 50759153c39cce73241e046f21b7e6567c6d740769bec1c77b54b5718b06be6e
+E     + c866791f380cb53124743d637ea71d2dea638e56e69f90b0089d720a86f50a68
+______________ test_m0a_02_bridge_routes_memory_through_pipeline _______________
+tests/test_aria_acm_m0a.py:51: in test_m0a_02_bridge_routes_memory_through_pipeline
+    memory_manager.remember(
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+__________________ test_m0b_07_goal_and_project_search_routes __________________
+tests/test_aria_acm_m0b.py:130: in test_m0b_07_goal_and_project_search_routes
+    memory_manager.remember(
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+_________________ test_m0c_04_user_identity_no_assistant_bleed _________________
+tests/test_aria_acm_m0c.py:104: in test_m0c_04_user_identity_no_assistant_bleed
+    memory_manager.remember("User's name is Jeff", entry_type="identity", namespace="profile")
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+______________ test_prediction_queries_route_to_memory_authority _______________
+tests/test_aria_acm_prediction.py:62: in test_prediction_queries_route_to_memory_authority
+    assert is_semantic_autobio_query(q), q
+E   AssertionError: What will happen in the stock market tomorrow?
+E   assert False
+E    +  where False = is_semantic_autobio_query('What will happen in the stock market tomorrow?')
+__________________ test_checkpoint_create_and_lookup_primary ___________________
+jarvis/modules/memory.py:155: in add
+    redirected = redirect_legacy_write_to_acm(
+aria_core/acm_bridge.py:95: in redirect_legacy_write_to_acm
+    return memory_manager.remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+
+The above exception was the direct cause of the following exception:
+tests/test_checkpoint_r1.py:64: in test_checkpoint_create_and_lookup_primary
+    written = store.upsert_checkpoint("ACM checkpoint alpha", namespace="default")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+jarvis/modules/memory.py:559: in upsert_checkpoint
+    return self.add(
+jarvis/modules/memory.py:161: in add
+    raise RuntimeError(
+E   RuntimeError: ACM authoritative: legacy MemoryStore write refused (RuntimeError)
+_____________________ test_checkpoint_update_keeps_latest ______________________
+jarvis/modules/memory.py:155: in add
+    redirected = redirect_legacy_write_to_acm(
+aria_core/acm_bridge.py:95: in redirect_legacy_write_to_acm
+    return memory_manager.remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+
+The above exception was the direct cause of the following exception:
+tests/test_checkpoint_r1.py:78: in test_checkpoint_update_keeps_latest
+    store.upsert_checkpoint("first state", namespace="work")
+jarvis/modules/memory.py:559: in upsert_checkpoint
+    return self.add(
+jarvis/modules/memory.py:161: in add
+    raise RuntimeError(
+E   RuntimeError: ACM authoritative: legacy MemoryStore write refused (RuntimeError)
+_______________________ test_checkpoint_restart_persists _______________________
+jarvis/modules/memory.py:155: in add
+    redirected = redirect_legacy_write_to_acm(
+aria_core/acm_bridge.py:95: in redirect_legacy_write_to_acm
+    return memory_manager.remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+
+The above exception was the direct cause of the following exception:
+tests/test_checkpoint_r1.py:102: in test_checkpoint_restart_persists
+    store.upsert_checkpoint("survives restart", namespace="default")
+jarvis/modules/memory.py:559: in upsert_checkpoint
+    return self.add(
+jarvis/modules/memory.py:161: in add
+    raise RuntimeError(
+E   RuntimeError: ACM authoritative: legacy MemoryStore write refused (RuntimeError)
+__________________ test_sqlite_checkpoint_primary_round_trip ___________________
+jarvis/modules/memory_sqlite.py:159: in add
+    redirected = redirect_legacy_write_to_acm(
+aria_core/acm_bridge.py:95: in redirect_legacy_write_to_acm
+    return memory_manager.remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+
+The above exception was the direct cause of the following exception:
+tests/test_checkpoint_r1.py:150: in test_sqlite_checkpoint_primary_round_trip
+    store.upsert_checkpoint("sqlite acm checkpoint", namespace="default")
+jarvis/modules/memory_sqlite.py:593: in upsert_checkpoint
+    return self.add(
+jarvis/modules/memory_sqlite.py:165: in add
+    raise RuntimeError(
+E   RuntimeError: ACM authoritative: legacy MemoryStore write refused (RuntimeError)
+___________________ test_project_resume_reads_acm_checkpoint ___________________
+jarvis/modules/memory.py:155: in add
+    redirected = redirect_legacy_write_to_acm(
+aria_core/acm_bridge.py:95: in redirect_legacy_write_to_acm
+    return memory_manager.remember(content, entry_type=entry_type, tags=tags, namespace=namespace)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+aria_core/memory_manager.py:103: in remember
+    assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+jarvis/production_guard.py:75: in assert_owner_write_allowed
+    assert_live_write_allowed(DATA_DIR)
+jarvis/live_data_guard.py:37: in assert_live_write_allowed
+    raise RuntimeError(
+E   RuntimeError: Test attempted to write live Jarvis data: /media/jeff/AI/jarvis/data. Use the data_dir fixture and patch DATA_DIR / JOURNAL_FILE / MEMORY_FILE.
+
+The above exception was the direct cause of the following exception:
+tests/test_checkpoint_r1.py:163: in test_project_resume_reads_acm_checkpoint
+    store.upsert_checkpoint("resume from ACM content", namespace="default")
+jarvis/modules/memory.py:559: in upsert_checkpoint
+    return self.add(
+jarvis/modules/memory.py:161: in add
+    raise RuntimeError(
+E   RuntimeError: ACM authoritative: legacy MemoryStore write refused (RuntimeError)
+_____________ test_stream_chat_keeps_conversation_engine_sse_shape _____________
+tests/test_conversation_pipeline_unify.py:93: in test_stream_chat_keeps_conversation_engine_sse_shape
+    events = list(
+jarvis/assistant.py:1237: in _process_stream_unlocked
+    self.yield_request_lock()
+    ^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: '_AssistantDouble' object has no attribute 'yield_request_lock'
+______________________ test_automation_rules_crud_and_run ______________________
+tests/test_intelligence_platform.py:86: in test_automation_rules_crud_and_run
+    assert delete_rule(rule["id"])["deleted"] == 1
+E   assert 0 == 1
+=========================== short test summary info ============================
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[How do I configure Docker Compose?-reference0]
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[Configure nginx.-reference]
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[How do I configure Docker?-reference]
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[How do I configure Docker Compose?-reference1]
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[How do I configure nginx?-reference]
+FAILED tests/test_nlu_routing_variants.py::test_nlu_variant_intent[How do I configure Postgres?-reference]
+FAILED tests/test_nlu_routing_variants.py::test_routing_accuracy_report - Ass...
+FAILED tests/test_learning_governor.py::test_memory_add_via_governor - Runtim...
+FAILED tests/test_execution_routing.py::test_apply_policy_uses_benchmark_when_present
+FAILED tests/test_execution_routing.py::test_apply_policy_user_config_beats_benchmark
+FAILED tests/test_aria_core_phase7.py::test_remember_search_forget_roundtrip
+FAILED tests/test_aria_core_phase7.py::test_propose_commit_and_history_no_contents
+FAILED tests/test_aria_core_phase7.py::test_merge_and_rollback - RuntimeError...
+FAILED tests/test_aria_core_phase7.py::test_cap_bus_remember_uses_core - Runt...
+FAILED tests/test_aria_core_phase7.py::test_mission_control_panel_hides_contents
+FAILED tests/test_aria_host_production_audit.py::test_lan_bind_requires_api_key
+FAILED tests/test_aria_host_production_audit.py::test_primary_import_routes_via_add_arg_order
+FAILED tests/test_aria_host_production_audit.py::test_upsert_checkpoint_primary_does_not_delete_legacy
+FAILED tests/test_product_ui_api_wiring.py::test_mc_dollar_accepts_hash_ids_and_audit_controls_wired
+FAILED tests/test_product_ui_api_wiring.py::test_command_palette_is_wired - a...
+FAILED tests/test_aria_acm_m0.py::test_m0_01_version_json_pin_matches_tree_hash
+FAILED tests/test_aria_acm_m0a.py::test_m0a_02_bridge_routes_memory_through_pipeline
+FAILED tests/test_aria_acm_m0b.py::test_m0b_07_goal_and_project_search_routes
+FAILED tests/test_aria_acm_m0c.py::test_m0c_04_user_identity_no_assistant_bleed
+FAILED tests/test_aria_acm_prediction.py::test_prediction_queries_route_to_memory_authority
+FAILED tests/test_checkpoint_r1.py::test_checkpoint_create_and_lookup_primary
+FAILED tests/test_checkpoint_r1.py::test_checkpoint_update_keeps_latest - Run...
+FAILED tests/test_checkpoint_r1.py::test_checkpoint_restart_persists - Runtim...
+FAILED tests/test_checkpoint_r1.py::test_sqlite_checkpoint_primary_round_trip
+FAILED tests/test_checkpoint_r1.py::test_project_resume_reads_acm_checkpoint
+FAILED tests/test_conversation_pipeline_unify.py::test_stream_chat_keeps_conversation_engine_sse_shape
+FAILED tests/test_intelligence_platform.py::test_automation_rules_crud_and_run
+32 failed, 737 passed, 1 skipped in 195.74s (0:03:15)

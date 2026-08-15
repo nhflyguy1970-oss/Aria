@@ -1,0 +1,112 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "capabilities",
+  "capability": "Capabilities loader",
+  "captured_at": "2026-08-14T19:38:00Z",
+  "result": "PASS — Front Door → Capabilities; registry 13 / enabled 12 / disabled 1 (Hello Aria left off); search/filter/detail/diagnostics; leave Browser / return restored room with filter state. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "health_home_at_end": 200,
+  "lock_overlay_at_end": "hidden",
+  "entry": {
+    "via": "Front Door → Capabilities (What Aria can load)",
+    "hash": "#capabilities",
+    "body_room": "capabilities",
+    "h2": "Capabilities",
+    "place": "Capabilities"
+  },
+  "first_paint": "a11y list empty until load; CDP already Installed 13",
+  "summary_unfiltered": {
+    "installed": 13,
+    "built_in": 12,
+    "enabled": 12,
+    "disabled": 1,
+    "failed": 0,
+    "experimental": 0,
+    "updates": 0
+  },
+  "ids": [
+    "acm:extension_registry",
+    "host:browser",
+    "host:engineering",
+    "host:flytying",
+    "host:git",
+    "host:journal",
+    "host:memory",
+    "host:planner",
+    "host:projects",
+    "host:security",
+    "host:smarthome",
+    "host:voice",
+    "sdk:hello_aria"
+  ],
+  "detail": {
+    "selected": "host:flytying",
+    "version": "v2.0.0",
+    "trust": "First-party",
+    "health": "healthy",
+    "status": "loaded",
+    "permissions": "None declared"
+  },
+  "search": {
+    "query": "flytying",
+    "result_count": 1,
+    "result": "host:flytying",
+    "note": "Value-only fill did not filter until input event fired"
+  },
+  "negative_search": {
+    "query": "zzzzqxnocap999",
+    "result": "No capabilities match."
+  },
+  "layer_filter": {
+    "value": "host",
+    "with_flytying_search": 1
+  },
+  "diagnostics": {
+    "control": "Diagnostics",
+    "toast": "Diagnostics: 13 capabilities"
+  },
+  "leave_return": {
+    "via": "Front Door recents → Browser then Front Door recents → Capabilities",
+    "browser_hash": "#browser",
+    "browser_session_still_live": true,
+    "front_door_from_capabilities": "stale — You're in the middle of Research (did not name Capabilities)",
+    "return_hash": "#capabilities",
+    "return_h2": "Capabilities",
+    "return_search": "zzzzqxnocap999",
+    "return_layer": "host",
+    "return_list": "No capabilities match.",
+    "return_summary_while_filtered": "Installed 0 (filtered view zeros stats)",
+    "overlay_after_return": "Front Door still open immediately; later closed; Capabilities chrome interactive",
+    "result": "PASS — room restored; filter state persisted"
+  },
+  "not_clicked": [
+    "Load enabled",
+    "New capability (not visible in owner chrome)",
+    "Enable",
+    "Disable",
+    "Load (detail)",
+    "Advanced options"
+  ],
+  "data_mutation": {
+    "capability_enabled": false,
+    "capability_disabled": false,
+    "scaffold": false,
+    "load_all": false,
+    "journal_post": false,
+    "health_phr": false,
+    "coding_apply": false,
+    "repair_executed": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "notes": [
+    "Hello Aria remains Disabled / off — Enable not clicked.",
+    "New capability button is in HTML but not visible in owner chrome.",
+    "Security banner: no OS sandbox / in-process privileges.",
+    "Front Door copy stale Research (Browser has a Research tab).",
+    "Guided Repair overlay remains in accessibility tree while hidden."
+  ],
+  "jeff_action_required": false,
+  "next_exact_capability": "System Audit existing trail without Run (14-phase Run not clicked). Do not Run Browser agent. Do not execute Guided Repair. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

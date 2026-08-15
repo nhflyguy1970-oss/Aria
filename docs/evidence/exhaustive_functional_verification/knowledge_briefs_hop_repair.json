@@ -1,0 +1,52 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-15T20:15:00Z",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "owner_session": "OWNER_UNLOCKED throughout",
+  "integrity": "clean / 100; artifacts 0",
+  "room": "memory",
+  "capability": "Knowledge Briefs hop lists existing briefs (not Documents)",
+  "result": "PASS \u2014 Memory Knowledge Briefs stays #memory; lists 5 existing briefs; Documents hidden. Connections Identity hop also lands #memory with 5 briefs. Run research not clicked. Titles/paths not recorded.",
+  "repair": {
+    "files": [
+      "jarvis/gui/static/index.html#memoryKnowledgePanel",
+      "jarvis/gui/static/memory_browser.js",
+      "jarvis/gui/static/connections.js"
+    ],
+    "cause": "hop called switchToView(documents); panel DOM ids missing; briefs waited on archive list",
+    "fix": "openKnowledgeBriefs on Memory panel; loadKnowledgeResearchPanel in parallel; Connections Identity hop"
+  },
+  "api": {
+    "GET /api/knowledge/research": "200 enabled; 5 briefs"
+  },
+  "memory_hop": {
+    "hash": "#memory",
+    "brief_count": 5,
+    "documents_hidden": true,
+    "toast": "Knowledge Briefs \u2014 research, not Memory or Connections."
+  },
+  "auto_load_ms": 1126,
+  "leave_return": {
+    "leave": "#documents",
+    "return": "#memory",
+    "brief_count": 5
+  },
+  "connections_hop": {
+    "from": "#connections",
+    "to": "#memory",
+    "brief_count": 5
+  },
+  "not_clicked": [
+    "Run research",
+    "Jobs"
+  ],
+  "data_mutation": {
+    "research_run": false,
+    "phr": false,
+    "memory_write": false
+  }
+}

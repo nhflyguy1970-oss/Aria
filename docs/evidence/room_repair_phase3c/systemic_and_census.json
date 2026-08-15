@@ -1,0 +1,435 @@
+{
+  "rooms": {
+    "search": {
+      "enter_ms": 2555,
+      "ui": {
+        "status": "7 result(s) \u00b7 3274.98 ms \u00b7 journal, chat, layouts, dashboard, planner, learned, notifications, flytying, settings, calendar, health, projects, memory",
+        "items": [
+          "FLY TYING Adams dry fly #16 75% terrestrial",
+          "FLY TYING Adams dry fly #18 75% dry",
+          "CHAT Main: user 66% Write me a one-paragraph project note for Adams Dry Fly Revival \u2014 status update for myself.",
+          "CHAT Main: assistant 66% Sure! Here\u2019s a one-paragraph project note for Adams Dry Fly Revival: \"Currently, the Adams Dry ",
+          "NOTIFICATIONS Open Notifications 56% 28 unread \u00b7 23 critical",
+          "HEALTH Open Health 56% Local PHR",
+          "HOME Home 56% Dashboard product"
+        ],
+        "count": 7,
+        "hasFly": true
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "repair": {
+      "enter_ms": 4039,
+      "ui": {
+        "btns": [
+          "\u00b7\u00b7\u00b7",
+          "Refresh",
+          "Scan",
+          "Integrity",
+          "Mission"
+        ],
+        "hasScan": true,
+        "head": "Aria \u00b7 Restoration bench Listening quietly Evidence Proactive scheduler is not running \u00b7 Home Assistant connection issue Integrity 100 \u00b7 ready Open repairs 2 Platform healthy Attention Proactive scheduler is not running \u00b7 Home Assistant connection issue \u00b7\u00b7\u00b7",
+        "openRepairs": true,
+        "scan_overlay": {
+          "open": true,
+          "text": "ISSUE DETECTED Proactive scheduler is not running Priority: medium \u00b7 State: repair_ready \u00b7 \u2606\u2606\u2606\u2606\u2606 Confidence 55% \u2014 possible Reason First occurrence (or no prior history for this signature) Diagnosis Scheduler thread stopped The proactive scheduler background thread is not alive \u2014 timers and nudges will not fire. Evidence proactive_scheduler._thread "
+        }
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "flytying": {
+      "enter_ms": 2573,
+      "search": {
+        "items": 80,
+        "hint": "80 results for \u201cAdams\u201d \u00b7 alias"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "integrity": {
+      "enter_ms": 2555,
+      "ui": {
+        "score100": true,
+        "head": "Aria \u00b7 Quiet caretaker Listening quietly Truth Score 100 \u00b7 ready No deductions on record. \u00b7\u00b7\u00b7"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "chat": {
+      "enter_ms": 2214,
+      "snap": {
+        "room": "chat",
+        "furnished": null,
+        "btns": 24,
+        "inputs": 7,
+        "fail": false,
+        "warn": false,
+        "head": "Aria is here I'm here A"
+      },
+      "status": "PROBED"
+    },
+    "documents": {
+      "enter_ms": 2216,
+      "snap": {
+        "room": "documents",
+        "furnished": "1",
+        "btns": 29,
+        "inputs": 5,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Private library Listening quietly Documents Personal document intelligence \u2014 local files, grounded search, Memory candidates. Not Drive, SharePoint, or Notion. Documents = library \u00b7 Knowledge = briefs \u00b7 Connection"
+      },
+      "status": "PROBED"
+    },
+    "planner": {
+      "enter_ms": 2240,
+      "snap": {
+        "room": "planner",
+        "furnished": "1",
+        "btns": 27,
+        "inputs": 6,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Leather notebook Listening quietly Planner Today\u2019s actionable work \u00b7 Journal for notes \u00b7 Calendar for commitments \u00b7 Documents HA Focus mode Shortcuts: N \u00b7 P \u00b7 F \u00b7 T \u00b7 U DAILY FOCUS Today\u2019s day ops Planner = action"
+      },
+      "status": "PROBED"
+    },
+    "calendar": {
+      "enter_ms": 2219,
+      "snap": {
+        "room": "calendar",
+        "furnished": "1",
+        "btns": 57,
+        "inputs": 9,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Wall calendar Listening quietly Calendar Scheduled commitments \u00b7 use Planner for today\u2019s actionable work \u00b7 Journal for notes \u2190 Prev August 2026 Next \u2192 Today Month Week Agenda Timeline All sources Journal Planner I"
+      },
+      "status": "PROBED"
+    },
+    "gallery": {
+      "enter_ms": 2223,
+      "snap": {
+        "room": "gallery",
+        "furnished": "1",
+        "btns": 55,
+        "inputs": 23,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Museum Listening quietly Gallery Local AI image product \u2014 generate, browse, organize, and edit stills. Video and Meme stay separate. Chat converses; Documents store knowledge. Refresh Job Center Models Maker Fly t"
+      },
+      "status": "PROBED"
+    },
+    "coding": {
+      "enter_ms": 2212,
+      "snap": {
+        "room": "coding",
+        "furnished": "1",
+        "btns": 26,
+        "inputs": 0,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Engineering studio Listening quietly Coding Propose \u2192 Review \u2192 Apply \u2192 Undo \u2192 Verify. Projects identify workspaces; Job Center tracks execution; Models configures the coding model. Refresh Projects Job Center Mode"
+      },
+      "status": "PROBED"
+    },
+    "memory": {
+      "enter_ms": 2217,
+      "snap": {
+        "room": "memory",
+        "furnished": "1",
+        "btns": 2099,
+        "inputs": 15,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Memory archive Listening quietly Memory What Aria knows about you \u2014 autobiographical cognition (ACM), not a note database. Search New Briefing Assist ? Auto-memory Smart \u2192 candidates Explicit only Off Brain learni"
+      },
+      "status": "PROBED"
+    },
+    "voice": {
+      "enter_ms": 2217,
+      "snap": {
+        "room": "voice",
+        "furnished": "1",
+        "btns": 9,
+        "inputs": 9,
+        "fail": false,
+        "warn": true,
+        "head": "Aria \u00b7 Presence Listening quietly Voice Audio Presence State: idle \u00b7 Duplex: off \u00b7 STT: whisper TTS engine: piper Cloud live unavailable Duplex Off Half Full STT backend Whisper RealtimeSTT TTS chunk chars Speak replies "
+      },
+      "status": "PROBED"
+    },
+    "automation": {
+      "enter_ms": 2213,
+      "snap": {
+        "room": "automation",
+        "furnished": "1",
+        "btns": 17,
+        "inputs": 5,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Automation loft Listening quietly Automation Home Orchestrates schedules, rules, skills, and workflows. Not Job Center, Activity Center, Mission Control, or Home Assistant. Refresh Pause all Resume New rule Specia"
+      },
+      "status": "PROBED"
+    },
+    "presence": {
+      "enter_ms": 2212,
+      "snap": {
+        "room": "presence",
+        "furnished": "1",
+        "btns": 6,
+        "inputs": 1,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Presence Listening quietly Presence Security Voice Gestures enabled \u2014 pick Control mode to move floating panels Start camera Stop Enroll face Gestures Off Preview only Control \u2014 pinch click, fist drag panels CPU-o"
+      },
+      "status": "PROBED"
+    },
+    "journal": {
+      "enter_ms": 2219,
+      "snap": {
+        "room": "journal",
+        "furnished": "1",
+        "btns": 47,
+        "inputs": 17,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Bullet journal Listening quietly Bullet Journal Notes, thoughts, reflections \u00b7 promote actionable items to Planner \u00b7 scheduled commitments live in Calendar \u2022 task \u25cb event \u2014 note \u00d7 done > migrated < scheduled ~ can"
+      },
+      "status": "PROBED"
+    },
+    "video": {
+      "enter_ms": 2213,
+      "snap": {
+        "room": "video",
+        "furnished": "1",
+        "btns": 18,
+        "inputs": 19,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Video studio Listening quietly Video Studio Stay-in-Studio generation \u00b7 AnimateDiff or Ken Burns \u00b7 shared media queue Gallery Meme Mission Control Generate Enhance prompt Preset \u2014 none \u2014 Fast Draft Portrait Motion"
+      },
+      "status": "PROBED"
+    },
+    "browser": {
+      "enter_ms": 2216,
+      "snap": {
+        "room": "browser",
+        "furnished": "1",
+        "btns": 34,
+        "inputs": 3,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Browser Listening quietly Browser Live web interaction agent \u2014 Playwright navigation, screenshots, DOM/Vision tasks. Not a full Chrome replacement. Documents store knowledge; Chat converses. Refresh Projects Job C"
+      },
+      "status": "PROBED"
+    },
+    "maker": {
+      "enter_ms": 2223,
+      "snap": {
+        "room": "maker",
+        "furnished": "1",
+        "btns": 17,
+        "inputs": 8,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Maker lab Listening quietly Maker lab \u29c9 CAD: OpenSCAD auto OpenSCAD build123d Meshy Generate Iterate Hello cube Slice Download STL Refresh Gallery Documents Clear gallery No models yet. Hello cube or ask Chat Prin"
+      },
+      "status": "PROBED"
+    },
+    "meme": {
+      "enter_ms": 2212,
+      "snap": {
+        "room": "meme",
+        "furnished": "1",
+        "btns": 6,
+        "inputs": 4,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Meme studio Listening quietly Meme Generator Classic top/bottom captions \u00b7 AI background optional \u00b7 safe / uncensored follows global toggle Generate in chat Gallery Video MEME IDEA (OPTIONAL \u2014 AI WRITES CAPTIONS) "
+      },
+      "status": "PROBED"
+    },
+    "vision": {
+      "enter_ms": 2222,
+      "snap": {
+        "room": "vision",
+        "furnished": "1",
+        "btns": 17,
+        "inputs": 7,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Vision bench Listening quietly Vision Chat attach Gallery Refresh State: idle \u00b7 Model: moondream:latest \u00b7 Mode: quality OCR entry point: enter an image/PDF page path, then choose OCR or Structured OCR below. Comma"
+      },
+      "status": "PROBED"
+    },
+    "connections": {
+      "enter_ms": 2212,
+      "snap": {
+        "room": "connections",
+        "furnished": "1",
+        "btns": 15,
+        "inputs": 4,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Connections Listening quietly Connections Relationship explorer \u2014 models how things relate. Not Memory, not Documents, not Knowledge Briefs. ACM remains cognitive source of truth; the graph mirrors. Documents = fi"
+      },
+      "status": "PROBED"
+    },
+    "settings": {
+      "enter_ms": 2213,
+      "snap": {
+        "room": "settings",
+        "furnished": "1",
+        "btns": 11,
+        "inputs": 13,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Settings Listening quietly Settings Preference catalog and deep links. Products own their stores \u2014 Settings indexes them. Ctrl+, opens this Home. Refresh Voice & Chat Diagnostics Export Catalog 63 Stores 9/12 Corr"
+      },
+      "status": "PROBED"
+    },
+    "capabilities": {
+      "enter_ms": 2215,
+      "snap": {
+        "room": "capabilities",
+        "furnished": "1",
+        "btns": 7,
+        "inputs": 4,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Capabilities Listening quietly Capabilities Unified management for everything that extends Aria. Products stay product owners \u2014 Capabilities only extends them. Refresh Load enabled Diagnostics Capabilities does no"
+      },
+      "status": "PROBED"
+    },
+    "integrations": {
+      "enter_ms": 2213,
+      "snap": {
+        "room": "integrations",
+        "furnished": "1",
+        "btns": 7,
+        "inputs": 3,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Integrations Listening quietly Integrations Provider credentials, connection tests, and unlock matrix. Products own behavior \u2014 Integrations owns keys and health. Refresh Test configured Diagnostics Secrets are sto"
+      },
+      "status": "PROBED"
+    },
+    "audit": {
+      "enter_ms": 2212,
+      "snap": {
+        "room": "audit",
+        "furnished": "1",
+        "btns": 3,
+        "inputs": 0,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 System audit Listening quietly System Audit Audit in progress\u2026 Mission Control Actions Run audit 14 phases: OS \u00b7 packages \u00b7 storage/SMART \u00b7 memory \u00b7 hardware/sensors \u00b7 GPU \u00b7 services/desktop \u00b7 containers \u00b7 dev too"
+      },
+      "status": "PROBED"
+    },
+    "security": {
+      "enter_ms": 2210,
+      "snap": {
+        "room": "security",
+        "furnished": "1",
+        "btns": 5,
+        "inputs": 1,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Security Listening quietly Security Presence Voice PIN lock off (set JARVIS_PIN_LOCK=1) PIN lock Set a PIN and enable JARVIS_PIN_LOCK=1 in jarvis.env. Set PIN Lock now Trusted devices No trusted devices yet. Unloc"
+      },
+      "status": "PROBED"
+    },
+    "actions": {
+      "enter_ms": 2211,
+      "snap": {
+        "room": "actions",
+        "furnished": "1",
+        "btns": 4,
+        "inputs": 1,
+        "fail": false,
+        "warn": false,
+        "head": "Aria \u00b7 Action history Listening quietly Action history All modules Coding Home Assistant Documents Image Clear Chat Audit Mission Control 2026-08-12T14:47:07 api http /api/cheatsheets 2026-08-12T14:47:07 api http /api/ch"
+      },
+      "status": "PROBED"
+    }
+  },
+  "systemic": {
+    "repair_home_ms": 982.3,
+    "repair_issues": 2,
+    "repair_home_warm_ms": 20.9,
+    "search_adams": {
+      "ms": 3362.7,
+      "n": 7,
+      "sources": [
+        "flytying",
+        "flytying",
+        "chat",
+        "chat",
+        "notifications"
+      ]
+    }
+  },
+  "isolation": {
+    "qa_header": 403,
+    "test_shaped": 400
+  },
+  "integrity": {
+    "status": "clean",
+    "overall": 100,
+    "clean": true,
+    "counts": {
+      "total": 0,
+      "actionable": 0,
+      "by_category": {},
+      "safe_to_remove": 0,
+      "uncertain": 0
+    }
+  },
+  "activity": {
+    "unread": 28,
+    "count": 28,
+    "room_leave": false
+  },
+  "registry": {
+    "total": 34,
+    "core": [
+      "audio",
+      "health",
+      "home",
+      "home_automation",
+      "mission",
+      "projects",
+      "providers"
+    ],
+    "remaining": [
+      "chat",
+      "flytying",
+      "documents",
+      "planner",
+      "calendar",
+      "gallery",
+      "search",
+      "coding",
+      "memory",
+      "voice",
+      "repair",
+      "integrity",
+      "automation",
+      "presence",
+      "journal",
+      "video",
+      "browser",
+      "maker",
+      "meme",
+      "vision",
+      "connections",
+      "settings",
+      "capabilities",
+      "integrations",
+      "audit",
+      "security",
+      "actions"
+    ]
+  }
+}

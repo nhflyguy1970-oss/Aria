@@ -42,7 +42,11 @@ async function loadMemeGallery() {
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         const name = btn.dataset.name;
-        if (!name || !confirm(`Delete ${name}?`)) return;
+        if (!name) return;
+        const delOk = window.ariaConfirm
+          ? await window.ariaConfirm(`Delete ${name}?`, { title: "Delete meme", okLabel: "Delete" })
+          : window.confirm(`Delete ${name}?`);
+        if (!delOk) return;
         try {
           const delRes = await fetch(`/api/meme-gallery/${encodeURIComponent(name)}`, { method: "DELETE" });
           const delData = await delRes.json().catch(() => ({}));
@@ -58,6 +62,7 @@ async function loadMemeGallery() {
       });
     });
   } catch (e) {
+    if (window.AriaNet?.isRoomAbort?.(e)) return;
     grid.innerHTML = `<p class="muted">Failed to load memes — ${escapeHtml(String(e.message || e))}</p>`;
     window.showAriaToast?.(e.message || "Failed to load memes", "err", 5000);
   }

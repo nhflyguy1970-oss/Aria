@@ -6,11 +6,22 @@
   let roomGroups = {};
   let activeRoom = "All";
 
+  function isRoomAbort(err) {
+    return (
+      window.AriaNet?.isRoomAbort?.(err) ||
+      err?.name === "AbortError" ||
+      /aborted|aria-room-leave|failed to fetch/i.test(String(err?.message || ""))
+    );
+  }
+
   async function fetchJson(url, opts) {
     const res = await fetch(url, opts);
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.ok === false) {
-      throw new Error(data.message || data.error || data.detail || `Request failed (${res.status})`);
+      const detail = data.message || data.error || data.detail;
+      throw new Error(
+        typeof detail === "string" && detail ? detail : `Request failed (${res.status})`,
+      );
     }
     return data;
   }
@@ -131,8 +142,13 @@
       renderRoomFilters();
       renderDeviceList();
     } catch (err) {
+      if (isRoomAbort(err)) {
+        window.AriaNet?.absorbAbort?.(err, () => refreshKasa(), 180);
+        return;
+      }
       line.textContent = "Kasa: unavailable";
-      window.showAriaToast?.(err?.message || "Kasa unavailable", "err", 4000);
+      // Optional Kasa stack — quiet status, not a hard failure toast.
+      console.info("[smarthome] Kasa unavailable:", err?.message || err);
     }
   }
 
@@ -202,6 +218,11 @@
         });
       });
     } catch (err) {
+      // BUG-020: enter thrash aborted /api/scenes/presets → false "Could not load presets".
+      if (isRoomAbort(err)) {
+        window.AriaNet?.absorbAbort?.(err, () => loadScenePresets(), 180);
+        return;
+      }
       wrap.innerHTML = "<span class=\"muted\">Could not load presets</span>";
       window.showAriaToast?.(err?.message || "Could not load scene presets", "err", 4000);
     }

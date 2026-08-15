@@ -1,0 +1,56 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "flytying",
+  "capability": "Existing tying session continue + Suggest a fly empty inventory",
+  "captured_at": "2026-08-14T15:57:21Z",
+  "result": "PASS on existing Adams session — Repeat, Next, Prev restore. Suggest honest empty. Start session not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner": "OWNER_UNLOCKED; lockScreen hidden",
+  "performance": {
+    "enter_switchToView": "FAST",
+    "suggest": "FAST (~804 ms) — honest empty",
+    "repeat": "FAST (~1254 ms)",
+    "next_then_prev_restore": "FAST (~1504 ms)"
+  },
+  "owner_ui": {
+    "hash": "#flytying",
+    "heading": "Fly tying",
+    "place": "Streamside cabin",
+    "status": "271 catalog patterns · library connected · smart search on · index ready",
+    "session_line": "Session: Adams dry fly olive · step 2",
+    "inventory": "0 materials · 0 low stock · 1 in queue",
+    "suggest": {
+      "clicked": true,
+      "chat_status": "Add materials first (list above or inventory table)",
+      "inventory_opened": true,
+      "focused": "flytyingMaterialsSummary"
+    },
+    "repeat_toast": "Step 2 of 10 for Adams dry fly olive: Use shear 40 hackle (not black) for the wings, making sure they are as long as the hook shank or thereabouts.",
+    "next_toast": "Step 3 of 10 for Adams dry fly olive: Tuck in two or three turns of the hackle to create a foundation at the front.",
+    "prev_toast": "Step 2 of 10 for Adams dry fly olive: Use shear 40 hackle (not black) for the wings, making sure they are as long as the hook shank or thereabouts.",
+    "leave_return": {
+      "via": "#chat",
+      "hash_after": "#flytying",
+      "session_restored": "Session: Adams dry fly olive · step 2"
+    },
+    "screenshot": "flytying-session-adams-step2.png",
+    "start_session_clicked": false,
+    "rebuild_clicked": false,
+    "apply_profile_clicked": false,
+    "complete_clicked": false
+  },
+  "data_mutation": {
+    "active_session_id": "b2d4017e9066",
+    "active_recipe": "Adams dry fly olive",
+    "step_idx_after": 1,
+    "start_session_not_clicked_reason": "Would pause Jeff's active Adams session and create a new one",
+    "journal_post": false,
+    "live_journal_size": 67547,
+    "live_journal_sha256": "8193626d1fe6683e9de6386461b13aafbb974c96032db26a1037b44a171937f6",
+    "journal_note": "Size 67547 (was 67555 earlier this campaign). This Fly tying pass did not POST journal."
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "qa_header": "403 production_isolation",
+  "prior_catalog": "remaining_function_slice.json — search already PASS; not re-run",
+  "next_exact_capability": "Gallery / Meme image generation (Health PHR writes remain Jeff-attended STOP)"
+}

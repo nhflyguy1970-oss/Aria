@@ -189,6 +189,7 @@ async function loadComfyMode() {
     if (!res.ok) throw new Error(`ComfyUI settings failed (${res.status})`);
     syncComfySettings(await res.json());
   } catch (err) {
+    if (window.AriaNet?.isRoomAbort?.(err)) return;
     const st = document.getElementById("imageEngineStatus");
     if (st) st.textContent = err.message || "ComfyUI settings unavailable";
     if (!comfySettingsFailToasted) {

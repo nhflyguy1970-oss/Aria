@@ -296,22 +296,28 @@ def build_memory_home(memory_store, assistant=None) -> dict[str, Any]:
     beliefs: list[dict[str, Any]] = []
     recent: list[dict[str, Any]] = []
     try:
+        from jarvis.trust_memory import filter_trusted_content
+
         profile = memory_store.list_entries(namespace="profile") or []
         about = [
             _public_card(e)
             for e in profile
             if "summary" not in (e.get("tags") or [])
+            and filter_trusted_content(e.get("content") or e.get("title") or "")
         ][:20]
     except Exception:
         log.debug("profile load failed", exc_info=True)
 
     try:
+        from jarvis.trust_memory import filter_trusted_content
+
         all_entries = memory_store.list_entries() or []
         facing = [
             e
             for e in all_entries
             if (e.get("type") or "fact") in USER_FACING_TYPES
             and (e.get("namespace") or "") != "cheatsheet"
+            and filter_trusted_content(e.get("content") or e.get("title") or "")
         ]
         # Prefer preference + fact for beliefs
         beliefs = [

@@ -88,6 +88,15 @@ def load_extensions(*, force: bool = False) -> list[Extension]:
         except Exception:
             logger.exception("Extension %s failed to load", name)
             try:
+                from jarvis.product_registration import register as register_product
+
+                register_product(
+                    f"extension:{name}:load",
+                    lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("extension load failed")),
+                )
+            except Exception:
+                pass
+            try:
                 from jarvis.capabilities_product import policy as cap_policy
 
                 cap_policy.record_failure(f"host:{name}", "load failed")
@@ -150,9 +159,8 @@ def skipped_extensions() -> list[dict]:
 
 
 def register_extension_api(app: FastAPI, assistant: JarvisAssistant) -> None:
+    from jarvis.product_registration import register as register_product
+
     load_extensions()
     for ext in _EXTENSIONS:
-        try:
-            ext.register_api(app, assistant)
-        except Exception:
-            logger.exception("Extension %s API registration failed", ext.meta.name)
+        register_product(f"extension:{ext.meta.name}:api", ext.register_api, app, assistant)

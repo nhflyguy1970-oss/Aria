@@ -11,6 +11,7 @@
     { id: "today_glance", label: "Today at a glance" },
     { id: "calendar_summary", label: "Calendar" },
     { id: "journal_reminder", label: "Journal" },
+    { id: "health_record", label: "Health" },
     { id: "memory_highlights", label: "Memory" },
     { id: "projects", label: "Projects" },
     { id: "scenes", label: "Home scenes" },
@@ -21,19 +22,32 @@
   ];
 
   function layout() {
-    const saved = window.AriaUiPrefs?.get?.("dashboardLayout");
-    if (saved && Array.isArray(saved.order)) return saved;
+    const cached = window.AriaUiPrefs?.get?.("dashboardLayout");
+    if (cached && Array.isArray(cached.order)) return cached;
     return { order: WIDGETS.map((w) => w.id), hidden: ["news"] };
   }
 
-  function saveLayout(next) {
-    window.AriaUiPrefs?.set?.("dashboardLayout", next);
-    // Mirror to Dashboard product layout API (non-blocking)
-    fetch("/api/dashboard/layout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(next),
-    }).catch(() => {});
+  async function saveLayout(next) {
+    try {
+      const res = await fetch("/api/dashboard/layout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.ok === false) throw new Error(data.error || data.message || "Layout save failed");
+      window.AriaUiPrefs?.set?.("dashboardLayout", {
+        order: data.order || next.order || [],
+        hidden: data.hidden || next.hidden || [],
+        collapsed: data.collapsed || next.collapsed || [],
+        density: data.density || next.density || "comfortable",
+        role: data.role || next.role || "default",
+      });
+      return data;
+    } catch (err) {
+      window.showAriaToast?.(err.message || "Layout save failed", "err", 3500);
+      return null;
+    }
   }
 
   function apply() {
@@ -114,11 +128,11 @@
     const saveBtn = document.getElementById("dashCustomizeSaveBtn");
     const resetBtn = document.getElementById("dashCustomizeResetBtn");
     const closeBtn = document.getElementById("dashCustomizeCloseBtn");
-    const onSave = () => {
-      saveLayout({ order: [...order], hidden: [...hiddenSet] });
-      modal.classList.add("hidden");
-      window.loadDashboard?.();
+    const onSave = async () => {
       saveBtn?.removeEventListener("click", onSave);
+      await saveLayout({ order: [...order], hidden: [...hiddenSet] });
+      modal.classList.add("hidden");
+      await window.loadDashboard?.();
     };
     saveBtn?.addEventListener("click", onSave);
     closeBtn?.addEventListener("click", () => modal.classList.add("hidden"));

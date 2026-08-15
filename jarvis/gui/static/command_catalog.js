@@ -30,6 +30,7 @@
       ["security", "Security", "pin auth"],
       ["presence", "Presence", "location"],
       ["audit", "System / audit", "logs repair"],
+      ["certification", "Certification", "release evidence gate"],
       ["capabilities", "Capabilities", "plugins extensions"],
       ["integrations", "Integrations", "api keys secrets providers"],
       ["search", "Search", "federated find everything browse"],
@@ -38,6 +39,7 @@
       ["vision", "Vision", "ocr compare webcam image understand"],
       ["audio", "Audio", "sound whisper"],
       ["journal", "Bullet Journal", "bujo gratitude"],
+      ["health", "Health", "phr medications vitals labs blood pressure sugar check-in"],
       ["memory", "Memory", "knowledge recall"],
       ["gallery", "Gallery", "images comfy"],
       ["video", "Video", "movie render"],
@@ -112,6 +114,23 @@
     ]);
   }
 
+  function registerVisionActions() {
+    reg([
+      mk("act:vision-ocr", "Run OCR in Vision Home", "Vision", "ocr read text image screenshot extract vision text recognition", () => A().vision.ocr(), {
+        hint: "Vision Home",
+        description: "Open Vision Home, focus image path, and run OCR when a path is present",
+      }),
+      mk("act:vision-structured-ocr", "Run Structured OCR in Vision Home", "Vision", "structured ocr tables forms markdown json extract vision", () => A().vision.structuredOcr(), {
+        hint: "Vision Home",
+        description: "Open Vision Home, focus image path, and run Structured OCR when a path is present",
+      }),
+      mk("act:vision-path", "Focus Vision OCR image path", "Vision", "ocr image path vision file screenshot pdf page", () => A().vision.focusPath(), {
+        hint: "Vision Home",
+        description: "Open Vision Home and focus the OCR image path field",
+      }),
+    ]);
+  }
+
   function registerProductivity() {
     reg([
       mk("act:planner-task", "Add planner task", "Actions", "todo focus task input", () => A().planner.focusTask()),
@@ -119,6 +138,9 @@
       mk("act:calendar-today", "Open calendar today", "Actions", "schedule day", () => A().calendar.today()),
       mk("act:ics-wizard", "Focus calendar ICS import", "Actions", "subscribe ics", () => A().calendar.focusIcs()),
       mk("act:journal-rapid", "Focus journal rapid log", "Actions", "bujo quick capture bullet", () => A().journal.rapid()),
+      mk("act:health-checkin", "Health daily check-in", "Actions", "phr vitals blood pressure sugar", () => A().health.checkin()),
+      mk("act:health-doctor", "Prepare doctor visit summary", "Actions", "appointment physician print", () => A().health.doctor()),
+      mk("act:health-emergency", "Emergency medical summary", "Actions", "ice wallet card allergies meds", () => A().health.emergency()),
     ]);
   }
 
@@ -133,6 +155,7 @@
       mk("act:connections-search", "Search Connections", "Actions", "graph entity relationship", () => A().connections.search()),
       mk("search:home", "Open Search Home", "Search", "federated find everything browse", () => window.switchToView?.("search"), { mode: "search" }),
       mk("search:journal", "Search journal", "Search", "bujo find filter", () => A().journal.search(), { mode: "search" }),
+      mk("search:health", "Search Health", "Search", "phr meds labs vitals", () => A().health.search(), { mode: "search" }),
       mk("search:memory", "Search memory", "Search", "recall find filter", () => A().memory.search(), { mode: "search" }),
       mk("search:documents", "Search documents", "Search", "library files pdf", () => A().documents.search(), { mode: "search" }),
       mk("search:flytying", "Search fly patterns", "Search", "tying recipes", () => A().flytying.search(), { mode: "search" }),
@@ -201,7 +224,7 @@
       mk("act:server-whisper", "Toggle server Whisper", "Settings", "stt", () => A().voice.serverWhisper()),
       mk("act:lan-copy", "Copy LAN URL", "System", "network share", () => A().system.lanCopy()),
       mk("act:open-actions", "Open Actions / report", "Navigate", "checklist history", () => A().goView("actions"), { mode: "navigate" }),
-      mk("act:lock-security", "Lock Aria (PIN)", "System", "security pin lock screen", () => A().system.lock()),
+      mk("act:lock-security", "Lock Aria", "System", "security lock house master password", () => A().system.lock()),
       mk("act:security", "Open Security / PIN", "System", "lock pin auth trust", () => A().goView("security")),
       mk("act:models-editor", "Open Models Home", "Models", "ollama providers roles catalog registry", () => A().system.modelsHome?.() || A().system.modelsEditor(), {
         hint: "Ctrl+Shift+.",
@@ -319,14 +342,46 @@
         return true;
       }),
       mk("act:automation-pause", "Pause automations", "Actions", "pause travel", async () => {
-        await fetch("/api/automation/pause", { method: "POST", body: JSON.stringify({ paused: true }), headers: { "Content-Type": "application/json" } });
-        window.showAriaToast?.("Automations paused", "warn");
+        try {
+          const res = await fetch("/api/automation/pause", {
+            method: "POST",
+            body: JSON.stringify({ paused: true }),
+            headers: { "Content-Type": "application/json" },
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || data.ok === false) {
+            throw new Error(data.message || data.detail || `Pause failed (${res.status})`);
+          }
+          window.showAriaToast?.("Automations paused", "warn");
+        } catch (err) {
+          window.showAriaToast?.(err.message || "Could not pause automations", "err", 5000);
+        }
         return true;
       }),
       mk("act:automation-resume", "Resume automations", "Actions", "resume engine", async () => {
-        await fetch("/api/automation/pause", { method: "POST", body: JSON.stringify({ paused: false }), headers: { "Content-Type": "application/json" } });
-        await fetch("/api/automation/engine/start", { method: "POST", body: "{}" });
-        window.showAriaToast?.("Automations resumed", "ok");
+        try {
+          const pauseRes = await fetch("/api/automation/pause", {
+            method: "POST",
+            body: JSON.stringify({ paused: false }),
+            headers: { "Content-Type": "application/json" },
+          });
+          const pauseData = await pauseRes.json().catch(() => ({}));
+          if (!pauseRes.ok || pauseData.ok === false) {
+            throw new Error(pauseData.message || pauseData.detail || `Resume failed (${pauseRes.status})`);
+          }
+          const startRes = await fetch("/api/automation/engine/start", {
+            method: "POST",
+            body: "{}",
+            headers: { "Content-Type": "application/json" },
+          });
+          const startData = await startRes.json().catch(() => ({}));
+          if (!startRes.ok || startData.ok === false) {
+            throw new Error(startData.message || startData.detail || `Engine start failed (${startRes.status})`);
+          }
+          window.showAriaToast?.("Automations resumed", "ok");
+        } catch (err) {
+          window.showAriaToast?.(err.message || "Could not resume automations", "err", 5000);
+        }
         return true;
       }),
       mk("act:automation-webhook", "Webhook status", "Actions", "home assistant inbound secret", () => {
@@ -474,6 +529,11 @@
         mkCtx("research", "Research with Aria", "web", () =>
           A().askAria("Help me research a topic. Ask what I want to look up and how deep to go.")),
       ],
+      vision: [
+        mkCtx("ocr", "Run OCR", "read text image screenshot extract", () => A().vision.ocr(), "Vision Home"),
+        mkCtx("structured-ocr", "Run Structured OCR", "tables forms markdown json extract", () => A().vision.structuredOcr(), "Vision Home"),
+        mkCtx("path", "Focus OCR image path", "image file screenshot pdf", () => A().vision.focusPath(), "Vision Home"),
+      ],
       chat: [
         mkCtx("clear", "Clear conversation", "reset", () => A().chat.clear()),
         mkCtx("new", "New Chat", "thread", () => A().newChat()),
@@ -486,6 +546,12 @@
       journal: [
         mkCtx("today", "Journal today", "bujo", () => A().journal.today()),
         mkCtx("search", "Search journal", "find", () => A().journal.search()),
+      ],
+      health: [
+        mkCtx("checkin", "Daily check-in", "phr vitals", () => A().health.checkin()),
+        mkCtx("search", "Search Health", "find meds labs", () => A().health.search()),
+        mkCtx("doctor", "Doctor visit summary", "appointment", () => A().health.doctor()),
+        mkCtx("emergency", "Emergency summary", "ice", () => A().health.emergency()),
       ],
       calendar: [
         mkCtx("today", "Jump to today", "day", () => A().calendar.today()),
@@ -560,6 +626,7 @@
     registerNavigate();
     registerMissionControl();
     registerChatActions();
+    registerVisionActions();
     registerProductivity();
     registerKnowledge();
     registerMediaDev();

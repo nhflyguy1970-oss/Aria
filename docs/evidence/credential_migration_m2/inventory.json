@@ -1,0 +1,1406 @@
+{
+  "updated_at": "2026-08-13T01:05:14.193308+00:00",
+  "source": "data/jarvis.env metadata only \u2014 no secret values",
+  "env_key_count": 162,
+  "configured_count": 161,
+  "authorized_now": "Integration / Provider API credentials",
+  "keys": [
+    {
+      "key": "JARVIS_ASSISTANT_NAME",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_ASSISTANT_FULL_NAME",
+      "configured": true,
+      "length": 41,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_VECTOR_BACKEND",
+      "configured": true,
+      "length": 6,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GRAPH_BACKEND",
+      "configured": true,
+      "length": 8,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GRAPH_URL",
+      "configured": true,
+      "length": 21,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_PIPER_MODEL",
+      "configured": true,
+      "length": 64,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "PATH",
+      "configured": true,
+      "length": 39,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_TTS_VOICE",
+      "configured": true,
+      "length": 5,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WHISPER_MODEL",
+      "configured": true,
+      "length": 6,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WHISPER_LANGUAGE",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "OLLAMA_KEEP_ALIVE",
+      "configured": true,
+      "length": 2,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "OLLAMA_MAX_LOADED_MODELS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_ROUTER_BACKEND",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_FUNCTIONGEMMA_MODEL",
+      "configured": true,
+      "length": 59,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_FUNCTIONGEMMA_DEVICE",
+      "configured": true,
+      "length": 3,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_LOCAL_ROUTER",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUDIO_SINK",
+      "configured": true,
+      "length": 42,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUDIO_SOURCE",
+      "configured": true,
+      "length": 41,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_SET_DEFAULT_SOURCE",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CREATIVE_CAPTURE_VOLUME",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CREATIVE_GATE_DB",
+      "configured": true,
+      "length": 3,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CREATIVE_DENOISE_NF",
+      "configured": true,
+      "length": 3,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_PLAYBACK_LOUDNESS",
+      "configured": true,
+      "length": 3,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CAPTURE_VOLUME",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_ALSA_CARD",
+      "configured": true,
+      "length": 8,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_ALSA_DEVICE",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_ALSA_PLAYBACK",
+      "configured": true,
+      "length": 26,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_ALSA_CAPTURE",
+      "configured": true,
+      "length": 26,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUTO_PLAY",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_SET_DEFAULT_SINK",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "COQUI_TOS_AGREED",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WEATHER_LAT",
+      "configured": true,
+      "length": 7,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WEATHER_LON",
+      "configured": true,
+      "length": 8,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WEATHER_LOCATION",
+      "configured": true,
+      "length": 15,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WEATHER_IP_LOOKUP",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WEATHER_UNITS",
+      "configured": true,
+      "length": 10,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GUI_MODE",
+      "configured": true,
+      "length": 6,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_PYSIDE_SHELL",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_FLUENT_WIDGETS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_PYSIDE_NATIVE_DASHBOARD",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_APP_WINDOW",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_BROWSER",
+      "configured": true,
+      "length": 13,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_BROWSER_PATH",
+      "configured": true,
+      "length": 46,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_BROWSER_ALLOW_XDG",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WAKEWORD_TO_CHAT",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WAKEWORD",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WAKEWORD_MODEL",
+      "configured": true,
+      "length": 10,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WAKEWORD_PHRASE",
+      "configured": true,
+      "length": 8,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WAKEWORD_RECORD",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WAKEWORD_RECORD_MAX_SEC",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WAKEWORD_SILENCE_SEC",
+      "configured": true,
+      "length": 3,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WAKEWORD_WHISPER_MODEL",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_MODEL_WARMUP",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_OLLAMA_NUM_CTX",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_OLLAMA_PROBE_TIMEOUT",
+      "configured": true,
+      "length": 3,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUTO_PULL_MODELS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUTOSTART_COMFYUI",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_COMFYUI_CPU",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "PYWEBVIEW_GUI",
+      "configured": true,
+      "length": 2,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_PREFER_QT_WEBVIEW",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_IMAGE_AUTO_ENHANCE",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_IMAGE_LLM_ENHANCE",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_HOST",
+      "configured": true,
+      "length": 7,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_API_KEY",
+      "configured": true,
+      "length": 30,
+      "secret_shaped_name": true,
+      "migration": "DEFERRED",
+      "defer_reason": "LAN API \u2014 M3",
+      "category": "deferred_secret"
+    },
+    {
+      "key": "JARVIS_TORCH_DEVICE",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WHISPER_DEVICE",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WHISPER_COMPUTE",
+      "configured": true,
+      "length": 7,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_VRAM_GUARD",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_SONG_MODE",
+      "configured": true,
+      "length": 3,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_SONG_VOCALS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_SONG_VOCAL_DEVICE",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_SONG_MAX_DURATION",
+      "configured": true,
+      "length": 2,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "HF_TOKEN",
+      "configured": true,
+      "length": 37,
+      "secret_shaped_name": true,
+      "migration": "AUTHORIZED NOW",
+      "vault_target": "provider.huggingface.token",
+      "category": "integration_provider"
+    },
+    {
+      "key": "JARVIS_COMFYUI_INPAINT_MAX_DIM",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_NETWORK_GUARD",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_RATE_LIMIT",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_HA_ENABLED",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_HA_URL",
+      "configured": true,
+      "length": 21,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUTOMATION_SECRET",
+      "configured": true,
+      "length": 32,
+      "secret_shaped_name": true,
+      "migration": "DEFERRED",
+      "defer_reason": "Automation \u2014 deferred",
+      "category": "deferred_secret"
+    },
+    {
+      "key": "JARVIS_HA_TOKEN",
+      "configured": true,
+      "length": 183,
+      "secret_shaped_name": true,
+      "migration": "DEFERRED",
+      "defer_reason": "Home Assistant \u2014 M3",
+      "category": "deferred_secret"
+    },
+    {
+      "key": "JARVIS_PLANNER",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_DASHBOARD",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_TOOL_PERMISSIONS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CURATED_NEWS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_SYSTEM_MONITOR",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CHECKLIST",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_BRAIN_ROUTING",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_VOICE_DUPLEX",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_VOICE_WS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CHAT_SESSIONS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_FIRST_RUN_MODELS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_ROUTER_MODEL",
+      "configured": true,
+      "length": 10,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_FAST_MODEL",
+      "configured": true,
+      "length": 10,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_REASONING_MODEL",
+      "configured": true,
+      "length": 15,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_PROJECTS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_SCENE_PRESETS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_DEVICE_ROUTER",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CAD",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CAD_TEACHING",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WORKFLOW_LEARN",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUTO_WORKFLOW_LEARN",
+      "configured": true,
+      "length": 5,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_KASA",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_FLOATING_PANELS",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GESTURE_SENSITIVITY",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GESTURES",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_REALTIMESTT",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CLOUD_LIVE_PROVIDER",
+      "configured": true,
+      "length": 11,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GEMINI_LIVE_MODEL",
+      "configured": true,
+      "length": 45,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GEMINI_LIVE_SERVER_MIC",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GEMINI_LIVE_SERVER_SPEAK",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_USER_NAME",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_FG_IMPORT_ADA",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUTO_WEB_SEARCH",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CLOUD_LIVE_VOICE",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "GEMINI_API_KEY",
+      "configured": true,
+      "length": 39,
+      "secret_shaped_name": true,
+      "migration": "AUTHORIZED NOW",
+      "vault_target": "provider.gemini.api_key",
+      "category": "integration_provider"
+    },
+    {
+      "key": "OPENAI_API_KEY",
+      "configured": true,
+      "length": 164,
+      "secret_shaped_name": true,
+      "migration": "AUTHORIZED NOW",
+      "vault_target": "provider.openai.api_key",
+      "category": "integration_provider"
+    },
+    {
+      "key": "JARVIS_PRESET",
+      "configured": true,
+      "length": 6,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_PERSONA",
+      "configured": true,
+      "length": 6,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WORLD_STATE",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_BRAIN_MODE",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_PROJECT_JOURNAL_AUTO_LEARN",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUTO_WORKFLOW_REMEMBER",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GRAPH_LLM_EXTRACT",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_KNOWLEDGE_RESEARCH_REMEMBER",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_REFLECTION_DAILY",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_REFLECTION_HOUR",
+      "configured": true,
+      "length": 2,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GPU_PREFER",
+      "configured": true,
+      "length": 6,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_CUDA_DEVICE",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "HIP_VISIBLE_DEVICES",
+      "configured": true,
+      "length": 2,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_LAZY_STARTUP",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_HA_AUTOSTART",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WARM_ROUTER",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_WAKEWORD_AUTOSTART",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_FACE_AUTH",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_PIN_LOCK",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_LOCK_IDLE_SEC",
+      "configured": true,
+      "length": 3,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_HA_SCENE_LEAVE",
+      "configured": true,
+      "length": 13,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_FLYTYING_ROOT",
+      "configured": true,
+      "length": 33,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_UPC_LOOKUP",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "AI_ROOT",
+      "configured": true,
+      "length": 14,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_OPENWEBUI_URL",
+      "configured": true,
+      "length": 21,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_OPENWEBUI_CONTAINER",
+      "configured": true,
+      "length": 10,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "POSTGRES_HOST",
+      "configured": true,
+      "length": 9,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "POSTGRES_PORT",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "POSTGRES_USER",
+      "configured": true,
+      "length": 8,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "POSTGRES_DB",
+      "configured": true,
+      "length": 10,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "REDIS_HOST",
+      "configured": true,
+      "length": 9,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "REDIS_PORT",
+      "configured": true,
+      "length": 4,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "EMBEDDING_VECTOR_STORE",
+      "configured": true,
+      "length": 8,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUTOSTART_SERVICES",
+      "configured": true,
+      "length": 25,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_DOCKER_PROFILES",
+      "configured": true,
+      "length": 36,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_AUTO_RECOVER_OPTIONAL",
+      "configured": true,
+      "length": 1,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "POSTGRES_PASSWORD",
+      "configured": true,
+      "length": 8,
+      "secret_shaped_name": true,
+      "migration": "DEFERRED",
+      "defer_reason": "Postgres \u2014 deferred",
+      "category": "deferred_secret"
+    },
+    {
+      "key": "PGVECTOR_DATABASE_URL",
+      "configured": true,
+      "length": 56,
+      "secret_shaped_name": true,
+      "migration": "DEFERRED",
+      "defer_reason": "Postgres/pgvector \u2014 deferred",
+      "category": "deferred_secret"
+    },
+    {
+      "key": "QDRANT_URL",
+      "configured": true,
+      "length": 21,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_QDRANT_CONTAINER",
+      "configured": true,
+      "length": 9,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_LITELLM_URL",
+      "configured": true,
+      "length": 21,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_N8N_URL",
+      "configured": true,
+      "length": 21,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_N8N_CONTAINER",
+      "configured": true,
+      "length": 6,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_PROMETHEUS_URL",
+      "configured": true,
+      "length": 21,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_GRAFANA_URL",
+      "configured": true,
+      "length": 21,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "JARVIS_ICS_URL",
+      "configured": false,
+      "length": 0,
+      "secret_shaped_name": false,
+      "migration": "NOT A CREDENTIAL \u2014 config flag",
+      "category": "config"
+    },
+    {
+      "key": "GOOGLE_API_KEY",
+      "configured": false,
+      "length": 0,
+      "secret_shaped_name": true,
+      "migration": "AUTHORIZED NOW \u2014 not configured (skip)",
+      "vault_target": "provider.gemini.api_key",
+      "category": "integration_provider",
+      "present_in_env_file": false
+    },
+    {
+      "key": "ANTHROPIC_API_KEY",
+      "configured": false,
+      "length": 0,
+      "secret_shaped_name": true,
+      "migration": "AUTHORIZED NOW \u2014 not configured (skip)",
+      "vault_target": "provider.anthropic.api_key",
+      "category": "integration_provider",
+      "present_in_env_file": false
+    },
+    {
+      "key": "OPENROUTER_API_KEY",
+      "configured": false,
+      "length": 0,
+      "secret_shaped_name": true,
+      "migration": "AUTHORIZED NOW \u2014 not configured (skip)",
+      "vault_target": "provider.openrouter.api_key",
+      "category": "integration_provider",
+      "present_in_env_file": false
+    },
+    {
+      "key": "HUGGING_FACE_HUB_TOKEN",
+      "configured": false,
+      "length": 0,
+      "secret_shaped_name": true,
+      "migration": "AUTHORIZED NOW \u2014 not configured (skip)",
+      "vault_target": "provider.huggingface.token",
+      "category": "integration_provider",
+      "present_in_env_file": false
+    },
+    {
+      "key": "HUGGINGFACE_TOKEN",
+      "configured": false,
+      "length": 0,
+      "secret_shaped_name": true,
+      "migration": "AUTHORIZED NOW \u2014 not configured (skip)",
+      "vault_target": "provider.huggingface.token",
+      "category": "integration_provider",
+      "present_in_env_file": false
+    },
+    {
+      "key": "JARVIS_MESHY_API_KEY",
+      "configured": false,
+      "length": 0,
+      "secret_shaped_name": true,
+      "migration": "AUTHORIZED NOW \u2014 not configured (skip)",
+      "vault_target": "provider.meshy.api_key",
+      "category": "integration_provider",
+      "present_in_env_file": false
+    },
+    {
+      "key": "MESHY_API_KEY",
+      "configured": false,
+      "length": 0,
+      "secret_shaped_name": true,
+      "migration": "AUTHORIZED NOW \u2014 not configured (skip)",
+      "vault_target": "provider.meshy.api_key",
+      "category": "integration_provider",
+      "present_in_env_file": false
+    }
+  ],
+  "summary": {
+    "authorized_configured": [
+      "HF_TOKEN",
+      "GEMINI_API_KEY",
+      "OPENAI_API_KEY"
+    ],
+    "authorized_absent": [
+      "GOOGLE_API_KEY",
+      "ANTHROPIC_API_KEY",
+      "OPENROUTER_API_KEY",
+      "HUGGING_FACE_HUB_TOKEN",
+      "HUGGINGFACE_TOKEN",
+      "JARVIS_MESHY_API_KEY",
+      "MESHY_API_KEY"
+    ],
+    "deferred_secrets_configured": [
+      "JARVIS_API_KEY",
+      "JARVIS_AUTOMATION_SECRET",
+      "JARVIS_HA_TOKEN",
+      "POSTGRES_PASSWORD",
+      "PGVECTOR_DATABASE_URL"
+    ]
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "home_automation",
+  "capability": "HA unlock restore after lock fail-closed",
+  "captured_at": "2026-08-13T18:05:00+00:00",
+  "result": "PASS — owner UI + API",
+  "owner": {
+    "state": "OWNER_UNLOCKED",
+    "owner_unlocked": true,
+    "session_valid": true,
+    "overlay_hidden": true
+  },
+  "api": {
+    "ha_configured": true,
+    "ha_connected": true,
+    "ha_token_set": true,
+    "ha_locked": false,
+    "conn_ok": true,
+    "conn_message": "API running.",
+    "health_ready": true,
+    "token_vaulted": true,
+    "token_present": true,
+    "hint": "Ready — control devices from Smart Home Home",
+    "asks_paste": false
+  },
+  "owner_ui": {
+    "hash": "#homeAutomation",
+    "h2": "Home Automation",
+    "place": "Home control",
+    "health": "Connected · http://127.0.0.1:8123",
+    "recovery_hidden": true,
+    "paste_button_hidden": true,
+    "asks_paste": false,
+    "enter_ms": 1083,
+    "performance": "ACCEPTABLE"
+  },
+  "leave_return": {
+    "presence": "#presence / Presence / Presence",
+    "video": "#video / Video Studio / Video studio",
+    "return_ha": "#homeAutomation / Home Automation / Home control",
+    "hash_stuck": false
+  },
+  "devices_toggled": false,
+  "scenes_clicked": false,
+  "secrets_in_evidence": false,
+  "integrity_before": "clean / 100",
+  "qa": "403 production_isolation"
+}

@@ -97,6 +97,12 @@ def remember(
     M1 Shadow: optional dual-call after legacy write when still legacy-authoritative.
     """
     from aria_core import acm_bridge
+    from jarvis.production_guard import ProductionIsolationError, assert_owner_write_allowed
+
+    try:
+        assert_owner_write_allowed(content, entry_type, namespace, store="memory")
+    except ProductionIsolationError:
+        raise
 
     if acm_bridge.acm_is_authoritative():
         # SUP-02: never fall through to MemoryStore while ACM is authoritative.

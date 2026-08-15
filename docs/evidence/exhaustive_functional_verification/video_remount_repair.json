@@ -1,0 +1,53 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "video",
+  "capability": "Video remount / leave-return after settings-load repair",
+  "captured_at": "2026-08-15T19:20:00Z",
+  "result": "PASS — after Reload UI, Video Studio loaded AnimateDiff ready with empty prompt and no Generation failed chrome. Gallery leave/return restored #video with the same ready line and empty prompt. Typed Generate / Free VRAM / Ask Aria / Retry not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "hash #video then Ctrl+Shift+R Reload UI",
+    "hash": "#video",
+    "h2": "Video Studio"
+  },
+  "before_reload": {
+    "prompt": "leftover ship-cert text from prior Generate another (SPA persistence)",
+    "job_status": "Generation failed + Retry actions",
+    "engine": "AnimateDiff ready — settings load itself was already OK"
+  },
+  "after_reload": {
+    "prompt": "empty",
+    "job_status": "absent",
+    "engine": "Auto: AnimateDiff when ready, else Ken Burns. AnimateDiff ready · 32 frames @ 8 fps (~4s)",
+    "library": "existing clip listed; remount showed Loading… then restored"
+  },
+  "leave_return": {
+    "leave": "Video → Gallery #gallery h2 Gallery; library first paint Loading library…",
+    "return": "Gallery → Video #video",
+    "result": "PASS — prompt stayed empty; no Generation failed; engine ready line restored"
+  },
+  "performance": {
+    "room_entry": "FAST after reload",
+    "settings_load": "FAST — ready line on first settled paint",
+    "library_remount": "ACCEPTABLE — Loading… then list"
+  },
+  "not_clicked": [
+    "Generate",
+    "Generate another",
+    "Preview enhance",
+    "Free VRAM before video",
+    "Retry",
+    "Ask Aria",
+    "Save clip settings"
+  ],
+  "data_mutation": {
+    "journal_post": false,
+    "health_phr": false,
+    "video_generate": false
+  },
+  "owner_session": "OWNER_UNLOCKED throughout; Reload UI did not lock"
+}

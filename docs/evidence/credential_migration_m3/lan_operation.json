@@ -1,0 +1,38 @@
+{
+  "updated_at": "2026-08-13T15:20:01.606574+00:00",
+  "phase": "post_migrate_unlocked",
+  "loopback_without_key": {
+    "http_status": 200,
+    "exempt": true
+  },
+  "lan_without_key": {
+    "http_status": 401,
+    "message": "Invalid or missing API key"
+  },
+  "lan_with_key": {
+    "http_status": 200,
+    "elapsed_ms": 4.16,
+    "ha_connected": true,
+    "secret_in_response": false
+  },
+  "lan_key_fp8": "cec7e051",
+  "lan_key_length": 30,
+  "owner_unlock_with_lan_key": {
+    "owner_security": {
+      "http_status": 200,
+      "ok": false
+    },
+    "security_unlock": {
+      "http_status": 403,
+      "ok": false
+    },
+    "still_unlocked_after": true
+  },
+  "health_step_up_with_lan_key": {
+    "http_status": 404,
+    "ok": null,
+    "message": null
+  },
+  "jeff_entered_lan_key": false,
+  "secrets_in_evidence": false
+}

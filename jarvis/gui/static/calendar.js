@@ -46,7 +46,17 @@
     const res = await fetch(url, opts);
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.ok === false) {
-      throw new Error(data.message || data.detail || data.error || res.statusText || "Request failed");
+      let detail = data.message || data.error || null;
+      if (detail == null && data.detail != null) {
+        if (typeof data.detail === "string") detail = data.detail;
+        else if (Array.isArray(data.detail)) {
+          detail = data.detail.map((d) => d.msg || JSON.stringify(d)).join("; ");
+        } else if (typeof data.detail === "object") {
+          detail = data.detail.message || JSON.stringify(data.detail);
+        }
+      }
+      if (detail == null) detail = res.statusText || "Request failed";
+      throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
     }
     return data;
   }
@@ -210,17 +220,29 @@
   async function editItem(id) {
     const item = lastDayItems.find((x) => x.id === id);
     if (!item) return;
-    const title = prompt("Title", item.title || "");
+    const title = window.ariaPrompt
+      ? await window.ariaPrompt("Title", item.title || "", { title: "Edit event", okLabel: "Save" })
+      : prompt("Title", item.title || "");
     if (title == null) return;
-    const time = prompt("Time (HH:MM or blank for all-day)", item.time || "");
+    const time = window.ariaPrompt
+      ? await window.ariaPrompt("Time (HH:MM or blank for all-day)", item.time || "", {
+          title: "Edit event time",
+          okLabel: "Save",
+        })
+      : prompt("Time (HH:MM or blank for all-day)", item.time || "");
     if (time == null) return;
     try {
-      await fetchJson(`/api/calendar/items/${encodeURIComponent(id)}/update`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, time: time || "" }),
+      const result = await window.ariaMutate({
+        request: () =>
+          fetch(`/api/calendar/items/${encodeURIComponent(id)}/update`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title, time: time || "" }),
+          }),
+        successToast: "Updated",
+        failToast: "Update failed",
       });
-      window.showAriaToast?.("Updated", "ok", 2000);
+      if (!result.ok) return;
       await refreshCurrent();
     } catch (e) {
       window.showAriaToast?.(e.message, "err");
@@ -228,7 +250,10 @@
   }
 
   async function deleteItem(id) {
-    if (!confirm("Delete this item?")) return;
+    const delOk = window.ariaConfirm
+      ? await window.ariaConfirm("Delete this item?", { title: "Delete item", okLabel: "Delete" })
+      : window.confirm("Delete this item?");
+    if (!delOk) return;
     try {
       await fetchJson(`/api/calendar/items/${encodeURIComponent(id)}`, { method: "DELETE" });
       window.showAriaToast?.("Deleted", "ok", 2000);
@@ -399,8 +424,14 @@
         .join("");
       panel.innerHTML = `<h4>Focus windows</h4><ul>${rows || "<li class='muted'>No long free blocks</li>"}</ul>`;
       panel.querySelectorAll("[data-focus-when]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          if (!confirm(`Start a focus session during ${btn.dataset.focusWhen}?`)) return;
+        btn.addEventListener("click", async () => {
+          const focusOk = window.ariaConfirm
+            ? await window.ariaConfirm(`Start a focus session during ${btn.dataset.focusWhen}?`, {
+                title: "Start focus",
+                okLabel: "Start",
+              })
+            : window.confirm(`Start a focus session during ${btn.dataset.focusWhen}?`);
+          if (!focusOk) return;
           window.switchToView?.("planner");
           setTimeout(() => document.querySelector('[data-pf="focus"]')?.click(), 120);
         });
@@ -422,7 +453,11 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text }),
       });
-      if (!confirm((parsed.message || "Confirm?") + "\n\nRequires confirmation.")) return;
+      const nlMsg = (parsed.message || "Confirm?") + "\n\nRequires confirmation.";
+      const nlOk = window.ariaConfirm
+        ? await window.ariaConfirm(nlMsg, { title: "Confirm schedule", okLabel: "Schedule" })
+        : window.confirm(nlMsg);
+      if (!nlOk) return;
       await fetchJson("/api/calendar/nl/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -477,6 +512,13 @@
       }
       if (calView === "month") await loadCalendarDay(calSelectedDay);
     } catch (err) {
+      if (
+        window.AriaNet?.isRoomAbort?.(err) ||
+        err?.name === "AbortError" ||
+        /aborted|aria-room-leave/i.test(String(err?.message || ""))
+      ) {
+        return;
+      }
       if (grid) grid.innerHTML = `<p class="audit-error">Calendar failed: ${escapeHtml(err.message || String(err))}</p>`;
       window.showAriaToast?.("Calendar load failed", "err", 5000);
     }
@@ -597,12 +639,43 @@
       return;
     }
     try {
+      let savedWhere = "Journal";
+      let toastHandled = false;
       if (bulletType === "event") {
-        await fetchJson("/api/calendar/items", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: content, day, time: time || null, target }),
+        savedWhere = target === "planner" ? "Planner" : "Journal";
+        const result = await window.ariaMutate({
+          request: () =>
+            fetch("/api/calendar/items", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ title: content, day, time: time || null, target }),
+            }),
+          successToast: `Saved to ${savedWhere}`,
+          failToast: "Could not add entry",
         });
+        if (!result.ok) return;
+        toastHandled = true;
+      } else if (target === "planner") {
+        // Tasks/notes with Planner target must hit Planner — never Journal + "Saved to Planner".
+        const endpoint =
+          bulletType === "task" ? "/api/planner/tasks" : "/api/planner/events";
+        const body =
+          bulletType === "task"
+            ? { text: content }
+            : { title: content, time: time || null, date: day, when: day };
+        const result = await window.ariaMutate({
+          request: () =>
+            fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            }),
+          successToast: "Saved to Planner",
+          failToast: "Could not save to Planner",
+        });
+        if (!result.ok) return;
+        savedWhere = "Planner";
+        toastHandled = true;
       } else {
         const form = new FormData();
         form.append("content", content);
@@ -612,9 +685,10 @@
         const res = await fetch("/api/journal/daily", { method: "POST", body: form });
         const data = await res.json().catch(() => ({}));
         if (!res.ok || data.ok === false) throw new Error(data.message || "Could not add entry");
+        savedWhere = "Journal";
       }
       calEl("calAddContent").value = "";
-      window.showAriaToast?.(`Saved to ${target === "planner" ? "Planner" : "Journal"}`, "ok", 3000);
+      if (!toastHandled) window.showAriaToast?.(`Saved to ${savedWhere}`, "ok", 3000);
       await refreshCurrent();
     } catch (err) {
       window.showAriaToast?.(err?.message || "Could not add entry", "err", 5000);
@@ -641,7 +715,18 @@
 
   function renderWorkScheduleEditor(sched) {
     const el = calEl("calendarWorkSchedule");
-    if (!el || !sched) return;
+    if (!el) return;
+    if (!sched || typeof sched !== "object") {
+      el.innerHTML =
+        '<p class="muted">Work schedule could not be loaded.</p>' +
+        '<button type="button" class="ghost-btn small" id="calWorkRetryBtn">Retry</button>';
+      el.querySelector("#calWorkRetryBtn")?.addEventListener("click", () => {
+        loadWorkSchedule().catch((err) => {
+          window.showAriaToast?.(err?.message || "Work schedule unavailable", "err", 4000);
+        });
+      });
+      return;
+    }
     const enabled = sched.enabled !== false;
     let html = `<label class="memory-setting"><input type="checkbox" id="calWorkEnabled" ${enabled ? "checked" : ""} /> Show work blocks on calendar</label>`;
     html += '<div class="cal-work-grid">';
@@ -727,10 +812,17 @@
   }
 
   async function loadWorkSchedule() {
-    const data = await fetchJson("/api/calendar/work-schedule");
-    calWorkSchedule = data;
-    renderWorkScheduleEditor(data);
-    renderIcsStatus(data.ics_status);
+    try {
+      const data = await fetchJson("/api/calendar/work-schedule");
+      calWorkSchedule = data;
+      renderWorkScheduleEditor(data);
+      renderIcsStatus(data.ics_status);
+    } catch (err) {
+      if (window.AriaNet?.absorbAbort?.(err, () => loadWorkSchedule(), 180)) return;
+      calWorkSchedule = null;
+      renderWorkScheduleEditor(null);
+      throw err;
+    }
   }
 
   async function saveIcsUrl() {
@@ -779,11 +871,24 @@
     }
   }
 
+  function renderSearchStatus() {
+    const el = calEl("calendarSearchStatus");
+    if (!el) return;
+    const q = String(calSearch || "").trim();
+    if (!q) {
+      el.textContent = "";
+      return;
+    }
+    const hits = document.querySelectorAll("#calendarView .bujo-cal-event, #calendarView .cal-item").length;
+    el.textContent = hits ? `${hits} match${hits === 1 ? "" : "es"}` : "No events match this search";
+  }
+
   async function refreshCurrent() {
     if (calView === "week") await loadWeek();
     else if (calView === "agenda") await loadAgenda();
     else if (calView === "timeline") await loadTimeline();
     else await loadCalendarMonth(calMonth || monthKey());
+    renderSearchStatus();
   }
 
   function setView(view) {
@@ -833,6 +938,16 @@
     calEl("calendarOpenDocumentsBtn")?.addEventListener("click", () => window.switchToView?.("documents"));
     calEl("calendarHintPlannerBtn")?.addEventListener("click", () => window.switchToView?.("planner"));
     calEl("calendarHintJournalBtn")?.addEventListener("click", () => window.switchToView?.("journal"));
+    const workDetails = calEl("calendarWorkSchedule")?.closest("details");
+    workDetails?.addEventListener("toggle", () => {
+      if (!workDetails.open) return;
+      const el = calEl("calendarWorkSchedule");
+      if (el && !el.querySelector(".cal-work-grid, .cal-work-day")) {
+        loadWorkSchedule().catch((err) => {
+          window.showAriaToast?.(err?.message || "Work schedule unavailable", "err", 4000);
+        });
+      }
+    });
     calEl("calendarIcsSaveBtn")?.addEventListener("click", saveIcsUrl);
     calEl("calendarIcsTestBtn")?.addEventListener("click", testIcsUrl);
     calEl("calendarIcsRefreshBtn")?.addEventListener("click", async () => {
@@ -857,7 +972,12 @@
       refreshCurrent();
     });
     calEl("calendarVisionBtn")?.addEventListener("click", async () => {
-      const path = prompt("Path to whiteboard / agenda / printed calendar image:");
+      const path = window.ariaPrompt
+        ? await window.ariaPrompt("Path to whiteboard / agenda / printed calendar image:", "", {
+            title: "Vision import",
+            okLabel: "Extract",
+          })
+        : prompt("Path to whiteboard / agenda / printed calendar image:");
       if (!path) return;
       try {
         const data = await fetchJson("/api/calendar/vision/extract", {
@@ -870,7 +990,10 @@
           window.showAriaToast?.(data.message || "No events found", "warn");
           return;
         }
-        if (!confirm(`Import ${n} candidate event(s)?`)) return;
+        const importOk = window.ariaConfirm
+          ? await window.ariaConfirm(`Import ${n} candidate event(s)?`, { title: "Import events", okLabel: "Import" })
+          : window.confirm(`Import ${n} candidate event(s)?`);
+        if (!importOk) return;
         const imp = await fetchJson("/api/calendar/vision/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -883,7 +1006,13 @@
       }
     });
     calEl("calendarHaMeetingBtn")?.addEventListener("click", async () => {
-      if (!confirm("Enable optional Home Assistant Meeting mode?")) return;
+      const haOk = window.ariaConfirm
+        ? await window.ariaConfirm("Enable optional Home Assistant Meeting mode?", {
+            title: "Meeting mode",
+            okLabel: "Enable",
+          })
+        : window.confirm("Enable optional Home Assistant Meeting mode?");
+      if (!haOk) return;
       try {
         const data = await fetchJson("/api/calendar/ha-mode", {
           method: "POST",
@@ -896,10 +1025,18 @@
       }
     });
     calEl("calendarMemoryBtn")?.addEventListener("click", async () => {
+      const panel = calEl("calendarMemoryPanel");
       try {
         const data = await fetchJson("/api/calendar/memory-dates");
-        const lines = (data.reminders || []).map((r) => r.content).join("\n• ") || "None found";
-        alert(`Memory dates / reminders:\n• ${lines}`);
+        const reminders = data.reminders || [];
+        if (panel) {
+          panel.hidden = false;
+          panel.innerHTML = reminders.length
+            ? `<p>Memory dates / reminders · ${reminders.length}</p><ul class="cal-day-list">${reminders.map((r) => `<li>${escapeHtml(r.content || "")}</li>`).join("")}</ul>`
+            : "<p>No memory dates on file.</p>";
+        } else {
+          window.showAriaToast?.(reminders.length ? `${reminders.length} memory date(s)` : "No memory dates on file.", "info");
+        }
       } catch (e) {
         window.showAriaToast?.(e.message, "err");
       }
@@ -937,6 +1074,8 @@
     await refreshCurrent();
   };
 
+  window.refreshCalendar = refreshCurrent;
+
   window.initCalendar = async function initCalendar() {
     const root = calEl("calendarView");
     if (!root) return;
@@ -945,15 +1084,19 @@
       bindCalendarControls();
       calMonth = monthKey();
       calSelectedDay = todayIso();
+    }
+    const editor = calEl("calendarWorkSchedule");
+    const needsSchedule = !editor || !editor.querySelector(".cal-work-grid, .cal-work-day");
+    if (needsSchedule) {
       try {
         await loadWorkSchedule();
       } catch (err) {
         console.warn("Work schedule load failed:", err);
         window.showAriaToast?.(`Work schedule unavailable: ${err?.message || "request failed"}`, "err", 5000);
       }
-      const sched = calWorkSchedule || {};
-      if (sched.ics_url && calEl("calendarIcsUrl")) calEl("calendarIcsUrl").value = sched.ics_url;
     }
+    const sched = calWorkSchedule || {};
+    if (sched.ics_url && calEl("calendarIcsUrl")) calEl("calendarIcsUrl").value = sched.ics_url;
     await refreshCurrent();
   };
 })();

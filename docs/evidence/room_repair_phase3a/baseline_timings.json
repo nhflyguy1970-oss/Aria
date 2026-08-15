@@ -1,0 +1,142 @@
+{
+  "rounds": {
+    "pass1": {
+      "/api/mission-control/health": {
+        "ms": 3242.1,
+        "bytes": 189,
+        "status": 200,
+        "ok": true
+      },
+      "/api/mission-control/health-brief": {
+        "ms": 2419.0,
+        "bytes": 696,
+        "status": 200,
+        "ok": true
+      },
+      "/api/mission-control": {
+        "ms": 1604.0,
+        "bytes": 192259,
+        "status": 200,
+        "ok": true
+      },
+      "/api/planner/focus": {
+        "ms": 1582.5,
+        "bytes": 476,
+        "status": 200,
+        "ok": true
+      },
+      "/api/resources": {
+        "ms": 230.9,
+        "bytes": 1098,
+        "status": 200,
+        "ok": true
+      },
+      "/api/environment": {
+        "ms": 166.6,
+        "bytes": 2681,
+        "status": 200,
+        "ok": true
+      },
+      "/api/dashboard/home?stale_ok=true": {
+        "ms": 4.6,
+        "bytes": 19307,
+        "status": 200,
+        "ok": true
+      },
+      "/api/integrity/home": {
+        "ms": 57.9,
+        "bytes": 4753,
+        "status": 200,
+        "ok": true
+      },
+      "/api/activity/inbox?limit=20": {
+        "ms": 78.4,
+        "bytes": 7531,
+        "status": 200,
+        "ok": true
+      }
+    },
+    "pass2": {
+      "/api/mission-control/health": {
+        "ms": 34.7,
+        "bytes": 189,
+        "status": 200,
+        "ok": true
+      },
+      "/api/mission-control/health-brief": {
+        "ms": 2031.9,
+        "bytes": 696,
+        "status": 200,
+        "ok": true
+      },
+      "/api/mission-control": {
+        "ms": 1667.4,
+        "bytes": 192688,
+        "status": 200,
+        "ok": true
+      },
+      "/api/planner/focus": {
+        "ms": 1754.0,
+        "bytes": 476,
+        "status": 200,
+        "ok": true
+      },
+      "/api/resources": {
+        "ms": 257.1,
+        "bytes": 1136,
+        "status": 200,
+        "ok": true
+      },
+      "/api/environment": {
+        "ms": 179.4,
+        "bytes": 2706,
+        "status": 200,
+        "ok": true
+      },
+      "/api/dashboard/home?stale_ok=true": {
+        "ms": 3.8,
+        "bytes": 18288,
+        "status": 200,
+        "ok": true
+      },
+      "/api/integrity/home": {
+        "ms": 3.1,
+        "bytes": 4753,
+        "status": 200,
+        "ok": true
+      },
+      "/api/activity/inbox?limit=20": {
+        "ms": 3.5,
+        "bytes": 7531,
+        "status": 200,
+        "ok": true
+      }
+    }
+  },
+  "sequential_mc": [
+    {
+      "/api/mission-control/health": {
+        "ms": 1107.7,
+        "bytes": 189,
+        "status": 200,
+        "ok": true
+      }
+    },
+    {
+      "/api/mission-control/health-brief": {
+        "ms": 2498.3,
+        "bytes": 696,
+        "status": 200,
+        "ok": true
+      }
+    },
+    {
+      "/api/mission-control": {
+        "ms": 2453.1,
+        "bytes": 192317,
+        "status": 200,
+        "ok": true
+      }
+    }
+  ]
+}

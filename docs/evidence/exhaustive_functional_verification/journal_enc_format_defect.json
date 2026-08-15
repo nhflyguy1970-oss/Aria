@@ -1,0 +1,74 @@
+{
+  "room": "Journal",
+  "capability": "Encrypted Import",
+  "symptom": "Legitimate owner encrypted export rejected as \"Not a Jarvis encrypted journal file.\"",
+  "owner_file": "/home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08.json",
+  "status": "BLOCKED \u2014 FORMAT/IMPORT DEFECT INVESTIGATED; PRODUCTION WIPE INCIDENT DURING ISOL MISCONFIG",
+  "critical_question": {
+    "A_malformed_owner_file": false,
+    "B_valid_but_importer_rejects": false,
+    "C_export_import_diverged": false,
+    "D_UI_sends_wrong": false,
+    "E_old_format_rejected": false,
+    "F_other": true,
+    "F_detail": "Owner Aug 8 file matches current jarvis-journal-v1 envelope. Owner UI posts {export: envelope, password, merge} correctly. With that file, server returns Wrong password or corrupt file (format OK), not format error. Format error occurs when decrypt-root lacks format=jarvis-journal-v1 \u2014 e.g. unencrypted jarvis-journal-*.json selected, or accidental {ok,export} wrapper without normalize. Nearby Downloads also contain unencrypted jarvis-journal-2026-08-10.json which produces the format error."
+  },
+  "export_produces": {
+    "filename": "jarvis-journal-encrypted-YYYY-MM-DD.json",
+    "location": "Browser download (client Blob)",
+    "json": {
+      "format": "jarvis-journal-v1",
+      "salt": "hex(16 bytes)",
+      "ciphertext": "base64(Fernet(pbkdf2_sha256_200k))"
+    },
+    "code": [
+      "jarvis/gui/static/journal.js journalExportEncBtn",
+      "POST /api/journal/export/encrypted",
+      "jarvis.journal_crypto.encrypt_export"
+    ]
+  },
+  "import_expects": {
+    "endpoint": "POST /api/journal/import/encrypted",
+    "body": {
+      "export": "envelope-or-wrapper",
+      "password": "str",
+      "merge": "bool",
+      "confirm_wipe": "required if merge=false"
+    },
+    "format_id": "jarvis-journal-v1",
+    "validation_order": [
+      "normalize envelope",
+      "format+salt+ciphertext",
+      "decrypt Fernet",
+      "JSON dict payload",
+      "merge/replace"
+    ],
+    "format_error_source": "normalize_encrypted_envelope / prior data.get(\"format\") != FORMAT"
+  },
+  "owner_file_inspection": {
+    "keys": [
+      "ciphertext",
+      "format",
+      "salt"
+    ],
+    "format": "jarvis-journal-v1",
+    "compatible_with_current": true,
+    "copies_not_tried_further": true
+  },
+  "repairs": [
+    "normalize_encrypted_envelope unwraps {ok,export} wrappers; clearer errors; plain-journal hint",
+    "API uses explicit export field; decrypt_import normalizes",
+    "UI: password:true on prompts; validate envelope before download; Replace-all second confirm + confirm_wipe",
+    "journal.js cache-bust v=5.17.7-enc-import"
+  ],
+  "isol_safe_proof": "docs/evidence/exhaustive_functional_verification/journal_enc_format_repair_isol_SAFE.json",
+  "production_incident": "docs/evidence/exhaustive_functional_verification/PRODUCTION_JOURNAL_WIPE_INCIDENT.json",
+  "aug08_compatible": true,
+  "remaining_for_jeff": [
+    "ACKNOWLEDGE Journal wipe incident and restore (backup 2026-08-12 13:10; undo history lost)",
+    "Confirm Journal content looks correct in Aria",
+    "Then retry Journal \u2192 More \u2192 Import encrypted with jarvis-journal-encrypted-*.json (not unencrypted jarvis-journal-*.json)",
+    "Enter real password at prompt \u2014 STOP there for Jeff"
+  ],
+  "updated_at": "2026-08-12T20:39:32.407887+00:00"
+}

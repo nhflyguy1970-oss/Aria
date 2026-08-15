@@ -18,6 +18,10 @@
 
     chatForm?.addEventListener("submit", (e) => {
       e.preventDefault();
+      if (window.jarvisChat?.chatRequestActive) {
+        window.showAriaToast?.("Wait for the current reply to finish, or press Stop", "warn", 3500);
+        return;
+      }
       const text = messageInput?.value || "";
       if (messageInput) {
         messageInput.value = "";

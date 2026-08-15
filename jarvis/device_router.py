@@ -7,6 +7,16 @@ from typing import Any
 from jarvis.p2_flags import device_router_enabled, kasa_enabled
 
 
+def _is_ha_entity_id(target: str) -> bool:
+    """True for HA entity ids like light.table_lamp — never a Kasa alias/host."""
+    if "." not in target or " " in target:
+        return False
+    domain, _, obj = target.partition(".")
+    if not domain or not obj or "." in obj:
+        return False
+    return domain.replace("_", "").isalnum() and obj.replace("_", "").isalnum()
+
+
 def control_device(target: str, action: str, **kwargs) -> tuple[bool, str, str]:
     """Returns (ok, message, backend) where backend is ha|kasa|none."""
     target = (target or "").strip()
@@ -14,7 +24,9 @@ def control_device(target: str, action: str, **kwargs) -> tuple[bool, str, str]:
     if not target:
         return False, "No device target specified.", "none"
 
-    if device_router_enabled() and kasa_enabled():
+    ha_entity = _is_ha_entity_id(target)
+
+    if not ha_entity and device_router_enabled() and kasa_enabled():
         from jarvis.kasa_devices import _match_device, control_device as kasa_control
 
         if _match_device(target):
@@ -24,23 +36,26 @@ def control_device(target: str, action: str, **kwargs) -> tuple[bool, str, str]:
     from jarvis.home_assistant import control_entity, ha_enabled
 
     if ha_enabled():
-        ok, msg = control_entity(
-            target,
-            action,
-            brightness_pct=kwargs.get("brightness_pct") or kwargs.get("brightness"),
-            color_name=kwargs.get("color_name"),
-            rgb=kwargs.get("rgb"),
-            hs=kwargs.get("hs"),
-            color_temp_kelvin=kwargs.get("color_temp_kelvin"),
-            temperature=kwargs.get("temperature"),
-            hvac_mode=kwargs.get("hvac_mode"),
-        )
+        try:
+            ok, msg = control_entity(
+                target,
+                action,
+                brightness_pct=kwargs.get("brightness_pct") or kwargs.get("brightness"),
+                color_name=kwargs.get("color_name"),
+                rgb=kwargs.get("rgb"),
+                hs=kwargs.get("hs"),
+                color_temp_kelvin=kwargs.get("color_temp_kelvin"),
+                temperature=kwargs.get("temperature"),
+                hvac_mode=kwargs.get("hvac_mode"),
+            )
+        except Exception as exc:
+            ok, msg = False, str(exc)
         if ok:
             return ok, msg, "ha"
-        if not device_router_enabled() or not kasa_enabled():
+        if ha_entity or not device_router_enabled() or not kasa_enabled():
             return ok, msg, "ha"
 
-    if kasa_enabled():
+    if not ha_entity and kasa_enabled():
         from jarvis.kasa_devices import control_device as kasa_control
 
         ok, msg = kasa_control(target, action, brightness=kwargs.get("brightness"))

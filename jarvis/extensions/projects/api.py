@@ -8,10 +8,10 @@ from fastapi.responses import JSONResponse
 
 def register_routes(app, assistant) -> None:
     @app.get("/api/projects")
-    def projects_list():
+    def projects_list(include_qa: bool = False, include_archived: bool = False):
         from jarvis.project_registry import registry_snapshot
 
-        return {"ok": True, **registry_snapshot()}
+        return {"ok": True, **registry_snapshot(include_qa=include_qa, include_archived=include_archived)}
 
     @app.get("/api/projects/home")
     def projects_home(slug: str = ""):
@@ -64,6 +64,8 @@ def register_routes(app, assistant) -> None:
             title,
             description=body.get("description") or "",
             git_path=(body.get("git_path") or "").strip() or None,
+            qa_artifact=bool(body.get("qa_artifact")),
+            origin=(body.get("origin") or "").strip() or None,
         )
         switch = None
         if body.get("activate", True):
@@ -112,9 +114,16 @@ def register_routes(app, assistant) -> None:
 
     @app.post("/api/projects/{slug}/archive")
     def projects_archive(slug: str):
+        from jarvis.active_project import get_active_slug, set_active_slug
         from jarvis.project_registry import archive_project
 
-        return {"ok": archive_project(slug, archived=True)}
+        ok = archive_project(slug, archived=True)
+        cleared_active = False
+        if ok and get_active_slug() == slug:
+            # Archiving the active workspace must not leave identity pointing at a tombstone.
+            set_active_slug("")
+            cleared_active = True
+        return {"ok": ok, "cleared_active": cleared_active}
 
     @app.post("/api/projects/{slug}/restore")
     def projects_restore(slug: str):

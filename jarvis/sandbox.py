@@ -25,6 +25,35 @@ def wrap_command(cmd: Sequence[str], *, network: bool = False) -> list[str]:
     return flags
 
 
+def _pruned_env() -> dict[str, str]:
+    """Firejail rejects oversized environments (MAX_ENVS >= 256). Keep essentials."""
+    keep = {
+        "PATH",
+        "HOME",
+        "USER",
+        "LOGNAME",
+        "LANG",
+        "LC_ALL",
+        "LC_CTYPE",
+        "TERM",
+        "TMPDIR",
+        "TMP",
+        "TEMP",
+        "VIRTUAL_ENV",
+        "PYTHONPATH",
+        "PYTHONHOME",
+        "JARVIS_SANDBOX",
+        "DISPLAY",
+        "XDG_RUNTIME_DIR",
+        "XDG_DATA_HOME",
+        "XDG_CONFIG_HOME",
+    }
+    env = {k: v for k, v in os.environ.items() if k in keep and v}
+    if "PATH" not in env:
+        env["PATH"] = "/usr/bin:/bin"
+    return env
+
+
 def run_sandboxed(
     cmd: Sequence[str],
     *,
@@ -32,10 +61,13 @@ def run_sandboxed(
     timeout: int = 30,
     network: bool = False,
 ) -> subprocess.CompletedProcess:
+    # Always prune env when firejail wraps — parent shells often exceed MAX_ENVS.
+    use_pruned = sandbox_enabled() and firejail_available()
     return subprocess.run(
         wrap_command(cmd, network=network),
         capture_output=True,
         text=True,
         timeout=timeout,
         cwd=cwd,
+        env=_pruned_env() if use_pruned else None,
     )

@@ -1,0 +1,26 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-15T20:22:00Z",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "owner_session": "OWNER_UNLOCKED throughout",
+  "integrity": "clean / 100; artifacts 0",
+  "room": "audit",
+  "capability": "Enter System Audit without auto-starting a 14-phase run",
+  "result": "PASS \u2014 #audit h2 System Audit. Body: No audit cached. Click Run audit when you want a 14-phase pass. Entering this room does not start one. GET /api/audit/status before and after: ok false, running false, No audit cached. Run audit present and enabled; NOT clicked. Leave Mission Control / return restored honest empty. GET /api/audit no-start needs process load (JS now uses /status).",
+  "repair": {
+    "files": [
+      "jarvis/gui/static/audit.js",
+      "jarvis/gui/extra_routes.py"
+    ],
+    "cache": "audit.js?v=5.16.166-no-autorun",
+    "cause": "loadAudit GET /api/audit started run_audit when no cache",
+    "fix": "JS loads /api/audit/status; GET /api/audit returns status only (process load pending)"
+  },
+  "run_audit_clicked": false,
+  "started_run": false,
+  "leave_return": "PASS \u2014 honest empty restored; still not running"
+}

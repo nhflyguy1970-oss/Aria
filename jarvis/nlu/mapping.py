@@ -31,18 +31,28 @@ _ENCYCLOPEDIC = re.compile(
     re.I,
 )
 _STATUS = re.compile(
-    r"\b(status|health|postgres|redis|mongodb|platform|mission control|ollama)\b",
+    r"\b(status|postgres|redis|mongodb|platform|mission control|ollama)\b|"
+    r"\bhealth\b(?!\s+records?\b)",
     re.I,
 )
 _MY_STATE = re.compile(
     r"\bwhat\s+is\s+my\b|\bmy\s+current\b|\bam\s+i\s+using\b|\bwhich\b.+\b(active|loaded|running)\b",
     re.I,
 )
+# Local documentation cues only — bare "how do I …" is NOT local reference_search.
 _REF = re.compile(
-    r"\b(documentation|docs?|readme|manual|how\s+(?:do|to)\s+(?:i|we)\s+\w+|configure)\b",
+    r"\b(documentation|docs?|readme|manual|changelog|adr|configure\s+(?:the\s+)?(?:project|repo|aria|jarvis))\b",
     re.I,
 )
-_EXPLICIT_WEB = re.compile(r"\bsearch\s+(?:the\s+)?web\b|\blook\s+up\s+online\b", re.I)
+_EXPLICIT_WEB = re.compile(
+    r"\b(?:search\s+(?:the\s+)?web|web\s+search|look\s+up(?:\s+online)?|search\s+up|google)\b",
+    re.I,
+)
+_LOCAL_CORPUS = re.compile(
+    r"\b(?:docs?|documentation|readme|manual|adr|changelog|"
+    r"this\s+(?:project|repo|codebase)|jarvis|aria|ai[- ]?platform)\b",
+    re.I,
+)
 _USER_MEMORY = re.compile(
     r"\bsearch\s+(?:my\s+)?memory\b|\brecall\b|\bwhat\s+do\s+you\s+remember\b|"
     r"\bwhat\s+do\s+you\s+know\s+about\s+me\b|"
@@ -75,24 +85,83 @@ _CONVERSATION_LANGUAGE_QUERY = re.compile(
     re.I,
 )
 
-# Imperative write — "remember that …" but not "what do you remember" / "do you remember …?"
+# Imperative write — anchored at utterance start (or polite "remember that…").
+# Mid-sentence "remember" in questions is recall, not storage (BUG-025).
 _MEMORY_WRITE = re.compile(
-    r"\b(?:please\s+)?(?:remember|don'?t\s+forget|note\s+that|keep\s+in\s+mind)\b",
+    r"^(?:(?:hey\s+)?(?:aria|jarvis)[,:\s]+)?(?:please\s+)?"
+    r"(?:remember|don'?t\s+forget|note\s+that|keep\s+in\s+mind)\b|"
+    r"^(?:(?:could|can|would)\s+you\s+(?:please\s+)?)?"
+    r"(?:remember|don'?t\s+forget)\s+that\b|"
+    r"^(?:please\s+)?(?:store|save)\s+this\b",
     re.I,
 )
+# Explicit recall phrasing that contains "remember" (never a storage imperative).
 _MEMORY_WRITE_QUESTION = re.compile(
-    r"\b(?:what\s+do\s+you\s+remember|do\s+you\s+remember|did\s+you\s+remember)\b",
+    r"\b(?:"
+    r"what\s+do\s+you\s+remember|"
+    r"what\s+else\s+(?:do\s+you\s+)?remember|"
+    r"anything\s+else\s+(?:relevant\s+)?(?:you\s+know|you\s+remember)|"
+    r"do\s+you\s+remember|"
+    r"did\s+you\s+remember|"
+    r"(?:can|could)\s+you\s+remember\s+(?!that\b)|"
+    r"tell\s+me\s+what\s+you\s+remember|"
+    r"(?:ask(?:ed)?|told)\s+you\s+to\s+remember|"
+    r"i\s+(?:ask(?:ed)?|told)\s+you\s+to\s+remember|"
+    r"remind\s+me\s+(?:of|what|about)\b|"
+    r"which\s+(?:machine|computer|desktop)\s+(?:did\s+i|i)\s+(?:say|want|prefer)|"
+    r"what\s+(?:exact\s+)?(?:\w[\w-]*\s+){0,8}?(?:marker|token|value|fact)\b[\s\S]{0,80}?\bremember|"
+    r"what\s+.+\b(?:did\s+i|i)\s+ask\s+you\s+to\s+remember|"
+    r"recall\s+only\b"
+    r")\b",
     re.I,
 )
+# Marker / acceptance-token recall — not storage (store uses imperative remember).
+_MEMORY_MARKER_RECALL = re.compile(
+    r"(?:"
+    r"\bwhat\b[\s\S]{0,80}?\bARIA-FINAL-MEMORY\b|"
+    r"\bARIA-FINAL-MEMORY\s+marker\b|"
+    r"\b(?:unique\s+)?(?:acceptance\s+)?memory\s+marker\b|"
+    r"\bmarker\s+i\s+just\s+stored\b|"
+    r"\bwhat\s+was\s+the\s+ARIA-FINAL-MEMORY\b"
+    r")",
+    re.I,
+)
+# Memory deletion — fact-scoped ("forget that I…", "take X out of memory").
 _MEMORY_FORGET = re.compile(
-    r"\b(?:please\s+)?(?:forget|delete\s+memory|remove\s+memory)\b",
+    r"^(?:(?:okay|ok|alright)[, ]+)?(?:please\s+)?"
+    r"(?:"
+    r"forget\s+that\s+i\b|"
+    r"forget\s+what\s+i\b|"
+    r"forget\s+(?:my\s+)?(?:preference|fact|memory)\b|"
+    r"forget\s+.+\bout\s+of\s+memory\b|"
+    r"take\s+.+\bout\s+of\s+memory\b|"
+    r"remove\s+(?:that|this|it)\s+from\s+memory\b|"
+    r"delete\s+memory\b|"
+    r"remove\s+memory\b|"
+    r"you\s+can\s+forget\b|"
+    r"don'?t\s+remember\s+that\b|"
+    r"forget\b"
+    r")",
+    re.I,
+)
+# Conversational topic drop ("forget the truck, let's…") — NOT memory_search.
+_CONVERSATIONAL_SUBJECT_CHANGE = re.compile(
+    r"^(?:(?:okay|ok|alright)[, ]+)?(?:please\s+)?"
+    r"forget\s+(?:the\s+|about\s+)?(?!that\s+i\b|what\s+i\b)"
+    r"(?P<topic>[a-z][\w\s-]{0,40}?)\s*[,.]?\s*"
+    r"(?:let'?s|i\s+want|we\s+(?:should|can)|now\s+let'?s|switch\s+to)\b",
     re.I,
 )
 _MEMORY_UPDATE = re.compile(
     r"\b(?:please\s+)?(?:correct|update|fix|change)\s+"
     r"(?:that|the\s+fact|memory|my\s+memory|my)\b|"
-    r"^(?:please\s+)?(?:update|change|correct|fix)\s+my\b|"
-    r"^(?:please\s+)?actually,?\s+",
+    r"^(?:please\s+)?(?:update|change|correct|fix)\s+my\b",
+    re.I,
+)
+# Discourse "actually…" is NOT a memory correction by itself.
+_MEMORY_UPDATE_DISCOURSE = re.compile(
+    r"^(?:please\s+)?actually\s*(?:never\s+mind|wait|hold\s+on|scratch\s+that)\b|"
+    r"^(?:please\s+)?actually\s*[,—–-]\s*(?:what|how|why|where|when|who|is|are|can|could|should|do|does)\b",
     re.I,
 )
 _MEMORY_SEARCH = re.compile(
@@ -124,7 +193,12 @@ _ASSISTANT_IDENTITY = re.compile(
 _MEMORY_RECALL_FACT = re.compile(
     r"\bwhat\s+is\s+my\b|\bwhat'?s\s+my\b|\bdo\s+you\s+remember\s+my\b|"
     r"\bwhat\s+do\s+you\s+know\s+about\s+(?!me\b)|"
-    r"\bwhat\s+kind\s+of\s+.+\s+do\s+i\s+prefer\b",
+    r"\bwhat\s+kind\s+of\s+.+\s+do\s+i\s+prefer\b|"
+    r"\bremind\s+me\s+(?:what|of|about)\b|"
+    r"\bwhat\s+(?:computer|machine|workstation|project)\s+(?:was\s+i|did\s+i|am\s+i)\b|"
+    r"\bwhat\s+(?:gpu|graphics\s+card)\s+(?:was\s+i|did\s+i)\b|"
+    r"\bwhat\s+was\s+the\s+name\s+of\s+my\b|"
+    r"\bwhat\s+(?!gpu\b|cpu\b|ram\b|vram\b|disk\b)\w[\w\s-]{0,40}?\s+do\s+i\s+have\b",
     re.I,
 )
 _MEMORY_RECALL_RUNTIME = re.compile(
@@ -166,6 +240,45 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
     if _CONVERSATION_LANGUAGE_QUERY.search(message):
         return None
 
+    # Subject change ("Okay, forget the truck. Let's work on…") — chat, not memory (RW-009).
+    if _CONVERSATIONAL_SUBJECT_CHANGE.search(message):
+        return None
+
+    # Fact forget must beat teaching detection ("Forget that I prefer…") — RW-011.
+    if _MEMORY_FORGET.search(lower) and (
+        re.search(
+            r"\bforget\s+that\s+i\b|\bforget\s+what\s+i\b|\bout\s+of\s+memory\b|"
+            r"\bfrom\s+memory\b|\bdelete\s+memory\b|\bremove\s+memory\b|"
+            r"\bdon'?t\s+remember\s+that\b|\byou\s+can\s+forget\b|"
+            r"\bforget\s+(?:my\s+)?(?:preference|fact)\b",
+            lower,
+        )
+        or (
+            re.match(r"^(?:(?:okay|ok|alright)[, ]+)?(?:please\s+)?forget\b", lower)
+            and re.search(r"\b(?:that\s+i|what\s+i|preference|prefer)\b", lower)
+            and not _CONVERSATIONAL_SUBJECT_CHANGE.search(message)
+        )
+    ):
+        query = re.sub(
+            r"^(?:(?:okay|ok|alright)[, ]+)?(?:please\s+)?"
+            r"(?:forget|delete memory|remove memory|you can forget|don't remember|don'?t remember)\s*"
+            r"(?:that\s+|what\s+|about\s+)?",
+            "",
+            message,
+            flags=re.I,
+        ).strip()
+        query = re.sub(
+            r"^(?:take\s+)|(?:\s+out\s+of\s+memory\.?$)|(?:\s+from\s+memory\.?$)",
+            "",
+            query,
+            flags=re.I,
+        ).strip()
+        return {
+            "action": "memory_forget",
+            "params": {"query": query or message},
+            "thinking": "forget memory",
+        }
+
     # Assistant identity — ACM Memory Authority (D043/D044), never LLM chat.
     if _ASSISTANT_IDENTITY.search(message):
         return {
@@ -190,7 +303,12 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
 
     # Semantic autobiographical facts / integrated personal knowledge — Memory Authority.
     # Explicit "remember that…" imperatives keep the remember verb (tested write path).
-    if is_semantic_autobio_teaching(message) and not _MEMORY_WRITE.search(lower):
+    # Never treat forget/negation as teaching (RW-011).
+    if (
+        is_semantic_autobio_teaching(message)
+        and not _MEMORY_WRITE.search(lower)
+        and not re.search(r"\b(?:forget|don'?t\s+remember|remove\s+from\s+memory)\b", lower)
+    ):
         return {
             "action": "memory_about_user",
             "params": {"question": message},
@@ -215,7 +333,51 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
     if is_live_hardware_question(message):
         return None
 
-    # Order matters: write before interrogative remember; search before generic recall.
+    # Recall that merely contains "remember" / marker cues — never store the question (BUG-025).
+    # Imperative "Please remember … ARIA-FINAL-MEMORY-…" must still store (checked first).
+    if _MEMORY_WRITE.search(lower) and not (
+        _MEMORY_WRITE_QUESTION.search(lower) or _MEMORY_MARKER_RECALL.search(message)
+    ):
+        text = re.sub(
+            r"^(?:(?:hey\s+)?(?:aria|jarvis)[,:\s]+)?(?:please\s+)?"
+            r"(?:remember|don't forget|don'?t forget|note that|keep in mind)\s*"
+            r"(?:for\s+later\s*)?(?:that\s+|this\s+|the\s+following\s*)?:?\s*",
+            "",
+            message,
+            flags=re.I,
+        ).strip()
+        text = re.sub(
+            r"^(?:(?:could|can|would)\s+you\s+(?:please\s+)?)?"
+            r"(?:remember|don'?t forget)\s+that\s+",
+            "",
+            text,
+            flags=re.I,
+        ).strip()
+        text = re.sub(
+            r"^(?:please\s+)?(?:store|save)\s+this\s*(?:fact\s*)?:?\s*",
+            "",
+            text,
+            flags=re.I,
+        ).strip()
+        text = re.sub(r"^(these|the following)\s+facts?\s*:?\s*", "", text, flags=re.I).strip()
+        text = re.sub(r"^(exactly|literally)\s*:\s*", "", text, flags=re.I).strip()
+        # Normalize with parse_remember so confirmational/QA tails never ride in params (BUG-008).
+        try:
+            from jarvis.modules.memory_common import parse_remember
+
+            text, _etype, _ns = parse_remember(f"remember {text}")
+        except Exception:
+            pass
+        if text:
+            return {"action": "remember", "params": {"text": text}, "thinking": "remember"}
+
+    if _MEMORY_WRITE_QUESTION.search(lower) or _MEMORY_MARKER_RECALL.search(message):
+        return {
+            "action": "memory_about_user",
+            "params": {"question": message},
+            "thinking": "memory recall remember",
+        }
+
     if _MEMORY_SEARCH.search(lower):
         query = (
             re.sub(
@@ -240,9 +402,18 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
         )
         return {"action": "memory_forget", "params": {"query": query}, "thinking": "forget memory"}
 
+    if _MEMORY_UPDATE_DISCOURSE.search(message):
+        return None
     if _MEMORY_UPDATE.search(lower):
         from jarvis.trust_memory import parse_memory_correct
 
+        # Questions are never memory corrections.
+        if "?" in message or re.match(
+            r"^(?:please\s+)?actually\s*[,—–-]?\s*(?:what|how|why|where|when|who)\b",
+            message,
+            re.I,
+        ):
+            return None
         parsed = parse_memory_correct(message)
         if parsed:
             hint, new_fact = parsed
@@ -263,17 +434,6 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
             "params": {"new_fact": "", "search_hint": hint or message},
             "thinking": "update memory",
         }
-
-    if _MEMORY_WRITE.search(lower) and not _MEMORY_WRITE_QUESTION.search(lower):
-        text = re.sub(
-            r"^(please\s+)?(remember|don't forget|don'?t forget|note that|keep in mind)\s*(that\s+)?",
-            "",
-            message,
-            flags=re.I,
-        ).strip()
-        text = re.sub(r"^(these|the following)\s+facts?\s*:?\s*", "", text, flags=re.I).strip()
-        if text:
-            return {"action": "remember", "params": {"text": text}, "thinking": "remember"}
 
     if _MEMORY_SUMMARY.search(lower):
         return {
@@ -384,7 +544,22 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
         return "coding"
     if re.search(r"\bwhat\b.+\bare\s+you\s+using\b", lower):
         return "runtime"
+    # Writing ("status update" / project note) must not become Mission Control (RW-010).
+    try:
+        from jarvis.runtime_routing import is_writing_request
+
+        if is_writing_request(prompt):
+            return "chat"
+    except Exception:
+        pass
     if _STATUS.search(lower) and not _ENCYCLOPEDIC.search(prompt):
+        try:
+            from jarvis.runtime_routing import is_writing_request as _is_write
+
+            if _is_write(prompt):
+                return "chat"
+        except Exception:
+            pass
         return "runtime"
     if _MY_STATE.search(lower) and re.search(
         r"\b(gpu|graphics|model|hardware|cpu|vram|card)\b", lower, re.I
@@ -404,7 +579,12 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
             return "runtime"
     if syntax.verb == "using" and syntax.object:
         return "runtime"
-    if grammar.mood == "instruction" and syntax.verb in ("configure", "setup"):
+    # Instruction mood alone must not become local docs — require a corpus cue.
+    if (
+        grammar.mood == "instruction"
+        and syntax.verb in ("configure", "setup")
+        and _LOCAL_CORPUS.search(prompt)
+    ):
         return "reference"
     if _LIVE_STATE.search(prompt) and grammar.sentence_type == "interrogative":
         if re.search(r"\b(which|what)\b.+\b(using|running|loaded|active)\b", prompt, re.I):
@@ -427,12 +607,42 @@ def is_calendar_fact_question(prompt: str) -> bool:
     return bool(_CALENDAR_FACT_QUERY.search(prompt or ""))
 
 
+# Local forecast via Open-Meteo handler — must not fall through to chat/Ollama.
+_WEATHER_FORECAST_QUERY = re.compile(
+    r"\b(weather|forecast|temperature|temps?|humidity|rain(?:y|ing)?|snow(?:y|ing)?|"
+    r"windy|cloudy|sunny|umbrella|how\s+(?:hot|cold|warm))\b",
+    re.I,
+)
+_WEATHER_FORECAST_CUE = re.compile(
+    r"\b(what|how|will|going to|like|expect|tomorrow|today|tonight|this week|next week|"
+    r"outside|look like)\b",
+    re.I,
+)
+
+
+def is_weather_forecast_question(prompt: str) -> bool:
+    """Deterministic weather questions → weather_forecast action (no chat LLM)."""
+    text = prompt or ""
+    if is_calendar_fact_question(text):
+        return False
+    return bool(_WEATHER_FORECAST_QUERY.search(text) and _WEATHER_FORECAST_CUE.search(text))
+
+
 def apply_intent_guards(result: NLUResult) -> str:
     prompt = result.prompt
     intent = result.semantic.intent
     # Calendar / clock facts must never collapse into memory_search.
     if is_calendar_fact_question(prompt):
         return "chat"
+    try:
+        from jarvis.runtime_routing import is_writing_request
+
+        if is_writing_request(prompt):
+            return "chat"
+    except Exception:
+        pass
+    if is_weather_forecast_question(prompt):
+        return "weather"
     if is_episodic_teaching(prompt):
         return "memory"
     if is_episodic_memory_query(prompt) or is_past_event_memory_question(prompt):
@@ -457,14 +667,20 @@ def apply_intent_guards(result: NLUResult) -> str:
         return "memory"
     if _EXPLICIT_WEB.search(prompt):
         return "web_search"
-    if (
-        _REF.search(prompt)
-        or syntax.subject in ("documentation", "reference")
-        or syntax.verb in ("configure", "setup", "show")
+    # reference_search only for local corpus / explicit documentation asks.
+    if syntax.subject in ("documentation", "reference") or (
+        _REF.search(prompt) and _LOCAL_CORPUS.search(prompt)
     ):
         if not _LIVE_STATE.search(prompt) or syntax.subject in ("documentation", "reference"):
             if not re.search(r"\bis\b.+\brunning\b", prompt, re.I):
                 return "reference"
+    if (
+        syntax.verb in ("configure", "setup")
+        and _LOCAL_CORPUS.search(prompt)
+        and not _LIVE_STATE.search(prompt)
+    ):
+        if not re.search(r"\bis\b.+\brunning\b", prompt, re.I):
+            return "reference"
     if _ENCYCLOPEDIC.search(prompt) and not _LIVE_STATE.search(prompt):
         return "knowledge"
     if intent == "runtime" and _ENCYCLOPEDIC.search(prompt) and not _LIVE_STATE.search(prompt):
@@ -513,6 +729,8 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
     confidence = result.semantic.confidence
     if is_calendar_fact_question(result.prompt or ""):
         confidence = max(confidence, 0.95)
+    if is_weather_forecast_question(result.prompt or ""):
+        confidence = max(confidence, 0.95)
     band = confidence_band(confidence)
 
     if confidence < 0.45 and not result.learned_match:
@@ -552,6 +770,26 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
             "router": "nlu",
             "router_stage": "nlu_pipeline",
             "rule_matched": "calendar_fact",
+            "confidence_band": "high",
+            "flag_for_review": False,
+        }
+
+    if is_weather_forecast_question(result.prompt or "") or intent == "weather":
+        from jarvis.journal_weather import parse_weather_day
+
+        day = parse_weather_day(result.prompt or "")
+        return {
+            "action": "weather_forecast",
+            "params": {"day": day} if day else {},
+            "thinking": "weather forecast",
+            "route_reason": "weather_forecast",
+            "route_confidence": confidence,
+            "route_handler": "weather_forecast",
+            "nlu": result.to_debug(),
+            "semantic_report": result.to_debug(),
+            "router": "nlu",
+            "router_stage": "nlu_pipeline",
+            "rule_matched": "weather_forecast",
             "confidence_band": "high",
             "flag_for_review": False,
         }
@@ -603,14 +841,46 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
         action = "web_search"
         params = {"query": subject or result.prompt}
     elif intent == "coding":
-        if re.search(r"\bfix\s+errors?\s+in\b", result.prompt, re.I):
-            from jarvis.router import py_path_from_message
+        from jarvis.router import py_path_from_message
 
+        prompt = result.prompt or ""
+        lower = prompt.lower()
+        path = py_path_from_message(prompt) or (subject if subject and "." in subject else "")
+        if re.search(
+            r"\b(?:fix|repair|debug)(?:\s+(?:any\s+)?(?:issues?|bugs?|errors?|problems?))?\s+(?:in\s+|the\s+file\s+)?",
+            lower,
+        ) or re.search(r"\bfix\s+[`'\"]?[^\s`'\"]+\.py\b", lower):
             action = "coding_fix"
-            params = {"path": py_path_from_message(result.prompt)}
-        else:
+            params = {"path": path}
+        elif re.search(r"\b(?:improve|refactor|clean up)\b", lower) and (
+            path or re.search(r"\b(?:file|code|module|script)\b", lower)
+        ):
+            action = "coding_improve"
+            params = {"path": path}
+        elif re.search(
+            r"\b(?:create|write|make|generate)\b.+\b(?:script|file|module|\.py)\b",
+            lower,
+        ) or re.search(r"\bcoding\s+create\b", lower):
+            action = "coding_create"
+            params = {"description": prompt, "path": path}
+        elif re.search(
+            r"\b(how does|where is|explain (the )?code|what does .+ do|how is .+ implemented)\b",
+            lower,
+        ):
             action = "coding_chat"
-            params = {"query": result.prompt}
+            params = {"query": prompt}
+        else:
+            # Prefer propose/fix when NLU says coding + a concrete path, not Q&A chat.
+            if path and re.search(
+                r"\b(fix|improve|refactor|edit|change|update|append|add)\b", lower
+            ):
+                action = "coding_improve" if "fix" not in lower else "coding_fix"
+                if re.search(r"\b(?:fix|repair|debug)\b", lower):
+                    action = "coding_fix"
+                params = {"path": path}
+            else:
+                action = "coding_chat"
+                params = {"query": prompt}
     elif intent == "planning":
         lower = result.prompt.lower()
         if re.search(r"\b(?:add|create)\s+(?:a\s+)?task\b", lower):

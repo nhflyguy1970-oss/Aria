@@ -76,6 +76,7 @@ FACETS = (
     "planner",
     "calendar",
     "gallery",
+    "chat",
     "home_assistant",
     "flytying",
     "automation",
@@ -84,5 +85,7 @@ FACETS = (
     "dashboard",
     "layouts",
     "notifications",
+    "health",
     "provider_health",
+    "latency",
 )

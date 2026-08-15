@@ -1,0 +1,69 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "audit",
+  "capability": "System Audit auto-run observed after authorized repairs + journal note removal",
+  "captured_at": "2026-08-15T18:57:26Z",
+  "result": "OBSERVED OK — house healthy; 14-phase audit progressed through Phase 14 (Jarvis & AI Runtime) more than once. Durable pass/warn/fail tally was not cached this session because Phase 14 is long (pip outdated + torch) and GET /api/audit can start another run when no cache is present. Run audit was not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "owner": {
+    "state": "OWNER_UNLOCKED",
+    "owner_unlocked": true,
+    "auto_idle_lock": false
+  },
+  "entry": {
+    "via": "Front Door already open → #audit",
+    "hash": "#audit",
+    "h2": "System Audit",
+    "run_audit": "present, disabled while auto-running; NOT clicked"
+  },
+  "observed_progress": [
+    "Phase 1 — Operating System",
+    "Phase 2 — Package Manager",
+    "Phase 3 — Storage & Filesystems",
+    "Phase 9 — Development Tools",
+    "Phase 12 — Security",
+    "Phase 13 — Network",
+    "Phase 14 — Jarvis & AI Runtime"
+  ],
+  "latest_status_sample": {
+    "running": true,
+    "result": null,
+    "cached": false,
+    "phase": 14,
+    "title": "Phase 14 — Jarvis & AI Runtime",
+    "elapsed_sec_at_sample": 33,
+    "note": "elapsed_sec freezes at phase start; Phase 14 includes pip list --outdated (60s) and torch import (30s)"
+  },
+  "house_ok": {
+    "owner": "OWNER_UNLOCKED",
+    "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+    "mission_control_hardware": "RTX 3060; RAM ~37/62.7 GB; disk ~179 GB free; models loaded 0",
+    "journal_bytes": 67547,
+    "aug15_accidental_note": "removed"
+  },
+  "poll_repair": {
+    "audit_js": "poll now uses GET /api/audit/status so a finished report is not turned into another GET /api/audit auto-start",
+    "extra_routes": "GET /api/audit returns cached/phases/summary even when ok is false — needs process load"
+  },
+  "not_clicked": [
+    "Run audit",
+    "Run full audit",
+    "Run install",
+    "Copy fix"
+  ],
+  "data_mutation": {
+    "journal_post": false,
+    "journal_delete": "980d808a only (Jeff authorized)",
+    "health_phr": false,
+    "coding_apply": false,
+    "repair_executed": false,
+    "audit_run_button": false,
+    "note": "Entering the room auto-starts background system audit. That is product auto-start, not an owner click."
+  },
+  "jeff_action_required": false,
+  "next_exact_capability": "Do not certify 34/34. Do not start Owner Residency. Connections browse Python fix needs process load. Do not apply 603973e7."
+}

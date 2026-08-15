@@ -1,0 +1,1095 @@
+{
+  "rooms": {
+    "journal": {
+      "enter_ms": 3055,
+      "snap": {
+        "room": "journal",
+        "furnished": "1",
+        "btns": 47,
+        "inputs": 17,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Bullet journal Listening quietly Bullet Journal Notes, thoughts, reflections \u00b7 promote actionable items to Planner \u00b7 scheduled commitments live in Calendar \u2022 task \u25cb event \u2014 note \u00d7 done > migrated < scheduled ~ cancelled * important ! inspiration \ud83d\udc41 explore No special keys? Type t: task \u00b7 e: event \u00b7 n: note \u00b7 or "
+      },
+      "stats": "0 open tasks \u00b7 92 daily \u00b7 6 weekly \u00b7 5 habits \u00b7 0 collections",
+      "legend": "\u2022\ntask\n\u25cb\nevent\n\u2014\nnote\n\u00d7\ndone\n>\nmigrated\n<\nscheduled\n~\ncancelled\n*\nimportant\n!\ninspiration\n\ud83d\udc41\nexplore",
+      "enc": {
+        "exportEnc": true,
+        "importEnc": true,
+        "export": true
+      },
+      "enc_cancel": {
+        "hadDialog": true,
+        "cancelled": true
+      },
+      "return": "journal",
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Encrypted export/import with Jeff password \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED"
+      ]
+    },
+    "planner": {
+      "enter_ms": 2538,
+      "snap": {
+        "room": "planner",
+        "furnished": "1",
+        "btns": 27,
+        "inputs": 6,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Leather notebook Listening quietly Planner Today\u2019s actionable work \u00b7 Journal for notes \u00b7 Calendar for commitments \u00b7 Documents HA Focus mode Shortcuts: N \u00b7 P \u00b7 F \u00b7 T \u00b7 U DAILY FOCUS Today\u2019s day ops Planner = actionable work \u00b7 Journal = notes \u00b7 Calendar = commitments healthy \u00b7 0 tasks \u00b7 ~527m focus TOP 3 No open t"
+      },
+      "focus_ui": {
+        "hasFocus": true,
+        "honestZero": true
+      },
+      "controls": {
+        "add": false,
+        "focus": true,
+        "btns": 27
+      },
+      "focus_api_open": 0,
+      "return": "planner",
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "calendar": {
+      "enter_ms": 2520,
+      "snap": {
+        "room": "calendar",
+        "furnished": "1",
+        "btns": 57,
+        "inputs": 9,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Wall calendar Listening quietly Calendar Scheduled commitments \u00b7 use Planner for today\u2019s actionable work \u00b7 Journal for notes \u2190 Prev August 2026 Next \u2192 Today Month Week Agenda Timeline All sources Journal Planner ICS Work Holidays Planner Journal Documents Shortcuts: \u2190 \u2192 day \u00b7 T today \u00b7 N new \u00b7 1\u20134 views Mon Tue "
+      },
+      "after_nav": {
+        "room": "calendar",
+        "furnished": "1",
+        "btns": 56,
+        "inputs": 9,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Wall calendar Listening quietly Calendar Scheduled commitments \u00b7 use Planner for today\u2019s actionable work \u00b7 Journal for notes \u2190 Prev September 2026 Next \u2192 Today Month Week Agenda Timeline All sources Journal Planner ICS Work Holidays Planner Journal Documents Shortcuts: \u2190 \u2192 day \u00b7 T today \u00b7 N new \u00b7 1\u20134 views 7 Lab"
+      },
+      "return": "calendar",
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "External calendar mutation \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED"
+      ]
+    },
+    "documents": {
+      "enter_ms": 3015,
+      "snap": {
+        "room": "documents",
+        "furnished": "1",
+        "btns": 29,
+        "inputs": 5,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Private library Listening quietly Documents Personal document intelligence \u2014 local files, grounded search, Memory candidates. Not Drive, SharePoint, or Notion. Documents = library \u00b7 Knowledge = briefs \u00b7 Connections = graph \u00b7 Memory = autobiography \u00b7 Search index = retrieval ? Drop files or Upload Import Search R"
+      },
+      "search": {
+        "hasWarranty": true,
+        "head": "Aria \u00b7 Private library Listening quietly Documents Personal document intelligence \u2014 local files, grounded search, Memory candidates. Not Drive, SharePoint, or Notion. Documents = library \u00b7 Knowledge = briefs \u00b7 Connections = graph \u00b7 Memory = autobiography \u00b7 Search index = retrieval ? Drop files or Upload Import Search Rebuild Search Index Briefing A",
+        "hasSearchInput": true
+      },
+      "api_hits": 8,
+      "return": "documents",
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Cold semantic embed preload/path \u2014 measure only; warm keyword proven"
+      ]
+    },
+    "gallery": {
+      "enter_ms": 3016,
+      "snap": {
+        "room": "gallery",
+        "furnished": "1",
+        "btns": 55,
+        "inputs": 23,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Museum Listening quietly Gallery Local AI image product \u2014 generate, browse, organize, and edit stills. Video and Meme stay separate. Chat converses; Documents store knowledge. Refresh Job Center Models Maker Fly tying Video Meme Ctrl+Shift+G 0 images \u00b7 showing 0 Generation Stays in Gallery \u2014 same shared Image Ge"
+      },
+      "comfy": {
+        "comfyFail": false,
+        "hasSurface": true,
+        "head": "Aria \u00b7 Museum Listening quietly Gallery Local AI image product \u2014 generate, browse, organize, and edit stills. Video and Meme stay separate. Chat converses; Documents store knowledge. Refresh Job Center Models Maker Fly tying Video Meme Ctrl+Shift+G 0 images \u00b7 showing 0 Generation"
+      },
+      "return": "gallery",
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "voice": {
+      "enter_ms": 2513,
+      "snap": {
+        "room": "voice",
+        "furnished": "1",
+        "btns": 9,
+        "inputs": 9,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Presence Listening quietly Voice Audio Presence State: idle \u00b7 Duplex: off \u00b7 STT: whisper TTS engine: piper Cloud live unavailable Duplex Off Half Full STT backend Whisper RealtimeSTT TTS chunk chars Speak replies Server Whisper (mic) Interrupt on speak Chunk sentences Profile \u2014 none \u2014 Quiet Office Hands-Free Cod"
+      },
+      "dep": {
+        "cloudUnavailable": true,
+        "hasControls": true,
+        "head": "Aria \u00b7 Presence Listening quietly Voice Audio Presence State: idle \u00b7 Duplex: off \u00b7 STT: whisper TTS engine: piper Cloud live unavailable Duplex Off Half Full STT backend Whisper RealtimeSTT TTS chunk chars Speak replies Server Whisper (mic)"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Microphone / cloud live hardware \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED"
+      ]
+    },
+    "presence": {
+      "enter_ms": 2515,
+      "snap": {
+        "room": "presence",
+        "furnished": "1",
+        "btns": 6,
+        "inputs": 1,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Presence Listening quietly Presence Security Voice Gestures enabled \u2014 pick Control mode to move floating panels Start camera Stop Enroll face Gestures Off Preview only Control \u2014 pinch click, fist drag panels CPU-only (low FPS) Calibrate gestures"
+      },
+      "identity": {
+        "room": "presence",
+        "hash": "#presence",
+        "notHA": true
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Camera/gesture hardware \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED"
+      ]
+    },
+    "video": {
+      "enter_ms": 3013,
+      "snap": {
+        "room": "video",
+        "furnished": "1",
+        "btns": 18,
+        "inputs": 19,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Video studio Listening quietly Video Studio Stay-in-Studio generation \u00b7 AnimateDiff or Ken Burns \u00b7 shared media queue Gallery Meme Mission Control Generate Enhance prompt Preset \u2014 none \u2014 Fast Draft Portrait Motion Landscape Pan Storyboard Preview Cinematic Social Clip AnimateDiff HQ Ken Burns Fast Duration Previ"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Device-dependent playback \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED"
+      ]
+    },
+    "browser": {
+      "enter_ms": 3013,
+      "snap": {
+        "room": "browser",
+        "furnished": "1",
+        "btns": 34,
+        "inputs": 3,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Browser Listening quietly Browser Live web interaction agent \u2014 Playwright navigation, screenshots, DOM/Vision tasks. Not a full Chrome replacement. Documents store knowledge; Chat converses. Refresh Projects Job Center Coding Memory Documents Chat Ctrl+Shift+B Ready Overview Session History Bookmarks Downloads N"
+      },
+      "status_ui": {
+        "hasStatus": true,
+        "agentFail": false,
+        "head": "Aria \u00b7 Browser Listening quietly Browser Live web interaction agent \u2014 Playwright navigation, screenshots, DOM/Vision tasks. Not a full Chrome replacement. Documents store knowledge; Chat converses. Refresh Projects Job Center Coding Memory "
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Real website credentials/sessions \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED"
+      ]
+    },
+    "maker": {
+      "enter_ms": 3015,
+      "snap": {
+        "room": "maker",
+        "furnished": "1",
+        "btns": 17,
+        "inputs": 8,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Maker lab Listening quietly Maker lab \u29c9 CAD: OpenSCAD auto OpenSCAD build123d Meshy Generate Iterate Hello cube Slice Download STL Refresh Gallery Documents Clear gallery No models yet. Hello cube or ask Chat Printer \u29c9 No printer configured Select model\u2026 Bambu Lab A1 (Studio / SD) Bambu Lab A1 Mini (Studio / SD)"
+      },
+      "cad_line": "CAD: OpenSCAD",
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "meme": {
+      "enter_ms": 2513,
+      "snap": {
+        "room": "meme",
+        "furnished": "1",
+        "btns": 6,
+        "inputs": 4,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Meme studio Listening quietly Meme Generator Classic top/bottom captions \u00b7 AI background optional \u00b7 safe / uncensored follows global toggle Generate in chat Gallery Video MEME IDEA (OPTIONAL \u2014 AI WRITES CAPTIONS) TOP TEXT BOTTOM TEXT AI BACKGROUND (COMFYUI) Ready Quick preview (text only) Generate meme Meme libr"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    },
+    "vision": {
+      "enter_ms": 2516,
+      "snap": {
+        "room": "vision",
+        "realFail": false,
+        "hasModel": true,
+        "hasControls": 17,
+        "head": "Aria \u00b7 Vision bench Listening quietly Vision Chat attach Gallery Refresh State: idle \u00b7 Model: moondream:latest \u00b7 Mode: quality OCR entry point: enter an image/PDF page path, then choose OCR or Structured OCR below. Command Palette also knows \u201cRun OCR in Vision Home\u201d. moondream:latest \u00b7 1\u20133s Est. VRAM ~1500MB \u00b7 Free 11837MB \u00b7 OCR: hybrid (tesseract ok) Fallba"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Camera capture / real image OCR \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED"
+      ],
+      "after_refresh": {
+        "head": "Aria \u00b7 Vision bench Listening quietly Vision Chat attach Gallery Refresh State: idle \u00b7 Model: moondream:latest \u00b7 Mode: quality OCR entry point: enter an image/PDF page path, then choose OCR or Structured OCR below. Command Palette also knows \u201cRun OCR in Vision Home\u201d. moondream:la",
+        "state": "State: idle"
+      },
+      "note": "Prior fail was false positive matching ~1500MB as 500; corrected with word-boundary detector"
+    },
+    "connections": {
+      "enter_ms": 3011,
+      "snap": {
+        "room": "connections",
+        "furnished": "1",
+        "btns": 15,
+        "inputs": 4,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 Connections Listening quietly Connections Relationship explorer \u2014 models how things relate. Not Memory, not Documents, not Knowledge Briefs. ACM remains cognitive source of truth; the graph mirrors. Documents = files \u00b7 Knowledge = briefs \u00b7 Connections = graph \u00b7 Memory = autobiography ? Search Mode All Entities R"
+      },
+      "ui": {
+        "hasOverview": true,
+        "serverError": false,
+        "head": "Aria \u00b7 Connections Listening quietly Connections Relationship explorer \u2014 models how things relate. Not Memory, not Documents, not Knowledge Briefs. ACM remains cognitive source of truth; the graph mirrors. Documents = files \u00b7 Knowledge = briefs \u00b7 Connections = graph \u00b7 Memory = au"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+      "jeff_attended": [
+        "Graph credential/backend recovery if Neo4j permanently down \u2014 JEFF-ATTENDED"
+      ]
+    },
+    "audit": {
+      "enter_ms": 2512,
+      "snap": {
+        "room": "audit",
+        "furnished": "1",
+        "btns": 3,
+        "inputs": 0,
+        "fail": false,
+        "loading": false,
+        "head": "Aria \u00b7 System audit Listening quietly System Audit Audit in progress\u2026 Mission Control Actions Run audit 14 phases: OS \u00b7 packages \u00b7 storage/SMART \u00b7 memory \u00b7 hardware/sensors \u00b7 GPU \u00b7 services/desktop \u00b7 containers \u00b7 dev tools \u00b7 integrity \u00b7 performance \u00b7 security \u00b7 network \u00b7 Jarvis/AI. 14% Phase 3 \u2014 Storage & Filesystems P"
+      },
+      "after": {
+        "running": true,
+        "stuckLoading": false,
+        "hasFindings": true,
+        "head": "Aria \u00b7 System audit Listening quietly System Audit Audit in progress\u2026 Mission Control Actions Run audit 14 phases: OS \u00b7 packages \u00b7 storage/SMART \u00b7 memory \u00b7 hardware/sensors \u00b7 GPU \u00b7 services/desktop \u00b7 containers \u00b7 dev tools \u00b7 integrity \u00b7 performance \u00b7 security \u00b7 network \u00b7 Jarvis/AI. 35% Phase 6 \u2014 GPU"
+      },
+      "status": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+    }
+  },
+  "systemic": {
+    "connections_home": {
+      "status": 200,
+      "ms": 21.0,
+      "ok": true,
+      "degraded": false,
+      "health": "ok"
+    },
+    "audit_get": {
+      "status": 200,
+      "ms": 3.1,
+      "running": true,
+      "ok": true,
+      "message": "Audit started"
+    },
+    "cad": {
+      "status": 200,
+      "ms": 29.3,
+      "keys": [
+        "ok",
+        "enabled",
+        "printer_enabled",
+        "meshy_cad",
+        "openscad",
+        "openscad_path",
+        "build123d",
+        "meshy",
+        "ready",
+        "slicer"
+      ],
+      "openscad": true,
+      "ready": true
+    },
+    "docs_search": {
+      "status": 200,
+      "ms": 101.9,
+      "hits": 8
+    }
+  },
+  "isolation": {
+    "qa_header": 403,
+    "test_shaped": 400
+  },
+  "integrity": {
+    "status": "clean",
+    "overall": 100,
+    "clean": true,
+    "counts": {
+      "total": 0,
+      "actionable": 0,
+      "by_category": {},
+      "safe_to_remove": 0,
+      "uncertain": 0
+    }
+  },
+  "activity": {
+    "unread": 28,
+    "kinds": {
+      "warning": 9,
+      "info": 5,
+      "error": 14
+    },
+    "sample": [
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Missed: Work"
+      },
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Missed: Work"
+      },
+      {
+        "kind": "info",
+        "ownerVisible": null,
+        "title": "Provider recovered"
+      },
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Missed: Work"
+      },
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Planner timer"
+      },
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Planner timer"
+      },
+      {
+        "kind": "error",
+        "ownerVisible": null,
+        "title": "Generation failed"
+      },
+      {
+        "kind": "warning",
+        "ownerVisible": null,
+        "title": "Automations paused"
+      },
+      {
+        "kind": "error",
+        "ownerVisible": null,
+        "title": "EQ failed"
+      },
+      {
+        "kind": "error",
+        "ownerVisible": null,
+        "title": "Voice\u2192song failed"
+      }
+    ]
+  },
+  "cross": {
+    "search_fly": {
+      "hasFly": true
+    },
+    "search_docs": {
+      "hasDoc": true
+    },
+    "presence_ha": {
+      "linkPresent": false
+    }
+  },
+  "jeff_attended": [
+    "Encrypted export/import with Jeff password \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED",
+    "External calendar mutation \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED",
+    "Cold semantic embed preload/path \u2014 measure only; warm keyword proven",
+    "Microphone / cloud live hardware \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED",
+    "Camera/gesture hardware \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED",
+    "Device-dependent playback \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED",
+    "Real website credentials/sessions \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED",
+    "Camera capture \u2014 JEFF-ATTENDED \u2014 FINAL RESIDENCY REQUIRED",
+    "Graph credential/backend recovery if Neo4j permanently down \u2014 JEFF-ATTENDED"
+  ],
+  "registry": {
+    "total": 34,
+    "ids": [
+      "chat",
+      "flytying",
+      "health",
+      "mission",
+      "documents",
+      "planner",
+      "calendar",
+      "gallery",
+      "search",
+      "coding",
+      "projects",
+      "memory",
+      "voice",
+      "repair",
+      "integrity",
+      "home",
+      "automation",
+      "providers",
+      "home_automation",
+      "presence",
+      "journal",
+      "video",
+      "audio",
+      "browser",
+      "maker",
+      "meme",
+      "vision",
+      "connections",
+      "settings",
+      "capabilities",
+      "integrations",
+      "audit",
+      "security",
+      "actions"
+    ],
+    "domain": [
+      "documents",
+      "planner",
+      "calendar",
+      "gallery",
+      "voice",
+      "presence",
+      "journal",
+      "video",
+      "browser",
+      "maker",
+      "meme",
+      "vision",
+      "connections",
+      "audit"
+    ],
+    "missing_from_domain_list": []
+  },
+  "isol": {
+    "journal_create": {
+      "status": 200,
+      "ok": true,
+      "body": {
+        "ok": true,
+        "bullet": {
+          "id": "eb944cb9",
+          "type": "note",
+          "content": "ARIA-3CC-ISOL-JOURNAL-TEMP",
+          "status": "open",
+          "signifiers": [],
+          "location": "daily:2026-08-12",
+          "children": [],
+          "links": [],
+          "time": null,
+          "duration_min": null,
+          "created": "2026-08-12T16:13:26.325106+00:00",
+          "updated": "2026-08-12T16:13:26.325114+00:00"
+        }
+      }
+    },
+    "journal_read": {
+      "found": true
+    },
+    "journal_live_clean": true,
+    "planner_create": {
+      "status": 200,
+      "ok": true,
+      "body_keys": [
+        "ok",
+        "task"
+      ]
+    },
+    "planner_read": {
+      "found": true
+    },
+    "planner_live_clean": true,
+    "calendar_create": {
+      "status": 404,
+      "body": {
+        "detail": "Not Found"
+      }
+    },
+    "calendar_live_clean": true
+  },
+  "controls": {
+    "documents": {
+      "buttons": 89,
+      "inputs": 5,
+      "links": 0,
+      "room": "documents"
+    },
+    "planner": {
+      "buttons": 27,
+      "inputs": 6,
+      "links": 0,
+      "room": "planner"
+    },
+    "calendar": {
+      "buttons": 56,
+      "inputs": 9,
+      "links": 0,
+      "room": "calendar"
+    },
+    "gallery": {
+      "buttons": 55,
+      "inputs": 23,
+      "links": 1,
+      "room": "gallery"
+    },
+    "voice": {
+      "buttons": 9,
+      "inputs": 9,
+      "links": 0,
+      "room": "voice"
+    },
+    "presence": {
+      "buttons": 6,
+      "inputs": 1,
+      "links": 0,
+      "room": "presence"
+    },
+    "journal": {
+      "buttons": 47,
+      "inputs": 17,
+      "links": 0,
+      "room": "journal"
+    },
+    "video": {
+      "buttons": 18,
+      "inputs": 19,
+      "links": 0,
+      "room": "video"
+    },
+    "browser": {
+      "buttons": 34,
+      "inputs": 3,
+      "links": 0,
+      "room": "browser"
+    },
+    "maker": {
+      "buttons": 17,
+      "inputs": 8,
+      "links": 0,
+      "room": "maker"
+    },
+    "meme": {
+      "buttons": 6,
+      "inputs": 4,
+      "links": 0,
+      "room": "meme"
+    },
+    "vision": {
+      "buttons": 17,
+      "inputs": 7,
+      "links": 0,
+      "room": "vision"
+    },
+    "connections": {
+      "buttons": 15,
+      "inputs": 4,
+      "links": 0,
+      "room": "connections"
+    },
+    "audit": {
+      "buttons": 3,
+      "inputs": 0,
+      "links": 0,
+      "room": "audit"
+    }
+  },
+  "perf": {
+    "journal": 3055,
+    "planner": 2538,
+    "calendar": 2520,
+    "documents": 3015,
+    "gallery": 3016,
+    "voice": 2513,
+    "presence": 2515,
+    "video": 3013,
+    "browser": 3013,
+    "maker": 3015,
+    "meme": 2513,
+    "vision": 2516,
+    "connections": 3011,
+    "audit": 2512
+  },
+  "deep": {
+    "isol_deep": {
+      "journal_create2": {
+        "status": 200,
+        "id": "c383db43",
+        "ok": true
+      },
+      "journal_delete": {
+        "status": 404,
+        "body": "{'detail': 'Not Found'}"
+      },
+      "journal_live_clean": true,
+      "planner_create2": {
+        "status": 200,
+        "id": "59ac3c19c9"
+      },
+      "planner_complete": {
+        "status": 200,
+        "ok": true
+      },
+      "planner_delete": {
+        "status": 200,
+        "ok": true
+      },
+      "planner_live_clean": true,
+      "calendar_create": {
+        "status": 200,
+        "body": {
+          "ok": true,
+          "target": "planner",
+          "event": {
+            "id": "473677b4c1",
+            "title": "ARIA-3CC-ISOL-CAL",
+            "start_time": "2099-06-15T10:00:00",
+            "end_time": "2099-06-15T10:30:00"
+          },
+          "item_id": "planner:473677b4c1"
+        }
+      },
+      "calendar_update": {
+        "status": 400,
+        "ok": false
+      },
+      "calendar_delete": {
+        "status": 400,
+        "ok": false
+      },
+      "calendar_live_clean": true,
+      "calendar_agenda_live_clean": true,
+      "gallery_isol": {
+        "status": 200,
+        "total": 0
+      },
+      "gallery_live": {
+        "status": 200,
+        "total": 0,
+        "images": 0
+      },
+      "journal_enc_export_isol": {
+        "status": 422,
+        "ok": null,
+        "keys": [
+          "detail"
+        ]
+      }
+    },
+    "docs_rag": {
+      "default": {
+        "status": 200,
+        "ms": 102.9,
+        "hits": 8,
+        "meta": {
+          "ok": true
+        },
+        "sample_keys": [
+          "ok",
+          "query",
+          "hits",
+          "citations",
+          "markdown"
+        ]
+      },
+      "keyword_hint": {
+        "status": 200,
+        "ms": 54.5,
+        "hits": 8,
+        "meta": {
+          "ok": true
+        },
+        "sample_keys": [
+          "ok",
+          "query",
+          "hits",
+          "citations",
+          "markdown"
+        ]
+      },
+      "semantic_hint": {
+        "status": 200,
+        "ms": 55.5,
+        "hits": 8,
+        "meta": {
+          "ok": true
+        },
+        "sample_keys": [
+          "ok",
+          "query",
+          "hits",
+          "citations",
+          "markdown"
+        ]
+      },
+      "warm_repeat": {
+        "status": 200,
+        "ms": 52.9,
+        "hits": 8
+      }
+    },
+    "vision_api": {
+      "/api/vision/product": {
+        "status": 200,
+        "ms": 629.6,
+        "ok": true,
+        "keys": [
+          "ok",
+          "product",
+          "boundaries",
+          "state",
+          "settings",
+          "honesty",
+          "profiles",
+          "history_recent",
+          "actions",
+          "pipeline"
+        ]
+      },
+      "/api/vision/honesty": {
+        "status": 200,
+        "ms": 205.7,
+        "ok": true,
+        "keys": [
+          "ok",
+          "task",
+          "model",
+          "quality_mode",
+          "ocr_mode",
+          "classic_ocr_available",
+          "estimated_vram_mb",
+          "free_vram_mb",
+          "low_vram",
+          "expected_latency",
+          "fallback",
+          "warnings"
+        ]
+      },
+      "/api/vision/history?limit=5": {
+        "status": 200,
+        "ms": 2.3,
+        "ok": true,
+        "keys": [
+          "ok",
+          "history"
+        ]
+      },
+      "/api/vision/profiles": {
+        "status": 200,
+        "ms": 1.6,
+        "ok": true,
+        "keys": [
+          "ok",
+          "profiles",
+          "active"
+        ]
+      },
+      "/api/vision/actions": {
+        "status": 200,
+        "ms": 1.2,
+        "ok": true,
+        "keys": [
+          "ok",
+          "actions"
+        ]
+      }
+    },
+    "controls_deep": {
+      "calendar": {
+        "hasMonth": true,
+        "addPresent": true,
+        "btns": 57
+      },
+      "maker": {
+        "tabs": [
+          "\u29c9",
+          "Generate",
+          "Iterate",
+          "Hello cube",
+          "Slice",
+          "Download STL",
+          "Refresh",
+          "Gallery",
+          "Documents",
+          "Clear gallery",
+          "Hello cube",
+          "ask Chat",
+          "\u29c9",
+          "Add",
+          "Discover KE",
+          "Status",
+          "Start print"
+        ],
+        "cad": "CAD: OpenSCAD",
+        "hasUndefined": false
+      },
+      "meme": {
+        "btns": 6,
+        "hasGen": true,
+        "fail": false,
+        "head": "Aria \u00b7 Meme studio Listening quietly Meme Generator Classic top/bottom captions \u00b7 AI background optional \u00b7 safe / uncensored follows global toggle Generate in chat Gallery Video MEME IDEA (OPTIONAL \u2014 AI WRITES CAPTIONS) TOP TEXT BOTTOM TEXT"
+      },
+      "browser": {
+        "idle": true,
+        "fail": false,
+        "head": "Aria \u00b7 Browser Listening quietly Browser Live web interaction agent \u2014 Playwright navigation, screenshots, DOM/Vision tasks. Not a full Chrome replacement. Documents store knowledge; Chat converses. Refresh Projects Job C"
+      },
+      "video": {
+        "btns": 18,
+        "hasMedia": true,
+        "fail": false,
+        "head": "Aria \u00b7 Video studio Listening quietly Video Studio Stay-in-Studio generation \u00b7 AnimateDiff or Ken Burns \u00b7 shared media queue Gallery Meme Mission Control Generate Enhance prompt Preset \u2014 none \u2014 Fast Draft Portrait Motion Landscape Pan Storyboard Preview Cinema"
+      },
+      "audit": {
+        "progress": true,
+        "qaLeak": false,
+        "head": "Aria \u00b7 System audit Listening quietly System Audit Audit in progress\u2026 Mission Control Actions Run audit 14 phases: OS \u00b7 packages \u00b7 storage/SMART \u00b7 memory \u00b7 hardware/sensors \u00b7 GPU \u00b7 services/desktop \u00b7 containers \u00b7 dev tools \u00b7 integrity \u00b7 performance \u00b7 security \u00b7 network \u00b7 Jarvis/AI. 0% Starting audit"
+      },
+      "documents": {
+        "hasLibrary": true,
+        "btns": 29,
+        "inputs": 3
+      },
+      "gallery": {
+        "comfyFail": false,
+        "count": "0",
+        "btns": 55
+      },
+      "presence": {
+        "identity": "presence",
+        "hash": "#presence",
+        "hasGestures": true,
+        "head": "Aria \u00b7 Presence Listening quietly Presence Security Voice Gestures enabled \u2014 pick Control mode to move floating panels Start camera Stop Enroll face Gestures Off Preview only Control \u2014 pinch click, fist drag panels CPU-only (low FPS) Calibr"
+      },
+      "journal_enc_controls": {
+        "exportEnc": true,
+        "importEnc": true,
+        "moreOpen": true
+      }
+    },
+    "leave_return": {
+      "journal": "journal",
+      "planner": "planner",
+      "documents": "documents",
+      "gallery": "gallery",
+      "connections": "connections",
+      "vision": "vision"
+    },
+    "cross_extra": {
+      "calendar_focus_suggestions": {
+        "status": 200,
+        "keys": [
+          "ok",
+          "day",
+          "suggestions",
+          "priorities",
+          "requires_confirmation"
+        ]
+      }
+    }
+  },
+  "final_close": {
+    "integrity": {
+      "status": "clean",
+      "overall": 100,
+      "clean": true
+    },
+    "qa_header": 403,
+    "test_shaped": 400,
+    "clean_journal": true,
+    "clean_planner": true,
+    "clean_gallery": true,
+    "clean_calendar": true,
+    "activity": {
+      "owner_visible_room_leave": false,
+      "note": "False is expected \u2014 room-leave failures stay non-owner-visible"
+    },
+    "contamination_incident": {
+      "what": "Close-script mistakenly POSTed ARIA-QA without QA header (unguarded call)",
+      "id": "0c4ea849fa",
+      "action": "Immediately DELETE /api/planner/tasks/0c4ea849fa \u2014 confirmed absent from snapshot",
+      "integrity_after": "clean/100"
+    }
+  },
+  "isol_mutations_complete": {
+    "create": {
+      "status": 200,
+      "id": "1366c115"
+    },
+    "edit": {
+      "status": 200,
+      "ok": true,
+      "content": "ARIA-3CC-ISOL-J3"
+    },
+    "search": {
+      "status": 200,
+      "n": 0
+    },
+    "delete": {
+      "status": 200,
+      "ok": true
+    },
+    "search_after_delete": {
+      "n": 0
+    },
+    "enc_export": {
+      "status": 200,
+      "ok": true,
+      "has_export": true
+    },
+    "enc_import_wrong": {
+      "status": 400,
+      "ok": false,
+      "message": "Wrong password or corrupt file"
+    },
+    "enc_import_ok": {
+      "status": 200,
+      "ok": true,
+      "merged": true
+    },
+    "cal_create": {
+      "status": 200,
+      "body": {
+        "ok": true,
+        "target": "planner",
+        "event": {
+          "id": "b59bab82d8",
+          "title": "ARIA-3CC-ISOL-CAL2",
+          "start_time": "2099-07-01T14:00:00",
+          "end_time": "2099-07-01T14:30:00"
+        },
+        "item_id": "planner:b59bab82d8"
+      }
+    },
+    "cal_update_tries": [
+      {
+        "id": "planner:b59bab82d8",
+        "status": 200,
+        "body": {
+          "ok": true,
+          "event": {
+            "id": "b59bab82d8",
+            "title": "ARIA-3CC-ISOL-CAL2-EDIT",
+            "start_time": "2099-07-01T14:00:00",
+            "end_time": "2099-07-01T14:30:00",
+            "description": "",
+            "recurrence": ""
+          }
+        }
+      }
+    ],
+    "cal_delete": {
+      "id": "planner:b59bab82d8",
+      "status": 200,
+      "body": {
+        "ok": true,
+        "event": {
+          "id": "b59bab82d8",
+          "title": "ARIA-3CC-ISOL-CAL2-EDIT",
+          "start_time": "2099-07-01T14:00:00",
+          "end_time": "2099-07-01T14:30:00",
+          "description": "",
+          "recurrence": ""
+        }
+      }
+    },
+    "live_journal_clean": true,
+    "live_planner_clean": true,
+    "live_calendar_clean": true,
+    "integrity": {
+      "status": "clean",
+      "overall": 100,
+      "clean": true
+    }
+  },
+  "status_summary": {
+    "journal": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "planner": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "calendar": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "documents": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "gallery": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "voice": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "presence": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "video": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "browser": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "maker": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "meme": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "vision": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "connections": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION",
+    "audit": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION"
+  },
+  "all_domain_repaired": true,
+  "registry_34": {
+    "total": 34,
+    "ids": [
+      "chat",
+      "flytying",
+      "health",
+      "mission",
+      "documents",
+      "planner",
+      "calendar",
+      "gallery",
+      "search",
+      "coding",
+      "projects",
+      "memory",
+      "voice",
+      "repair",
+      "integrity",
+      "home",
+      "automation",
+      "providers",
+      "home_automation",
+      "presence",
+      "journal",
+      "video",
+      "audio",
+      "browser",
+      "maker",
+      "meme",
+      "vision",
+      "connections",
+      "settings",
+      "capabilities",
+      "integrations",
+      "audit",
+      "security",
+      "actions"
+    ],
+    "domain_3cc": [
+      "journal",
+      "planner",
+      "calendar",
+      "documents",
+      "gallery",
+      "voice",
+      "presence",
+      "video",
+      "browser",
+      "maker",
+      "meme",
+      "vision",
+      "connections",
+      "audit"
+    ],
+    "missing_from_domain_list": []
+  }
+}

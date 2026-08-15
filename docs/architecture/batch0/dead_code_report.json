@@ -1,0 +1,12 @@
+{
+  "method": "ast-import reachability heuristic (not coverage)",
+  "never_imported_count": 0,
+  "never_imported_sample": [],
+  "known_dead_from_architecture_research": [
+    "jarvis/job_framework.py",
+    "jarvis/local_router.py::try_local_route",
+    "jarvis/functiongemma_router.py::try_functiongemma_route",
+    "jarvis/extensions/journal/api.py register_api unwired",
+    "jarvis/extensions/git/api.py register_api unwired"
+  ]
+}

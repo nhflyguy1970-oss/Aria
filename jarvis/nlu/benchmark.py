@@ -196,12 +196,38 @@ def run_benchmark(*, force: bool = False) -> dict[str, Any]:
         }
         save_placement(placement)
         return placement
-    results.sort(key=lambda r: r["score"])
-    winner = results[0]
+    # C2: accuracy gate — latency alone must never crown a 0%-accurate classifier.
+    min_acc = float(os.getenv("JARVIS_NLU_MIN_INTENT_ACCURACY", "0.5"))
+    eligible = [r for r in results if float(r.get("intent_accuracy") or 0) >= min_acc]
+    if not eligible:
+        placement = {
+            "model": "structure",
+            "device": "cpu",
+            "source": "accuracy_gate_fallback",
+            "selection_reason": (
+                f"No classifier met intent_accuracy >= {min_acc} "
+                f"(best measured {max(float(r.get('intent_accuracy') or 0) for r in results):.0%}). "
+                "Using structural NLU until a competent classifier wins."
+            ),
+            "benchmark_at": time.time(),
+            "benchmark_date": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
+            "hardware_fingerprint": _hardware_fingerprint(),
+            "version": "1.1",
+            "results": results,
+            "force": force,
+            "min_intent_accuracy": min_acc,
+        }
+        save_placement(placement)
+        _write_report(placement)
+        return placement
+    eligible.sort(key=lambda r: r["score"])
+    winner = eligible[0]
     device = winner["device"]
     reason = (
-        f"Lowest composite score (latency {winner['warm_latency_ms']}ms warm, "
-        f"accuracy {int(winner['intent_accuracy'] * 100)}%, JSON {int(winner['json_correct_rate'] * 100)}%). "
+        f"Lowest composite score among accuracy-eligible models "
+        f"(latency {winner['warm_latency_ms']}ms warm, "
+        f"accuracy {int(winner['intent_accuracy'] * 100)}%, "
+        f"JSON {int(winner['json_correct_rate'] * 100)}%, min_acc={min_acc}). "
     )
     if device == "cpu":
         reason += "CPU chosen to keep primary GPU free for main inference."
@@ -218,9 +244,11 @@ def run_benchmark(*, force: bool = False) -> dict[str, Any]:
         "benchmark_date": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime()),
         "average_latency_ms": winner["warm_latency_ms"],
         "hardware_fingerprint": _hardware_fingerprint(),
-        "version": "1.0",
+        "version": "1.1",
         "results": results,
         "force": force,
+        "min_intent_accuracy": min_acc,
+        "intent_accuracy": winner["intent_accuracy"],
     }
     save_placement(placement)
     _write_report(placement)

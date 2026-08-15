@@ -102,13 +102,23 @@ def assess_coding_root(assistant: Any | None = None) -> dict[str, Any]:
     git_status = ""
     if active_root or engine_root:
         try:
+            import subprocess
+
             from jarvis import git_util
 
             root_path = Path(engine_root or active_root)
             repo = git_util.is_repo(root_path)
             if repo:
                 branch = git_util.current_branch(root_path) or ""
-                git_status = (git_util.status(root_path) or "")[:500]
+                # Bound UI status — full-tree `git status` can hang the Coding Room.
+                st = subprocess.run(
+                    ["git", "-C", str(root_path), "status", "-sb"],
+                    capture_output=True,
+                    text=True,
+                    timeout=8,
+                    check=False,
+                )
+                git_status = ((st.stdout or "") + (st.stderr or "")).strip()[:500]
         except Exception as exc:
             warnings.append(
                 {

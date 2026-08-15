@@ -1,0 +1,53 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "home_automation",
+  "capability": "Vault-backed HA fail-closed while OWNER_LOCKED",
+  "captured_at": "2026-08-13T17:42:00+00:00",
+  "result": "PASS while locked — unlock restore PASS (see ha_unlock_restore.json)",
+  "unlocked_before_lock": {
+    "ha_configured": true,
+    "ha_connected": true,
+    "ha_token_set": true,
+    "ha_locked": false,
+    "health_ready": true,
+    "token_vaulted": true,
+    "token_present": true,
+    "hint": "Ready — control devices from Smart Home Home",
+    "asks_paste": false
+  },
+  "lock": {
+    "http_status": 200,
+    "ok": true,
+    "state": "OWNER_LOCKED",
+    "vault_unlocked": false,
+    "mode": "hard",
+    "lock_api_ms": 16
+  },
+  "while_locked": {
+    "ha_configured": true,
+    "ha_connected": false,
+    "ha_token_set": true,
+    "ha_locked": true,
+    "conn_ok": false,
+    "conn_message": "Home Assistant is locked. Unlock Aria with your Master Password.",
+    "health_ready": false,
+    "health_connected": false,
+    "token_vaulted": true,
+    "token_present": true,
+    "hint": "Unlock Aria to use the vault-backed Home Assistant credential",
+    "asks_paste": false,
+    "secret_in_response": false,
+    "env_fallback_used": false
+  },
+  "overlay": {
+    "shown_via": "jarvisShowLock after API lock",
+    "title": "ARIA locked",
+    "hint": "Enter your Aria Master Password. One password unlocks the house.",
+    "note": "API lock succeeded immediately. Overlay was not yet visible until jarvisShowLock; checkLock poller had not painted."
+  },
+  "devices_toggled": false,
+  "scenes_clicked": false,
+  "secrets_in_evidence": false,
+  "jarvis_env_read": false,
+  "waiting": "cleared — Jeff unlocked; ha_unlock_restore.json PASS"
+}

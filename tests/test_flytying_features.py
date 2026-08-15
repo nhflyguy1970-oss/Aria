@@ -21,6 +21,33 @@ def test_expand_query_bwo():
     assert "blue wing olive" in expanded or "baetis" in expanded
 
 
+def test_query_variants_are_or_not_and():
+    from jarvis.flytying.aliases import query_variants
+
+    variants, used = query_variants("elk hair caddis")
+    assert "elk hair caddis" in variants
+    assert "ehc" in variants or "elk-hair caddis" in variants
+    # Must not require AND of unrelated alias siblings
+    joined = " ".join(variants)
+    assert variants[0] == "elk hair caddis"
+
+
+def test_unified_search_caddis_finds_named_patterns():
+    from jarvis.flytying.search import unified_search
+
+    out = unified_search("elk hair caddis", limit=20, semantic=False)
+    assert out["ok"] is True
+    names = [str(r.get("name") or "") for r in out.get("results") or []]
+    assert any("elk hair caddis" in n.lower() for n in names), names[:10]
+
+    out2 = unified_search("caddis", limit=20, semantic=False)
+    assert out2["ok"] is True
+    names2 = [str(r.get("name") or "") for r in out2.get("results") or []]
+    assert any("caddis" in n.lower() for n in names2[:8]), names2[:8]
+    # Must not be only parachute ants from broken AND-alias expansion
+    assert not (len(names2) <= 2 and all("ant" in n.lower() for n in names2))
+
+
 def test_parse_hook_sizes():
     p = parse_hook("size 14 dry fly hook")
     assert p["size_min"] == 14

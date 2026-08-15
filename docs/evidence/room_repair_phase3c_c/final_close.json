@@ -1,0 +1,23 @@
+{
+  "integrity": {
+    "status": "clean",
+    "overall": 100,
+    "clean": true
+  },
+  "qa_header": 403,
+  "test_shaped": 400,
+  "clean_journal": true,
+  "clean_planner": true,
+  "clean_gallery": true,
+  "clean_calendar": true,
+  "activity": {
+    "owner_visible_room_leave": false,
+    "note": "False is expected \u2014 room-leave failures stay non-owner-visible"
+  },
+  "contamination_incident": {
+    "what": "Close-script mistakenly POSTed ARIA-QA without QA header (unguarded call)",
+    "id": "0c4ea849fa",
+    "action": "Immediately DELETE /api/planner/tasks/0c4ea849fa \u2014 confirmed absent from snapshot",
+    "integrity_after": "clean/100"
+  }
+}

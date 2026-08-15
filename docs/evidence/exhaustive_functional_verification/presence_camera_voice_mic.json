@@ -1,0 +1,60 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "presence / voice / vision",
+  "capability": "Presence camera start/stop; Voice mic honest control; Vision empty OCR",
+  "captured_at": "2026-08-14T16:33:42Z",
+  "result": "PASS — hardware gates exercised without enroll, recordings, or Vision analyze. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked": true,
+  "health_home": 200,
+  "presence": {
+    "hash": "#presence",
+    "h2": "Presence",
+    "start": {
+      "status": "Camera on — fist drag · pinch click",
+      "permission": "granted",
+      "video": "640x480 live track; no screenshot of preview"
+    },
+    "stop": {
+      "status": "Camera off",
+      "live_tracks": 0
+    },
+    "enroll_camera_off": "PASS — Start camera first — enroll needs a live frame",
+    "enroll_posted": false,
+    "leave_health_return": {
+      "left_hash": "#health",
+      "returned_hash": "#presence",
+      "returned_h2": "Presence",
+      "camera_stayed_off": true,
+      "result": "PASS"
+    }
+  },
+  "voice": {
+    "hash": "#voice",
+    "h2": "Voice",
+    "status": "State: idle · Duplex: off · STT: whisper",
+    "mic_btn": {
+      "disabled": false,
+      "title": "Hold for server Whisper (see Settings)",
+      "listening": false
+    },
+    "ptt_btn": {
+      "disabled": false,
+      "title": "Hold to talk (local Whisper)"
+    },
+    "microphone_permission": "granted",
+    "hold_not_clicked": true,
+    "reason": "PTT start POSTs /api/audio/record and can write a live recording / chat transcript",
+    "voice_smoke_not_clicked": true,
+    "save_settings_not_clicked": true
+  },
+  "vision": {
+    "hash": "#vision",
+    "h2": "Vision",
+    "status": "State: idle · Model: moondream:latest · Mode: quality",
+    "empty_ocr": "PASS — toast Enter an image path or attach via Chat; analyze not POSTed",
+    "remember_import_not_clicked": true
+  },
+  "ha_scenes_clicked": false,
+  "next_exact_capability": "Home Automation scenes / device toggles — STOP unless Jeff explicitly authorizes. Do not click unattended."
+}

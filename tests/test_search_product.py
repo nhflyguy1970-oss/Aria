@@ -58,15 +58,25 @@ def test_search_result_contract():
 
 def test_intent_classification():
     from jarvis.search_product.intent import classify_intent, select_corpora
+    from jarvis.search_product.terminology import FACETS
 
     code = classify_intent("find the python function import")
     assert code["primary"] == "code"
     web = classify_intent("latest news today online")
     assert "web" in web["intents"]
-    enabled = {"documents", "memory", "code", "web"}
+    enabled = {f for f in FACETS if f != "everything"}
     picked = select_corpora(code, facets=None, enabled=enabled)
     assert "code" in picked
     assert "memory" in picked
+    everything = select_corpora(classify_intent("alpha beta"), facets=None, enabled=enabled)
+    from jarvis.search_product.intent import _FAST_EVERYTHING
+
+    assert everything == [f for f in _FAST_EVERYTHING if f in enabled]
+    assert "web" not in everything
+    assert "code" not in everything
+    # Explicit everything facet still fans out.
+    full = select_corpora(classify_intent("alpha beta"), facets=["everything"], enabled=enabled)
+    assert full == [f for f in FACETS if f != "everything"]
 
 
 def test_ranking_and_dedupe():
@@ -152,14 +162,78 @@ def test_history_and_saved(search_data):
 
 
 def test_settings_opt_in(search_data):
+    from jarvis.search_product.terminology import FACETS
     from jarvis.search_product.settings import enabled_corpora_set, load_settings, save_settings
 
     s = save_settings({"opt_in_corpora": {"gallery": True, "home_assistant": False}})
     enabled = enabled_corpora_set(s)
+    assert enabled == {f for f in FACETS if f != "everything"}
     assert "gallery" in enabled
-    assert "home_assistant" not in enabled
+    assert "home_assistant" in enabled
     assert "documents" in enabled
     assert load_settings()["opt_in_corpora"]["gallery"] is True
+
+
+def test_pipeline_reports_partial_and_all_failures(search_data, monkeypatch):
+    from jarvis.search_product import pipeline as pipe
+    from jarvis.search_product.contract import make_result
+
+    def ok_docs(q, limit):
+        return [
+            make_result(
+                source="documents",
+                source_label="Documents",
+                title="Hit",
+                summary=q,
+                preview=q,
+                score=0.8,
+                open_action={"view": "documents", "query": q},
+            )
+        ]
+
+    def broken(q, limit):
+        raise RuntimeError("corpus exploded")
+
+    monkeypatch.setattr(
+        "jarvis.search_product.settings.load_settings",
+        lambda: {
+            "enabled_corpora": ["documents", "memory"],
+            "opt_in_corpora": {},
+            "parallel_retrieval": False,
+            "record_history": False,
+            "max_results": 10,
+            "default_mode": "browse",
+            "code_mode": "auto",
+        },
+    )
+    monkeypatch.setattr(
+        "jarvis.search_product.settings.enabled_corpora_set",
+        lambda _s=None: {"documents", "memory"},
+    )
+    monkeypatch.setattr(pipe, "load_settings", lambda: {
+        "enabled_corpora": ["documents", "memory"],
+        "opt_in_corpora": {},
+        "parallel_retrieval": False,
+        "record_history": False,
+        "max_results": 10,
+        "default_mode": "browse",
+        "code_mode": "auto",
+    })
+    monkeypatch.setattr(pipe, "enabled_corpora_set", lambda _s=None: {"documents", "memory"})
+    monkeypatch.setitem(pipe.RETRIEVERS, "documents", ok_docs)
+    monkeypatch.setitem(pipe.RETRIEVERS, "memory", broken)
+
+    partial = pipe.run_search("warranty", facets=["documents", "memory"], parallel=False)
+    assert partial["ok"] is True
+    assert partial["degraded"] is True
+    assert partial["failures"][0]["corpus"] == "memory"
+    assert set(partial["searched"]) == {"documents", "memory"}
+
+    monkeypatch.setitem(pipe.RETRIEVERS, "documents", broken)
+    all_failed = pipe.run_search("warranty", facets=["documents", "memory"], parallel=False)
+    assert all_failed["ok"] is False
+    assert all_failed["degraded"] is True
+    assert {f["corpus"] for f in all_failed["failures"]} == {"documents", "memory"}
 
 
 def test_unified_search_delegates(search_data, monkeypatch):

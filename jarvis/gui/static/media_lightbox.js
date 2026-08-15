@@ -141,10 +141,13 @@ async function queueImageEdit(imagePath, prompt, regionKey, statusEl, onDone, de
         try {
           if (statusEl) statusEl.textContent = out.message || "Queued…";
           const result = await pollFn(out.job_id);
-          if (result.image_path) window.showGeneratedImage?.(result.image_path, result.image_name);
+          if (!result.image_path && !result.image_name) {
+            throw new Error("Edit finished but no image path was returned");
+          }
+          window.showGeneratedImage?.(result.image_path, result.image_name);
           if (statusEl) statusEl.textContent = "Edit complete";
           window.loadGallery?.();
-          onDone?.();
+          onDone?.({ completed: true, result });
           return true;
         } catch (err) {
           if (statusEl) statusEl.textContent = err.message || "Edit failed";
@@ -168,10 +171,13 @@ async function queueImageEdit(imagePath, prompt, regionKey, statusEl, onDone, de
         };
         try {
           const result = await poll(out.job_id);
-          if (result.image_path) window.showGeneratedImage?.(result.image_path, result.image_name);
+          if (!result.image_path && !result.image_name) {
+            throw new Error("Edit finished but no image path was returned");
+          }
+          window.showGeneratedImage?.(result.image_path, result.image_name);
           statusEl.textContent = "Edit complete";
           window.loadGallery?.();
-          onDone?.();
+          onDone?.({ completed: true, result });
           return true;
         } catch (err) {
           statusEl.textContent = err.message || "Edit failed";
@@ -224,11 +230,16 @@ function initImageLightbox() {
     if (btn) btn.disabled = true;
     if (statusEl) statusEl.textContent = "Queuing edit…";
     const denoise = document.getElementById("imageLightboxDenoise")?.value;
-    const ok = await queueImageEdit(lightboxImagePath, prompt, regionKey, statusEl, () => {
+    const ok = await queueImageEdit(lightboxImagePath, prompt, regionKey, statusEl, (info) => {
       closeImageLightbox();
       const st = document.getElementById("statusText");
-      if (st) st.textContent = "Image edit running…";
-      window.showAriaToast?.("Image edit queued", "ok", 2500);
+      if (info?.completed) {
+        if (st) st.textContent = "Image edit complete";
+        window.showAriaToast?.("Image edit complete", "ok", 2500);
+      } else {
+        if (st) st.textContent = "Image edit running…";
+        window.showAriaToast?.("Image edit queued", "ok", 2500);
+      }
     }, denoise);
     if (!ok && statusEl && !statusEl.textContent) statusEl.textContent = "Edit failed";
     if (btn) btn.disabled = false;

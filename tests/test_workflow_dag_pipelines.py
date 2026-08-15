@@ -183,7 +183,7 @@ def test_retry_on_failure_compat(pipe_env, monkeypatch):
 
 def test_workflow_dag_run_in_automation_engine(pipe_env, monkeypatch):
     from jarvis.automation.pipelines.storage import save_pipeline
-    from jarvis.intelligence.automation_engine import AutomationRule, _default_run
+    from jarvis.automation.engine import AutomationRule, _default_run
 
     save_pipeline(
         {

@@ -101,7 +101,8 @@ def test_list_providers_includes_ollama():
     providers = list_providers()
     ids = {p["id"] for p in providers}
     assert "ollama" in ids
-    assert "openai" in ids
+    assert "openai" not in ids
+    assert all(p.get("alive") is not None for p in providers)
 
 
 def test_client_timeout_classification_fixed():
@@ -131,6 +132,22 @@ def test_api_module_registers():
     from jarvis.provider_health.api import register_product_routes
 
     assert callable(register_product_routes)
+
+
+def test_provider_recover_request_annotation_resolves():
+    """Regression: local Request import + future annotations made FastAPI treat
+    `request` as a required query param, breaking Chat auto-recovery."""
+    import inspect
+
+    from fastapi import FastAPI, Request
+    from jarvis.provider_health.api import register_product_routes
+
+    app = FastAPI()
+    register_product_routes(app, None)
+    route = next(r for r in app.routes if getattr(r, "path", None) == "/api/provider/recover")
+    hints = inspect.get_annotations(route.endpoint, eval_str=True)
+    assert hints.get("request") is Request
+    assert not route.dependant.query_params
 
 
 def test_dashboard_and_mission_bridges():

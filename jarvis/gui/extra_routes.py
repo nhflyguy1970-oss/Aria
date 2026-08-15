@@ -19,8 +19,22 @@ from jarvis.cache_state import (
 from jarvis.config import DATA_DIR
 
 
+class _LazyAssistantAttr:
+    def __init__(self, assistant, attr: str):
+        self._assistant = assistant
+        self._attr = attr
+
+    def __getattr__(self, name: str):
+        return getattr(getattr(self._assistant, self._attr), name)
+
+
 def register_routes(app, assistant):
-    journal = assistant.journal
+    if assistant.__class__.__name__ == "_AssistantProxy":
+        journal = _LazyAssistantAttr(assistant, "journal")
+    else:
+        journal = assistant.journal
+
+    from jarvis.product_registration import register as register_product
 
     # Gallery product routes must register before /api/gallery/{name}
     from jarvis.gallery_product.api import register_routes as register_gallery_product
@@ -29,18 +43,15 @@ def register_routes(app, assistant):
     from jarvis.vision_product.api import register_routes as register_vision_product
     from jarvis.voice_product.api import register_routes as register_voice_product
 
-    register_gallery_product(app, assistant)
-    register_image_generation(app, assistant)
-    register_video_generation(app, assistant)
-    register_voice_product(app, assistant)
-    register_vision_product(app, assistant)
+    register_product("gallery_product", register_gallery_product, app, assistant, required=True)
+    register_product("image_generation", register_image_generation, app, assistant, required=True)
+    register_product("video_generation", register_video_generation, app, assistant, required=True)
+    register_product("voice_product", register_voice_product, app, assistant, required=True)
+    register_product("vision_product", register_vision_product, app, assistant, required=True)
 
-    try:
-        from jarvis.capabilities_product.api import register_product_routes as register_capabilities_product
+    from jarvis.capabilities_product.api import register_product_routes as register_capabilities_product
 
-        register_capabilities_product(app, assistant)
-    except Exception:
-        pass
+    register_product("capabilities_product", register_capabilities_product, app, assistant)
 
     @app.get("/api/journal")
     def journal_all():
@@ -299,7 +310,9 @@ def register_routes(app, assistant):
     def journal_daily(day: str = ""):
         from jarvis.modules.journal import _today
 
-        return journal.daily_get(day or _today())
+        # Owner Journal never shows test/QA residue. Isolated DATA_DIR tests may
+        # still write those bullets; Integrity purge still scrubs the store.
+        return journal.daily_get(day or _today(), include_qa=False)
 
     @app.post("/api/journal/daily")
     async def journal_daily_add(
@@ -316,9 +329,13 @@ def register_routes(app, assistant):
                 hm = validate_time_hm(time)
             except ValueError as exc:
                 return JSONResponse(status_code=400, content={"ok": False, "message": str(exc)})
+        try:
+            bullet = journal.daily_add(content, bullet_type, day=day or None, time=hm)
+        except ValueError as exc:
+            return JSONResponse(status_code=400, content={"ok": False, "message": str(exc)})
         return {
             "ok": True,
-            "bullet": journal.daily_add(content, bullet_type, day=day or None, time=hm),
+            "bullet": bullet,
         }
 
     @app.get("/api/briefing")
@@ -411,10 +428,12 @@ def register_routes(app, assistant):
 
     @app.post("/api/documents/import-folder")
     async def documents_import_folder(request: Request):
+        from jarvis.async_util import run_sync
         from jarvis.document_services import import_folder
 
         body = await request.json()
-        return import_folder((body.get("path") or "").strip())
+        # Never block the HTTP event loop on home-directory scans.
+        return await run_sync(import_folder, (body.get("path") or "").strip())
 
     @app.post("/api/documents/classify")
     async def documents_classify(request: Request):
@@ -449,90 +468,66 @@ def register_routes(app, assistant):
     try:
         from jarvis.integrations_product.api import register_product_routes as register_integrations_product
 
-        register_integrations_product(app, assistant)
+        if not register_product("integrations_product", register_integrations_product, app, assistant):
+            @app.get("/api/integrations/secrets")
+            def integrations_secrets_get():
+                from jarvis.integration_secrets import secrets_status
+
+                return {"ok": True, **secrets_status()}
+
+            @app.post("/api/integrations/secrets")
+            async def integrations_secrets_post(request: Request):
+                from jarvis.integration_secrets import save_secrets
+
+                try:
+                    body = await request.json()
+                except Exception:
+                    body = {}
+                if not isinstance(body, dict):
+                    return JSONResponse(
+                        status_code=400, content={"ok": False, "message": "JSON body required"}
+                    )
+                return save_secrets(body)
     except Exception:
-        @app.get("/api/integrations/secrets")
-        def integrations_secrets_get():
-            from jarvis.integration_secrets import secrets_status
+        # Outer catch only for import errors before register_product — still fail-loud via register
+        register_product(
+            "integrations_product",
+            lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("integrations_product import failed")),
+            app,
+            assistant,
+        )
 
-            return {"ok": True, **secrets_status()}
+    from jarvis.search_product.api import register_product_routes as register_search_product
+    from jarvis.settings_product.api import register_product_routes as register_settings_product
+    from jarvis.dashboard_product.api import register_product_routes as register_dashboard_product
+    from jarvis.layouts_product.api import register_product_routes as register_layouts_product
+    from jarvis.notifications_product.api import register_product_routes as register_notifications_product
+    from jarvis.health_product.api import register_product_routes as register_health_product
+    from jarvis.certification_product.api import register_product_routes as register_certification_product
+    from jarvis.repair_product.api import register_product_routes as register_repair_product
+    from jarvis.integrity_product.api import register_product_routes as register_integrity_product
+    from jarvis.shell.api import register_product_routes as register_shell_product
+    from jarvis.calendar_api import register_product_routes as register_calendar_product
+    from jarvis.provider_health.api import register_product_routes as register_provider_health
+    from jarvis.latency_observability.api import register_product_routes as register_latency
 
-        @app.post("/api/integrations/secrets")
-        async def integrations_secrets_post(request: Request):
-            from jarvis.integration_secrets import save_secrets
+    register_product("search_product", register_search_product, app, assistant)
+    register_product("settings_product", register_settings_product, app, assistant)
+    register_product("dashboard_product", register_dashboard_product, app, assistant)
+    register_product("layouts_product", register_layouts_product, app, assistant)
+    register_product("notifications_product", register_notifications_product, app, assistant)
+    register_product("health_product", register_health_product, app, assistant)
+    register_product("certification_product", register_certification_product, app, assistant)
+    register_product("repair_product", register_repair_product, app, assistant)
+    register_product("integrity_product", register_integrity_product, app, assistant)
+    register_product("shell", register_shell_product, app, assistant)
+    register_product("calendar", register_calendar_product, app, assistant)
+    register_product("provider_health", register_provider_health, app, assistant)
+    register_product("latency_observability", register_latency, app, assistant)
 
-            try:
-                body = await request.json()
-            except Exception:
-                body = {}
-            if not isinstance(body, dict):
-                return JSONResponse(
-                    status_code=400, content={"ok": False, "message": "JSON body required"}
-                )
-            return save_secrets(body)
+    from jarvis.activity_api import register_activity_routes
 
-    try:
-        from jarvis.search_product.api import register_product_routes as register_search_product
-
-        register_search_product(app, assistant)
-    except Exception:
-        pass
-
-    try:
-        from jarvis.settings_product.api import register_product_routes as register_settings_product
-
-        register_settings_product(app, assistant)
-    except Exception:
-        pass
-
-    try:
-        from jarvis.dashboard_product.api import register_product_routes as register_dashboard_product
-
-        register_dashboard_product(app, assistant)
-    except Exception:
-        pass
-
-    try:
-        from jarvis.layouts_product.api import register_product_routes as register_layouts_product
-
-        register_layouts_product(app, assistant)
-    except Exception:
-        pass
-
-    try:
-        from jarvis.notifications_product.api import register_product_routes as register_notifications_product
-
-        register_notifications_product(app, assistant)
-    except Exception:
-        pass
-
-    try:
-        from jarvis.shell.api import register_product_routes as register_shell_product
-
-        register_shell_product(app, assistant)
-    except Exception:
-        pass
-
-    try:
-        from jarvis.calendar_api import register_product_routes as register_calendar_product
-
-        register_calendar_product(app, assistant)
-    except Exception:
-        pass
-
-    try:
-        from jarvis.provider_health.api import register_product_routes as register_provider_health
-
-        register_provider_health(app, assistant)
-    except Exception:
-        pass
-
-    try:
-        from jarvis.latency_observability.api import register_product_routes as register_latency
-
-        register_latency(app, assistant)
-    except Exception:
-        pass
+    register_product("activity_inbox", register_activity_routes, app, assistant)
 
     @app.get("/api/knowledge")
     def knowledge_list():
@@ -1089,12 +1084,25 @@ def register_routes(app, assistant):
         return {"ok": True, "bullet": journal.collection_add(name, content, bullet_type)}
 
     @app.patch("/api/journal/bullet/{bullet_id}")
-    async def journal_bullet_update(
-        bullet_id: str,
-        content: str = Form(""),
-        status: str = Form(""),
-        bullet_type: str = Form(""),
-    ):
+    async def journal_bullet_update(bullet_id: str, request: Request):
+        # Owner UI posts multipart/form-data; also accept JSON so API clients
+        # do not get a silent no-op success when Content-Type is application/json.
+        content = ""
+        status = ""
+        bullet_type = ""
+        ctype = (request.headers.get("content-type") or "").lower()
+        if "application/json" in ctype:
+            body = await request.json()
+            if not isinstance(body, dict):
+                body = {}
+            content = str(body.get("content") or body.get("text") or "")
+            status = str(body.get("status") or "")
+            bullet_type = str(body.get("bullet_type") or body.get("type") or "")
+        else:
+            form = await request.form()
+            content = str(form.get("content") or "")
+            status = str(form.get("status") or "")
+            bullet_type = str(form.get("bullet_type") or "")
         kw = {}
         if content:
             kw["content"] = content
@@ -1102,6 +1110,11 @@ def register_routes(app, assistant):
             kw["status"] = status
         if bullet_type:
             kw["bullet_type"] = bullet_type
+        if not kw:
+            return JSONResponse(
+                status_code=400,
+                content={"ok": False, "message": "No updatable fields provided"},
+            )
         b = journal.bullet_update(bullet_id, **kw)
         if not b:
             return JSONResponse(status_code=404, content={"ok": False})
@@ -1173,8 +1186,11 @@ def register_routes(app, assistant):
                     "message": "Non-merge import wipes journal data. Set confirm_wipe=true to proceed.",
                 },
             )
+        # Prefer body["export"] (UI contract). Fall back to body for raw envelope POSTs.
+        # decrypt_import normalizes accidental {ok, export: envelope} wrappers.
+        envelope = body["export"] if isinstance(body.get("export"), (dict, str, bytes)) else body
         try:
-            payload = decrypt_import(body.get("export") or body, password)
+            payload = decrypt_import(envelope, password)
         except ValueError as e:
             return JSONResponse(status_code=400, content={"ok": False, "message": str(e)})
         except RuntimeError as e:
@@ -1613,6 +1629,12 @@ def register_routes(app, assistant):
         if permanent:
             path.unlink(missing_ok=False)
             invalidate_gallery()
+            try:
+                from jarvis.gallery_product.consistency import on_gallery_asset_removed
+
+                on_gallery_asset_removed(path.name, path=str(path))
+            except Exception:
+                pass
             return {"ok": True, "deleted": path.name, "permanent": True}
         from jarvis.gallery_product.soft_delete import soft_delete
 
@@ -1667,7 +1689,11 @@ def register_routes(app, assistant):
                     content={"ok": False, "restricted": True, "message": "Restricted video"},
                 )
         except Exception:
-            pass
+            # Fail closed: never serve the asset if restriction check cannot run
+            return JSONResponse(
+                status_code=403,
+                content={"ok": False, "restricted": True, "message": "Restricted video (check failed)"},
+            )
         for root in (VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR):
             path = (root / safe).resolve()
             if (
@@ -2185,13 +2211,32 @@ def register_routes(app, assistant):
 
     @app.get("/api/homeassistant/entities")
     def ha_entities(domain: str = "", limit: int = 80):
-        from jarvis.home_assistant import ha_enabled, list_states
+        from jarvis.home_assistant import ha_credential_locked, ha_enabled, list_states
 
         if not ha_enabled():
+            if ha_credential_locked():
+                return JSONResponse(
+                    status_code=400,
+                    content={
+                        "ok": False,
+                        "locked": True,
+                        "message": "Home Assistant is locked. Unlock Aria to load entities.",
+                    },
+                )
             return JSONResponse(
                 status_code=400, content={"ok": False, "message": "Home Assistant disabled"}
             )
-        states = list_states(refresh=True)
+        try:
+            states = list_states(refresh=True)
+        except Exception as exc:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "ok": False,
+                    "message": str(exc) or "Home Assistant unreachable",
+                    "entities": [],
+                },
+            )
         dom = (domain or "").strip().lower()
         if dom:
             states = [s for s in states if (s.get("entity_id") or "").startswith(f"{dom}.")]
@@ -2341,14 +2386,12 @@ def register_routes(app, assistant):
 
     @app.get("/api/audit")
     def audit_get(refresh: bool = False):
-        from jarvis.system_audit import get_audit_status, run_audit
+        from jarvis.system_audit import get_audit_status
 
-        if refresh:
-            return run_audit(use_cache=False)
-        status = get_audit_status()
-        if status.get("running") or status.get("ok"):
-            return status
-        return run_audit(use_cache=False)
+        # GET never starts a run. Entering the Audit Room must be read-only.
+        # POST /api/audit/run is the only start. `refresh` is ignored on GET.
+        _ = refresh
+        return get_audit_status()
 
     @app.post("/api/audit/run")
     def audit_run():
@@ -2468,9 +2511,8 @@ def register_routes(app, assistant):
 
     @app.get("/api/workflows")
     def workflows_list(q: str = ""):
-        from jarvis.workflow_learning import ensure_demo_workflow, list_workflows
+        from jarvis.workflow_learning import list_workflows
 
-        ensure_demo_workflow()
         workflows = list_workflows(query=q)
         return {
             "ok": True,
@@ -2741,14 +2783,18 @@ def register_routes(app, assistant):
     try:
         from jarvis.intelligence.routes import register_intelligence_routes
 
-        register_intelligence_routes(app, assistant)
+        register_product("intelligence", register_intelligence_routes, app, assistant)
         from jarvis.automation.product_routes import register_automation_product_routes
 
-        register_automation_product_routes(app, assistant)
+        register_product("automation", register_automation_product_routes, app, assistant)
         from jarvis.specialists.routes import register_specialist_routes
 
-        register_specialist_routes(app, assistant)
+        register_product("specialists", register_specialist_routes, app, assistant)
     except Exception as exc:
-        import logging
-
-        logging.getLogger("jarvis.gui").warning("Intelligence routes not registered: %s", exc)
+        # Import-time failure before individual register_product calls
+        register_product(
+            "intelligence_automation_specialists",
+            lambda *_a, **_k: (_ for _ in ()).throw(exc),
+            app,
+            assistant,
+        )

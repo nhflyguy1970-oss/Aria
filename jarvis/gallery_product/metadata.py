@@ -73,6 +73,12 @@ def mark_generation(
     engine: str = "comfyui",
 ) -> dict[str, Any]:
     """Record generation provenance (called on create — not full Vision indexing)."""
+    from jarvis.production_guard import ProductionIsolationError, assert_owner_write_allowed
+
+    try:
+        assert_owner_write_allowed(prompt, project, store="gallery")
+    except ProductionIsolationError as exc:
+        return {"ok": False, "error": str(exc)}
     return set_meta(
         name,
         {

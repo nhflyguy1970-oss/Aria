@@ -449,7 +449,10 @@
       btn.addEventListener("click", async (e) => {
         e.stopPropagation();
         const svc = row.dataset.svc;
-        if (!confirm(`Restart ${svc}?`)) return;
+        const restartOk = window.ariaConfirm
+          ? await window.ariaConfirm(`Restart ${svc}?`, { title: "Restart service", okLabel: "Restart" })
+          : window.confirm(`Restart ${svc}?`);
+        if (!restartOk) return;
         btn.disabled = true;
         const prev = btn.textContent;
         btn.textContent = "…";
@@ -495,7 +498,12 @@
 
   /* --- Server restart --- */
   async function restartJarvisServer() {
-    if (!confirm(`Restart ${typeof ariaName === "function" ? ariaName() : "ARIA"} server now? Chat will reconnect in a few seconds.`)) return;
+    const msg = `Restart ${typeof ariaName === "function" ? ariaName() : "ARIA"} server now? Chat will reconnect in a few seconds.`;
+    if (window.ariaConfirm) {
+      if (!(await window.ariaConfirm(msg, { title: "Restart Aria", okLabel: "Restart" }))) return;
+    } else if (!confirm(msg)) {
+      return;
+    }
     const btn = $("restartServerBtn");
     const prev = btn?.textContent;
     if (btn) {
@@ -591,7 +599,7 @@
   }
 
   function initServerRestart() {
-    $("restartServerBtn")?.addEventListener("click", restartJarvisServer);
+    // Owned by sidebar_chrome.js (Aria-themed confirm). Do not double-bind.
   }
 
   /* --- Upgrade restart (Tier 3 #24) --- */
@@ -613,12 +621,16 @@
   /* --- Keyboard shortcuts (Tier 4 #38) --- */
   function initShortcuts() {
     const modal = $("shortcutsModal");
-    $("shortcutsBtn")?.addEventListener("click", () => modal?.classList.remove("hidden"));
+    $("shortcutsBtn")?.addEventListener("click", () => {
+      window.AriaModalPortal?.ensure?.();
+      modal?.classList.remove("hidden");
+    });
     $("shortcutsCloseBtn")?.addEventListener("click", () => modal?.classList.add("hidden"));
     document.addEventListener("keydown", (e) => {
       if (e.target.matches("textarea, input") && !e.ctrlKey && !e.metaKey) return;
       if ((e.ctrlKey || e.metaKey) && e.key === "/") {
         e.preventDefault();
+        window.AriaModalPortal?.ensure?.();
         modal?.classList.toggle("hidden");
       }
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && e.shiftKey) {

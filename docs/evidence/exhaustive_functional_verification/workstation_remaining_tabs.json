@@ -1,0 +1,55 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "mission",
+  "capability": "Workstation remaining tabs + native #missionRoom hash",
+  "captured_at": "2026-08-15T19:49:00Z",
+  "result": "PASS WITH NOTES — #workstation Overview/Routing/Performance/Recovery/Connection all rendered distinct bodies. Meme leave/return restored Connection selected. Audit/Backup/Scan/Guided Repair execute/8780 link not clicked. #missionRoom is not a live door (no #missionRoom node; hash fell through to Chat How can I help?). NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "hash #workstation",
+    "hash": "#workstation",
+    "h2": "Mission Control"
+  },
+  "tabs": {
+    "overview": "PASS — Platform healthy · Phase STOPPED · Acceptance 96.2% · Production 99.6%; Health Brief DEGRADED (backup 37 days; refresh 1293 ms; probe 29/43; routing latency metric 20851.7 ms)",
+    "routing": "PASS — last route chat → Chat; avg latency 20851.7 ms; runtime/search/knowledge/tools 0%",
+    "performance": "PASS — cpu/ram/vram + Mission Control 1293.77 ms p50 · Aria 3.19 ms p50",
+    "recovery": "PASS — Guided Repair queue visible (9 active); Integrity 100/100 clean; Backup recommended. Execute/Scan not clicked",
+    "connection": "PASS — Mode in_process; heartbeat 0s; last API /api/mission-control latency 2227.8 ms; issues none. 8780 not opened"
+  },
+  "native_mission_room": {
+    "hash": "#missionRoom",
+    "result": "FAIL — element missing; owner lands Chat How can I help?",
+    "note": "Front Door Mission Control remains #workstation. Do not treat as house crash."
+  },
+  "leave_return": {
+    "leave": "workstation → #meme then #health",
+    "return": "#workstation",
+    "result": "PASS — Connection tab still selected"
+  },
+  "performance": {
+    "room_entry": "FAST",
+    "tab_switch": "FAST",
+    "overview_refresh_metric": "SLOW — 1293 ms p50 (owner-visible sluggish copy on Overview)",
+    "connection_last_api": "SLOW — 2227.8 ms",
+    "routing_latency_metric": "SLOW — 20851.7 ms displayed (metric, not a hung tab)"
+  },
+  "not_clicked": [
+    "Audit",
+    "Backup recommended",
+    "Scan now",
+    "Guided Repair execute",
+    "Open Platform Mission Control",
+    "Restart Server",
+    "Reconnect"
+  ],
+  "data_mutation": {
+    "repair_executed": false,
+    "journal_post": false
+  },
+  "owner_session": "OWNER_UNLOCKED throughout"
+}

@@ -1,0 +1,24 @@
+{
+  "credential": "GEMINI_API_KEY",
+  "vault_id": "provider.gemini.api_key",
+  "migrated_at": "2026-08-13T13:20:45+00:00",
+  "ok": true,
+  "legacy_retained": true,
+  "jarvis_env_mtime_unchanged_during_migrate": true,
+  "fingerprint": {
+    "length": 39,
+    "sha256_8": "1d60e833",
+    "prefix_class": "AIza"
+  },
+  "consumer": "integrations_product.secrets_bus.get_secret → test_connection(gemini)",
+  "provider_operation": {
+    "ok": true,
+    "auth": "ok",
+    "http_status": 200,
+    "latency_ms": 225,
+    "message": "Gemini API authenticated"
+  },
+  "migrate_api_ms": 24.38,
+  "vault_put_ms": 7.2,
+  "secrets_in_evidence": false
+}

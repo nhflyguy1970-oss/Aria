@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 
 def register_automation_product_routes(app, assistant) -> None:
-    from fastapi import Request
-    from fastapi.responses import JSONResponse
-
     from jarvis.automation.pipeline_routes import register_pipeline_routes
 
     register_pipeline_routes(app, assistant)
@@ -53,21 +51,26 @@ def register_automation_product_routes(app, assistant) -> None:
 
     @app.get("/api/automation/rules")
     def automation_rules_list():
-        from jarvis.intelligence.automation_engine import list_rules, status
+        from jarvis.automation.engine import list_rules, status
 
         st = status()
-        return {"ok": True, "running": st.get("running"), "paused": st.get("paused"), "rules": list_rules()}
+        return {
+            "ok": True,
+            "running": st.get("running"),
+            "paused": st.get("paused"),
+            "rules": list_rules(),
+        }
 
     @app.post("/api/automation/rules")
     async def automation_rules_upsert(request: Request):
         body = await request.json()
-        from jarvis.intelligence.automation_engine import upsert_rule
+        from jarvis.automation.engine import upsert_rule
 
         return {"ok": True, "rule": upsert_rule(body if isinstance(body, dict) else {})}
 
     @app.delete("/api/automation/rules/{rule_id}")
     def automation_rules_delete(rule_id: str):
-        from jarvis.intelligence.automation_engine import delete_rule
+        from jarvis.automation.engine import delete_rule
 
         return delete_rule(rule_id)
 
@@ -79,7 +82,7 @@ def register_automation_product_routes(app, assistant) -> None:
         except Exception:
             body = {}
         dry_run = bool(body.get("dry_run"))
-        from jarvis.intelligence.automation_engine import run_rule
+        from jarvis.automation.engine import run_rule
 
         return run_rule(rule_id, dry_run=dry_run)
 
@@ -90,28 +93,30 @@ def register_automation_product_routes(app, assistant) -> None:
             body = await request.json()
         except Exception:
             body = {}
-        from jarvis.intelligence.automation_engine import set_paused
+        from jarvis.automation.engine import set_paused
 
         return set_paused(bool(body.get("paused", True)))
 
     @app.post("/api/automation/engine/start")
     def automation_engine_start():
-        from jarvis.intelligence.automation_engine import start_engine
+        from jarvis.automation.engine import start_engine
 
         return start_engine()
 
     @app.get("/api/automation/rules/export")
     def automation_rules_export():
-        from jarvis.intelligence.automation_engine import export_rules
+        from jarvis.automation.engine import export_rules
 
         return export_rules()
 
     @app.post("/api/automation/rules/import")
     async def automation_rules_import(request: Request):
         body = await request.json()
-        from jarvis.intelligence.automation_engine import import_rules
+        from jarvis.automation.engine import import_rules
 
-        return import_rules(body if isinstance(body, dict) else {}, replace=bool(body.get("replace")))
+        return import_rules(
+            body if isinstance(body, dict) else {}, replace=bool(body.get("replace"))
+        )
 
     @app.post("/api/automation/nl")
     async def automation_nl(request: Request):
@@ -124,11 +129,13 @@ def register_automation_product_routes(app, assistant) -> None:
     async def automation_nl_confirm(request: Request):
         body = await request.json()
         if not body.get("confirm"):
-            return JSONResponse(status_code=400, content={"ok": False, "error": "confirm=true required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "error": "confirm=true required"}
+            )
         draft = body.get("draft") or {}
         intent = body.get("intent")
         if intent == "pause_all":
-            from jarvis.intelligence.automation_engine import list_rules, set_paused, upsert_rule
+            from jarvis.automation.engine import list_rules, set_paused, upsert_rule
 
             set_paused(True)
             for r in list_rules():
@@ -138,7 +145,7 @@ def register_automation_product_routes(app, assistant) -> None:
         if not draft:
             return JSONResponse(status_code=400, content={"ok": False, "error": "draft required"})
         draft["enabled"] = bool(body.get("enable", False))
-        from jarvis.intelligence.automation_engine import upsert_rule
+        from jarvis.automation.engine import upsert_rule
 
         rule = upsert_rule(draft)
         return {"ok": True, "rule": rule, "enabled": rule.get("enabled")}
@@ -162,15 +169,20 @@ def register_automation_product_routes(app, assistant) -> None:
             body = await request.json()
         except Exception:
             body = {}
+        from jarvis.automation.engine import upsert_rule
         from jarvis.automation.suggestions import list_suggestions, mark_promoted
-        from jarvis.intelligence.automation_engine import upsert_rule
 
         # Find suggestion
-        sug = next((s for s in list_suggestions(include_dismissed=True) if s.get("id") == suggestion_id), None)
+        sug = next(
+            (s for s in list_suggestions(include_dismissed=True) if s.get("id") == suggestion_id),
+            None,
+        )
         if not sug:
             return JSONResponse(status_code=404, content={"ok": False, "error": "not_found"})
         if not body.get("confirm"):
-            return JSONResponse(status_code=400, content={"ok": False, "error": "confirm=true required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "error": "confirm=true required"}
+            )
         wf = sug.get("workflow") or {}
         rule = upsert_rule(
             {
@@ -246,7 +258,12 @@ def register_automation_product_routes(app, assistant) -> None:
         status = 200 if result.get("ok") or dry_run else 404
         return JSONResponse(
             status_code=status,
-            content={**result, "execution": norm, "activity": pub.get("activity"), "run": pub.get("run")},
+            content={
+                **result,
+                "execution": norm,
+                "activity": pub.get("activity"),
+                "run": pub.get("run"),
+            },
         )
 
     @app.post("/api/automation/workflows/{slug}/run")
@@ -287,5 +304,10 @@ def register_automation_product_routes(app, assistant) -> None:
         status_code = 200 if result.get("ok") or dry_run else 404
         return JSONResponse(
             status_code=status_code,
-            content={**result, "execution": norm, "activity": pub.get("activity"), "run": pub.get("run")},
+            content={
+                **result,
+                "execution": norm,
+                "activity": pub.get("activity"),
+                "run": pub.get("run"),
+            },
         )

@@ -19,6 +19,9 @@ SIMILARITY_THRESHOLD = 0.22
 # Parity with document_pipeline.DOCUMENT_EXTENSIONS
 INDEX_EXTENSIONS = frozenset(DOCUMENT_EXTENSIONS)
 
+# In-process index cache — avoid re-parsing 4MB JSON on every Search hit.
+_INDEX_MEM: dict[str, object] = {"mtime": None, "chunks": None}
+
 
 def _chunks(text: str, source: str, title: str) -> list[dict]:
     parts = []
@@ -60,12 +63,59 @@ def _read_index_file() -> list[dict] | None:
     if not INDEX_FILE.is_file():
         return None
     try:
+        mtime = INDEX_FILE.stat().st_mtime
+        cached = _INDEX_MEM.get("chunks")
+        if cached is not None and _INDEX_MEM.get("mtime") == mtime:
+            return list(cached)  # type: ignore[arg-type]
         data = json.loads(INDEX_FILE.read_text(encoding="utf-8"))
         if isinstance(data, list):
+            _INDEX_MEM["mtime"] = mtime
+            _INDEX_MEM["chunks"] = data
             return data
     except (json.JSONDecodeError, OSError) as exc:
         log.warning("Corrupt documents index — rebuilding: %s", exc)
     return None
+
+
+def _semantic_allowed() -> bool:
+    """Cold-loading nomic-embed (~7–16s) exceeds the Search corpus wall.
+
+    Only run semantic documents search when the embed runner is already
+    resident (or explicitly forced). Otherwise keyword search is the owner path.
+    """
+    import os
+
+    force = os.getenv("JARVIS_DOCS_FORCE_SEMANTIC", "").lower() in ("1", "true", "yes")
+    if force:
+        return True
+    try:
+        from jarvis.ollama_runtime import model_resident
+
+        return model_resident(llm.model_for("embed"))
+    except Exception:
+        return False
+
+
+def _search_impl(query: str, limit: int = 5) -> list[dict]:
+    chunks = _load_index()
+    if not chunks:
+        return []
+    keyword_hits = _keyword_search(query, chunks, limit)
+    if not llm.embed_available() or not _semantic_allowed():
+        return keyword_hits
+    q_emb = llm.embed_text(query)
+    if not q_emb:
+        return keyword_hits
+    scored = []
+    for c in chunks:
+        emb = c.get("embedding") or []
+        if not emb:
+            continue
+        scored.append((llm.cosine_similarity(q_emb, emb), c))
+    scored.sort(key=lambda x: x[0], reverse=True)
+    hits = [c for s, c in scored[:limit] if s > SIMILARITY_THRESHOLD]
+    # Prefer semantic when it finds hits; otherwise keep keyword results.
+    return hits or keyword_hits
 
 
 def build_index(*, force: bool = False) -> list[dict]:
@@ -140,26 +190,6 @@ def search(query: str, limit: int = 5) -> list[dict]:
     from jarvis.modules.knowledge_retrieval_adapter import knowledge_search
 
     return knowledge_search(CORPUS_DOCUMENT_LIBRARY, _search_impl, query, limit=limit)
-
-
-def _search_impl(query: str, limit: int = 5) -> list[dict]:
-    chunks = _load_index()
-    if not chunks:
-        return []
-    if llm.embed_available():
-        q_emb = llm.embed_text(query)
-        if q_emb:
-            scored = []
-            for c in chunks:
-                emb = c.get("embedding") or []
-                if not emb:
-                    continue
-                scored.append((llm.cosine_similarity(q_emb, emb), c))
-            scored.sort(key=lambda x: x[0], reverse=True)
-            hits = [c for s, c in scored[:limit] if s > SIMILARITY_THRESHOLD]
-            if hits:
-                return hits
-    return _keyword_search(query, chunks, limit)
 
 
 def _hits_to_citations(hits: list[dict], *, why: str = "Matched library search") -> list[dict]:

@@ -9,6 +9,13 @@ const fetchWithTimeout = (...args) => window.fetchWithTimeout(...args);
 const ariaName = () => window.ariaName?.() || "Aria";
 const renderServices = (...args) => window.renderServices?.(...args);
 
+function isLivingWorkspace() {
+  return (
+    document.documentElement.classList.contains("living-workspace") ||
+    document.body?.classList.contains("living-workspace")
+  );
+}
+
 function hideStartupOverlay(message) {
   if (startupStatus && message) startupStatus.textContent = message;
   overlay?.classList.add("hidden");
@@ -24,6 +31,11 @@ function appendStartupLog(msg) {
 }
 
 async function waitForServices(maxAttempts = 12) {
+  /* House Integrity: never paint startup overlay over/under Living Workspace */
+  if (isLivingWorkspace()) {
+    overlay?.classList.add("hidden");
+    return true;
+  }
   if (!overlay) return true;
   try {
     const live = await fetchWithTimeout("/api/live", {}, 2500);

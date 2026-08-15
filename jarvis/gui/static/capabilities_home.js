@@ -228,6 +228,13 @@
       const banner = $("capabilitiesSecurityBanner");
       if (banner && home.security?.message) banner.textContent = home.security.message;
     } catch (e) {
+      if (
+        window.AriaNet?.isRoomAbort?.(e) ||
+        e?.name === "AbortError" ||
+        /aborted|aria-room-leave/i.test(String(e?.message || ""))
+      ) {
+        return;
+      }
       window.showAriaToast?.(e.message || "Capabilities load failed", "err");
     }
   }

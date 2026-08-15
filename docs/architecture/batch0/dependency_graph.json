@@ -1,0 +1,1005 @@
+{
+  "edges": [
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.engineering",
+      "weight": 20
+    },
+    {
+      "from": "jarvis.flytying_product",
+      "to": "jarvis.flytying",
+      "weight": 19
+    },
+    {
+      "from": "jarvis.workstation",
+      "to": "jarvis.application",
+      "weight": 18
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.handlers",
+      "weight": 17
+    },
+    {
+      "from": "jarvis.intelligence",
+      "to": "jarvis.automation",
+      "weight": 16
+    },
+    {
+      "from": "jarvis.modules",
+      "to": "jarvis",
+      "weight": 15
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.flytying",
+      "weight": 13
+    },
+    {
+      "from": "jarvis.application",
+      "to": "jarvis.env_loader",
+      "weight": 12
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.browser_product",
+      "weight": 12
+    },
+    {
+      "from": "jarvis.modules",
+      "to": "jarvis.config",
+      "weight": 12
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.response",
+      "weight": 11
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.extensibility",
+      "weight": 11
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.handlers",
+      "weight": 11
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.router_table",
+      "weight": 11
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.models_product",
+      "weight": 11
+    },
+    {
+      "from": "jarvis.assistant",
+      "to": "jarvis.modules",
+      "weight": 10
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis",
+      "weight": 10
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.response",
+      "weight": 9
+    },
+    {
+      "from": "jarvis.flytying_product",
+      "to": "jarvis.config",
+      "weight": 9
+    },
+    {
+      "from": "jarvis.assistant",
+      "to": "jarvis.behaviors",
+      "weight": 8
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.coding_product",
+      "weight": 8
+    },
+    {
+      "from": "jarvis.handlers",
+      "to": "jarvis.response",
+      "weight": 8
+    },
+    {
+      "from": "jarvis.home_assistant_product",
+      "to": "jarvis.config",
+      "weight": 8
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.modules",
+      "weight": 7
+    },
+    {
+      "from": "jarvis.gallery_product",
+      "to": "jarvis.config",
+      "weight": 7
+    },
+    {
+      "from": "jarvis.home_assistant_product",
+      "to": "jarvis.home_assistant",
+      "weight": 7
+    },
+    {
+      "from": "jarvis.vision_product",
+      "to": "jarvis.config",
+      "weight": 7
+    },
+    {
+      "from": "jarvis.automation",
+      "to": "jarvis.live_data_guard",
+      "weight": 6
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.knowledge",
+      "weight": 6
+    },
+    {
+      "from": "jarvis.browser_product",
+      "to": "jarvis.config",
+      "weight": 6
+    },
+    {
+      "from": "jarvis.coding_product",
+      "to": "jarvis",
+      "weight": 6
+    },
+    {
+      "from": "jarvis.engineering",
+      "to": "jarvis.config",
+      "weight": 6
+    },
+    {
+      "from": "jarvis.flytying",
+      "to": "jarvis.config",
+      "weight": 6
+    },
+    {
+      "from": "jarvis.intelligence",
+      "to": "jarvis.specialists",
+      "weight": 6
+    },
+    {
+      "from": "jarvis.security",
+      "to": "jarvis.p4_flags",
+      "weight": 6
+    },
+    {
+      "from": "jarvis.voice_smoke",
+      "to": "jarvis.voice_product",
+      "weight": 6
+    },
+    {
+      "from": "jarvis.automation",
+      "to": "jarvis.intelligence",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.browser_agent",
+      "to": "jarvis.browser_product",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.capabilities_product",
+      "to": "jarvis.config",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.security",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.gallery_product",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.automation",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.knowledge",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.mission_control_ops",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.handlers",
+      "to": "jarvis.automation",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.intelligence",
+      "to": "jarvis",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.interfaces",
+      "to": "jarvis.workstation",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.knowledge",
+      "to": "jarvis.config",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.models_product",
+      "to": "jarvis.config",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.modules",
+      "to": "jarvis.conversation",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.security",
+      "to": "jarvis.config",
+      "weight": 5
+    },
+    {
+      "from": "jarvis.application",
+      "to": "jarvis.services",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.application",
+      "to": "jarvis.config",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.automation",
+      "to": "jarvis.workflow_learning",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.automation",
+      "to": "jarvis.knowledge",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.config",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.context",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.browser_product",
+      "to": "jarvis",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.behaviors",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.modules",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.handlers",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.vision_product",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.handlers",
+      "to": "jarvis.behaviors",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.handlers",
+      "to": "jarvis.video_generation",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.intelligence",
+      "to": "jarvis.capabilities_product",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.knowledge",
+      "to": "jarvis.code_index",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.models_product",
+      "to": "jarvis.model_store",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.router",
+      "to": "jarvis.nlu",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.search_product",
+      "to": "jarvis.knowledge",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.search_product",
+      "to": "jarvis.config",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.settings_product",
+      "to": "jarvis.config",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.specialists",
+      "to": "jarvis.config",
+      "weight": 4
+    },
+    {
+      "from": "jarvis.assistant",
+      "to": "jarvis.coding_product",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.automation",
+      "to": "jarvis.home_assistant",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.automation",
+      "to": "jarvis.skill_database",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.automation",
+      "to": "jarvis.config",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.assistant",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.profiles",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.capabilities_product",
+      "to": "jarvis.extensibility",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.certification_product",
+      "to": "jarvis.config",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.coding_product",
+      "to": "jarvis.config",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.engineering",
+      "to": "jarvis.p3_flags",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.flytying_product",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.config",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.video_generation",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.provider_health",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.security",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.interfaces",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.handlers",
+      "to": "jarvis.image_generation",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.handlers",
+      "to": "jarvis.specialists",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.home_assistant_product",
+      "to": "jarvis.ha_entity_filter",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.inference",
+      "to": "jarvis.gpu",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.integrations_product",
+      "to": "jarvis.config",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.intelligence",
+      "to": "jarvis.modules",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.knowledge",
+      "to": "jarvis.project_registry",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.knowledge",
+      "to": "jarvis.documents_rag",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.knowledge",
+      "to": "jarvis",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.mission_control_ops",
+      "to": "jarvis.config",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.models_product",
+      "to": "jarvis.gpu",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.modules",
+      "to": "jarvis.cache_state",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.modules",
+      "to": "jarvis.platform_cutover",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.nlu",
+      "to": "jarvis.config",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.notifications_product",
+      "to": "jarvis.config",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.planner_services",
+      "to": "jarvis.intelligence",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.router",
+      "to": "jarvis.modules",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.search_product",
+      "to": "jarvis.notifications_product",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.specialists",
+      "to": "jarvis.intelligence",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.specialists",
+      "to": "jarvis.live_data_guard",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.tools",
+      "to": "jarvis.personalization",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.video_generation",
+      "to": "jarvis.config",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.vision_product",
+      "to": "jarvis.assistant_instance",
+      "weight": 3
+    },
+    {
+      "from": "jarvis.agents",
+      "to": "jarvis.specialists",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.application",
+      "to": "jarvis.ha_docker",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.application",
+      "to": "jarvis.tools",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.application",
+      "to": "jarvis",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.assistant",
+      "to": "jarvis.handlers",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.background_jobs",
+      "to": "jarvis.handlers",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.relationship_memory",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.router",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.lang_util",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.runtime_routing",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.learning_notice",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.personalization",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.trust_memory",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.document_pipeline",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.document_learning",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.memory",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.routing_trace",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.tools",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.behaviors",
+      "to": "jarvis.vision_product",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.browser_dom_agent",
+      "to": "jarvis.browser_product",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.browser_product",
+      "to": "jarvis.browser_agent",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.browser_vlm",
+      "to": "jarvis.browser_product",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.calendar_services",
+      "to": "jarvis.intelligence",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.capabilities_product",
+      "to": "jarvis.intelligence",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.capabilities_product",
+      "to": "jarvis.handlers",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.capabilities_product",
+      "to": "jarvis.router_table",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.capability_routing",
+      "to": "jarvis.nlu",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.coding_product",
+      "to": "jarvis.model_store",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.coding_product",
+      "to": "jarvis.coding_agent",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.dashboard_product",
+      "to": "jarvis.modules",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.dashboard_product",
+      "to": "jarvis.config",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.dashboard_product",
+      "to": "jarvis.morning_briefing",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.debug_bundle",
+      "to": "jarvis.engineering",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.document_learning",
+      "to": "jarvis.security",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.engineering",
+      "to": "jarvis.meshy_client",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.engineering",
+      "to": "jarvis.llm",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.engineering",
+      "to": "jarvis.p5_flags",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.extensibility",
+      "to": "jarvis.assistant",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.extensibility",
+      "to": "jarvis.router_table",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.async_util",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.journal_learning",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.project_services",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.project_registry",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.active_project",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.extensions",
+      "to": "jarvis.cloud_live_voice",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.flytying_product",
+      "to": "jarvis.gallery_product",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.functiongemma_router",
+      "to": "jarvis.handlers",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gallery_product",
+      "to": "jarvis.handlers",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gallery_product",
+      "to": "jarvis.media_jobs",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gallery_product",
+      "to": "jarvis.vision_product",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.song_studio",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.resource_router",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.jobs_center",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.router_table",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.music_gen",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.lan",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.assistant",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.env_loader",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.video_ops",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.config",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.coding_jobs",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.cache_state",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.latency_observability",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.voice_product",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.workstation",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.flytying",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.gui",
+      "to": "jarvis.tools",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.handlers",
+      "to": "jarvis.modules",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.handlers",
+      "to": "jarvis.assistant",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.image_generation",
+      "to": "jarvis.comfyui_settings",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.image_generation",
+      "to": "jarvis.config",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.inference",
+      "to": "jarvis.nlu",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.inference",
+      "to": "jarvis.config",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.inference",
+      "to": "jarvis.llm",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.inference",
+      "to": "jarvis.model_store",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.integrations_product",
+      "to": "jarvis.intelligence",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.intelligence",
+      "to": "jarvis.live_data_guard",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.intelligence",
+      "to": "jarvis.config",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.intelligence",
+      "to": "jarvis.handlers",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.jarvis_mcp",
+      "to": "jarvis.handlers",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.jobs",
+      "to": "jarvis.specialists",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.journal_export",
+      "to": "jarvis.modules",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.knowledge",
+      "to": "jarvis.assistant_instance",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.knowledge",
+      "to": "jarvis.document_learning",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.knowledge",
+      "to": "jarvis.search_product",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.knowledge_research_daily",
+      "to": "jarvis.modules",
+      "weight": 2
+    },
+    {
+      "from": "jarvis.llm",
+      "to": "jarvis.inference",
+      "weight": 2
+    }
+  ],
+  "total_edges": 1656
+}

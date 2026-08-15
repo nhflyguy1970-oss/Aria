@@ -3,7 +3,8 @@
   "use strict";
 
   let _data = null;
-  let _tab = "overview";
+  /* Roles first — Models room must expose model <select>s on enter (BUG-018). */
+  let _tab = "roles";
   let _advancedOpen = false;
   const TABS = [
     ["overview", "Overview"],
@@ -87,6 +88,12 @@
     </label>`;
   }
 
+  function conversationRole() {
+    const roles = _data?.roles || {};
+    const all = (roles.primary || []).concat(roles.advanced || []);
+    return all.find((r) => r.id === "conversation") || { id: "conversation", label: "Chat", model: "" };
+  }
+
   function renderOverview() {
     const h = _data.health || {};
     const t = _data.terminology || {};
@@ -96,6 +103,9 @@
     const loaded = (_data.loaded_models || [])
       .map((m) => `<li><code>${esc(m.name || m.model || JSON.stringify(m))}</code></li>`)
       .join("");
+    const choices = (_data.settings || {}).choices || (_data.settings || {}).installed || [];
+    const conv = conversationRole();
+    const chatSelect = roleSelect(conv, conv.model, choices);
     return `
       <section class="models-hero">
         <div>
@@ -110,6 +120,11 @@
           <button type="button" class="ghost-btn small" data-models-integrations>Open Integrations</button>
           <button type="button" class="ghost-btn small" id="modelsFreeVramBtn">Free VRAM</button>
         </div>
+      </section>
+      <section class="models-panel-card" aria-label="Chat model">
+        <h4>Chat model</h4>
+        <p class="muted tiny">Changing this updates the active Chat session immediately. Use Save on Roles to persist all role defaults.</p>
+        <div class="models-role-grid">${chatSelect}</div>
       </section>
       <div class="models-grid">
         <section class="models-panel-card">
@@ -368,6 +383,21 @@
     }
   }
 
+  async function applyConversationSession(model) {
+    const tag = String(model || "").trim();
+    if (!tag) return null;
+    const form = new FormData();
+    form.append("model", tag);
+    const res = await fetch("/api/chat/model", { method: "POST", body: form });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      window.showAriaToast?.(data.message || data.error || "Chat model update failed", "err");
+      return data;
+    }
+    window.loadChatModelSelect?.();
+    return data;
+  }
+
   async function saveRoles() {
     const roles = {};
     document.querySelectorAll("#modelsHomeBody [data-role-id]").forEach((sel) => {
@@ -390,6 +420,9 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ roles }),
     });
+    if (roles.conversation) {
+      await applyConversationSession(roles.conversation);
+    }
     window.showAriaToast?.(out.switch?.message || "Roles saved", out.ok ? "ok" : "err");
     await refresh();
     window.loadChatModelSelect?.();
@@ -437,6 +470,15 @@
     const body = $("modelsHomeBody");
     if (!body || body.dataset.wired) return;
     body.dataset.wired = "1";
+    body.addEventListener("change", async (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLSelectElement)) return;
+      if (t.getAttribute("data-role-id") !== "conversation") return;
+      const out = await applyConversationSession(t.value);
+      if (out && out.ok !== false) {
+        window.showAriaToast?.(`Chat model → ${t.value}`, "ok");
+      }
+    });
     body.addEventListener("click", async (e) => {
       const t = e.target;
       if (!(t instanceof Element)) return;

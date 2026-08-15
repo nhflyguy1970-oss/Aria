@@ -18,6 +18,24 @@
     window.AriaUiPrefs?.set?.(key, val);
   }
 
+  function cacheDashboardLayout(layout) {
+    if (!layout || typeof layout !== "object") return;
+    prefsSet("dashboardLayout", layout);
+    fetch("/api/dashboard/layout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(layout),
+    })
+      .then((res) => res.json().catch(() => ({})).then((data) => ({ res, data })))
+      .then(({ res, data }) => {
+        if (!res.ok || data.ok === false) throw new Error(data.error || data.message || "Dashboard layout save failed");
+        prefsSet("dashboardLayout", data);
+      })
+      .catch((err) => {
+        window.showAriaToast?.(err.message || "Dashboard layout save failed", "err", 3500);
+      });
+  }
+
   function snapshot() {
     const prefs = window.AriaUiPrefs?.load?.() || {};
     const theme = document.body.classList.contains("light-theme") ? "light" : prefs.theme || "dark";
@@ -73,7 +91,7 @@
       if (typeof snap.miniChatHidden === "boolean") prefsSet("miniChatHidden", snap.miniChatHidden);
       window.AriaQuickDock?.render?.();
       window.AriaStatusBar?.apply?.();
-      if (snap.dashboardLayout) prefsSet("dashboardLayout", snap.dashboardLayout);
+      if (snap.dashboardLayout) cacheDashboardLayout(snap.dashboardLayout);
       if (snap.panelCollapsed && typeof snap.panelCollapsed === "object") {
         prefsSet("panelCollapsed", snap.panelCollapsed);
       }
@@ -243,10 +261,6 @@
         window.showAriaToast?.(data.error || "Save failed", "err", 3500);
         return false;
       }
-      // Mirror into local prefs for offline
-      const layouts = prefsGet("workspaceLayouts", {}) || {};
-      layouts[data.layout_id] = { label, ...snap };
-      prefsSet("workspaceLayouts", layouts);
       prefsSet("activeWorkspace", data.layout_id);
       prefsSet("activeLayout", data.layout_id);
       window.showAriaToast?.(`Saved layout “${label}”`, "ok", 2500);
@@ -277,9 +291,6 @@
     } catch {
       /* fall through to local */
     }
-    const layouts = prefsGet("workspaceLayouts", {}) || {};
-    delete layouts[id];
-    prefsSet("workspaceLayouts", layouts);
     if (prefsGet("activeWorkspace") === id || prefsGet("activeLayout") === id) {
       prefsSet("activeWorkspace", "");
       prefsSet("activeLayout", "");
@@ -293,7 +304,7 @@
     const host = $("workspaceSwitcherList");
     if (!host) return;
     host.replaceChildren();
-    const q = String(filterQ ?? $("layoutsTypeahead")?.value || "")
+    const q = String(filterQ ?? ($("layoutsTypeahead")?.value || ""))
       .trim()
       .toLowerCase();
     const active = prefsGet("activeLayout", "") || prefsGet("activeWorkspace", "");
@@ -335,13 +346,7 @@
         });
     }
 
-    const localCustoms = prefsGet("workspaceLayouts", {}) || {};
-    const customIds = new Set([
-      ...customs.map((c) => c.id),
-      ...Object.keys(localCustoms).filter(
-        (id) => !q || `${id} ${localCustoms[id]?.label || ""}`.toLowerCase().includes(q)
-      ),
-    ]);
+    const customIds = new Set(customs.map((c) => c.id));
     if (customIds.size) {
       const head = document.createElement("p");
       head.className = "muted tiny";
@@ -350,7 +355,7 @@
     }
     customIds.forEach((id) => {
       const fromApi = customs.find((c) => c.id === id);
-      const label = fromApi?.label || localCustoms[id]?.label || id;
+      const label = fromApi?.label || id;
       const wrap = document.createElement("div");
       wrap.className = "workspace-custom-row";
       const btn = addChip(id, label, "custom", () => applyLayout(id));
@@ -371,7 +376,6 @@
     updateActiveIndicator(
       builtins.find((b) => b.id === active)?.label ||
         customs.find((c) => c.id === active)?.label ||
-        localCustoms[active]?.label ||
         active
     );
   }

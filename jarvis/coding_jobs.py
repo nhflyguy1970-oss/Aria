@@ -10,6 +10,7 @@ import threading
 import time
 import uuid
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from pathlib import Path
 from typing import Any, Callable
 
@@ -26,7 +27,7 @@ _history: deque[str] = deque(maxlen=32)
 _state_file = DATA_DIR / "coding_jobs_state.json"
 _loaded = False
 
-JOB_TIMEOUT_SEC = float(os.getenv("JARVIS_CODING_JOB_TIMEOUT_SEC", "1800"))
+JOB_TIMEOUT_SEC = float(os.getenv("JARVIS_CODING_JOB_TIMEOUT_SEC", "600"))
 WORKER_COUNT = max(1, min(4, int(os.getenv("JARVIS_CODING_WORKERS", "1"))))
 _stats = {"completed": 0, "failed": 0, "cancelled": 0}
 
@@ -181,14 +182,60 @@ def _worker_loop() -> None:
                         _stats["cancelled"] += 1
                     continue
                 _active_ids.add(job_id)
-                job["message"] = "Running…"
-                job["pct"] = 5
+                job["message"] = "Preparing coding model…"
+                job["pct"] = 3
             try:
-                result = fn()
-                if _is_cancelled(job_id):
+                from jarvis.ollama_runtime import ensure_coding_model_ready
+
+                ready = ensure_coding_model_ready()
+                if not ready.get("ok"):
+                    detail = ready.get("detail") or "coding model not ready"
+                    result = {
+                        "ok": False,
+                        "message": (
+                            "Coding model could not be loaded for this job "
+                            f"({detail}). Stop other GPU work and try again."
+                        ),
+                    }
+                elif _is_cancelled(job_id):
                     result = {"ok": False, "message": "Cancelled"}
-                elif time.time() > deadline:
-                    result = {"ok": False, "message": f"Coding task timed out after {int(JOB_TIMEOUT_SEC)}s"}
+                else:
+                    with _lock:
+                        job = _jobs.get(job_id)
+                        if job:
+                            job["message"] = "Running…"
+                            job["pct"] = 5
+                    # Enforce wall-clock timeout — previously deadline was only
+                    # checked after fn() returned, so hung Ollama waits sat at 5% forever
+                    # and Stop job could not finish the cancel.
+                    pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="coding-fn")
+                    fut = pool.submit(fn)
+                    result = None
+                    try:
+                        while True:
+                            if _is_cancelled(job_id):
+                                result = {"ok": False, "message": "Cancelled"}
+                                break
+                            if time.time() > deadline:
+                                result = {
+                                    "ok": False,
+                                    "message": (
+                                        f"Coding task timed out after {int(JOB_TIMEOUT_SEC)}s"
+                                    ),
+                                }
+                                break
+                            try:
+                                result = fut.result(timeout=1.0)
+                                break
+                            except FuturesTimeout:
+                                continue
+                    finally:
+                        # Do not join a hung LLM thread — that re-wedges the worker.
+                        pool.shutdown(wait=False, cancel_futures=True)
+                    if result is None:
+                        result = {"ok": False, "message": "Coding task failed"}
+                if _is_cancelled(job_id) and isinstance(result, dict) and result.get("ok"):
+                    result = {"ok": False, "message": "Cancelled"}
             except Exception as exc:
                 logger.exception("Coding job %s failed", job_id)
                 result = {"ok": False, "message": str(exc)}

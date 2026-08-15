@@ -32,9 +32,29 @@
 
       setSeg("statusSegProvider", `Ollama · ${ollama}`, `status-${ollama}`);
       setSeg("statusSegModel", models.general || "no model");
-      const gpuMode = gpu.ollama_using_gpu ? "GPU" : gpu.rocm_available ? "GPU idle" : "CPU";
-      const vram = gpu.vram_mb ? ` ${Math.round(gpu.vram_mb / 1024)}GB` : "";
+      // Authoritative compute GPU (nvidia/amd), not ROCm package presence.
+      const hasGpu = Boolean(
+        gpu.nvidia_available || gpu.compute_vendor === "nvidia" || gpu.vendor === "nvidia" || gpu.vendor === "amd" || gpu.vram_mb
+      );
+      let gpuMode = "CPU";
+      if (hasGpu) {
+        gpuMode = gpu.ollama_using_gpu ? "GPU" : "GPU idle";
+      }
+      const free = gpu.free_vram_mb != null ? Math.round(Number(gpu.free_vram_mb) / 1024) : null;
+      const total = gpu.vram_mb ? Math.round(Number(gpu.vram_mb) / 1024) : null;
+      const vram =
+        free != null && total != null ? ` ${free}/${total}GB` : total != null ? ` ${total}GB` : "";
       setSeg("statusSegGpu", `${gpuMode}${vram}`, gpu.ollama_using_gpu ? "status-healthy" : "");
+      const gpuEl = $("statusSegGpu");
+      if (gpuEl) {
+        gpuEl.title = [
+          gpu.compute_gpu || gpu.name || "",
+          gpu.free_vram_mb != null ? `Free VRAM ${gpu.free_vram_mb}MB` : "",
+          gpu.ollama_using_gpu ? "Ollama on GPU" : "Ollama not using GPU right now",
+        ]
+          .filter(Boolean)
+          .join(" · ");
+      }
       const el = $("statusSegModel");
       if (el) el.title = `Chat ${models.general || "—"} · Code ${models.coder || "—"} · Vision ${models.vision || "—"}`;
       if (h.version) setSeg("statusSegVersion", `v${h.version}`);

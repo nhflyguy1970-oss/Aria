@@ -347,11 +347,24 @@ def delete_workflow(slug: str) -> bool:
 DEMO_WORKFLOW_SLUG = "demo-skill-check"
 
 
-def ensure_demo_workflow() -> dict[str, Any] | None:
-    """Seed a runnable demo workflow when none exist (manual test 22.2)."""
+def ensure_demo_workflow(*, force: bool = False) -> dict[str, Any] | None:
+    """Seed a runnable demo workflow for tests only.
+
+    Owner production must never auto-create demo-skill-check. Tests that need
+    the fixture call with force=True (or rely on explicit test setup).
+    """
+    import os
+
     existing = load_workflow(DEMO_WORKFLOW_SLUG)
     if existing:
         return existing
+    allow = force or (os.environ.get("ARIA_ALLOW_DEMO_WORKFLOW") or "").strip() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if not allow:
+        return None
     return save_workflow(
         [
             {"action": "skill_list", "detail": "", "detail_norm": ""},
@@ -362,6 +375,39 @@ def ensure_demo_workflow() -> dict[str, Any] | None:
         count=1,
         source="demo",
     )
+
+
+def purge_demo_workflow() -> bool:
+    """Remove demo-skill-check file + index entries (learned + legacy)."""
+    from jarvis.automation.paths import LEGACY_WORKFLOWS_DIR
+
+    removed = False
+    if delete_workflow(DEMO_WORKFLOW_SLUG):
+        removed = True
+    index = _load_index()
+    if DEMO_WORKFLOW_SLUG in (index.get("workflows") or {}):
+        index["workflows"].pop(DEMO_WORKFLOW_SLUG, None)
+        _save_index(index)
+        removed = True
+    legacy_file = LEGACY_WORKFLOWS_DIR / f"{DEMO_WORKFLOW_SLUG}.json"
+    if legacy_file.is_file():
+        try:
+            legacy_file.unlink()
+            removed = True
+        except OSError:
+            pass
+    legacy_index = LEGACY_WORKFLOWS_DIR / "index.json"
+    if legacy_index.is_file():
+        try:
+            raw = json.loads(legacy_index.read_text(encoding="utf-8"))
+            wfs = raw.get("workflows") if isinstance(raw, dict) else None
+            if isinstance(wfs, dict) and DEMO_WORKFLOW_SLUG in wfs:
+                wfs.pop(DEMO_WORKFLOW_SLUG, None)
+                legacy_index.write_text(json.dumps(raw, indent=2), encoding="utf-8")
+                removed = True
+        except (json.JSONDecodeError, OSError):
+            pass
+    return removed
 
 
 def promote_watch_patterns(*, min_count: int | None = None) -> list[dict[str, Any]]:
@@ -380,22 +426,36 @@ def promote_watch_patterns(*, min_count: int | None = None) -> list[dict[str, An
 
 
 def ensure_workflows_ready() -> dict[str, Any]:
-    """Startup hook: demo seed + promote learned patterns."""
+    """Startup hook: promote learned patterns; never seed demo into production."""
     promoted = promote_watch_patterns()
-    demo = ensure_demo_workflow()
+    purge_demo_workflow()
     items = list_workflows()
-    return {"count": len(items), "promoted": len(promoted), "demo": demo.get("slug") if demo else None}
+    return {"count": len(items), "promoted": len(promoted), "demo": None}
 
 
-def list_workflows(*, query: str = "") -> list[dict[str, Any]]:
+def _is_demo_workflow(wf: dict[str, Any] | None) -> bool:
+    if not isinstance(wf, dict):
+        return False
+    slug = str(wf.get("slug") or "").strip().lower()
+    source = str(wf.get("source") or "").strip().lower()
+    name = str(wf.get("name") or "")
+    if slug == DEMO_WORKFLOW_SLUG or source == "demo":
+        return True
+    return bool(re.search(r"demo-skill-check|Demo:\s*List skills", name, re.I))
+
+
+def list_workflows(*, query: str = "", include_demo: bool = False) -> list[dict[str, Any]]:
     _ensure_dir()
     items: list[dict[str, Any]] = []
     for path in sorted(WORKFLOWS_DIR.glob("*.json")):
         if path.name.startswith("_") or path.name == "index.json":
             continue
         wf = load_workflow(path.stem)
-        if wf and (wf.get("slug") or wf.get("name")):
-            items.append(wf)
+        if not wf or not (wf.get("slug") or wf.get("name")):
+            continue
+        if not include_demo and _is_demo_workflow(wf):
+            continue
+        items.append(wf)
     q = (query or "").strip().lower()
     if not q:
         return sorted(items, key=lambda w: w.get("count", 0), reverse=True)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 
 from fastapi import Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, StreamingResponse
@@ -11,13 +12,26 @@ from jarvis.flytying import bridge
 from jarvis.flytying.chat import chat_turn, chat_turn_stream, get_model_setting, set_model_setting
 from jarvis.flytying.knowledge import seed_memory, sync_library, sync_status
 
+log = logging.getLogger("jarvis.extensions.flytying.api")
+
 
 def register_routes(app, assistant) -> None:
-    if assistant is not None and getattr(assistant, "memory", None):
+    state = getattr(app, "state", None)
+    if state is not None and getattr(state, "_jarvis_flytying_api_registered", False):
+        log.info("Fly-tying API already registered for this app; skipping duplicate registration")
+        return
+    if state is not None:
+        state._jarvis_flytying_api_registered = True
+
+    if (
+        assistant is not None
+        and assistant.__class__.__name__ != "_AssistantProxy"
+        and getattr(assistant, "memory", None)
+    ):
         try:
             seed_memory(assistant.memory)
         except Exception:
-            pass
+            log.exception("Fly-tying seed memory failed during API registration")
 
     @app.get("/api/flytying/status")
     def api_flytying_status():
@@ -574,9 +588,7 @@ def register_routes(app, assistant) -> None:
         return result
 
     # Product layer routes (profiles, sessions, mission, vision/voice bridges, etc.)
-    try:
-        from jarvis.flytying_product.api import register_product_routes
+    from jarvis.flytying_product.api import register_product_routes
+    from jarvis.product_registration import register as register_product
 
-        register_product_routes(app, assistant)
-    except Exception:
-        pass
+    register_product("flytying_product", register_product_routes, app, assistant)

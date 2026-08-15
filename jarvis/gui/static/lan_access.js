@@ -145,7 +145,11 @@
         if (st) st.textContent = "LAN URL copied";
         window.showAriaToast?.("LAN URL copied", "ok", 2500);
       } catch (_) {
-        prompt("Copy this URL:", lanPrimaryUrl);
+        if (window.ariaPrompt) {
+          await window.ariaPrompt("Copy this URL:", lanPrimaryUrl, { title: "LAN URL", okLabel: "Close" });
+        } else {
+          prompt("Copy this URL:", lanPrimaryUrl);
+        }
       }
     });
     refreshLanPanel();

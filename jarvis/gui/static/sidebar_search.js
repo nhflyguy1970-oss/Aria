@@ -276,10 +276,17 @@
         if (document.activeElement !== input) renderResultsHiddenOnBlur();
       }, 120);
     });
-    // Ctrl+Shift+F focuses sidebar search
+    // Ctrl+Shift+F — sidebar search (Living Workspace → Front Door / navigation search)
     document.addEventListener("keydown", (e) => {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "f") {
         e.preventDefault();
+        const lw =
+          document.body?.classList.contains("living-workspace") ||
+          document.documentElement.classList.contains("living-workspace");
+        if (lw) {
+          window.AriaFrontDoor?.open?.("") || window.AriaSpotlight?.open?.("");
+          return;
+        }
         input.focus();
         input.select();
       }

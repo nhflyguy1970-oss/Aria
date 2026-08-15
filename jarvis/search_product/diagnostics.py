@@ -38,14 +38,18 @@ def corpus_matrix() -> list[dict[str, Any]]:
     enabled = enabled_corpora_set()
     settings = load_settings()
     opt = settings.get("opt_in_corpora") or {}
+    from jarvis.search_product.retrievers import RETRIEVERS
+
     rows = []
     for f in FACETS:
         if f == "everything":
             continue
+        has_retriever = f in RETRIEVERS
         rows.append(
             {
                 "id": f,
                 "enabled": f in enabled,
+                "available": has_retriever,
                 "opt_in": f in opt,
                 "opt_in_enabled": bool(opt.get(f)),
                 "owner": _owner(f),
@@ -68,10 +72,18 @@ def _owner(facet: str) -> str:
         "planner": "Planner",
         "calendar": "Calendar",
         "gallery": "Gallery",
+        "chat": "Chat / Branches",
         "home_assistant": "Smart Home",
         "flytying": "Fly Tying",
         "automation": "Automation",
         "learned": "Knowledge registry",
+        "settings": "Settings",
+        "dashboard": "Home",
+        "layouts": "Layouts",
+        "notifications": "Notifications",
+        "health": "Health",
+        "provider_health": "Provider Health",
+        "latency": "Latency Observability",
     }.get(facet, "Product")
 
 
@@ -80,17 +92,27 @@ def health_summary() -> dict[str, Any]:
     reg = _registry_status()
     state = get_search_state()
     enabled = enabled_corpora_set()
+    matrix = corpus_matrix()
+    local_enabled = [r for r in matrix if r["enabled"] and r["id"] != "web"]
+    unavailable = [r["id"] for r in local_enabled if not r.get("available")]
+    local_ready = len(local_enabled) - len(unavailable)
+    ok = local_ready > 0 and not unavailable
     return {
-        "ok": True,
+        "ok": ok,
         "product": TERMINOLOGY["product"],
         "state": state.get("state") or "idle",
         "corpora_enabled": len(enabled),
+        "local_corpora_enabled": len(local_enabled),
+        "local_corpora_ready": local_ready,
+        "unavailable_corpora": unavailable,
         "web": web,
         "registry": reg,
         "last_latency_ms": state.get("last_latency_ms") or 0,
         "last_hit_count": state.get("last_hit_count") or 0,
         "last_query": state.get("last_query") or "",
-        "healthy": bool(web.get("available")) or (reg.get("retrieval_available") or 0) > 0,
+        "failures": state.get("failures") or [],
+        "degraded": bool(unavailable) or bool(state.get("degraded")),
+        "healthy": ok or bool(web.get("available")) or (reg.get("retrieval_available") or 0) > 0,
     }
 
 

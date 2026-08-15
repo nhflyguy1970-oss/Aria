@@ -142,6 +142,20 @@ class TestUndoHistorySidecar:
             data = json.loads(side.read_text(encoding="utf-8"))
             assert "history" in data
 
+    def test_corrupt_json_is_quarantined_before_save(self, tmp_path, monkeypatch):
+        path = tmp_path / "bullet_journal.json"
+        path.write_text("{not valid json", encoding="utf-8")
+        monkeypatch.setenv("JARVIS_LIVE_DATA_OK", "1")
+
+        journal = BulletJournal(path=path)
+        assert journal.export_all()["daily_log"] == {}
+        quarantined = list(tmp_path.glob("bullet_journal.json.corrupt-*"))
+        assert len(quarantined) == 1
+        assert quarantined[0].read_text(encoding="utf-8") == "{not valid json"
+
+        journal.daily_add("after quarantine", "note")
+        assert json.loads(path.read_text(encoding="utf-8"))["daily_log"]
+
 
 class TestCrypto:
     def test_encrypt_roundtrip(self):

@@ -33,10 +33,12 @@ def register_routes(app, assistant) -> None:
 
     @app.post("/api/vision/analyze")
     async def vision_analyze(request: Request):
+        from jarvis.async_util import run_sync
         from jarvis.vision_product.engine import analyze
 
         body = await request.json()
-        return analyze(
+        return await run_sync(
+            analyze,
             path=body.get("path"),
             path2=body.get("path2"),
             action=str(body.get("action") or "describe"),
@@ -51,11 +53,13 @@ def register_routes(app, assistant) -> None:
 
     @app.post("/api/vision/ocr")
     async def vision_ocr(request: Request):
+        from jarvis.async_util import run_sync
         from jarvis.vision_product.engine import analyze
 
         body = await request.json()
         action = "ocr_structured" if body.get("structured") else "ocr"
-        return analyze(
+        return await run_sync(
+            analyze,
             path=body.get("path"),
             action=action,
             source=str(body.get("source") or "api"),
@@ -228,6 +232,7 @@ def register_routes(app, assistant) -> None:
         action: str = Form("describe"),
         question: str = Form(""),
     ):
+        from jarvis.async_util import run_sync
         from jarvis.config import DATA_DIR
         from jarvis.vision_product.engine import analyze
 
@@ -235,7 +240,8 @@ def register_routes(app, assistant) -> None:
         upload_dir.mkdir(parents=True, exist_ok=True)
         dest = upload_dir / (file.filename or "vision.jpg")
         dest.write_bytes(await file.read())
-        return analyze(
+        return await run_sync(
+            analyze,
             path=str(dest),
             action=action,
             question=question,

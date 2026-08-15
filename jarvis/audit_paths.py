@@ -165,7 +165,9 @@ def audit_path_env() -> dict[str, str]:
         add(login)
     add(os.environ.get("PATH", ""))
 
-    env = os.environ.copy()
+    from jarvis.security.owner.env_boundary import copy_process_env
+
+    env = copy_process_env()
     if not env.get("HOME") and env.get("USER"):
         env["HOME"] = f"/home/{env['USER']}"
     env["PATH"] = os.pathsep.join(parts)

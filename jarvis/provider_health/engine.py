@@ -69,8 +69,13 @@ def product_status() -> dict[str, Any]:
     }
 
 
-def diagnostics() -> dict[str, Any]:
-    ping = ping_provider("ollama", force_probe=True)
+def diagnostics(*, force_probe: bool = False) -> dict[str, Any]:
+    """Diagnostics for Provider Health UI.
+
+    Default does NOT force an Ollama generate probe (measured multi-second /
+    timeout source). Pass force_probe=True only for an explicit user refresh.
+    """
+    ping = ping_provider("ollama", force_probe=force_probe)
     models = list_models("ollama")
     resources = resource_snapshot()
     wd = watchdog_stats()
@@ -100,6 +105,7 @@ def diagnostics() -> dict[str, Any]:
         "recovery_attempts": wd.get("recoveries"),
         "recovery_success": wd.get("recovery_success"),
         "probe": ping.get("probe"),
+        "probe_forced": bool(force_probe),
         "recent_history": load_history(limit=20),
         "resources": resources,
     }

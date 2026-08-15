@@ -283,3 +283,53 @@ def test_apply_proposal_records_history(coding_env, monkeypatch):
     record_proposal("apply001", prop, status="pending")
     update_status("apply001", "applied", verification_status="pending_operator")
     assert list_history(status="applied")["total"] >= 1
+
+
+def test_apply_undo_survives_restart(coding_env, assistant, monkeypatch):
+    from jarvis.assistant import JarvisAssistant, perform_undo_apply
+    from jarvis.proposal_store import APPLY_UNDO_FILE
+
+    assistant.coding.project_root = coding_env
+    assistant.pending_proposals = {
+        "undo001": {
+            "files": [{"path": "sample.py", "code": "def hello():\n    return 42\n"}],
+            "explanation": "durable undo",
+            "syntax_ok": True,
+        }
+    }
+    assistant.session.last_proposal_id = "undo001"
+    monkeypatch.setattr("jarvis.assistant.verify_python_files", lambda *args, **kwargs: "**Syntax:** OK (`sample.py`)")
+
+    out = assistant.apply_proposal("undo001")
+    assert out["ok"] is True
+    assert (coding_env / "sample.py").read_text(encoding="utf-8") == "def hello():\n    return 42\n"
+    assert APPLY_UNDO_FILE.exists()
+
+    restarted = JarvisAssistant()
+    restarted.coding.project_root = coding_env
+    undone = perform_undo_apply(restarted)
+
+    assert undone["ok"] is True
+    assert (coding_env / "sample.py").read_text(encoding="utf-8") == "def hello():\n    return 1\n"
+    assert not APPLY_UNDO_FILE.exists()
+
+
+def test_apply_verify_failure_reports_not_ok(coding_env, assistant, monkeypatch):
+    assistant.coding.project_root = coding_env
+    assistant.pending_proposals = {
+        "fail001": {
+            "files": [{"path": "sample.py", "code": "def hello():\n    return 5\n"}],
+            "explanation": "failing verify",
+            "syntax_ok": True,
+        }
+    }
+    monkeypatch.setattr(
+        "jarvis.assistant.verify_python_files",
+        lambda *args, **kwargs: "**pytest:** failed (`tests/test_sample.py`)\n```\nFAILED\n```",
+    )
+
+    out = assistant.apply_proposal("fail001")
+
+    assert out["ok"] is False
+    assert out["applied_with_failures"] is True
+    assert out["show_undo"] is True

@@ -1,0 +1,29 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "calendar",
+  "capability": "Work schedule (weekly)",
+  "captured_at": "2026-08-13T17:41:00+00:00",
+  "result": "PASS — owner UI",
+  "identity": {
+    "hash": "#calendar",
+    "h2": "Calendar",
+    "place": "Wall calendar",
+    "room": "calendar"
+  },
+  "owner_ui": {
+    "details_open": true,
+    "has_grid": true,
+    "days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "has_save": true,
+    "has_retry": false,
+    "weekend_honest_empty": "Sat/Sun No blocks",
+    "weekday_blocks_present": true,
+    "save_clicked": false,
+    "blocks_added_or_removed": false
+  },
+  "leave_return": {
+    "journal_then_calendar": "PASS",
+    "return_ms": 412,
+    "performance": "FAST"
+  }
+}

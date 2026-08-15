@@ -12,6 +12,14 @@
           .replace(/"/g, "&quot;");
   }
 
+  function isChatCapableModel(name) {
+    const low = String(name || "").trim().toLowerCase();
+    if (!low) return false;
+    // Embedding-only runners cannot produce chat tokens.
+    if (low.includes("embed") || low.includes("nomic-embed")) return false;
+    return true;
+  }
+
   async function loadChatModelSelect() {
     const sel = document.getElementById("chatModelSelect");
     if (!sel) return;
@@ -31,13 +39,13 @@
       const opts = ['<option value="">Chat model: (default)</option>'];
       const seen = new Set();
       for (const m of [current, def, ...installed]) {
-        if (!m || seen.has(m)) continue;
+        if (!m || seen.has(m) || !isChatCapableModel(m)) continue;
         seen.add(m);
         const label = m === def ? `${m} (default)` : m;
         opts.push(`<option value="${esc(m)}">${esc(label)}</option>`);
       }
       sel.innerHTML = opts.join("");
-      sel.value = current;
+      sel.value = current && isChatCapableModel(current) ? current : "";
     } catch (err) {
       window.showAriaToast?.(err.message || "Could not load chat models", "err", 5000);
     }

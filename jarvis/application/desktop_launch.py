@@ -71,13 +71,16 @@ def start_aria_server(*, timeout: float = 90) -> bool:
     if _jarvis_port_open() and not api_responsive():
         stop_aria_server()
 
-    env = os.environ.copy()
+    from jarvis.security.owner.env_boundary import copy_process_env
+
+    env = copy_process_env()
     env.setdefault("JARVIS_NO_BROWSER", "1")
     env.setdefault("JARVIS_SERVICES_MANAGED", "1")
     main_py = str(PROJECT_ROOT / "main.py")
     log_dir = PROJECT_ROOT / "data" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     log_file = log_dir / "jarvis.log"
+    from jarvis.logging_config import open_rotating_log
 
     mode = "tray" if _tray_available() else "serve"
     if mode == "tray":
@@ -85,7 +88,7 @@ def start_aria_server(*, timeout: float = 90) -> bool:
     else:
         logger.info("Tray unavailable — starting headless serve")
 
-    with open(log_file, "a", encoding="utf-8") as log_handle:
+    with open_rotating_log(log_file) as log_handle:
         _SERVER_PROC = subprocess.Popen(
             [_python_exe(), main_py, mode],
             cwd=str(PROJECT_ROOT),

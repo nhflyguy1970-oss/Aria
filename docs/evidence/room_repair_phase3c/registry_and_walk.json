@@ -1,0 +1,565 @@
+{
+  "registry_total": 34,
+  "core": [
+    "audio",
+    "health",
+    "home",
+    "home_automation",
+    "mission",
+    "projects",
+    "providers"
+  ],
+  "remaining_ids": [
+    "chat",
+    "flytying",
+    "documents",
+    "planner",
+    "calendar",
+    "gallery",
+    "search",
+    "coding",
+    "memory",
+    "voice",
+    "repair",
+    "integrity",
+    "automation",
+    "presence",
+    "journal",
+    "video",
+    "browser",
+    "maker",
+    "meme",
+    "vision",
+    "connections",
+    "settings",
+    "capabilities",
+    "integrations",
+    "audit",
+    "security",
+    "actions"
+  ],
+  "walk": [
+    {
+      "id": "chat",
+      "viewId": "chat",
+      "metaphor": "Living room",
+      "hero": "Conversation",
+      "ms": 1820,
+      "snap": {
+        "room": "chat",
+        "hash": "#chat",
+        "furnished": "",
+        "textHead": "Aria is here Morning, Jeff A Morning, Jeff.",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 24,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "flytying",
+      "viewId": "flytying",
+      "metaphor": "Streamside cabin",
+      "hero": "The fly",
+      "ms": 1925,
+      "snap": {
+        "room": "flytying",
+        "hash": "#flytying",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Streamside cabin Listening quietly Fly tying 271 catalog patterns \u00b7 library connected \u00b7 smart search on \u00b7 index ready \u00b7 dry 94 \u00b7 terrestrial 72 \u00b7 nymph 54 \u00b7 streamer 35 Pattern of the day: Adams CDC Model qwen2.5:7b (recipes \u2014 recommended) qwen2.5:14b (design & new patterns) qwen2.5:3b (fast) Setup Refresh Gallery Season (Northeast US, month 8): Tricos, Ants, Hoppers, Flying ants, Evening caddis \u2014 Terrestrial ",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 176,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "documents",
+      "viewId": "documents",
+      "metaphor": "Private library",
+      "hero": "Knowledge",
+      "ms": 1818,
+      "snap": {
+        "room": "documents",
+        "hash": "#documents",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Private library Listening quietly Documents Personal document intelligence \u2014 local files, grounded search, Memory candidates. Not Drive, SharePoint, or Notion. Documents = library \u00b7 Knowledge = briefs \u00b7 Connections = graph \u00b7 Memory = autobiography \u00b7 Search index = retrieval ? Drop files or Upload Import Search Rebuild Search Index Briefing Ask Aria Clear 289 docs \u00b7 397 chunks \u00b7 hybrid (keyword + vector) \u00b7 embe",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 30,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "planner",
+      "viewId": "planner",
+      "metaphor": "Leather notebook",
+      "hero": "Today\u2019s page",
+      "ms": 1819,
+      "snap": {
+        "room": "planner",
+        "hash": "#planner",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Leather notebook Listening quietly Planner Today\u2019s actionable work \u00b7 Journal for notes \u00b7 Calendar for commitments \u00b7 Documents HA Focus mode Shortcuts: N \u00b7 P \u00b7 F \u00b7 T \u00b7 U DAILY FOCUS Today\u2019s day ops Planner = actionable work \u00b7 Journal = notes \u00b7 Calendar = commitments healthy \u00b7 0 tasks \u00b7 ~614m focus TOP 3 No open tasks \u2014 add one below EVENTS No events today TIMERS No running timers ALARMS No upcoming alarms AT RI",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 31,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "calendar",
+      "viewId": "calendar",
+      "metaphor": "Wall calendar",
+      "hero": "The week",
+      "ms": 1832,
+      "snap": {
+        "room": "calendar",
+        "hash": "#calendar",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Wall calendar Listening quietly Calendar Scheduled commitments \u00b7 use Planner for today\u2019s actionable work \u00b7 Journal for notes \u2190 Prev August 2026 Next \u2192 Today Month Week Agenda Timeline All sources Journal Planner ICS Work Holidays Planner Journal Documents Shortcuts: \u2190 \u2192 day \u00b7 T today \u00b7 N new \u00b7 1\u20134 views Mon Tue Wed Thu Fri Sat Sun 1 2 3 08:30 Work 4 08:30 Work 5 08:30 Work 6 08:30 Work 7 08:30 Work 8 9 10 08:3",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 57,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "gallery",
+      "viewId": "gallery",
+      "metaphor": "Museum",
+      "hero": "Artwork",
+      "ms": 1821,
+      "snap": {
+        "room": "gallery",
+        "hash": "#gallery",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Museum Listening quietly Gallery Local AI image product \u2014 generate, browse, organize, and edit stills. Video and Meme stay separate. Chat converses; Documents store knowledge. Refresh Job Center Models Maker Fly tying Video Meme Ctrl+Shift+G 0 images \u00b7 showing 0 Generation Stays in Gallery \u2014 same shared Image Generation pipeline as Chat / MCP / Automation. Chat command equivalent: generate image: Generate Enha",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 55,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "search",
+      "viewId": "search",
+      "metaphor": "Research study",
+      "hero": "Discovery",
+      "ms": 1821,
+      "snap": {
+        "room": "search",
+        "hash": "#search",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Research study Listening quietly Search One federated engine. Browse everything here \u2014 Ctrl+K for commands, Chat for answers, products own their data. Refresh Save search Diagnostics Sidebar Filter navigation (views, settings, tools) \u2014 not content search Ctrl+K Ctrl+K \u2014 commands + quick federated search Search Home Browse everything \u2014 facets, previews, history, saved searches Chat Answer + synthesis (including",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 42,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "coding",
+      "viewId": "coding",
+      "metaphor": "Engineering studio",
+      "hero": "Current work",
+      "ms": 1826,
+      "snap": {
+        "room": "coding",
+        "hash": "#coding",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Engineering studio Listening quietly Coding Propose \u2192 Review \u2192 Apply \u2192 Undo \u2192 Verify. Projects identify workspaces; Job Center tracks execution; Models configures the coding model. Refresh Projects Job Center Models Ctrl+Shift+C Ready Overview Proposals History Jobs LSP & Git Preferences Advanced Coding in Home Lab \u2192 `/media/jeff/AI/jarvis` \u00b7 main PROJECT Home Lab CODING ROOT /media/jeff/AI/jarvis WRITE TARGET",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 26,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "memory",
+      "viewId": "memory",
+      "metaphor": "Memory archive",
+      "hero": "Personal history",
+      "ms": 1822,
+      "snap": {
+        "room": "memory",
+        "hash": "#memory",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Memory archive Listening quietly Memory What Aria knows about you \u2014 autobiographical cognition (ACM), not a note database. Search New Briefing Assist ? Auto-memory Smart \u2192 candidates Explicit only Off Brain learning Journal \u2192 candidates Docs \u2192 candidates Auto-checkpoint Per-repo namespace Profile in prompt Update profile About you Loading\u2026 Edit answers Safety & authority Loading\u2026 Memory health Loading\u2026 Sleep &",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 2091,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "voice",
+      "viewId": "voice",
+      "metaphor": "Presence",
+      "hero": "Speaking",
+      "ms": 1823,
+      "snap": {
+        "room": "voice",
+        "hash": "#voice",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Presence Listening quietly Voice Audio Presence State: idle \u00b7 Duplex: off \u00b7 STT: whisper TTS engine: piper Cloud live unavailable Duplex Off Half Full STT backend Whisper RealtimeSTT TTS chunk chars Speak replies Server Whisper (mic) Interrupt on speak Chunk sentences Profile \u2014 none \u2014 Quiet Office Hands-Free Coding Presentation Dictation Accessibility Cloud Live Apply profile Save settings Refresh Recovery Rou",
+        "failCue": true,
+        "loadingCue": false,
+        "btnCount": 9,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "repair",
+      "viewId": "repair",
+      "metaphor": "Restoration bench",
+      "hero": "Evidence",
+      "ms": 1815,
+      "snap": {
+        "room": "repair",
+        "hash": "#repair",
+        "furnished": "",
+        "textHead": "Aria \u00b7 Restoration bench Examining evidence\u2026 Evidence Check integrity for details. Integrity \u2014 \u00b7 Platform \u2014 Attention \u2014 \u00b7\u00b7\u00b7",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 0,
+        "onStage": false,
+        "panelExists": false
+      },
+      "api_failures": []
+    },
+    {
+      "id": "integrity",
+      "viewId": "integrity",
+      "metaphor": "Quiet caretaker",
+      "hero": "Truth",
+      "ms": 1814,
+      "snap": {
+        "room": "integrity",
+        "hash": "#integrity",
+        "furnished": "",
+        "textHead": "Aria \u00b7 Quiet caretaker Listening quietly Truth Score 100 \u00b7 ready No deductions on record. \u00b7\u00b7\u00b7",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 0,
+        "onStage": false,
+        "panelExists": false
+      },
+      "api_failures": []
+    },
+    {
+      "id": "automation",
+      "viewId": "automation",
+      "metaphor": "Automation loft",
+      "hero": "Skills",
+      "ms": 1816,
+      "snap": {
+        "room": "automation",
+        "hash": "#automation",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Automation loft Listening quietly Automation Home Orchestrates schedules, rules, skills, and workflows. Not Job Center, Activity Center, Mission Control, or Home Assistant. Refresh Pause all Resume New rule Specialist team Specialists Team history View Paths Webhook Export Import Draft from NL Rules Recent runs Failures Learned suggestions Skills Learned workflows Pipelines (DAGs) Multi-step execution pipeline",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 17,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "presence",
+      "viewId": "presence",
+      "metaphor": "Presence",
+      "hero": "Camera & gestures",
+      "ms": 1818,
+      "snap": {
+        "room": "presence",
+        "hash": "#presence",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Presence Listening quietly Presence Security Voice Gestures enabled \u2014 pick Control mode to move floating panels Start camera Stop Enroll face Gestures Off Preview only Control \u2014 pinch click, fist drag panels CPU-only (low FPS) Calibrate gestures",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 6,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "journal",
+      "viewId": "journal",
+      "metaphor": "Bullet journal",
+      "hero": "Daily pages",
+      "ms": 1828,
+      "snap": {
+        "room": "journal",
+        "hash": "#journal",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Bullet journal Listening quietly Bullet Journal Notes, thoughts, reflections \u00b7 promote actionable items to Planner \u00b7 scheduled commitments live in Calendar \u2022 task \u25cb event \u2014 note \u00d7 done > migrated < scheduled ~ cancelled * important ! inspiration \ud83d\udc41 explore No special keys? Type t: task \u00b7 e: event \u00b7 n: note \u00b7 or O before text \u00b7 Rapid log: indent 2 spaces to nest. Daily Weekly Monthly Habits Wellness Future Inde",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 47,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "video",
+      "viewId": "video",
+      "metaphor": "Video studio",
+      "hero": "Motion",
+      "ms": 1819,
+      "snap": {
+        "room": "video",
+        "hash": "#video",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Video studio Listening quietly Video Studio Stay-in-Studio generation \u00b7 AnimateDiff or Ken Burns \u00b7 shared media queue Gallery Meme Mission Control Generate Enhance prompt Preset \u2014 none \u2014 Fast Draft Portrait Motion Landscape Pan Storyboard Preview Cinematic Social Clip AnimateDiff HQ Ken Burns Fast Duration Preview enhance Advanced Generate another Simple Expert Auto: AnimateDiff when ready, else Ken Burns. Res",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 18,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "browser",
+      "viewId": "browser",
+      "metaphor": "Browser",
+      "hero": "The web",
+      "ms": 1816,
+      "snap": {
+        "room": "browser",
+        "hash": "#browser",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Browser Listening quietly Browser Live web interaction agent \u2014 Playwright navigation, screenshots, DOM/Vision tasks. Not a full Chrome replacement. Documents store knowledge; Chat converses. Refresh Projects Job Center Coding Memory Documents Chat Ctrl+Shift+B Ready Overview Session History Bookmarks Downloads Notes Research Security Playwright ready \u00b7 status idle PROFILE _default URL \u2014 DOM available VLM avail",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 34,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "maker",
+      "viewId": "maker",
+      "metaphor": "Maker lab",
+      "hero": "CAD & print",
+      "ms": 1814,
+      "snap": {
+        "room": "maker",
+        "hash": "#maker",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Maker lab Listening quietly Maker lab \u29c9 CAD: OpenSCAD auto OpenSCAD build123d Meshy Generate Iterate Hello cube Slice Download STL Refresh Gallery Documents Clear gallery No models yet. Hello cube or ask Chat Printer \u29c9 No printer configured Select model\u2026 Bambu Lab A1 (Studio / SD) Bambu Lab A1 Mini (Studio / SD) Creality Ender-3 V3 KE (Moonraker) Add Discover KE Status Bambu: no LAN mode \u2014 slice here, send via",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 17,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "meme",
+      "viewId": "meme",
+      "metaphor": "Meme studio",
+      "hero": "Memes",
+      "ms": 1813,
+      "snap": {
+        "room": "meme",
+        "hash": "#meme",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Meme studio Listening quietly Meme Generator Classic top/bottom captions \u00b7 AI background optional \u00b7 safe / uncensored follows global toggle Generate in chat Gallery Video MEME IDEA (OPTIONAL \u2014 AI WRITES CAPTIONS) TOP TEXT BOTTOM TEXT AI BACKGROUND (COMFYUI) Ready Quick preview (text only) Generate meme Meme library No memes yet \u2014 ask Chat or make one below.",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 6,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "vision",
+      "viewId": "vision",
+      "metaphor": "Vision bench",
+      "hero": "Seeing",
+      "ms": 1821,
+      "snap": {
+        "room": "vision",
+        "hash": "#vision",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Vision bench Listening quietly Vision Chat attach Gallery Refresh State: idle \u00b7 Model: moondream:latest \u00b7 Mode: quality OCR entry point: enter an image/PDF page path, then choose OCR or Structured OCR below. Command Palette also knows \u201cRun OCR in Vision Home\u201d. moondream:latest \u00b7 1\u20133s Est. VRAM ~1500MB \u00b7 Free 11740MB \u00b7 OCR: hybrid (tesseract ok) Fallback: installed vision model No warnings Profile \u2014 none \u2014 Docu",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 17,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "connections",
+      "viewId": "connections",
+      "metaphor": "Connections",
+      "hero": "Relationships",
+      "ms": 1819,
+      "snap": {
+        "room": "connections",
+        "hash": "#connections",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Connections Listening quietly Connections Relationship explorer \u2014 models how things relate. Not Memory, not Documents, not Knowledge Briefs. ACM remains cognitive source of truth; the graph mirrors. Documents = files \u00b7 Knowledge = briefs \u00b7 Connections = graph \u00b7 Memory = autobiography ? Search Mode All Entities Relationships People Places Organizations Concepts Project namespace Document-linked Browse New (N) I",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 15,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "settings",
+      "viewId": "settings",
+      "metaphor": "Settings",
+      "hero": "Preferences",
+      "ms": 1814,
+      "snap": {
+        "room": "settings",
+        "hash": "#settings",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Settings Listening quietly Settings Preference catalog and deep links. Products own their stores \u2014 Settings indexes them. Ctrl+, opens this Home. Refresh Voice & Chat Diagnostics Export Catalog 63 Stores 9/12 Corrupt 0 Profile 912010b3c0 Settings coach Secrets stored in plaintext jarvis.env Integrations owns secrets \u2014 Aria does not encrypt this file today. Theme migrated into Settings appearance store Legacy a",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 11,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "capabilities",
+      "viewId": "capabilities",
+      "metaphor": "Capabilities",
+      "hero": "Extensions",
+      "ms": 1816,
+      "snap": {
+        "room": "capabilities",
+        "hash": "#capabilities",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Capabilities Listening quietly Capabilities Unified management for everything that extends Aria. Products stay product owners \u2014 Capabilities only extends them. Refresh Load enabled Diagnostics Capabilities does not isolate third-party code. In-process execution shares Aria's privileges. Review permissions before enabling. Search capabilities Layer All layers Host Local Cognitive Platform Category All categorie",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 7,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "integrations",
+      "viewId": "integrations",
+      "metaphor": "Integrations",
+      "hero": "Keys & services",
+      "ms": 1823,
+      "snap": {
+        "room": "integrations",
+        "hash": "#integrations",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Integrations Listening quietly Integrations Provider credentials, connection tests, and unlock matrix. Products own behavior \u2014 Integrations owns keys and health. Refresh Test configured Diagnostics Secrets are stored in plaintext in data/jarvis.env on this PC. Aria does not encrypt this file today. Prefer restrictive file permissions (0600). Keys are never synced to git and must not be stored in Memory or chat",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 7,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "audit",
+      "viewId": "audit",
+      "metaphor": "System audit",
+      "hero": "Audit",
+      "ms": 1812,
+      "snap": {
+        "room": "audit",
+        "hash": "#audit",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 System audit Listening quietly System Audit Audit in progress\u2026 Mission Control Actions Run audit 14 phases: OS \u00b7 packages \u00b7 storage/SMART \u00b7 memory \u00b7 hardware/sensors \u00b7 GPU \u00b7 services/desktop \u00b7 containers \u00b7 dev tools \u00b7 integrity \u00b7 performance \u00b7 security \u00b7 network \u00b7 Jarvis/AI. 0% Starting audit\u2026 Preparing\u2026 \u00b7 elapsed 0s \u00b7 ~1m 30s remaining",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 3,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "security",
+      "viewId": "security",
+      "metaphor": "Security",
+      "hero": "Lock & trust",
+      "ms": 1812,
+      "snap": {
+        "room": "security",
+        "hash": "#security",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Security Listening quietly Security Presence Voice PIN lock off (set JARVIS_PIN_LOCK=1) PIN lock Set a PIN and enable JARVIS_PIN_LOCK=1 in jarvis.env. Set PIN Lock now Trusted devices No trusted devices yet. Unlock with PIN once, then use Presence / face enroll if available. Voice & presence Cloud live: ready (gemini_live) Gestures: off \u00b7 floating panels on Brain mode: Local + cloud",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 5,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    },
+    {
+      "id": "actions",
+      "viewId": "actions",
+      "metaphor": "Action history",
+      "hero": "What happened",
+      "ms": 1812,
+      "snap": {
+        "room": "actions",
+        "hash": "#actions",
+        "furnished": "1",
+        "textHead": "Aria \u00b7 Action history Listening quietly Action history All modules Coding Home Assistant Documents Image Clear Chat Audit Mission Control 2026-08-12T13:00:10 api http /api/cheatsheets 2026-08-12T13:00:06 api http /api/cheatsheets 2026-08-12T13:00:06 api http /api/cheatsheets 2026-08-12T03:20:23 api http /api/cheatsheets 2026-08-12T03:15:47 api http /api/planner/tasks 2026-08-12T00:32:19 api http /api/health/overview ",
+        "failCue": false,
+        "loadingCue": false,
+        "btnCount": 4,
+        "onStage": true,
+        "panelExists": true
+      },
+      "api_failures": []
+    }
+  ],
+  "triage": {
+    "wrong_room": [],
+    "loading": [],
+    "fail_cue": [
+      "voice"
+    ],
+    "problem_count": 1,
+    "api_failures_by_url": {}
+  }
+}

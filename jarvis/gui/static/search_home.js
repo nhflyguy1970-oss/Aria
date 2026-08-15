@@ -7,6 +7,8 @@
   let _selected = "";
   let _codeMode = "auto";
   let _busy = false;
+  /** Monotonic generation — prevents stale loadHome/runQuery from overwriting a newer owner query. */
+  let _gen = 0;
 
   function $(id) {
     return document.getElementById(id);
@@ -102,10 +104,19 @@
   function renderResults(results, meta) {
     const list = $("searchResultsList");
     const status = $("searchResultsStatus");
+    const failures = Array.isArray(meta?.failures) ? meta.failures : [];
+    const failureText = failures
+      .map((f) => `${f.corpus || "corpus"}: ${f.error || "failed"}`)
+      .join(" · ");
     if (status) {
-      if (_busy) status.textContent = "Searching…";
-      else if (!results?.length) status.textContent = meta?.query ? "No matches." : "Enter a query to browse federated results.";
-      else status.textContent = `${results.length} result(s)${meta?.latency_ms != null ? ` · ${meta.latency_ms} ms` : ""} · ${esc((meta?.searched || []).join(", "))}`;
+      // Never leave "Searching…" on screen once results (or an empty final set) exist.
+      if (_busy && !(results && results.length)) status.textContent = "Searching…";
+      else if (failureText && meta?.ok === false) status.textContent = `Search failed · ${failureText}`;
+      else if (!results?.length) status.textContent = meta?.query ? `No matches.${failureText ? ` Partial failure: ${failureText}` : ""}` : "Enter a query to browse federated results.";
+      else {
+        const searched = Array.isArray(meta?.searched) ? meta.searched.join(", ") : "";
+        status.textContent = `${results.length} result(s)${meta?.latency_ms != null ? ` · ${meta.latency_ms} ms` : ""}${searched ? ` · ${searched}` : ""}${failureText ? ` · Warnings: ${failureText}` : ""}`;
+      }
     }
     if (!list) return;
     if (!results?.length) {
@@ -198,7 +209,7 @@
         "gallerySearchInput",
         "audioSearchInput",
         "plannerSearchInput",
-        "flySearchInput",
+        "flytyingSearchInput",
       ];
       for (const id of selectors) {
         const el = $(id);
@@ -218,6 +229,7 @@
       renderResults([], {});
       return;
     }
+    const gen = ++_gen;
     _busy = true;
     renderResults([], { query: q });
     try {
@@ -233,33 +245,54 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
+      if (gen !== _gen) return; // newer owner query won the race
       _home = { ...(_home || {}), results: data.results || [], search: data, query: q };
       _selected = (data.results && data.results[0]?.id) || "";
+      _busy = false;
       renderResults(data.results || [], data);
       renderHistory((await api("/api/search/product/history?limit=20")).history || []);
+      if (gen !== _gen) return;
+      if (Array.isArray(data.failures) && data.failures.length) {
+        const msg = data.failures
+          .slice(0, 3)
+          .map((f) => `${f.corpus || "corpus"}: ${f.error || "failed"}`)
+          .join(" · ");
+        window.showAriaToast?.(`Search warning: ${msg}`, data.ok === false ? "error" : "warn", 7000);
+      }
       if (data.web_handoff && _facet === "web") {
         window.showAriaToast?.("Web facet ready — synthesize in Chat for an answer with sources", "info");
       }
     } catch (err) {
+      if (gen !== _gen) return;
       if ($("searchResultsStatus")) $("searchResultsStatus").textContent = err?.message || "Search failed";
     } finally {
-      _busy = false;
+      if (gen === _gen) _busy = false;
     }
   }
 
   async function loadHome() {
     const q = $("searchHomeInput")?.value?.trim() || "";
+    // Capture generation — do NOT bump _gen here. Bumping would cancel an in-flight
+    // owner runQuery and can leave the UI stuck on "Searching…".
+    const genAtStart = _gen;
     const data = await api(`/api/search/product/home?q=${encodeURIComponent(q)}&facet=${encodeURIComponent(_facet)}`);
-    _home = data;
+    if (genAtStart !== _gen) {
+      // Owner started a newer query; still refresh chrome chrome-only fields if safe
+      return;
+    }
+    _home = { ...(_home || {}), ...data, results: data.results || _home?.results || [] };
     renderMentalModel(data.mental_model);
     renderFacets(data.facets);
     renderHealth(data.health, data.recovery);
     renderHistory(data.history);
     renderSaved(data.saved);
-    if (q) {
+    const qNow = $("searchHomeInput")?.value?.trim() || "";
+    if (_busy) {
+      // Owner query in flight — never overwrite results/status
+    } else if (q && qNow === q) {
       _selected = (data.results && data.results[0]?.id) || "";
       renderResults(data.results || [], data.search || { query: q });
-    } else {
+    } else if (!qNow) {
       renderResults([], {});
     }
     const tips = $("searchTipsList");

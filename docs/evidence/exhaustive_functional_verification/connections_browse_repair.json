@@ -1,0 +1,43 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-15T21:08:00Z",
+  "not_certification": true,
+  "session_model": "ONE Owner session after Jeff unlock; no lock/unlock between Rooms",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "owner_session": "OWNER_UNLOCKED throughout",
+  "integrity": "clean / 100; artifacts 0",
+  "room": "connections",
+  "capability": "Browse lists existing graph matching Overview",
+  "result": "PASS \u2014 after process load + browse limit 200. Overview Nodes 59 \u00b7 Relationships 53 \u00b7 Backend memgraph. Browse 59 entities. Negative zzzznonexistentxyz honest empty. Opened one existing entity (name not recorded). Audit leave/return restored 59. New/Import/Cleanup not clicked.",
+  "repair": {
+    "python": "Bolt list_nodes/list_edges MATCH all when q empty (loaded on restart)",
+    "js": "connections.js?v=1.0.5-browse-all limit=200 + count line",
+    "prior_live": "count 0 until process load; default API limit 20 hid the rest"
+  },
+  "overview": {
+    "nodes": 59,
+    "relationships": 53,
+    "backend": "memgraph",
+    "namespaces": "system 1 + default 58"
+  },
+  "browse": {
+    "count_line": "59 entities",
+    "rows": 59
+  },
+  "negative_search": "No connections. Try New entity (N) or Import text for review.",
+  "entity_opened": true,
+  "names_recorded": false,
+  "leave_return": "PASS \u2014 #audit then #connections restored 59 / Overview 59",
+  "not_clicked": [
+    "New",
+    "Import",
+    "Cleanup",
+    "Approve",
+    "Delete"
+  ],
+  "data_mutation": {
+    "graph_write": false
+  }
+}

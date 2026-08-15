@@ -1,0 +1,22 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-15T20:28:00Z",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "owner_session": "OWNER_UNLOCKED throughout",
+  "room": "home",
+  "capability": "Foyer first paint after leave/return without Retry",
+  "result": "PASS \u2014 Audit \u2192 Home settled welcome in 141ms; no Home unavailable / Load failed; Retry not shown. Prior first paint had Load failed then Retry recovered. Cause: room-abort painted empty-state instead of retrying.",
+  "repair": {
+    "file": "jarvis/gui/static/dashboard_home.js",
+    "cache": "dashboard_home.js?v=1.0.5-abort-retry",
+    "fix": "AbortError / room-leave retries quietly after 200ms when still on dashboard"
+  },
+  "from": "#audit",
+  "to": "#dashboard",
+  "elapsed_ms": 141,
+  "retry_clicked": false
+}

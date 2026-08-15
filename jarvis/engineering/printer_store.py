@@ -41,7 +41,7 @@ def add_printer(
     model: str = "",
 ) -> dict[str, Any]:
     model_meta = get_model(model) if model else None
-    if model_meta and not backend:
+    if model_meta and (not backend or model_meta.get("backend") == "bambu_handoff"):
         backend = model_meta["backend"]
     if model_meta and backend == model_meta["backend"] and model_meta["backend"] == "bambu_handoff":
         row = default_row_for_model(model_meta["id"], name=name or model_meta["label"])

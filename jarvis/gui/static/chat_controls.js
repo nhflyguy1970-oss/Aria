@@ -12,13 +12,37 @@
         if (window.activeBranchId) f.append("branch_id", window.activeBranchId);
         const res = await fetch("/api/chat", { method: "POST", body: f });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || data.detail || `Clear failed (${res.status})`);
+        if (!res.ok || data.ok === false) {
+          throw new Error(data.message || data.detail || `Clear failed (${res.status})`);
+        }
+        const branchId = window.activeBranchId || "main";
+        const verify = await fetch(`/api/branches/${encodeURIComponent(branchId)}/messages`);
+        if (!verify.ok) {
+          throw new Error(`Clear verify failed (HTTP ${verify.status}) — conversation not confirmed empty`);
+        }
+        const verified = await verify.json().catch(() => null);
+        if (!verified || !Array.isArray(verified.messages)) {
+          throw new Error("Clear verify returned invalid payload — conversation not confirmed empty");
+        }
+        const remaining = verified.messages.filter(
+          (m) => m && (m.role === "user" || m.role === "assistant")
+        );
+        if (remaining.length) {
+          throw new Error(
+            `Clear reported success but ${remaining.length} message(s) remain — not cleared.`
+          );
+        }
         const messagesEl = $("messages");
         if (messagesEl) messagesEl.innerHTML = "";
         window.addMessage?.("assistant", "Fresh start. What would you like to do?");
         window.showAriaToast?.("Conversation cleared", "ok", 2500);
       } catch (err) {
         window.showAriaToast?.(err.message || "Could not clear conversation", "err", 5000);
+        try {
+          if (typeof window.reloadBranchMessages === "function") {
+            await window.reloadBranchMessages();
+          }
+        } catch (_) {}
       }
     });
   }

@@ -127,7 +127,9 @@ def finish_job(job_id: str, *, status: str, result: dict[str, Any] | None = None
             job["cancelled"] = True
         if result:
             job["result_ok"] = bool(result.get("ok"))
-            job["result_message"] = (result.get("success_summary") or result.get("failure_summary") or "")[:200]
+            job["result_message"] = (
+                result.get("success_summary") or result.get("failure_summary") or ""
+            )[:200]
     _persist()
 
 

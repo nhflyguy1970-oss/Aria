@@ -1,0 +1,39 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "journal",
+  "capability": "Projects tab",
+  "captured_at": "2026-08-13T17:40:00+00:00",
+  "result": "PASS — owner UI",
+  "runtime": "http://127.0.0.1:8765/?workspace=1#journal",
+  "root_cause": "Classic scripts share window. journal.js async function loadProjects was overwritten by projects.js loadProjects (loaded later). setBujoTab('projects') dispatched the Projects-room loader (/api/projects/home) instead of /api/journal/projects, so BuJo chrome switched and #bujoContent never painted.",
+  "repair": "Rename journal loader to loadJournalProjects. Cache-bust journal.js?v=5.17.10-navfix.",
+  "owner_ui": {
+    "tab_active": "projects",
+    "heading": "Project journals",
+    "existing_projects": ["Home Lab", "jarvis"],
+    "hash": "#journal",
+    "room": "journal",
+    "h2": "Bullet Journal",
+    "place": "Bullet journal",
+    "paint_ms": 100,
+    "performance": "FAST"
+  },
+  "api": {
+    "journal_projects": "/api/journal/projects",
+    "projects_home_called": false
+  },
+  "leave_return": {
+    "daily_then_projects": "PASS",
+    "weekly_then_projects": "PASS",
+    "calendar_then_journal_restores_projects_body": "PASS",
+    "calendar_identity": "#calendar / Wall calendar"
+  },
+  "mutations": {
+    "journal_post": false,
+    "live_journal_size": 67555,
+    "live_journal_sha256": "2d914b51e1359d3ff67aa1a848a482dd869e9efa90eac526e2e6197d1fc6a431",
+    "prior_evidence_sha256": "3c86da4da8c8bcf455333eb87ffedf89f07a24e780de56439f6de30a9712d48a",
+    "note": "Size unchanged from journal_live_remaining.json. Hash differs from that earlier snapshot; this verification did not POST journal writes. No bullet text recorded."
+  },
+  "do_not_include": ["journal bullet text", "project log bodies"]
+}

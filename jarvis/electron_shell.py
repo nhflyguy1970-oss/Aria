@@ -66,8 +66,13 @@ def missing_dependency_hint() -> str:
 
 
 def _shell_env(url: str) -> dict[str, str]:
-    env = os.environ.copy()
-    env["JARVIS_URL"] = app_url(url)
+    from jarvis.security.owner.env_boundary import copy_process_env
+
+    env = copy_process_env()
+    # Living Workspace Stage — force workspace identity in the URL
+    env["JARVIS_URL"] = app_url(url, shell="electron")
+    if "workspace=1" not in env["JARVIS_URL"]:
+        env["JARVIS_URL"] += "&workspace=1" if "?" in env["JARVIS_URL"] else "?workspace=1"
     env["JARVIS_WINDOW_TITLE"] = window_title()
     env["JARVIS_SHELL"] = "electron"
     return env

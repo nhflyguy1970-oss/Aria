@@ -78,3 +78,17 @@ def test_git_api_routes(chat_app):
     res = chat_app.get("/api/git/status")
     assert res.status_code == 200
     assert "status" in res.json()
+
+
+def test_git_extension_register_api_adds_routes():
+    from fastapi import FastAPI
+
+    from jarvis.extensions.git.extension import EXTENSION
+
+    app = FastAPI()
+    EXTENSION.register_api(app, object())
+    paths = {getattr(route, "path", None) for route in app.routes}
+
+    assert "/api/git/status" in paths
+    assert "/api/git/diff" in paths
+    assert "/api/git/log" in paths

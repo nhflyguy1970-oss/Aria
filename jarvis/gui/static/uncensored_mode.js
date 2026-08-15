@@ -5,8 +5,9 @@
 const uncensoredToggle = document.getElementById("uncensoredToggle");
 const UNCENSORED_SESSION_KEY = "jarvisUncensoredToken";
 
-function showUncensoredPasswordModal(needsSetup, authConfigured = false) {
+function showUncensoredPasswordModal(needsSetup, authConfigured = false, ownerVault = false) {
   return new Promise((resolve) => {
+    window.AriaModalPortal?.ensure?.();
     const modal = document.getElementById("uncensoredAuthModal");
     const title = document.getElementById("uncensoredAuthTitle");
     const intro = document.getElementById("uncensoredAuthIntro");
@@ -20,13 +21,23 @@ function showUncensoredPasswordModal(needsSetup, authConfigured = false) {
       resolve(null);
       return;
     }
-    if (title) title.textContent = needsSetup ? "Set uncensored password" : "Uncensored mode";
-    if (intro) {
-      intro.textContent = needsSetup
-        ? "Choose a password to protect uncensored mode. You'll need it to enable NSFW chat and image settings."
-        : "Enter your password to enable uncensored mode.";
+    if (ownerVault) {
+      needsSetup = false;
+      if (title) title.textContent = "Enable uncensored mode";
+      if (intro) {
+        intro.textContent =
+          "Confirm with your Aria Master Password. Uncensored is a house capability — not a second Aria password.";
+      }
+      resetBtn?.classList.add("hidden");
+    } else {
+      if (title) title.textContent = needsSetup ? "Set uncensored password" : "Uncensored mode";
+      if (intro) {
+        intro.textContent = needsSetup
+          ? "Choose a password to protect uncensored mode. You'll need it to enable NSFW chat and image settings."
+          : "Enter your password to enable uncensored mode.";
+      }
+      resetBtn?.classList.toggle("hidden", needsSetup || !authConfigured);
     }
-    resetBtn?.classList.toggle("hidden", needsSetup || !authConfigured);
     passInput.autocomplete = needsSetup ? "new-password" : "current-password";
     if (confirmInput) confirmInput.autocomplete = "new-password";
     const sessionToken = sessionStorage.getItem(UNCENSORED_SESSION_KEY) || "";
@@ -48,7 +59,7 @@ function showUncensoredPasswordModal(needsSetup, authConfigured = false) {
     if (passInput) passInput.disabled = false;
     if (confirmInput) confirmInput.disabled = false;
     errEl?.classList.add("hidden");
-    if (submitBtn) submitBtn.textContent = needsSetup ? "Set password" : "Unlock";
+    if (submitBtn) submitBtn.textContent = ownerVault ? "Confirm" : needsSetup ? "Set password" : "Unlock";
     modal.classList.remove("hidden");
     passInput.focus();
 
@@ -61,7 +72,13 @@ function showUncensoredPasswordModal(needsSetup, authConfigured = false) {
       resolve(null);
     };
     const onReset = async () => {
-      if (!confirm("Clear the uncensored password? You can set a new one right after.")) return;
+      const resetOk = window.ariaConfirm
+        ? await window.ariaConfirm("Clear the uncensored password? You can set a new one right after.", {
+            title: "Clear password",
+            okLabel: "Clear",
+          })
+        : window.confirm("Clear the uncensored password? You can set a new one right after.");
+      if (!resetOk) return;
       try {
         const res = await fetch("/api/uncensored/reset", { method: "POST" });
         const data = await res.json();
@@ -85,7 +102,7 @@ function showUncensoredPasswordModal(needsSetup, authConfigured = false) {
     const onSubmit = () => {
       const password = passInput.value.trim();
       const confirm = (confirmInput?.value || "").trim();
-      if (needsSetup && password.length < 12) {
+      if (!ownerVault && needsSetup && password.length < 12) {
         if (errEl) {
           errEl.textContent = "Password must be at least 12 characters";
           errEl.classList.remove("hidden");
@@ -198,10 +215,18 @@ uncensoredToggle?.addEventListener("change", async () => {
     if (authRes.ok) auth = await authRes.json();
   } catch (_) {}
 
+  if (auth.owner_vault && auth.owner_unlocked === false) {
+    window.showAriaToast?.("Unlock Aria with your Master Password first", "warn", 4000);
+    return;
+  }
   let password = "";
   let confirm = "";
   if (!auth.session_valid) {
-    const creds = await showUncensoredPasswordModal(!auth.configured, auth.configured);
+    const creds = await showUncensoredPasswordModal(
+      !auth.configured && !auth.owner_vault,
+      auth.configured,
+      !!auth.owner_vault,
+    );
     if (!creds) return;
     password = creds.password;
     confirm = creds.confirm || "";
@@ -265,4 +290,12 @@ uncensoredToggle?.addEventListener("change", async () => {
 
   window.restoreUncensoredSession = restoreUncensoredSession;
   window.showUncensoredPasswordModal = showUncensoredPasswordModal;
+  window.toggleAriaUncensored = function toggleAriaUncensored() {
+    window.AriaModalPortal?.ensure?.();
+    if (!uncensoredToggle) return false;
+    const currentlyOn = document.body.classList.contains("uncensored-mode") || uncensoredToggle.checked;
+    uncensoredToggle.checked = !currentlyOn;
+    uncensoredToggle.dispatchEvent(new Event("change", { bubbles: true }));
+    return true;
+  };
 })();

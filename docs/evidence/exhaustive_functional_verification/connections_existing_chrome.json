@@ -1,0 +1,77 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "connections",
+  "capability": "Connections existing graph without writing",
+  "captured_at": "2026-08-15T13:24:45Z",
+  "result": "PARTIAL — Front Door → Connections; first load honest Neo4j localhost:7687 defunct (Backend unavailable · degraded; empty Overview counts). Integrity leave/return recovered Overview Nodes 59 · Relationships 53 · Backend memgraph; namespaces system 1 + default 58. Browse and negative search stayed empty (0 rows) even after recovery. New/Import/Cleanup/Approve not clicked. Names/triples not recorded. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Connections (How things relate)",
+    "hash": "#connections",
+    "h2": "Connections",
+    "place": "Connections",
+    "first_paint": "Loading… then Failed to read from defunct connection IPv4Address(('localhost', 7687)); Backend unavailable · degraded; Overview counts empty",
+    "usable_after_return": "Overview Nodes 59 · Relationships 53 · Backend memgraph; Listening quietly"
+  },
+  "functions": {
+    "overview_first_load": "HONEST DEGRADED — Neo4j :7687 defunct; Nodes/Relationships/Orphans/Missing provenance empty; Backend unavailable · degraded",
+    "browse_first_load": "HONEST EMPTY — No entities yet. Press N to create one, or Import text for review. (graph unreachable)",
+    "negative_search": "PASS honesty — query zzzznonexistentxyz → No connections. Try New entity (N) or Import text for review.",
+    "overview_after_return": "RECOVERED — Nodes 59 · Relationships 53 · Backend memgraph; namespaces system · 1 + default · 58; no degraded banner",
+    "browse_after_recovery": "FAIL vs Overview — Browse still No entities yet; GET /api/connections/search?mode=entities&limit=40&q= returns ok count 0 while home Overview shows 59/53. search_connections → list_nodes(q='') does not surface the graph home already counted."
+  },
+  "leave_return": {
+    "leave": "Front Door recents → Integrity → #integrity h1 Truth Score 100 · ready; No deductions; More/Repair not clicked",
+    "return": "Front Door recents → Connections → #connections h2 Connections",
+    "return_state": "query zzzznonexistentxyz restored; search copy No connections…; Overview recovered 59/53 memgraph",
+    "front_door_copy": "stale — You’re in the middle of Production Integrity",
+    "result": "PASS — room, hash, query, and empty search copy restored; Overview recovered from degraded"
+  },
+  "graph_write": {
+    "new_clicked": false,
+    "import_clicked": false,
+    "cleanup_clicked": false,
+    "assistant_clicked": false,
+    "undo_clicked": false,
+    "clear_clicked": false,
+    "approve_clicked": false,
+    "namespace_chips_clicked": false
+  },
+  "not_clicked": [
+    "New",
+    "Import",
+    "Cleanup",
+    "Assistant",
+    "Undo",
+    "Clear",
+    "Approve all",
+    "Dismiss pending",
+    "namespace chips",
+    "Lock Aria",
+    "Open mini chat"
+  ],
+  "performance": {
+    "room_entry": "hash #connections immediately on Front Door click",
+    "first_meaningful": "h2 Connections + chrome; Overview first load degraded",
+    "browse_after_recovery": "Loading… then empty copy immediately (API count 0)",
+    "note": "Tool-roundtrip delays are not owner-visible time and were not recorded as room slowness. First-load Neo4j defunct vs later memgraph is owner-visible."
+  },
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "graph_write": false,
+    "journal_post": false,
+    "journal_bytes": 67547,
+    "health_phr": false,
+    "chat_send": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "AI Providers existing chrome without writing keys. Do not execute Guided Repair. Do not Lock Aria. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5. Do not New/Import Connections."
+}

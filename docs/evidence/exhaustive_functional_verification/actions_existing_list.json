@@ -1,0 +1,66 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "actions",
+  "capability": "Action History existing list without dismiss",
+  "captured_at": "2026-08-15T12:36:00Z",
+  "result": "PASS — Front Door → Action History; All modules 15 existing rows; Coding filter honest empty; All modules restored; Mission Control leave/return restored All modules + 15. Clear not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Action History (What just happened)",
+    "hash": "#actions",
+    "h2": "Action history",
+    "place": "Action history"
+  },
+  "list": {
+    "filter": "All modules",
+    "row_count": 15,
+    "action_type_counts": {
+      "api": 10,
+      "media_job_done": 1,
+      "media_job_start": 1,
+      "voice_speak": 3
+    },
+    "titles_details_in_evidence": false
+  },
+  "functions": {
+    "filter_coding": "PASS — after load: 1 empty-state row; No actions logged yet. First snapshot after select still showed prior All-modules rows until loadActions finished.",
+    "restore_all": "PASS — All modules again; 15 rows; type counts unchanged"
+  },
+  "leave_return": {
+    "leave": "Action History Mission Control button → #workstation h2 Mission Control; Hardware tab still selected from prior Mission gate; Audit/Refresh not clicked",
+    "return": "Front Door Rooms → Action History → #actions h2 Action history",
+    "return_state": "All modules; 15 rows restored",
+    "result": "PASS — room and list restored"
+  },
+  "not_clicked": [
+    "Clear",
+    "Chat",
+    "Open Chat",
+    "Audit",
+    "Lock Aria"
+  ],
+  "performance": {
+    "room_entry": "hash #actions immediately on Front Door click",
+    "first_meaningful": "h2 Action history + All modules chrome on first paint; list fill after loadActions",
+    "filter_apply": "Coding empty after loadActions; snapshot can lag",
+    "note": "Tool-roundtrip delays are not owner-visible time and were not recorded as room slowness."
+  },
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "actions_clear": false,
+    "journal_post": false,
+    "journal_bytes": 67547,
+    "health_phr": false,
+    "planner_task_create": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "Projects existing chrome without creating. Do not Clear Action History. Do not Lock Aria. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5."
+}

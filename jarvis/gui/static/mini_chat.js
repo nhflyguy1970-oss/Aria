@@ -97,14 +97,35 @@
     send();
   }
 
+  function chatSurfaceActive() {
+    /* Living Workspace Immersion — chat owns the stage; FAB stays hidden, mini chat stays available via Ctrl+Shift+K. */
+    if (
+      document.body?.classList.contains("living-workspace") ||
+      document.documentElement.classList.contains("living-workspace")
+    ) {
+      return document.body?.dataset?.room === "chat" || document.body?.classList.contains("living-room");
+    }
+    const chatView = $("chatView");
+    if (chatView && !chatView.classList.contains("hidden")) return true;
+    return !!document.querySelector('.view-tab[data-view="chat"].active');
+  }
+
   function updateFab() {
     const fab = $("miniChatFab");
     if (!fab) return;
-    fab.classList.toggle("hidden", hiddenPref());
+    // Full Chat already has Send; the FAB sits on top of it (measured click intercept).
+    const hide = hiddenPref() || chatSurfaceActive();
+    fab.classList.toggle("hidden", hide);
+    /* Do not auto-close mini chat in Living Workspace — Ctrl+Shift+K is a House Control. */
+    const lw =
+      document.body?.classList.contains("living-workspace") ||
+      document.documentElement.classList.contains("living-workspace");
+    if (!lw && hide && isOpen() && chatSurfaceActive()) close();
   }
 
   function init() {
     updateFab();
+    window.addEventListener("aria-view-change", updateFab);
     $("miniChatFab")?.addEventListener("click", toggle);
     $("miniChatCloseBtn")?.addEventListener("click", close);
     $("miniChatDockBtn")?.addEventListener("click", dockToChat);
@@ -130,7 +151,7 @@
     if (btn) btn.textContent = hiddenPref() ? "Show mini chat" : "Hide mini chat";
   }
 
-  window.AriaMiniChat = { open, close, toggle, send };
+  window.AriaMiniChat = { open, close, toggle, send, updateFab };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

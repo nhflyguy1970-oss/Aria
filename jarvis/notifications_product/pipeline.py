@@ -46,6 +46,28 @@ def publish(raw: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
     append_history(evt)
     _RECENT.insert(0, evt)
     del _RECENT[_MAX_RECENT:]
+    activity_payload = to_activity_payload(evt)
+    inbox_result: dict[str, Any] | None = None
+    if routing.get("activity"):
+        try:
+            from jarvis.activity_inbox import publish as publish_activity
+
+            inbox_result = publish_activity(
+                kind=evt["severity"],
+                title=evt["title"],
+                body=evt.get("summary") or evt.get("detail") or "",
+                source=evt.get("source") or "notifications",
+                meta={
+                    **(evt.get("metadata") or {}),
+                    "category": evt.get("category"),
+                    "type": evt.get("type"),
+                    "severity": evt.get("severity"),
+                    "notification": activity_payload,
+                },
+                event_id=evt["id"],
+            )
+        except Exception as exc:
+            inbox_result = {"ok": False, "error": str(exc)[:200]}
 
     # Also feed Mission Control platform notifications for critical/error (ops echo, not inbox)
     if evt["severity"] in ("critical", "error"):
@@ -65,11 +87,12 @@ def publish(raw: dict[str, Any] | None = None, **kwargs: Any) -> dict[str, Any]:
         "ok": True,
         "suppressed": False,
         "event": evt,
-        "activity": to_activity_payload(evt),
+        "activity": activity_payload,
+        "activity_inbox": inbox_result,
         "routing": routing,
         "client_action": {
             "type": "ingest_notification",
-            "activity": to_activity_payload(evt),
+            "activity": activity_payload,
             "toast": routing.get("toast"),
             "desktop": routing.get("desktop"),
             "voice": routing.get("voice"),
@@ -93,7 +116,25 @@ def recent(*, limit: int = 40) -> list[dict[str, Any]]:
 
 def unread_summary() -> dict[str, Any]:
     items = [e for e in _RECENT if not e.get("read") and not e.get("dismissed") and not e.get("suppressed")]
-    critical = [e for e in items if e.get("severity") in ("critical", "error")]
+    # Activity Center is the durable inbox — survive restarts when in-memory ring is empty.
+    try:
+        from jarvis.activity_inbox import list_items
+
+        inbox = (list_items(include_dismissed=False, limit=100) or {}).get("items") or []
+        inbox_unread = [e for e in inbox if not e.get("read") and not e.get("dismissed")]
+        if len(inbox_unread) > len(items):
+            items = [
+                {
+                    "title": e.get("title"),
+                    "severity": e.get("kind") or e.get("severity") or "info",
+                    "read": e.get("read"),
+                    "dismissed": e.get("dismissed"),
+                }
+                for e in inbox_unread
+            ]
+    except Exception:
+        pass
+    critical = [e for e in items if e.get("severity") in ("critical", "error", "warning")]
     return {
         "unread": len(items),
         "critical": len(critical),

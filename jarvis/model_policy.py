@@ -182,9 +182,11 @@ def select_model_for_role(
     fallback_model: str | None = None
     provider = "ollama"
     execution_path = "local_gpu"
+    # Per-chat / explicit UI override must beat Settings role model and benchmarks.
+    explicit_override = bool((configured_override or ctx.user_model_override or "").strip())
 
     # Personalization (learned preference) when no explicit override.
-    if not ctx.user_model_override:
+    if not explicit_override:
         try:
             from jarvis.personalization.store import preferred_model
 
@@ -196,15 +198,22 @@ def select_model_for_role(
             pass
 
     overlay = _benchmark_overlay(selected, canonical)
-    if overlay.get("model") and overlay.get("source") == "benchmark":
-        selected = str(overlay["model"])
-        reason = str(overlay.get("reason") or "benchmark_policy")
-        fallback_model = overlay.get("fallback_model")
-        hw = str(overlay.get("hardware") or "cpu")
-        execution_path = "local_gpu" if hw not in ("cpu", "") else "cpu"
+    overlay_source = str(overlay.get("source") or "")
+    if overlay.get("model") and overlay_source in ("benchmark", "user_config", "env"):
+        if explicit_override and overlay_source != "env":
+            reason = "explicit_session_or_ui_override"
+        else:
+            selected = str(overlay["model"])
+            reason = str(overlay.get("reason") or overlay_source)
+            fallback_model = overlay.get("fallback_model")
+            hw = str(overlay.get("hardware") or "cpu")
+            execution_path = "local_gpu" if hw not in ("cpu", "") else "cpu"
 
     # Hardware / latency / power-saving adjustments.
-    if ctx.power_saving or ctx.latency_preference == "fast" or _low_vram():
+    # Explicit UI/session selection must not be silently downgraded (BUG-018).
+    if not explicit_override and (
+        ctx.power_saving or ctx.latency_preference == "fast" or _low_vram()
+    ):
         if any(tok in (selected or "").lower() for tok in ("14b", "13b", "12b", "16b")):
             candidates = list(FALLBACK_PRIORITY.get(canonical, []))
             smaller = _pick_installed(candidates)
@@ -216,16 +225,20 @@ def select_model_for_role(
                 execution_path = "local_gpu" if _low_vram() else execution_path
 
     if not _model_available(selected):
-        candidates = list(FALLBACK_PRIORITY.get(canonical, []))
-        alt = _pick_installed(candidates)
-        if alt:
-            fallback_model = selected
-            selected = alt
-            fallback_active = True
-            reason = "model_unavailable_fallback"
+        if explicit_override:
+            # Keep Jeff's choice — surface failure at execution rather than silent swap.
+            reason = "explicit_unavailable_kept"
+        else:
+            candidates = list(FALLBACK_PRIORITY.get(canonical, []))
+            alt = _pick_installed(candidates)
+            if alt:
+                fallback_model = selected
+                selected = alt
+                fallback_active = True
+                reason = "model_unavailable_fallback"
 
     # Large context → cloud when enabled.
-    if ctx.cloud_enabled and ctx.context_tokens > 12000:
+    if not explicit_override and ctx.cloud_enabled and ctx.context_tokens > 12000:
         cloud = _cloud_model_for_role(canonical)
         if cloud:
             fallback_model = selected

@@ -7,6 +7,7 @@ import json
 from jarvis.config import DATA_DIR
 
 PROPOSALS_FILE = DATA_DIR / "pending_proposals.json"
+APPLY_UNDO_FILE = DATA_DIR / "apply_undo_journal.json"
 
 
 def load() -> dict[str, dict]:
@@ -30,3 +31,27 @@ def save(proposals: dict[str, dict]) -> None:
 
 def sync(proposals: dict[str, dict]) -> None:
     save(proposals)
+
+
+def load_undo() -> dict:
+    if not APPLY_UNDO_FILE.exists():
+        return {}
+    try:
+        data = json.loads(APPLY_UNDO_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def save_undo(entry: dict) -> None:
+    APPLY_UNDO_FILE.parent.mkdir(parents=True, exist_ok=True)
+    APPLY_UNDO_FILE.write_text(json.dumps(entry or {}, indent=2), encoding="utf-8")
+
+
+def clear_undo() -> None:
+    try:
+        APPLY_UNDO_FILE.unlink()
+    except FileNotFoundError:
+        pass
+    except OSError:
+        save_undo({})

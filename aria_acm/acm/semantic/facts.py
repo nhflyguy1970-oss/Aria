@@ -31,6 +31,11 @@ _DOG_NAME = re.compile(
     rf"mother|father|brother|sister|child)'?s?\s+name\s+is\s+{_NAME_VALUE}",
     re.I,
 )
+_BUDDY_IS = re.compile(
+    rf"\bmy\s+((?:\w+\s+){{0,2}}(?:buddy|friend|partner|colleague))\s+"
+    rf"(?:for\s+\w+\s+)?(?:is\s+named|named|is)\s+{_NAME_VALUE}",
+    re.I,
+)
 _LIVE_IN = re.compile(r"\bi\s+live\s+in\s+(.+?)(?:\.|$)", re.I)
 _LOCATED = re.compile(r"\bi\s+(?:am\s+)?(?:from|based\s+in)\s+(.+?)(?:\.|$)", re.I)
 
@@ -71,23 +76,30 @@ _LIKE = re.compile(r"\bi\s+like\s+(.+?)(?:\.|$)", re.I)
 _OWNED_ENTITIES = (
     r"laptop|desktop|computer|pc|workstation|machine|phone|tablet|"
     r"server|nas|gpu|editor|keyboard|mouse|monitor|"
-    r"truck|vehicle|car|van|boat|kayak|printer|camera|watch|router"
+    r"truck|vehicle|car|van|boat|kayak|printer|camera|watch|router|"
+    r"compressor|air\s+compressor"
 )
+_MOD = r"(?:\w+\s+){0,2}"  # up to two modifiers: "AI project workstation"
 _POSSESSION_RUNS = re.compile(
-    rf"\bmy\s+({_OWNED_ENTITIES})\s+(?:runs|running|uses|using)\s+(.+?)(?:\.|$)",
+    rf"\bmy\s+{_MOD}({_OWNED_ENTITIES})\s+(?:runs|running|uses|using)\s+(.+?)(?:\.|$)",
     re.I,
 )
 _POSSESSION_HAS = re.compile(
-    rf"\bmy\s+({_OWNED_ENTITIES})\s+has\s+(?:an?\s+)?(.+?)(?:\.|$)",
+    rf"\bmy\s+{_MOD}({_OWNED_ENTITIES})\s+has\s+(?:an?\s+)?(.+?)(?:\.|$)",
     re.I,
 )
 _POSSESSION_IS = re.compile(
-    rf"\bmy\s+({_OWNED_ENTITIES})(?:'s)?\s+(?:os|operating\s+system|graphics\s+card|"
+    rf"\bmy\s+{_MOD}({_OWNED_ENTITIES})(?:'s)?\s+(?:os|operating\s+system|graphics\s+card|"
     rf"gpu|ram|memory|editor)\s+is\s+(.+?)(?:\.|$)",
     re.I,
 )
 _POSSESSION_MODEL = re.compile(
-    rf"\bmy\s+({_OWNED_ENTITIES})\s+is\s+(?:an?\s+)?(.+?)(?:\.|$)",
+    rf"\bmy\s+{_MOD}({_OWNED_ENTITIES})\s+is\s+(?:an?\s+)?(.+?)(?:\.|$)",
+    re.I,
+)
+# "the workshop air compressor is a California Air Tools 8010"
+_OWNED_THING_IS = re.compile(
+    rf"\b(?:the|my)\s+(?:workshop\s+|garage\s+)?({_OWNED_ENTITIES})\s+is\s+(?:an?\s+)?(.+?)(?:\.|$)",
     re.I,
 )
 _I_USE = re.compile(r"\bi\s+use\s+(.+?)(?:\.|$)", re.I)
@@ -240,17 +252,23 @@ def _extract_possession(
         entity = _clean_value(m.group(1)).lower()
         value = _clean_value(m.group(2))
         if entity and value:
-            out.append(
-                CognitiveFact(
-                    kind=FactKind.POSSESSION,
-                    subject=subject,
-                    property=_possession_property(value),
-                    value=value,
-                    relation_type=entity,
-                    confidence=0.88,
-                    labels=(entity,),
+            # Split compound attributes: "an RTX 3090 and 128GB of RAM"
+            parts = re.split(r"\s+and\s+|,\s*", value)
+            for part in parts:
+                part = _clean_value(part)
+                if not part:
+                    continue
+                out.append(
+                    CognitiveFact(
+                        kind=FactKind.POSSESSION,
+                        subject=subject,
+                        property=_possession_property(part),
+                        value=part,
+                        relation_type=entity,
+                        confidence=0.88,
+                        labels=(entity,),
+                    )
                 )
-            )
 
     m = _POSSESSION_IS.search(t)
     if m:
@@ -281,21 +299,48 @@ def _extract_possession(
         value = _clean_value(m.group(2))
         # Avoid "My laptop is running …" style — already covered by RUNS.
         if entity and value and not re.match(r"^(?:running|using)\b", value, re.I):
-            prop = "model" if entity in _MODEL_ENTITIES else _possession_property(value)
-            if prop == "attribute" and entity in _MODEL_ENTITIES:
-                prop = "model"
-            if prop in ("model", "os", "gpu", "ram", "editor", "attribute"):
-                out.append(
-                    CognitiveFact(
-                        kind=FactKind.POSSESSION,
-                        subject=subject,
-                        property=prop if prop != "attribute" else "model",
-                        value=value,
-                        relation_type=entity,
-                        confidence=0.88,
-                        labels=(entity,),
+            # "Charlestown tower with the RTX 3090" → model + gpu
+            chunks = re.split(r"\s+with\s+(?:an?\s+)?|\s+and\s+(?:an?\s+)?", value, maxsplit=2)
+            for chunk in chunks or [value]:
+                chunk = _clean_value(chunk)
+                if not chunk:
+                    continue
+                prop = "model" if entity in _MODEL_ENTITIES else _possession_property(chunk)
+                if prop == "attribute" and entity in _MODEL_ENTITIES:
+                    prop = "model"
+                if prop == "attribute" and len(chunks) > 1 and _possession_property(chunk) == "gpu":
+                    prop = "gpu"
+                if prop in ("model", "os", "gpu", "ram", "editor", "attribute"):
+                    out.append(
+                        CognitiveFact(
+                            kind=FactKind.POSSESSION,
+                            subject=subject,
+                            property=prop if prop != "attribute" else "model",
+                            value=chunk,
+                            relation_type=entity,
+                            confidence=0.88,
+                            labels=(entity,),
+                        )
                     )
+
+    m = _OWNED_THING_IS.search(t)
+    if m and not out:
+        entity = re.sub(r"\s+", " ", _clean_value(m.group(1)).lower())
+        value = _clean_value(m.group(2))
+        if entity and value:
+            # Normalize "air compressor" → compressor
+            ent = "compressor" if "compressor" in entity else entity
+            out.append(
+                CognitiveFact(
+                    kind=FactKind.POSSESSION,
+                    subject=subject,
+                    property="model",
+                    value=value,
+                    relation_type=ent,
+                    confidence=0.86,
+                    labels=(ent,),
                 )
+            )
 
     m = _I_USE.search(t)
     if m and not out:
@@ -958,6 +1003,21 @@ def extract_fact_patterns(
                 confidence=0.9,
             )
         )
+    m = _BUDDY_IS.search(t)
+    if m:
+        rel = re.sub(r"\s+", " ", _clean_value(m.group(1)).lower())
+        name = _clean_value(m.group(2))
+        if rel and name and not re.match(r"^(?:a|an|the)\b", name, re.I):
+            facts.append(
+                CognitiveFact(
+                    kind=FactKind.RELATIONSHIP,
+                    subject=PerspectiveSubject.THIRD_PARTY,
+                    property="name",
+                    value=name,
+                    relation_type=rel,
+                    confidence=0.9,
+                )
+            )
 
     # Identity names (skip when the only "my … name" is a relationship possessives)
     m = _MY_NAME.search(t)

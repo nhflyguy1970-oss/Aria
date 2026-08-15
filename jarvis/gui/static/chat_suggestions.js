@@ -210,6 +210,11 @@
   function render() {
     const el = document.getElementById("suggestions");
     if (!el) return;
+    // Living Room owns the hearth chips — no feature-marketing wall
+    if (window.AriaLivingRoom?.isActive?.()) {
+      window.AriaLivingRoom?.refreshSuggestions?.();
+      return;
+    }
     // Preserve attachment-driven chips
     const keep = [...el.querySelectorAll(".data-chip, .vision-chip")];
     el.replaceChildren();

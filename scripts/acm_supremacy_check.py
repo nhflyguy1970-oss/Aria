@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import os
 import sys
 from pathlib import Path
 
@@ -32,36 +31,19 @@ def check_primary_default() -> bool:
 
 def check_dualwrite_disabled() -> bool:
     sys.path.insert(0, str(ROOT))
-    os.environ.pop("JARVIS_ALLOW_DUALWRITE_LEGACY", None)
-    from jarvis.modules.memory_adapter_store import (
-        memory_adapter_enabled,
-        platform_data_authoritative,
-        wrap_memory_store,
-    )
-
-    if memory_adapter_enabled():
-        _fail("DualWrite memory_adapter_enabled must be False (M4b)")
+    adapter = ROOT / "jarvis/modules/memory_adapter_store.py"
+    if adapter.exists():
+        _fail("DualWrite memory_adapter_store.py must stay deleted")
         return False
-    if platform_data_authoritative():
-        _fail("platform_data_authoritative must be False when DualWrite retired")
+    memory_py = (ROOT / "jarvis/modules/memory.py").read_text(encoding="utf-8")
+    if "jarvis.modules.memory_adapter_store" in memory_py or "wrap_memory_store(" in memory_py:
+        _fail("MemoryStore factory must not import DualWrite wrapper")
         return False
-
-    class _S:
-        pass
-
-    s = _S()
-    if wrap_memory_store(s) is not s:
-        _fail("wrap_memory_store must be identity when DualWrite disabled")
-        return False
-    _ok("DualWrite cognitive path disabled")
+    _ok("DualWrite adapter deleted; memory factory is direct")
     return True
 
 
 def check_forbid_patterns() -> bool:
-    adapter = (ROOT / "jarvis/modules/memory_adapter_store.py").read_text(encoding="utf-8")
-    if "M4b" not in adapter and "RETIRED" not in adapter:
-        _fail("memory_adapter_store.py missing M4 retirement markers")
-        return False
     bridge = (ROOT / "aria_core/acm_bridge.py").read_text(encoding="utf-8")
     if 'return _env_bool("ARIA_ACM_PRIMARY", "0")' in bridge:
         _fail("PRIMARY default still off — M4 requires default on")
@@ -69,7 +51,11 @@ def check_forbid_patterns() -> bool:
     if "redirect_legacy_write_to_acm" not in bridge:
         _fail("Missing redirect_legacy_write_to_acm (M4 bypass closure)")
         return False
-    _ok("Forbid patterns / retirement markers present")
+    cutover = (ROOT / "jarvis/platform_cutover.py").read_text(encoding="utf-8")
+    if '"dual_write"' in cutover or "dual-read verification" in cutover:
+        _fail("platform_cutover must not present dual_write as cognitive cutover")
+        return False
+    _ok("Forbid patterns / ACM authority markers present")
     return True
 
 

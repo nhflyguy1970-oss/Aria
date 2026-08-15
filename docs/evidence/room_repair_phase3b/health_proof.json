@@ -1,0 +1,81 @@
+{
+  "steps": [
+    {
+      "name": "ui_isol_meds_visible",
+      "ok": true,
+      "detail": "Medication adherence\n\nGentle history only \u2014 never a judgment. Log taken/missed doses to keep this honest.\n\nTaken today\n1\nMissed today\n\u2014\nWeekly\n100%\nMonthly\n100%\n\nAbout 100% of expected medication days logged without a missed note over 7 day"
+    },
+    {
+      "name": "ui_isol_dose_submit",
+      "ok": true,
+      "detail": "{'ok': True, 'forms': 2} Dose logged."
+    },
+    {
+      "name": "ui_isol_checkin",
+      "ok": true,
+      "detail": "Check-in saved."
+    },
+    {
+      "name": "ui_isol_vitals",
+      "ok": true,
+      "detail": "Range \nWeek\nMonth\n3 months\n6 months\nYear\nAll time\nWeight\n\nNot enough points to graph.\n\n**Weight \u2014 last 90 days**\n\nBlood pressure\n\nNot enough points to graph.\n\nNo blood pressure history in Health yet.\n\nBlood sugar\n\nNot enough points to graph"
+    },
+    {
+      "name": "ui_isol_backup_create",
+      "ok": true,
+      "detail": "Encrypted backups\n\nPassword-protected exports stored locally. Store the password safely \u2014 it cannot be recovered.\n\nFile\tKind\tVerify\tSize\t\naria-health-20260812-102303.json\tmanual\tok\t12464 B\t\nVerify\nRestore\n\naria-health-20260812-102137.json\tmanual\tok\t8140 B\t\nVerify\nRestore\nCreate backup\n\nAria is not a"
+    },
+    {
+      "name": "ui_isol_activity",
+      "ok": true,
+      "detail": "Activity\nDate\tKind\tMinutes\tIntensity\tEst. cal\tDistance\tSteps\tNotes\n2026-08-12\twalking\t\t\t\t\t\t\nwalking\nrunning\ncycling\nswimming\nhiking\nstrength\nresistance bands\nweight lifting\nstretching\nyoga\nmobility\nbalance\nsports\nfishing\nhousework\nyardwork\n"
+    },
+    {
+      "name": "live_ui_vitamin_d3",
+      "ok": true,
+      "detail": "Medication adherence\n\nGentle history only \u2014 never a judgment. Log taken/missed doses to keep this honest.\n\nTaken today\n\u2014\nMissed today\n\u2014\nWeekly\n100%\nMonthly\n100%\n\nAbout 100% of expected medication days logged without a missed note over 7 days. This is a gentle history reminder \u2014 not a judgment.\n\nStil",
+      "usable_ms": 2040.7
+    },
+    {
+      "name": "live_ui_search",
+      "ok": true,
+      "detail": "Search\n**Health search \u2014 Vitamin D3**\n\u2022 [medications] Vitamin D3 current\n\n_Aria is not a physician and does not diagnose or prescribe. Health insights are informational only. Consult a qualified healthcare professional for medical advice._"
+    },
+    {
+      "name": "live_leave_return_meds",
+      "ok": true,
+      "detail": {
+        "left": "chat",
+        "room": "health",
+        "head": "Medication adherence\n\nGentle history only \u2014 never a judgment. Log taken/missed doses to keep this honest.\n\nTaken today\n\u2014\nMissed today\n\u2014\nWeekly\n100%\nMonthly\n100%\n\nAbout 100% of expected medication days"
+      }
+    },
+    {
+      "name": "live_inventory_unchanged",
+      "ok": true,
+      "detail": {
+        "meds": [
+          [
+            "med_39bcc7df3187",
+            "Vitamin D3"
+          ]
+        ],
+        "vitals": 0,
+        "checkins": 0,
+        "activities": 0,
+        "backups": 0
+      }
+    },
+    {
+      "name": "isol_has_test_not_live_id",
+      "ok": true,
+      "detail": [
+        [
+          "med_71a0041ade0b",
+          "Isolated Test Med Alpha"
+        ]
+      ]
+    }
+  ],
+  "ok": true
+}

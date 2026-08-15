@@ -85,7 +85,8 @@ def build_light_service_data(
     bp = brightness_pct if brightness_pct is not None else named.get("brightness_pct")
     if bp is not None:
         bp = max(1, min(100, int(bp)))
-        data["brightness_pct"] = bp
+        # HA light.turn_on accepts brightness (0–255) or brightness_pct, not both.
+        # Dual fields 400 on several integrations (including this house's table lamp).
         data["brightness"] = _pct_to_brightness(bp)
 
     if transition is not None:
@@ -162,8 +163,8 @@ def set_light(
     name = (st.get("attributes") or {}).get("friendly_name") or eid
     parts = [f"**{name}** (`{eid}`)"]
     if service == "turn_on":
-        if data.get("brightness_pct") is not None:
-            parts.append(f"{data['brightness_pct']}%")
+        if data.get("brightness") is not None:
+            parts.append(f"{int(round(int(data['brightness']) * 100 / 255))}%")
         if data.get("color_temp_kelvin"):
             parts.append(f"{data['color_temp_kelvin']}K")
         if data.get("rgb_color"):

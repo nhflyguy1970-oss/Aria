@@ -61,3 +61,19 @@ def test_request_id_in_log_record(tmp_path, monkeypatch):
     assert filt.filter(record) is True
     assert record.request_id == "req-abc"  # type: ignore[attr-defined]
     lc.clear_request_id()
+
+
+def test_open_rotating_log_rotates_existing_file(tmp_path, monkeypatch):
+    import jarvis.logging_config as lc
+
+    monkeypatch.setenv("JARVIS_LOG_MAX_BYTES", "4")
+    monkeypatch.setenv("JARVIS_LOG_BACKUP_COUNT", "2")
+    log_file = tmp_path / "logs" / "serve.log"
+    log_file.parent.mkdir()
+    log_file.write_text("12345", encoding="utf-8")
+
+    with lc.open_rotating_log(log_file) as handle:
+        handle.write("new")
+
+    assert log_file.read_text(encoding="utf-8") == "new"
+    assert (tmp_path / "logs" / "serve.log.1").read_text(encoding="utf-8") == "12345"

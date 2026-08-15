@@ -1,0 +1,37 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-15T20:15:00Z",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "owner_session": "OWNER_UNLOCKED throughout",
+  "integrity": "clean / 100; artifacts 0",
+  "room": "mission",
+  "capability": "#missionRoom hash lands Mission Control not Chat",
+  "result": "PASS \u2014 from #chat, location.hash=missionRoom lands current=workstation, chat hidden, Mission Control h2, hash rewritten to #workstation in 830ms. Canonical mission|missionRoom|mission-control \u2192 workstation.",
+  "repair": {
+    "files": [
+      "jarvis/gui/static/view_router.js",
+      "jarvis/gui/static/app.js"
+    ],
+    "cause": "canonicalView left missionRoom; no #missionRoomView; Chat fallthrough. hashchange skipped syncHash when fromHistory.",
+    "fix": "alias to workstation; first-load uses canonicalView; hashchange rewrites alias hashes"
+  },
+  "from_chat": {
+    "start": "#chat",
+    "set": "#missionRoom",
+    "after_hash": "#workstation",
+    "current": "workstation",
+    "chat_hidden": true,
+    "mc_h2": true,
+    "elapsed_ms": 830
+  },
+  "not_clicked": [
+    "Audit",
+    "Backup",
+    "Scan",
+    "Guided Repair execute"
+  ]
+}

@@ -161,21 +161,73 @@
   }
 
   function renderAppearance(app) {
+    const prefs = window.AriaUiPrefs?.load?.() || {};
     const theme = $("settingsThemeSelect");
     const accent = $("settingsAccentSelect");
     const density = $("settingsDensitySelect");
-    if (theme && app?.theme) theme.value = app.theme;
-    const accentVal = app?.accent === "gold" || app?.accent === "blue" ? "steel" : app?.accent;
+    // Prefer live UI prefs so a concurrent loadHome cannot wipe a just-applied change (BUG-019).
+    const themeVal = prefs.theme || app?.theme;
+    if (theme && themeVal) theme.value = themeVal;
+    const accentSrc = app?.accent;
+    const accentVal = accentSrc === "gold" || accentSrc === "blue" ? "steel" : accentSrc;
     if (accent && accentVal) accent.value = accentVal;
     const dens =
+      prefs.density ||
       app?.density ||
-      window.AriaUiPrefs?.get?.("density") ||
       window.AriaUiPrefs?.get?.("shellDensity") ||
       "standard";
     if (density) density.value = dens;
     if ($("settingsDockToggle")) $("settingsDockToggle").checked = !app?.dock_hidden;
     if ($("settingsStatusToggle")) $("settingsStatusToggle").checked = !app?.status_bar_hidden;
     if ($("settingsMiniChatToggle")) $("settingsMiniChatToggle").checked = !app?.mini_chat_hidden;
+    if ($("settingsAtmosphereToggle")) {
+      $("settingsAtmosphereToggle").checked = prefs.atmosphereEnabled !== false;
+    }
+    if ($("settingsWeatherAtmToggle")) {
+      $("settingsWeatherAtmToggle").checked = prefs.weatherAtmosphere !== false;
+    }
+    if ($("settingsSeasonAtmToggle")) {
+      $("settingsSeasonAtmToggle").checked = prefs.seasonAtmosphere !== false;
+    }
+    if ($("settingsAmbientSoundToggle")) {
+      $("settingsAmbientSoundToggle").checked = Boolean(prefs.ambientSound || prefs.livingSound);
+    }
+  }
+
+  async function applyThemeLocalFirst(theme) {
+    document.body.classList.toggle("light-theme", theme === "light");
+    try {
+      localStorage.setItem("aria_theme", theme);
+      window.AriaUiPrefs?.set?.("theme", theme);
+    } catch {
+      /* ignore */
+    }
+    const btn = $("themeToggle");
+    if (btn) btn.textContent = theme === "light" ? "Dark theme" : "Light theme";
+    try {
+      await api("/api/settings/product/appearance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ theme }),
+      });
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Theme save failed", "err");
+    }
+  }
+
+  async function applyDensityLocalFirst(density) {
+    window.AriaUiPrefs?.set?.("density", density);
+    document.documentElement.setAttribute("data-density", density);
+    window.dispatchEvent(new CustomEvent("aria-ui-prefs", { detail: window.AriaUiPrefs?.load?.() }));
+    try {
+      await api("/api/settings/product/appearance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ density }),
+      });
+    } catch (err) {
+      window.showAriaToast?.(err?.message || "Density save failed", "err");
+    }
   }
 
   function renderRecent(items) {
@@ -262,59 +314,62 @@
         /* ignore */
       }
     });
-    $("settingsThemeSelect")?.addEventListener("change", async (e) => {
-      const theme = e.target.value;
-      await api("/api/settings/product/appearance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ theme }),
-      });
-      document.body.classList.toggle("light-theme", theme === "light");
-      try {
-        localStorage.setItem("aria_theme", theme);
-        window.AriaUiPrefs?.set?.("theme", theme);
-      } catch {
-        /* ignore */
-      }
-      const btn = $("themeToggle");
-      if (btn) btn.textContent = theme === "light" ? "Dark theme" : "Light theme";
-    });
-    $("settingsAccentSelect")?.addEventListener("change", async (e) => {
-      const accent = e.target.value;
-      await api("/api/settings/product/appearance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accent }),
-      });
-      window.applyAriaAccent?.(accent);
-    });
-    $("settingsDensitySelect")?.addEventListener("change", async (e) => {
-      const density = e.target.value;
-      await api("/api/settings/product/appearance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ density }),
-      });
-      window.AriaUiPrefs?.set?.("density", density);
-      document.documentElement.setAttribute("data-density", density);
-      window.dispatchEvent(new CustomEvent("aria-ui-prefs", { detail: window.AriaUiPrefs?.load?.() }));
-    });
     async function toggleChrome(key, checked, inverted) {
       const val = inverted ? !checked : checked;
       const patch = {};
       patch[key] = val;
-      await api("/api/settings/product/appearance", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(patch),
-      });
       if (key === "dock_hidden") window.AriaUiPrefs?.set?.("dockHidden", val);
       if (key === "status_bar_hidden") window.AriaUiPrefs?.set?.("statusBarHidden", val);
       if (key === "mini_chat_hidden") window.AriaUiPrefs?.set?.("miniChatHidden", val);
+      try {
+        await api("/api/settings/product/appearance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        });
+      } catch (err) {
+        window.showAriaToast?.(err?.message || "Appearance save failed", "err");
+      }
     }
-    $("settingsDockToggle")?.addEventListener("change", (e) => toggleChrome("dock_hidden", e.target.checked, true));
-    $("settingsStatusToggle")?.addEventListener("change", (e) => toggleChrome("status_bar_hidden", e.target.checked, true));
-    $("settingsMiniChatToggle")?.addEventListener("change", (e) => toggleChrome("mini_chat_hidden", e.target.checked, true));
+    // Delegate appearance controls so bind-once cannot miss late-mounted selects (BUG-019).
+    $("settingsHomeRoot")?.addEventListener("change", (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLElement)) return;
+      if (t.id === "settingsThemeSelect") {
+        applyThemeLocalFirst(t.value);
+        return;
+      }
+      if (t.id === "settingsAccentSelect") {
+        const accent = t.value;
+        window.applyAriaAccent?.(accent);
+        api("/api/settings/product/appearance", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accent }),
+        }).catch((err) => window.showAriaToast?.(err?.message || "Accent save failed", "err"));
+        return;
+      }
+      if (t.id === "settingsDensitySelect") {
+        applyDensityLocalFirst(t.value);
+        return;
+      }
+      if (t.id === "settingsDockToggle") toggleChrome("dock_hidden", t.checked, true);
+      else if (t.id === "settingsStatusToggle") toggleChrome("status_bar_hidden", t.checked, true);
+      else if (t.id === "settingsMiniChatToggle") toggleChrome("mini_chat_hidden", t.checked, true);
+      else if (t.id === "settingsAtmosphereToggle") {
+        window.AriaUiPrefs?.set?.("atmosphereEnabled", t.checked);
+        window.AriaLivingInterface?.applyAtmosphereFlags?.();
+      } else if (t.id === "settingsWeatherAtmToggle") {
+        window.AriaUiPrefs?.set?.("weatherAtmosphere", t.checked);
+        window.AriaLivingInterface?.refreshWeather?.(true);
+      } else if (t.id === "settingsSeasonAtmToggle") {
+        window.AriaUiPrefs?.set?.("seasonAtmosphere", t.checked);
+        window.AriaLivingInterface?.applyAtmosphereFlags?.();
+      } else if (t.id === "settingsAmbientSoundToggle") {
+        window.AriaUiPrefs?.set?.("ambientSound", t.checked);
+        if (t.checked) window.AriaLivingInterface?.playCue?.("soft");
+      }
+    });
     $("settingsVoiceChatBtn")?.addEventListener("click", () => window.openVoiceChatSettings?.());
     $("settingsDiagBtn")?.addEventListener("click", async () => {
       const d = await api("/api/settings/product/diagnostics");
@@ -339,7 +394,9 @@
       a.click();
     });
     $("settingsSaveProfileBtn")?.addEventListener("click", async () => {
-      const name = prompt("Profile name?", "My profile");
+      const name = window.ariaPrompt
+        ? await window.ariaPrompt("Profile name?", "My profile", { title: "Save profile", okLabel: "Save" })
+        : prompt("Profile name?", "My profile");
       if (!name) return;
       await api("/api/settings/product/profiles", {
         method: "POST",

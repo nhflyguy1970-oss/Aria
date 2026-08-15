@@ -47,14 +47,29 @@ def _ollama_chat_with_usage(model: str, messages: list[dict], **kwargs) -> tuple
         options.setdefault(key, value)
     normalized["options"] = options
 
-    response = chat(model=model, messages=_with_system(messages), **normalized)
+    keep_alive = normalized.pop("keep_alive", None)
+    if keep_alive is None:
+        keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "30m").strip() or "30m"
+
+    response = chat(
+        model=model,
+        messages=_with_system(messages),
+        keep_alive=keep_alive,
+        **normalized,
+    )
     return response["message"]["content"], usage_from_response(response)
 
 
-def _ollama_stream(model: str, messages: list[dict], **kwargs) -> Iterator[str]:
+def _ollama_stream(
+    model: str,
+    messages: list[dict],
+    *,
+    usage: dict[str, Any] | None = None,
+    **kwargs,
+) -> Iterator[str]:
     from ollama import chat
 
-    from jarvis.llm import _normalize_chat_kwargs, _with_system
+    from jarvis.llm import _normalize_chat_kwargs, _with_system, usage_from_response
     from jarvis.ollama_runtime import default_options
 
     normalized = _normalize_chat_kwargs(kwargs)
@@ -63,13 +78,20 @@ def _ollama_stream(model: str, messages: list[dict], **kwargs) -> Iterator[str]:
         options.setdefault(key, value)
     normalized["options"] = options
 
+    keep_alive = normalized.pop("keep_alive", None)
+    if keep_alive is None:
+        keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "30m").strip() or "30m"
+
     stream = chat(
         model=model,
         messages=_with_system(messages),
         stream=True,
+        keep_alive=keep_alive,
         **normalized,
     )
     for chunk in stream:
+        if usage is not None:
+            usage.update(usage_from_response(chunk))
         if chunk.get("message", {}).get("content"):
             yield chunk["message"]["content"]
 
@@ -166,11 +188,12 @@ def chat_with_usage(
         options.setdefault(key, value)
     kwargs["options"] = options
 
+    _lock = overlay.get("source") in ("benchmark", "user_config", "env", "explicit")
     chosen = route or select_route(
         chosen_model,
         role=role,
         messages=messages,
-        lock_model=overlay.get("source") == "benchmark",
+        lock_model=_lock,
     )
     try:
         from jarvis.routing_trace import record_gateway
@@ -211,7 +234,7 @@ def chat_with_usage(
             chosen_model,
             role=role,
             messages=messages,
-            lock_model=overlay.get("source") == "benchmark",
+            lock_model=overlay.get("source") in ("benchmark", "user_config", "env", "explicit"),
         ).reason
     )
     usage["execution_model"] = chosen.model
@@ -233,9 +256,11 @@ def stream_chat(
     route: InferenceRoute | None = None,
     **kwargs,
 ) -> Iterator[str]:
+    """Route streaming chat through the same policy and trace path as sync chat."""
     from jarvis.inference.execution_policy import apply_policy_to_route
     from jarvis.nlu.placement import ollama_options_for_device
 
+    usage = kwargs.pop("usage", None)
     overlay = apply_policy_to_route(model=model, role=role)
     chosen_model = str(overlay.get("model") or model)
     hardware = str(overlay.get("hardware") or "cpu")
@@ -244,19 +269,49 @@ def stream_chat(
         options.setdefault(key, value)
     kwargs["options"] = options
 
+    _lock = overlay.get("source") in ("benchmark", "user_config", "env", "explicit")
     chosen = route or select_route(
         chosen_model,
         role=role,
         messages=messages,
-        lock_model=overlay.get("source") == "benchmark",
+        lock_model=_lock,
     )
+    try:
+        from jarvis.routing_trace import record_gateway
+
+        record_gateway(
+            decision={
+                "backend": chosen.backend,
+                "model": chosen.model,
+                "reason": chosen.reason,
+                "hardware": hardware,
+                "execution_path": "cloud"
+                if getattr(chosen, "cloud", False)
+                else ("local_gpu" if hardware != "cpu" else "cpu"),
+                "provider": "litellm" if chosen.backend == "litellm" else "ollama",
+                "policy_source": overlay.get("source"),
+                "stream": True,
+            }
+        )
+    except Exception:
+        pass
+    if usage is not None:
+        usage["route_reason"] = chosen.reason
+        usage["execution_model"] = chosen.model
+        usage["execution_hardware"] = hardware
+        usage["execution_provider"] = "litellm" if chosen.backend == "litellm" else "ollama"
+        usage["execution_source"] = overlay.get("source")
+        usage["execution_reason"] = overlay.get("reason")
+        usage["execution_workload"] = overlay.get("workload")
+        usage["execution_fallback_model"] = overlay.get("fallback_model")
+        usage["execution_fallback_hardware"] = overlay.get("fallback_hardware")
     if chosen.backend == "litellm":
         try:
             yield from _litellm_stream(chosen.model, messages, **kwargs)
             return
         except Exception as exc:
             logger.warning("LiteLLM stream failed, falling back to Ollama: %s", exc)
-    yield from _ollama_stream(chosen.model, messages, **kwargs)
+    yield from _ollama_stream(chosen.model, messages, usage=usage, **kwargs)
 
 
 def embed_text(model: str, text: str) -> list[float]:
@@ -270,6 +325,7 @@ def embed_text(model: str, text: str) -> list[float]:
     # Temporarily force model_for to the requested name when it differs.
     if (model or "").strip() and (model_for("embed") or "").strip() != (model or "").strip():
         from ollama import embed
+
         from jarvis.ollama_runtime import chat_priority_active, unload_model
 
         if chat_priority_active():

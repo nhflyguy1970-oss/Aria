@@ -23,12 +23,6 @@ class _Ext(Extension):
         from jarvis.extensions.flytying.api import register_routes
 
         register_routes(app, assistant)
-        try:
-            from jarvis.flytying_product.api import register_product_routes
-
-            register_product_routes(app, assistant)
-        except Exception:
-            pass
 
 
 EXTENSION = _Ext()

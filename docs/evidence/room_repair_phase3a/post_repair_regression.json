@@ -1,0 +1,37 @@
+{
+  "integrity": {
+    "status": "clean",
+    "score": 100,
+    "clean": true,
+    "counts": {
+      "total": 0,
+      "actionable": 0,
+      "by_category": {},
+      "safe_to_remove": 0,
+      "uncertain": 0
+    },
+    "http": 200
+  },
+  "isolation": {
+    "qa_header_http": 403,
+    "test_shaped_http": 400,
+    "qa_body": {
+      "ok": false,
+      "message": "Test/QA harness headers are not allowed against the live workspace. Start a server with JARVIS_DATA_DIR pointing at disposable storage.",
+      "reason": "production_isolation"
+    },
+    "shape_body": {
+      "ok": false,
+      "message": "Refusing to write test/QA/certification data into production planner."
+    }
+  },
+  "activity": {
+    "room_leave_in_inbox": false,
+    "unread": 28,
+    "count": 28
+  },
+  "mc_warm_ms": 22.1,
+  "voice_cached_on_second_full": false,
+  "focus_briefing": "**Active project:** `home-lab`",
+  "focus_ms_note": "see post_repair_timings"
+}

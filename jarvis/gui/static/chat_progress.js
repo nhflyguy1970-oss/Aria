@@ -189,16 +189,31 @@
   function setChatBusy(busy) {
     const c = chat();
     c.chatRequestActive = busy;
-    const { sendBtn, stopChatBtn } = els();
+    const { sendBtn, stopChatBtn, statusText } = els();
     if (sendBtn) {
       sendBtn.disabled = busy;
       sendBtn.classList.toggle("hidden", busy);
     }
-    stopChatBtn?.classList.toggle("hidden", !busy);
+    if (stopChatBtn) {
+      /* Hidden Stop must not remain an operable "Stop responding" control (BUG-005). */
+      stopChatBtn.classList.toggle("hidden", !busy);
+      stopChatBtn.hidden = !busy;
+      stopChatBtn.setAttribute("aria-hidden", busy ? "false" : "true");
+      if (busy) {
+        stopChatBtn.setAttribute("aria-label", "Stop responding");
+        stopChatBtn.removeAttribute("tabindex");
+      } else {
+        stopChatBtn.removeAttribute("aria-label");
+        stopChatBtn.setAttribute("tabindex", "-1");
+      }
+    }
     if (!busy) {
       c.chatAbortController = null;
       c.chatStopRequested = false;
       c.activeStreamText = "";
+      if (statusText && /^(Stopping…|Stopping\.\.\.|Thinking…|Thinking\.\.\.)$/i.test((statusText.textContent || "").trim())) {
+        statusText.textContent = "Ready";
+      }
     }
   }
 
@@ -228,6 +243,23 @@
     c.chatAbortController?.abort?.();
     const { statusText } = els();
     if (statusText) statusText.textContent = "Stopping…";
+    try {
+      window.AriaLivingRoom?.setStatus?.("Stopping…");
+    } catch (_) {
+      /* ignore */
+    }
+    /* If stream cleanup stalls, never leave Stop/Stopping sticky (BUG-005). */
+    setTimeout(() => {
+      try {
+        if (!chat().chatRequestActive) return;
+        window.finishSendUi?.();
+        const st = els().statusText;
+        if (st) st.textContent = "Stopped";
+        window.AriaLivingRoom?.setStatus?.("Listening quietly");
+      } catch (_) {
+        /* ignore */
+      }
+    }, 2000);
   }
 
   function updateProgressStatus(message) {

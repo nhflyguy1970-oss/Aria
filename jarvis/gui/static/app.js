@@ -78,7 +78,8 @@ window.ariaPostStartup = function ariaPostStartup() {
       window.history.replaceState({}, "", window.location.pathname);
       setTimeout(() => window.sendMessage?.(prefill), 300);
     }
-    const hashView = (window.location.hash || "").replace(/^#/, "").trim();
+    const hashView = window.AriaViewRouter?.canonicalView?.(window.location.hash)
+      || (window.location.hash || "").replace(/^#/, "").trim();
     if (hashView && document.querySelector(`.view-tab[data-view="${hashView}"]`)) {
       window.switchToView?.(hashView);
     }

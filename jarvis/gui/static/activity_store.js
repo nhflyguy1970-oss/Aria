@@ -3,10 +3,13 @@
   "use strict";
 
   const STORE_KEY = "aria_activity_log_v2";
+  const CACHE_META_KEY = "aria_activity_cache_meta_v1";
   const PREFS_KEY = "aria_activity_prefs_v1";
   const SCHEMA_VERSION = 2;
   const MAX_EVENTS = 200;
   const DEDUPE_WINDOW_MS = 5 * 60 * 1000;
+  /** Server is source of truth; localStorage is cache only (Batch C). */
+  const SERVER_AUTHORITATIVE = true;
 
   /** @type {object[]} */
   let events = [];
@@ -125,13 +128,81 @@
       const v2 = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
       if (Array.isArray(v2)) {
         events = v2.map(normalize).filter(Boolean);
-        return;
+      } else {
+        const v1 = JSON.parse(localStorage.getItem("aria_activity_log_v1") || "[]");
+        events = migrateV1(Array.isArray(v1) ? v1 : []);
+        persist();
       }
-      const v1 = JSON.parse(localStorage.getItem("aria_activity_log_v1") || "[]");
-      events = migrateV1(Array.isArray(v1) ? v1 : []);
-      persist();
     } catch {
       events = [];
+    }
+    if (SERVER_AUTHORITATIVE) {
+      syncFromServer();
+    }
+  }
+
+  function serverItemToLocal(row) {
+    const meta = row.meta || {};
+    return normalize({
+      id: row.id,
+      timestamp: (row.ts || 0) * (row.ts > 1e12 ? 1 : 1000),
+      ts: row.ts,
+      title: row.title,
+      summary: row.body,
+      detail: row.body,
+      source: row.source,
+      category: meta.category || row.kind || "system",
+      type: meta.type || row.kind || "event",
+      severity: meta.severity || (mapTone(row.kind) === "info" && row.kind === "error" ? "error" : mapTone(row.kind)),
+      kind: row.kind,
+      dismissed: Boolean(row.dismissed),
+      read: Boolean(row.read),
+      metadata: meta,
+    });
+  }
+
+  async function syncFromServer() {
+    try {
+      const res = await fetch("/api/activity/inbox?limit=200");
+      if (!res.ok) return;
+      const data = await res.json().catch(() => ({}));
+      if (!data.ok || !Array.isArray(data.items)) return;
+      const mapped = data.items.map(serverItemToLocal).filter(Boolean);
+      // Server wins for shared fields; keep local-only pins/snooze if same id
+      const byId = new Map(events.map((e) => [e.id, e]));
+      events = mapped.map((s) => {
+        const local = byId.get(s.id);
+        if (!local) return s;
+        return {
+          ...s,
+          pinned: local.pinned,
+          snoozedUntil: local.snoozedUntil,
+          muted: local.muted,
+        };
+      });
+      persist();
+    } catch {
+      /* offline — cache remains */
+    }
+  }
+
+  async function publishToServer(item) {
+    if (!SERVER_AUTHORITATIVE || !item) return;
+    try {
+      await fetch("/api/activity/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: item.id,
+          kind: item.severity || item.kind || "info",
+          title: item.title,
+          body: item.detail || item.summary || "",
+          source: item.source || "client",
+          meta: item.metadata || {},
+        }),
+      });
+    } catch {
+      /* queue offline later — cache already has item */
     }
   }
 
@@ -142,6 +213,11 @@
         return rest;
       });
       localStorage.setItem(STORE_KEY, JSON.stringify(serializable));
+      localStorage.setItem(CACHE_META_KEY, JSON.stringify({
+        sourceOfTruth: "server:/api/activity/inbox",
+        cacheOnly: true,
+        updatedAt: new Date().toISOString(),
+      }));
     } catch {
       /* quota */
     }
@@ -164,9 +240,36 @@
     return prefs.mutedSources.includes(String(source || ""));
   }
 
+  function isOwnerChannel(item) {
+    const ch = String(item?.channel || "owner").toLowerCase();
+    return ch === "owner" || ch === "";
+  }
+
+  function classifyChannel(raw) {
+    const title = String(raw?.title || "");
+    const detail = String(raw?.detail || raw?.summary || raw?.body || "");
+    const blob = `${title} ${detail}`.toLowerCase();
+    if (window.AriaNet?.isRoomAbort?.(raw) || window.AriaNet?.isRoomAbort?.({ message: blob })) return "cancelled";
+    if (/aria-room-leave|signal is aborted|the operation was aborted|aborterror|stream aborted|cancel api/.test(blob)) return "cancelled";
+    if (
+      /could not load |failed to load |load failed|checklist failed|settings unavailable|status unavailable|home unavailable|work schedule unavailable|mission control.*health|activity center is listening|save failed|toggle failed|settings update failed|model switch failed|another request is still finishing|enter a |enter event text|need top text|preview needs|nothing to redo|empty request|^not found$/.test(
+        blob,
+      )
+    ) {
+      return "engineering";
+    }
+    return String(raw?.channel || "owner").toLowerCase() || "owner";
+  }
+
   function publish(raw) {
     const item = normalize(raw);
     if (!item) return null;
+    item.channel = classifyChannel(raw);
+    if (item.channel === "cancelled") return null;
+    if (item.channel !== "owner") {
+      item.read = true;
+      return null;
+    }
     if (item.muted || isMutedSource(item.source) || prefs.mutedSources.includes(item.category)) {
       return null;
     }
@@ -184,16 +287,21 @@
       twin.detail = item.detail || twin.detail;
       twin.timestamp = now();
       twin.ts = twin.timestamp;
-      twin.read = false;
+      // Rollup must not re-open already-read noise as unread.
+      if (item.severity === "error" || item.severity === "critical") {
+        twin.read = false;
+      }
       if (!twin.groupId) twin.groupId = `grp_${twin.id}`;
       item.groupId = twin.groupId;
       // move twin to front
       events = [twin, ...events.filter((e) => e.id !== twin.id)].slice(0, MAX_EVENTS);
       persist();
+      publishToServer(twin);
       return twin;
     }
     events = [item, ...events].slice(0, MAX_EVENTS);
     persist();
+    publishToServer(item);
     return item;
   }
 
@@ -237,7 +345,19 @@
   }
 
   function markRead(id, read = true) {
-    return update(id, { read: Boolean(read) });
+    const out = update(id, { read: Boolean(read) });
+    if (SERVER_AUTHORITATIVE && read && id) {
+      void window.ariaMutate?.({
+        request: () =>
+          fetch("/api/activity/read", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+          }),
+        failToast: "Could not mark activity read",
+      });
+    }
+    return out;
   }
 
   function markAllRead() {
@@ -246,6 +366,14 @@
       if (!e.dismissed && !isSnoozed(e)) e.read = true;
     });
     persist();
+    if (SERVER_AUTHORITATIVE) {
+      void window.ariaMutate?.({
+        request: () => fetch("/api/activity/read-all", { method: "POST" }),
+        failToast: "Could not mark all activity read",
+      })?.then?.((result) => {
+        if (result?.ok) void syncFromServer();
+      });
+    }
   }
 
   function markUnread(id) {
@@ -264,19 +392,47 @@
 
   function dismiss(id) {
     snapshotForUndo("dismiss");
-    return update(id, { dismissed: true, read: true });
+    const out = update(id, { dismissed: true, read: true });
+    if (SERVER_AUTHORITATIVE && id) {
+      void window.ariaMutate?.({
+        request: () =>
+          fetch("/api/activity/dismiss", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
+          }),
+        failToast: "Could not dismiss activity",
+      });
+    }
+    return out;
   }
 
   function clearRead() {
     snapshotForUndo("clearRead");
     events = events.filter((e) => !e.read || e.pinned);
     persist();
+    if (SERVER_AUTHORITATIVE) {
+      void window.ariaMutate?.({
+        request: () => fetch("/api/activity/clear-read", { method: "POST" }),
+        failToast: "Could not clear read activity",
+      })?.then?.((result) => {
+        if (result?.ok) void syncFromServer();
+      });
+    }
   }
 
   function clearAll() {
     snapshotForUndo("clearAll");
     events = events.filter((e) => e.pinned);
     persist();
+    if (SERVER_AUTHORITATIVE) {
+      void window.ariaMutate?.({
+        request: () => fetch("/api/activity/clear-all", { method: "POST" }),
+        failToast: "Could not clear activity",
+      })?.then?.((result) => {
+        if (result?.ok) void syncFromServer();
+      });
+    }
   }
 
   function muteSource(source, muted = true) {
@@ -295,7 +451,7 @@
   }
 
   function visibleEvents() {
-    return events.filter((e) => !e.dismissed && !isSnoozed(e));
+    return events.filter((e) => !e.dismissed && !isSnoozed(e) && isOwnerChannel(e));
   }
 
   function unreadCount() {
@@ -462,6 +618,7 @@
     SCHEMA_VERSION,
     load,
     persist,
+    syncFromServer,
     publish,
     push,
     get,

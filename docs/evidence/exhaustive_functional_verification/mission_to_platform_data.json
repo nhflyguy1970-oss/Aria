@@ -1,0 +1,85 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "mission",
+  "capability": "Mission → platform data",
+  "captured_at": "2026-08-14T19:12:20Z",
+  "result": "PASS — Front Door → Mission Control workstation showed live platform Overview + Hardware; Refresh updated load; Platform MC hop honest not reachable; leave Integrity then return restored Hardware. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "health_home_at_end": 200,
+  "lock_overlay_at_end": "hidden",
+  "entry": {
+    "via": "Front Door → Mission Control (How the house is breathing)",
+    "hash": "#workstation",
+    "body_room": "mission",
+    "house_class": "house-room house-mission furnished-room",
+    "place": "Aerospace ops",
+    "h2": "Mission Control"
+  },
+  "native_mission_room": "not used — Front Door Rooms option lands the workstation console, not #missionRoom",
+  "overview": {
+    "hero": {
+      "platform": "healthy",
+      "phase": "STOPPED",
+      "acceptance": "96.2%",
+      "production": "99.6%",
+      "model": "—",
+      "jobs": 0
+    },
+    "health_brief": "DEGRADED — 1 thing needs your attention (Long-run stability warning)",
+    "attention_card": "All clear",
+    "providers": "Inference ollama · Memory aria_core.acm_bridge → CognitiveEngine · Knowledge platform",
+    "hardware": "NVIDIA GeForce RTX 3060 · RAM free 36.9 GB · VRAM free 3635 MB",
+    "platform_mission_control_card": "Status: not reachable · link http://127.0.0.1:8780/ target=_blank not clicked"
+  },
+  "hardware_tab": {
+    "cpu_ram": "Load (1m) 6.68 then Refresh 5.66 · RAM available 36.9 / 62.7 GB",
+    "gpu": "NVIDIA GeForce RTX 3060 · VRAM 3646 / 12288 MB free · Models loaded 0",
+    "disk": "Free 181.4 GB",
+    "refresh": "PASS — load updated"
+  },
+  "platform_aggregator": {
+    "ui_status": "not reachable",
+    "probe": "curl 127.0.0.1:8780 connection refused",
+    "link_clicked": false
+  },
+  "leave_return": {
+    "via": "Front Door recents → Integrity then Front Door recents → Mission Control",
+    "integrity_hash": "#integrity",
+    "integrity_identity": "Truth · Score 100 · ready · No deductions on record",
+    "front_door_on_mission": "You're in the middle of Mission Control.",
+    "front_door_on_integrity": "You're in the middle of Production Integrity.",
+    "front_door_stale_while_open": "After returning to Mission while Front Door stayed open, copy still said Production Integrity.",
+    "return_hash": "#workstation",
+    "return_tab": "Hardware still selected",
+    "return_cards": "CPU/RAM GPU Disk restored",
+    "result": "PASS"
+  },
+  "not_clicked": [
+    "Audit",
+    "Reconnect (confirm)",
+    "Open Recovery",
+    "Open Platform Mission Control",
+    "Restart Server",
+    "Recover provider",
+    "Backup recommended",
+    "Guided Repair execute"
+  ],
+  "data_mutation": {
+    "repair_executed": false,
+    "journal_post": false,
+    "health_phr": false,
+    "coding_apply": false,
+    "platform_mc_opened": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "notes": [
+    "Health Brief DEGRADED vs Overview Attention All clear — same Overview paint.",
+    "Phase STOPPED is the platform phase shown in the hero, not an Aria serve outage.",
+    "Guided Repair overlay remains in the accessibility tree while hidden.",
+    "Connection tab showed Reconnect (confirm) on first land; not clicked."
+  ],
+  "jeff_action_required": false,
+  "next_exact_capability": "Integrations → provider operation (STOP if it needs Jeff credentials). Do not execute Guided Repair. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

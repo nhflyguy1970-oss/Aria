@@ -1,0 +1,22 @@
+{
+  "/api/mission-control/health": {
+    "ms": 1377.2,
+    "bytes": 189,
+    "ok": true
+  },
+  "/api/mission-control/health-brief": {
+    "ms": 1782.6,
+    "bytes": 696,
+    "ok": true
+  },
+  "/api/integrity/home": {
+    "ms": 2.6,
+    "bytes": 4756,
+    "ok": true
+  },
+  "/api/planner/focus": {
+    "ms": 1561.7,
+    "bytes": 476,
+    "ok": true
+  }
+}

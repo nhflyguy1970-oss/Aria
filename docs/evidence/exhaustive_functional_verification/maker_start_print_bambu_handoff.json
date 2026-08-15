@@ -1,0 +1,60 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "maker",
+  "capability": "Start print → Bambu Studio / SD handoff for Hello cube",
+  "captured_at": "2026-08-14T15:48:59Z",
+  "result": "PASS — owner-UI Start print copied G-code to handoff folder. Physical print not started. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner": "OWNER_UNLOCKED; lockScreen hidden; Owner session active",
+  "performance": {
+    "start_print": "FAST (~252 ms) after re-slice"
+  },
+  "cause_fix": {
+    "problem": "POST /api/engineering/print queued with 'print client not started in this build' and Printer 2 (bambu_a1) was stored as moonraker with an invalid host",
+    "repair": "enqueue_print dispatches start_print_job; effective_backend follows model profile so bambu_a1 always handoffs; printer status uses printer_client; add_printer no longer defaults Bambu to moonraker",
+    "printers_json": "not modified",
+    "tests": "tests/test_engineering_printers.py — 11 passed"
+  },
+  "owner_ui": {
+    "hash": "#maker",
+    "printer_model": "bambu_a1",
+    "hello_cube_id": "c625705b89",
+    "bed_confirmed": true,
+    "filament_confirmed": true,
+    "toast": "G-code ready for Printer 2 — open /media/jeff/AI/jarvis/data/engineering/handoff/printer-2/latest.gcode in Bambu Studio or copy to SD card.",
+    "cad_log": "G-code ready for Printer 2 — open /media/jeff/AI/jarvis/data/engineering/handoff/printer-2/latest.gcode in Bambu Studio or copy to SD card.",
+    "printer_status_after_refresh": "Printer 2 — handoff · bed null°C · nozzle null°C",
+    "physical_print_started": false,
+    "screenshot": "maker-start-print-bambu-handoff.png",
+    "leave_return": {
+      "via": "#chat",
+      "hash_after": "#maker",
+      "cube_still_listed": true,
+      "handoff_log_persisted": true
+    }
+  },
+  "handoff": {
+    "dir": "/media/jeff/AI/jarvis/data/engineering/handoff/printer-2",
+    "latest_gcode_bytes": 201183,
+    "matches_plate_1": true,
+    "job_status": "handoff"
+  },
+  "data_mutation": {
+    "handoff_copy": true,
+    "print_jobs_state": true,
+    "hello_cube_left_in_place": true,
+    "clear_gallery_not_clicked": true,
+    "printers_json": "not modified; backend still moonraker on disk; routing uses model bambu_a1 → bambu_handoff",
+    "journal_post": false,
+    "live_journal_size": 67555,
+    "live_journal_sha256": "2ba593edebb1d2da2a4bbad569056dc489358c58bc76bf02d923b521c778fb3c",
+    "journal_note": "Size still 67555; sha changed overnight vs prior 6f43b891… This Start print did not POST journal."
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "qa_header": "403 production_isolation",
+  "jeff_action_required": {
+    "gate": "Bambu Studio / SD send to A1",
+    "action": "Aria will not start the A1. Open Bambu Studio → File → Import → /media/jeff/AI/jarvis/data/engineering/handoff/printer-2/latest.gcode (or copy to SD). Send when you are at the printer. Say done when the cube is sent or you want to skip the physical print."
+  },
+  "next_exact_capability": "WAIT FOR JEFF — Bambu Studio send / physical print. Do not jump to Fly tying while this gate is open."
+}

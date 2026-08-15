@@ -1,0 +1,58 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-13T18:51:14+00:00",
+  "after": "Jeff said done with house already OWNER_UNLOCKED",
+  "not_certification": true,
+  "runtime": "http://127.0.0.1:8765/?workspace=1",
+  "owner": "OWNER_UNLOCKED; lockScreen display none; AriaOwner.isHouseLocked false",
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "qa_header": "POST /api/planner/tasks + X-Aria-QA-Run → 403 production_isolation",
+  "live_journal_size": 67555,
+  "live_journal_sha256": "2d914b51e1359d3ff67aa1a848a482dd869e9efa90eac526e2e6197d1fc6a431",
+  "journal_post": false,
+  "health_phr_write": false,
+  "rooms": {
+    "maker": {
+      "identity": "PASS — #maker / Maker lab / · Maker lab",
+      "refresh": "PASS — CAD: OpenSCAD; model list honest empty: No models yet. Hello cube or ask Chat",
+      "printer_status": "PASS — No printer configured (Status clicked, Add/Discover/Start print not clicked)",
+      "leave_return": "PASS — Chat #chat then Maker restores CAD: OpenSCAD",
+      "not_clicked": ["cadGenerateBtn", "cadHelloCubeBtn", "cadSliceBtn", "cadIterateBtn", "cadExportBtn", "cadClearBtn"]
+    },
+    "flytying": {
+      "identity": "PASS — #flytying / Fly tying / Streamside cabin",
+      "catalog": "PASS — 271 catalog patterns · library connected · smart search on · index ready",
+      "search_existing": "PASS — woolly bugger → 144 results for “woolly bugger” · alias (~2.7 s)",
+      "negative_search": "PASS — 0 results for “zzzzqxnotapattern999”",
+      "not_clicked": ["flytyingHomeSuggestBtn", "flytyingStartSessionBtn", "flytyingRebuildBtn"],
+      "note": "Existing session chrome visible (Adams dry fly olive · step 2); session not started by this slice"
+    },
+    "memory": {
+      "identity": "PASS — #memory / Memory",
+      "stats": "1072 · fact: 270 · preference: 8 · note: 789 · project: 3 · ACM PRIMARY",
+      "list_after_wait": "PASS — 1070 cards in ~5937 ms (stats 1072 minus strategy/failure). Earlier empty first-paint was wait-too-short, not a missing archive.",
+      "negative_search": "PASS — No memories match. Ask Chat (button present, not clicked)",
+      "not_clicked": ["memoryAddBtn", "memory-edit-btn", "memory-forget-btn", "memoryEmptyChatBtn"]
+    },
+    "health": {
+      "identity": "PASS — #health; disclaimer present",
+      "timeline": "PASS — Lifetime Health Timeline; filter Everything…Recovery; existing MEDICATIONS row (title only, no extra clinical text recorded)",
+      "dashboard": "PASS — How am I doing? Check-in Not yet; educational scorecard; not a medical score",
+      "meds": "PASS — chrome + forms present; Taken/Missed/Log dose not clicked",
+      "vitals": "PASS — honest empty graphs (weight/BP/sugar/sleep)",
+      "labs": "PASS — None recorded; Add lab not clicked",
+      "docs": "PASS — None recorded; Upload not clicked",
+      "negative_search": "PASS — Nothing in Health matched “zzzzqxnohealth999”",
+      "leave_return": "PASS — Chat then Health restores search body",
+      "not_clicked": ["healthUploadBtn", "healthNlBtn", "healthDoctorBtn", "healthEmergencyBtn", "Check-in submit", "Log dose"]
+    }
+  },
+  "still_na": [
+    "Maker Generate / Hello cube / Slice / Start print",
+    "Fly tying Suggest a fly / Start session",
+    "Gallery / Meme image generation",
+    "Health PHR writes (Log, Upload, Check-in submit)",
+    "Search federated garbage still returns hits (~9 s) — product ranking, not a hung spinner",
+    "Aug 8 encrypted journal import — BLOCKED JEFF ACTION REQUIRED"
+  ]
+}

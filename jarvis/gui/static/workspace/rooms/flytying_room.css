@@ -1,0 +1,365 @@
+/**
+ * Native Fly Tying Room — streamside cabin materials.
+ * body.living-workspace.native-flytying
+ */
+
+body.living-workspace.native-flytying {
+  --fly-ink: #e8efe6;
+  --fly-ink-soft: #a8b8a4;
+  --fly-ink-mute: #6e7d6a;
+  --fly-room: #0e1410;
+  --fly-deep: #080c09;
+  --fly-wood: #1a241c;
+  --fly-lift: #243028;
+  --fly-water: #4a7a8c;
+  --fly-moss: #6e8f62;
+  --fly-amber: #c4a35a;
+  --fly-line: rgba(232, 239, 230, 0.08);
+  --fly-display: "Fraunces", Georgia, serif;
+  --fly-body: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  font-family: var(--fly-body);
+  color: var(--fly-ink);
+  background: var(--fly-deep);
+}
+
+#flytyingRoom.fly-room {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  color: var(--fly-ink);
+  font-family: var(--fly-body);
+}
+
+.nr-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.nr-atmosphere__wash,
+.nr-atmosphere__veil,
+.nr-atmosphere__grain {
+  position: absolute;
+  inset: 0;
+}
+
+body.living-workspace.native-flytying .nr-atmosphere__wash {
+  background:
+    radial-gradient(ellipse 70% 50% at 75% 20%, rgba(74, 122, 140, 0.28), transparent 55%),
+    radial-gradient(ellipse 50% 40% at 15% 85%, rgba(110, 143, 98, 0.18), transparent 50%),
+    linear-gradient(180deg, #121a14 0%, #0a100c 45%, #080c09 100%);
+}
+
+.nr-atmosphere__grain {
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+.nr-presence {
+  position: relative;
+  z-index: 2;
+  padding: 1.1rem clamp(1rem, 3vw, 2rem) 0.4rem;
+}
+
+.nr-presence__brand {
+  font-family: var(--fly-display);
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  font-weight: 500;
+  color: var(--fly-ink);
+}
+
+.nr-presence__place {
+  font-style: italic;
+  color: var(--fly-water);
+  font-weight: 400;
+}
+
+.nr-presence__status {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--fly-ink-mute);
+}
+
+.fly-room__body {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr minmax(180px, 220px);
+  gap: 0.75rem;
+  padding: 0.5rem clamp(1rem, 3vw, 2rem) 1.5rem;
+}
+
+.fly-room__rail,
+.fly-room__hearth {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.fly-room__search input {
+  width: 100%;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--fly-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--fly-wood) 80%, transparent);
+  color: var(--fly-ink);
+}
+
+.fly-room__list {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  overflow: auto;
+  flex: 1;
+}
+
+.fly-room__pattern {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.5rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.fly-room__pattern:hover,
+.fly-room__pattern.is-active {
+  background: color-mix(in srgb, var(--fly-water) 14%, transparent);
+}
+
+.fly-room__pname {
+  font-weight: 500;
+}
+
+.fly-room__ptype {
+  font-size: 0.7rem;
+  color: var(--fly-ink-mute);
+  text-transform: lowercase;
+}
+
+.fly-room__empty {
+  padding: 0.75rem 0.35rem;
+  color: var(--fly-ink-mute);
+  font-size: 0.85rem;
+}
+
+.fly-room__stage {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.fly-room__welcome h1,
+.fly-room__hero h1 {
+  font-family: var(--fly-display);
+  font-weight: 500;
+  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+  margin: 0.2rem 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.fly-room__welcome p,
+.fly-room__hook {
+  color: var(--fly-ink-soft);
+  max-width: 28rem;
+  line-height: 1.45;
+}
+
+.fly-room__kicker {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fly-moss);
+  margin: 0;
+}
+
+.fly-room__ghost {
+  margin-top: 0.75rem;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--fly-line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fly-ink-soft);
+  cursor: pointer;
+}
+
+.fly-room__bench {
+  margin-top: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 1.25rem;
+}
+
+.fly-room__bench h2 {
+  font-family: var(--fly-display);
+  font-size: 1.05rem;
+  font-weight: 500;
+  margin: 0 0 0.5rem;
+}
+
+.fly-room__materials ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--fly-ink-soft);
+  line-height: 1.55;
+}
+
+.fly-room__step {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: var(--fly-ink);
+  min-height: 4rem;
+}
+
+.fly-room__step-count {
+  font-family: var(--fly-body);
+  font-size: 0.75rem;
+  color: var(--fly-ink-mute);
+  font-weight: 400;
+}
+
+.fly-room__step-nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.fly-room__step-nav button {
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--fly-line);
+  background: var(--fly-lift);
+  color: var(--fly-ink);
+  cursor: pointer;
+}
+
+.fly-room__step-nav button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.fly-room__hearth {
+  padding-top: 0.25rem;
+}
+
+.fly-room__hearth-title {
+  font-family: var(--fly-display);
+  font-size: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.fly-room__inv {
+  font-size: 0.85rem;
+  color: var(--fly-ink-soft);
+  margin: 0 0 0.75rem;
+}
+
+.fly-room__suggest {
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--fly-amber) 40%, transparent);
+  background: color-mix(in srgb, var(--fly-amber) 12%, transparent);
+  color: var(--fly-ink);
+  cursor: pointer;
+}
+
+.fly-room__whisper {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--fly-ink-soft);
+  line-height: 1.4;
+}
+
+.nr-overflow-btn {
+  position: absolute;
+  top: 1rem;
+  right: clamp(1rem, 3vw, 2rem);
+  z-index: 5;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fly-ink-mute);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+}
+
+.nr-overflow {
+  position: absolute;
+  top: 3.2rem;
+  right: clamp(1rem, 3vw, 2rem);
+  z-index: 6;
+  min-width: 11rem;
+  padding: 0.4rem;
+  border-radius: 10px;
+  border: 1px solid var(--fly-line);
+  background: var(--fly-wood);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.nr-overflow button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 0.82rem;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--fly-ink);
+  cursor: pointer;
+}
+
+.nr-overflow button:hover {
+  background: color-mix(in srgb, var(--fly-water) 16%, transparent);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+}
+
+@media (max-width: 960px) {
+  .fly-room__body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr auto;
+  }
+  .fly-room__list {
+    max-height: 28vh;
+  }
+  .fly-room__bench {
+    grid-template-columns: 1fr;
+  }
+}

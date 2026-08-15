@@ -60,6 +60,15 @@ def documents_bridge() -> dict[str, Any]:
     }
 
 
+def health_bridge() -> dict[str, Any]:
+    return {
+        "ok": True,
+        "bridge": "health",
+        "note": "Health owns the Personal Health Record; Search retrieves via health facet.",
+        "facet": "health",
+    }
+
+
 def memory_bridge() -> dict[str, Any]:
     return {
         "ok": True,

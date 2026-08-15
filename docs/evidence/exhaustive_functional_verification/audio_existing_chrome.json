@@ -1,0 +1,73 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "audio",
+  "capability": "Audio existing studio chrome without Hold/Save",
+  "captured_at": "2026-08-15T17:28:05Z",
+  "result": "PASS — Front Door → Audio; #audio h2 Audio · Audio studio; status Whisper/ffmpeg/Piper healthy; library counts; Music honest empty; negative transcript search honest; Models leave/return restored query + no-match. Hold/Record/Test mic/Generate/Delete/Save not clicked. Filenames not recorded. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Audio (Sound, speech, and music)",
+    "hash": "#audio",
+    "h2": "Audio",
+    "place": "Audio studio",
+    "usable": "Record & transcribe chrome; status bar healthy; Listening quietly"
+  },
+  "functions": {
+    "status": "PASS — Whisper (medium) · ffmpeg · Piper · MusicGen transformers · output TOSLink/iec958 · mic 100% routing OK",
+    "library": "PASS counts — recordings 16 · generated speech 16 · edited 2 · music 0 (No music yet. Ask Chat) · songs 12. Filenames not recorded. Play/Delete not clicked.",
+    "record_mode": "PASS — default timed; Hold to talk present but hidden (PTT row hidden). Hold not clicked (already proven earlier).",
+    "negative_search": "PASS — zzzznonexistentxyz → No matches for “zzzznonexistentxyz”. Ask Chat. Ask Chat not clicked."
+  },
+  "leave_return": {
+    "leave": "Front Door recents → AI Providers → #models Providers tab; Validate not clicked",
+    "return": "Front Door recents → Audio → #audio h2 Audio",
+    "return_state": "query zzzznonexistentxyz restored; No matches copy restored; status healthy; PTT still hidden; Audio studio",
+    "front_door_copy": "stale — You’re in the middle of Providers",
+    "result": "PASS — room, hash, query, and empty search copy restored"
+  },
+  "not_clicked": [
+    "Hold to talk",
+    "Record only",
+    "Record + transcribe",
+    "Test mic (2s)",
+    "Generate speech",
+    "Generate music",
+    "Generate song",
+    "Edit",
+    "Convert",
+    "Delete",
+    "Play on Sound Blaster",
+    "Send to chat",
+    "Add to journal",
+    "Ask Chat",
+    "Voice",
+    "Journal",
+    "Lock Aria"
+  ],
+  "performance": {
+    "room_entry": "hash #audio immediately on Front Door click",
+    "first_meaningful": "h2 Audio + status + library after loadAudioPanel",
+    "note": "Tool-roundtrip delays are not owner-visible time and were not recorded as room slowness."
+  },
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "record": false,
+    "hold": false,
+    "generate": false,
+    "delete": false,
+    "journal_post": false,
+    "journal_bytes": 67547,
+    "health_phr": false,
+    "chat_send": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "Video existing studio chrome without Generate. Do not Hold/Record Audio. Do not Lock Aria. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5."
+}

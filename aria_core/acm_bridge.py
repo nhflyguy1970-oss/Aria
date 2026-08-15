@@ -18,6 +18,7 @@ import threading
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -480,6 +481,11 @@ def panel_observables() -> dict[str, Any]:
     }
 
 
+def acm_metrics() -> dict[str, Any]:
+    """Public metrics payload for Memory Home and diagnostics."""
+    return panel_observables()
+
+
 def _harvest_panel() -> dict[str, Any]:
     try:
         from aria_core.acm_harvest import last_harvest_report
@@ -838,12 +844,21 @@ def primary_get(entry_id: str) -> dict[str, Any] | None:
     exp = engine.store.experiences.get(entry_id)
     if exp is not None:
         pub = engine.experiences.public_view(exp)
+        tags = list(exp.context_tags)
+        namespace = "default"
+        entry_type = "fact"
+        for tag in tags:
+            if str(tag).startswith("ns:"):
+                namespace = str(tag)[3:] or "default"
+            elif str(tag).startswith("legacy_type:"):
+                entry_type = str(tag).split(":", 1)[1] or "fact"
         return {
             "id": exp.id,
             "content": exp.summary,
-            "type": "fact",
+            "type": entry_type,
+            "namespace": namespace,
             "source": "acm",
-            "tags": list(exp.context_tags),
+            "tags": tags,
             "public": pub,
         }
     concept = engine.store.concepts.get(entry_id)
@@ -864,6 +879,9 @@ def primary_forget(
 ) -> dict[str, Any]:
     """Soft forget via cool_memory (never hard-delete Experiences)."""
     t0 = time.perf_counter()
+    cooled_ids: list[str] = []
+    concept_id: str | None = None
+    out: dict[str, Any] = {"cooled": False, "experiences_unchanged": True}
     with engine_exclusive() as engine:
         concept_id = entry_id
         if entry_id and entry_id in engine.store.experiences:
@@ -872,9 +890,129 @@ def primary_forget(
         if not concept_id and query:
             view = engine.what_do_i_remember(query)
             concept_id = str((view or {}).get("primary_concept_id") or "") or None
+            # Lexical fallback — require full query substring (not loose token AND),
+            # so "Forget ARIA-REPAIR-MEM-1" cannot cool every memory mentioning those stems.
+            if not concept_id:
+                q = (query or "").strip().lower()
+                for exp in engine.store.experiences.values():
+                    content = str(getattr(exp, "summary", "") or "").lower()
+                    if not content or not q or q not in content:
+                        continue
+                    cids = list(getattr(exp, "concept_ids", ()) or [])
+                    chosen = None
+                    for cid in cids:
+                        concept = engine.store.concepts.get(str(cid))
+                        labels = [
+                            str(x).lower()
+                            for x in (getattr(concept, "labels", None) or [])
+                            if str(x).strip()
+                        ]
+                        if any(q in lab or lab in q for lab in labels):
+                            chosen = str(cid)
+                            break
+                    if chosen:
+                        concept_id = chosen
+                        break
+                    if cids:
+                        concept_id = str(cids[0])
+                        break
         if not concept_id:
             return {"ok": False, "cooled": False, "deleted": False, "reason": "no_concept"}
-        out = engine.cool_memory(str(concept_id), steps=1)
+        cooled_ids = [str(concept_id)]
+        # Cool query-relevant concepts on matching experiences — not every attached
+        # concept (shared stems like "exactly" must not be mass-archived).
+        _generic_labels = {
+            "exactly",
+            "literally",
+            "note",
+            "fact",
+            "memory",
+            "that",
+            "this",
+            "remember",
+        }
+        if query:
+            q = (query or "").strip().lower()
+            for exp in engine.store.experiences.values():
+                content = str(getattr(exp, "summary", "") or "").lower()
+                if not content or not q or q not in content:
+                    continue
+                for cid in list(getattr(exp, "concept_ids", ()) or []):
+                    sid = str(cid)
+                    concept = engine.store.concepts.get(sid)
+                    labels = [
+                        str(x).lower()
+                        for x in (getattr(concept, "labels", None) or [])
+                        if str(x).strip()
+                    ]
+                    if not labels:
+                        continue
+                    if any(lab in _generic_labels for lab in labels) and not any(
+                        q in lab or lab in q for lab in labels if lab not in _generic_labels
+                    ):
+                        continue
+                    if any(q in lab or lab in q for lab in labels if lab not in _generic_labels):
+                        if sid not in cooled_ids:
+                            cooled_ids.append(sid)
+        for cid in cooled_ids:
+            # Host forget should leave the memory out of casual recall (archived),
+            # not just one accessibility notch down.
+            step = engine.cool_memory(str(cid), steps=5)
+            if step.get("cooled"):
+                out = step
+                concept_id = str(cid)
+            # Force archived — ambient ensure()/reactivation must not undo host forget.
+            try:
+                from acm.forgetting.model import AccessibilityLevel
+
+                engine.store.accessibility[str(cid)] = AccessibilityLevel.ARCHIVED.value
+            except Exception:
+                engine.store.accessibility[str(cid)] = "archived"
+        # Tag matching experiences so projection can hide them even if sibling
+        # stems (exact/fact/later) remain highly accessible (BUG-025).
+        # Experience is a frozen dataclass — use object.__setattr__.
+        def _tag_forgotten(exp: Any) -> bool:
+            tags = list(getattr(exp, "context_tags", ()) or [])
+            if "host_forgotten" in tags:
+                return False
+            try:
+                object.__setattr__(exp, "context_tags", tuple(tags + ["host_forgotten"]))
+                return True
+            except Exception:
+                return False
+
+        tagged = False
+        if entry_id and entry_id in engine.store.experiences:
+            if _tag_forgotten(engine.store.experiences[entry_id]):
+                tagged = True
+        if query:
+            q = (query or "").strip().lower()
+            for exp in engine.store.experiences.values():
+                content = str(getattr(exp, "summary", "") or "").lower()
+                if not content or not q or q not in content:
+                    continue
+                if _tag_forgotten(exp):
+                    tagged = True
+        # Durable side-index — survives if context_tags cannot persist.
+        try:
+            forgotten = set(getattr(engine.store, "host_forgotten_ids", ()) or [])
+            if query:
+                q = (query or "").strip().lower()
+                for exp in engine.store.experiences.values():
+                    content = str(getattr(exp, "summary", "") or "").lower()
+                    if content and q and q in content:
+                        forgotten.add(str(exp.id))
+            if entry_id and entry_id in engine.store.experiences:
+                forgotten.add(str(entry_id))
+            engine.store.host_forgotten_ids = forgotten
+        except Exception:
+            pass
+        try:
+            engine.flush(kind="host_forget")
+        except Exception:
+            pass
+        if tagged and not out.get("cooled"):
+            out = {**out, "cooled": True}
     ms = (time.perf_counter() - t0) * 1000.0
     _record_ms(ms)
     _bump("primary_cool")
@@ -885,6 +1023,7 @@ def primary_forget(
         "deleted": False,
         "experiences_unchanged": out.get("experiences_unchanged", True),
         "id": concept_id,
+        "cooled_ids": cooled_ids,
     }
 
 
@@ -925,6 +1064,50 @@ def primary_correct(
     }
     _set_last_primary(acm_verb="revise", duration_ms=round(ms, 3), experience_id=new_id)
     return {"ok": bool(out.get("encoded") or new_id), "entry": host, "revised": True}
+
+
+def primary_update_metadata(
+    entry_id: str,
+    *,
+    entry_type: str | None = None,
+    tags: list[str] | None = None,
+    namespace: str | None = None,
+) -> dict[str, Any]:
+    """Update host projection tags/ns/type on an ACM experience without rewriting content."""
+    t0 = time.perf_counter()
+    with engine_exclusive() as engine:
+        exp = engine.store.experiences.get(entry_id)
+        if exp is None:
+            return {"ok": False, "reason": "not_found"}
+
+        current_tags = [str(t) for t in (getattr(exp, "context_tags", ()) or ()) if str(t)]
+        host_tags = [
+            t for t in current_tags if not t.startswith("ns:") and not t.startswith("legacy_type:")
+        ]
+        if tags is not None:
+            host_tags = [str(t) for t in tags if str(t)]
+
+        next_tags = list(host_tags)
+        if namespace is not None:
+            ns = namespace.strip() or "default"
+            next_tags.append(f"ns:{ns}")
+        else:
+            next_tags.extend(t for t in current_tags if t.startswith("ns:"))
+
+        if entry_type is not None:
+            next_tags.append(f"legacy_type:{entry_type}")
+        else:
+            next_tags.extend(t for t in current_tags if t.startswith("legacy_type:"))
+
+        deduped = tuple(dict.fromkeys(next_tags))
+        engine.store.experiences[entry_id] = replace(exp, context_tags=deduped)
+        if getattr(engine, "auto_persist", False) and getattr(engine, "durable", None) is not None:
+            engine.flush(kind="metadata_update")
+
+    ms = (time.perf_counter() - t0) * 1000.0
+    _record_ms(ms)
+    _set_last_primary(acm_verb="metadata_update", duration_ms=round(ms, 3), experience_id=entry_id)
+    return {"ok": True, "id": entry_id, "tags": list(deduped)}
 
 
 def primary_context_fragments(message: str, *, limit: int = 5) -> list[str]:
@@ -993,10 +1176,13 @@ def project_list_entries(
     namespace: str | None = None,
     query: str | None = None,
     limit: int = 200,
+    include_test_artifacts: bool = False,
 ) -> list[dict[str, Any]]:
     """Host-shaped ACM projection for list_entries façades (not legacy SoT)."""
     if not acm_is_authoritative():
         return []
+    from jarvis.trust_memory import is_test_artifact
+
     engine = get_engine()
     out: list[dict[str, Any]] = []
     q = (query or "").strip().lower()
@@ -1004,6 +1190,72 @@ def project_list_entries(
     for exp in engine.store.experiences.values():
         tags = list(getattr(exp, "context_tags", ()) or [])
         content = str(getattr(exp, "summary", "") or "")
+        if not include_test_artifacts and is_test_artifact(content):
+            continue
+        # Explicit host soft-forget — never surface in casual recall (BUG-025).
+        forgotten_ids = set(getattr(engine.store, "host_forgotten_ids", ()) or [])
+        if "host_forgotten" in {str(t) for t in tags} or str(exp.id) in forgotten_ids:
+            continue
+        # Soft-forgotten concepts stay in the store but must not surface as recall.
+        # Hide when a distinctive (non-generic) linked concept is archived/prune_eligible
+        # and its label appears in the experience — shared stems like "exactly"/"fact"
+        # alone must not hide otherwise-accessible memories (BUG-025 forget).
+        _generic_labels = {
+            "exactly",
+            "literally",
+            "note",
+            "fact",
+            "memory",
+            "that",
+            "this",
+            "remember",
+            "exact",
+            "later",
+            "for",
+            "the",
+        }
+        cids = list(getattr(exp, "concept_ids", ()) or [])
+        if cids:
+            access_levels = [
+                str(engine.store.accessibility.get(cid) or "accessible") for cid in cids
+            ]
+            if access_levels and all(
+                a
+                in (
+                    "archived",
+                    "prune_eligible",
+                    "dormant",
+                    "rarely_activated",
+                )
+                for a in access_levels
+            ):
+                continue
+            content_l = content.lower()
+            hide_forgotten = False
+            for cid, access in zip(cids, access_levels):
+                if access not in (
+                    "archived",
+                    "prune_eligible",
+                    "dormant",
+                    "rarely_activated",
+                ):
+                    continue
+                concept = engine.store.concepts.get(str(cid))
+                labels = [
+                    str(x).lower()
+                    for x in (getattr(concept, "labels", None) or [])
+                    if str(x).strip()
+                ]
+                distinctive = [
+                    lab
+                    for lab in labels
+                    if lab not in _generic_labels and len(lab) >= 6
+                ]
+                if distinctive and any(lab in content_l for lab in distinctive):
+                    hide_forgotten = True
+                    break
+            if hide_forgotten:
+                continue
         entry_ns = "default"
         for t in tags:
             if str(t).startswith("ns:"):
@@ -1034,8 +1286,27 @@ def project_list_entries(
         if len(out) >= limit:
             break
     if len(out) < limit:
+        forgotten_ids = set(getattr(engine.store, "host_forgotten_ids", ()) or [])
+        forgotten_text = " ".join(
+            str(getattr(engine.store.experiences.get(eid), "summary", "") or "").lower()
+            for eid in forgotten_ids
+            if eid in engine.store.experiences
+        )
         for concept in engine.store.concepts.values():
+            access = str(engine.store.accessibility.get(concept.id) or "accessible")
+            if access in (
+                "archived",
+                "prune_eligible",
+                "dormant",
+                "rarely_activated",
+            ):
+                continue
             label = concept.labels[0] if getattr(concept, "labels", None) else concept.id
+            lab_l = str(label).lower()
+            if forgotten_text and lab_l and lab_l in forgotten_text and len(lab_l) >= 6:
+                continue
+            if not include_test_artifacts and is_test_artifact(str(label)):
+                continue
             if entry_type and entry_type not in ("fact", "concept"):
                 continue
             if q and q not in str(label).lower():
@@ -1054,6 +1325,52 @@ def project_list_entries(
                 break
     _set_last_primary(acm_verb="project_list", hit_count=len(out))
     return out
+
+
+def project_latest_checkpoint(namespace: str | None = None) -> dict[str, Any] | None:
+    """Host-shaped latest project checkpoint from ACM experiences (not legacy vault).
+
+    Scans all experiences tagged ``checkpoint`` (optionally filtered by ``ns:``).
+    Returns None when none match — caller must not fall through to legacy while
+    ACM is authoritative.
+    """
+    if not acm_is_authoritative():
+        return None
+    engine = get_engine()
+    ns = (namespace or "").strip()
+    best: dict[str, Any] | None = None
+    best_ts = ""
+    for exp in engine.store.experiences.values():
+        tags = [str(t) for t in (getattr(exp, "context_tags", ()) or ())]
+        if "checkpoint" not in tags:
+            continue
+        entry_ns = "default"
+        for t in tags:
+            if t.startswith("ns:"):
+                entry_ns = t[3:]
+                break
+        if ns and entry_ns != ns:
+            continue
+        etype = "project"
+        for t in tags:
+            if t.startswith("legacy_type:"):
+                etype = t.split(":", 1)[1]
+                break
+        ts = str(getattr(exp, "t_encoded", None) or getattr(exp, "timestamp", None) or "")
+        if best is not None and ts < best_ts:
+            continue
+        best_ts = ts
+        best = {
+            "id": exp.id,
+            "content": str(getattr(exp, "summary", "") or ""),
+            "type": etype,
+            "namespace": entry_ns,
+            "tags": tags,
+            "source": "acm",
+            "timestamp": ts or None,
+        }
+    _set_last_primary(acm_verb="project_checkpoint", hit_count=1 if best else 0)
+    return best
 
 
 def project_search(

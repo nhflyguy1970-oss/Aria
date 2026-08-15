@@ -1,0 +1,47 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "home_automation",
+  "capability": "Owner UI Heading out — activate configured leave scene",
+  "captured_at": "2026-08-14T17:54:42Z",
+  "jeff_authorized": "heading out",
+  "result": "PASS — Heading out activated scene.leaving via product scene API. Listed lights unchanged (HA scene content). NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_ui": {
+    "hash": "#homeAutomation",
+    "h2": "Home Automation",
+    "health": "Connected · http://127.0.0.1:8123",
+    "leave_scene_field": "scene.leaving",
+    "clicked": "Heading out",
+    "not_clicked": ["Home status", "Save leave scene", "Apply profile", "Connect", "Paste token", "Discover Kasa", "scene chips"]
+  },
+  "first_click_blocked": {
+    "toast": "Wait for the current reply to finish, or press Stop",
+    "lights": "unchanged",
+    "cause": "Heading out called window.sendMessage(\"I'm heading out\") so a busy Chat reply blocked the HA room button"
+  },
+  "repair": {
+    "file": "jarvis/gui/static/ha_panel.js",
+    "change": "Heading out POSTs /api/smarthome/product/scene with Leaving scene field (same path as Movie mode chips); Home status still sendMessage",
+    "cache_bust": "ha_panel.js?v=1.0.6-headingout",
+    "reload": "http://127.0.0.1:8765/?workspace=1&v=headingout131#homeAutomation — JS-only; no server restart"
+  },
+  "apply_after_repair": {
+    "toast": "Activated scene **scene.leaving** (`scene.leaving`).",
+    "via": "smarthome product scene / home_assistant",
+    "lights_after": {
+      "light.merkury_bw904_smart_bulb_2": {"state": "on", "brightness": 255, "name": "Wall 1"},
+      "light.geeni_bw413_smart_bulb_5": {"state": "on", "brightness": 255, "name": "Bedroom 2"},
+      "light.geeni_bw413_smart_bulb": {"state": "on", "brightness": 255, "name": "Bedroom 1"},
+      "light.table_lamp": {"state": "on", "brightness": 64, "name": "Table lamp"},
+      "light.geeni_bw413_smart_bulb_2": {"state": "on", "brightness": 255, "name": "Wall"},
+      "light.geeni_bw413_smart_bulb_3": {"state": "unavailable", "name": "Lamp"},
+      "light.geeni_bw413_smart_bulb_4": {"state": "on", "brightness": 255, "name": "Tying desk"},
+      "light.geeni_bw413_smart_bulb_6": {"state": "on", "brightness": 255, "name": "Family room 2"},
+      "light.geeni_bw413_smart_bulb_7": {"state": "on", "brightness": 255, "name": "family room 1"}
+    },
+    "note": "HA accepted scene.leaving. These lights did not change — leave scene in Home Assistant may be empty or not target this list. Did not invent an all-off preset.",
+    "result": "PASS — owner button reached HA scene"
+  },
+  "lamp_left_at": "on, brightness 64 (25%) — same as after Movie mode / toggle",
+  "next_exact_capability": "Voice PTT / Health Upload-Log dose / Coding Apply / Automation Pause all still unclicked. Do not start Owner Residency. Do not certify 34/34."
+}

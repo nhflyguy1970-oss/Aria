@@ -47,6 +47,7 @@
         + (adj ? `\n\nPlan: ${adj}` : "")
         + (tips ? `\n\nTip: ${tips}` : "")
         + "\n\nContinue anyway?";
+      if (window.ariaConfirm) return window.ariaConfirm(msg, { title: "VRAM warning", okLabel: "Continue" });
       return window.confirm(msg);
     } catch {
       return true;

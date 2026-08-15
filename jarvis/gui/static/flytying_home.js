@@ -10,14 +10,32 @@
     return d.innerHTML;
   }
 
+  function isRoomAbort(err) {
+    return !!(
+      window.AriaNet?.isRoomAbort?.(err) ||
+      err?.name === "AbortError" ||
+      /aborted|aria-room-leave/i.test(String(err?.message || err?.reason || ""))
+    );
+  }
+
+  function flyViewActive() {
+    return (
+      document.body.classList.contains("house-flytying") ||
+      /^#?flytying\b/i.test(location.hash || "") ||
+      !!document.getElementById("flytyingView")?.offsetParent
+    );
+  }
+
   async function loadFlytyingHome() {
     const panel = $("flytyingHomePanel");
     if (!panel) return;
+    const gen = (loadFlytyingHome._gen = (loadFlytyingHome._gen || 0) + 1);
     try {
       const [home, profiles] = await Promise.all([
         fetch("/api/flytying/product/home").then((r) => r.json()),
         fetch("/api/flytying/product/profiles").then((r) => r.json()).catch(() => ({ profiles: [] })),
       ]);
+      if (gen !== loadFlytyingHome._gen) return;
       const recovery = home.recovery || {};
       const card = $("flytyingRecoveryCard");
       if (card) {
@@ -74,6 +92,16 @@
         });
       }
     } catch (err) {
+      if (gen !== loadFlytyingHome._gen) return;
+      if (isRoomAbort(err)) {
+        if (flyViewActive()) {
+          clearTimeout(loadFlytyingHome._retry);
+          loadFlytyingHome._retry = setTimeout(() => {
+            if (flyViewActive()) loadFlytyingHome();
+          }, 160);
+        }
+        return;
+      }
       if ($("flytyingHomeInvStatus")) $("flytyingHomeInvStatus").textContent = err.message || "Home failed";
     }
   }
@@ -88,7 +116,14 @@
     $("flytyingHomeFocusInvBtn")?.addEventListener("click", () => {
       const d = $("flytyingInvDetails");
       if (d) d.open = true;
-      $("flytyingInvWhat")?.focus();
+      const what = $("flytyingInvWhat");
+      const box = $("flytyingInvDetails") || $("flytyingMaterialsSummary")?.closest(".flytying-materials-box");
+      try {
+        (box || what)?.scrollIntoView?.({ block: "center", behavior: "smooth" });
+      } catch (_) {
+        /* ignore */
+      }
+      what?.focus();
     });
     $("flytyingStartSessionBtn")?.addEventListener("click", async () => {
       const id = window._flytyingSelectedId || "";

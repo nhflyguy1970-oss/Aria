@@ -1,0 +1,605 @@
+{
+  "phase": 1,
+  "certification": "runtime_live",
+  "purpose": "Runtime Certification evidence \u2014 not R1 selection by this script alone",
+  "backend_before": {
+    "ok": true,
+    "version": "3.1.0"
+  },
+  "url": "http://127.0.0.1:8765/",
+  "soak_sec": 180,
+  "results": [
+    {
+      "candidate": "E1",
+      "mode": "electron_stage",
+      "url": "http://127.0.0.1:8765/",
+      "events": [
+        {
+          "t": 0.131,
+          "msg": "window_shown"
+        },
+        {
+          "t": 1.236,
+          "msg": "load_ok"
+        },
+        {
+          "t": 2.754,
+          "msg": "navigate chat"
+        },
+        {
+          "t": 7.775,
+          "msg": "navigate health"
+        },
+        {
+          "t": 12.819,
+          "msg": "navigate flytying"
+        },
+        {
+          "t": 17.84,
+          "msg": "navigate workstation"
+        },
+        {
+          "t": 22.886,
+          "msg": "navigate planner"
+        },
+        {
+          "t": 27.905,
+          "msg": "navigate gallery"
+        },
+        {
+          "t": 32.92,
+          "msg": "navigate documents"
+        },
+        {
+          "t": 37.932,
+          "msg": "navigate coding"
+        },
+        {
+          "t": 42.953,
+          "msg": "navigate search"
+        },
+        {
+          "t": 47.967,
+          "msg": "navigate dashboard"
+        }
+      ],
+      "room_tour": [
+        {
+          "room": "chat",
+          "t": 2.754
+        },
+        {
+          "room": "health",
+          "t": 7.775
+        },
+        {
+          "room": "flytying",
+          "t": 12.819
+        },
+        {
+          "room": "workstation",
+          "t": 17.84
+        },
+        {
+          "room": "planner",
+          "t": 22.886
+        },
+        {
+          "room": "gallery",
+          "t": 27.905
+        },
+        {
+          "room": "documents",
+          "t": 32.92
+        },
+        {
+          "room": "coding",
+          "t": 37.932
+        },
+        {
+          "room": "search",
+          "t": 42.953
+        },
+        {
+          "room": "dashboard",
+          "t": 47.967
+        }
+      ],
+      "started": 1786037832219,
+      "load_ok": true,
+      "wall_sec": 180.004,
+      "feels_like_browser": "risk_medium_electron_identity_needs_branding",
+      "invisible_computer_notes": "No browser chrome when packaged; unpackaged Electron can feel like a web wrapper. Branding + asar packaging critical.",
+      "ok": true,
+      "exit_code": 0,
+      "rss_samples_kb": [
+        24,
+        703424,
+        713372,
+        715508,
+        720304,
+        720488,
+        740704,
+        743908,
+        747068,
+        750080,
+        754092,
+        756748,
+        756924,
+        759844,
+        759676,
+        763184,
+        762756,
+        764236,
+        764176,
+        765360,
+        764600,
+        728752,
+        728960,
+        729144,
+        729340,
+        730680,
+        732648,
+        729588,
+        729868,
+        727432,
+        727088,
+        727588,
+        727872,
+        729316,
+        729140,
+        729580,
+        729932,
+        730260,
+        730548,
+        730776,
+        732404,
+        730572,
+        730644,
+        730820,
+        730840,
+        729836,
+        729848,
+        729960,
+        731016,
+        731088,
+        730396,
+        730444,
+        730152,
+        730776,
+        730968,
+        730948,
+        732220,
+        730960,
+        731128,
+        731152,
+        731248,
+        731484,
+        731676,
+        732224,
+        733284,
+        733380,
+        733060,
+        734416,
+        733548,
+        733552,
+        733068,
+        733588,
+        734200,
+        733468,
+        733584,
+        733076,
+        733120,
+        733132,
+        733100,
+        734140
+      ],
+      "peak_rss_mb": 747.4,
+      "gpu_samples": [
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 1,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 5,
+          "mem_used_mb": 127,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 548,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 2,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 4,
+          "mem_used_mb": 127,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 127,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 550,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 572,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 585,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 138,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 550,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 1,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 572,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 127,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 236,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 3,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 127,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 5,
+          "mem_used_mb": 127,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 550,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 560,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 1,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 574,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 1,
+          "mem_used_mb": 127,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 3,
+          "mem_used_mb": 136,
+          "mem_total_mb": 12288
+        },
+        {
+          "gpu_util_pct": 0,
+          "mem_used_mb": 550,
+          "mem_total_mb": 12288
+        }
+      ],
+      "backend_live_after": true,
+      "stderr_tail": "[3087051:0806/133712.551104:ERROR:crypto/nss_util.cc:344] After loading Root Certs, loaded==false: NSS error code: -8018\n",
+      "wall_sec_harness": 181.4
+    }
+  ]
+}

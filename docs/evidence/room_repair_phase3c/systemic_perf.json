@@ -1,0 +1,34 @@
+{
+  "repair_home_cold_or_warm": 958.6,
+  "repair_home_warm": 10.4,
+  "search_adams_ms": 3295.1,
+  "search_adams_sources": [
+    "flytying",
+    "flytying",
+    "chat",
+    "chat",
+    "notifications"
+  ],
+  "search_document_ms": 12020.1,
+  "search_document_failures": [
+    {
+      "corpus": "documents",
+      "error": "corpus timed out \u2014 partial results returned"
+    }
+  ],
+  "integrity": {
+    "overall": 100,
+    "state": "ready",
+    "clean": null
+  },
+  "qa_header": {
+    "status": 403,
+    "expect": 403,
+    "ok": true
+  },
+  "test_shaped": {
+    "status": 400,
+    "expect": 400,
+    "ok": true
+  }
+}

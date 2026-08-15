@@ -132,6 +132,7 @@ def test_embed_available_is_tags_only(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_ask_stream_applies_default_num_ctx(monkeypatch: pytest.MonkeyPatch) -> None:
+    from jarvis.inference import gateway
     import jarvis.llm as llm_mod
 
     seen: dict = {}
@@ -141,12 +142,13 @@ def test_ask_stream_applies_default_num_ctx(monkeypatch: pytest.MonkeyPatch) -> 
         yield {"message": {"content": "hi"}}
 
     monkeypatch.setattr(
-        "jarvis.inference.policy.select_route",
-        lambda model, role="general", messages=None: SimpleNamespace(
-            backend="ollama", model=model
+        gateway,
+        "select_route",
+        lambda model, role="general", messages=None, lock_model=False: SimpleNamespace(
+            backend="ollama", model=model, reason="test"
         ),
     )
-    monkeypatch.setattr(llm_mod, "chat", fake_chat)
+    monkeypatch.setattr("ollama.chat", fake_chat)
     monkeypatch.setenv("JARVIS_OLLAMA_NUM_CTX", "4096")
     tokens = list(llm_mod.ask_stream("qwen2.5:7b", [{"role": "user", "content": "hi"}]))
     assert tokens == ["hi"]

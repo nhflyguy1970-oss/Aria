@@ -96,11 +96,13 @@ def test_embed_available_is_cached(monkeypatch):
 
     calls = {"n": 0}
 
-    def _embed(_text):
+    def _check_ollama(*, soft_probe=False):
+        assert soft_probe is False
         calls["n"] += 1
-        return [0.1, 0.2]
+        return {"running": True, "models": ["nomic-embed-text:latest"]}
 
-    monkeypatch.setattr(llm, "embed_text", _embed)
+    monkeypatch.setattr("jarvis.ollama_health.check_ollama", _check_ollama)
+    monkeypatch.setattr(llm, "model_for", lambda _role: "nomic-embed-text")
     llm._EMBED_AVAIL_CACHE.clear()
     assert llm.embed_available() is True
     assert llm.embed_available() is True

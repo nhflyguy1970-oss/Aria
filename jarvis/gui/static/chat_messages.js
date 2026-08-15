@@ -59,7 +59,7 @@
 
     const msgIndex = msgs.querySelectorAll(".message").length;
     div.dataset.msgIndex = String(msgIndex);
-    if (role === "user" || role === "assistant") {
+    if ((role === "user" || role === "assistant") && !window.AriaLivingRoom?.isActive?.()) {
       const actions = document.createElement("div");
       actions.className = "message-actions";
       const copyBtn = window.createCopyButton?.(body);
@@ -100,6 +100,13 @@
     }
 
     msgs.appendChild(div);
+    // Markdown gallery images (reload path) must be clickable like live appendGeneratedImage.
+    try {
+      window.bindClickableImages?.(body);
+      body?.querySelectorAll?.("img.clickable-image").forEach((img) => {
+        window.attachMediaLoadError?.(img, "image");
+      });
+    } catch (_) { /* ignore */ }
     if (!options.skipScroll) msgs.scrollTop = msgs.scrollHeight;
 
     if (role === "assistant" && window.jarvisChat) {

@@ -41,11 +41,15 @@
     home.innerHTML = `<div class="conn-skeleton" aria-busy="true"><div></div><div></div><div></div></div>`;
     try {
       const data = await api("/api/connections/home");
-      if (!data.ok) throw new Error(data.error || "Failed");
+      if (!data.ok) throw new Error(data.error || data.message || "Failed");
       const o = data.overview || {};
       const h = data.health || {};
       const pending = (data.pending_ingest || []).filter((p) => p.status === "pending");
+      const degradedBanner = data.degraded || h.status === "degraded" || h.ok === false
+        ? `<p class="conn-degraded" role="status">${esc(data.message || h.message || "Knowledge graph unavailable — showing empty overview.")}</p>`
+        : "";
       home.innerHTML = `
+        ${degradedBanner}
         <div class="conn-home-grid">
           <section class="conn-panel">
             <h4>Overview</h4>
@@ -54,7 +58,7 @@
               <dt>Relationships</dt><dd>${esc(o.relationships)}</dd>
               <dt>Orphans</dt><dd>${esc(o.orphans)}</dd>
               <dt>Missing provenance</dt><dd>${esc(o.missing_provenance)}</dd>
-              <dt>Backend</dt><dd>${esc(h.backend)}</dd>
+              <dt>Backend</dt><dd>${esc(h.backend)}${h.status && h.status !== "ok" ? ` · ${esc(h.status)}` : ""}</dd>
             </dl>
             <p class="muted tiny">${esc(data.philosophy)}</p>
           </section>
@@ -62,7 +66,7 @@
             <h4>Identity</h4>
             <ul class="conn-mini">
               <li><strong>Documents</strong> — Document Intelligence</li>
-              <li><strong>Knowledge</strong> — Knowledge Briefs</li>
+              <li><strong>Knowledge</strong> — <button type="button" class="ghost-btn tiny" id="connOpenKnowledgeHome">Knowledge Briefs</button></li>
               <li><strong>Connections</strong> — Knowledge Graph (this view)</li>
               <li><strong>Memory</strong> — Autobiographical cognition (ACM)</li>
             </ul>
@@ -126,7 +130,11 @@
           loadHome();
         });
       });
+      $("connOpenKnowledgeHome")?.addEventListener("click", () => {
+        window.openKnowledgeBriefs?.() || window.switchToView?.("memory");
+      });
     } catch (err) {
+      if (window.AriaNet?.isRoomAbort?.(err)) return;
       home.innerHTML = `<p class="muted">Could not load Connections: ${esc(err.message || err)}</p>`;
       toast(String(err.message || err), "error");
     }
@@ -182,13 +190,13 @@
     list?.classList.remove("hidden");
     if (!list) return;
     list.innerHTML = `<li class="muted">Loading…</li>`;
-    const data = await api("/api/connections/search?mode=entities&limit=40&q=");
+    const data = await api("/api/connections/search?mode=entities&limit=200&q=");
     const collected = data.nodes || [];
     if (!collected.length) {
       list.innerHTML = `<li class="muted">No entities yet. Press <kbd>N</kbd> to create one, or Import text for review.</li>`;
       return;
     }
-    list.innerHTML = collected.map((n) => `<li class="conn-row" role="option" tabindex="0" aria-selected="false" data-name="${esc(n.name)}" data-ns="${esc(n.namespace)}">
+    list.innerHTML = `<li class="muted">${collected.length} entit${collected.length === 1 ? "y" : "ies"}</li>` + collected.map((n) => `<li class="conn-row" role="option" tabindex="0" aria-selected="false" data-name="${esc(n.name)}" data-ns="${esc(n.namespace)}">
       <strong>${esc(n.name)}</strong> <span class="muted tiny">${esc(n.kind)} · ${esc(n.namespace)}</span>
     </li>`).join("");
     list.querySelectorAll(".conn-row").forEach((row) => {
@@ -250,8 +258,7 @@
     $("connOpenProjects")?.addEventListener("click", () => window.switchToView?.("projects"));
     $("connOpenDocs")?.addEventListener("click", () => window.switchToView?.("documents"));
     $("connOpenKnowledge")?.addEventListener("click", () => {
-      window.switchToView?.("documents");
-      toast("Knowledge Briefs live with Documents / research — separate from Connections.", "info");
+      window.openKnowledgeBriefs?.() || window.switchToView?.("memory");
     });
     $("connDeleteEntity")?.addEventListener("click", () => deleteEntity(e.name, e.namespace));
   }
@@ -293,9 +300,17 @@
   }
 
   async function createEntityDialog() {
-    const name = prompt("Entity name");
+    const name = window.ariaPrompt
+      ? await window.ariaPrompt("Entity name", "", { title: "New entity", okLabel: "Next" })
+      : prompt("Entity name");
     if (!name) return;
-    const kind = prompt("Type (person/place/organization/concept/project/entity)", "entity") || "entity";
+    const kind =
+      (window.ariaPrompt
+        ? await window.ariaPrompt("Type (person/place/organization/concept/project/entity)", "entity", {
+            title: "Entity type",
+            okLabel: "Create",
+          })
+        : prompt("Type (person/place/organization/concept/project/entity)", "entity")) || "entity";
     const r = await api("/api/connections/entity", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

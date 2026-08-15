@@ -33,6 +33,14 @@ output/
 /data/chat_*.json
 tools/piper/
 
+# Local scratch — not production Aria
+/00000.log
+/result.json
+/cooling_tower_chimney.scad
+/cooling_tower_chimney_freecad.py
+/design/
+/jarvis/__init__.py.bak.*
+
 # OS / editor
 .DS_Store
 *.swp

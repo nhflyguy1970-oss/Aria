@@ -1,0 +1,462 @@
+{
+  "meta": {
+    "tabs": [
+      {
+        "text": "Timeline",
+        "htab": "timeline",
+        "id": null
+      },
+      {
+        "text": "Dashboard",
+        "htab": "dashboard",
+        "id": null
+      },
+      {
+        "text": "Check-in",
+        "htab": "checkin",
+        "id": null
+      },
+      {
+        "text": "Activity",
+        "htab": "activity",
+        "id": null
+      },
+      {
+        "text": "Workouts",
+        "htab": "workouts",
+        "id": null
+      },
+      {
+        "text": "Goals",
+        "htab": "goals",
+        "id": null
+      },
+      {
+        "text": "Trends",
+        "htab": "trends",
+        "id": null
+      },
+      {
+        "text": "Meds",
+        "htab": "meds",
+        "id": null
+      },
+      {
+        "text": "Supplements",
+        "htab": "supps",
+        "id": null
+      },
+      {
+        "text": "Recovery",
+        "htab": "recovery",
+        "id": null
+      },
+      {
+        "text": "History",
+        "htab": "history",
+        "id": null
+      },
+      {
+        "text": "Journal",
+        "htab": "journal",
+        "id": null
+      },
+      {
+        "text": "Knowledge",
+        "htab": "knowledge",
+        "id": null
+      },
+      {
+        "text": "Providers",
+        "htab": "providers",
+        "id": null
+      },
+      {
+        "text": "Procedures",
+        "htab": "procedures",
+        "id": null
+      },
+      {
+        "text": "Family",
+        "htab": "family",
+        "id": null
+      },
+      {
+        "text": "Preventive",
+        "htab": "preventive",
+        "id": null
+      },
+      {
+        "text": "Nutrition",
+        "htab": "nutrition",
+        "id": null
+      },
+      {
+        "text": "Insights",
+        "htab": "insights",
+        "id": null
+      },
+      {
+        "text": "Visit prep",
+        "htab": "visitprep",
+        "id": null
+      },
+      {
+        "text": "Backups",
+        "htab": "backups",
+        "id": null
+      },
+      {
+        "text": "Security",
+        "htab": "security",
+        "id": null
+      },
+      {
+        "text": "Vitals",
+        "htab": "vitals",
+        "id": null
+      },
+      {
+        "text": "Labs",
+        "htab": "labs",
+        "id": null
+      },
+      {
+        "text": "Documents",
+        "htab": "docs",
+        "id": null
+      },
+      {
+        "text": "Questions",
+        "htab": "questions",
+        "id": null
+      },
+      {
+        "text": "Coach",
+        "htab": "coach",
+        "id": null
+      },
+      {
+        "text": "Consult",
+        "htab": "consult",
+        "id": null
+      },
+      {
+        "text": "Reminders",
+        "htab": "reminders",
+        "id": null
+      },
+      {
+        "text": "Print / Export",
+        "htab": "print",
+        "id": null
+      },
+      {
+        "text": "Profile",
+        "htab": "profile",
+        "id": null
+      }
+    ],
+    "buttons": [
+      "Upload a medical document",
+      "healthDoctorBtn",
+      "healthEmergencyBtn",
+      "healthRefreshBtn",
+      "Timeline",
+      "Dashboard",
+      "Check-in",
+      "Activity",
+      "Workouts",
+      "Goals",
+      "Trends",
+      "Meds",
+      "Supplements",
+      "Recovery",
+      "History",
+      "Journal",
+      "Knowledge",
+      "Providers",
+      "Procedures",
+      "Family",
+      "Preventive",
+      "Nutrition",
+      "Insights",
+      "Visit prep",
+      "Backups",
+      "Security",
+      "Vitals",
+      "Labs",
+      "Documents",
+      "Questions",
+      "Coach",
+      "Consult",
+      "Reminders",
+      "Print / Export",
+      "Profile",
+      "healthSearchBtn",
+      "healthNlBtn"
+    ],
+    "room": "health",
+    "status": ""
+  },
+  "tabs": [
+    {
+      "tab": "timeline",
+      "label": "Timeline",
+      "ms": 907,
+      "status": "",
+      "body": "Lifetime Health Timeline Central chronological view of your Personal Health Record. Filter Everything Vitals Exercise Workouts Symptoms Medications Supplements Labs Doctors Documents Journal Goals Milestones Recovery Nutrition Preventive Family history 2026-08-07 MEDICATIONS Current: Vitamin D3 \u2014 current 1 capsule daily morning",
+      "fail": false
+    },
+    {
+      "tab": "dashboard",
+      "label": "Dashboard",
+      "ms": 909,
+      "status": "",
+      "body": "How am I doing? Check-in Not yet Activity 0 session(s) Workouts 0 Streak 0 day(s) Med adherence 100% Habit summary 100/100 Habit summary is educational only \u2014 not a medical score. Wellness scorecard This wellness scorecard summarizes your recorded Health habits. It is not a medical score, diagnosis, or risk calculator. Sleep consistency \u2014 No sleep hours recorded yet. Exercise consistency \u2014 No activity/workouts logged in this window. Medication adherence 100/100 About 100% of expected medication ",
+      "fail": false
+    },
+    {
+      "tab": "checkin",
+      "label": "Check-in",
+      "ms": 913,
+      "status": "",
+      "body": "Daily check-in \u2014 2026-08-12 Under two minutes. Leave blank what you skip. Overall 1\u201310 Energy 1\u201310 Mood 1\u201310 Stress 1\u201310 Pain 0\u201310 Hours slept Sleep quality 1\u201310 Weight BP systolic BP diastolic Heart rate Blood sugar Temperature Pulse ox % Exercise Water Alcohol Tobacco Meals Symptoms Notes Save check-in Observations No strong patterns yet. Aria is not a physician and does not diagnose or prescribe. Health insights are informational only. Consult a qualified healthcare professional for medical a",
+      "fail": false
+    },
+    {
+      "tab": "activity",
+      "label": "Activity",
+      "ms": 908,
+      "status": "",
+      "body": "Activity None recorded. walking running cycling swimming hiking strength resistance bands weight lifting stretching yoga mobility balance sports fishing housework yardwork custom Light Moderate Hard Vigorous Log activity",
+      "fail": false
+    },
+    {
+      "tab": "workouts",
+      "label": "Workouts",
+      "ms": 906,
+      "status": "",
+      "body": "Workouts Last: \u2014 on \u2014 \u00b7 Streak 0 \u00b7 Volume stable None recorded. upper body lower body full body push pull legs core resistance band cardio mobility rehabilitation custom Save workout",
+      "fail": false
+    },
+    {
+      "tab": "goals",
+      "label": "Goals",
+      "ms": 906,
+      "status": "",
+      "body": "Goals & coaching Progress is visual and educational \u2014 discuss targets with your physician. None yet. Weight Walking / steps Exercise days/week Sleep Blood pressure Blood sugar Hydration Strength Stretching Medication adherence Supplement adherence Appointment reminder Stress Custom Save goal",
+      "fail": false
+    },
+    {
+      "tab": "trends",
+      "label": "Trends",
+      "ms": 905,
+      "status": "",
+      "body": "Trends Observations only \u2014 not diagnoses. Not enough recorded data yet. Aria is not a physician and does not diagnose or prescribe. Health insights are informational only. Consult a qualified healthcare professional for medical advice.",
+      "fail": false
+    },
+    {
+      "tab": "meds",
+      "label": "Meds",
+      "ms": 907,
+      "status": "",
+      "body": "Medication adherence Gentle history only \u2014 never a judgment. Log taken/missed doses to keep this honest. Taken today \u2014 Missed today \u2014 Weekly 100% Monthly 100% About 100% of expected medication days logged without a missed note over 7 days. This is a gentle history reminder \u2014 not a judgment. Still to log today: Vitamin D3 Taken Missed Log dose Current medications Name Strength Dose Frequency Purpose Physician Status Vitamin D3 2000 IU 1 capsule daily morning General wellness current Add / update ",
+      "fail": false
+    },
+    {
+      "tab": "supps",
+      "label": "Supplements",
+      "ms": 906,
+      "status": "",
+      "body": "Current supplements None recorded. Add / update",
+      "fail": false
+    },
+    {
+      "tab": "recovery",
+      "label": "Recovery",
+      "ms": 906,
+      "status": "",
+      "body": "Recovery tracking Illness, injury, surgery, PT, pain, and mobility \u2014 educational history only. None recorded. Illness Injury Surgery Recovery Physical therapy Pain progression Mobility Healing milestone Active Improving Resolved Log recovery",
+      "fail": false
+    },
+    {
+      "tab": "history",
+      "label": "History",
+      "ms": 906,
+      "status": "",
+      "body": "Conditions None recorded. Condition Past illness Surgery Hospitalization Family history Add Allergies None recorded. Drug Food Environmental Add Vaccinations None recorded. Add",
+      "fail": false
+    },
+    {
+      "tab": "journal",
+      "label": "Journal",
+      "ms": 906,
+      "status": "",
+      "body": "Health Journal Separate from Journal. Entries appear on the Health Timeline. No entries yet. Save",
+      "fail": false
+    },
+    {
+      "tab": "knowledge",
+      "label": "Knowledge",
+      "ms": 907,
+      "status": "",
+      "body": "Health Knowledge Trusted notes, doctor instructions, NIH / Mayo / Cleveland / AHA / ADA clippings \u2014 searchable with Health. None recorded. Doctor advice Hospital / treatment plan NIH CDC WHO Mayo Clinic Cleveland Clinic AHA ADA Educational article Trusted website Research Lifestyle idea Personal note Question Save",
+      "fail": false
+    },
+    {
+      "tab": "providers",
+      "label": "Providers",
+      "ms": 906,
+      "status": "",
+      "body": "Doctor directory None recorded. Primary physician Cardiologist Endocrinologist Dentist Eye doctor Pharmacy Physical therapist Other specialist Save provider Doctor appointment history None recorded. Log visit",
+      "fail": false
+    },
+    {
+      "tab": "procedures",
+      "label": "Procedures",
+      "ms": 905,
+      "status": "",
+      "body": "Procedures None recorded. MRI CT X-Ray Ultrasound Colonoscopy Stress test Echocardiogram Biopsy Hospital stay Other Save procedure",
+      "fail": false
+    },
+    {
+      "tab": "family",
+      "label": "Family",
+      "ms": 905,
+      "status": "",
+      "body": "Family medical history Family history is recorded context only. Aria does not diagnose, predict disease, or imply that you will develop any condition because a relative had it. None recorded. mother father sister brother maternal grandmother maternal grandfather paternal grandmother paternal grandfather grandmother grandfather daughter son aunt uncle cousin other Add entry Aria is not a physician and does not diagnose or prescribe. Health insights are informational only. Consult a qualified heal",
+      "fail": false
+    },
+    {
+      "tab": "preventive",
+      "label": "Preventive",
+      "ms": 905,
+      "status": "",
+      "body": "Preventive care Preventive care dates are from your Health Record. Recommended intervals are general education from common public-health guidance \u2014 your physician decides what is right for you. None recorded. Add / update Aria is not a physician and does not diagnose or prescribe. Health insights are informational only. Consult a qualified healthcare professional for medical advice.",
+      "fail": false
+    },
+    {
+      "tab": "nutrition",
+      "label": "Nutrition",
+      "ms": 907,
+      "status": "",
+      "body": "Nutrition habits Nutrition entries are habit notes from what you told Aria. This is not a calorie counter and not medical dietary advice. Meals (14d) 0 Water notes 0 Alcohol notes 0 Nutrition habits Nutrition entries are habit notes from what you told Aria. This is not a calorie counter and not medical dietary advice. Last 14 days: 0 meal note(s), 0 water note(s), 0 alcohol note(s). _Aria is not a physician and does not diagnose or prescribe. Health insights are informational only. Consult a qua",
+      "fail": false
+    },
+    {
+      "tab": "insights",
+      "label": "Insights",
+      "ms": 913,
+      "status": "",
+      "body": "Health insights These are educational observations from patterns in your recorded Health data. They are not medical conclusions or proof of causation. Discuss anything concerning with your physician. Educational observations None yet. Health insights (educational observations) These are educational observations from patterns in your recorded Health data. They are not medical conclusions or proof of causation. Discuss anything concerning with your physician. Educational observations (window: 7300",
+      "fail": false
+    },
+    {
+      "tab": "visitprep",
+      "label": "Visit prep",
+      "ms": 907,
+      "status": "",
+      "body": "Doctor visit preparation Organizes recorded facts for your next physician visit \u2014 not a diagnosis. **Doctor visit preparation** This packet organizes information from your local Personal Health Record for discussion with a clinician. Aria is not a physician and does not diagnose or prescribe. Timeline since: 2026-02-13 **Current medications** \u2022 Vitamin D3 2000 IU 1 capsule daily morning **Current supplements** \u2022 None on file **Conditions** \u2022 None on file **Trends** \u2022 Blood pressure: not enough r",
+      "fail": false
+    },
+    {
+      "tab": "backups",
+      "label": "Backups",
+      "ms": 905,
+      "status": "",
+      "body": "Encrypted backups Password-protected exports stored locally. Store the password safely \u2014 it cannot be recovered. No backups yet. Create backup Aria is not a physician and does not diagnose or prescribe. Health insights are informational only. Consult a qualified healthcare professional for medical advice.",
+      "fail": false
+    },
+    {
+      "tab": "security",
+      "label": "Security",
+      "ms": 905,
+      "status": "",
+      "body": "Health security Step-up auth reuses your Aria PIN for sensitive Health operations. Step-up enabled No Grant TTL 300s Active grants No active step-up grants. All sensitive ops backup create backup restore cloud consult delete record edit allergies edit conditions edit emergency edit family history edit medications emergency info export record view full record Confirm step-up Aria is not a physician and does not diagnose or prescribe. Health insights are informational only. Consult a qualified hea",
+      "fail": false
+    },
+    {
+      "tab": "vitals",
+      "label": "Vitals",
+      "ms": 907,
+      "status": "",
+      "body": "Range Week Month 3 months 6 months Year All time Weight Not enough points to graph. No weight history in Health yet. Blood pressure Not enough points to graph. No blood pressure history in Health yet. Blood sugar Not enough points to graph. No blood sugar history in Health yet. Sleep Not enough points to graph. No sleep hours history in Health yet. Heart rate Not enough points to graph. No heart rate history in Health yet. Mood Not enough points to graph. No mood history in Health yet. Energy No",
+      "fail": false
+    },
+    {
+      "tab": "labs",
+      "label": "Labs",
+      "ms": 905,
+      "status": "",
+      "body": "Laboratory results None recorded. Add lab",
+      "fail": false
+    },
+    {
+      "tab": "docs",
+      "label": "Documents",
+      "ms": 907,
+      "status": "",
+      "body": "Medical documents Organized by kind. Search by doctor, date, condition, medication, or procedure via Health search or filters below. Kind All Labs Imaging Prescriptions Visit summaries Insurance Referrals Hospital records Notes Other None recorded. Lab report Prescription Visit summary Hospital record Imaging Referral Insurance Scanned note Other Upload + OCR",
+      "fail": false
+    },
+    {
+      "tab": "questions",
+      "label": "Questions",
+      "ms": 906,
+      "status": "",
+      "body": "Questions for my doctor None open. Say \u201cremind me to ask my doctor about \u2026\u201d Save question",
+      "fail": false
+    },
+    {
+      "tab": "coach",
+      "label": "Coach",
+      "ms": 906,
+      "status": "",
+      "body": "Wellness coach These are educational lifestyle ideas based on your recorded Health data and general public-health guidance. They are not a diagnosis or prescription. Do not stop prescription medications. Ask your physician before major changes. Medication routine consistency: Keep current prescriptions on a visible daily routine. Do not stop prescribed medications. Why: Health lists 1 current medication(s). Walking / strength / resistance: Build toward regular walking plus two short resistance o",
+      "fail": false
+    },
+    {
+      "tab": "consult",
+      "label": "Consult",
+      "ms": 906,
+      "status": "",
+      "body": "Optional AI consultation Health stays local. Cloud AI is a consultant only. Nothing is sent until you approve the exact payload. Level 1 \u2014 local only Level 2 \u2014 sanitized Level 3 \u2014 full (explicit) Preview (do not send yet) Sanitized Local only Full Preview second opinion Consultation history None recorded.",
+      "fail": false
+    },
+    {
+      "tab": "reminders",
+      "label": "Reminders",
+      "ms": 905,
+      "status": "",
+      "body": "Reminders None recorded. Daily check-in Medication Supplement Blood pressure Blood sugar Weight Appointment Prescription refill Exercise Hydration Save reminder",
+      "fail": false
+    },
+    {
+      "tab": "print",
+      "label": "Print / Export",
+      "ms": 905,
+      "status": "",
+      "body": "Printable reports Opens a clean page you can print or save as PDF for a physician. Daily report Weekly summary Monthly summary Current medications Medication history Current supplements Supplement history Blood pressure log Blood sugar log Weight log Sleep report Lab report Vaccination report Doctor visit summary Emergency summary Export JSON",
+      "fail": false
+    },
+    {
+      "tab": "profile",
+      "label": "Profile",
+      "ms": 906,
+      "status": "",
+      "body": "Emergency / identity profile Name Date of birth Blood type Height (inches) Primary physician Specialists Emergency contacts Insurance (optional) Emergency notes Save profile Highest trust: medications, allergies, conditions, blood type, emergency contacts, physicians, labs, vaccinations. Chat confirms before changing those. GUI save is explicit confirmation. Privacy default is local only \u2014 Aria never silently sends Health data to the internet.",
+      "fail": false
+    }
+  ],
+  "search": "Search\n**Health search \u2014 Vitamin D3**\n\u2022 [medications] Vitamin D3 current\n\n_Aria is not a physician and does not diagnose or prescribe. Health insights are informational only. Consult a qualified healthcare professional for medical advice._",
+  "left_room": "chat",
+  "returned": {
+    "room": "health",
+    "meds": false,
+    "status": "",
+    "bodyHead": "Emergency / identity profile Name Date of birth Blood type Height (inches) Primary physician Specialists Emergency contacts Insurance (optional) Emergency notes Save profile Highest trust: medications, allergies, conditions, blood type, emergency contacts, physicians, labs, vaccinations. Chat confir"
+  },
+  "api_failures": [],
+  "failing_tabs": []
+}

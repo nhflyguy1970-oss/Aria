@@ -29,7 +29,9 @@ def _save(items: list[dict[str, Any]]) -> None:
         assert_live_write_allowed(SUGGESTIONS_FILE)
     except Exception:
         pass
-    SUGGESTIONS_FILE.write_text(json.dumps({"suggestions": items[:100]}, indent=2), encoding="utf-8")
+    SUGGESTIONS_FILE.write_text(
+        json.dumps({"suggestions": items[:100]}, indent=2), encoding="utf-8"
+    )
 
 
 def list_suggestions(*, include_dismissed: bool = False) -> list[dict[str, Any]]:
@@ -44,9 +46,21 @@ def propose_from_scan(workflows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     existing = _load()
     by_slug = {s.get("slug"): s for s in existing}
     created = []
+    junk_bits = (
+        "ocr-then-describe",
+        "describe-then-ocr",
+        "open-then-open",
+        "whats-the-weather-today-then-whats-the-weather",
+        "demo-skill",
+        "demo:",
+    )
     for w in workflows or []:
         slug = w.get("slug") or ""
         if not slug:
+            continue
+        slug_l = str(slug).lower()
+        name_l = str(w.get("name") or "").lower()
+        if any(b in slug_l or b in name_l for b in junk_bits):
             continue
         if slug in by_slug and not by_slug[slug].get("dismissed"):
             continue

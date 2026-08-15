@@ -25,6 +25,7 @@ def ensure_handlers_loaded() -> None:
         specialists_handlers,
         workflow_handlers,
     )
+    from jarvis.health_product import handlers as _health_handlers  # noqa: F401
 
     try:
         from jarvis.extensibility.loader import load_extensions

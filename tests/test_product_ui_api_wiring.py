@@ -59,6 +59,24 @@ def test_pin_lock_exact_exempt_paths_exist_as_routes():
         assert exempt in paths, f"PIN-exempt path has no route: {exempt}"
 
 
+def test_health_exemption_is_exact_match_only():
+    from jarvis.auth import is_exact_health_path
+    from jarvis.security.middleware import PinLockMiddleware
+
+    assert is_exact_health_path("/api/health") is True
+    assert is_exact_health_path("/api/health/full") is False
+    assert not any(p.startswith("/api/health") for p in PinLockMiddleware.EXEMPT_PREFIXES)
+
+
+def test_network_guard_runs_before_pin_lock():
+    from jarvis.gui.server import app
+    from jarvis.network_guard import NetworkGuardMiddleware
+    from jarvis.security.middleware import PinLockMiddleware
+
+    order = [item.cls for item in app.user_middleware]
+    assert order.index(NetworkGuardMiddleware) < order.index(PinLockMiddleware)
+
+
 def test_mission_control_tab_loaders_databases_and_connection():
     from jarvis.mission_control import get_tab
 
@@ -110,8 +128,8 @@ def test_workflow_list_skips_index_json(data_dir, monkeypatch):
     (wf / "index.json").write_text('{"workflows": {}}', encoding="utf-8")
     from jarvis.workflow_learning import ensure_demo_workflow, list_workflows
 
-    ensure_demo_workflow()
-    items = list_workflows()
+    ensure_demo_workflow(force=True)
+    items = list_workflows(include_demo=True)
     assert items
     assert all(i.get("slug") and i.get("name") for i in items)
     assert not any(i.get("slug") in (None, "index") for i in items)

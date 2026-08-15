@@ -197,6 +197,39 @@ def _calendar_widget() -> dict[str, Any]:
     )
 
 
+def _health_record_widget() -> dict[str, Any]:
+    try:
+        from jarvis.health_product.dashboard_bridge import dashboard_health_summary
+
+        summary = dashboard_health_summary()
+        empty = not summary.get("checkin_today")
+        return make_widget(
+            id="health_record",
+            title="Health",
+            owner="Health",
+            category="life",
+            priority=46,
+            available=True,
+            empty=empty,
+            coach="No daily health check-in yet — open Health (under 2 minutes)." if empty else "",
+            payload=summary,
+            deep_links=[{"label": "Health", "view": "health"}],
+            description="Personal Health Record summary — Health owns the store.",
+        )
+    except Exception as exc:
+        return make_widget(
+            id="health_record",
+            title="Health",
+            owner="Health",
+            category="life",
+            priority=46,
+            available=False,
+            coach="Health unavailable.",
+            reason=str(exc),
+            deep_links=[{"label": "Health", "view": "health"}],
+        )
+
+
 def _journal_widget(assistant: Any) -> dict[str, Any]:
     try:
         journal = getattr(assistant, "journal", None)
@@ -633,6 +666,7 @@ def build_home_aggregate(
     widgets.append(_planner_widget())
     widgets.append(_calendar_widget())
     widgets.append(_journal_widget(assistant))
+    widgets.append(_health_record_widget())
     widgets.append(_memory_widget(assistant))
     widgets.append(_projects_widget())
     widgets.append(_scenes_widget())

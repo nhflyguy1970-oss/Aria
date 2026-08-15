@@ -93,46 +93,76 @@ def infer_kind(name: str, hint: str = "") -> str:
 
 
 def health() -> dict[str, Any]:
-    store = get_graph_store()
-    st = store.stats() if hasattr(store, "stats") else {}
+    """Graph health for Connections Home.
+
+    Neo4j (or any backend) may be down or leave a defunct driver. Never 500 the
+    owner Room — return an honest degraded payload instead.
+    """
     activity = _load_json(ACTIVITY_FILE, [])
     last = activity[0] if isinstance(activity, list) and activity else None
-    path = getattr(store, "path", None)
-    return {
-        "ok": True,
-        "backend": getattr(store, "backend", "unknown"),
-        "status": "ok",
-        "health": "healthy",
-        "node_count": int(st.get("nodes") or 0),
-        "relationship_count": int(st.get("edges") or 0),
-        "orphans": int(st.get("orphans") or 0),
-        "missing_provenance": int(st.get("missing_provenance") or 0),
-        "namespaces": store.namespaces() if hasattr(store, "namespaces") else [],
-        "last_ingest": next((a for a in (activity or []) if a.get("kind") == "ingest"), None),
-        "last_cleanup": next((a for a in (activity or []) if a.get("kind") in ("prune", "cleanup")), None),
-        "last_activity": last,
-        "storage": str(path) if path else "",
+    base = {
         "philosophy": PHILOSOPHY,
         "product_name": "Connections",
         "implementation": "knowledge_graph",
+        "last_ingest": next((a for a in (activity or []) if a.get("kind") == "ingest"), None),
+        "last_cleanup": next((a for a in (activity or []) if a.get("kind") in ("prune", "cleanup")), None),
+        "last_activity": last,
     }
+    try:
+        store = get_graph_store()
+        st = store.stats() if hasattr(store, "stats") else {}
+        path = getattr(store, "path", None)
+        return {
+            **base,
+            "ok": True,
+            "backend": getattr(store, "backend", "unknown"),
+            "status": "ok",
+            "health": "healthy",
+            "node_count": int(st.get("nodes") or 0),
+            "relationship_count": int(st.get("edges") or 0),
+            "orphans": int(st.get("orphans") or 0),
+            "missing_provenance": int(st.get("missing_provenance") or 0),
+            "namespaces": store.namespaces() if hasattr(store, "namespaces") else [],
+            "storage": str(path) if path else "",
+        }
+    except Exception as exc:
+        return {
+            **base,
+            "ok": False,
+            "backend": "unavailable",
+            "status": "degraded",
+            "health": "unavailable",
+            "message": str(exc)[:240],
+            "node_count": 0,
+            "relationship_count": 0,
+            "orphans": 0,
+            "missing_provenance": 0,
+            "namespaces": [],
+            "storage": "",
+        }
 
 
 def connections_home() -> dict[str, Any]:
-    store = get_graph_store()
     h = health()
-    recent = store.recent_activity(limit=12) if hasattr(store, "recent_activity") else []
+    recent: list[Any] = []
+    try:
+        store = get_graph_store()
+        if h.get("ok") and hasattr(store, "recent_activity"):
+            recent = store.recent_activity(limit=12) or []
+    except Exception:
+        recent = []
     pending = _load_json(PENDING_FILE, [])
     return {
         "ok": True,
+        "degraded": not bool(h.get("ok")),
         "philosophy": PHILOSOPHY,
         "health": h,
         "overview": {
-            "nodes": h["node_count"],
-            "relationships": h["relationship_count"],
-            "namespaces": h["namespaces"],
-            "orphans": h["orphans"],
-            "missing_provenance": h["missing_provenance"],
+            "nodes": h.get("node_count") or 0,
+            "relationships": h.get("relationship_count") or 0,
+            "namespaces": h.get("namespaces") or [],
+            "orphans": h.get("orphans") or 0,
+            "missing_provenance": h.get("missing_provenance") or 0,
         },
         "recent_activity": recent,
         "pending_ingest": pending if isinstance(pending, list) else [],
@@ -149,6 +179,7 @@ def connections_home() -> dict[str, Any]:
             "connections": "Knowledge Graph (this view)",
             "memory": "Autobiographical cognition (ACM)",
         },
+        "message": None if h.get("ok") else (h.get("message") or "Knowledge graph unavailable"),
     }
 
 
@@ -202,6 +233,7 @@ def search_connections(
         "nodes": nodes[:limit],
         "relationships": edges[:limit],
         "count": len(nodes) + len(edges),
+        "backend": getattr(store, "backend", ""),
     }
 
 

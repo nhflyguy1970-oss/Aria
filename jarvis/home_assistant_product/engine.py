@@ -51,24 +51,44 @@ def product_status() -> dict[str, Any]:
 
 
 def recovery_status() -> dict[str, Any]:
-    """Guided Home Assistant connect steps — operator-friendly, not CLI-first."""
+    """Guided Home Assistant connect steps — operator-friendly, not CLI-first.
+
+    Vault-backed ha.token is a first-class credential. Never treat a migrated
+    token as "paste a token" — locked sessions fail closed with an unlock hint.
+    """
     from jarvis.home_assistant import (
         check_connection,
+        ha_credential_locked,
         ha_feature_on,
         ha_token,
+        ha_token_migrated,
         ha_url,
         status_payload,
     )
 
     url = ha_url()
-    token = bool(ha_token())
+    token_live = bool(ha_token())
+    migrated = ha_token_migrated()
+    locked = ha_credential_locked() or (migrated and not token_live)
+    token_present = token_live or migrated
     feature = ha_feature_on()
     conn: dict[str, Any] = {}
     try:
-        conn = check_connection() if (url and token) else {
-            "ok": False,
-            "message": "URL and token required",
-        }
+        if locked:
+            conn = {
+                "ok": False,
+                "locked": True,
+                "message": "Home Assistant is locked. Unlock Aria with your Master Password.",
+            }
+        elif url and token_live:
+            conn = check_connection()
+        elif url and not token_present:
+            conn = {"ok": False, "message": "URL and token required"}
+        else:
+            conn = {
+                "ok": False,
+                "message": "Home Assistant URL is not set.",
+            }
     except Exception as exc:
         conn = {"ok": False, "message": str(exc)}
 
@@ -89,16 +109,20 @@ def recovery_status() -> dict[str, Any]:
             "detail": url or "Paste your HA URL (e.g. http://homeassistant.local:8123)",
         }
     )
+    if locked:
+        token_detail = "Owner Vault holds ha.token — unlock Aria to use it"
+    elif token_live:
+        token_detail = "Token saved in Owner Vault"
+    elif migrated:
+        token_detail = "Owner Vault holds ha.token — unlock Aria to use it"
+    else:
+        token_detail = "In HA: Profile → Security → Long-lived access tokens → Create token"
     steps.append(
         {
             "id": "token",
             "label": "Long-lived access token",
-            "done": token,
-            "detail": (
-                "Token saved"
-                if token
-                else "In HA: Profile → Security → Long-lived access tokens → Create token"
-            ),
+            "done": token_present,
+            "detail": token_detail,
         }
     )
     connected = bool(conn.get("ok"))
@@ -120,25 +144,33 @@ def recovery_status() -> dict[str, Any]:
         }
     )
 
-    ready = feature and bool(url) and token and connected
+    ready = feature and bool(url) and token_live and connected and not locked
     status = {}
     try:
         status = status_payload()
     except Exception:
         status = {}
 
+    if ready:
+        hint = "Ready — control devices from Smart Home Home"
+    elif locked:
+        hint = "Unlock Aria to use the vault-backed Home Assistant credential"
+    elif token_present:
+        hint = conn.get("message") or "Home Assistant is not reachable"
+    else:
+        hint = "Follow guided connect steps: URL → Token → Test → Save"
+
     return {
         "ok": True,
         "ready": ready,
+        "locked": locked,
+        "token_present": token_present,
+        "token_vaulted": migrated,
         "guided": True,
         "connection": conn,
         "status": status,
         "steps": steps,
-        "hint": (
-            "Ready — control devices from Smart Home Home"
-            if ready
-            else "Follow guided connect steps: URL → Token → Test → Save"
-        ),
+        "hint": hint,
         "deep_links": {
             "home": "/api/smarthome/product/home",
             "status": "/api/smarthome/product",
@@ -178,6 +210,9 @@ def home_payload() -> dict[str, Any]:
         "ready": recovery.get("ready"),
         "hint": recovery.get("hint"),
         "connected": bool((recovery.get("connection") or {}).get("ok")),
+        "locked": bool(recovery.get("locked") or (recovery.get("connection") or {}).get("locked")),
+        "token_present": bool(recovery.get("token_present")),
+        "token_vaulted": bool(recovery.get("token_vaulted")),
         "url": (recovery.get("status") or {}).get("url") or "",
     }
 

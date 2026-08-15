@@ -1,0 +1,61 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "video",
+  "capability": "Video existing studio chrome plus remaining empty clicks",
+  "captured_at": "2026-08-15T17:46:30Z",
+  "result": "PARTIAL — Front Door → Video Studio; #video h2 Video Studio. First paint settings recovered to AnimateDiff ready after an initial Could not load video settings. Library honest empty (No videos yet). Empty Generate focused prompt. Preview enhance toast Enter a prompt first. Advanced/Expert toggled. Gallery leave/return restored #video. Return remount showed leftover prompt, Generation failed, and Could not load video settings again. Real GPU Generate not started by typed prompt this gate. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Video Studio (Motion and clips) from Voice",
+    "hash": "#video",
+    "h2": "Video Studio",
+    "place": "Stay-in-Studio generation · AnimateDiff or Ken Burns · shared media queue",
+    "usable": "Generate chrome; Enhance; presets; Advanced; storyboard; library"
+  },
+  "functions": {
+    "settings_first_paint": "PARTIAL — Could not load video settings, then recovered: Auto AnimateDiff when ready · AnimateDiff ready · 32 frames @ 8 fps (~4s)",
+    "library": "PASS — No videos yet. Focus prompt Ask Aria — generate stays in Video Studio.",
+    "empty_generate": "PASS — focused prompt; prior campaign toast Enter a video description first still the handler",
+    "empty_preview_enhance": "PASS — Enter a prompt first",
+    "empty_generate_another": "clicked — may have reused last-session params; see remount",
+    "advanced_expert": "PASS — Advanced expanded; Expert pressed",
+    "engine_after_recovery": "PASS — AnimateDiff ready"
+  },
+  "leave_return": {
+    "leave": "Video header Gallery → #gallery h2 Gallery; Generate not clicked",
+    "return": "Gallery header Video → #video h2 Video Studio",
+    "return_state": "Advanced still expanded; Expert pressed; prompt restored to leftover ship-cert text; status Generation failed; Could not load video settings; library Loading…",
+    "result": "PARTIAL — hash/h2 restored; remount degraded settings + leftover prompt + Generation failed"
+  },
+  "not_clicked": [
+    "Ask Aria",
+    "Free VRAM before video",
+    "Save clip settings",
+    "Build storyboard (empty paths would queue? skipped after Generation failed)",
+    "Upload video",
+    "Meme",
+    "Mission Control",
+    "Lock Aria",
+    "typed real Generate"
+  ],
+  "jobs": "GET /api/jobs any_busy false after gate; no active media job listed",
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "generate_video": false,
+    "storyboard": false,
+    "delete": false,
+    "journal_post": false,
+    "health_phr": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "activity_center": "unread 83; top included Generation failed. Not dismissed.",
+  "jeff_action_required": false,
+  "next_exact_capability": "Continue remaining incomplete slices (Home Automation PARTIAL already recorded; System Audit PARTIAL — do not Run audit). Do not Lock Aria. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5."
+}

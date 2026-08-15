@@ -83,6 +83,18 @@
 
     if (!text.trim() && !pendingFile && !pendingFile2) return;
 
+    // Composer must not start a parallel turn (Enter bypasses disabled Send).
+    // Internal retries use skipUserBubble and may run before busy clears.
+    if (c.chatRequestActive && !options.skipUserBubble) {
+      window.showAriaToast?.("Wait for the current reply to finish, or press Stop", "warn", 3500);
+      return;
+    }
+
+    // Keep Edit / Regenerate / Retry in sync for composer sends (not only Ask Aria).
+    if (!options.skipUserBubble && text.trim()) {
+      try { window.AriaChatOS?.noteUserPrompt?.(text.trim()); } catch (_) { /* ignore */ }
+    }
+
     if (compareMode && pendingFile && !pendingFile2) {
       window.showError?.("Compare needs **two images**. Click **+ Add image 2** in the preview, or click **Compare** and select both files at once.");
       return;
@@ -118,6 +130,18 @@
     c.chatAbortController = new AbortController();
     window.setChatBusy?.(true);
     window.showProgress?.(window.progressLabel?.(text) || "Thinking…");
+    /* Never leave the hearth mute: if a request wedges, release Send so Jeff can continue. */
+    const busyWatch = setTimeout(() => {
+      try {
+        if (window.jarvisChat?.chatRequestActive || document.getElementById("sendBtn")?.disabled) {
+          console.warn("[chat] busy watchdog — releasing Send");
+          window.finishSendUi?.();
+          window.AriaLivingRoom?.setStatus?.("Listening quietly");
+        }
+      } catch (_) {
+        /* ignore */
+      }
+    }, 90_000);
 
     if (window.isVideoRequest?.(text)) {
       const proceed = (await window.vramPreflight?.("generate_video")) !== false;
@@ -157,7 +181,11 @@
 
     const trimmed = text.trim();
     const isInstant = /^(hi|hello|hey|what can you|what (services|models|do you)|help|capabilities)/i.test(trimmed)
-      || /^(undo|apply)(\s+(it|that|last|the changes?|apply))?\s*$/i.test(trimmed);
+      || /^(undo|apply)(\s+(it|that|last|the changes?|apply))?\s*$/i.test(trimmed)
+      /* Jeff follow-ups after a proposal — must stay snappy and never stream-wedge the hearth */
+      || /^(apply (it|that|the changes?|the proposal|that proposal|this proposal)|undo (it|that|this|last|the apply|that apply|the proposal))\b/i.test(
+        trimmed
+      );
     const isCodingFix = /\b(?:fix|repair|debug|improve|refactor|clean up)\b/i.test(text) && /[^\s`'"]+\.py/.test(text);
     const isCodingCreate = /\b(with tests?|pytest)\b/i.test(text)
       && /\b(implement|create|write|make|build|add)\b/i.test(text);
@@ -245,17 +273,29 @@
               let event;
               try { event = JSON.parse(line.slice(6)); } catch { continue; }
               if (event.type === "status") {
-                window.updateProgressStatus?.(event.message || "Processing…");
-                if (body) {
-                  body.innerHTML = `<p class="status-hint">${escapeHtml(event.message || "Processing…")}</p>`;
+                const statusMsg = event.message || "Processing…";
+                window.updateProgressStatus?.(statusMsg);
+                if (window.AriaLivingRoom?.isActive?.()) {
+                  window.AriaLivingRoom?.setStatus?.("Thinking with you");
+                } else if (body) {
+                  body.innerHTML = `<p class="status-hint">${escapeHtml(statusMsg)}</p>`;
                   if (msgs) msgs.scrollTop = msgs.scrollHeight;
                 }
-                // Status alone does not count as model progress — avoids infinite "Processing…".
+                // "Processing…" alone is not progress, but deterministic handlers announce
+                // "Running <action>…" before a single done event (no tokens). Count that
+                // so memory recall/forget cannot FIRST_PROGRESS_TIMEOUT (BUG-013).
+                if (/^Running\s+\S+/i.test(statusMsg)) {
+                  gotProgress = true;
+                  firstProgressAnchorAt = Date.now();
+                }
               } else if (event.type === "heartbeat") {
                 // Server keepalive while provider is blocked (e.g. loading chat model).
                 // Extends first-progress wait without counting as a token.
                 firstProgressAnchorAt = Date.now();
                 window.updateProgressStatus?.(event.message || "Waiting for provider…");
+                if (window.AriaLivingRoom?.isActive?.()) {
+                  window.AriaLivingRoom?.setStatus?.("Still with you");
+                }
               } else if (event.type === "error" && (event.code === "FIRST_PROGRESS_TIMEOUT" || event.code === "STREAM_IDLE_TIMEOUT")) {
                 const terr = providerTimeoutError(event.code === "STREAM_IDLE_TIMEOUT" ? "idle" : "first");
                 if (event.message) terr.message = event.message;
@@ -350,9 +390,12 @@
 
         if (c.chatStopRequested) {
           typing.remove();
-          if ((c.activeStreamText || "").trim()) {
-            window.addMessage?.("assistant", `${c.activeStreamText.trim()}\n\n*(stopped)*`, { type: "info" });
-          }
+          const partial = (c.activeStreamText || "").trim();
+          window.addMessage?.(
+            "assistant",
+            partial ? `${partial}\n\n*(stopped)*` : "*(stopped)*",
+            { type: "info" },
+          );
           if (statusText) statusText.textContent = "Stopped";
         } else if (!gotDone) {
           typing.remove();
@@ -432,9 +475,12 @@
         return;
       }
       if (c.chatStopRequested || e.name === "AbortError") {
-        if ((c.activeStreamText || "").trim()) {
-          window.addMessage?.("assistant", `${c.activeStreamText.trim()}\n\n*(stopped)*`, { type: "info" });
-        }
+        const partial = (c.activeStreamText || "").trim();
+        window.addMessage?.(
+          "assistant",
+          partial ? `${partial}\n\n*(stopped)*` : "*(stopped)*",
+          { type: "info" },
+        );
         if (statusText) statusText.textContent = "Stopped";
         return;
       }
@@ -456,7 +502,13 @@
         window.showError?.(`**Error:** ${msg}`);
       }
     } finally {
+      clearTimeout(busyWatch);
       window.finishSendUi?.();
+      try {
+        window.AriaLivingRoom?.setStatus?.("Listening quietly");
+      } catch (_) {
+        /* ignore */
+      }
     }
   }
 

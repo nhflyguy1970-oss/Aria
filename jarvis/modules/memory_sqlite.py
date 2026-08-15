@@ -212,14 +212,15 @@ class SqliteMemoryStore:
         return entry
 
     def similar_exists(self, content: str, threshold: float = 0.88) -> bool:
-        try:
-            from aria_core.acm_store_facade import acm_similar_exists
+        from aria_core.acm_store_facade import acm_similar_exists
+        from jarvis.modules.memory_common import divert_acm_read
 
-            hit = acm_similar_exists(content, threshold=threshold)
-            if hit is not None:
-                return hit
-        except Exception:
-            pass
+        handled, hit = divert_acm_read(
+            lambda: acm_similar_exists(content, threshold=threshold),
+            op="similar_exists",
+        )
+        if handled:
+            return bool(hit)
         norm = content.lower().strip()
         if not norm:
             return True
@@ -253,19 +254,20 @@ class SqliteMemoryStore:
         query: str | None = None,
         include_embedding: bool = False,
     ) -> list[dict]:
-        try:
-            from aria_core.acm_store_facade import acm_list_entries
+        from aria_core.acm_store_facade import acm_list_entries
+        from jarvis.modules.memory_common import divert_acm_read
 
-            projected = acm_list_entries(
+        handled, projected = divert_acm_read(
+            lambda: acm_list_entries(
                 entry_type,
                 namespace=namespace,
                 query=query,
                 include_embedding=include_embedding,
-            )
-            if projected is not None:
-                return projected
-        except Exception:
-            pass
+            ),
+            op="list_entries",
+        )
+        if handled:
+            return list(projected or [])
         sql = "SELECT * FROM memories WHERE 1=1"
         params: list = []
         if entry_type:
@@ -291,18 +293,15 @@ class SqliteMemoryStore:
         return [to_public(e) for e in entries]
 
     def get(self, entry_id: str) -> dict | None:
-        try:
-            from aria_core.acm_store_facade import acm_get
+        from aria_core.acm_store_facade import acm_get
+        from jarvis.modules.memory_common import divert_acm_read
 
-            projected = acm_get(entry_id)
-            if projected is not None:
-                return projected
-            from aria_core import acm_bridge
-
-            if acm_bridge.acm_is_authoritative():
-                return None
-        except Exception:
-            pass
+        handled, projected = divert_acm_read(
+            lambda: acm_get(entry_id),
+            op="get",
+        )
+        if handled:
+            return projected  # type: ignore[return-value]
         row = self._conn.execute("SELECT * FROM memories WHERE id = ?", (entry_id,)).fetchone()
         if not row:
             return None
@@ -384,16 +383,17 @@ class SqliteMemoryStore:
         namespace: str | None = None,
         user_facing_only: bool = False,
     ) -> list[dict]:
-        try:
-            from aria_core.acm_store_facade import acm_search
+        from aria_core.acm_store_facade import acm_search
+        from jarvis.modules.memory_common import divert_acm_read
 
-            projected = acm_search(
+        handled, projected = divert_acm_read(
+            lambda: acm_search(
                 query, limit=limit, namespace=namespace, user_facing_only=user_facing_only
-            )
-            if projected is not None:
-                return projected
-        except Exception:
-            pass
+            ),
+            op="search",
+        )
+        if handled:
+            return list(projected or [])
         pool = self._iter_entries()
 
         def _get_emb(e: dict) -> list[float]:
@@ -557,6 +557,22 @@ class SqliteMemoryStore:
         }
 
     def latest_checkpoint(self, namespace: str | None = None) -> dict | None:
+        from aria_core.acm_store_facade import acm_latest_checkpoint
+        from jarvis.modules.memory_common import divert_acm_read
+
+        def _call():
+            from aria_core import acm_bridge
+
+            if not acm_bridge.acm_is_authoritative():
+                return None
+            hit = acm_latest_checkpoint(namespace)
+            return hit if hit is not None else {}
+
+        handled, hit = divert_acm_read(_call, op="latest_checkpoint")
+        if handled:
+            if not hit:
+                return None
+            return to_public(hit)  # type: ignore[arg-type]
         sql = "SELECT * FROM memories WHERE tags LIKE '%checkpoint%'"
         params: list = []
         if namespace:

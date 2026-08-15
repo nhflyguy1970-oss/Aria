@@ -295,7 +295,63 @@ def apply_policy_to_route(
     workload = _role_to_workload(role)
     policy = load_policy()
     wl = (policy or {}).get("workloads", {}).get(workload) if policy else None
+    requested = (model or "").strip()
+
+    # Operator-saved role models beat benchmark winners. Toy-prompt benchmarks
+    # (e.g. deepseek-coder latency) must not override Settings → Coding model
+    # for real propose/apply work.
+    user_model = ""
+    try:
+        from jarvis.model_store import explicit_saved_model
+
+        user_model = (explicit_saved_model(role) or "").strip()
+    except Exception:
+        user_model = ""
+
+    hw = (
+        str(wl.get("hardware") or _fallback_hardware())
+        if isinstance(wl, dict)
+        else _fallback_hardware()
+    )
+
+    # Per-chat / caller model (session dropdown, API) beats Settings role model
+    # and benchmark winners — keep measured hardware placement when available.
+    if requested and user_model and requested != user_model:
+        return {
+            "model": requested,
+            "hardware": hw or _fallback_hardware(),
+            "reason": "explicit session/caller model (benchmark hardware retained)",
+            "source": "explicit",
+            "workload": workload,
+            "warm_latency_ms": wl.get("warm_latency_ms") if isinstance(wl, dict) else None,
+            "fallback_model": wl.get("fallback_model") if isinstance(wl, dict) else None,
+            "fallback_hardware": wl.get("fallback_hardware") if isinstance(wl, dict) else None,
+        }
+
+    if user_model:
+        return {
+            "model": user_model,
+            "hardware": hw or _fallback_hardware(),
+            "reason": f"user-configured model for {role} (benchmark hardware retained)",
+            "source": "user_config",
+            "workload": workload,
+            "warm_latency_ms": wl.get("warm_latency_ms") if isinstance(wl, dict) else None,
+            "fallback_model": wl.get("fallback_model") if isinstance(wl, dict) else None,
+            "fallback_hardware": wl.get("fallback_hardware") if isinstance(wl, dict) else None,
+        }
+
     if isinstance(wl, dict) and wl.get("model"):
+        if requested and requested != str(wl.get("model") or ""):
+            return {
+                "model": requested,
+                "hardware": str(wl.get("hardware") or _fallback_hardware()),
+                "reason": "explicit session/caller model (benchmark hardware retained)",
+                "source": "explicit",
+                "workload": workload,
+                "warm_latency_ms": wl.get("warm_latency_ms"),
+                "fallback_model": wl.get("fallback_model"),
+                "fallback_hardware": wl.get("fallback_hardware"),
+            }
         return {
             "model": str(wl["model"]),
             "hardware": str(wl.get("hardware") or "cpu"),

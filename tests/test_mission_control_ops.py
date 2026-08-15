@@ -57,6 +57,33 @@ def test_health_brief_critical():
     assert brief["primary_cta"]["label"]
 
 
+def test_health_brief_strips_all_clear_sentinel():
+    """BUG-006: 'All clear' must never sit beside real degraded issues."""
+    brief = build_health_brief(
+        {
+            "overview": {
+                "platform_status": "degraded",
+                "needs_attention": ["All clear", "Long-run stability warning"],
+                "operational_advisor": {
+                    "healthy": False,
+                    "headline": "Needs attention",
+                    "recommendations": [
+                        {
+                            "title": "Long-run stability warning",
+                            "severity": "warning",
+                            "action": "Review long-run stability",
+                        }
+                    ],
+                },
+            },
+            "recovery": {"health": {"ok": True}},
+        }
+    )
+    assert "All clear" not in brief["critical_issues"]
+    assert any("stability" in str(x).lower() for x in brief["critical_issues"])
+    assert brief["overall"] == "degraded"
+
+
 def test_predictive_warnings_disk():
     warns = build_predictive_warnings({"hardware": {"disk_free_gb": 3, "ram_available_gb": 1, "ram_total_gb": 32}})
     ids = {w["id"] for w in warns}

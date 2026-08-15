@@ -1,0 +1,462 @@
+/**
+ * Living Interface Phase 2 — Atmosphere
+ * Subtle life only. No RGB, particles, or gaming chrome.
+ * Respects prefers-reduced-motion and data-atmosphere="off".
+ */
+
+/* ── Time of day (house lighting) ────────────────────────────── */
+
+body[data-tod="morning"] {
+  --tod-tint-a: rgba(190, 220, 235, 0.07);
+  --tod-tint-b: rgba(255, 245, 220, 0.05);
+  --tod-warmth: 0.92;
+}
+
+body[data-tod="afternoon"] {
+  --tod-tint-a: rgba(255, 255, 255, 0.03);
+  --tod-tint-b: rgba(200, 190, 160, 0.04);
+  --tod-warmth: 1;
+}
+
+body[data-tod="evening"] {
+  --tod-tint-a: rgba(220, 160, 100, 0.07);
+  --tod-tint-b: rgba(120, 80, 50, 0.05);
+  --tod-warmth: 1.06;
+}
+
+body[data-tod="night"] {
+  --tod-tint-a: rgba(80, 100, 140, 0.05);
+  --tod-tint-b: rgba(20, 30, 50, 0.08);
+  --tod-warmth: 0.88;
+}
+
+body.light-theme[data-tod="morning"] {
+  --tod-tint-a: rgba(200, 230, 245, 0.35);
+  --tod-tint-b: rgba(255, 250, 230, 0.25);
+}
+
+body.light-theme[data-tod="evening"] {
+  --tod-tint-a: rgba(255, 210, 160, 0.22);
+  --tod-tint-b: rgba(240, 200, 170, 0.12);
+}
+
+body.light-theme[data-tod="night"] {
+  --tod-tint-a: rgba(180, 190, 210, 0.2);
+  --tod-tint-b: rgba(160, 170, 190, 0.1);
+  --bg-deep: color-mix(in srgb, var(--bg-deep) 92%, #d8dce8);
+}
+
+/* ── Season (optional, quiet) ────────────────────────────────── */
+
+body[data-season="spring"] {
+  --season-tint: rgba(120, 170, 130, 0.04);
+}
+
+body[data-season="summer"] {
+  --season-tint: rgba(230, 190, 100, 0.045);
+}
+
+body[data-season="autumn"] {
+  --season-tint: rgba(180, 110, 60, 0.05);
+}
+
+body[data-season="winter"] {
+  --season-tint: rgba(140, 170, 200, 0.045);
+}
+
+/* ── Weather (optional) ──────────────────────────────────────── */
+
+body[data-weather="rain"] {
+  --weather-tint: rgba(100, 120, 150, 0.05);
+  --weather-diff: 0.94;
+}
+
+body[data-weather="snow"] {
+  --weather-tint: rgba(200, 220, 240, 0.06);
+  --weather-diff: 0.96;
+}
+
+body[data-weather="sunny"] {
+  --weather-tint: rgba(255, 220, 140, 0.045);
+  --weather-diff: 1.03;
+}
+
+body[data-weather="cloudy"] {
+  --weather-tint: rgba(140, 150, 160, 0.04);
+  --weather-diff: 0.97;
+}
+
+body[data-weather="clear"],
+body:not([data-weather]) {
+  --weather-tint: transparent;
+  --weather-diff: 1;
+}
+
+/* Compose atmosphere layers into main stage */
+#mainContent::before {
+  background:
+    radial-gradient(ellipse 90% 55% at 12% -5%, var(--room-atmosphere-a), transparent 58%),
+    radial-gradient(ellipse 70% 45% at 95% 105%, var(--room-atmosphere-b), transparent 52%),
+    radial-gradient(ellipse 80% 50% at 50% 0%, var(--tod-tint-a, transparent), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, var(--tod-tint-b, transparent), transparent 55%),
+    linear-gradient(180deg, var(--season-tint, transparent), transparent 40%),
+    linear-gradient(0deg, var(--weather-tint, transparent), transparent 35%);
+  filter: brightness(var(--weather-diff, 1)) saturate(var(--tod-warmth, 1));
+}
+
+body[data-atmosphere="off"] #mainContent::before {
+  filter: none;
+  background:
+    radial-gradient(ellipse 90% 55% at 12% -5%, var(--room-atmosphere-a), transparent 58%),
+    radial-gradient(ellipse 70% 45% at 95% 105%, var(--room-atmosphere-b), transparent 52%);
+}
+
+body[data-atmosphere="off"] #mainContent::after {
+  opacity: 0.2;
+}
+
+/* ── Room breath (almost imperceptible) ──────────────────────── */
+
+@keyframes roomBreath {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.92;
+  }
+}
+
+@keyframes softGlowShift {
+  0%,
+  100% {
+    filter: brightness(var(--weather-diff, 1)) saturate(var(--tod-warmth, 1));
+  }
+  50% {
+    filter: brightness(calc(var(--weather-diff, 1) * 1.02)) saturate(calc(var(--tod-warmth, 1) * 1.02));
+  }
+}
+
+@keyframes waterShimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes featherDrift {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.18;
+  }
+  92% {
+    opacity: 0.12;
+  }
+  100% {
+    transform: translate3d(-40vw, 28vh, 0) rotate(-18deg);
+    opacity: 0;
+  }
+}
+
+@keyframes galleryFadeIn {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes listeningGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--room-accent) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 24px 2px color-mix(in srgb, var(--room-accent) 18%, transparent);
+  }
+}
+
+@keyframes waveformBreathe {
+  0%,
+  100% {
+    transform: scaleY(0.85);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 0.85;
+  }
+}
+
+/* Mission — soft telemetry wash */
+body[data-room="mission"]:not([data-atmosphere="off"]) #mainContent::before {
+  animation: softGlowShift 48s ease-in-out infinite;
+}
+
+body[data-room="mission"] #workstationView .mc-hero-stat strong,
+body[data-room="mission"] #workstationView .mc-card strong {
+  transition: color 0.6s ease, opacity 0.4s ease;
+}
+
+/* Health — morning clinic light, gentle card emphasis */
+body[data-room="health"][data-tod="morning"] #healthView {
+  --room-atmosphere-a: rgba(220, 240, 250, 0.1);
+}
+
+body[data-room="health"] #healthView .health-today,
+body[data-room="health"] #healthView [data-health-today],
+body[data-room="health"] #healthView .health-card:first-of-type {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--room-accent) 22%, transparent);
+  transition: box-shadow 0.5s ease, background 0.5s ease;
+}
+
+/* Fly tying — water + rare feather */
+body[data-room="flytying"]:not([data-atmosphere="off"]) #flytyingView {
+  background-size: 200% 200%, auto;
+  animation: waterShimmer 90s ease-in-out infinite;
+  background-image:
+    linear-gradient(
+      120deg,
+      transparent 40%,
+      rgba(90, 130, 120, 0.04) 50%,
+      transparent 60%
+    ),
+    linear-gradient(180deg, transparent 55%, rgba(40, 28, 16, 0.12)),
+    radial-gradient(ellipse 50% 28% at 82% 12%, rgba(90, 130, 100, 0.09), transparent);
+}
+
+body[data-room="flytying"]:not([data-atmosphere="off"]) #flytyingView::after {
+  content: "";
+  position: fixed;
+  width: 10px;
+  height: 28px;
+  right: 12%;
+  top: 18%;
+  border-radius: 50% 50% 40% 40%;
+  background: color-mix(in srgb, var(--room-accent) 35%, transparent);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+  animation: featherDrift 120s linear infinite;
+  animation-delay: 18s;
+}
+
+body[data-room="flytying"] #flytyingView .recipe-card,
+body[data-room="flytying"] #flytyingView article {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 11px,
+    rgba(120, 80, 40, 0.015) 11px,
+    rgba(120, 80, 40, 0.015) 12px
+  );
+}
+
+/* Documents — paper grain */
+body[data-room="documents"] #documentsView {
+  background-image:
+    radial-gradient(ellipse 70% 40% at 8% 0%, rgba(166, 139, 91, 0.08), transparent),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(90, 70, 40, 0.012) 2px,
+      rgba(90, 70, 40, 0.012) 3px
+    );
+}
+
+body[data-room="documents"] #documentsView .doc-row,
+body[data-room="documents"] #documentsView .document-item {
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+body[data-room="documents"] #documentsView .doc-row:hover,
+body[data-room="documents"] #documentsView .document-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--elev-1);
+}
+
+/* Gallery — framed fade-in */
+body[data-room="gallery"] #galleryView .gallery-thumb,
+body[data-room="gallery"] #galleryView .media-thumb,
+body[data-room="gallery"] #galleryView img.thumb {
+  animation: galleryFadeIn 0.7s ease both;
+  outline: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
+  outline-offset: 3px;
+}
+
+/* Planner — today's page */
+body[data-room="planner"] #plannerView [data-today],
+body[data-room="planner"] #plannerView .is-today,
+body[data-room="calendar"] #calendarView .cal-day.is-today,
+body[data-room="calendar"] #calendarView [data-today="1"] {
+  background: color-mix(in srgb, var(--room-accent) 12%, var(--bg-elevated));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--room-accent) 28%, transparent);
+}
+
+body[data-room="planner"] #plannerView,
+body[data-room="calendar"] #calendarView {
+  background-image:
+    radial-gradient(ellipse 48% 28% at 0% 0%, var(--room-atmosphere-a), transparent),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 24px,
+      rgba(120, 90, 50, 0.02) 24px,
+      rgba(120, 90, 50, 0.02) 25px
+    );
+}
+
+/* Voice — listening glow + waveform breath */
+body[data-room="voice"] #voiceView .voice-listening,
+body[data-room="voice"] #voiceView [data-listening="1"],
+body[data-room="voice"] #voiceView .listening {
+  animation: listeningGlow 3.6s ease-in-out infinite;
+}
+
+body[data-room="voice"] #voiceView .waveform span,
+body[data-room="voice"] #voiceView .voice-wave i,
+body[data-room="voice"] #audioView .waveform span {
+  transform-origin: center bottom;
+  animation: waveformBreathe 2.8s ease-in-out infinite;
+}
+
+body[data-room="voice"] #voiceView .waveform span:nth-child(2n),
+body[data-room="voice"] #audioView .waveform span:nth-child(2n) {
+  animation-delay: 0.35s;
+}
+
+body[data-room="voice"] #voiceView .waveform span:nth-child(3n),
+body[data-room="voice"] #audioView .waveform span:nth-child(3n) {
+  animation-delay: 0.7s;
+}
+
+/* Search — instant feel (snappy focus, no bounce) */
+body[data-room="search"] #searchView input:focus {
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  box-shadow: 0 0 0 3px var(--room-accent-glow), var(--elev-1);
+}
+
+/* Cards lift — handcrafted tactile */
+.sidebar-section,
+.mc-card,
+.dash-widget,
+.health-card,
+.recipe-card {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease;
+}
+
+.mc-card:hover,
+.dash-widget:hover,
+.health-card:hover,
+.recipe-card:hover {
+  transform: translateY(-1px);
+}
+
+/* Buttons feel tactile (no bounce) */
+.apply-btn,
+.ghost-btn,
+.primary-btn,
+.nav-item {
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.apply-btn:active,
+.ghost-btn:active,
+.primary-btn:active,
+.nav-item:active {
+  transform: translateY(1px);
+}
+
+/* Graphs settle gently when present */
+.health-chart path,
+.dash-spark polyline,
+svg.trend-line path {
+  transition: opacity 0.45s ease, stroke 0.45s ease;
+}
+
+/* Dialogs appear gently — do not leave transform: filled from enter keyframes (breaks centering). */
+dialog[open],
+.modal:not(.hidden),
+.aria-dialog:not(.hidden) {
+  animation: roomEnter 0.22s ease;
+}
+
+/* Toasts arrive politely */
+.aria-toast {
+  animation: aria-toast-in 0.28s ease both;
+}
+
+/* ── Reduced motion / battery friendly kill switch ───────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-room="mission"]:not([data-atmosphere="off"]) #mainContent::before,
+  body[data-room="flytying"]:not([data-atmosphere="off"]) #flytyingView,
+  body[data-room="flytying"] #flytyingView::after,
+  body[data-room="gallery"] #galleryView .gallery-thumb,
+  body[data-room="gallery"] #galleryView .media-thumb,
+  body[data-room="gallery"] #galleryView img.thumb,
+  body[data-room="voice"] #voiceView .voice-listening,
+  body[data-room="voice"] #voiceView [data-listening="1"],
+  body[data-room="voice"] #voiceView .listening,
+  body[data-room="voice"] #voiceView .waveform span,
+  body[data-room="voice"] #audioView .waveform span,
+  dialog[open],
+  .modal:not(.hidden),
+  .aria-dialog:not(.hidden) {
+    animation: none !important;
+  }
+
+  .mc-card:hover,
+  .dash-widget:hover,
+  .health-card:hover,
+  .recipe-card:hover,
+  body[data-room="documents"] #documentsView .doc-row:hover {
+    transform: none;
+  }
+
+  .apply-btn:active,
+  .ghost-btn:active,
+  .primary-btn:active,
+  .nav-item:active {
+    transform: none;
+  }
+}
+
+body[data-atmosphere="off"] #flytyingView::after,
+body[data-atmosphere="off"][data-room="flytying"] #flytyingView {
+  animation: none !important;
+}
+
+body[data-atmosphere="off"] .mc-card:hover,
+body[data-atmosphere="off"] .dash-widget:hover,
+body[data-atmosphere="off"] .health-card:hover {
+  transform: none;
+}
+
+/* Empty states — finished rooms, gentle invite */
+body[data-atmosphere="on"] .empty-state {
+  border-color: color-mix(in srgb, var(--room-accent, var(--accent)) 18%, transparent);
+  background:
+    radial-gradient(
+      ellipse 70% 50% at 50% 0%,
+      color-mix(in srgb, var(--room-accent, var(--accent)) 8%, transparent),
+      transparent 70%
+    ),
+    var(--bg-elevated, transparent);
+}

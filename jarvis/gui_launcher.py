@@ -17,10 +17,10 @@ _SHELL_MODES = frozenset(
 
 def gui_mode() -> str:
     """Return app | browser | native | electron | pyside | fluent | auto."""
-    mode = os.getenv("JARVIS_GUI_MODE", "fluent").strip().lower()
+    mode = os.getenv("JARVIS_GUI_MODE", "electron").strip().lower()
     if mode in _SHELL_MODES:
         return mode
-    return "fluent"
+    return "electron"
 
 
 def _app_url(url: str) -> str:

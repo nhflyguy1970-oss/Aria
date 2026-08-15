@@ -1,0 +1,77 @@
+{
+  "captured_at": "2026-08-15T21:20:00Z",
+  "purpose": "Identity of the live 8765 process before the production-tray controlled restart",
+  "listen": {"address": "0.0.0.0", "port": 8765, "pid": 1287356},
+  "serve": {
+    "pid": 1287356,
+    "ppid": 41589,
+    "started": "2026-08-15T16:25:15",
+    "cmd": "/media/jeff/AI/jarvis/venv/bin/python /media/jeff/AI/jarvis/main.py serve",
+    "cwd": "/media/jeff/AI/jarvis",
+    "exe": "/usr/bin/python3.12",
+    "venv": "/media/jeff/AI/jarvis/venv",
+    "JARVIS_DATA_DIR": "/media/jeff/AI/jarvis/data",
+    "cursor_owned": false,
+    "terminal_launched": false,
+    "tray_managed": true
+  },
+  "tray": {
+    "pid": 41589,
+    "ppid": 1508,
+    "parent": "systemd --user",
+    "started": "2026-08-13T09:18:48",
+    "cmd": "/media/jeff/AI/jarvis/venv/bin/python /media/jeff/AI/jarvis/main.py tray"
+  },
+  "systemd_unit": {
+    "unit": "jarvis.service",
+    "enabled": false,
+    "active": "inactive",
+    "note": "Tray is already independent of Cursor; unit exists but is disabled. Not started (would duplicate)."
+  },
+  "other_instances": [
+    {
+      "pid": 4579,
+      "what": "LibreChat rag_api docker container `python main.py`",
+      "port": "none-on-8765",
+      "status": "unrelated"
+    },
+    {
+      "pid": 27514,
+      "what": "Cursor MCP jarvis-mcp-server.py",
+      "status": "Cursor child; not the owner HTTP server"
+    },
+    {
+      "pid": 1939717,
+      "what": "jarvis.pyside_shell client of 8765",
+      "status": "desktop window; child of tray"
+    }
+  ],
+  "git": {
+    "repo": "/media/jeff/AI/jarvis",
+    "branch": "main",
+    "commit": "c325e5576aca62f71a800641ec1cb9652e6bb5cf",
+    "ahead_of_origin_main": 25,
+    "working_tree": "dirty — certified repairs are uncommitted working-tree changes loaded from this cwd"
+  },
+  "browser": {
+    "url": "http://127.0.0.1:8765/?workspace=1#chat",
+    "connected_to_pid": 1287356,
+    "lock_overlay": "ARIA locked",
+    "scripts": [
+      "connections.js?v=1.0.5-browse-all",
+      "audit.js?v=5.16.166-no-autorun",
+      "activity_center.js?v=6.5.5-inbox-honest",
+      "view_router.js?v=6.4.6-hash-alias",
+      "app.js?v=5.16.165-hash-canon",
+      "memory_browser.js?v=2.0.7-briefs-parallel"
+    ]
+  },
+  "runtime_before_restart": {
+    "owner": "OWNER_LOCKED",
+    "auto_idle_lock": false,
+    "integrity": {"score": 100, "status": "clean", "artifacts": 0},
+    "connections_browse": 59,
+    "connections_overview": {"nodes": 59, "edges": 53, "backend": "memgraph"},
+    "GET /api/audit": "status only, running=false"
+  }
+}

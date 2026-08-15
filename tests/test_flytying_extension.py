@@ -22,6 +22,30 @@ def test_extension_routes_method():
     assert len(rules) >= 5
 
 
+def test_flytying_api_registers_once_per_app(monkeypatch):
+    from fastapi import FastAPI
+
+    from jarvis.extensions.flytying import api
+
+    product_calls = []
+
+    def fake_register(name, fn, app, assistant):  # noqa: ANN001
+        product_calls.append(name)
+        fn(app, assistant)
+        return True
+
+    monkeypatch.setattr(api, "seed_memory", lambda memory: None)
+    monkeypatch.setattr("jarvis.product_registration.register", fake_register)
+
+    app = FastAPI()
+    api.register_routes(app, None)
+    route_count = len(app.routes)
+    api.register_routes(app, None)
+
+    assert len(app.routes) == route_count
+    assert product_calls == ["flytying_product"]
+
+
 def test_fly_status_handler():
     from jarvis.extensions.flytying import handlers
 

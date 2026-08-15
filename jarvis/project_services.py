@@ -101,7 +101,8 @@ def project_home(slug: str | None = None) -> dict[str, Any]:
 
     active = get_active_slug()
     target = (slug or active or "").strip()
-    projects = list_projects(include_archived=True)
+    # Owner picker: never surface archived or QA/cert artifacts.
+    projects = list_projects(include_archived=False, include_qa=False)
     if not target:
         return {
             "ok": True,
@@ -125,8 +126,8 @@ def project_home(slug: str | None = None) -> dict[str, Any]:
         return {"ok": False, "message": f"Unknown project: {target}", "active": active}
 
     identity = identity_for_slug(target)
-    today = _today_workspace(target, identity)
     coding = _coding_section(identity)
+    today = _today_workspace(target, identity, coding=coding)
     ai = _ai_context(target, identity)
     journal = _journal_section(target)
     memory = _memory_section(target)
@@ -138,7 +139,7 @@ def project_home(slug: str | None = None) -> dict[str, Any]:
         "is_active": active == target,
         "project": meta,
         "identity": identity,
-        "projects": [p for p in projects if not p.get("archived")] or projects,
+        "projects": projects,
         "effects": {
             "coding_root": identity.get("coding_root") or "—",
             "memory_namespace": identity.get("memory_namespace") or "—",
@@ -258,7 +259,7 @@ def _coding_section(identity: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _today_workspace(slug: str, identity: dict[str, Any]) -> dict[str, Any]:
+def _today_workspace(slug: str, identity: dict[str, Any], *, coding: dict[str, Any] | None = None) -> dict[str, Any]:
     journal_preview = ""
     bullets: list[str] = []
     try:
@@ -273,7 +274,7 @@ def _today_workspace(slug: str, identity: dict[str, Any]) -> dict[str, Any]:
     except Exception as exc:
         journal_preview = f"(journal unavailable: {exc})"
 
-    coding = _coding_section(identity)
+    coding = coding if coding is not None else _coding_section(identity)
     memories: list[str] = []
     candidates: list[dict] = []
     try:
@@ -288,9 +289,16 @@ def _today_workspace(slug: str, identity: dict[str, Any]) -> dict[str, Any]:
     try:
         from jarvis.assistant_instance import get_assistant
 
-        assistant = get_assistant()
-        hits = assistant.memory.search(slug, limit=5) if hasattr(assistant.memory, "search") else []
-        for h in hits or []:
+        mem = get_assistant().memory
+        # Local namespace listing only — never pay ACM semantic search on every Project Home poll.
+        rows = []
+        if hasattr(mem, "list_entries"):
+            rows = mem.list_entries(namespace=slug, limit=5) or []
+        elif hasattr(mem, "list"):
+            rows = mem.list(namespace=slug, limit=5) or []
+        elif hasattr(mem, "get_all"):
+            rows = [e for e in (mem.get_all() or []) if (e.get("namespace") or "") == slug][:5]
+        for h in rows:
             memories.append(_clip(h.get("content") or h.get("text") or str(h), 100))
     except Exception:
         pass
@@ -379,9 +387,16 @@ def _memory_section(slug: str) -> dict[str, Any]:
         from jarvis.assistant_instance import get_assistant
 
         mem = get_assistant().memory
-        if hasattr(mem, "search"):
-            for h in mem.search(slug, limit=6) or []:
-                recent.append(_clip(h.get("content") or "", 100))
+        # Fast local namespace read — Project Home must not call semantic search (SYS-P01 class).
+        rows = []
+        if hasattr(mem, "list_entries"):
+            rows = mem.list_entries(namespace=slug, limit=6) or []
+        elif hasattr(mem, "list"):
+            rows = mem.list(namespace=slug, limit=6) or []
+        elif hasattr(mem, "get_all"):
+            rows = [e for e in (mem.get_all() or []) if (e.get("namespace") or "") == slug][:6]
+        for h in rows:
+            recent.append(_clip(h.get("content") or h.get("text") or "", 100))
     except Exception:
         pass
     return {

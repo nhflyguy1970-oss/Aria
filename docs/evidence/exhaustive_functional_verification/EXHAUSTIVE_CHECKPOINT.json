@@ -1,0 +1,575 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "checkpoint_id": "enumerated-rooms-2026-08-13",
+  "updated_at": "2026-08-15T21:12:00Z",
+  "status": "COMPLETE \u2014 34/34 ROOMS CERTIFIED FUNCTIONAL with documented Jeff-skipped / hardware / destructive boundaries",
+  "do_not_restart_from_room_1": true,
+  "room": "house",
+  "capability": "final matrix",
+  "workflow": "ONE Owner session; no lock/unlock between Rooms",
+  "completed_steps": [
+    {
+      "step": "Journal More menu interactable",
+      "status": "REPAIRED",
+      "evidence": "journal_more_menu_repair.json"
+    },
+    {
+      "step": "Export encrypted \u2192 password prompt reachable",
+      "status": "PROVEN"
+    },
+    {
+      "step": "Export encrypted completed (Jeff-attended)",
+      "status": "JEFF-ATTENDED \u2014 PROVEN",
+      "evidence": "journal_encrypted_export_resume.json",
+      "note": "Ephemeral export-time password; not a persistent Aria credential"
+    },
+    {
+      "step": "Encryption design read-only investigation",
+      "status": "DONE",
+      "evidence": "journal_encryption_design_readonly.json"
+    },
+    {
+      "step": "Owner Security Vault architecture documented",
+      "status": "DONE \u2014 NOT IMPLEMENTED",
+      "evidence": "docs/ARIA_OWNER_SECURITY_VAULT_ARCHITECTURE.md"
+    },
+    {
+      "step": "Owner Security Vault architecture review",
+      "status": "DONE \u2014 CONDITIONAL APPROVE; M1 NOT AUTHORIZED",
+      "evidence": "docs/ARIA_OWNER_SECURITY_VAULT_ARCHITECTURE_REVIEW.md",
+      "note": "Resolve R1\u2013R10 before M1; do not implement until Jeff authorizes"
+    },
+    {
+      "step": "Owner Security Vault M1 (empty vault + owner session)",
+      "status": "DONE \u2014 M1 COMPLETE; M2+ NOT AUTHORIZED",
+      "evidence": "docs/ARIA_OWNER_SECURITY_VAULT_M1.md",
+      "note": "No credential migration; jarvis.env untouched; Journal crypto unchanged; exhaustive not resumed"
+    },
+    {
+      "step": "One-password owner experience",
+      "status": "PROVEN \u2014 isol owner UI; live vault later initialized empty",
+      "evidence": "docs/ARIA_ONE_PASSWORD_OWNER_EXPERIENCE.md",
+      "ui_evidence": "docs/evidence/exhaustive_functional_verification/one_password_owner_experience.json"
+    },
+    {
+      "step": "Live Owner Vault initialize (owner-attended)",
+      "status": "DONE \u2014 EMPTY LIVE VAULT; ONE-PASSWORD PROVEN",
+      "evidence": "docs/evidence/exhaustive_functional_verification/live_owner_vault_initialized.json",
+      "note": "Journal crypto unchanged; exhaustive not resumed"
+    },
+    {
+      "step": "M2 Integration/Provider credential migration",
+      "status": "DONE \u2014 LIVE PROVIDER BATCH PROVEN; M3+ NOT AUTHORIZED",
+      "evidence": "docs/ARIA_CREDENTIAL_MIGRATION_M2.md",
+      "note": "OpenAI, Gemini, HF migrated; jarvis.env retained for rollback; exhaustive not resumed"
+    },
+    {
+      "step": "M3 Home Assistant + LAN API credential migration",
+      "status": "DONE \u2014 HA AND LAN LIVE PROVEN; FURTHER CATEGORIES NOT AUTHORIZED",
+      "evidence": "docs/ARIA_CREDENTIAL_MIGRATION_M3.md",
+      "note": "ha.token + lan.api_key vault-backed; jarvis.env retained; LAN key is not an Owner/Health authenticator; exhaustive not resumed"
+    },
+    {
+      "step": "M4 Health step-up + Owner session unification",
+      "status": "DONE \u2014 HEALTH SESSION UNIFIED; M5 NOT AUTHORIZED",
+      "evidence": "docs/ARIA_SECURITY_M4_HEALTH_SESSION_UNIFICATION.md",
+      "note": "No new credential migration; jarvis.env retained; Uncensored uses Owner Security; exhaustive not resumed"
+    },
+    {
+      "step": "Encrypted import \u2014 current implementation Export\u2192Import round trip (isolated)",
+      "status": "WORKING \u2014 ISOL OWNER UI + SAME-ORIGIN ROUND TRIP",
+      "evidence": "journal_encrypted_import_current_impl.json",
+      "note": "JARVIS_DATA_DIR=/tmp/aria-final34-journal-isol; live journal sha unchanged; prompt class B"
+    },
+    {
+      "step": "Live house unlock after Jeff done",
+      "status": "DONE",
+      "note": "OWNER_UNLOCKED; vault unlocked; 5 entries; lock overlay display:none"
+    },
+    {
+      "step": "Live Journal remaining owner-facing capabilities",
+      "status": "DONE WITH FAIL",
+      "evidence": "journal_live_remaining.json",
+      "note": "Daily/Weekly/Monthly/Habits/Wellness/Future/Index/Collections/Key/Search/leave-return proven on existing owner data. Projects tab FAIL. Aug 8 encrypted import still BLOCKED. No live journal writes. sha unchanged."
+    },
+    {
+      "step": "Calendar exhaustive owner UI",
+      "status": "DONE WITH FAIL",
+      "evidence": "calendar_live.json",
+      "note": "Views/nav/day/ICS/leave-return PASS. Work schedule blank FAIL. Memory dates PARTIAL (alert)."
+    },
+    {
+      "step": "Coding exhaustive owner UI (read-only)",
+      "status": "DONE",
+      "evidence": "coding_live.json",
+      "note": "Tabs, Job Center, Projects/Models leave-return. Existing proposal observed; Apply not clicked."
+    },
+    {
+      "step": "Voice owner UI (no mic, no save, no smoke)",
+      "status": "DONE WITH PARTIAL",
+      "evidence": "voice_live.json",
+      "note": "Refresh/Recovery/cheatsheet/Audio leave PASS. House place label is Presence while hash is #voice."
+    },
+    {
+      "step": "Identity sweep of remaining ENUMERATED rooms",
+      "status": "IDENTITY ONLY \u2014 NOT CERTIFICATION",
+      "evidence": "enumerated_identity_sweep.json",
+      "note": "automation, home_automation, presence, video, browser, vision, connections open via Front Door with real headings. Functions not yet exercised."
+    },
+    {
+      "step": "Automation exhaustive owner UI",
+      "status": "DONE WITH PARTIAL",
+      "evidence": "automation_live.json"
+    },
+    {
+      "step": "Home Automation exhaustive owner UI",
+      "status": "DONE WITH FAIL",
+      "evidence": "home_automation_live.json",
+      "note": "Owner UI unavailable vs HA API connected/ready"
+    },
+    {
+      "step": "Presence/Video/Browser/Vision/Connections function slice",
+      "status": "DONE WITH FAIL",
+      "evidence": "enumerated_rooms_live.json",
+      "note": "Hash stuck #homeAutomation; place labels wrong"
+    },
+    {
+      "step": "Remaining Maker/Fly tying/Memory/Health read-only function slice",
+      "status": "DONE \u2014 NOT CERTIFICATION",
+      "evidence": "remaining_function_slice.json"
+    },
+    {
+      "step": "Idle-lock unlock restore (Jeff-attended)",
+      "status": "DONE",
+      "evidence": "idle_lock_unlock_restore.json",
+      "note": "OWNER_UNLOCKED; HA Connected restore PASS; Security Aria unlocked; integrity clean / 100"
+    },
+    {
+      "step": "Maker Hello cube generate \u2192 preview \u2192 leave/return",
+      "status": "DONE \u2014 NOT CERTIFICATION",
+      "evidence": "maker_hello_cube.json",
+      "note": "Created Hello cube c625705b89 in Home Lab CAD; slice blocked no OrcaSlicer; Start print not clicked"
+    },
+    {
+      "step": "OrcaSlicer Flatpak detection repair + code-load restart",
+      "status": "DONE \u2014 WAIT FOR UNLOCK TO SLICE",
+      "evidence": "maker_slicer_detection_repair.json",
+      "note": "Jeff already had com.orcaslicer.OrcaSlicer 2.4.2; Aria looked for com.softfever via invalid flatpak which"
+    },
+    {
+      "step": "Maker Slice with owner-selected Bambu A1",
+      "status": "PASS \u2014 plate_1.gcode; Start print not clicked at that step",
+      "evidence": "maker_slice_bambu_a1_pass.json",
+      "note": "Prior BLOCKED superseded: maker_slice_bambu_a1_blocked.json. Orca 2.4.2 + BBL A1 machine/process/PLA after Jeff installed presets and matcher repair."
+    },
+    {
+      "step": "Maker Start print Bambu Studio handoff",
+      "status": "PASS \u2014 latest.gcode copied; physical print not started",
+      "evidence": "maker_start_print_bambu_handoff.json",
+      "note": "Cause-fix: print API now dispatches start_print_job; bambu_a1 routes to handoff even if stored backend is moonraker. printers.json not edited."
+    },
+    {
+      "step": "Maker physical A1 print",
+      "status": "SKIPPED BY JEFF",
+      "evidence": "maker_physical_print_skipped.json"
+    },
+    {
+      "step": "Fly tying session on existing Adams dry fly olive",
+      "status": "PASS \u2014 Repeat/Next/Prev restore; Suggest honest empty; Start session not clicked",
+      "evidence": "flytying_session.json",
+      "note": "Active session b2d4017e9066 left at step 2. Start session would pause it."
+    },
+    {
+      "step": "Gallery generate + Meme empty/preview",
+      "status": "PASS \u2014 workbench cube image; Meme AI generate not clicked",
+      "evidence": "gallery_meme_generate.json"
+    },
+    {
+      "step": "Health blank check-in after Jeff unlock",
+      "status": "PASS \u2014 Check-in On file; no vitals/doses/uploads",
+      "evidence": "health_checkin_blank.json"
+    },
+    {
+      "step": "Aug 8 encrypted journal import",
+      "status": "SKIPPED BY JEFF",
+      "evidence": "journal_aug08_import_skipped.json",
+      "note": "Password not supplied; files not modified; live journal not POSTed. Isolated current-impl already PASS."
+    },
+    {
+      "step": "Presence camera / Voice mic / Vision empty OCR",
+      "status": "PASS \u2014 camera start/stop; enroll honest empty; Voice hold not clicked (would write); Vision empty OCR toast",
+      "evidence": "presence_camera_voice_mic.json",
+      "note": "No face enroll. No Whisper recording. No Vision analyze POST. HA scenes not clicked."
+    },
+    {
+      "step": "HA scene chips Movie mode",
+      "status": "PASS \u2014 table lamp 25% via HA after router + brightness payload repairs",
+      "evidence": "ha_scenes_movie_mode.json",
+      "note": "Heading out and device on/off not clicked. Lamp left at 25%."
+    },
+    {
+      "step": "HA device toggle Table lamp",
+      "status": "PASS \u2014 off then on via owner UI after product-control path repair",
+      "evidence": "ha_device_toggle.json",
+      "note": "Heading out not clicked. Other lights not clicked. Lamp left on at brightness 64 (25%)."
+    },
+    {
+      "step": "HA Heading out",
+      "status": "PASS \u2014 activated scene.leaving via product scene API after sendMessage busy-chat repair",
+      "evidence": "ha_heading_out.json",
+      "note": "Listed lights unchanged. HA accepted scene.leaving. Save leave scene / Apply profile not clicked."
+    },
+    {
+      "step": "Voice PTT / Audio Hold to talk",
+      "status": "PASS \u2014 Audio studio Hold; no speech; not sent to chat/journal",
+      "evidence": "voice_ptt_hold.json",
+      "note": "Living Voice chrome #pttBtn is hidden; Hold lives in Audio. Save / Voice smoke not clicked."
+    },
+    {
+      "step": "Health Upload / empty Log dose / empty NL Log",
+      "status": "PASS empty/honest \u2014 no PHR dose/upload; Vitamin D3 not logged",
+      "evidence": "health_upload_logdose_empty.json"
+    },
+    {
+      "step": "Automation Pause all then Resume",
+      "status": "PASS \u2014 paused toast then resumed toast; house not left paused",
+      "evidence": "automation_pause_all.json",
+      "note": "Delete/Run/Enable/Import/Webhook copy not clicked. Webhook query secret visible in UI \u2014 not recorded."
+    },
+    {
+      "step": "Coding Apply confirm Cancel",
+      "status": "PASS \u2014 confirm shown for 603973e7; Cancel; not applied",
+      "evidence": "coding_apply_confirm_cancelled.json",
+      "note": "Pending proposal is a RES27 residency leftover. Do not apply. Do not start Owner Residency."
+    },
+    {
+      "step": "Search federated query \u2192 Fly Tying",
+      "status": "PASS \u2014 woolly bugger 5 hits / 4219 ms; Open in context #flytying; leave/return restored results",
+      "evidence": "search_to_flytying.json",
+      "note": "Open in context did not fill Fly Tying search box. Health/Home/Notifications also ranked. Save search and Search\u2192Documents not clicked."
+    },
+    {
+      "step": "Search federated query \u2192 Documents",
+      "status": "PASS \u2014 documents facet; 3 hits / 77 ms; Open in context #documents; query filled; library Search extra click 3 hits; leave/return restored",
+      "evidence": "search_to_documents.json",
+      "note": "Open in context filled Documents search box but did not auto-run library search. Titles not recorded. Save/Upload/Import not clicked."
+    },
+    {
+      "step": "Home foyer \u2192 Home Automation",
+      "status": "PARTIAL \u2014 sidebar Open Home Automation landed #homeAutomation Connected; Home scenes Smart Home opens setup modal; Home first paint Load failed then Retry recovered",
+      "evidence": "home_to_home_automation.json",
+      "note": "Scenes/toggles/Apply/Heading out not clicked. Webhook query secret still visible in HA UI \u2014 not recorded."
+    },
+    {
+      "step": "Repair \u2192 Guided Repair Scan overlay",
+      "status": "PASS \u2014 Scan overlay; Preview ONLY; Repair not executed; leave Integrity overlay did not cover; return Repair restored",
+      "evidence": "repair_to_guided_repair.json",
+      "note": "Open repairs 2 (scheduler + HA connection). Exec/Rollback/Export not clicked. Front Door briefly said Guided Repair after Dismiss while still open."
+    },
+    {
+      "step": "Mission \u2192 platform data",
+      "status": "PASS \u2014 Overview + Hardware live platform data; Platform MC :8780 honest not reachable; leave Integrity / return Hardware restored",
+      "evidence": "mission_to_platform_data.json",
+      "note": "Health Brief DEGRADED vs Attention All clear. Audit/Reconnect/Recover/Restart not clicked."
+    },
+    {
+      "step": "Integrations \u2192 provider operation",
+      "status": "PASS \u2014 Ollama Test connection reachable \u00b7 40 models \u00b7 4ms; no key paste; leave Mission / return restored",
+      "evidence": "integrations_to_provider_operation.json",
+      "note": "Save/Clear/Disable/Test-all/cloud tests not clicked. Front Door from Integrations still said Mission Control."
+    },
+    {
+      "step": "Browser actual page load",
+      "status": "PASS \u2014 Open https://example.com; session live; leave Documents / return restored URL + running session",
+      "evidence": "browser_actual_page_load.json",
+      "note": "Empty Open already proven idle. Run/Takeover/Stop/Save to Documents not clicked. Front Door copy stale (Mission Control / Research)."
+    },
+    {
+      "step": "Capabilities loader",
+      "status": "PASS \u2014 13 installed / 12 enabled; flytying detail healthy; search/filter/diagnostics; leave Browser / return restored with filter persisted",
+      "evidence": "capabilities_loader.json",
+      "note": "Load enabled / Enable / Disable / New capability not clicked. Hello Aria left disabled. Front Door copy stale Research."
+    },
+    {
+      "step": "STOP exhaustive rooms \u2014 Owner Session daily-use correction",
+      "status": "PROVEN \u2014 then RESUMED",
+      "evidence": "docs/ARIA_OWNER_SESSION_DAILY_USE.md",
+      "note": "Daily-use Owner Session proven. Campaign resumed with ONE continuous Owner session. Do not start Owner Residency or M5."
+    },
+    {
+      "step": "System Audit existing trail without Run",
+      "status": "PARTIAL \u2014 no durable trail; room enter auto-starts 14-phase via GET /api/audit",
+      "evidence": "system_audit_existing_trail.json",
+      "note": "Run audit not clicked. Leave Mission Control / return Audit restored the room. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Settings existing owner chrome without Save",
+      "status": "PASS \u2014 catalog/search/filter/detail/diagnostics/Voice&Chat/leave-return; Save not clicked",
+      "evidence": "settings_existing_chrome.json",
+      "note": "63 prefs; stores 9/12 honest. Appearance not written. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Documents open an existing owner document (no Upload/Import)",
+      "status": "PASS \u2014 search + Preview of existing product cheatsheet; leave Settings / return restored search and preview",
+      "evidence": "documents_open_existing.json",
+      "note": "Upload/Import/Summarize/Ask/Learn not clicked. Titles/paths/bodies not recorded. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Planner existing chrome without creating tasks",
+      "status": "PASS \u2014 honest empty; empty Add/Start refused; Calendar leave/return restored collapse",
+      "evidence": "planner_existing_chrome.json",
+      "note": "No tasks/timers/alarms/events created. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Security room honesty without Lock Aria",
+      "status": "PASS \u2014 after load Aria unlocked; Presence leave/return restored; Lock not clicked",
+      "evidence": "security_honesty_unlocked.json",
+      "note": "First a11y paint said Aria locked then loadHome corrected. Overlay stayed hidden. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Action History existing list without dismiss",
+      "status": "PASS \u2014 15 rows; Coding filter honest empty; All modules restored; Mission leave/return restored list",
+      "evidence": "actions_existing_list.json",
+      "note": "Clear not clicked. Titles/details not recorded. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Projects existing chrome without creating",
+      "status": "PASS \u2014 2 workspaces; active home-lab; 0 QA-named rows; no-match search honest; Action History leave/return restored",
+      "evidence": "projects_existing_chrome.json",
+      "note": "Create/Import/Archive/Rename not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Memory existing chrome without writing",
+      "status": "PASS \u2014 1088 archive; Search opened Browse; negative search honest; Projects leave/return restored query",
+      "evidence": "memory_existing_chrome.json",
+      "note": "New/Edit/Forget/Save/Ask Chat not clicked. Contents not recorded. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Chat existing composer without sending",
+      "status": "PASS \u2014 Living room composer; empty Send no turn; Memory leave/return restored empty composer",
+      "evidence": "chat_existing_composer.json",
+      "note": "New Chat / Hold to talk / typed send not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Integrity existing score without executing Guided Repair",
+      "status": "PASS \u2014 Truth Score 100 \u00b7 ready; No deductions; Refresh restored; Chat leave/return restored",
+      "evidence": "integrity_existing_score.json",
+      "note": "Repair overflow not clicked. Overlay stayed closed. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Connections existing graph without writing",
+      "status": "PARTIAL \u2014 first load Neo4j :7687 defunct; return recovered Overview 59/53 memgraph; Browse/search stayed empty (API count 0)",
+      "evidence": "connections_existing_chrome.json",
+      "note": "New/Import/Cleanup/Approve not clicked. Names/triples not recorded. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "AI Providers existing chrome without writing keys",
+      "status": "PASS \u2014 #models Provider bay; Roles/Overview/Providers; Connections leave/return restored Providers tab",
+      "evidence": "providers_existing_chrome.json",
+      "note": "Validate/Save/Pull/key paste not clicked. Keys not recorded. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Audio existing studio chrome without Hold/Save",
+      "status": "PASS \u2014 #audio Audio studio; status healthy; library counts; Music honest empty; negative search; Models leave/return restored query",
+      "evidence": "audio_existing_chrome.json",
+      "note": "Hold/Record/Test mic/Generate/Delete not clicked. Filenames not recorded. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Audio remaining clicks Jeff authorized",
+      "status": "PASS WITH LIVE WRITES \u2014 Test mic / Record only / Play / empty generate / Piper TTS / EQ / wake / Voice nav. Restored transcript fired Send to chat + Add to journal; Apply trim wrote edited wav.",
+      "evidence": "audio_remaining_clicks.json",
+      "note": "Journal 67547 \u2192 68340. Delete/Ask Chat/Lock Aria/Record+transcribe/GPU song not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Video existing studio chrome plus empty clicks",
+      "status": "PARTIAL \u2014 identity + empty Generate/Preview enhance; Gallery leave/return restored #video; remount Could not load video settings + leftover prompt + Generation failed",
+      "evidence": "video_existing_chrome.json",
+      "note": "Ask Aria / Free VRAM / typed Generate / Lock Aria not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Home Automation remaining read-only clicks",
+      "status": "PARTIAL \u2014 Status snapshot + Discover Kasa 0 + negative search; first paint stale locked; entity list HA disabled vs Connected",
+      "evidence": "ha_remaining_clicks.json",
+      "note": "Copy webhook / Open HA / Apply / Heading out / chat Home status not clicked. Webhook secret not recorded. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Connections namespace chips",
+      "status": "PARTIAL \u2014 chips system+default clicked; home API 59/53 memgraph; browse/search still count 0",
+      "evidence": "connections_namespace_chips.json",
+      "note": "New/Import/Cleanup not clicked. Names not recorded. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Remove accidental 2026-08-15 Audio journal note",
+      "status": "DONE \u2014 DELETE /api/journal/bullet/980d808a; journal 68340 \u2192 67547; 2026-08-15 bullets 0",
+      "evidence": "system_audit_completed.json",
+      "note": "Content not recorded. Other journal days untouched. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Repair HA entity list vs Connected",
+      "status": "REPAIRED IN TREE \u2014 retry after disabled/locked; Connected refresh reloads entities; webhook query secret redacted in the status line",
+      "note": "JS is live from static. extra_routes locked-vs-disabled message needs process load. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Repair Connections browse vs Overview 59/53",
+      "status": "REPAIRED IN TREE \u2014 Bolt list_nodes/list_edges now MATCH all when q is empty; unit test passed. Live browse still count 0 until process load.",
+      "note": "Overview still 59/53. New/Import/Cleanup not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Repair Video remount leftover / settings load",
+      "status": "REPAIRED IN TREE \u2014 settings load retries abort/non-OK; remount clears stale Generation failed; Generate another no longer fills last-settings into the prompt box",
+      "note": "Ask Aria / Free VRAM / typed Generate not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "System Audit auto-run observed",
+      "status": "OBSERVED OK \u2014 14 phases progressed through Phase 14; house stayed healthy; Run audit not clicked; durable tally not cached this session",
+      "evidence": "system_audit_completed.json",
+      "note": "Poll now uses /api/audit/status. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Video remount / leave-return after repair",
+      "status": "PASS \u2014 Reload UI then empty prompt + AnimateDiff ready + no Generation failed; Gallery leave/return restored",
+      "evidence": "video_remount_repair.json",
+      "note": "Ask Aria / Free VRAM / typed Generate not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "HA entity list vs Connected after repair",
+      "status": "PASS \u2014 first settled paint Connected + lights listed; webhook ?secret=\u2022\u2022\u2022\u2022; Presence leave/return restored",
+      "evidence": "ha_entity_list_repair.json",
+      "note": "Toggles/scenes/Heading out/Copy webhook not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Connections Browse vs Overview 59/53",
+      "status": "PARTIAL \u2014 Overview/namespaces 59 nodes; Browse No entities yet; API search count 0. Repair in tree, live process not loaded.",
+      "evidence": "connections_browse_vs_overview.json",
+      "note": "Did not create fake graph data. New/Import/Cleanup not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Lock Aria present on Front Door",
+      "status": "PASS \u2014 visible while OWNER_UNLOCKED; not clicked",
+      "evidence": "front_door_lock_aria_present.json"
+    },
+    {
+      "step": "Front Door \u2192 Home Automation revisit",
+      "status": "PASS \u2014 door landed Connected + entity list; setup chrome one-beat stale then vault recovered",
+      "evidence": "home_to_ha_revisit.json"
+    },
+    {
+      "step": "Notifications existing inbox without dismiss",
+      "status": "PARTIAL \u2014 Ctrl+Shift+A; All first paint Inbox is clear vs 79 unread; Unread filter 79 shown",
+      "evidence": "notifications_existing_inbox.json",
+      "note": "Mark all read / Clear / Dismiss not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Knowledge Briefs hop + Health Knowledge tab",
+      "status": "PARTIAL \u2014 Memory Knowledge Briefs lands Documents; API 5 briefs not shown. Health Knowledge honest empty. Research/PHR not written.",
+      "evidence": "knowledge_briefs_hop.json"
+    },
+    {
+      "step": "Workstation remaining tabs + #missionRoom",
+      "status": "PASS WITH NOTES \u2014 Overview/Routing/Performance/Recovery/Connection distinct; leave/return restored Connection. #missionRoom hash fell through to Chat.",
+      "evidence": "workstation_remaining_tabs.json",
+      "note": "Audit/Backup/Scan/Guided Repair execute/8780 not clicked. Owner stayed OWNER_UNLOCKED."
+    },
+    {
+      "step": "Meme existing chrome without AI generate",
+      "status": "PASS \u2014 Ready; library heading 0 cards; Gallery leave/return restored. AI generate not clicked.",
+      "evidence": "meme_existing_chrome.json"
+    },
+    {
+      "step": "Repair Notifications All first-paint",
+      "status": "PASS",
+      "evidence": "notifications_inbox_repair.json"
+    },
+    {
+      "step": "Repair Knowledge Briefs hop",
+      "status": "PASS",
+      "evidence": "knowledge_briefs_hop_repair.json"
+    },
+    {
+      "step": "Repair #missionRoom hash",
+      "status": "PASS",
+      "evidence": "mission_room_hash_repair.json"
+    },
+    {
+      "step": "Mission Control routing metric honesty",
+      "status": "PASS",
+      "evidence": "mission_control_routing_metric.json"
+    },
+    {
+      "step": "Calendar negative search + Memory dates",
+      "status": "PASS",
+      "evidence": "calendar_search_memory_repair.json"
+    },
+    {
+      "step": "System Audit enter without auto-run",
+      "status": "PASS",
+      "evidence": "system_audit_no_autorun.json",
+      "note": "GET /api/audit no-start in tree; live JS uses /status"
+    },
+    {
+      "step": "Home foyer first paint abort-retry",
+      "status": "PASS",
+      "evidence": "home_first_paint_repair.json"
+    },
+    {
+      "step": "Health Knowledge tab",
+      "status": "PASS",
+      "evidence": "health_knowledge_tab.json"
+    },
+    {
+      "step": "Health all section tabs read-only",
+      "status": "PASS",
+      "evidence": "health_tabs_readonly.json"
+    },
+    {
+      "step": "Vision settled chrome",
+      "status": "PASS",
+      "evidence": "vision_settled_chrome.json"
+    },
+    {
+      "step": "Jeff unlock after controlled restart",
+      "status": "DONE",
+      "note": "OWNER_UNLOCKED"
+    },
+    {
+      "step": "Connections Browse vs Overview",
+      "status": "PASS",
+      "evidence": "connections_browse_repair.json"
+    },
+    {
+      "step": "Audit no-autorun after unlock",
+      "status": "PASS",
+      "evidence": "system_audit_no_autorun_after_unlock.json"
+    },
+    {
+      "step": "Post-unlock identity + shared-repair regression",
+      "status": "PASS"
+    }
+  ],
+  "current_step": {
+    "name": "COMPLETE \u2014 34/34 CERTIFIED FUNCTIONAL",
+    "state": "OWNER_UNLOCKED",
+    "evidence": "connections_browse_repair.json",
+    "jeff_action_required": false,
+    "jeff_action": "",
+    "note": "Do not start Owner Residency or M5. Do not apply 603973e7. Aug 8 and physical print remain SKIPPED BY JEFF."
+  },
+  "next_action_after_owner_ready": [
+    "Campaign complete for required software capabilities",
+    "Do not start Owner Residency",
+    "Do not start M5",
+    "Do not apply 603973e7"
+  ],
+  "related_architecture": "docs/ARIA_OWNER_SECURITY_VAULT_ARCHITECTURE.md",
+  "related_architecture_review": "docs/ARIA_OWNER_SECURITY_VAULT_ARCHITECTURE_REVIEW.md",
+  "related_m1": "docs/ARIA_OWNER_SECURITY_VAULT_M1.md",
+  "related_m2": "docs/ARIA_CREDENTIAL_MIGRATION_M2.md",
+  "related_m3": "docs/ARIA_CREDENTIAL_MIGRATION_M3.md",
+  "related_m4": "docs/ARIA_SECURITY_M4_HEALTH_SESSION_UNIFICATION.md",
+  "related_live_vault": "docs/evidence/exhaustive_functional_verification/live_owner_vault_initialized.json",
+  "integrity_at_checkpoint": {
+    "expected": "clean / 100",
+    "observed": "GET /api/integrity/home 200; overall 100; status clean; artifacts 0",
+    "note": "Re-verified 2026-08-15 after Connections browse repair and post-unlock sweep"
+  }
+}

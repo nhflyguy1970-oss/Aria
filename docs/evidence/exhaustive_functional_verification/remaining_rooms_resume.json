@@ -1,0 +1,20 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-13T18:28:00+00:00",
+  "after": "Jeff unlock following idle lock",
+  "owner": "OWNER_UNLOCKED; overlay hidden; integrity clean / 100",
+  "not_certification": true,
+  "gaps_rechecked": {
+    "security_honesty": "PASS after unlock + re-enter Presence→Security (~200 ms). Copy Aria unlocked. Prior FAIL was stale during idle lock without overlay.",
+    "search_negative": "SLOW — UI Searching… until ~9.2 s then 3 result(s) · ~3739 ms across 13 corpora. Garbage query is not a true no-match. Titles not recorded.",
+    "documents_negative": "PASS — documentsSearchInput + Search → No matches. Ask Chat. Library list still 40 (results pane, not the library).",
+    "memory_negative": "SUPERSEDED — remaining_function_slice.json. After ~6 s wait: 1070 cards. Garbage query: No memories match. Ask Chat.",
+    "planner_empty": "PASS — #plannerTasks honest empty No tasks yet (Add not clicked).",
+    "health_tabs": "SUPERSEDED — remaining_function_slice.json. Timeline/Dashboard/Meds/Vitals/Labs/Docs read-only PASS. Negative search honest. Writes false.",
+    "mission_tabs": "PASS — Overview/Routing/Performance/Recovery/Connection body lengths change.",
+    "integrity_list": "PASS after ~2.5 s — Truth Score 100 · ready · No deductions on record.",
+    "meme_empty_generate": "PASS — toast Need top text, bottom text, idea, or image_prompt. Generate not started.",
+    "providers_tabs": "PASS after ~11s /api/models/home — 8 tabs with distinct bodies. Save/Pull/Export not clicked.",
+    "actions_filter": "PASS — select Coding → honest empty; All modules restores the list."
+  }
+}

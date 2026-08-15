@@ -1,0 +1,14 @@
+{
+  "updated_at": "2026-08-13T14:23:40+00:00",
+  "phase": "code_load_restart",
+  "reason": "Load vault-first ha_token()/get_api_key() into live serve process",
+  "old_serve_pid": 91840,
+  "new_serve_pid": 290334,
+  "tray_pid": 41589,
+  "owner_state": "OWNER_LOCKED",
+  "vault_exists": true,
+  "entry_count": 3,
+  "ha_migrated": false,
+  "lan_migrated": false,
+  "note": "HA still env-backed until migrate after unlock. LAN still env-backed until after HA is proven."
+}

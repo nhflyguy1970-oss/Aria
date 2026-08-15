@@ -1,0 +1,77 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "planner",
+  "capability": "Planner existing chrome without creating tasks",
+  "captured_at": "2026-08-15T12:22:00Z",
+  "result": "PASS — Front Door → Planner; honest empty Tasks/Timers/Alarms/Today + Daily Focus; empty Add/Start refused without writes; Tasks collapse persisted after Calendar leave/return. Add/Focus/From Journal/HA Focus not used to create. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Planner (Today’s page)",
+    "hash": "#planner",
+    "h2": "Planner",
+    "place": "Leather notebook",
+    "subtitle": "Today’s actionable work · Journal for notes · Calendar for commitments · Documents"
+  },
+  "honest_empty": {
+    "tasks": "No tasks yet",
+    "timers": "No active timers / Daily Focus No running timers",
+    "alarms": "No alarms / Daily Focus No upcoming alarms",
+    "today_events": "No events today",
+    "daily_focus": "healthy · 0 tasks; Top 3 No open tasks; At risk Nothing at risk"
+  },
+  "functions": {
+    "empty_add_task": "PASS — Add with empty input; toast Task text required; input focused; still No tasks yet; no POST",
+    "empty_add_event": "PASS — Add with empty title; toast Event title required; title focused; still No events today",
+    "empty_start_timer": "PASS — Start with empty duration; duration input focused; still No active timers; no timer created",
+    "collapse_tasks": "PASS — Tasks collapsed; Add-task chrome hidden"
+  },
+  "leave_return": {
+    "leave": "Planner Calendar deep link → #calendar h2 Calendar; Month pressed; Saturday Aug 15 Nothing scheduled; Add commitment not clicked",
+    "return": "Calendar Planner deep link → #planner h2 Planner",
+    "return_state": "Tasks still collapsed; Timers/Alarms/Today expanded; still honest empty 0 tasks / no timers / no alarms / no events",
+    "result": "PASS — room and collapse state restored"
+  },
+  "not_clicked": [
+    "Add with text",
+    "From Journal",
+    "Plan My Day",
+    "Start Focus Session",
+    "Review Morning Plan",
+    "Reprioritize",
+    "Ask Aria",
+    "Suggest schedule",
+    "Focus 25m",
+    "Start Focus 25m",
+    "Set alarm",
+    "HA Focus mode",
+    "Vision capture",
+    "Ask Chat",
+    "Lock Aria"
+  ],
+  "activity_center_note": "Honesty toasts (Task text required / Event title required) appeared in Activity Center; unread rose 75→77. Existing house noise; not dismissed as QA cleanup.",
+  "performance": {
+    "room_entry": "hash #planner immediately on Front Door click",
+    "first_meaningful": "h2 Planner + Daily Focus + empty sections on first paint",
+    "note": "Tool-roundtrip delays are not owner-visible time and were not recorded as room slowness."
+  },
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "planner_task_create": false,
+    "planner_timer_create": false,
+    "planner_alarm_create": false,
+    "planner_event_create": false,
+    "journal_post": false,
+    "journal_bytes": 67547,
+    "health_phr": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "Security room honesty without Lock Aria. Do not lock/unlock. Do not Add Planner tasks. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5."
+}

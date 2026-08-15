@@ -1,0 +1,39 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "health",
+  "capability": "Health PHR check-in write",
+  "captured_at": "2026-08-14T16:15:00Z",
+  "result": "BLOCKED — Health API owner_unlocked false / home 423. Overlay was hidden with stale Owner session chrome. jarvisShowLock shown. Check-in not submitted. NOT CERTIFICATION.",
+  "not_certification": true,
+  "jeff_action_required": true,
+  "owner_ui": {
+    "hash": "#health",
+    "heading": "Health",
+    "overlay_before": "hidden (stale)",
+    "owner_chrome": "Owner session active — Rooms share this unlock. (stale vs Health gate)",
+    "health_home": "423 Unlock Aria with your Master Password to use Health.",
+    "auth_status": {
+      "owner_vault": true,
+      "owner_unlocked": false,
+      "owner_step_up_valid": false
+    },
+    "checkin_tab": "form present; Leave blank what you skip; no fields filled",
+    "empty_nl": "status showed unlock message; toast Aria unlocked (stale)",
+    "save_checkin_clicked": false,
+    "log_dose_clicked": false,
+    "upload_clicked": false,
+    "vitals_invented": false,
+    "lock_after_jarvisShowLock": {
+      "visible": true,
+      "title": "ARIA locked",
+      "hint": "Enter your Aria Master Password. One password unlocks the house.",
+      "mode": "master"
+    }
+  },
+  "lock_fail_closed_note": "GET /api/health/checkin returned 200 while home was 423. POST /api/health/checkin is not owner-gated in api.py. Save was not clicked so PHR was not written through that hole.",
+  "data_mutation": {
+    "phr_write": false,
+    "journal_post": false
+  },
+  "next_exact_capability": "WAIT FOR JEFF unlock. Then blank Save check-in (no invented vitals/doses). Do not guess the password."
+}

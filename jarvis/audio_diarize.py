@@ -15,7 +15,15 @@ def pyannote_available() -> bool:
 
 
 def hf_token() -> str:
-    """HF token from env or huggingface-cli login cache."""
+    """HF token from Owner Vault / env, then huggingface-cli login cache."""
+    try:
+        from jarvis.integrations_product.secrets_bus import get_secret
+
+        val = get_secret("hf_token")
+        if val:
+            return val
+    except Exception:
+        pass
     for key in ("HF_TOKEN", "HUGGINGFACE_TOKEN", "HUGGING_FACE_HUB_TOKEN"):
         val = os.getenv(key, "").strip()
         if val:

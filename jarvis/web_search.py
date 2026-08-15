@@ -271,20 +271,38 @@ def should_auto_search(message: str) -> bool:
         return False
     lower = text.lower()
     if re.search(r"\b(search (the )?web|web search|look up online|google)\b", lower):
+        # Explicit web verbs are handled as web_search actions elsewhere.
         return False
-    if re.search(r"\b(fix|code|python|file|function|class|import|git|memory|remember)\b", lower):
+    # Coding-task verbs — not a blanket ban on the word "python"/"file"/"memory".
+    if re.search(
+        r"\b(?:fix|patch|refactor|implement|debug)\b.+\b(?:code|function|class|file)\b|"
+        r"\b(?:git\s+(?:status|commit|diff)|import\s+\w+)\b|"
+        r"\b(?:remember|don'?t forget)\b",
+        lower,
+    ):
         return False
     # Arithmetic / unit conversions — local chat.
     if re.search(r"\b\d+\s*(?:[\+\-\*/x×÷]|times|plus|minus|over)\s*\d+\b", lower):
         return False
     # Planning / creative asks are local chat — not live web grounding.
+    # Do not treat vehicle "can you show me how to change…" as creative writing.
     if re.search(
         r"\b(can you|could you|would you|please)\b.*\b("
         r"develop|write|create|draft|design|make|plan|exercise|workout|"
-        r"recipe|story|poem|joke|brainstorm|help me)\b",
+        r"story|poem|joke|brainstorm)\b",
+        lower,
+    ) and not re.search(
+        r"\b(?:change|replace|install|torque|brake|rotor|repair|service)\b",
         lower,
     ):
         return False
+    try:
+        from jarvis.orchestration_policy import research_required
+
+        if research_required(text):
+            return True
+    except Exception:
+        pass
     # Greetings / small talk even when they mention "today".
     if re.search(
         r"^\s*(hi|hello|hey|how are you|how's it going|good (?:morning|afternoon|evening))\b",
@@ -294,51 +312,155 @@ def should_auto_search(message: str) -> bool:
     return any(re.search(p, lower) for p in _AUTO_PATTERNS)
 
 
-def _synthesis_messages(query: str, results: list[dict]) -> tuple[list[dict], str]:
-    context = format_results_for_llm(results)
-    system = (
-        "You answer using ONLY the web search snippets below. "
-        "Cite sources as [1], [2] matching the numbered results. "
-        "If snippets are insufficient, say what is missing. Be concise and direct."
-    )
-    user = f"Question: {query}\n\nSearch results:\n{context}"
+def _synthesis_messages(query: str, results: list[dict]) -> tuple[list[dict], str, list[dict], dict]:
+    """Build synthesis messages after research-verification filtering/ranking."""
+    try:
+        from jarvis.research_verification import format_ranked_for_llm, prepare_research_context
+
+        filtered, system, meta = prepare_research_context(query, results)
+        context_fn = format_ranked_for_llm
+    except Exception:
+        filtered, system, meta = (
+            results,
+            (
+                "You answer using ONLY the web search snippets below. "
+                "Cite sources as [1], [2] matching the numbered results. "
+                "If snippets are insufficient, say what is missing. Be concise and direct."
+            ),
+            {"filtered": False, "consequential": False, "current": False},
+        )
+        context_fn = format_results_for_llm
+    if not filtered:
+        return [], "", [], meta
+    context = context_fn(filtered)
+    user = f"Question: {query}\n\nRanked search results:\n{context}"
     sources = "\n".join(
         f"[{i}] {r.get('title', '')} — {r.get('url', '')}"
-        for i, r in enumerate(results, 1) if r.get("url")
+        for i, r in enumerate(filtered, 1)
+        if r.get("url")
     )
     return [
         {"role": "system", "content": system},
         {"role": "user", "content": user},
-    ], sources
+    ], sources, filtered, meta
+
+
+def fetch_page_excerpt(url: str, *, max_chars: int = 2500) -> str:
+    """Retrieve underlying page text for consequential/current claims (snippet ≠ evidence)."""
+    if not url or not str(url).startswith("http"):
+        return ""
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            raw = resp.read(120_000)
+        html = raw.decode("utf-8", errors="ignore")
+        # Strip scripts/styles then tags
+        html = re.sub(r"(?is)<(script|style|noscript)[^>]*>.*?</\1>", " ", html)
+        text = re.sub(r"(?is)<[^>]+>", " ", html)
+        text = unescape(re.sub(r"\s+", " ", text)).strip()
+        return text[:max_chars]
+    except Exception as exc:
+        log.debug("page fetch failed for %s: %s", url, exc)
+        return ""
+
+
+def enrich_results_with_pages(query: str, results: list[dict], *, limit: int = 3) -> list[dict]:
+    """For consequential/current queries, replace/extend snippets with page excerpts when possible."""
+    try:
+        from jarvis.orchestration_policy import is_consequential_request, research_required
+        from jarvis.research_verification import classify_source_tier
+
+        need = is_consequential_request(query) or bool(
+            research_required(query)
+            and re.search(r"\b(?:latest|current|newest|today|now|version)\b", query or "", re.I)
+        )
+    except Exception:
+        need = False
+        classify_source_tier = None  # type: ignore
+    if not need or not results:
+        return results
+    out: list[dict] = []
+    fetched = 0
+    for r in results:
+        item = dict(r)
+        url = str(item.get("url") or "")
+        tier = 3
+        if classify_source_tier is not None:
+            try:
+                tier = classify_source_tier(url, str(item.get("title") or ""), str(item.get("snippet") or ""))
+            except Exception:
+                tier = 3
+        if fetched < limit and tier <= 2 and url:
+            excerpt = fetch_page_excerpt(url)
+            if excerpt and len(excerpt) > 80:
+                # Prefer page text over SERP snippet for synthesis evidence.
+                item["snippet"] = excerpt[:1800]
+                item["page_fetched"] = True
+                fetched += 1
+        out.append(item)
+    return out
 
 
 def synthesize_answer_stream(query: str, results: list[dict]):
-    """Stream a summarized answer from search hits."""
+    """Stream a summarized answer from search hits with verification gates."""
     if not results:
         yield format_results([])
         return
-    from jarvis import llm
-
-    msgs, sources = _synthesis_messages(query, results)
-    body: list[str] = []
-    try:
-        for chunk in llm.ask_stream(llm.web_research_model(), msgs, role="web_research"):
-            body.append(chunk)
-            yield chunk
-        if sources and "".join(body).strip():
-            block = f"\n\n**Sources**\n{sources}"
-            yield block
-    except Exception as exc:
-        log.warning("Web search synthesis failed: %s", exc)
-        if not body:
-            yield format_results(results)
+    # Prefer gated non-stream synthesis for correctness of the final owner-facing text.
+    answer = synthesize_answer(query, results)
+    yield answer
 
 
 def synthesize_answer(query: str, results: list[dict]) -> str:
-    """Summarize search hits with citations."""
+    """Summarize search hits with citations and post-synthesis verification."""
     if not results:
         return format_results([])
-    return "".join(synthesize_answer_stream(query, results)).strip() or format_results(results)
+    msgs, sources, filtered, meta = _synthesis_messages(query, results)
+    if not filtered:
+        return (
+            "I could not find sufficiently authoritative sources to verify an answer "
+            "for this request. Please consult official documentation or provide a "
+            "primary source URL."
+        )
+    from jarvis import llm
+
+    try:
+        answer = "".join(
+            llm.ask_stream(llm.web_research_model(), msgs, role="web_research")
+        ).strip()
+    except Exception as exc:
+        log.warning("Web search synthesis failed: %s", exc)
+        return format_results(filtered)
+    if not answer:
+        return format_results(filtered)
+    try:
+        from jarvis.research_verification import postcheck_research_answer
+
+        replacement = postcheck_research_answer(
+            query,
+            answer,
+            filtered,
+            consequential=bool(meta.get("consequential")),
+            current=bool(meta.get("current")),
+        )
+        if replacement:
+            answer = replacement
+    except Exception:
+        pass
+    try:
+        from jarvis.orchestration_policy import consequential_web_answer_ok
+
+        refused = consequential_web_answer_ok(query, answer, filtered)
+        if refused:
+            answer = refused
+    except Exception:
+        pass
+    if sources and "I could not" not in answer[:80] and "could not find sufficiently" not in answer:
+        # Always attach sources when we used them; still attach after refusals for audit.
+        pass
+    if sources:
+        answer = f"{answer.rstrip()}\n\n**Sources**\n{sources}"
+    return answer
 
 
 def answer_with_web(query: str, limit: int = 5) -> tuple[str, list[dict]]:

@@ -1,0 +1,24 @@
+{
+  "credential": "HF_TOKEN",
+  "vault_id": "provider.huggingface.token",
+  "migrated_at": "2026-08-13T13:20:58+00:00",
+  "ok": true,
+  "legacy_retained": true,
+  "jarvis_env_mtime_unchanged_during_migrate": true,
+  "fingerprint": {
+    "length": 37,
+    "sha256_8": "ac352856",
+    "prefix_class": "hf"
+  },
+  "consumer": "integrations_product.secrets_bus.get_secret → test_connection(huggingface)",
+  "provider_operation": {
+    "ok": true,
+    "auth": "ok",
+    "http_status": 200,
+    "latency_ms": 225,
+    "message": "Hugging Face token authenticated"
+  },
+  "migrate_api_ms": 31.72,
+  "vault_put_ms": 6.7,
+  "secrets_in_evidence": false
+}

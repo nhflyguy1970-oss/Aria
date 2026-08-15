@@ -261,6 +261,25 @@ class ConversationEngine:
                 "injected": False,
             }
 
+        if getattr(needs, "health", False):
+            t0 = _time.perf_counter()
+            try:
+                from jarvis.health_product.context import health_context_for_chat
+
+                health_ctx = health_context_for_chat(message, limit=8)
+                if health_ctx:
+                    parts.append(health_ctx)
+                _note("health", t0, health_ctx or "", used=True)
+            except Exception:
+                _note("health", t0, "", used=True)
+        else:
+            inventory["sources"]["health"] = {
+                "elapsed_ms": 0,
+                "characters": 0,
+                "required": False,
+                "injected": False,
+            }
+
         t0 = _time.perf_counter()
         lang_hint = cached_language_hint(message)
         if lang_hint:
@@ -393,6 +412,71 @@ class ConversationEngine:
         except Exception:
             pass
 
+    def _apply_answer_integrity_gates(
+        self,
+        user_message: str,
+        answer: str,
+        *,
+        memory_citations: list | None = None,
+        context_warnings: list | None = None,
+    ) -> str:
+        """Memory honesty + consequential-spec verification before owner-facing text."""
+        text = answer or ""
+        try:
+            from jarvis.orchestration_policy import (
+                answer_has_actionable_destructive_command,
+                destructive_system_refusal,
+                is_destructive_system_request,
+                memory_honesty_refusal,
+                should_apply_memory_honesty,
+                strip_or_refuse_unverified_specs,
+            )
+
+            if is_destructive_system_request(user_message) or (
+                answer_has_actionable_destructive_command(text)
+                and re.search(
+                    r"\b(?:wipe|erase|destroy|rm\s+-rf|root\s+filesystem|boot\s+drive)\b",
+                    user_message or "",
+                    re.I,
+                )
+            ):
+                return destructive_system_refusal(user_message)
+
+            had_memory = bool(memory_citations)
+            if should_apply_memory_honesty(
+                user_message, text, had_memory_hits=had_memory
+            ):
+                return memory_honesty_refusal(user_message)
+
+            # Web/knowledge citations in context_warnings or answer Sources block count.
+            verified = bool(
+                re.search(r"\*\*sources\*\*|^\s*\[\d+\]\s+\S+", text, re.I | re.M)
+                or any("web" in str(w).lower() for w in (context_warnings or []))
+            )
+            refused = strip_or_refuse_unverified_specs(
+                user_message, text, verified=verified
+            )
+            if refused:
+                return refused
+
+            # Current-information must not silently use stale model knowledge.
+            from jarvis.orchestration_policy import research_required
+
+            if research_required(user_message) and not verified:
+                if re.search(
+                    r"\b(?:latest|current|currently|newest|does\s+.+\s+exist|version\s+\d)",
+                    user_message or "",
+                    re.I,
+                ):
+                    return (
+                        "I can't verify the current value from retrieved evidence right now, "
+                        "so I won't substitute a possibly stale model estimate. "
+                        "Ask me to search the web, or provide an official source URL."
+                    )
+        except Exception:
+            pass
+        return text
+
     def execute(self, params: dict, message: str) -> dict:
         from jarvis.branding import assistant_name
 
@@ -411,6 +495,12 @@ class ConversationEngine:
 
             text = str(params.get("explain_text") or explain_routing(message))
             return _ok(text, module=None, type="routing_explain")
+        fixed = str(params.get("policy_fixed_reply") or "").strip()
+        if fixed:
+            self._a.conversation.add_user(user_message)
+            self._a.conversation.add_assistant(fixed)
+            self._a.branches.persist(session=self._a.session)
+            return _ok(fixed, module=None, type="policy_refusal")
         piped = self.try_strict_instructions(user_message)
         if piped:
             self._a.conversation.add_user(user_message)
@@ -458,6 +548,12 @@ class ConversationEngine:
             detail = f"Model `{model}` returned empty"
             _record_backend_failure(detail)
             return _err(_sanitize_user_error(detail), module=None)
+        answer = self._apply_answer_integrity_gates(
+            user_message,
+            answer,
+            memory_citations=memory_citations,
+            context_warnings=context_warnings,
+        )
         self._a.conversation.add_assistant(answer)
         self.auto_remember(message, answer)
         self._learn_preferences(model)
@@ -507,6 +603,13 @@ class ConversationEngine:
 
             text = str(params.get("explain_text") or explain_routing(message))
             yield _stream_done(_ok(text, module=None, type="routing_explain"))
+            return
+        fixed = str(params.get("policy_fixed_reply") or "").strip()
+        if fixed:
+            self._a.conversation.add_user(user_message)
+            self._a.conversation.add_assistant(fixed)
+            self._a.branches.persist(session=self._a.session)
+            yield _stream_done(_ok(fixed, module=None, type="policy_refusal"))
             return
         piped = self.try_strict_instructions(user_message)
         if piped:
@@ -661,6 +764,12 @@ class ConversationEngine:
             }
             return
 
+        answer = self._apply_answer_integrity_gates(
+            user_message,
+            answer,
+            memory_citations=stream_citations,
+            context_warnings=context_warnings,
+        )
         self._a.conversation.add_assistant(answer)
         self.auto_remember(message, answer)
         self._learn_preferences(chat_model)

@@ -1,0 +1,94 @@
+{
+  "updated_at": "2026-08-13T15:43:55.199577+00:00",
+  "phase": "restart_locked",
+  "rows": {
+    "owner": {
+      "http": 200,
+      "state": "OWNER_LOCKED",
+      "unlocked": false
+    },
+    "health_home": {
+      "http": 423,
+      "ms": 12.81,
+      "ok": false,
+      "locked": true,
+      "step_up_required": false,
+      "message": "Unlock Aria with your Master Password to use Health.",
+      "secret_in_response": false
+    },
+    "health_overview": {
+      "http": 423,
+      "ms": 8.8,
+      "ok": false,
+      "locked": true,
+      "step_up_required": false,
+      "message": "Unlock Aria with your Master Password to use Health.",
+      "secret_in_response": false
+    },
+    "health_auth": {
+      "http": 200,
+      "ms": 2.05,
+      "ok": true,
+      "secret_in_response": false
+    },
+    "ha_status": {
+      "http": 200,
+      "ms": 1.93,
+      "ok": true,
+      "locked": true,
+      "connected": false,
+      "token_set": true,
+      "secret_in_response": false
+    },
+    "uncensored_auth": {
+      "http": 200,
+      "ms": 3.02,
+      "secret_in_response": false
+    },
+    "health_export": {
+      "http": 500,
+      "ms": 23.6,
+      "ok": false,
+      "message": "Server error. Reference: 7f7deb07"
+    },
+    "openai": {
+      "http": 404,
+      "ms": 3.85,
+      "keys": [
+        "detail"
+      ]
+    },
+    "gemini": {
+      "http": 404,
+      "ms": 3.41,
+      "keys": [
+        "detail"
+      ]
+    },
+    "hf": {
+      "http": 404,
+      "ms": 2.45,
+      "keys": [
+        "detail"
+      ]
+    },
+    "lan_with_key": {
+      "http": 401,
+      "ms": 0.78,
+      "ok": false,
+      "message": "Invalid or missing API key"
+    },
+    "qa_post": {
+      "http": 403,
+      "message": "Test/QA harness headers are not allowed against the live workspace. Start a serv"
+    }
+  },
+  "secrets_in_evidence": false,
+  "health_export_repaired": true,
+  "health_export_locked": {
+    "http": 423,
+    "locked": true,
+    "step_up_required": false
+  },
+  "note": "First restart had export 500 due to missing _gate_or_response; restored; re-restarted; export now 423 fail-closed."
+}

@@ -45,13 +45,14 @@ def test_api_workflows_scan_and_run(chat_app, data_dir, monkeypatch):
 
     from jarvis.workflow_learning import ensure_demo_workflow
 
-    demo = ensure_demo_workflow()
+    demo = ensure_demo_workflow(force=True)
     assert demo
 
     list_res = chat_app.get("/api/workflows")
     assert list_res.status_code == 200
+    # Owner list never surfaces the demo seed; run path still works by slug.
     workflows = list_res.json()["workflows"]
-    assert workflows
+    assert not any(w.get("slug") == demo["slug"] for w in workflows)
 
     run_res = chat_app.post(f"/api/workflows/{demo['slug']}/run", json={})
     assert run_res.status_code == 200

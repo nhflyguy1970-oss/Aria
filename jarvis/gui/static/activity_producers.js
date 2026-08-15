@@ -141,6 +141,9 @@
 
   function classifyChatError(text) {
     const t = String(text || "").toLowerCase();
+    if (window.AriaNet?.isRoomAbort?.({ message: t }) || /aria-room-leave|aborterror|the operation was aborted/.test(t)) {
+      return null;
+    }
     if (/ollama|provider|timeout|connect|refus|inference/.test(t)) return Producers.chat.provider(text);
     if (/stream|abort|network/.test(t)) return Producers.chat.stream(text);
     if (/context|token|truncat/.test(t)) return Producers.chat.context(text);
@@ -151,6 +154,9 @@
     const orig = window.showError;
     if (typeof orig !== "function" || orig._ariaActivityWrapped) return;
     const wrapped = function (msg) {
+      if (window.AriaNet?.isRoomAbort?.(msg) || window.AriaNet?.isRoomAbort?.({ message: String(msg || "") })) {
+        return;
+      }
       const plain = String(msg || "").replace(/\*\*/g, "").slice(0, 500);
       window.__ariaActivitySuppressToast = true;
       try {
@@ -211,7 +217,17 @@
           Producers.mission.critical(msg, "mc:recovery");
         }
       } else if (data.ok === false || data.overall === "degraded") {
-        Producers.mission.health(String(data.reason || "Mission Control degraded").slice(0, 200));
+        const msg = String(data.reason || "Mission Control degraded").slice(0, 200);
+        const key = `mc_deg_${msg}`;
+        if (seen[key] !== true) {
+          seen[key] = true;
+          Producers.mission.health(msg);
+        }
+      } else if (data.ok !== false && data.overall !== "degraded" && data.overall !== "critical") {
+        // Clear degraded sticky keys when healthy again so a future regression alerts once.
+        Object.keys(seen).forEach((k) => {
+          if (k.startsWith("mc_deg_")) delete seen[k];
+        });
       }
     } catch {
       /* offline */

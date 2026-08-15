@@ -159,6 +159,22 @@ class MediaHandler:
             msg += f"\n\n**Avoiding:** {negative_out[:300]}"
         if seed_str:
             msg += f"\n\n**Seed:** `{seed_str}`"
+
+        # Persist a durable chat outcome (path + gallery URL) so reload still shows
+        # the real image — never leave users with only a toast/job "Complete".
+        try:
+            durable = msg + f"\n\n![generated](/api/gallery/{name})"
+            self.a.conversation.add_assistant(durable)
+            self.a.branches.persist(session=self.a.session)
+        except Exception:
+            pass
+        try:
+            from jarvis.cache_state import invalidate_gallery
+
+            invalidate_gallery()
+        except Exception:
+            pass
+
         return ok(
             msg,
             module="image",

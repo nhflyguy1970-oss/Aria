@@ -9,6 +9,14 @@ def _severity_rank(s: str) -> int:
     return {"ok": 0, "info": 1, "warning": 2, "error": 3, "critical": 4}.get((s or "").lower(), 1)
 
 
+_CLEAR_SENTINELS = frozenset({"all clear", "no action required", "none", "ok", "healthy"})
+
+
+def _is_clear_sentinel(text: str) -> bool:
+    """True for non-issue placeholders that must never appear as critical_issues (BUG-006)."""
+    return (text or "").strip().lower() in _CLEAR_SENTINELS
+
+
 def build_health_brief(snapshot: dict[str, Any] | None) -> dict[str, Any]:
     """Derive an operator-facing brief from a Mission Control snapshot."""
     d = snapshot or {}
@@ -28,7 +36,10 @@ def build_health_brief(snapshot: dict[str, Any] | None) -> dict[str, Any]:
     critical_issues: list[str] = []
     severity = "ok"
     for n in attention:
-        critical_issues.append(str(n))
+        text = str(n)
+        if _is_clear_sentinel(text):
+            continue
+        critical_issues.append(text)
         severity = "warning"
     for r in recs:
         sev = str((r or {}).get("severity") or "info").lower()

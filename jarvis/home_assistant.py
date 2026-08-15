@@ -43,9 +43,39 @@ def ha_url() -> str:
 
 
 def ha_token() -> str:
+    try:
+        from jarvis.security.owner.provider_credentials import resolve_provider_secret
+
+        got = resolve_provider_secret("ha_token")
+        if got is not None:
+            return normalize_ha_token(got.value)
+    except Exception:
+        pass
     return normalize_ha_token(
         os.getenv("JARVIS_HA_TOKEN", "") or os.getenv("HOME_ASSISTANT_TOKEN", "")
     )
+
+
+def ha_token_migrated() -> bool:
+    """True if ha.token exists in the Owner Vault (does not require unlock)."""
+    try:
+        from jarvis.security.owner.provider_credentials import bound_owner_service, vault_has_entry
+
+        return vault_has_entry(bound_owner_service(), "ha.token")
+    except Exception:
+        return False
+
+
+def ha_credential_locked() -> bool:
+    """Migrated HA token exists but Owner session cannot retrieve it."""
+    if not ha_token_migrated():
+        return False
+    try:
+        from jarvis.security.owner.provider_credentials import bound_owner_service
+
+        return not bound_owner_service().vault.is_unlocked()
+    except Exception:
+        return True
 
 
 def normalize_ha_token(raw: str | None) -> str:
@@ -123,6 +153,14 @@ def check_connection() -> dict[str, Any]:
     url = ha_url()
     token = ha_token()
     if ha_feature_on() and url and not token:
+        if ha_credential_locked():
+            return {
+                "ok": False,
+                "enabled": True,
+                "url": url,
+                "locked": True,
+                "message": "Home Assistant is locked. Unlock Aria with your Master Password.",
+            }
         return {
             "ok": False,
             "enabled": True,
@@ -674,9 +712,10 @@ def status_payload() -> dict[str, Any]:
     return {
         "enabled": ha_feature_on(),
         "feature_on": ha_feature_on(),
-        "configured": bool(ha_url() and ha_token()),
+        "configured": bool(ha_url() and (ha_token() or ha_token_migrated())),
         "connected": bool(conn.get("ok")),
-        "token_set": bool(ha_token()),
+        "token_set": bool(ha_token() or ha_token_migrated()),
+        "locked": bool(conn.get("locked") or ha_credential_locked()),
         "url": ha_url(),
         "leave_scene": leave_scene(),
         "automation_secret_set": bool(secret),
@@ -715,6 +754,13 @@ def save_config(
 
     changed = upsert_env_vars(updates) if updates else []
     load_jarvis_env(force=True)
+    if updates.get("JARVIS_HA_TOKEN"):
+        try:
+            from jarvis.security.owner.provider_credentials import sync_vault_secret_if_migrated
+
+            sync_vault_secret_if_migrated("ha_token", updates["JARVIS_HA_TOKEN"])
+        except Exception:
+            log.debug("HA vault sync skipped", exc_info=True)
     payload = status_payload()
     payload["changed"] = changed
     return payload
@@ -727,6 +773,12 @@ def test_connection(url: str | None = None, token: str | None = None) -> dict[st
     if not probe_url:
         return {"ok": False, "message": "Home Assistant URL is required."}
     if not probe_token:
+        if ha_credential_locked() or ha_token_migrated():
+            return {
+                "ok": False,
+                "locked": True,
+                "message": "Unlock Aria to use the vault-backed Home Assistant credential.",
+            }
         return {"ok": False, "message": "Paste your long-lived access token first."}
     old_url, old_token = os.environ.get("JARVIS_HA_URL"), os.environ.get("JARVIS_HA_TOKEN")
     try:

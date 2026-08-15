@@ -158,32 +158,32 @@ def register_intelligence_routes(app, assistant: Any = None) -> None:
 
     @app.get("/api/intelligence/automation")
     def intelligence_automation_list():
-        from jarvis.intelligence.automation_engine import status
+        from jarvis.automation.engine import status
 
         return status()
 
     @app.post("/api/intelligence/automation")
     async def intelligence_automation_upsert(request: Request):
         body = await request.json()
-        from jarvis.intelligence.automation_engine import upsert_rule
+        from jarvis.automation.engine import upsert_rule
 
         return {"ok": True, "rule": upsert_rule(body)}
 
     @app.delete("/api/intelligence/automation/{rule_id}")
     def intelligence_automation_delete(rule_id: str):
-        from jarvis.intelligence.automation_engine import delete_rule
+        from jarvis.automation.engine import delete_rule
 
         return delete_rule(rule_id)
 
     @app.post("/api/intelligence/automation/{rule_id}/run")
     def intelligence_automation_run(rule_id: str):
-        from jarvis.intelligence.automation_engine import run_rule
+        from jarvis.automation.engine import run_rule
 
         return run_rule(rule_id)
 
     @app.post("/api/intelligence/automation/start")
     def intelligence_automation_start():
-        from jarvis.intelligence.automation_engine import start_engine
+        from jarvis.automation.engine import start_engine
 
         return start_engine()
 

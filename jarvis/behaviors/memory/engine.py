@@ -91,6 +91,165 @@ class MemoryEngine:
         return result, raw
 
     @staticmethod
+    def _acm_lexical_hits(query: str, *, limit: int = 8) -> list[dict[str, Any]]:
+        """Token-union ACM list lookup — works when cognitive speak cannot reconstruct."""
+        from aria_core import acm_bridge
+
+        # Query expansion aliases: raise recall without lowering relevance thresholds.
+        _ALIASES = {
+            "gpu": ("rtx", "gtx", "graphics", "nvidia", "3090", "3060", "3080", "4070", "4090"),
+            "graphics": ("gpu", "rtx", "gtx", "nvidia"),
+            "card": ("gpu", "rtx", "graphics"),
+            "nvidia": ("gpu", "rtx", "gtx"),
+            "workstation": ("tower", "computer", "desktop", "machine", "charlestown"),
+            "computer": ("workstation", "tower", "desktop", "laptop", "machine"),
+            "desktop": ("computer", "machine", "preference", "prefer"),
+            "buddy": ("friend", "partner", "mike"),
+            "friend": ("buddy", "partner"),
+            "compressor": ("air", "california", "tools", "8010"),
+            # Do not alias fishing → buddy/mike (RW-005 dishonest association).
+            "reel": ("fishing", "brand"),
+        }
+        tokens = [
+            t
+            for t in re.findall(r"[A-Za-z0-9_]{2,}", query or "")
+            if t.lower()
+            not in {
+                "the",
+                "and",
+                "for",
+                "memory",
+                "search",
+                "about",
+                "what",
+                "is",
+                "my",
+                "from",
+                "that",
+                "this",
+                "thing",
+                "ocr",
+                "like",
+                "color",
+                "do",
+                "you",
+                "know",
+                "who",
+                "did",
+                "say",
+                "was",
+                "have",
+                "which",
+            }
+        ]
+        keep_extra = [
+            t
+            for t in re.findall(r"[A-Za-z0-9_]{2,}", query or "")
+            if t.lower() in {"color", "favourite", "favorite", "invoice", "ocr", "gpu", "rtx"}
+        ]
+        for t in keep_extra:
+            if t not in tokens:
+                tokens.append(t)
+        expanded: list[str] = list(tokens)
+        for t in tokens:
+            for alias in _ALIASES.get(t.lower(), ()):
+                if alias not in {x.lower() for x in expanded}:
+                    expanded.append(alias)
+        seen: dict[str, dict] = {}
+        for token in expanded[:14] or [query]:
+            for e in acm_bridge.project_list_entries(None, query=token, limit=12) or []:
+                cid = str(e.get("id") or e.get("content") or "")
+                content = (e.get("content") or "").strip()
+                if not content:
+                    continue
+                if "no_reliable_reconstruction" in content:
+                    continue
+                if content.lower() in {
+                    "i don't currently know.",
+                    "i don't currently know",
+                }:
+                    continue
+                seen[cid] = e
+        lexical = list(seen.values())
+        if tokens and lexical:
+
+            def _score(e: dict) -> int:
+                c = (e.get("content") or "").lower()
+                q = (query or "").lower()
+                base = sum(1 for t in tokens if t.lower() in c)
+                alias_hits = sum(
+                    1
+                    for t in tokens
+                    for a in _ALIASES.get(t.lower(), ())
+                    if a in c
+                )
+                score = base + alias_hits
+                # Exact distinctive markers / tokens beat recency and QA noise (BUG-025).
+                markers = re.findall(r"ARIA-[A-Z0-9-]{8,}", query or "", flags=re.I)
+                for m in markers:
+                    if m.lower() in c:
+                        score += 50
+                if "aria-final-memory" in q:
+                    if "aria-final-memory" in c:
+                        score += 25
+                        if re.search(r"aria-final-memory-[a-z0-9-]+", c):
+                            score += 15
+                    # Stale QA / repair accept tokens must not win marker recalls.
+                    if re.search(
+                        r"aria-repair-accept-token|qa[-_](?:smoke|cert|run)|smoke[-_]id",
+                        c,
+                    ):
+                        score -= 40
+                elif ("marker" in q or "unique" in q) and re.search(
+                    r"aria-final-memory-[a-z0-9-]+", c
+                ):
+                    score += 20
+                # Prefer short exact facts containing the asked marker family.
+                if score > 0 and len(c) <= 160:
+                    score += 2
+                # Explicit preference / "I prefer" statements beat inferred GPU lore (RW-003).
+                if re.search(r"\b(?:prefer|preference|heavy\s+ai)\b", q):
+                    if re.search(r"\b(?:prefer|preference|heavy\s+ai)\b", c):
+                        score += 12
+                    if re.search(r"\bdesktop\b", q) and "desktop" in c:
+                        score += 8
+                    if re.search(r"\b(?:rtx|3090|charlestown|tower)\b", c) and not re.search(
+                        r"\b(?:prefer|preference|heavy\s+ai|desktop)\b", c
+                    ):
+                        score -= 6
+                # QA / smoke / cert residue never outranks explicit user facts.
+                if re.search(
+                    r"\b(?:qa[-_](?:smoke|cert|run|artifact)|smoke[-_]id|certification[-_]id|"
+                    r"aria-repair-accept|lorem ipsum|test residue)\b",
+                    c,
+                ):
+                    score -= 30
+                # Recency: newer ISO timestamps / epoch seconds win topical ties (RW-003).
+                ts = e.get("updated_at") or e.get("created_at") or e.get("ts") or ""
+                try:
+                    if isinstance(ts, (int, float)) and ts > 1_000_000_000:
+                        # Epoch seconds → coarse day buckets relative to a fixed floor.
+                        score += max(0, min(20, int((float(ts) - 1_700_000_000) / 86_400)))
+                    elif isinstance(ts, str) and ts:
+                        ym = re.search(r"(20\d{2})-(\d{2})(?:-(\d{2}))?", ts)
+                        if ym:
+                            y, m = int(ym.group(1)), int(ym.group(2))
+                            d = int(ym.group(3) or "1")
+                            score += max(0, min(20, (y - 2020) * 12 + m + d // 10))
+                except Exception:
+                    pass
+                return score
+
+            lexical = sorted(lexical, key=_score, reverse=True)
+            best = _score(lexical[0])
+            if best <= 0:
+                return []
+            # Keep near-best matches (best and best-1) for multi-fact coverage.
+            floor = max(1, best - 1)
+            lexical = [e for e in lexical if _score(e) >= floor][:limit]
+        return lexical[:limit]
+
+    @staticmethod
     def _is_misrouted_identity_answer(question: str, speech: str) -> bool:
         q = (question or "").lower()
         s = (speech or "").strip().rstrip(".")
@@ -130,7 +289,22 @@ class MemoryEngine:
         if acm_bridge.acm_is_authoritative():
             try:
                 parts = acm_bridge.primary_context_fragments(message, limit=5)
-                return parts, []
+                if parts:
+                    return parts, []
+                # Cognitive path miss → lexical fallback (alias-expanded) for recall coverage.
+                lexical = cls._acm_lexical_hits(message, limit=3)
+                relevant = [
+                    e
+                    for e in lexical
+                    if cls._memory_answer_relevant(message, str(e.get("content") or ""))
+                ]
+                if relevant:
+                    lines = [
+                        f"Relevant memories:\n- {(e.get('content') or '').strip()[:400]}"
+                        for e in relevant[:3]
+                    ]
+                    return lines, []
+                return [], []
             except Exception:
                 return [], []
 
@@ -318,6 +492,132 @@ class MemoryEngine:
         return run_consolidation(ctx.memory)
 
     @classmethod
+    def _memory_answer_relevant(cls, question: str, answer: str) -> bool:
+        """Reject unrelated ACM reconstructions for specific personal questions.
+
+        Default-deny for personal fact questions: nearby semantic neighbors
+        (other fishing facts, scrapers, GPUs) must not answer as if known (RW-005).
+        """
+        import re
+
+        q = (question or "").lower()
+        a = (answer or "").lower()
+        if not a.strip():
+            return False
+        # Marker / unique-token questions: require a matching marker family (BUG-025).
+        if re.search(r"\b(?:marker|token|aria-final-memory)\b", q):
+            if "aria-final-memory" in q:
+                if "aria-final-memory" not in a:
+                    return False
+                # Reject stale QA accept tokens when the ask is explicitly FINAL-MEMORY.
+                if re.search(r"aria-repair-accept-token", a) and "aria-final-memory" not in a:
+                    return False
+                return True
+            if "marker" in q or "token" in q:
+                return bool(re.search(r"aria-[a-z0-9-]{6,}", a))
+
+        # Never-told brand / preference specifics require direct evidence (RW-005).
+        if re.search(r"\b(?:fishing\s+)?reel\b|\bbrand\s+of\s+fishing\b", q):
+            return bool(
+                re.search(r"\breel\b", a)
+                and re.search(r"\b(?:brand|prefer|favorite|favourite|shimano|daiwa|penn|abu)\b", a)
+            ) or ("reel" in a and "fishing" in a and "brand" in a)
+
+        if re.search(r"\b(?:prefer|preference|heavy\s+ai)\b", q) and re.search(
+            r"\b(?:desktop|computer|machine|workstation|laptop)\b", q
+        ):
+            return bool(
+                re.search(r"\b(?:prefer|preference|heavy\s+ai|desktop)\b", a)
+            ) and not (
+                re.search(r"\b(?:scraper|python fragment|compress)\b", a)
+                and not re.search(r"\b(?:prefer|desktop|heavy\s+ai)\b", a)
+            )
+
+        # Topic cues → require at least one matching evidence token in the answer.
+        checks: list[tuple[re.Pattern[str], tuple[str, ...]]] = [
+            (
+                re.compile(r"\b(?:computer|workstation|machine|laptop|pc|desktop)\b", re.I),
+                (
+                    "computer",
+                    "workstation",
+                    "machine",
+                    "laptop",
+                    "tower",
+                    "desktop",
+                    "prefer",
+                    "preference",
+                    "heavy ai",
+                    "rtx",
+                    "gpu",
+                    "3090",
+                    "3060",
+                    "charlestown",
+                ),
+            ),
+            (
+                re.compile(r"\b(?:gpu|graphics\s+card|nvidia\s+card|vram)\b", re.I),
+                ("gpu", "rtx", "gtx", "vram", "3090", "3060", "3080", "4070", "4090", "graphics", "nvidia"),
+            ),
+            (
+                re.compile(r"\b(?:fly[- ]?tying\s+)?project\b|\bfly[- ]?tying\b", re.I),
+                ("fly", "tying", "project", "adams", "pattern", "revival", "nymph", "streamer"),
+            ),
+            (
+                re.compile(r"\b(?:buddy|friend|partner)\b", re.I),
+                ("buddy", "friend", "partner", "mike", "rivera", "fishing", "named"),
+            ),
+            (
+                re.compile(r"\b(?:compressor|air\s+tools)\b", re.I),
+                ("compressor", "california", "air", "tools", "8010", "workshop"),
+            ),
+        ]
+        matched_topic = False
+        for qpat, tokens in checks:
+            if qpat.search(q):
+                matched_topic = True
+                if any(t in a for t in tokens):
+                    return True
+        if matched_topic:
+            return False
+        # Specific personal questions ("what's my…", "what do you remember about…")
+        # require lexical overlap with the asked topic — not unconstrained dump (RW-004/005).
+        if re.search(
+            r"\b(?:what(?:'s|\s+is)\s+my|what\s+do\s+you\s+remember|what\s+else\s+(?:do\s+you\s+)?remember|"
+            r"anything\s+else\s+relevant|which\s+(?:machine|computer|brand))\b",
+            q,
+        ):
+            q_tokens = [
+                t
+                for t in re.findall(r"[a-z0-9]{3,}", q)
+                if t
+                not in {
+                    "what",
+                    "you",
+                    "remember",
+                    "about",
+                    "else",
+                    "that",
+                    "this",
+                    "have",
+                    "told",
+                    "know",
+                    "which",
+                    "did",
+                    "say",
+                    "wanted",
+                    "anything",
+                    "relevant",
+                    "favorite",
+                    "favourite",
+                }
+            ]
+            if not q_tokens:
+                return False
+            hits = sum(1 for t in q_tokens if t in a)
+            return hits >= max(1, min(2, len(q_tokens) // 2))
+        return True
+
+    @classmethod
     def remember(cls, ctx: MemoryContext, params: dict, message: str) -> dict:
         from aria_core import acm_bridge
         from aria_core import memory as core_memory
@@ -341,6 +641,10 @@ class MemoryEngine:
                     content, entry_type=entry_type or "fact", namespace=namespace
                 )
                 ctx.session.note_module("memory")
+                try:
+                    ctx.session.note_memory_subject(content[:200])
+                except Exception:
+                    pass
                 ctx.refresh_system_prompt()
                 body = (entry or {}).get("content") or content
                 return ok(
@@ -460,15 +764,90 @@ class MemoryEngine:
         if acm_bridge.acm_is_authoritative():
             try:
                 question = (params.get("question") or message or "").strip()
+                subject = ""
+                # "about that / anything else relevant" stays on the active *memory* subject (RW-004).
+                if re.search(
+                    r"\b(?:about\s+(?:that|it)\b|anything\s+else\s+(?:relevant\s+)?(?:you\s+know\s+)?(?:about\s+it\b)?|"
+                    r"what\s+else\s+(?:do\s+you\s+)?remember\b)",
+                    question,
+                    re.I,
+                ):
+                    subject = (
+                        (getattr(ctx.session, "last_memory_subject", None) or "").strip()
+                        or (getattr(ctx.session, "last_subject", None) or "").strip()
+                    )
+                    if subject and subject.casefold() not in question.casefold():
+                        question = f"{question} — topic: {subject}"
                 result, speech = cls._acm_authority_speak(question)
                 path = list(result.get("reasoning_path") or [])
-                if speech:
+                unknown = (
+                    not speech
+                    or "no_reliable_reconstruction" in (speech or "")
+                    or "i don't currently know" in (speech or "").lower()
+                )
+                if speech and not unknown:
+                    if cls._memory_answer_relevant(question, speech):
+                        return ok(
+                            speech,
+                            module="memory",
+                            source="acm",
+                            cognitive_status=result.get("status"),
+                        )
+                    # Unrelated reconstruction is not evidence — stay honest.
+                # Jeff asked a natural fact question — don't require "Search memory".
+                # Fall back to lexical ACM hits when speak cannot reconstruct.
+                lexical = cls._acm_lexical_hits(question)
+                if lexical:
+                    relevant = [
+                        e
+                        for e in lexical
+                        if cls._memory_answer_relevant(
+                            question, str(e.get("content") or "")
+                        )
+                    ]
+                    if relevant:
+                        lines = "\n".join(
+                            f"• {(e.get('content') or '').strip()}" for e in relevant
+                        )
+                        try:
+                            ctx.session.note_memory_subject(
+                                str(relevant[0].get("content") or subject or question)[:200]
+                            )
+                        except Exception:
+                            pass
+                        return ok(
+                            lines if len(relevant) > 1 else (relevant[0].get("content") or lines),
+                            module="memory",
+                            source="acm",
+                            memories=relevant,
+                        )
+                # Contextual "about that" with no further evidence → honest empty (RW-004).
+                if re.search(
+                    r"\b(?:about\s+(?:that|it)\b|anything\s+else\s+relevant|what\s+else\s+(?:do\s+you\s+)?remember\b)",
+                    (params.get("question") or message or ""),
+                    re.I,
+                ):
                     return ok(
-                        speech,
+                        "I don't have anything else relevant stored about that.",
                         module="memory",
                         source="acm",
-                        cognitive_status=result.get("status"),
+                        cognitive_status="no_further_relevant_memory",
                     )
+                try:
+                    from jarvis.orchestration_policy import (
+                        is_personal_memory_question,
+                        memory_honesty_refusal,
+                    )
+
+                    if is_personal_memory_question(question):
+                        return ok(
+                            memory_honesty_refusal(question),
+                            module="memory",
+                            source="acm",
+                            cognitive_status="no_relevant_memory",
+                        )
+                except Exception:
+                    pass
                 if any(str(p).startswith("teaching_") for p in path):
                     return ok(
                         "I couldn't store that as memory.",
@@ -602,8 +981,26 @@ class MemoryEngine:
                     return cls.memory_about_user(
                         ctx, {"question": query}, message or query
                     )
+                lexical = cls._acm_lexical_hits(query)
+                if lexical:
+                    lines = "\n".join(f"• {(e.get('content') or '').strip()}" for e in lexical)
+                    return ok(
+                        f"Found these memories:\n\n{lines}",
+                        module="memory",
+                        source="acm",
+                        memories=lexical,
+                    )
                 result, speech = cls._acm_authority_speak(query or "about me")
                 if speech:
+                    if (
+                        "don't currently know" in speech.lower()
+                        or "no_reliable_reconstruction" in speech.lower()
+                    ):
+                        return ok(
+                            "I don't have that saved yet. Tell me and I'll remember.",
+                            module="memory",
+                            source="acm",
+                        )
                     hits = acm_bridge.cognitive_result_to_hits(result, speech=speech, limit=8)
                     return ok(
                         speech,

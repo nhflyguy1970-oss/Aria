@@ -42,6 +42,14 @@
     }
   }
 
+  function isRoomAbort(err) {
+    return !!(
+      window.AriaNet?.isRoomAbort?.(err) ||
+      err?.name === "AbortError" ||
+      /aborted|aria-room-leave/i.test(String(err?.message || err?.reason || ""))
+    );
+  }
+
   async function fetchJson(url, opts) {
     const res = await fetch(url, opts);
     const data = await res.json().catch(() => ({}));
@@ -115,6 +123,9 @@
   }
 
   function completeStatus(data) {
+    if (!data?.ok && !data?.running && !data?.result && !data?.phases && !data?.summary) {
+      return data?.message || "No audit cached";
+    }
     const r = (data.result || "").toLowerCase();
     const jr = (data.jarvis_result || "").toLowerCase();
     let msg = r === "fail" ? "System audit — failures found"
@@ -164,6 +175,7 @@
   }
 
   function tickProgressLocal() {
+    if (document.hidden) return;
     if (!progressState) return;
     const startedAt = progressState.started_at;
     if (!startedAt) return;
@@ -204,6 +216,10 @@
 
     if (!data?.ok && data?.error) {
       body.innerHTML = `<p class="audit-error">${esc(data.error)}</p>`;
+      return;
+    }
+    if (!data?.ok && !data?.running && !data?.phases && !data?.summary) {
+      body.innerHTML = `<p class="muted">No audit cached. Click Run audit when you want a 14-phase pass. Entering this room does not start one.</p>`;
       return;
     }
 
@@ -295,7 +311,7 @@
           err = "Install API missing — restart ARIA (tray → restart, or jarvis-ctl restart)";
         }
         setStatus(`Install failed: ${String(err).slice(0, 200)}`, false);
-        btn.textContent = "Failed";
+        btn.textContent = `${prev} — failed`;
         if (data.stderr) console.warn("audit install stderr:", data.stderr);
         return;
       }
@@ -308,7 +324,7 @@
       }
     } catch (e) {
       setStatus(`Install error: ${e.message}`, false);
-      btn.textContent = "Error";
+      btn.textContent = `${prev} — error`;
     } finally {
       setTimeout(() => {
         btn.disabled = false;
@@ -368,12 +384,12 @@
     if (!body) return;
 
     setStatus(force ? "Running 14-phase system audit…" : "Loading audit…", true);
-    if (force || !body.querySelector(".audit-summary-bar")) {
+    if (force) {
       renderProgress({
         percent: 0,
         phase: 0,
         total: 14,
-        title: force ? "Starting audit…" : "Loading audit…",
+        title: "Starting audit…",
         elapsed_sec: 0,
         eta_sec: 90,
         started_at: Date.now() / 1000,
@@ -382,7 +398,7 @@
     }
 
     try {
-      const url = force ? "/api/audit/run" : "/api/audit";
+      const url = force ? "/api/audit/run" : "/api/audit/status";
       const data = force ? await fetchJson(url, { method: "POST" }) : await fetchJson(url);
 
       if (data.running) {
@@ -391,8 +407,9 @@
         startProgressTick();
         stopPoll();
         pollTimer = setInterval(async () => {
+          if (document.hidden) return;
           try {
-            const latest = await fetchJson("/api/audit");
+            const latest = await fetchJson("/api/audit/status");
             if (!latest.running) {
               stopAuditProgress();
               renderReport(latest);
@@ -401,8 +418,9 @@
             }
             applyProgressFromApi(latest);
           } catch (err) {
+              if (isRoomAbort(err)) return;
               stopAuditProgress();
-              setStatus(`Poll failed: ${err.message || err}`, false);
+              setStatus(`Poll failed: ${err.message || err} — click Run audit to retry`, false);
             }
           }, 2000);
         return;
@@ -412,21 +430,40 @@
       renderReport(data);
       setStatus(completeStatus(data), false);
     } catch (e) {
+      if (isRoomAbort(e)) {
+        const still =
+          document.body.classList.contains("house-audit") ||
+          /^#?audit\b/i.test(location.hash || "");
+        if (still) {
+          clearTimeout(loadAudit._retry);
+          loadAudit._retry = setTimeout(() => {
+            if (
+              document.body.classList.contains("house-audit") ||
+              /^#?audit\b/i.test(location.hash || "")
+            ) {
+              loadAudit({ force: false });
+            }
+          }, 200);
+        }
+        return;
+      }
       stopAuditProgress();
-      body.innerHTML = `<p class="audit-error">Audit failed: ${esc(e.message)}</p>`;
-      setStatus(`Error: ${e.message}`, false);
+      const msg = e.message || "Couldn’t finish this audit";
+      body.innerHTML = `<p class="audit-error">Audit failed: ${esc(msg)}</p>`;
+      setStatus(`Error: ${msg}`, false);
     }
   }
 
   function initAudit() {
     if (!$("auditView")) return;
     const root = $("auditView");
+    // Prefer loading current/cached status — never auto-force a full run on every visit.
     if (root.dataset.loaded === "1") {
       loadAudit({ force: false });
       return;
     }
     root.dataset.loaded = "1";
-    loadAudit({ force: true });
+    loadAudit({ force: false });
   }
 
   function bindAuditControls() {

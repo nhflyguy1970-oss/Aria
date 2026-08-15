@@ -55,57 +55,113 @@
         fetch("/api/smarthome/product/profiles").then((r) => r.json()).catch(() => ({ profiles: [] })),
       ]);
       const recovery = home.recovery || {};
+      const health = home.health || {};
       const card = $("smarthomeRecoveryCard");
       const setup = $("smarthomeSetupDetails");
+      const locked = !!(health.locked || recovery.locked || (recovery.connection && recovery.connection.locked));
+      const tokenVaulted = !!(health.token_vaulted || recovery.token_vaulted || health.token_present || recovery.token_present);
+      const connected = !!(health.connected || recovery.ready) && !locked;
+      panel.classList.toggle("smarthome-unavailable", !connected);
+      const tokenInput = $("haTokenInput");
+      const pasteBtn = $("haPasteTokenBtn");
+      const modalBtn = $("haTokenModalBtn");
+      if (tokenVaulted) {
+        if (tokenInput) {
+          tokenInput.placeholder = "Owner Vault holds ha.token — paste only to replace";
+          tokenInput.setAttribute("aria-label", "Replacement Home Assistant token (optional)");
+        }
+        if (pasteBtn) pasteBtn.classList.add("hidden");
+        if (modalBtn) modalBtn.classList.add("hidden");
+        const preview = $("haTokenPreview");
+        if (preview && !(tokenInput && tokenInput.value.trim())) {
+          preview.textContent = locked
+            ? "Home Assistant credential is in the Owner Vault — unlock Aria to use it."
+            : "Using Owner Vault credential (ha.token). Token is not shown here.";
+        }
+      }
       if (card) {
-        if (!recovery.ready) {
+        if (locked) {
+          card.classList.remove("hidden");
+          if (setup) setup.open = false;
+          card.innerHTML =
+            `<strong>Home Assistant locked</strong>` +
+            `<p class="muted small">${esc((recovery.connection && recovery.connection.message) || health.hint || "Unlock Aria with your Master Password.")}</p>`;
+        } else if (connected) {
+          card.classList.add("hidden");
+          if (setup) setup.open = false;
+        } else if (tokenVaulted) {
+          card.classList.remove("hidden");
+          if (setup) setup.open = false;
+          card.innerHTML =
+            `<strong>Smart Home unavailable</strong>` +
+            `<p class="muted small">${esc(health.hint || (recovery.connection && recovery.connection.message) || "Home Assistant is not reachable.")}</p>` +
+            `<p class="muted small">The Owner Vault already has ha.token — Aria will not ask you to paste it.</p>`;
+        } else {
           card.classList.remove("hidden");
           if (setup) setup.open = true;
           const steps = (recovery.steps || [])
             .map((s) => `<li>${s.done ? "✓" : "○"} ${esc(s.label)} — <span class="muted">${esc(s.detail)}</span></li>`)
             .join("");
-          card.innerHTML = `<strong>Connect Home Assistant</strong><p class="muted small">${esc(recovery.hint || "")}</p><ol class="tiny">${steps}</ol>`;
-        } else {
-          card.classList.add("hidden");
-          if (setup) setup.open = false;
+          const detail =
+            (recovery.connection && recovery.connection.message) ||
+            health.hint ||
+            "Home Assistant is not reachable.";
+          card.innerHTML =
+            `<strong>Smart Home unavailable</strong>` +
+            `<p class="muted small">${esc(detail)}</p>` +
+            `<p class="muted small">Controls are disabled until Home Assistant is online. ` +
+            `Start HA (Docker container <code>homeassistant</code>) or complete Connect steps.</p>` +
+            `<ol class="tiny">${steps}</ol>`;
         }
       }
-      const health = home.health || {};
       if ($("smarthomeHomeHealth")) {
-        $("smarthomeHomeHealth").textContent = health.connected
-          ? `Connected${health.url ? " · " + health.url : ""}`
-          : health.hint || "Not connected";
+        if (locked) {
+          $("smarthomeHomeHealth").textContent =
+            `Locked — ${health.hint || "Unlock Aria to use Home Assistant"}`;
+        } else {
+          $("smarthomeHomeHealth").textContent = connected
+            ? `Connected${health.url ? " · " + health.url : ""}`
+            : `Unavailable — ${health.hint || (recovery.connection && recovery.connection.message) || "Home Assistant offline"}`;
+        }
       }
       const fav = $("smarthomeFavoritesList");
       if (fav) {
         const ents = (home.favorites && home.favorites.entities) || [];
-        fav.innerHTML = ents.length
-          ? ents
-              .map(
-                (e) =>
-                  `<li><button type="button" class="ghost-btn tiny smarthome-fav-toggle" data-id="${esc(e.entity_id)}" aria-label="Toggle ${esc(e.friendly_name || e.entity_id)}">${esc(e.friendly_name || e.entity_id)} · ${esc(e.state || "?")}</button></li>`
-              )
-              .join("")
-          : "<li class='muted'>Pin devices from search</li>";
-        fav.querySelectorAll(".smarthome-fav-toggle").forEach((btn) =>
-          btn.addEventListener("click", () => control(btn.dataset.id, "toggle"))
-        );
+        if (!connected) {
+          fav.innerHTML = "<li class='muted'>Unavailable — Home Assistant offline</li>";
+        } else {
+          fav.innerHTML = ents.length
+            ? ents
+                .map(
+                  (e) =>
+                    `<li><button type="button" class="ghost-btn tiny smarthome-fav-toggle" data-id="${esc(e.entity_id)}" aria-label="Toggle ${esc(e.friendly_name || e.entity_id)}">${esc(e.friendly_name || e.entity_id)} · ${esc(e.state || "?")}</button></li>`
+                )
+                .join("")
+            : "<li class='muted'>Pin devices from search</li>";
+          fav.querySelectorAll(".smarthome-fav-toggle").forEach((btn) =>
+            btn.addEventListener("click", () => control(btn.dataset.id, "toggle"))
+          );
+        }
       }
       const chips = $("smarthomeSceneChips");
       if (chips) {
         const scenes = home.scenes || [];
-        chips.innerHTML = scenes.length
-          ? scenes
-              .slice(0, 8)
-              .map(
-                (s) =>
-                  `<button type="button" class="ghost-btn small smarthome-scene-chip" data-id="${esc(s.id || s.label)}">${esc(s.label || s.id)}</button>`
-              )
-              .join("")
-          : '<span class="muted small">No presets</span>';
-        chips.querySelectorAll(".smarthome-scene-chip").forEach((btn) =>
-          btn.addEventListener("click", () => activateScene(btn.dataset.id))
-        );
+        if (!connected) {
+          chips.innerHTML = '<span class="muted small">Scenes disabled — Home Assistant offline</span>';
+        } else {
+          chips.innerHTML = scenes.length
+            ? scenes
+                .slice(0, 8)
+                .map(
+                  (s) =>
+                    `<button type="button" class="ghost-btn small smarthome-scene-chip" data-id="${esc(s.id || s.label)}">${esc(s.label || s.id)}</button>`
+                )
+                .join("")
+            : '<span class="muted small">No presets</span>';
+          chips.querySelectorAll(".smarthome-scene-chip").forEach((btn) =>
+            btn.addEventListener("click", () => activateScene(btn.dataset.id))
+          );
+        }
       }
       const rooms = $("smarthomeRoomsList");
       if (rooms) {
@@ -132,6 +188,7 @@
         });
       }
     } catch (err) {
+      if (window.AriaNet?.absorbAbort?.(err, () => loadHome(), 180)) return;
       if ($("smarthomeHomeHealth")) $("smarthomeHomeHealth").textContent = err.message || "Home failed";
     }
   }
@@ -240,6 +297,15 @@
     loadHome();
   };
   window.loadSmarthomeHome = loadHome;
+  document.getElementById("sidebarOpenHomeAutoBtn")?.addEventListener("click", () => {
+    window.AriaFrontDoorCatalog?.goRoom?.("home_automation") || window.switchToView?.("homeAutomation");
+  });
+  document.getElementById("homeAutoOpenPresenceBtn")?.addEventListener("click", () => {
+    window.AriaFrontDoorCatalog?.goRoom?.("presence") || window.switchToView?.("presence");
+  });
+  document.getElementById("homeAutoOpenSecurityBtn")?.addEventListener("click", () => {
+    window.AriaFrontDoorCatalog?.goRoom?.("security") || window.switchToView?.("security");
+  });
   if (document.readyState !== "loading") {
     bind();
     loadHome();

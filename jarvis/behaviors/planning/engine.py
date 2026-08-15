@@ -271,6 +271,27 @@ class PlanningEngine:
     @classmethod
     def journal_today(cls, ctx: PlanningContext, params: dict, message: str) -> dict:
         day = params.get("day") or ""
+        from jarvis.modules.journal import _today
+
+        key = day or _today()
+        page_data = ctx.journal.daily_get(key)
+        bullets = page_data.get("bullets") or []
+        if not bullets:
+            label = "yesterday" if day and day != _today() else ("today" if not day or day == _today() else key)
+            # Prefer human labels when day is adjacent to today.
+            try:
+                from datetime import date, timedelta
+
+                if day == (date.today() - timedelta(days=1)).isoformat():
+                    label = "yesterday"
+                elif day == _today() or not day:
+                    label = "today"
+            except Exception:
+                pass
+            return ok(
+                f"There are no journal entries for {label} ({key}).",
+                module="journal",
+            )
         page = ctx.journal.format_page("daily", day or None)
         return ok(page, module="journal")
 

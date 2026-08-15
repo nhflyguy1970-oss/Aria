@@ -1,0 +1,445 @@
+/**
+ * Aria House — Phase 4 Living Rooms atmospheres.
+ * Philosophy of the Living Room; distinct materials per Room.
+ * Active when body.living-workspace.house-room (or per-room class).
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,400&family=IBM+Plex+Sans:wght@400;500;600&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap");
+
+/* —— Shared house chrome silence —— */
+body.living-workspace.house-room {
+  --house-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+body.living-workspace.house-room #wsBar,
+body.living-workspace.house-room #wsToolTray:empty,
+body.living-workspace.house-room #ariaStatusBar,
+body.living-workspace.house-room #ariaVoiceStrip,
+body.living-workspace.house-room #quickDock,
+body.living-workspace.house-room #globalWorldStateBar,
+body.living-workspace.house-room .view-tabs,
+body.living-workspace.house-room .sidebar,
+body.living-workspace.house-room .sidebar-backdrop {
+  display: none !important;
+}
+
+/* Legacy .app demolished globally under living-workspace — no grid patch needed */
+
+body.living-workspace.house-room #wsToolTray:not(.hidden):not(:empty) {
+  position: absolute;
+  top: 2.6rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 28;
+  border: 0;
+  background: transparent;
+  justify-content: center;
+}
+
+body.living-workspace.house-room .view-panel {
+  position: relative;
+  overflow: hidden;
+  font-family: var(--house-body, inherit);
+  color: var(--house-ink, inherit);
+  background: transparent;
+}
+
+body.living-workspace.house-room .house-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+body.living-workspace.house-room .house-atmosphere__wash,
+body.living-workspace.house-room .house-atmosphere__veil,
+body.living-workspace.house-room .house-atmosphere__grain {
+  position: absolute;
+  inset: 0;
+}
+
+body.living-workspace.house-room .house-atmosphere__grain {
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+body.living-workspace.house-room .house-presence {
+  position: relative;
+  z-index: 5;
+  padding: 1rem clamp(1rem, 3vw, 2.5rem) 0.35rem;
+  max-width: 52rem;
+  /* Presence is atmosphere only — never steal clicks from room tools. */
+  pointer-events: none;
+}
+
+body.living-workspace.house-room .house-presence__brand {
+  font-family: var(--house-display, Georgia, serif);
+  font-size: clamp(1.2rem, 2vw, 1.55rem);
+  font-weight: 500;
+  color: var(--house-accent, #d4a574);
+  letter-spacing: -0.02em;
+}
+
+body.living-workspace.house-room .house-presence__place {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--house-ink-soft, #cbb9a4);
+  font-size: 0.72em;
+  margin-left: 0.35rem;
+}
+
+body.living-workspace.house-room .house-presence__status {
+  font-size: 0.78rem;
+  color: var(--house-ink-mute, #8f7d6a);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.2rem;
+}
+
+body.living-workspace.house-room .house-presence__status::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--house-sage, #6e7a68);
+  box-shadow: 0 0 8px rgba(110, 122, 104, 0.45);
+}
+
+body.living-workspace.house-room .view-panel > *:not(.house-atmosphere):not(.house-presence) {
+  position: relative;
+  z-index: 2;
+}
+
+/*
+ * Equal z-index:2 on every view-panel child means later siblings paint above earlier ones.
+ * Absolute dropdowns (e.g. Journal More) extend over later siblings and look open but
+ * receive no clicks — elementFromPoint hits .bujo-rapid / #bujoContent instead of items.
+ * Raise ONLY the host of .bujo-more-menu (not every open <details>, e.g. enrichments inside
+ * #bujoContent — those would tie at the same z-index and still cover the dropdown).
+ * Specificity must match/exceed the z-index:2 rule (its :not() classes otherwise win).
+ */
+body.living-workspace.house-room .view-panel > *:not(.house-atmosphere):not(.house-presence):has(details.bujo-more-menu[open]) {
+  z-index: 60;
+}
+
+/* Cross-nav toolbars → quieter */
+body.living-workspace.house-room .mc-toolbar {
+  opacity: 0.45;
+  border: 0;
+  background: transparent;
+  transition: opacity 0.25s var(--house-ease);
+}
+body.living-workspace.house-room .mc-toolbar:hover,
+body.living-workspace.house-room .mc-toolbar:focus-within {
+  opacity: 0.9;
+}
+
+/* ========== FLY TYING — riverside cabin (native Room owns paint; legacy panel skins retired) ========== */
+body.living-workspace.house-flytying {
+  --house-ink: #f0e6d8;
+  --house-ink-soft: #c9b8a0;
+  --house-ink-mute: #8a7660;
+  --house-accent: #c4a06a;
+  --house-sage: #5f7a5a;
+  --house-display: "Libre Baskerville", Georgia, serif;
+  --house-body: "Source Serif 4", Georgia, serif;
+  --bg: #120e0a;
+  --bg-panel: #2a2118;
+  --bg-elevated: #35291f;
+  --text: var(--house-ink);
+  --text-muted: var(--house-ink-mute);
+  --accent: var(--house-accent);
+  --border: rgba(196, 160, 106, 0.18);
+}
+
+/* ========== HEALTH — wellness clinic (native Room owns paint) ========== */
+body.living-workspace.house-health {
+  --house-ink: #eef4f2;
+  --house-ink-soft: #c5d4ce;
+  --house-ink-mute: #7a9088;
+  --house-accent: #7eb8a8;
+  --house-sage: #6a9e8e;
+  --house-display: "Fraunces", Georgia, serif;
+  --house-body: "IBM Plex Sans", system-ui, sans-serif;
+  --bg: #0c1210;
+  --bg-panel: #15201c;
+  --bg-elevated: #1c2a25;
+  --text: var(--house-ink);
+  --text-muted: var(--house-ink-mute);
+  --accent: var(--house-accent);
+  --border: rgba(126, 184, 168, 0.2);
+}
+
+/* ========== MISSION — aerospace ops (native Room owns paint) ========== */
+body.living-workspace.house-mission {
+  --house-ink: #e6eef5;
+  --house-ink-soft: #a8b8c8;
+  --house-ink-mute: #6a7a8a;
+  --house-accent: #5b9fd4;
+  --house-sage: #4a7a9a;
+  --house-display: "IBM Plex Sans", system-ui, sans-serif;
+  --house-body: "IBM Plex Sans", system-ui, sans-serif;
+  --bg: #070b10;
+  --bg-panel: #0e1520;
+  --bg-elevated: #141e2c;
+  --text: var(--house-ink);
+  --text-muted: var(--house-ink-mute);
+  --accent: var(--house-accent);
+  --border: rgba(91, 159, 212, 0.22);
+}
+
+/* ========== DOCUMENTS — private library ========== */
+body.living-workspace.house-documents {
+  --house-ink: #f2ebe0;
+  --house-ink-soft: #cfc0ab;
+  --house-ink-mute: #8f7f6c;
+  --house-accent: #b8956c;
+  --house-display: "Libre Baskerville", Georgia, serif;
+  --house-body: "Source Serif 4", Georgia, serif;
+  --bg: #100e0b;
+  --bg-panel: #1f1a14;
+  --bg-elevated: #2a231c;
+  --text: var(--house-ink);
+  --accent: var(--house-accent);
+  --border: rgba(184, 149, 108, 0.2);
+}
+
+
+
+/* ========== SEARCH — research study ========== */
+body.living-workspace.house-search {
+  --house-ink: #ece8e0;
+  --house-ink-mute: #8a8278;
+  --house-accent: #c4b090;
+  --house-display: "Fraunces", Georgia, serif;
+  --house-body: "Bricolage Grotesque", system-ui, sans-serif;
+  --bg: #0d0c0a;
+  --bg-panel: #1a1814;
+  --accent: var(--house-accent);
+  --border: rgba(196, 176, 144, 0.18);
+}
+
+
+
+
+/* ========== GALLERY — museum ========== */
+body.living-workspace.house-gallery {
+  --house-ink: #f5f0ea;
+  --house-ink-mute: #8f8680;
+  --house-accent: #e0c9a8;
+  --house-display: "Fraunces", Georgia, serif;
+  --house-body: "IBM Plex Sans", system-ui, sans-serif;
+  --bg: #0a0908;
+  --bg-panel: #161310;
+  --accent: var(--house-accent);
+  --border: rgba(224, 201, 168, 0.15);
+}
+
+
+
+
+/* ========== PLANNER — leather notebook ========== */
+body.living-workspace.house-planner {
+  --house-ink: #f3ebe2;
+  --house-ink-mute: #8f7d6c;
+  --house-accent: #c9a06a;
+  --house-display: "Libre Baskerville", Georgia, serif;
+  --house-body: "Source Serif 4", Georgia, serif;
+  --bg: #110e0b;
+  --bg-panel: #241c16;
+  --accent: var(--house-accent);
+  --border: rgba(201, 160, 106, 0.2);
+}
+
+
+
+/* ========== CALENDAR ========== */
+body.living-workspace.house-calendar {
+  --house-ink: #eef1f4;
+  --house-accent: #8aa4bc;
+  --house-display: "Fraunces", Georgia, serif;
+  --house-body: "IBM Plex Sans", system-ui, sans-serif;
+  --bg: #0b0e12;
+  --bg-panel: #141a22;
+  --accent: var(--house-accent);
+  --border: rgba(138, 164, 188, 0.2);
+}
+
+
+/* ========== CODING — engineering studio ========== */
+body.living-workspace.house-coding {
+  --house-ink: #e8ecef;
+  --house-ink-mute: #7a858f;
+  --house-accent: #6ec3a8;
+  --house-display: "IBM Plex Sans", system-ui, sans-serif;
+  --house-body: "IBM Plex Sans", system-ui, sans-serif;
+  --bg: #0a0c0e;
+  --bg-panel: #12161a;
+  --accent: var(--house-accent);
+  --border: rgba(110, 195, 168, 0.2);
+}
+
+
+/* ========== PROJECTS — creative workshop ========== */
+body.living-workspace.house-projects {
+  --house-ink: #f2ece4;
+  --house-accent: #d4a06a;
+  --house-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --house-body: "Bricolage Grotesque", system-ui, sans-serif;
+  --bg: #100d0a;
+  --bg-panel: #1e1812;
+  --accent: var(--house-accent);
+  --border: rgba(212, 160, 106, 0.2);
+}
+
+
+/* ========== MEMORY — archive ========== */
+body.living-workspace.house-memory {
+  --house-ink: #efe8df;
+  --house-accent: #a89078;
+  --house-display: "Libre Baskerville", Georgia, serif;
+  --house-body: "Source Serif 4", Georgia, serif;
+  --bg: #0e0c0a;
+  --bg-panel: #1a1612;
+  --accent: var(--house-accent);
+  --border: rgba(168, 144, 120, 0.2);
+}
+
+
+/* ========== VOICE — presence ========== */
+body.living-workspace.house-voice {
+  --house-ink: #f0ebe4;
+  --house-accent: #d4a574;
+  --house-display: "Fraunces", Georgia, serif;
+  --house-body: "Bricolage Grotesque", system-ui, sans-serif;
+  --bg: #0c0908;
+  --bg-panel: #1a1410;
+  --accent: var(--house-accent);
+}
+
+
+
+/* ========== REPAIR — restoration bench ========== */
+body.living-workspace.house-repair {
+  --house-ink: #ece6dc;
+  --house-accent: #c47a45;
+  --house-display: "IBM Plex Sans", system-ui, sans-serif;
+  --house-body: "IBM Plex Sans", system-ui, sans-serif;
+  --bg: #0e0b09;
+  --bg-panel: #1c1612;
+  --accent: var(--house-accent);
+}
+
+
+/* ========== INTEGRITY — quiet caretaker ========== */
+body.living-workspace.house-integrity {
+  --house-ink: #e4e8e6;
+  --house-accent: #7a9a8e;
+  --house-display: "IBM Plex Sans", system-ui, sans-serif;
+  --house-body: "IBM Plex Sans", system-ui, sans-serif;
+  --bg: #0a0c0b;
+  --bg-panel: #121816;
+  --accent: var(--house-accent);
+}
+
+
+/* ========== HOME / FOYER ========== */
+body.living-workspace.house-home {
+  --house-ink: #f3ebe0;
+  --house-accent: #d4a574;
+  --house-display: "Fraunces", Georgia, serif;
+  --house-body: "Bricolage Grotesque", system-ui, sans-serif;
+  --bg: #0c0908;
+  --bg-panel: #1a1410;
+  --accent: var(--house-accent);
+}
+
+
+
+/* ========== AUTOMATION ========== */
+body.living-workspace.house-automation {
+  --house-ink: #e8ecea;
+  --house-accent: #7ab89a;
+  --house-display: "IBM Plex Sans", system-ui, sans-serif;
+  --house-body: "IBM Plex Sans", system-ui, sans-serif;
+  --bg: #0a0e0c;
+  --bg-panel: #121a16;
+  --accent: var(--house-accent);
+}
+
+
+/* ========== PROVIDERS ========== */
+body.living-workspace.house-providers {
+  --house-ink: #e6eaf0;
+  --house-accent: #6a9fd4;
+  --house-display: "IBM Plex Sans", system-ui, sans-serif;
+  --house-body: "IBM Plex Sans", system-ui, sans-serif;
+  --bg: #080a0e;
+  --bg-panel: #10161e;
+  --accent: var(--house-accent);
+}
+
+
+/* ========== HOME AUTOMATION (presence / HA) ========== */
+body.living-workspace.house-home-auto {
+  --house-ink: #efeae4;
+  --house-accent: #c9a06a;
+  --house-display: "Fraunces", Georgia, serif;
+  --house-body: "Bricolage Grotesque", system-ui, sans-serif;
+  --bg: #0d0b09;
+  --bg-panel: #1a1510;
+  --accent: var(--house-accent);
+}
+
+
+/* Toasts stay quiet across the house */
+body.living-workspace.house-room .aria-toast,
+body.living-workspace.house-room #ariaToastHost,
+body.living-workspace.house-room .toast-host {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.living-workspace.house-room .house-presence__status::before {
+    box-shadow: none;
+  }
+}
+
+/* Phase 6.4 — furnished full panels on stage */
+body.living-workspace.furnished-room #ariaStage > .view-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  height: 100%;
+  overflow: auto;
+  background: var(--bg, #0c0e12);
+  color: var(--text, #e8e4dc);
+}
+body.living-workspace.furnished-room #ariaStage > .view-panel.hidden {
+  display: flex !important; /* stage-mounted must paint */
+}
+
+/* Owner purity — hide engineering-gated Vision experiments in the Living Workspace */
+html.living-workspace .vision-exp-details,
+body.living-workspace .vision-exp-details {
+  display: none !important;
+}
+
+/* Voice smoke is a certification/dev probe — never an owner House Control */
+html.living-workspace #voiceSmokeBtn,
+body.living-workspace #voiceSmokeBtn,
+html.living-workspace #routerWarmBtn,
+body.living-workspace #routerWarmBtn {
+  display: none !important;
+}
+
+/* Capability scaffolding / hot-reload are engineering authoring tools — not owner furniture */
+html.living-workspace #capabilitiesScaffoldBtn,
+body.living-workspace #capabilitiesScaffoldBtn,
+html.living-workspace #capHotReloadBtn,
+body.living-workspace #capHotReloadBtn {
+  display: none !important;
+}

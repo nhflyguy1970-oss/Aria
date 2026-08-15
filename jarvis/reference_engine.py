@@ -316,10 +316,16 @@ def _local_reference_hits(query: str, *, limit: int = 12) -> list[dict[str, Any]
                 continue
             lower = text.lower()
             name_l = path.name.lower()
-            term_hits = sum(1 for t in terms if t in lower or t in name_l)
-            if term_hits <= 0 and q_l not in name_l and q_l not in lower[:2000]:
+            # Filename-only overlap (e.g. "change" ⊂ CHANGELOG) is not relevance.
+            content_hits = sum(1 for t in terms if t in lower)
+            name_hits = sum(1 for t in terms if t in name_l)
+            term_hits = content_hits + name_hits
+            if content_hits <= 0 and name_hits < 2 and q_l not in lower[:2000]:
                 continue
-            score = float(term_hits)
+            if content_hits <= 0 and name_hits >= 1:
+                # Single filename token match is noise for world how-tos.
+                continue
+            score = float(content_hits) + 0.25 * float(name_hits)
             score += _alias_boost(path, path.name, q_l, terms)
             score += _heading_boost(text, terms, q_l)
             # Recency lightly preferred when mtime available
@@ -758,7 +764,16 @@ def search_reference(query: str, *, subject: str = "") -> dict[str, Any]:
         qa_ms = round((time.perf_counter() - t_qa) * 1000, 3)
         if not found or not message.strip():
             # For locate/answer — honesty over weak paraphrase
-            if mode == _MODE_LOCATE or float(selected[0].get("score") or 0) < 25:
+            weak = float(selected[0].get("score") or 0) < 25
+            try:
+                from jarvis.orchestration_policy import tool_result_answers_request
+
+                preview = (message or "") + " " + str(selected[0].get("path") or "")
+                if not tool_result_answers_request(q, "reference_search", preview):
+                    weak = True
+            except Exception:
+                pass
+            if mode == _MODE_LOCATE or weak:
                 message = _unknown_message(q)
                 unknown = True
                 diagnostics["stages"]["question_answering"] = "unknown"

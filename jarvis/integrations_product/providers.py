@@ -289,7 +289,7 @@ def test_connection(provider_id: str) -> dict[str, Any]:
         elif provider_id == "openrouter":
             result = _test_openrouter()
         elif provider_id == "huggingface":
-            result = _test_key_presence("huggingface", "hf_token")
+            result = _test_huggingface()
         elif provider_id == "meshy":
             result = _test_meshy()
         elif provider_id == "ollama":
@@ -338,6 +338,48 @@ def test_connection(provider_id: str) -> dict[str, Any]:
         message=str(result.get("message") or result.get("error") or ""),
     )
     return result
+
+
+def _test_huggingface() -> dict[str, Any]:
+    key = get_secret("hf_token")
+    if not key:
+        return {
+            "ok": False,
+            "provider": "huggingface",
+            "error": "key_missing",
+            "message": "Hugging Face token not set",
+            "recovery": "Paste the token in Integrations Home (hf_token).",
+        }
+    try:
+        req = urllib.request.Request(
+            "https://huggingface.co/api/whoami-v2",
+            headers={"Authorization": f"Bearer {key}"},
+            method="GET",
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            data = json.loads(raw) if raw else {}
+            status = getattr(resp, "status", 200)
+        name = data.get("name") or data.get("fullname") or ""
+        return {
+            "ok": True,
+            "provider": "huggingface",
+            "status": status,
+            "auth": "ok",
+            "message": "Hugging Face token authenticated",
+            "account": str(name)[:80] if name else "ok",
+        }
+    except urllib.error.HTTPError as exc:
+        return {
+            "ok": False,
+            "provider": "huggingface",
+            "status": exc.code,
+            "error": f"HTTP {exc.code}",
+            "message": "Hugging Face authentication failed",
+            "recovery": "Verify the token at huggingface.co/settings/tokens and re-save.",
+        }
+    except Exception as exc:
+        return {"ok": False, "provider": "huggingface", "error": str(exc), "message": "Hugging Face unreachable"}
 
 
 def _test_key_presence(provider: str, field: str) -> dict[str, Any]:

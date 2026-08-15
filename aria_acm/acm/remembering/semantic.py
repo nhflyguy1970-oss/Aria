@@ -386,6 +386,18 @@ def answer_semantic_query(cue: str, facts: list[SemanticFact], *, store: Any = N
     if re.search(r"\bwhat\s+phone\b|\bphone\s+do\s+i\b", low):
         return answer_owned_query(facts, "phone")
 
+    # Data-driven possession: if cue names a remembered entity, answer it.
+    owned_ents = sorted({f.entity for f in _possessions(facts) if f.entity}, key=len, reverse=True)
+    for ent in owned_ents:
+        if ent and re.search(rf"\b{re.escape(ent)}\b", low):
+            ans = answer_owned_query(facts, ent)
+            if ans != UNKNOWN:
+                return ans
+            # Also surface gpu/model attributes for that entity
+            for f in _possessions(facts):
+                if f.entity == ent and f.property in ("gpu", "model", "attribute"):
+                    return f"Your {ent} — {f.property}: {f.value}."
+
     return None
 
 
@@ -453,10 +465,23 @@ def answer_os_query(facts: list[SemanticFact], low: str) -> str:
 
 
 def answer_gpu_query(facts: list[SemanticFact], low: str) -> str:
-    entity = "desktop" if "desktop" in low else ("laptop" if "laptop" in low else "")
+    entity = ""
+    if "desktop" in low:
+        entity = "desktop"
+    elif "laptop" in low:
+        entity = "laptop"
+    elif "workstation" in low or "tower" in low or "ai" in low:
+        entity = "workstation"
     matches = [f for f in _possessions(facts) if f.property == "gpu"]
     if entity:
-        matches = [f for f in matches if f.entity == entity]
+        scoped = [f for f in matches if f.entity == entity]
+        if scoped:
+            matches = scoped
+        # Also accept computer/machine aliases for workstation questions
+        elif entity == "workstation":
+            scoped = [f for f in matches if f.entity in {"workstation", "computer", "desktop", "machine", "tower"}]
+            if scoped:
+                matches = scoped
     if not matches:
         return UNKNOWN
     f = matches[-1]

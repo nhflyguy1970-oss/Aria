@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from jarvis.handlers.registry import register_action
@@ -73,18 +74,68 @@ def fly_recipe(assistant, params: dict, message: str = "") -> dict[str, Any]:
 @register_action("fly_ask", module="flytying", description="Ask a fly-tying question (RAG)")
 def fly_ask(assistant, params: dict, message: str = "") -> dict[str, Any]:
     from jarvis.flytying import bridge
+    from jarvis.flytying.search import unified_search
 
     question = (params.get("question") or message or "").strip()
     if not question:
         return _err("What fly-tying question?", module="flytying")
     result = bridge.ask_fly_tying(question)
-    if not result.get("ok"):
-        return _err(result.get("message") or "Ask failed", module="flytying", open_view="flytying")
+    answer = (result.get("answer") or result.get("message") or "").strip()
+    recipes = result.get("recipes") or []
+    no_hit = (not result.get("ok")) or (not recipes) or bool(
+        re.search(
+            r"\b(no\b.+\b(pattern|recipe|match|excerpt)|not (?:in|found)|couldn'?t find|don't have)\b",
+            answer,
+            re.I,
+        )
+    )
+    if no_hit:
+        # Don't dead-end Jeff — fall back to the pattern library he already owns.
+        # Full natural questions often miss; extract a short library query.
+        q_short = re.sub(
+            r"\b(i need|what should i tie|can you|please|recommend|with|olive flash|"
+            r"how (?:do|to) i tie|tie me|a |an |the )\b",
+            " ",
+            question,
+            flags=re.I,
+        )
+        q_short = re.sub(r"[—\-\?\!.,]+", " ", q_short)
+        q_short = re.sub(r"\s+", " ", q_short).strip()
+        # Prefer distinctive fly tokens if present
+        m = re.search(
+            r"\b((?:woolly|wooly)\s+bugger|adams|elk hair|pheasant|cdc|nymph|streamer|"
+            r"hopper|caddis|midge|leech|gonga)\b.*",
+            question,
+            re.I,
+        )
+        if m:
+            q_short = m.group(0)
+            q_short = re.sub(r"[—\-\?\!.,]+", " ", q_short)
+            q_short = re.sub(r"\s+", " ", q_short).strip()[:60]
+        for attempt in (q_short, "woolly bugger" if "bugger" in question.lower() else q_short):
+            if not attempt:
+                continue
+            payload = unified_search(attempt, limit=8)
+            rows = (payload or {}).get("results") or []
+            if rows:
+                lines = [
+                    f"- {r.get('name') or r.get('fly_name')} ({r.get('type') or '?'})"
+                    for r in rows[:8]
+                ]
+                return _ok(
+                    "Closest patterns in your library:\n" + "\n".join(lines),
+                    module="flytying",
+                    open_view="flytying",
+                    results=rows,
+                    search_mode=(payload or {}).get("search_mode"),
+                )
+        if not result.get("ok"):
+            return _err(result.get("message") or "Ask failed", module="flytying", open_view="flytying")
     return _ok(
-        result.get("answer") or result.get("message") or "",
+        answer,
         module="flytying",
         open_view="flytying",
-        recipes=result.get("recipes") or [],
+        recipes=recipes,
     )
 
 

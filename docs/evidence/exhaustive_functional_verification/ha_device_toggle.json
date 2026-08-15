@@ -1,0 +1,43 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "home_automation",
+  "capability": "Owner UI entity-list device toggle — Table lamp only",
+  "captured_at": "2026-08-14T17:45:14Z",
+  "jeff_authorized": "toggles",
+  "result": "PASS — Table lamp off then on via owner UI. Heading out not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_ui": {
+    "hash": "#homeAutomation",
+    "h2": "Home Automation",
+    "health": "Connected · http://127.0.0.1:8123",
+    "clicked": "light.table_lamp entity-list toggle",
+    "not_clicked": ["Heading out", "other lights", "unavailable Lamp", "Discover Kasa", "Chat-insert", "Apply profile"]
+  },
+  "first_click_blocked": {
+    "toast": "Home Assistant control is blocked by tool permissions.",
+    "lamp": {"id": "light.table_lamp", "state": "on", "brightness": 64},
+    "cause": "#haEntityList posted /api/homeassistant/toggle which checks permission_for(ha_control); DEFAULTS ha_control is never; live tool_permissions.json does not set ha_control",
+    "not_repaired": "did not rewrite data/tool_permissions.json; did not change DEFAULTS ha_control (chat/voice tools stay never)"
+  },
+  "repair": {
+    "file": "jarvis/gui/static/ha_extras.js",
+    "change": "entity-list toggle uses POST /api/smarthome/product/control like favorites/scenes; owner click is confirmation",
+    "cache_bust": "ha_extras.js?v=1.0.3-toggle",
+    "reload": "http://127.0.0.1:8765/?workspace=1&v=toggle130#homeAutomation — JS-only; no server restart"
+  },
+  "round_trip": {
+    "off": {
+      "toast": "updated 1 light(s)",
+      "ha": {"id": "light.table_lamp", "state": "off", "brightness": null},
+      "ui_after_refresh": "off"
+    },
+    "on": {
+      "toast": "updated 1 light(s)",
+      "ha": {"id": "light.table_lamp", "state": "on", "brightness": 64, "pct": 25},
+      "ui_after_refresh": "on"
+    },
+    "result": "PASS"
+  },
+  "lamp_left_at": "on, brightness 64 (25%) — same as after Movie mode",
+  "next_exact_capability": "Heading out still unclicked unless Jeff authorizes. Do not start Owner Residency. Do not certify 34/34."
+}

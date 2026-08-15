@@ -95,7 +95,12 @@ def _load_index() -> list[dict]:
             return _cache_chunks
         except (json.JSONDecodeError, OSError):
             pass
-    return build_index()
+    return []
+
+
+def index_available() -> bool:
+    """True when semantic search can use an existing code index without rebuilding."""
+    return CODE_INDEX.exists()
 
 
 def invalidate_cache() -> None:

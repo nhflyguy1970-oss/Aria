@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from jarvis.coding_product.guardrails import assess_coding_root, guardrail_banner
@@ -37,11 +38,40 @@ def _coding_model() -> dict[str, Any]:
         }
 
 
+def _is_owner_visible_proposal(prop: dict[str, Any]) -> bool:
+    """Drop QA scratch / empty proposals so Coding Home stays owner-clean."""
+    code = str(prop.get("code") or "").strip()
+    expl = str(prop.get("explanation") or "").strip().lower()
+    files = prop.get("files") or []
+    if not files and prop.get("path"):
+        files = [{"path": prop["path"]}]
+    blob = f"{code}\n{expl}\n{json.dumps(prop, default=str)}".lower()
+    if any(
+        m in blob
+        for m in (
+            "qa workflow probe",
+            "ship_probe",
+            "wf_probe",
+            "daily_driver",
+            "certification test",
+            "oc-cert",
+        )
+    ):
+        return False
+    if not files and code in {"x = 1", "x=1", "pass", "# test"}:
+        return False
+    if not files and len(code) < 24 and not expl:
+        return False
+    return True
+
+
 def _open_proposals(assistant: Any | None) -> list[dict[str, Any]]:
     if assistant is None:
         return []
     items = []
     for pid, prop in (assistant.pending_proposals or {}).items():
+        if not isinstance(prop, dict) or not _is_owner_visible_proposal(prop):
+            continue
         files = prop.get("files") or []
         if not files and prop.get("path"):
             files = [{"path": prop["path"]}]

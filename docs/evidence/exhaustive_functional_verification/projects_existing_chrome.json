@@ -1,0 +1,70 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "projects",
+  "capability": "Projects existing chrome without creating",
+  "captured_at": "2026-08-15T12:42:00Z",
+  "result": "PASS — Front Door → Projects; 2 existing workspaces; active home-lab; 0 QA/smoke/cert/demo/prototype-named rows; no-match search honest empty then restore; Action History leave/return restored list + active + empty search. Create/Import/Archive not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → Projects (Things you’re building)",
+    "hash": "#projects",
+    "h2": "Projects",
+    "place": "Creative workshop"
+  },
+  "list": {
+    "row_count": 2,
+    "slugs": ["home-lab", "jarvis"],
+    "active_workspace": "home-lab",
+    "detail_heading": "Home Lab",
+    "qa_smoke_cert_demo_prototype_named_rows": 0,
+    "titles_paths_bodies_in_evidence": false
+  },
+  "functions": {
+    "negative_search": "PASS — query zzzznonexistentxyz; list empty copy No projects yet. Create or ask Chat…; detail pane still Home Lab; no create",
+    "clear_search": "PASS — search cleared; 2 rows restored"
+  },
+  "leave_return": {
+    "leave": "Front Door recents → Action History → #actions h2 Action history; All modules; 15 rows still present; Clear not clicked",
+    "return": "Front Door recents → Projects → #projects h2 Projects",
+    "return_state": "search empty; 2 rows; slugs home-lab + jarvis; active home-lab; detail Home Lab; 0 QA-named rows",
+    "result": "PASS — room, list, active workspace, and empty search restored"
+  },
+  "not_clicked": [
+    "Create",
+    "Import",
+    "Continue Project",
+    "Archive",
+    "Rename",
+    "Resume Coding",
+    "Open Today's Journal",
+    "Briefing",
+    "Lock Aria"
+  ],
+  "production_integrity_ui": "PASS — production project list showed 0 QA/Smoke/Certification/Demo/Prototype/Temporary named rows",
+  "performance": {
+    "room_entry": "hash #projects immediately on Front Door click",
+    "first_meaningful": "h2 Projects + Active workspace home-lab on first paint; list fill after load",
+    "note": "Tool-roundtrip delays are not owner-visible time and were not recorded as room slowness."
+  },
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "project_create": false,
+    "project_import": false,
+    "project_archive": false,
+    "project_rename": false,
+    "journal_post": false,
+    "journal_bytes": 67547,
+    "health_phr": false,
+    "planner_task_create": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "Memory existing chrome without writing. Do not Create/Import/Archive Projects. Do not Lock Aria. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5."
+}

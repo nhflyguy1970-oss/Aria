@@ -263,9 +263,12 @@ class Collector:
 
 
 def _run(cmd: list[str], *, timeout: int = 30, text: bool = True) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        cmd, capture_output=True, text=text, timeout=timeout, check=False, env=_audit_env()
-    )
+    try:
+        return subprocess.run(
+            cmd, capture_output=True, text=text, timeout=timeout, check=False, env=_audit_env()
+        )
+    except subprocess.TimeoutExpired as exc:
+        return _completed_on_timeout(exc, cmd, timeout=timeout)
 
 
 _SUDO_TIMEOUT_RC = 124
@@ -1238,15 +1241,24 @@ def phase_security(c: Collector) -> None:
         c.pass_(pid, title, "AppArmor: enabled" if aa.returncode == 0 else "AppArmor: disabled or partial")
     else:
         c.pass_(pid, title, "AppArmor: not checked")
-    failed_logins = _run(
+    failed_logins_proc = _run(
         ["journalctl", "-b", "--no-pager", "-g", "Failed password|authentication failure"],
         timeout=15,
-    ).stdout or ""
-    n_fail = len([l for l in failed_logins.splitlines() if l.strip() and not l.startswith("--")])
-    if n_fail > 10:
-        c.warn(pid, title, f"Failed login attempts this boot: {n_fail}", "journalctl -b -g 'Failed password'")
+    )
+    if failed_logins_proc.returncode == _SUDO_TIMEOUT_RC:
+        c.warn(
+            pid,
+            title,
+            "Failed-login journal scan timed out",
+            "journalctl -b -g 'Failed password' (may be slow on large journals)",
+        )
     else:
-        c.pass_(pid, title, f"Failed logins this boot: {n_fail}")
+        failed_logins = failed_logins_proc.stdout or ""
+        n_fail = len([l for l in failed_logins.splitlines() if l.strip() and not l.startswith("--")])
+        if n_fail > 10:
+            c.warn(pid, title, f"Failed login attempts this boot: {n_fail}", "journalctl -b -g 'Failed password'")
+        else:
+            c.pass_(pid, title, f"Failed logins this boot: {n_fail}")
     listeners = _run(["ss", "-tln"], timeout=10).stdout or ""
     public = [l for l in listeners.splitlines() if re.search(r"0\.0\.0\.0:|^\s*LISTEN.*\*:", l)]
     sensitive = [l for l in public if re.search(r":22 |:8765 |:11434 |:27017 ", l)]

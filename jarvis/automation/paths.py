@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 from jarvis.config import DATA_DIR
 
 # Product root
 AUTOMATION_ROOT = DATA_DIR / "automation_product"
 
 # Isolated stores
-RULES_FILE = AUTOMATION_ROOT / "rules.json"  # mirrors / migrates user_automations.json
+RULES_FILE = AUTOMATION_ROOT / "rules.json"
+# Read once by migration only; runtime rules live in RULES_FILE.
 LEGACY_RULES_FILE = DATA_DIR / "user_automations.json"
 
 WORKFLOW_DAGS_DIR = AUTOMATION_ROOT / "workflow_dags"

@@ -16,6 +16,12 @@ function showToast(message, type = "info", ms = 4200) {
   el.classList.remove("hidden");
   clearTimeout(showToast._timer);
   showToast._timer = setTimeout(() => el.classList.add("hidden"), ms);
+  try {
+    const cue = type === "ok" || type === "success" ? "confirm" : "notify";
+    window.AriaLivingInterface?.playCue?.(cue);
+  } catch {
+    /* optional atmosphere sound */
+  }
 }
 
 async function refreshRouterStatus() {

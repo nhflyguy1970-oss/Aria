@@ -1,0 +1,45 @@
+{
+  "updated_at": "2026-08-13T15:59:03.830688+00:00",
+  "campaign": "final_34_room_functional_verification",
+  "checkpoint_loaded": "journal-encrypted-import-2026-08-12",
+  "resume_at": "Journal \u2192 More \u2192 Import encrypted",
+  "live": {
+    "http": 200,
+    "ms": 1.78,
+    "keys": [
+      "api_key_localhost_exempt",
+      "api_key_required",
+      "assistant_full_name",
+      "assistant_intro",
+      "assistant_name",
+      "auth_lan_requires_key",
+      "ok",
+      "ollama_health",
+      "product_registration_failed",
+      "product_registration_ok",
+      "ready",
+      "ui_version",
+      "uncensored",
+      "version"
+    ]
+  },
+  "owner": {
+    "state": "OWNER_UNLOCKED",
+    "owner_unlocked": true,
+    "vault_entries": 5,
+    "vault_unlocked": true
+  },
+  "integrity": {
+    "http": 200,
+    "status": "clean",
+    "clean": true,
+    "score": 100
+  },
+  "qa_header": {
+    "http": 403,
+    "message": "Test/QA harness headers are not allowed against the live workspace. Start a server with JARVIS_DATA_DIR pointing at disp"
+  },
+  "journal_sha256": "3c86da4da8c8bcf455333eb87ffedf89f07a24e780de56439f6de30a9712d48a",
+  "journal_size": 67555,
+  "secrets_in_evidence": false
+}

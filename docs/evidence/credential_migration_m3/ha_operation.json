@@ -1,0 +1,17 @@
+{
+  "updated_at": "2026-08-13T14:58:28.793888+00:00",
+  "phase": "post_migrate_unlocked",
+  "safe_operation": "GET /api/homeassistant/status \u2192 HA GET /api/ (no device toggle)",
+  "http_status": 200,
+  "elapsed_ms": 4.06,
+  "configured": true,
+  "connected": true,
+  "token_set": true,
+  "url_set": true,
+  "conn_ok": true,
+  "conn_message": "API running.",
+  "enabled": true,
+  "secret_in_response": false,
+  "response_contains_jwt_prefix": false,
+  "jeff_entered_ha_token": false
+}

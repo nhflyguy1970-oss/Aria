@@ -57,7 +57,10 @@ OVERVIEW_MARKDOWN = (
 
 @patch("aiplatform.mission_control.aggregator.collect_mission_control", return_value=FULL_MC, create=True)
 def test_collect_mission_control_shape(mock_collect):
-    data = collect_mission_control(record_metrics=False)
+    from jarvis.mission_control import invalidate_mission_control_cache
+
+    invalidate_mission_control_cache()
+    data = collect_mission_control(record_metrics=False, force=True)
     assert data.get("ok") is True
     assert data.get("title") == "Mission Control"
     assert data.get("owner") == "aiplatform"
@@ -82,7 +85,10 @@ def test_collect_mission_control_shape(mock_collect):
 
 @patch("aiplatform.mission_control.aggregator.collect_mission_control", return_value=FULL_MC, create=True)
 def test_applications_include_aria_profiles(mock_collect):
-    data = collect_mission_control(record_metrics=False)
+    from jarvis.mission_control import invalidate_mission_control_cache
+
+    invalidate_mission_control_cache()
+    data = collect_mission_control(record_metrics=False, force=True)
     apps = data.get("applications") or []
     ids = {a.get("id") for a in apps}
     assert "aria" in ids

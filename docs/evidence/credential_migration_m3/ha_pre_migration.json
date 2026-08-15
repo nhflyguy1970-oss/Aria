@@ -1,0 +1,29 @@
+{
+  "updated_at": "2026-08-13T14:23:15.125702+00:00",
+  "phase": "pre_migration_baseline",
+  "source": "env-backed live HA (old process, before vault-first code load)",
+  "http_status": 200,
+  "elapsed_ms": 26.23,
+  "configured": true,
+  "connected": true,
+  "token_set": true,
+  "url_set": true,
+  "conn_ok": true,
+  "conn_message": "API running.",
+  "safe_operation": "GET /api/homeassistant/status \u2192 HA GET /api/ (no device toggle)",
+  "secret_in_response": false,
+  "response_keys": [
+    "automation_secret_set",
+    "automation_webhook",
+    "automation_webhook_url",
+    "configured",
+    "connected",
+    "connection",
+    "enabled",
+    "feature_on",
+    "leave_scene",
+    "ok",
+    "token_set",
+    "url"
+  ]
+}

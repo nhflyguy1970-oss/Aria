@@ -1,0 +1,576 @@
+{
+  "health": {
+    "deleted": [
+      {
+        "table": "dose_logs",
+        "id": "dose_d79ad2f5dce9"
+      },
+      {
+        "table": "dose_logs",
+        "id": "dose_6b1d8df5280b"
+      },
+      {
+        "table": "dose_logs",
+        "id": "dose_b7b3e3c3b1c1"
+      },
+      {
+        "table": "checkins",
+        "id": "chk_df57c3a42785"
+      },
+      {
+        "table": "activities",
+        "id": "act_bc278fd2891d"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_0363b17d8d76"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_4d3aefb463cf"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_c69d153263d9"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_227f0037994e"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_904b52e7082b"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_5f7a46d6e4fb"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_e074b47ff074"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_01d69c765a0f"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_e5e3d6a8c666"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_0d645fe5c287"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_f0ee7dabf1c4"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_48f7d07361a9"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_cae1ac813c07"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_9e729efba006"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_f43e46bc65c6"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_deed94b18758"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_68221b4ad3b1"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_3bacf5fb0611"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_8dd48a54aa5b"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_1701f2038cbc"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_35eca6c93ff3"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_5abf2ea9f863"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_08e17e45e10d"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_80d067b2188b"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_0d80d3d4de7e"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_7c174a5d67f8"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_a4ec5fe90073"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_ad4cc6a4e21c"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_97b5246c2e80"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_8ee6a8611e08"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_72da86f971f4"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_42621995e386"
+      },
+      {
+        "table": "vitals",
+        "id": "vit_b4347594840f"
+      },
+      {
+        "table": "backups",
+        "id": "bak_7a69c9914d45"
+      },
+      {
+        "table": "events",
+        "id": "evt_e6dca64ad690",
+        "verb": "dose_log_restore"
+      },
+      {
+        "table": "events",
+        "id": "evt_ff518279fead",
+        "verb": "backup"
+      },
+      {
+        "table": "events",
+        "id": "evt_64aba9c7a5fa",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_7d155b39075c",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_0ec75c988e16",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_f131cb14e62b",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_bd2b2886c9f9",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_2e302384b7a9",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_9ff41b2014b1",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_d2fd59029753",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_978eaee0f052",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_457de1cbf1fa",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_e8a0a80adb46",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_4d913a51d455",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_64aea13ae586",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_c2e255380932",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_aa9220562033",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_2386d5ad12dd",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_e06391b7cf7d",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_7741ff0a151a",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_ac693c73a6be",
+        "verb": "activity"
+      },
+      {
+        "table": "events",
+        "id": "evt_1cbcb747cd9b",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_551e03d0afef",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_c208c41905c9",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_d3adb0e33c10",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_1ae2ee0da39a",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_f0660d32086e",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_b022bcaab1a6",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_267bb78a439a",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_32222107e6a1",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_4f5ea6a5df37",
+        "verb": "dose_log"
+      },
+      {
+        "table": "events",
+        "id": "evt_1de3ccbca9db",
+        "verb": "dose_log"
+      },
+      {
+        "table": "events",
+        "id": "evt_522669bc6211",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_f2853ca0c138",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_a8f435086012",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_0061f4a00606",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_6fc241a8c3a0",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_8061a176880d",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_727570765311",
+        "verb": "dose_log"
+      },
+      {
+        "table": "events",
+        "id": "evt_2f1162f82f27",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_9e9eab28a327",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_c0e6f9fb03ce",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_4cc4e57648c2",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_986067cb5881",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_0bfef6492b3d",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_070081f243b9",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_1d6bee3c88f9",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_b78e7920d1a1",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_ea7a09d23a23",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_07b31cbfbec2",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_d8c0ae1bf670",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_3b4547424968",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_d2f18e88ce28",
+        "verb": "checkin"
+      },
+      {
+        "table": "events",
+        "id": "evt_7d2a31a4422b",
+        "verb": "vital"
+      },
+      {
+        "table": "events",
+        "id": "evt_f5fdea46db79",
+        "verb": "checkin"
+      },
+      {
+        "file": "/media/jeff/AI/jarvis/data/health_product/backups/aria-health-20260808-092139.json"
+      }
+    ],
+    "kept": [
+      {
+        "table": "events",
+        "id": "evt_279120bdd995",
+        "verb": "medications_upsert",
+        "detail": "Vitamin D3"
+      }
+    ],
+    "backup_file_removed": true,
+    "medication_kept": true,
+    "remaining": {
+      "medications": 1,
+      "dose_logs": 0,
+      "checkins": 0,
+      "activities": 0,
+      "vitals": 0,
+      "events": 1,
+      "backups": 0
+    }
+  },
+  "planner": {
+    "removed": [
+      {
+        "id": "9e3ace063d",
+        "ok": true,
+        "was_deleted": 0,
+        "was_completed": 1
+      },
+      {
+        "id": "64165768f9",
+        "ok": true,
+        "was_deleted": 1,
+        "was_completed": 0
+      },
+      {
+        "id": "a449d226ee",
+        "ok": true,
+        "was_deleted": 1,
+        "was_completed": 0
+      },
+      {
+        "id": "43e4d3f799",
+        "ok": true,
+        "was_deleted": 1,
+        "was_completed": 0
+      },
+      {
+        "id": "44fdbbaab8",
+        "ok": true,
+        "was_deleted": 1,
+        "was_completed": 0
+      }
+    ],
+    "remaining_wool_rows": []
+  },
+  "acm": {
+    "before": {
+      "experiences": 878,
+      "concepts": 271,
+      "associations": 2143
+    },
+    "after": {
+      "experiences": 834,
+      "concepts": 234,
+      "associations": 2009
+    },
+    "dropped_counts": {
+      "experiences": 44,
+      "concepts": 37,
+      "associations": 4,
+      "hierarchy_edges": 0,
+      "abstractions": 0,
+      "general_principles": 0,
+      "evidence_influences": 0,
+      "goals": 0,
+      "envelopes": 0,
+      "adaptations": 0,
+      "temporal_patterns": 0,
+      "predictions": 0,
+      "hypotheses": 0,
+      "prediction_audits": 0,
+      "simulations": 0,
+      "recombinations": 0,
+      "analogies": 0,
+      "reconciliations": 0,
+      "provenance": 0,
+      "accessibility": 0,
+      "priority_events": 0,
+      "accessibility_events": 0,
+      "confidence_events": 0,
+      "associations_dangling": 130
+    },
+    "saved": {
+      "ok": true,
+      "kind": "tier2_probe_cleanup",
+      "checksum": "4ccbd2c1e259f3d7a421e0261d639e2bd1ec5b6ad9bbbc61efe8d7e2eabc606b",
+      "schema_version": 1,
+      "path": "/media/jeff/AI/jarvis/data/acm/cognitive.db",
+      "pruned_snapshots": 1,
+      "max_snapshots": 32
+    },
+    "pruned_old_snapshot_ids": [
+      4965,
+      4966,
+      4967,
+      4968,
+      4969,
+      4970,
+      4971,
+      4972,
+      4973,
+      4974,
+      4975,
+      4976,
+      4977,
+      4978,
+      4979,
+      4980,
+      4981,
+      4982,
+      4983,
+      4984,
+      4985,
+      4986,
+      4987,
+      4988,
+      4989,
+      4990,
+      4991,
+      4992,
+      4993,
+      4994,
+      4995
+    ],
+    "latest_id": 4996,
+    "latest_token_hits": []
+  }
+}

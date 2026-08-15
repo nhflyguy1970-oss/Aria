@@ -1,0 +1,23 @@
+{
+  "updated_at": "2026-08-13T15:49:53.776989+00:00",
+  "pin_file_exists": false,
+  "pin_lock_env": "0",
+  "uncensored_auth_file_exists": true,
+  "legacy_env": {
+    "mode": "0o600",
+    "size": 10616,
+    "rewritten": false
+  },
+  "health_auth": {
+    "http": 404,
+    "ms": 6.92,
+    "ok": null,
+    "enabled": null,
+    "owner_vault": null,
+    "owner_unlocked": null,
+    "pin_convenience": null,
+    "portable_backup_distinct": null,
+    "ops": null
+  },
+  "secrets_in_evidence": false
+}

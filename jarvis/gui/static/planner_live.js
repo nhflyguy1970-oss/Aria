@@ -2,12 +2,15 @@
 (function () {
   "use strict";
 
-  const TICK_MS = 4000;
+  const TICK_MS_ACTIVE = 4000;
+  const TICK_MS_IDLE = 15000;
   const COUNTDOWN_MS = 1000;
   let tickTimer = null;
   let countdownTimer = null;
   let lastSnapshot = null;
   let undoAvailable = false;
+  let lastHadTimers = false;
+  let tickInFlight = false;
 
   function $(id) {
     return document.getElementById(id);
@@ -80,15 +83,46 @@
     pendingNotes = left.slice(-20);
   }
 
+  function plannerViewActive() {
+    const view = document.getElementById("plannerView");
+    return Boolean(view && !view.classList.contains("hidden") && view.offsetParent !== null);
+  }
+
+  function hasVisibleTimers() {
+    return Boolean(document.querySelector("[data-timer-ends]"));
+  }
+
+  function tickIntervalMs() {
+    if (lastHadTimers || hasVisibleTimers() || plannerViewActive() || pendingNotes.length) {
+      return TICK_MS_ACTIVE;
+    }
+    return TICK_MS_IDLE;
+  }
+
+  function armTickTimer() {
+    if (tickTimer) clearInterval(tickTimer);
+    tickTimer = setInterval(pollTick, tickIntervalMs());
+  }
+
   async function pollTick() {
-    if (document.hidden && !window.isNativeApp?.()) {
-      // Still poll lightly when hidden so alarms remain trustworthy in desktop/browser tabs
+    if (tickInFlight) return;
+    if (document.hidden && !window.isNativeApp?.() && !lastHadTimers) {
+      flushPendingNotes();
+      return;
     }
     flushPendingNotes();
+    tickInFlight = true;
     try {
       const res = await fetch("/api/planner/tick", { method: "POST", cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       const notes = data.notifications || [];
+      const active =
+        Boolean(data.has_active_timers || data.has_alarms) ||
+        notes.some((n) => n && (n.type === "alarm" || n.type === "timer"));
+      if (active !== lastHadTimers) {
+        lastHadTimers = active;
+        armTickTimer();
+      }
       notes.forEach((note) => {
         if (!deliverNotification(note)) pendingNotes.push(note);
       });
@@ -99,6 +133,8 @@
     } catch (err) {
       console.warn("planner tick failed", err);
       // retry next interval
+    } finally {
+      tickInFlight = false;
     }
   }
 
@@ -162,6 +198,9 @@
         .join("") || "<li class='muted'>Nothing at risk</li>";
       const next = data.suggested_next?.label || "Add a task or start focus";
       const health = data.health || {};
+      const openCount = Number(health.open_tasks);
+      const listed = (data.top_priorities || []).length;
+      const taskCount = Number.isFinite(openCount) ? openCount : listed;
       host.innerHTML = `
         <div class="planner-focus-head">
           <div>
@@ -170,7 +209,7 @@
             <p class="muted">Planner = actionable work · Journal = notes · Calendar = commitments</p>
           </div>
           <div class="planner-focus-health status-${esc(health.status || "healthy")}">
-            ${esc(health.status || "healthy")} · ${health.open_tasks || 0} tasks · ~${data.focus_minutes_available != null ? data.focus_minutes_available : "—"}m focus
+            ${esc(health.status || "healthy")} · ${taskCount} tasks · ~${data.focus_minutes_available != null ? data.focus_minutes_available : "—"}m focus
           </div>
         </div>
         <div class="planner-focus-grid">
@@ -203,6 +242,7 @@
         btn.addEventListener("click", () => handleFocusAction(btn.dataset.pf));
       });
     } catch (e) {
+      if (window.AriaNet?.isRoomAbort?.(e)) return;
       host.innerHTML = `<p class="muted">Daily Focus unavailable: ${e.message}</p>`;
     }
   }
@@ -256,7 +296,12 @@
       else if (action === "journal") window.switchToView?.("journal");
       else if (action === "docs") window.switchToView?.("documents");
       else if (action === "vision") {
-        const path = prompt("Path to whiteboard / screenshot / note image:");
+        const path = window.ariaPrompt
+          ? await window.ariaPrompt("Path to whiteboard / screenshot / note image:", "", {
+              title: "Vision import",
+              okLabel: "Extract",
+            })
+          : prompt("Path to whiteboard / screenshot / note image:");
         if (!path) return;
         const data = await api("/api/planner/vision/extract", {
           method: "POST",
@@ -268,8 +313,13 @@
           window.showAriaToast?.(data.message || "No tasks found", "warn", 4000);
           return;
         }
-        const ok = confirm(`Import ${candidates.length} candidate task(s) into Planner?`);
-        if (!ok) return;
+        const importOk = window.ariaConfirm
+          ? await window.ariaConfirm(`Import ${candidates.length} candidate task(s) into Planner?`, {
+              title: "Import tasks",
+              okLabel: "Import",
+            })
+          : window.confirm(`Import ${candidates.length} candidate task(s) into Planner?`);
+        if (!importOk) return;
         const imp = await api("/api/planner/vision/import", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -289,10 +339,11 @@
           window.showAriaToast?.("No schedule suggestions", "info", 3000);
           return;
         }
-        const conf = confirm(
-          `Suggest scheduling “${s.task}” at ${String(s.suggested_start || "").slice(11, 16)}?\n(Requires confirmation — will create a Planner event)`,
-        );
-        if (!conf) return;
+        const schedMsg = `Suggest scheduling “${s.task}” at ${String(s.suggested_start || "").slice(11, 16)}?\n(Requires confirmation — will create a Planner event)`;
+        const schedOk = window.ariaConfirm
+          ? await window.ariaConfirm(schedMsg, { title: "Apply schedule", okLabel: "Apply" })
+          : window.confirm(schedMsg);
+        if (!schedOk) return;
         await api("/api/planner/schedule/apply", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -313,7 +364,7 @@
   }
 
   function start() {
-    if (!tickTimer) tickTimer = setInterval(pollTick, TICK_MS);
+    if (!tickTimer) armTickTimer();
     if (!countdownTimer) countdownTimer = setInterval(tickCountdowns, COUNTDOWN_MS);
     setTimeout(pollTick, 1200);
     fetch("/api/planner/prefs")

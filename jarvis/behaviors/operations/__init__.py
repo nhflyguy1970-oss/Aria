@@ -44,6 +44,7 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "runtime_models": lambda _params, _message: _runtime_action("runtime_models"),
     "runtime_jobs": lambda _params, _message: _runtime_action("runtime_jobs"),
     "runtime_gpu": lambda _params, _message: _runtime_action("runtime_gpu"),
+    "runtime_cpu": lambda _params, _message: _runtime_action("runtime_cpu"),
     "runtime_ram": lambda _params, _message: _runtime_action("runtime_ram"),
     "runtime_storage": lambda _params, _message: _runtime_action("runtime_storage"),
     "runtime_network": lambda _params, _message: _runtime_action("runtime_network"),
@@ -68,6 +69,8 @@ _OPERATIONS_ACTIONS: dict[str, Any] = {
     "reference_search": lambda params, message: _reference_search(params, message),
     "documentation_search": lambda params, message: _reference_search(params, message),
     "nlu_clarify": lambda params, message: _nlu_clarify(params, message),
+    "notifications_digest": lambda params, _message: _notifications_digest(params),
+    "jobs_status": lambda _params, _message: _jobs_status(),
 }
 
 
@@ -77,6 +80,150 @@ def _recover() -> dict:
         "ok": result.get("ok", False),
         "message": operations.format_report(force=True),
         "data": result,
+    }
+
+
+def _notifications_digest(params: dict | None = None) -> dict:
+    """Authoritative notifications truth — never invent empty inbox in chat."""
+    params = params or {}
+    kind = str(params.get("kind") or "needs_attention")
+    lines: list[str] = []
+    summary: dict = {}
+    digest: dict = {}
+    try:
+        from jarvis.notifications_product.digest import build_digest
+        from jarvis.notifications_product.pipeline import unread_summary
+
+        summary = unread_summary() or {}
+        digest = build_digest(kind) or {}
+    except Exception as exc:
+        digest = {"ok": False, "error": str(exc)[:200]}
+
+    unread = int(summary.get("unread") or 0)
+    critical = int(summary.get("critical") or 0)
+    header = f"**Notifications** — {unread} unread"
+    if critical:
+        header += f", {critical} critical"
+    lines.append(header + ".")
+
+    # Durable inbox is Activity Center — surface recent unread titles.
+    try:
+        from jarvis.activity_inbox import list_items
+
+        payload = list_items(include_dismissed=False, limit=12) or {}
+        items = payload.get("items") or []
+        unread_items = [i for i in items if not i.get("read") and not i.get("dismissed")]
+        if unread_items:
+            lines.append("")
+            lines.append("**Inbox:**")
+            for item in unread_items[:8]:
+                kind_l = item.get("kind") or "info"
+                title = (item.get("title") or "Untitled").strip()
+                lines.append(f"• [{kind_l}] {title}")
+        elif unread == 0:
+            lines.append("No notifications need attention right now.")
+    except Exception:
+        # Fall back to digest lines if inbox unavailable.
+        for line in (digest.get("lines") or [])[:8]:
+            lines.append(line)
+
+    if not unread and not (digest.get("count") or 0):
+        # Honest empty — still from the subsystem path.
+        if len(lines) < 2:
+            lines.append("No notifications need attention right now.")
+
+    return {
+        "ok": True,
+        "message": "\n".join(lines),
+        "module": "notifications",
+        "data": {"summary": summary, "digest": digest},
+    }
+
+
+def _jobs_status() -> dict:
+    """Authoritative background work — media + coding queues, not chat guesses."""
+    lines: list[str] = ["**Background work**"]
+    media = {}
+    coding = {}
+    try:
+        from jarvis import media_jobs
+
+        media = media_jobs.job_stats() or {}
+    except Exception as exc:
+        media = {"error": str(exc)[:120]}
+    try:
+        from jarvis import coding_jobs
+
+        coding = coding_jobs.job_stats() or {}
+    except Exception as exc:
+        coding = {"error": str(exc)[:120]}
+
+    m_busy = bool(media.get("busy") or (media.get("pending") or 0) > 0)
+    c_busy = bool(coding.get("busy") or (coding.get("pending") or 0) > 0)
+    if not m_busy and not c_busy:
+        lines.append("Nothing running right now.")
+    else:
+        if m_busy:
+            label = media.get("active_label") or "Media job"
+            pct = None
+            msg = ""
+            try:
+                from jarvis import media_jobs
+
+                aid = media.get("active_id")
+                if aid:
+                    job = media_jobs.get_job(str(aid)) or {}
+                    pct = job.get("pct")
+                    msg = job.get("message") or ""
+                    label = job.get("label") or label
+                elif (media.get("pending") or 0) > 0:
+                    msg = "queued"
+            except Exception:
+                pass
+            bit = f"• Media: {label}"
+            if pct is not None:
+                bit += f" ({pct}%)"
+            if msg:
+                bit += f" — {msg}"
+            lines.append(bit)
+            if media.get("pending"):
+                lines.append(f"  Queue: {media.get('pending')} waiting")
+        if c_busy:
+            label = coding.get("active_label") or coding.get("label") or "Coding"
+            pct = coding.get("pct")
+            msg = coding.get("message") or ""
+            bit = f"• Coding: {label}"
+            if pct is not None:
+                bit += f" ({pct}%)"
+            if msg:
+                bit += f" — {msg}"
+            lines.append(bit)
+
+    # Recent completed media (discoverability after disconnect).
+    try:
+        from jarvis import media_jobs
+
+        recent = []
+        with media_jobs._lock:
+            for jid in list(media_jobs._history)[-8:]:
+                job = media_jobs._jobs.get(jid)
+                if job and job.get("done"):
+                    recent.append(job)
+        if recent:
+            lines.append("")
+            lines.append("**Recently finished:**")
+            for job in reversed(recent[-5:]):
+                ok = (job.get("result") or {}).get("ok")
+                status = "ok" if ok else (job.get("error") or job.get("message") or "done")
+                lines.append(f"• {job.get('label') or job.get('kind')}: {status}")
+    except Exception:
+        pass
+
+    return {
+        "ok": True,
+        "message": "\n".join(lines),
+        "module": "jobs",
+        "data": {"media": media, "coding": coding},
     }
 
 

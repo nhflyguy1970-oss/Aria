@@ -1,0 +1,48 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "knowledge",
+  "capability": "Knowledge Briefs hop from Memory + Health Knowledge tab read-only",
+  "captured_at": "2026-08-15T19:49:00Z",
+  "result": "PARTIAL — Memory Knowledge Briefs lands #documents (library), not a dedicated briefs list. GET /api/knowledge/research reports 5 existing briefs (titles/paths not recorded) that the Documents hop does not show. Health Knowledge tab is a different product: honest empty None recorded; no PHR write. Run research / Upload / Add not clicked. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "knowledge_briefs": {
+    "via": "Memory #memory → Knowledge Briefs",
+    "landed": "#documents h2 Documents",
+    "toast_intended": "Knowledge Briefs live with Documents / research — not Memory, not Connections",
+    "briefs_ui_on_documents": false,
+    "api": "GET /api/knowledge/research 200; enabled true; briefs 5",
+    "titles_paths_bodies_recorded": false,
+    "run_research_clicked": false
+  },
+  "health_knowledge_tab": {
+    "via": "#health → Knowledge",
+    "h3": "Health Knowledge",
+    "empty": "None recorded.",
+    "disclaimer": "informational only; not diagnose/prescribe",
+    "writes": false
+  },
+  "performance": {
+    "memory_entry": "FAST — archive already proven; first paint listed cards",
+    "knowledge_hop": "FAST — Documents immediately",
+    "health_knowledge": "FAST"
+  },
+  "not_clicked": [
+    "knowledgeResearchRunBtn",
+    "Upload",
+    "Import",
+    "Learn → candidates",
+    "Check-in",
+    "Log dose",
+    "New Memory"
+  ],
+  "data_mutation": {
+    "journal_post": false,
+    "health_phr": false,
+    "knowledge_research_run": false
+  },
+  "owner_session": "OWNER_UNLOCKED throughout"
+}

@@ -1,12 +1,10 @@
 """Specialist Team product API routes."""
 
-from __future__ import annotations
+from fastapi import Request
+from fastapi.responses import JSONResponse
 
 
 def register_specialist_routes(app, assistant) -> None:
-    from fastapi import Request
-    from fastapi.responses import JSONResponse
-
     @app.get("/api/specialists/gallery")
     def specialists_gallery():
         from jarvis.specialists.catalog import list_gallery

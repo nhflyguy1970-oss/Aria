@@ -1,0 +1,34 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-15T20:15:00Z",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "owner_session": "OWNER_UNLOCKED throughout",
+  "integrity": "clean / 100; artifacts 0",
+  "room": "notifications",
+  "capability": "Activity Center All first-paint honesty after repair",
+  "result": "PASS \u2014 Open Notifications from Mission Control. All first paint listed events with 79 shown \u00b7 79 unread. Did not say Inbox is clear. Header 79 unread. Escape closed. Mark all read / Clear / Dismiss not clicked.",
+  "repair": {
+    "file": "jarvis/gui/static/activity_center.js",
+    "cache": "activity_center.js?v=6.5.5-inbox-honest",
+    "cause": "empty queryEvents() used Inbox is clear even when unreadCount() > 0",
+    "fix": "true clear only when unread===0; filter-hidden copy + Show unread; loading+retry when All and unread>0"
+  },
+  "first_paint_all": {
+    "header": "79 unread events, 36 failures, 36 warnings",
+    "body": "79 shown \u00b7 79 unread with list items",
+    "honesty": "PASS"
+  },
+  "not_clicked": [
+    "Mark all read",
+    "Clear",
+    "Dismiss"
+  ],
+  "data_mutation": {
+    "dismiss": false,
+    "mark_read": false
+  }
+}

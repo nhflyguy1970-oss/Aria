@@ -1,0 +1,14 @@
+{
+  "updated_at": "2026-08-13T15:20:40.955235+00:00",
+  "health_auth_status_enabled": false,
+  "step_up_http_status": 200,
+  "step_up_ok": true,
+  "step_up_enabled": false,
+  "step_up_required": null,
+  "verify_credentials_lan_rejected": true,
+  "lan_key_authenticated_health": false,
+  "lan_key_authenticated_owner": false,
+  "qa_mutating_post_status": 403,
+  "note": "Health step-up not required (PIN lock off); LAN key was not used as authenticator. _verify_credentials(LAN key) rejected.",
+  "secrets_in_evidence": false
+}

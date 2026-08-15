@@ -213,7 +213,7 @@
     return `<section class="dash-widget dash-health" data-widget="provider_health" aria-label="Provider health">
       <h3>Provider health</h3>
       <p id="dashHealthLine">${escFn(status)}${score != null ? ` · score ${escFn(score)}` : ""} · ${escFn(p.provider || "provider")}${p.model ? ` · ${escFn(p.model)}` : ""}${recovery}</p>
-      <p class="muted tiny">CPU ${escFn(Math.round(p.cpu_percent || 0))}% · RAM ${escFn(Math.round(p.ram_percent || 0))}%${models ? ` · ${escFn(models)}` : ""}${lastErr}</p>
+      <p class="muted tiny">Aria CPU ${escFn(Math.round(p.cpu_percent || 0))}% · Aria RAM ${escFn(Math.round(p.ram_percent || 0))}%${models ? ` · ${escFn(models)}` : ""}${lastErr}</p>
       <button type="button" class="ghost-btn tiny dash-deeplink" data-view="workstation">Open Mission Control</button>
       <button type="button" class="ghost-btn tiny" id="dashProviderDiagBtn">Diagnostics</button>
       <p class="muted tiny">Summary only — Provider Health owns reliability; Mission Control is operational.</p>
@@ -315,6 +315,19 @@
     </section>`;
   }
 
+  function renderHealthRecord(w, escFn) {
+    const p = w?.payload || {};
+    const done = !!p.checkin_today;
+    return `<section class="dash-widget" data-widget="health_record" aria-label="Health">
+      <h3>Health</h3>
+      <p>${done ? "Today's check-in is on file." : "No daily check-in yet."}
+         · <strong>${escFn(p.current_meds ?? 0)}</strong> current meds</p>
+      ${p.latest_bp ? `<p class="muted tiny">Latest BP: ${escFn(p.latest_bp)}</p>` : ""}
+      ${p.observation ? `<p class="muted tiny">${escFn(p.observation)}</p>` : ""}
+      <button type="button" class="ghost-btn small dash-deeplink" data-view="health">Open Health</button>
+    </section>`;
+  }
+
   function renderNotificationsSummary(w, escFn) {
     const p = w?.payload || {};
     const unread = p.unread ?? 0;
@@ -378,12 +391,18 @@
     const quiet = !!opts.quiet;
     const category = opts.category || "";
     try {
-      const url = category
-        ? `/api/dashboard/home?category=${encodeURIComponent(category)}&stale_ok=true`
-        : "/api/dashboard/home?stale_ok=true";
-      const res = await fetch(url, { cache: "no-store" });
-      const data = await res.json();
-      if (!res.ok || data.ok === false) throw new Error(data.error || data.message || "Home load failed");
+      let data;
+      if (window.AriaSharedFetch?.dashboardHome) {
+        data = await window.AriaSharedFetch.dashboardHome({ category, stale_ok: true, ttlMs: 2500 });
+      } else {
+        const url = category
+          ? `/api/dashboard/home?category=${encodeURIComponent(category)}&stale_ok=true`
+          : "/api/dashboard/home?stale_ok=true";
+        const res = await fetch(url, { cache: "no-store" });
+        data = await res.json();
+        if (!res.ok) throw new Error(data.error || data.message || "Home load failed");
+      }
+      if (data.ok === false) throw new Error(data.error || data.message || "Home load failed");
       _lastHome = data;
       _generatedAt = data.generated_at;
 
@@ -398,8 +417,12 @@
       const body = $("dashboardBody");
       if (!body) return;
 
-      const orderHint = (data.layout?.order || []).filter(Boolean);
-      const hidden = new Set(data.layout?.hidden || []);
+      const effectiveLayout = data.layout || {};
+      if (Array.isArray(effectiveLayout.order)) {
+        window.AriaUiPrefs?.set?.("dashboardLayout", effectiveLayout);
+      }
+      const orderHint = (effectiveLayout.order || []).filter(Boolean);
+      const hidden = new Set(effectiveLayout.hidden || []);
       const byId = Object.fromEntries((data.widgets || []).map((w) => [w.id, w]));
 
       const defaultOrder = [
@@ -412,6 +435,7 @@
         "today_glance",
         "calendar_summary",
         "journal_reminder",
+        "health_record",
         "memory_highlights",
         "projects",
         "scenes",
@@ -447,6 +471,7 @@
         else if (id === "suggestions") parts.push(renderSuggestions(w, esc));
         else if (id === "search_shortcuts") parts.push(renderSearchShortcuts(w, esc));
         else if (id === "notifications_summary") parts.push(renderNotificationsSummary(w, esc));
+        else if (id === "health_record") parts.push(renderHealthRecord(w, esc));
         else if (id === "diagnostics") parts.push(renderDiagnostics(w, esc));
         else if (["calendar_summary", "journal_reminder", "memory_highlights", "projects"].includes(id))
           parts.push(renderSimpleProduct(w, esc));
@@ -477,7 +502,13 @@
       body.querySelector("#dashDiagRefresh")?.addEventListener("click", () => loadDashboard());
       body.querySelector("#dashNewsRefresh")?.addEventListener("click", () => loadDashboard());
       body.querySelector("#dashProviderDiagBtn")?.addEventListener("click", () => {
-        window.open("/api/provider/diagnostics", "_blank", "noopener");
+        // Product surface: Mission Control · Inference (never dump raw JSON in a new tab).
+        window.AriaActions?.mission?.diagnostics?.()
+          || window.AriaActions?.goMc?.("inference")
+          || (() => {
+            window.switchToView?.("workstation");
+            setTimeout(() => window.switchMcTab?.("inference"), 80);
+          })();
       });
 
       body.querySelectorAll(".dash-stat-card[data-view], .dash-attention-item[data-view]").forEach((btn) => {
@@ -561,6 +592,27 @@
         /* soft success only on manual refresh path via toast optional */
       }
     } catch (e) {
+      const stillHome =
+        window.AriaViewRouter?.currentView?.() === "dashboard" ||
+        /^#?(dashboard|home)\b/i.test(location.hash || "");
+      if (
+        window.AriaNet?.isRoomAbort?.(e) ||
+        e?.name === "AbortError" ||
+        /aborted|aria-room-leave/i.test(String(e?.message || ""))
+      ) {
+        if (stillHome) {
+          clearTimeout(loadDashboard._retry);
+          loadDashboard._retry = setTimeout(() => {
+            if (
+              window.AriaViewRouter?.currentView?.() === "dashboard" ||
+              /^#?(dashboard|home)\b/i.test(location.hash || "")
+            ) {
+              loadDashboard({ quiet: true });
+            }
+          }, 200);
+        }
+        return;
+      }
       const body = $("dashboardBody");
       if (body) {
         body.innerHTML = `<div class="empty-state" role="alert">

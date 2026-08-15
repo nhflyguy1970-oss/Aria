@@ -1,0 +1,44 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-15T20:22:00Z",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "owner_session": "OWNER_UNLOCKED throughout",
+  "integrity": "clean / 100; artifacts 0",
+  "room": "calendar",
+  "capability": "Negative search no-match copy + Memory dates in-house panel",
+  "result": "PASS \u2014 zzzznonexistentxyz shows \u201cNo events match this search\u201d. Memory dates opens in-room panel (1 reminder) instead of window.alert. Reminder content not recorded. Save / New event / HA Meeting / Vision import not clicked.",
+  "repair": {
+    "files": [
+      "jarvis/gui/static/calendar.js",
+      "jarvis/gui/static/index.html"
+    ],
+    "cache": "calendar.js?v=5.17.5-search-memory",
+    "cause": "search filtered silently; Memory dates used window.alert",
+    "fix": "#calendarSearchStatus no-match copy; #calendarMemoryPanel in-house list"
+  },
+  "negative_search": {
+    "query": "zzzznonexistentxyz",
+    "status": "No events match this search"
+  },
+  "memory_dates": {
+    "alert_used": false,
+    "panel": true,
+    "reminder_count": 1,
+    "contents_recorded": false
+  },
+  "not_clicked": [
+    "Save work schedule",
+    "Add commitment",
+    "HA Meeting mode",
+    "Vision import",
+    "ICS Save"
+  ],
+  "data_mutation": {
+    "calendar_write": false,
+    "journal_write": false
+  }
+}

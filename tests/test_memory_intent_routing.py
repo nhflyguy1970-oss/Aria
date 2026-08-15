@@ -20,6 +20,13 @@ CASES = [
     ("Who are you?", "memory_about_user"),
     ("What's your name?", "memory_about_user"),
     ("Search memory for fly tying.", "memory_search"),
+    # BUG-025: "remember" in a recall question must not store.
+    ("What exact ARIA-FINAL-MEMORY marker did I ask you to remember?", "memory_about_user"),
+    ("Can you remember what I told you about my project?", "memory_about_user"),
+    ("Tell me what you remember about X.", "memory_about_user"),
+    ("Remind me of the unique acceptance memory marker I just stored.", "memory_about_user"),
+    ("What was the ARIA-FINAL-MEMORY marker? It starts with ARIA-FINAL-MEMORY-.", "memory_about_user"),
+    ("Please remember ARIA-FINAL-MEMORY-UNIQUE-ZETA", "remember"),
 ]
 
 
@@ -29,7 +36,14 @@ def test_resolve_memory_route_verbs(prompt, expected):
     assert resolved is not None, prompt
     assert resolved["action"] == expected
     if expected == "remember":
-        assert "dark roast" in resolved["params"]["text"] or "Zeus" in resolved["params"]["text"]
+        text = resolved["params"]["text"]
+        assert text
+        if "dark roast" in prompt:
+            assert "dark roast" in text
+        elif "Zeus" in prompt:
+            assert "Zeus" in text
+        elif "ARIA-FINAL-MEMORY" in prompt:
+            assert "ARIA-FINAL-MEMORY" in text
     if expected == "memory_forget":
         assert "coffee" in resolved["params"]["query"].lower()
     if expected == "memory_search" and "fly tying" in prompt.lower():
@@ -94,3 +108,23 @@ def test_nlu_mapping_remember_not_recall():
     intent = nlu_to_router_intent(result)
     assert intent is not None
     assert intent["action"] == "remember"
+
+
+def test_remember_strips_confirmational_tail():
+    """BUG-008: store clean propositions without QA/confirm framing."""
+    from jarvis.modules.memory_common import parse_remember
+
+    content, etype, _ns = parse_remember(
+        "Please remember for testing: my acceptance token is TOK-9. Confirm you stored it."
+    )
+    assert etype == "fact"
+    assert content == "my acceptance token is TOK-9"
+    assert "confirm" not in content.lower()
+    assert "for testing" not in content.lower()
+
+    resolved = resolve_memory_route(
+        "Please remember for testing: my acceptance token is TOK-9. Confirm you stored it."
+    )
+    assert resolved is not None
+    assert resolved["action"] == "remember"
+    assert resolved["params"]["text"] == "my acceptance token is TOK-9"

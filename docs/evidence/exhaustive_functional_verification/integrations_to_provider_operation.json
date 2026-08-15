@@ -1,0 +1,89 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "integrations",
+  "capability": "Integrations → provider operation",
+  "captured_at": "2026-08-14T19:22:46Z",
+  "result": "PASS — Front Door → Integrations; selected Ollama (local, no cloud key); Test connection reachable · 40 model(s) · 4ms; no key paste/save/clear. Leave Mission / return restored 12 providers with Ollama still selected. NOT CERTIFICATION.",
+  "not_certification": true,
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "health_home_at_end": 200,
+  "lock_overlay_at_end": "hidden",
+  "entry": {
+    "via": "Front Door → Integrations (Keys and outside services)",
+    "hash": "#integrations",
+    "body_room": "integrations",
+    "h2": "Integrations",
+    "place": "Integrations"
+  },
+  "summary": {
+    "configured": 8,
+    "available": 4,
+    "managed_elsewhere": 3,
+    "total": 12
+  },
+  "providers_named": [
+    "Google Gemini CONFIGURED",
+    "OpenAI CONFIGURED",
+    "Anthropic AVAILABLE not set",
+    "OpenRouter AVAILABLE not set",
+    "Hugging Face CONFIGURED",
+    "Meshy AVAILABLE not set",
+    "Ollama CONFIGURED",
+    "LiteLLM Gateway CONFIGURED",
+    "Home Assistant MANAGED_ELSEWHERE",
+    "Inbound Automation Webhook MANAGED_ELSEWHERE",
+    "SearXNG AVAILABLE not set",
+    "Aria Host API Key MANAGED_ELSEWHERE"
+  ],
+  "provider_operation": {
+    "provider": "Ollama",
+    "kind": "local",
+    "owner": "Models",
+    "status": "configured",
+    "control": "Test connection",
+    "result": "Ollama reachable · 40 model(s) · 4ms",
+    "toast": "Ollama reachable · 40 model(s)",
+    "key_pasted": false,
+    "jeff_credential_required": false
+  },
+  "leave_return": {
+    "via": "Front Door recents → Mission Control then Front Door recents → Integrations",
+    "mission_hash": "#workstation",
+    "front_door_from_integrations": "stale — You're in the middle of Mission Control (did not name Integrations)",
+    "front_door_from_mission": "You're in the middle of Mission Control.",
+    "return_hash": "#integrations",
+    "return_count": 12,
+    "return_selected": "Ollama",
+    "test_result_after_return": "cleared on reload",
+    "result": "PASS"
+  },
+  "not_clicked": [
+    "Save key",
+    "Clear key",
+    "Disable",
+    "Test configured (all)",
+    "Diagnostics",
+    "cloud Test connection (Gemini/OpenAI/HF)",
+    "Home Assistant Test",
+    "Webhook Test"
+  ],
+  "data_mutation": {
+    "secrets_saved": false,
+    "secrets_cleared": false,
+    "provider_toggled": false,
+    "journal_post": false,
+    "health_phr": false,
+    "coding_apply": false,
+    "repair_executed": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; clean; artifacts 0",
+  "notes": [
+    "First paint briefly empty then 12 providers. Gemini auto-selected first; Ollama chosen for local Test.",
+    "Security banner first said plaintext jarvis.env then updated to Owner Vault prefer / env rollback.",
+    "Experimental list still says Encrypted vault unavailable / current storage is plaintext — stale vs M2 vault.",
+    "Recovery showed 3 rotation reminders and 8 recent connection failures (prior M2 tests). Paths/previews not recorded."
+  ],
+  "jeff_action_required": false,
+  "next_exact_capability": "Browser actual page load (empty Open already proven). Do not execute Guided Repair. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34."
+}

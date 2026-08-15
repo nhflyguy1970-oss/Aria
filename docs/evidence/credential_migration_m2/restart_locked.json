@@ -1,0 +1,15 @@
+{
+  "test": "M2-H restart leaves vault locked with entries preserved",
+  "at": "2026-08-13T13:32:00+00:00",
+  "new_serve_pid": 91840,
+  "owner_state": "OWNER_LOCKED",
+  "vault": {
+    "exists": true,
+    "unlocked": false,
+    "entry_count": 3,
+    "format": "aria-owner-vault-v1"
+  },
+  "timings_fresh_process": true,
+  "legacy_env_retained": true,
+  "secrets_in_evidence": false
+}

@@ -1,0 +1,24 @@
+{
+  "credential": "OPENAI_API_KEY",
+  "vault_id": "provider.openai.api_key",
+  "migrated_at": "2026-08-13T13:20:33+00:00",
+  "ok": true,
+  "legacy_retained": true,
+  "jarvis_env_mtime_unchanged_during_migrate": true,
+  "fingerprint": {
+    "length": 164,
+    "sha256_8": "8b63e75d",
+    "prefix_class": "sk"
+  },
+  "consumer": "integrations_product.secrets_bus.get_secret → test_connection(openai)",
+  "provider_operation": {
+    "ok": true,
+    "auth": "ok",
+    "http_status": 200,
+    "latency_ms": 829,
+    "message": "OpenAI API authenticated"
+  },
+  "migrate_api_ms": 23.13,
+  "vault_put_ms": 6.47,
+  "secrets_in_evidence": false
+}

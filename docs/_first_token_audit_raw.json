@@ -1,0 +1,520 @@
+{
+  "soft_ms": 5072.397853999973,
+  "tags_ms": 0.031881000722933095,
+  "results": [
+    {
+      "category": "greeting",
+      "prompt": "Hello",
+      "action": "greeting",
+      "route_reason": "reflex",
+      "context_ms": 11.2,
+      "context_chars": 114,
+      "context_injected": [
+        "language"
+      ],
+      "lightweight": true,
+      "first_event_ms": 0.14406300033442676,
+      "first_status_ms": 0.14406300033442676,
+      "first_token_ms": null,
+      "stream_ms": 110.2,
+      "done": {
+        "ok": true,
+        "preview": "Hello! I'm ARIA, running entirely on your machine via Ollama.\n\nAsk me **what can"
+      },
+      "stages": [
+        {
+          "t_ms": 0.1,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 0.9,
+          "type": "status",
+          "msg": "Running greeting\u2026"
+        },
+        {
+          "t_ms": 110.2,
+          "type": "done",
+          "msg": "Hello! I'm ARIA, running entirely on your machine "
+        }
+      ]
+    },
+    {
+      "category": "simple",
+      "prompt": "What is 2+2?",
+      "action": "chat",
+      "route_reason": "nlu_structure_default",
+      "context_ms": 0.1,
+      "context_chars": 114,
+      "context_injected": [
+        "language"
+      ],
+      "lightweight": true,
+      "first_event_ms": 0.008195000191335566,
+      "first_status_ms": 0.008195000191335566,
+      "first_token_ms": 167389.10501499957,
+      "stream_ms": 167390.4,
+      "done": null,
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 1.2,
+          "type": "status",
+          "msg": "Checking provider\u2026"
+        },
+        {
+          "t_ms": 1.5,
+          "type": "status",
+          "msg": "Gathering context\u2026"
+        },
+        {
+          "t_ms": 411.8,
+          "type": "status",
+          "msg": "Calling model\u2026"
+        },
+        {
+          "t_ms": 167389.1,
+          "type": "token",
+          "msg": "2"
+        }
+      ]
+    },
+    {
+      "category": "datetime",
+      "prompt": "What day is today?",
+      "action": "chat",
+      "route_reason": "calendar_fact",
+      "context_ms": 0.1,
+      "context_chars": 162,
+      "context_injected": [
+        "local_clock",
+        "language"
+      ],
+      "lightweight": true,
+      "first_event_ms": 0.011531999916769564,
+      "first_status_ms": 0.011531999916769564,
+      "first_token_ms": 227556.66975000076,
+      "stream_ms": 227558.3,
+      "done": null,
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 0.5,
+          "type": "status",
+          "msg": "Checking provider\u2026"
+        },
+        {
+          "t_ms": 3.4,
+          "type": "status",
+          "msg": "Gathering context\u2026"
+        },
+        {
+          "t_ms": 751.5,
+          "type": "status",
+          "msg": "Calling model\u2026"
+        },
+        {
+          "t_ms": 227556.7,
+          "type": "token",
+          "msg": "Today"
+        }
+      ]
+    },
+    {
+      "category": "weather",
+      "prompt": "What's the weather today?",
+      "action": "weather_forecast",
+      "route_reason": "weather_forecast",
+      "context_ms": 557.6,
+      "context_chars": 169,
+      "context_injected": [
+        "planning",
+        "language"
+      ],
+      "lightweight": false,
+      "first_event_ms": 0.012904999493912328,
+      "first_status_ms": 0.012904999493912328,
+      "first_token_ms": null,
+      "stream_ms": 70.2,
+      "done": {
+        "ok": true,
+        "preview": "**Today** in Charlestown, NH \u2014 Rain \u00b7 H 76\u00b0F / L 63\u00b0F"
+      },
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 0.8,
+          "type": "status",
+          "msg": "Running weather_forecast\u2026"
+        },
+        {
+          "t_ms": 70.2,
+          "type": "done",
+          "msg": "**Today** in Charlestown, NH \u2014 Rain \u00b7 H 76\u00b0F / L 6"
+        }
+      ]
+    },
+    {
+      "category": "knowledge",
+      "prompt": "Who is Ada Lovelace?",
+      "action": "chat",
+      "route_reason": "nlu_structure_default",
+      "context_ms": 1586.1,
+      "context_chars": 1581,
+      "context_injected": [
+        "knowledge",
+        "language"
+      ],
+      "lightweight": false,
+      "first_event_ms": 0.011482000445539597,
+      "first_status_ms": 0.011482000445539597,
+      "first_token_ms": 223865.08688899994,
+      "stream_ms": 223866.1,
+      "done": null,
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 1.2,
+          "type": "status",
+          "msg": "Checking provider\u2026"
+        },
+        {
+          "t_ms": 3.4,
+          "type": "status",
+          "msg": "Gathering context\u2026"
+        },
+        {
+          "t_ms": 2837.4,
+          "type": "status",
+          "msg": "Calling model\u2026"
+        },
+        {
+          "t_ms": 223865.1,
+          "type": "token",
+          "msg": "Ada"
+        }
+      ]
+    },
+    {
+      "category": "search",
+      "prompt": "Search for information about RISC-V",
+      "action": "chat",
+      "route_reason": "nlu_structure_default",
+      "context_ms": 1.1,
+      "context_chars": 114,
+      "context_injected": [
+        "language"
+      ],
+      "lightweight": false,
+      "first_event_ms": 0.008134999916364904,
+      "first_status_ms": 0.008134999916364904,
+      "first_token_ms": 203433.2998159998,
+      "stream_ms": 203434.3,
+      "done": null,
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 1.0,
+          "type": "status",
+          "msg": "Checking provider\u2026"
+        },
+        {
+          "t_ms": 3.4,
+          "type": "status",
+          "msg": "Gathering context\u2026"
+        },
+        {
+          "t_ms": 1006.8,
+          "type": "status",
+          "msg": "Calling model\u2026"
+        },
+        {
+          "t_ms": 203433.3,
+          "type": "token",
+          "msg": "Sure"
+        }
+      ]
+    },
+    {
+      "category": "documents",
+      "prompt": "What does my warranty say?",
+      "action": "chat",
+      "route_reason": "nlu_structure_default",
+      "context_ms": 539444.9,
+      "context_chars": 1552,
+      "context_injected": [
+        "memory",
+        "knowledge",
+        "language"
+      ],
+      "lightweight": false,
+      "first_event_ms": 0.012673999663093127,
+      "first_status_ms": 0.012673999663093127,
+      "first_token_ms": null,
+      "stream_ms": 866333.9,
+      "done": null,
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 1.3,
+          "type": "status",
+          "msg": "Checking provider\u2026"
+        },
+        {
+          "t_ms": 4.3,
+          "type": "status",
+          "msg": "Gathering context\u2026"
+        },
+        {
+          "t_ms": 866332.9,
+          "type": "status",
+          "msg": "Calling model\u2026"
+        },
+        {
+          "t_ms": 866332.9,
+          "type": "deadline"
+        }
+      ]
+    },
+    {
+      "category": "planner",
+      "prompt": "Schedule a meeting tomorrow.",
+      "action": "chat",
+      "route_reason": "nlu_structure_default",
+      "context_ms": 564.8,
+      "context_chars": 114,
+      "context_injected": [
+        "language"
+      ],
+      "lightweight": false,
+      "first_event_ms": 0.018605000150273554,
+      "first_status_ms": 0.018605000150273554,
+      "first_token_ms": 189355.59707799985,
+      "stream_ms": 189356.7,
+      "done": null,
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 1.5,
+          "type": "status",
+          "msg": "Checking provider\u2026"
+        },
+        {
+          "t_ms": 1.5,
+          "type": "status",
+          "msg": "Gathering context\u2026"
+        },
+        {
+          "t_ms": 168.1,
+          "type": "status",
+          "msg": "Calling model\u2026"
+        },
+        {
+          "t_ms": 189355.6,
+          "type": "token",
+          "msg": "Sure"
+        }
+      ]
+    },
+    {
+      "category": "memory",
+      "prompt": "What did I tell you yesterday?",
+      "action": "memory_about_user",
+      "route_reason": "memory_verb",
+      "context_ms": 1767.5,
+      "context_chars": 1845,
+      "context_injected": [
+        "memory",
+        "knowledge",
+        "language"
+      ],
+      "lightweight": false,
+      "first_event_ms": 0.01004899968393147,
+      "first_status_ms": 0.01004899968393147,
+      "first_token_ms": null,
+      "stream_ms": 80.2,
+      "done": {
+        "ok": true,
+        "preview": "I don't currently know. (no_reliable_reconstruction)"
+      },
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 0.6,
+          "type": "status",
+          "msg": "Running memory_about_user\u2026"
+        },
+        {
+          "t_ms": 80.2,
+          "type": "done",
+          "msg": "I don't currently know. (no_reliable_reconstructio"
+        }
+      ]
+    },
+    {
+      "category": "smarthome",
+      "prompt": "Turn on the living room lights.",
+      "action": "chat",
+      "route_reason": "nlu_structure_default",
+      "context_ms": 0.6,
+      "context_chars": 114,
+      "context_injected": [
+        "language"
+      ],
+      "lightweight": false,
+      "first_event_ms": 0.007495000318158418,
+      "first_status_ms": 0.007495000318158418,
+      "first_token_ms": 113205.67279500028,
+      "stream_ms": 113206.7,
+      "done": null,
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 0.9,
+          "type": "status",
+          "msg": "Checking provider\u2026"
+        },
+        {
+          "t_ms": 3.4,
+          "type": "status",
+          "msg": "Gathering context\u2026"
+        },
+        {
+          "t_ms": 418.0,
+          "type": "status",
+          "msg": "Calling model\u2026"
+        },
+        {
+          "t_ms": 113205.7,
+          "type": "token",
+          "msg": "I"
+        }
+      ]
+    },
+    {
+      "category": "coding",
+      "prompt": "Write a Python function that reverses a string",
+      "action": "chat",
+      "route_reason": "nlu_structure_default",
+      "context_ms": 0.8,
+      "context_chars": 114,
+      "context_injected": [
+        "language"
+      ],
+      "lightweight": false,
+      "first_event_ms": 0.018214999727206305,
+      "first_status_ms": 0.018214999727206305,
+      "first_token_ms": 146563.78998000035,
+      "stream_ms": 146564.9,
+      "done": null,
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 1.2,
+          "type": "status",
+          "msg": "Checking provider\u2026"
+        },
+        {
+          "t_ms": 3.6,
+          "type": "status",
+          "msg": "Gathering context\u2026"
+        },
+        {
+          "t_ms": 1319.4,
+          "type": "status",
+          "msg": "Calling model\u2026"
+        },
+        {
+          "t_ms": 146563.8,
+          "type": "token",
+          "msg": "Sure"
+        }
+      ]
+    },
+    {
+      "category": "flytying",
+      "prompt": "Tie a Woolly Bugger.",
+      "action": "chat",
+      "route_reason": "nlu_structure_default",
+      "context_ms": 6778.4,
+      "context_chars": 3343,
+      "context_injected": [
+        "flytying",
+        "language"
+      ],
+      "lightweight": false,
+      "first_event_ms": 0.010460000339662656,
+      "first_status_ms": 0.010460000339662656,
+      "first_token_ms": 135293.12539400053,
+      "stream_ms": 135294.5,
+      "done": null,
+      "stages": [
+        {
+          "t_ms": 0.0,
+          "type": "status",
+          "msg": "Routing\u2026"
+        },
+        {
+          "t_ms": 1.1,
+          "type": "status",
+          "msg": "Checking provider\u2026"
+        },
+        {
+          "t_ms": 3.4,
+          "type": "status",
+          "msg": "Gathering context\u2026"
+        },
+        {
+          "t_ms": 6966.5,
+          "type": "status",
+          "msg": "Calling model\u2026"
+        },
+        {
+          "t_ms": 135293.1,
+          "type": "token",
+          "msg": "Sure"
+        }
+      ]
+    }
+  ]
+}

@@ -45,7 +45,6 @@ RUFF_PATHS: tuple[str, ...] = (
     "jarvis/extensions/security/handlers.py",
     "jarvis/handlers/__init__.py",
     "jarvis/modules/vector_store.py",
-    "jarvis/modules/memory_adapter_store.py",
     "jarvis/modules/knowledge_retrieval_adapter.py",
     "jarvis/platform_cutover.py",
     "jarvis/workflows",
@@ -139,6 +138,8 @@ PYTEST_PATHS: tuple[str, ...] = (
     "tests/test_memory_intent_routing.py",
     "tests/test_memory_retrieval_quality.py",
     "tests/test_memory_retrieval_consistency.py",
+    "tests/test_action_catalog_registry.py",
+    "tests/test_product_registration_strictness.py",
     "tests/test_aria_core_phase7.py",
     "tests/test_aria_core_phase8.py",
     "tests/test_aria_core_concurrency.py",
@@ -178,6 +179,22 @@ PYTEST_PATHS: tuple[str, ...] = (
     "tests/test_aria_acm_m3.py",
     "tests/test_aria_acm_m4.py",
     "tests/test_cognitive_infrastructure_conversion.py",
+    "tests/test_architecture_batch_abc.py",
+    "tests/test_certification_product.py",
+    "tests/test_checkpoint_r1.py",
+    "tests/test_conversation_pipeline_unify.py",
+    "tests/test_intelligence_platform.py",
+    "tests/test_memory_read_c3.py",
+    "tests/test_jarvis_mcp_c6.py",
+    "tests/test_launch_ownership.py",
+    "tests/test_server_restart.py",
+    "tests/test_owner_session_daily_use.py",
+    "tests/test_owner_security_m1.py",
+    "tests/test_owner_security_m2.py",
+    "tests/test_owner_security_m3.py",
+    "tests/test_owner_security_m4.py",
+    "tests/test_production_integrity.py",
+    "tests/test_connections.py",
 )
 
 
@@ -268,11 +285,29 @@ def run_supremacy() -> int:
     return subprocess.run([sys.executable, str(script)], cwd=ROOT, check=False).returncode
 
 
+def run_action_catalog() -> int:
+    cmd = [
+        sys.executable,
+        "-c",
+        (
+            "import re; "
+            "from jarvis.handlers import ensure_handlers_loaded; "
+            "from jarvis.handlers.registry import action_names; "
+            "from jarvis import router; "
+            "ensure_handlers_loaded(); "
+            "listed=set(re.findall(r'^- ([a-zA-Z0-9_]+):', str(router.ACTIONS), re.M)); "
+            "missing=sorted(listed-action_names()); "
+            "raise SystemExit('router.ACTIONS has unregistered actions: '+', '.join(missing) if missing else 0)"
+        ),
+    ]
+    return subprocess.run(cmd, cwd=ROOT, check=False).returncode
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="ARIA CI gates")
     parser.add_argument(
         "command",
-        choices=("ruff", "format", "format-check", "pytest", "supremacy", "all"),
+        choices=("ruff", "format", "format-check", "pytest", "supremacy", "action-catalog", "all"),
     )
     args = parser.parse_args()
     if args.command == "ruff":
@@ -285,7 +320,9 @@ def main() -> int:
         return run_pytest()
     if args.command == "supremacy":
         return run_supremacy()
-    for step in (run_ruff, run_format_check, run_supremacy, run_pytest):
+    if args.command == "action-catalog":
+        return run_action_catalog()
+    for step in (run_ruff, run_format_check, run_supremacy, run_action_catalog, run_pytest):
         code = step()
         if code != 0:
             return code

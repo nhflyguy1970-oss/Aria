@@ -2,6 +2,7 @@ import logging
 import os
 import re
 import threading
+import time
 import uuid
 from collections.abc import Iterator
 from pathlib import Path
@@ -63,6 +64,13 @@ def display_chat_user_content(content: str) -> str:
 def perform_undo_apply(assistant) -> dict:
     """Shared undo logic for chat and GUI API."""
     backups = getattr(assistant, "last_apply_backups", None) or []
+    journal = {}
+    if not backups:
+        journal = proposal_store.load_undo()
+        backups = journal.get("backups") if isinstance(journal.get("backups"), list) else []
+        if backups:
+            assistant.last_apply_backups = backups
+            assistant.last_applied_proposal_id = str(journal.get("proposal_id") or "")
     if not backups and getattr(assistant, "last_apply_backup", None):
         backups = [{"path": assistant.last_apply_path, "backup": assistant.last_apply_backup}]
     if not backups:
@@ -98,6 +106,7 @@ def perform_undo_apply(assistant) -> dict:
     assistant.last_apply_backups = []
     assistant.last_apply_backup = None
     assistant.last_apply_path = None
+    proposal_store.clear_undo()
     if not restored and not deleted:
         return _err("Could not restore — backup files missing.")
     if last_pid:
@@ -149,7 +158,15 @@ class JarvisAssistant:
         self.last_apply_path: str | None = None
         self.last_apply_backups: list[dict] = []
         self.last_applied_proposal_id: str = ""
+        undo = proposal_store.load_undo()
+        if isinstance(undo.get("backups"), list):
+            self.last_apply_backups = undo["backups"]
+            self.last_applied_proposal_id = str(undo.get("proposal_id") or "")
+            if self.last_apply_backups:
+                self.last_apply_backup = self.last_apply_backups[-1].get("backup")
+                self.last_apply_path = self.last_apply_backups[-1].get("path")
         self._request_lock = threading.Lock()
+        self._holding_request_lock = False
         UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         from jarvis.cheatsheets import seed_cheatsheets
 
@@ -241,9 +258,22 @@ class JarvisAssistant:
             branch_id=bid,
         )
 
-    def create_branch(self, name: str, from_index: int | None = None) -> str:
+    def create_branch(
+        self,
+        name: str,
+        from_index: int | None = None,
+        *,
+        copy_messages: bool = True,
+        copy_session: bool = True,
+    ) -> str:
         self.branches.save_session(self.branches.active_id, self.session)
-        bid = self.branches.create_branch(name, self.branches.active_id, from_index)
+        bid = self.branches.create_branch(
+            name,
+            self.branches.active_id,
+            from_index,
+            copy_messages=copy_messages,
+            copy_session=copy_session,
+        )
         self.session = self.branches.load_session(bid)
         self.conversation = self.branches.get_conversation(bid, self._build_prompt())
         return bid
@@ -459,10 +489,36 @@ class JarvisAssistant:
         except Exception:
             pass
         try:
-            with self._request_lock:
+            # Match stream: never wait forever on a wedged prior request.
+            lock_wait_s = float(os.getenv("JARVIS_REQUEST_LOCK_TIMEOUT_S", "3"))
+            acquired = self._request_lock.acquire(timeout=max(0.5, lock_wait_s))
+            if not acquired:
+                return _err(
+                    "Another request is still finishing. Stop it or wait a moment, then try again.",
+                    module=None,
+                )
+            self._holding_request_lock = True
+            try:
                 return self._process_unlocked(message, attachment, branch_id, attachment2)
+            finally:
+                if self._holding_request_lock:
+                    self._holding_request_lock = False
+                    self._request_lock.release()
         finally:
             end()
+
+    def yield_request_lock(self) -> None:
+        """Release the chat request lock during long work (LLM, etc.).
+
+        Ordinary use must not require a restart when one slow turn is running —
+        other chat/orchestration must stay available.
+        """
+        if self._holding_request_lock:
+            self._holding_request_lock = False
+            try:
+                self._request_lock.release()
+            except RuntimeError:
+                pass
 
     def _process_unlocked(
         self,
@@ -559,12 +615,15 @@ class JarvisAssistant:
             choices = intent.get("choices", [])
             question = intent.get("clarification_question", "Which one?")
             lines = "\n".join(f"{i + 1}. {c}" for i, c in enumerate(choices))
+            body = f"{question}\n\n{lines}\n\nReply with a number or name." if choices else f"{question}\n\nReply with a number or name."
             result = _ok(
-                f"{question}\n\n{lines}\n\nReply with a number or name.",
+                body,
                 module="general",
                 type="clarification",
                 choices=choices,
             )
+            result["action"] = "clarify"
+            result["thinking"] = intent.get("thinking") or "clarify"
             try:
                 from jarvis.routing_inspector import complete_routing
 
@@ -573,91 +632,26 @@ class JarvisAssistant:
                 pass
             return result
 
-        action = intent.get("action", "chat")
-        if isinstance(action, dict):
-            action = str(action.get("name") or action.get("action") or "chat")
-        elif not isinstance(action, str) or not action.strip():
-            action = "chat"
-        params = intent.get("params", {})
-        if not isinstance(params, dict):
-            params = {}
-        if action.startswith("coding_") or action in (
-            "find_references",
-            "extract_function",
-            "move_module",
-            "rename_symbol",
-        ):
-            from jarvis.behaviors.engineering.context import EngineeringContext
-            from jarvis.behaviors.engineering.engine import EngineeringEngine
+        from jarvis.conversation_pipeline import (
+            apply_editor_params_if_coding,
+            decorate_result,
+            dispatch_action,
+            normalize_action_params,
+        )
 
-            EngineeringEngine.apply_editor_params(
-                EngineeringContext.from_orchestrator(self), params, message, action
-            )
+        action, params = normalize_action_params(intent)
+        apply_editor_params_if_coding(self, action, params, message)
 
-        handlers = {
-            "chat": self._chat,
-            "apply_proposal": self._apply_proposal_nl,
-            "dismiss_proposal": self._dismiss_proposal,
-            "undo_apply": self._undo_apply,
-            "upgrade_wizard": self._upgrade_wizard,
-            "upgrade_verify": self._upgrade_verify,
-            "upgrade_apply": self._upgrade_apply,
-            "upgrade_rollback": self._upgrade_rollback,
-        }
-
-        handler = handlers.get(action, self._chat)
         try:
-            from jarvis.background_jobs import BACKGROUND_ACTIONS
-            from jarvis.handlers import ensure_handlers_loaded
-            from jarvis.handlers.registry import call_action, get_queue, has_action, is_info_action
-            from jarvis.media_jobs import QUEUED_ACTIONS
-
-            ensure_handlers_loaded()
-
-            queue = get_queue(action)
-            if queue == "media" or action in QUEUED_ACTIONS:
-                result = self._enqueue_media(action, params, message)
-            elif queue == "background" or action in BACKGROUND_ACTIONS:
-                result = self._enqueue_background(action, params, message)
-            elif queue == "coding" or action == "coding_agent":
-                result = self._enqueue_coding(params, message)
-            elif queue == "fix_tests" or action == "coding_fix_tests":
-                result = self._enqueue_fix_tests(params, message)
-            elif has_action(action):
-                result = call_action(self, action, params, message)
-            else:
-                result = handler(params, message)
-            result["action"] = action
-            result["thinking"] = intent.get("thinking", "")
-            result["uncensored"] = is_uncensored()
-            if is_info_action(action) or action in ("capabilities", "models_info", "greeting"):
-                result["type"] = "info"
-            if result.get("module"):
-                self.session.note_module(result["module"])
-            if result.get("module") in ("coding", "data"):
-                self.sync_project_namespace()
-            if action in (
-                "coding_agent",
-                "coding_refactor",
-                "coding_fix",
-                "coding_improve",
-                "coding_create",
-                "coding_fix_tests",
-            ):
-                mode = params.get("mode") or action.replace("coding_", "")
-                self.session.note_coding_mode(mode)
-            log_action(action, result.get("module", ""), message[:120], result.get("ok", True))
-            if result.get("ok") and action not in (
-                "chat",
-                "capabilities",
-                "greeting",
-                "models_info",
-            ):
-                from jarvis.trust_memory import record_tool_outcome
-
-                record_tool_outcome(self.memory, action=action, detail=message[:120], ok=True)
-            if action == "chat":
-                self.branches.persist(session=self.session)
+            result = dispatch_action(self, action, params, message)
+            result = decorate_result(
+                self,
+                result,
+                intent=intent,
+                action=action,
+                params=params,
+                message=message,
+            )
             try:
                 from jarvis.routing_inspector import complete_routing
 
@@ -687,6 +681,7 @@ class JarvisAssistant:
         attachment2: dict | None = None,
         request_id: str = "",
         lite_ui: bool = False,
+        intent: dict | None = None,
     ) -> Iterator[dict]:
         """Stream chat responses; non-chat actions return single chunk."""
         from jarvis.request_activity import begin, end
@@ -704,6 +699,7 @@ class JarvisAssistant:
             )
             end()
             return
+        self._holding_request_lock = True
         self._stream_lite_ui = lite_ui
         try:
             # Bind / create latency trace in this worker thread (ContextVar-safe).
@@ -730,6 +726,7 @@ class JarvisAssistant:
                 attachment2,
                 request_id,
                 lite_ui=lite_ui,
+                intent=intent,
             )
         except Exception as e:
             logger.exception("process_stream failed")
@@ -749,7 +746,12 @@ class JarvisAssistant:
             except Exception:
                 pass
             self._stream_lite_ui = False
-            self._request_lock.release()
+            if getattr(self, "_holding_request_lock", False):
+                self._holding_request_lock = False
+                try:
+                    self._request_lock.release()
+                except RuntimeError:
+                    pass
             end()
 
     def _process_stream_unlocked(
@@ -760,6 +762,7 @@ class JarvisAssistant:
         attachment2: dict | None = None,
         request_id: str = "",
         lite_ui: bool = False,
+        intent: dict | None = None,
     ) -> Iterator[dict]:
         if branch_id:
             self.switch_branch(branch_id)
@@ -834,7 +837,9 @@ class JarvisAssistant:
         # Unblock SSE immediately — routing / handlers must not own silence.
         yield {"type": "status", "message": "Routing…"}
         t_route = time.perf_counter()
-        intent = route(message, self.session, attachment)
+        # Server may pre-route so coding/media streams skip chat-model residency.
+        if not isinstance(intent, dict) or not intent.get("action"):
+            intent = route(message, self.session, attachment)
         route_latency_ms = round((time.perf_counter() - t_route) * 1000, 1)
         try:
             from jarvis.latency_observability.trace import active_trace
@@ -860,132 +865,105 @@ class JarvisAssistant:
             )
         except Exception:
             pass
-        action = intent.get("action", "chat")
-        if isinstance(action, dict):
-            action = str(action.get("name") or action.get("action") or "chat")
-        elif not isinstance(action, str) or not action.strip():
-            action = "chat"
-        params = intent.get("params", {})
-        if not isinstance(params, dict):
-            params = {}
-        if action.startswith("coding_") or action in (
-            "find_references",
-            "extract_function",
-            "move_module",
-            "rename_symbol",
-        ):
-            from jarvis.behaviors.engineering.context import EngineeringContext
-            from jarvis.behaviors.engineering.engine import EngineeringEngine
+        from jarvis.conversation_pipeline import (
+            apply_editor_params_if_coding,
+            decorate_result,
+            dispatch_action,
+            normalize_action_params,
+        )
 
-            EngineeringEngine.apply_editor_params(
-                EngineeringContext.from_orchestrator(self), params, message, action
+        action, params = normalize_action_params(intent)
+        apply_editor_params_if_coding(self, action, params, message)
+
+        def _decorate_stream_result(result: dict) -> dict:
+            return decorate_result(
+                self,
+                result,
+                intent=intent,
+                action=action,
+                params=params,
+                message=message,
             )
 
-        instant = {
-            "capabilities",
-            "models_info",
-            "greeting",
-            "morning_briefing",
-            "recall",
-            "remember",
-            "memory_about_user",
-            "memory_search",
-            "memory_forget",
-            "memory_correct",
-            "memory_prune",
-            "memory_summarize",
-            "memory_namespace",
-            "cheatsheet_list",
-            "cheatsheet_show",
-            "cheatsheet_reset",
-            "project_checkpoint",
-            "project_resume",
-            "undo_apply",
-            "apply_proposal",
-            "dismiss_proposal",
-        }
+        def _done(result: dict, *, done_lite_ui: bool = lite_ui) -> dict:
+            return _stream_done(_decorate_stream_result(result), lite_ui=done_lite_ui)
+
+        def _decorated_events(events: Iterator[dict], *, done_lite_ui: bool = lite_ui) -> Iterator[dict]:
+            for event in events:
+                if isinstance(event, dict) and event.get("type") == "done":
+                    result = dict(event)
+                    result.pop("type", None)
+                    yield _done(result, done_lite_ui=done_lite_ui)
+                    continue
+                yield event
+
+        def _dispatched_events(
+            *,
+            status: str | None = None,
+            prefer_queue: bool = True,
+            done_lite_ui: bool = lite_ui,
+        ) -> Iterator[dict]:
+            if status:
+                yield {"type": "status", "message": status}
+            result = dispatch_action(self, action, params, message, prefer_queue=prefer_queue)
+            yield _done(result, done_lite_ui=done_lite_ui)
         if action in ("coding_agent", "coding_refactor"):
-            params = intent.get("params", {})
+            params = intent.get("params", {}) if not params else params
             if lite_ui:
-                yield _stream_done(self._enqueue_coding(params, message), lite_ui=True)
+                yield _done(self._enqueue_coding(params, message), done_lite_ui=True)
                 return
-            for event in self._engineering_stream(
+            events = self._engineering_stream(
                 "coding_agent_stream",
                 params,
                 message,
                 mode="refactor" if action == "coding_refactor" else params.get("mode", "agent"),
-            ):
+            )
+            for event in _decorated_events(events):
                 yield event
             return
 
         if action == "coding_fix_tests":
-            yield _stream_done(
-                self._enqueue_fix_tests(intent.get("params", {}), message), lite_ui=lite_ui
-            )
+            yield from _dispatched_events(status="Queuing test fix…")
             return
 
-        if action in ("coding_fix", "coding_improve"):
+        if action in ("coding_propose", "coding_fix", "coding_improve"):
             params = intent.get("params", {})
             path = self._engineering_resolve_path(params.get("path", ""))
-            mode = "fix" if action == "coding_fix" else "improve"
-            task = None
-            if mode == "fix":
-                diagnosis = self._engineering_diagnosis_for_path(path) if path else ""
-                task = f"Fix based on diagnosis:\n{diagnosis}" if diagnosis else None
-                if params.get("use_selection"):
-                    task = (
-                        task or "Fix the selected code."
-                    ) + "\n\nSee Editor context for the selection."
+            if action == "coding_improve" or action == "coding_propose":
+                mode = "improve"
+            else:
+                mode = "fix"
+            # Always queue — never diagnose/stream under the request lock (wedges Chat).
+            task = params.get("task") or message
+            if params.get("use_selection"):
+                task = (task or "Fix the selected code.") + "\n\nSee Editor context for the selection."
             editor_prompt = self._engineering_editor_suffix(params)
-            if lite_ui:
-                from jarvis.coding_jobs import submit_coding_propose
+            from jarvis.coding_jobs import submit_coding_propose
 
-                job_id = submit_coding_propose(
-                    self,
-                    path,
-                    mode,
-                    task=task,
-                    editor_prompt=editor_prompt,
-                )
-                yield _stream_done(
-                    self._engineering_job_result(
-                        f"**Coding** queued — `{path or 'file'}` ({mode})\n\n"
-                        "Working in the background — result appears here when ready.",
-                        job_id,
-                        action,
-                    ),
-                    lite_ui=True,
-                )
-                return
-            for event in self._engineering_stream(
-                "coding_propose_stream",
+            job_id = submit_coding_propose(
+                self,
                 path,
                 mode,
                 task=task,
-                message=message,
                 editor_prompt=editor_prompt,
-            ):
-                yield event
+            )
+            yield _done(
+                self._engineering_job_result(
+                    f"**Coding** queued — `{path or 'file'}` ({mode})\n\n"
+                    "Working in the background — result appears here when ready.",
+                    job_id,
+                    action,
+                ),
+                done_lite_ui=True,
+            )
             return
 
         if action == "coding_create":
             if lite_ui:
-                from jarvis.coding_jobs import submit_coding_create
-
-                job_id = submit_coding_create(self, intent.get("params", {}), message)
-                yield _stream_done(
-                    self._engineering_job_result(
-                        "**Coding** queued — new script\n\n"
-                        "Working in the background — result appears here when ready.",
-                        job_id,
-                        "coding_create",
-                    ),
-                    lite_ui=True,
-                )
+                yield from _dispatched_events(status="Queuing coding create…", done_lite_ui=True)
                 return
-            for event in self._engineering_stream(
-                "coding_create_stream", intent.get("params", {}), message
-            ):
+            events = self._engineering_stream("coding_create_stream", params, message)
+            for event in _decorated_events(events):
                 yield event
             return
 
@@ -1004,48 +982,47 @@ class JarvisAssistant:
                     "max_steps": 5,
                 }
                 if lite_ui:
-                    yield _stream_done(self._enqueue_coding(agent_params, message), lite_ui=True)
+                    yield _done(self._enqueue_coding(agent_params, message), done_lite_ui=True)
                     return
-                for event in self._engineering_stream(
+                events = self._engineering_stream(
                     "coding_agent_stream",
                     agent_params,
                     message,
                     mode=coding_task.mode,
-                ):
+                )
+                for event in _decorated_events(events):
                     yield event
                 return
 
         if action == "coding_chat":
-            yield {"type": "status", "message": "Searching codebase…"}
-            from jarvis.handlers.registry import call_action
-
-            result = call_action(self, "coding_chat", intent.get("params", {}), message)
-            yield _stream_done(result)
+            yield from _dispatched_events(status="Searching codebase…")
             return
 
         from jarvis.background_jobs import BACKGROUND_ACTIONS
+        from jarvis.media_jobs import ACTION_LABELS
         from jarvis.media_jobs import QUEUED_ACTIONS
 
         if action in QUEUED_ACTIONS:
-            for event in self._yield_media_job(action, params, message):
-                yield event
+            yield from _dispatched_events(status=f"Queuing {ACTION_LABELS.get(action, action)}…")
             return
 
         if action in BACKGROUND_ACTIONS:
-            yield _stream_done(self._enqueue_background(action, params, message))
+            yield from _dispatched_events(status=f"Queuing {action}…")
             return
 
         if intent.get("action") == "clarify" or intent.get("needs_clarification"):
             choices = intent.get("choices", [])
             question = intent.get("clarification_question", "Which one?")
             lines = "\n".join(f"{i + 1}. {c}" for i, c in enumerate(choices))
+            body = f"{question}\n\n{lines}\n\nReply with a number or name." if choices else f"{question}\n\nReply with a number or name."
             result = _ok(
-                f"{question}\n\n{lines}\n\nReply with a number or name.",
+                body,
                 module="general",
                 type="clarification",
                 choices=choices,
             )
-            yield _stream_done(result)
+            result["action"] = "clarify"
+            yield _done(result)
             return
 
         if action == "briefing_news_detail":
@@ -1058,7 +1035,7 @@ class JarvisAssistant:
             from jarvis.profiles import web_search_disabled
 
             if web_search_disabled():
-                yield _stream_done(
+                yield _done(
                     _err(
                         "Web search is disabled (offline profile). Switch profile in the sidebar.",
                         module="briefing",
@@ -1068,7 +1045,7 @@ class JarvisAssistant:
 
             headlines = self.session.last_briefing_headlines or load_recent_headlines()
             if not headlines:
-                yield _stream_done(
+                yield _done(
                     _err(
                         "No briefing headlines saved yet. Say **morning briefing** first.",
                         module="briefing",
@@ -1092,7 +1069,7 @@ class JarvisAssistant:
                 listing = "\n".join(parts) or "\n".join(
                     f"{i}. {h.get('title', 'Headline')}" for i, h in enumerate(headlines[:8], 1)
                 )
-                yield _stream_done(
+                yield _done(
                     _ok(
                         "Which briefing story should I expand?\n\n"
                         f"{listing}\n\n"
@@ -1115,7 +1092,7 @@ class JarvisAssistant:
             answer = "".join(full).strip()
             result = _ok(answer, module="briefing", type="news_detail", headline=headline)
             self.session.note_briefing_headlines(headlines)
-            yield _stream_done(result)
+            yield _done(result)
             return
 
         if action == "web_search":
@@ -1126,13 +1103,13 @@ class JarvisAssistant:
 
                 runtime = route_runtime_priority(message) or {"action": "runtime_status"}
                 result = runtime_action_result(runtime.get("action", "runtime_status"))
-                yield _stream_done(result)
+                yield _done(result)
                 return
             from jarvis import web_search
             from jarvis.profiles import web_search_disabled
 
             if web_search_disabled():
-                yield _stream_done(
+                yield _done(
                     _err(
                         "Web search is disabled (offline profile). Switch profile in the sidebar.",
                         module="general",
@@ -1149,10 +1126,16 @@ class JarvisAssistant:
                 ).strip()
                 or message
             )
+            try:
+                from jarvis.research_context import expand_followup_query, extract_research_entities
+
+                query = expand_followup_query(query, session)
+            except Exception:
+                extract_research_entities = None  # type: ignore
             yield {"type": "status", "message": "Searching the web…"}
             results = web_search.search(query)
             if not results:
-                yield _stream_done(
+                yield _done(
                     _err(
                         f"No web results for that query ({web_search.backend_name()}). "
                         "Try again or run: `./venv/bin/pip install ddgs`",
@@ -1160,14 +1143,31 @@ class JarvisAssistant:
                     )
                 )
                 return
+            try:
+                results = web_search.enrich_results_with_pages(query, results)
+            except Exception:
+                pass
             yield {"type": "status", "message": f"Summarizing {len(results)} results…"}
-            full: list[str] = []
-            for chunk in web_search.synthesize_answer_stream(query, results):
-                full.append(chunk)
-                yield {"type": "token", "content": chunk}
-            answer = "".join(full).strip() or web_search.format_results(results)
+            # Gated synthesis (authority filter + postcheck) — do not stream raw unverified tokens.
+            answer = web_search.synthesize_answer(query, results)
+            if answer:
+                yield {"type": "token", "content": answer}
+            try:
+                from jarvis.orchestration_policy import consequential_web_answer_ok
+
+                refused = consequential_web_answer_ok(message, answer, results)
+                if refused:
+                    answer = refused
+            except Exception:
+                pass
+            try:
+                if extract_research_entities is not None:
+                    session.note_research(query, extract_research_entities(query or message))
+                    session.note_subject(query[:200])
+            except Exception:
+                pass
             result = _ok(answer, module="general", type="web_search", results=results)
-            yield _stream_done(result)
+            yield _done(result)
             return
 
         if action in (
@@ -1203,16 +1203,10 @@ class JarvisAssistant:
                 question = IMAGE_TO_CODE_PROMPT
                 task = "image_to_code"
             elif action == "analyze_region":
-                from jarvis.handlers.registry import call_action
-
-                result = call_action(self, "analyze_region", params, message)
-                yield _stream_done(result)
+                yield from _dispatched_events(status="Analyzing region…", prefer_queue=False)
                 return
             elif action == "compare_images":
-                from jarvis.handlers.registry import call_action
-
-                result = call_action(self, "compare_images", params, message)
-                yield _stream_done(result)
+                yield from _dispatched_events(status="Comparing images…", prefer_queue=False)
                 return
             elif action in ("analyze_image", "analyze_video_frame"):
                 task = vision_task_for_question(question)
@@ -1226,25 +1220,21 @@ class JarvisAssistant:
             full = []
             for token in self.vision.analyze_stream(question, path, task=task):
                 if token.startswith("ERROR:"):
-                    yield _stream_done(_err(token))
+                    yield _done(_err(token))
                     return
                 full.append(token)
                 yield {"type": "token", "content": token}
             answer = "".join(full)
             result = self._vision_ok(answer, image_path=path)
-            result["action"] = action
-            result["thinking"] = intent.get("thinking", "")
-            result["uncensored"] = is_uncensored()
-            self.session.note_module("vision")
-            yield _stream_done(result)
+            yield _done(result)
             return
 
-        if action != "chat" or action in instant:
-            yield {"type": "status", "message": f"Running {action}…"}
-            result = self._process_unlocked(message, attachment, branch_id, attachment2)
-            yield _stream_done(result)
+        if action != "chat":
+            yield from _dispatched_events(status=f"Running {action}…")
             return
 
+        # Long LLM stream must not hold the global request lock.
+        self.yield_request_lock()
         from jarvis.behaviors.conversation import ensure_conversation_engine
 
         final: dict = {"ok": True, "message": "", "action": "chat"}
@@ -1345,6 +1335,51 @@ class JarvisAssistant:
 
         return ensure_conversation_engine(self)._read_upload_snippet(path, limit)
 
+    def _coding_propose(
+        self,
+        path: str,
+        mode: str,
+        *,
+        task: str | None = None,
+        editor_prompt: str = "",
+    ) -> dict:
+        from jarvis.behaviors.engineering.engine import EngineeringEngine
+
+        return EngineeringEngine.coding_propose(
+            self._engineering_ctx(),
+            path,
+            mode,
+            task=task,
+            editor_prompt=editor_prompt,
+        )
+
+    def _coding_fix(self, params: dict, message: str) -> dict:
+        from jarvis.behaviors.engineering.engine import EngineeringEngine
+
+        return EngineeringEngine.coding_fix(self._engineering_ctx(), params, message)
+
+    def _coding_improve(self, params: dict, message: str) -> dict:
+        from jarvis.behaviors.engineering.engine import EngineeringEngine
+
+        return EngineeringEngine.coding_improve(self._engineering_ctx(), params, message)
+
+    def _coding_create(self, params: dict, message: str) -> dict:
+        from jarvis.behaviors.engineering.engine import EngineeringEngine
+
+        return EngineeringEngine.coding_create(self._engineering_ctx(), params, message)
+
+    def _coding_fix_tests(self, params: dict, message: str) -> dict:
+        from jarvis.behaviors.engineering.engine import EngineeringEngine
+
+        return EngineeringEngine.coding_fix_tests(self._engineering_ctx(), params, message)
+
+    def _coding_agent(self, params: dict, message: str, on_step=None) -> dict:
+        from jarvis.behaviors.engineering.engine import EngineeringEngine
+
+        return EngineeringEngine.coding_agent(
+            self._engineering_ctx(), params, message, on_step=on_step
+        )
+
     def apply_proposal(self, proposal_id: str | None = None, *, force: bool = False) -> dict:
         pid = proposal_id or self.session.last_proposal_id
         proposal = self.pending_proposals.get(pid) if pid else None
@@ -1360,6 +1395,24 @@ class JarvisAssistant:
         files = proposal.get("files")
         if not files:
             files = [{"path": proposal["path"], "code": proposal["code"]}]
+
+        # Block catastrophic truncation (e.g. README collapsed to one heading).
+        try:
+            from jarvis.behaviors.engineering._extracted import EngineeringOperations
+
+            for item in files:
+                if item.get("delete") or not item.get("path"):
+                    continue
+                orig = fs.read_file(item["path"], base=self.coding._base())
+                if isinstance(orig, str) and orig.startswith("ERROR:"):
+                    continue
+                shrink = EngineeringOperations.destructive_shrink_reason(
+                    orig or "", item.get("code") or "", path=str(item.get("path") or "")
+                )
+                if shrink and not force:
+                    return _err(shrink, module="coding")
+        except Exception:
+            pass
 
         if proposal.get("mode") == "upgrade_wizard":
             from jarvis.upgrade_wizard import validate_proposal_paths
@@ -1377,47 +1430,77 @@ class JarvisAssistant:
                     module="coding",
                 )
 
-        proposal = self.pending_proposals.pop(pid, None)
-
         applied = []
         self.last_apply_backups = []
-        for item in files:
-            path = item["path"]
-            if not path:
-                continue
-            resolved = fs.resolve_path(path, base=self.coding._base())
-            if item.get("delete"):
-                if resolved.exists():
-                    backup = fs.backup_file(path, base=self.coding._base())
-                    resolved.unlink()
-                    self.last_apply_backups.append(
-                        {
-                            "path": path,
-                            "backup": backup,
-                            "was_deleted": True,
-                        }
-                    )
-                    applied.append(f"{path} (deleted)")
-                continue
-            code = item["code"]
-            backup = (
-                fs.backup_file(path, base=self.coding._base())
-                if resolved.exists()
-                else "(new file)"
-            )
-            fs.write_file(path, code, base=self.coding._base())
-            self.last_apply_backups.append(
-                {"path": path, "backup": backup, "is_new": backup == "(new file)"}
-            )
-            applied.append(path)
+        try:
+            for item in files:
+                path = item["path"]
+                if not path:
+                    continue
+                resolved = fs.resolve_path(path, base=self.coding._base())
+                if item.get("delete"):
+                    if resolved.exists():
+                        backup = fs.backup_file(path, base=self.coding._base())
+                        resolved.unlink()
+                        self.last_apply_backups.append(
+                            {
+                                "path": path,
+                                "backup": backup,
+                                "was_deleted": True,
+                            }
+                        )
+                        applied.append(f"{path} (deleted)")
+                    continue
+                code = item["code"]
+                backup = (
+                    fs.backup_file(path, base=self.coding._base())
+                    if resolved.exists()
+                    else "(new file)"
+                )
+                fs.write_file(path, code, base=self.coding._base())
+                self.last_apply_backups.append(
+                    {"path": path, "backup": backup, "is_new": backup == "(new file)"}
+                )
+                applied.append(path)
+        except Exception as exc:
+            rolled_back = []
+            for backup_item in reversed(self.last_apply_backups):
+                path = backup_item.get("path")
+                backup = backup_item.get("backup")
+                try:
+                    if backup_item.get("is_new") or backup == "(new file)":
+                        resolved = fs.resolve_path(path, base=self.coding._base())
+                        if resolved.exists():
+                            resolved.unlink()
+                        rolled_back.append(path)
+                    elif backup and Path(backup).exists():
+                        fs.write_file(path, Path(backup).read_text(encoding="utf-8"), base=self.coding._base())
+                        rolled_back.append(path)
+                except Exception:
+                    pass
+            self.last_apply_backups = []
+            proposal_store.clear_undo()
+            detail = f"Apply failed before completion: {exc}"
+            if rolled_back:
+                detail += "\n\nRolled back partial writes:\n" + "\n".join(f"- `{p}`" for p in rolled_back)
+            return _err(detail, module="coding")
 
         if not applied:
             return _err("Proposal had no valid files.")
 
+        proposal = self.pending_proposals.pop(pid, None)
         self._persist_proposals()
         self.last_apply_backup = self.last_apply_backups[-1]["backup"]
         self.last_apply_path = self.last_apply_backups[-1]["path"]
         self.last_applied_proposal_id = pid
+        proposal_store.save_undo(
+            {
+                "proposal_id": pid,
+                "backups": self.last_apply_backups,
+                "applied": applied,
+                "created_at": time.time(),
+            }
+        )
         self.session.last_proposal_id = ""
         try:
             from jarvis.coding_product.history import record_proposal, update_status
@@ -1435,6 +1518,7 @@ class JarvisAssistant:
             msg += f"\n\nBackup: `{self.last_apply_backup}`"
 
         py_files = []
+        verify = ""
         try:
             py_files = [
                 fs.resolve_path(p, base=self.coding._base())
@@ -1464,11 +1548,26 @@ class JarvisAssistant:
 
         from jarvis.trust_memory import record_fix_success
 
+        verify_failed = bool(
+            verify
+            and (
+                "**pytest:** failed" in verify
+                or "Syntax check failed" in verify
+                or "**Run failed:**" in verify
+            )
+        )
+        if verify_failed:
+            try:
+                from jarvis.coding_product.history import update_status
+
+                update_status(pid, "applied", verification_status="failed")
+            except Exception:
+                pass
+
         if (
             py_files
             and verify
-            and "**pytest:** failed" not in verify
-            and "Syntax check failed" not in verify
+            and not verify_failed
         ):
             record_fix_success(
                 self.memory,
@@ -1493,9 +1592,14 @@ class JarvisAssistant:
         except Exception:
             verify_offer = None
         extra = {"type": "applied", "show_undo": True, "proposal_id": pid}
+        if verify_failed:
+            extra["applied_with_failures"] = True
         if verify_offer:
             extra["verify_offer"] = verify_offer
-        return _ok(msg, module="coding", **extra)
+        result = _ok(msg, module="coding", **extra)
+        if verify_failed:
+            result["ok"] = False
+        return result
 
     def _apply_proposal_nl(self, params: dict, message: str) -> dict:
         return self.apply_proposal(params.get("proposal_id"))
@@ -1959,6 +2063,9 @@ class JarvisAssistant:
             return explanation, candidate
 
         return explanation or "Could not generate a valid fix.", content
+
+    def _code_unchanged(self, original: str, candidate: str) -> bool:
+        return original.strip() == (candidate or "").strip()
 
     def _tests_verify_ok(self, verify: str) -> bool:
         if not verify.strip():

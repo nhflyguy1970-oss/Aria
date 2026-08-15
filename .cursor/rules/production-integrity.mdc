@@ -1,0 +1,32 @@
+---
+description: Production Integrity — permanent platform safeguard. Keep QA/smoke/cert/demo artifacts out of Jeff's live Aria.
+alwaysApply: true
+---
+
+# Production Integrity — Engineering Guarantee
+
+Development belongs to developers. Production belongs to Jeff.
+
+## Separation
+
+Aria must always distinguish: Production | QA | Development | Smoke | Certification | Demo | Prototype | Test.
+
+Jeff must never encounter QA projects, smoke Health rows, certification leftovers, demo workflows, placeholder/Lorem data, fake notifications, or other development-only artifacts in the live workspace.
+
+## Rules
+
+1. **Scans never silently delete.** Create a Guided Repair recommendation; Jeff approves.
+2. **Repairs may remove only known-safe development artifacts** (QA/smoke/cert/demo/temp/prototype). Nothing else without explicit confirmation.
+3. **Never remove without confirmation:** user documents, Health PHR, ACM, Projects, Journal, Planner, Calendar, Gallery, coding work, downloads, filesystem content.
+4. **Every QA object should carry metadata:** `qa_artifact`, `artifact_type`, `origin`, `environment`, `created_by`, `creation_reason`, `qa_run_id` / `smoke_id` / `certification_id`, `expiration`.
+5. **Test isolation:** QA, Smoke, Certification, Regression, Performance, and Load tests must use isolated storage. The live workspace is never the default target.
+6. **Health protection:** no automated test/smoke/cert/QA path may write the live Personal Health Record. Violations fail certification.
+7. **Project protection:** production project lists never show QA/Smoke/Certification/Demo/Prototype/Temporary projects.
+8. **Certification:** READY_TO_SHIP / Daily Driver / Production Mature require a clean Production Integrity scan.
+
+## Implementation
+
+Platform module: `jarvis/integrity_product/`  
+Mission Control: Production Integrity card (status, last scan, artifacts, history)  
+Guided Repair module: `production_integrity`  
+APIs: `/api/integrity/*`

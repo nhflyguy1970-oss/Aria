@@ -246,6 +246,28 @@ def test_export_and_archive(projects_env):
     assert any(p["slug"] == "export-me" for p in list_projects(include_archived=True))
 
 
+def test_qa_projects_hidden_from_production_list(projects_env):
+    from jarvis.project_registry import create_project, is_qa_artifact, list_projects, purge_qa_artifacts
+
+    real = create_project("Personal Lab")
+    qa = create_project("QA Workflow Project RENAMED", description="Lead QA workflow probe")
+    cert = create_project("Cert Proj 999", qa_artifact=True, origin="certification")
+    assert is_qa_artifact(qa)
+    assert is_qa_artifact(cert)
+    assert not is_qa_artifact(real)
+
+    prod = list_projects()
+    assert any(p["slug"] == "personal-lab" for p in prod)
+    assert not any(p["slug"] == qa["slug"] for p in prod)
+    assert not any(p["slug"] == cert["slug"] for p in prod)
+    assert any(p["slug"] == qa["slug"] for p in list_projects(include_qa=True))
+
+    removed = purge_qa_artifacts()
+    assert qa["slug"] in removed and cert["slug"] in removed
+    assert any(p["slug"] == "personal-lab" for p in list_projects())
+    assert not any(p["slug"] == qa["slug"] for p in list_projects(include_qa=True))
+
+
 def test_suggest_requires_confirm(projects_env):
     from jarvis.project_registry import create_project
     from jarvis.project_services import suggest_projects

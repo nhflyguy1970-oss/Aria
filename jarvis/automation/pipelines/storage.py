@@ -14,6 +14,32 @@ from jarvis.automation.pipelines.templates import TEMPLATES, get_template, list_
 FAVORITES_FILE = "favorites.json"
 STATS_FILE = "usage_stats.json"
 
+# Test/cert pipeline names that must never surface in the owner Automation loft.
+_PIPELINE_FIXTURE_NAMES = frozenset(
+    {
+        "retry",
+        "retry path",
+        "retry demo",
+        "engine dag",
+        "dry docs",
+        "dry docs unique",
+        "eve unique canvas",
+        "fav eve",
+    }
+)
+
+
+def _is_pipeline_fixture(data: dict[str, Any], *, path_stem: str = "") -> bool:
+    name = str(data.get("name") or path_stem or "").strip().lower()
+    if name in _PIPELINE_FIXTURE_NAMES:
+        return True
+    blob = json.dumps(data).lower()
+    if "builtin:fail" in blob:
+        return True
+    if path_stem in {"retry01", "runhist01", "drytest01", "enginedag1"}:
+        return True
+    return False
+
 
 def _safe_write(path: Path, payload: dict[str, Any] | list[Any]) -> None:
     ensure_dirs()
@@ -91,6 +117,8 @@ def list_pipelines(
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
         except Exception:
+            continue
+        if _is_pipeline_fixture(data, path_stem=p.stem):
             continue
         if data.get("slug") and not data.get("entry") and not data.get("steps"):
             continue  # learned schema stray

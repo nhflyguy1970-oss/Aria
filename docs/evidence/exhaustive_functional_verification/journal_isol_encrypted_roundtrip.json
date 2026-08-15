@@ -1,0 +1,21 @@
+{
+  "updated_at": "2026-08-13T16:01:49.964923+00:00",
+  "instance": "isol :18765 JARVIS_DATA_DIR=/tmp/aria-final34-journal-isol",
+  "live_journal_sha256_unchanged": true,
+  "live_sha256": "3c86da4da8c8bcf455333eb87ffedf89f07a24e780de56439f6de30a9712d48a",
+  "export_http": 200,
+  "export_ok": true,
+  "envelope_format": "jarvis-journal-v1",
+  "wrong_password": {
+    "message_class": "password or format",
+    "ok": false
+  },
+  "import_ok": true,
+  "merged": true,
+  "marker_in_isol_file": false,
+  "isol_not_live": true,
+  "prompt_class": "B portable file password \u2014 not Aria Master Password",
+  "secrets_in_evidence": false,
+  "export_ms": 62.79,
+  "import_ms": 46.96
+}

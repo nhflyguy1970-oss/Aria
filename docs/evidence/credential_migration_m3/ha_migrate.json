@@ -1,0 +1,26 @@
+{
+  "updated_at": "2026-08-13T14:58:28.785786+00:00",
+  "http_status": 200,
+  "elapsed_ms": 30.23,
+  "result": {
+    "ok": true,
+    "field": "ha_token",
+    "vault_id": "ha.token",
+    "env": "JARVIS_HA_TOKEN",
+    "migrated": true,
+    "already_migrated": false,
+    "legacy_retained": true,
+    "fingerprint": {
+      "configured": true,
+      "length": 183,
+      "sha256_8": "f76cc236",
+      "prefix_class": "jwt"
+    },
+    "provider_id": "home_assistant"
+  },
+  "jeff_entered_ha_token": false,
+  "legacy_env_size_before": 10616,
+  "legacy_env_size_after": 10616,
+  "legacy_env_rewritten": false,
+  "legacy_env_size_unchanged": true
+}

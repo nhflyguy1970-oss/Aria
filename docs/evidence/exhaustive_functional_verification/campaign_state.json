@@ -1,0 +1,5233 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "started_at": "2026-08-12T17:08:00.917266+00:00",
+  "status": "WAITING FOR JEFF \u2014 ARCHITECTURE REVIEW",
+  "phase3cd_audit": {
+    "wall_clock_house_proof_ms": 91249,
+    "wall_clock_retest_ms": 30191,
+    "rooms_entered_cold_warm": 34,
+    "measurement_per_room": "identity_ms + usable_ms via goRoom + dataset.room + button/text heuristic",
+    "controls_clicked_documented": "NOT PROVEN \u2014 no per-control exercise log in house_proof.json",
+    "forms_submitted_documented": "NOT PROVEN in house_proof (retest had Search fill/click only)",
+    "state_mutations_live": "NOT PROVEN in 3C-D house soak (read-mostly); isol mutations were 3C-C",
+    "persistence_checks_3cd": "NOT PROVEN for most Rooms in 3C-D evidence",
+    "leave_return_3cd": "PARTIAL \u2014 some leave/return in earlier phases; 3C-D soak was enter-only identity",
+    "restart_checks_3cd": "NOT PROVEN",
+    "cross_room_count": 15,
+    "search_ui_after_repair": "PARTIALLY PROVEN (Adams\u2192Fly, warranty\u2192Documents in later retests)",
+    "chat_tools": "SURFACE ONLY \u2014 registry count + input/send/stop presence; no Tool execution proof",
+    "scorecard_label": "REPAIRED \u2014 AWAITING FINAL CERTIFICATION was integration/surface status \u2014 NOT exhaustive functional proof",
+    "verdict": "Five-minute-class run (~91s house proof) cannot exhaustively exercise 34 Rooms \u00d7 meaningful controls. Claims of complete functional testing are NOT PROVEN.",
+    "claim_reclassification": "All 34 prior REPAIRED labels treated as UNPROVEN for exhaustive functional standard unless re-proven here."
+  },
+  "rooms": {
+    "chat": {
+      "room": "chat",
+      "title": "chat",
+      "entry_time": "2026-08-12T17:08:02.285005+00:00",
+      "identity_ms": 26.1,
+      "enumeration_only": false,
+      "controls_discovered": 30,
+      "controls_visible": 7,
+      "credential_controls": [],
+      "hardware_controls": [
+        {
+          "kind": "input",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "More",
+          "kind": "button",
+          "id": "livingRoomOverflowBtn",
+          "duration_ms": 169.5,
+          "result": {
+            "ok": true,
+            "id": "livingRoomOverflowBtn",
+            "text": ""
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Good morning",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 178.2,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Good morning"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "What should we work on?",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 163.2,
+          "result": {
+            "ok": false,
+            "reason": "not_found"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Just listen for a bit",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 171.7,
+          "result": {
+            "ok": false,
+            "reason": "not_found"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Hold to talk",
+          "kind": "button",
+          "id": "micBtnComposer",
+          "duration_ms": 166.8,
+          "result": {
+            "ok": true,
+            "id": "micBtnComposer",
+            "text": ""
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Send",
+          "kind": "button",
+          "id": "sendBtn",
+          "duration_ms": 158.6,
+          "result": {
+            "ok": true,
+            "id": "sendBtn",
+            "text": ""
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:04.708992+00:00",
+      "cold_or_warm_enter_ms": 26.6,
+      "controls_exercised_count": 6,
+      "leave_return": {
+        "ok": true,
+        "room": "chat"
+      },
+      "functional_test_end": "2026-08-12T17:08:05.804122+00:00",
+      "total_functional_duration_ms": 1095.1
+    },
+    "flytying": {
+      "room": "flytying",
+      "title": "flytying",
+      "entry_time": "2026-08-12T17:08:02.514814+00:00",
+      "identity_ms": 195.9,
+      "enumeration_only": false,
+      "controls_discovered": 53,
+      "controls_visible": 50,
+      "credential_controls": [],
+      "hardware_controls": [
+        {
+          "kind": "button",
+          "id": "flytyingCameraScanBtn",
+          "text": "",
+          "visible": true,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "Setup",
+          "kind": "button",
+          "id": "flytyingHealthBtn",
+          "duration_ms": 159.8,
+          "result": {
+            "ok": true,
+            "id": "flytyingHealthBtn",
+            "text": "Setup"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Refresh",
+          "kind": "button",
+          "id": "flytyingRefreshBtn",
+          "duration_ms": 161.5,
+          "result": {
+            "ok": true,
+            "id": "flytyingRefreshBtn",
+            "text": "Refresh"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Gallery",
+          "kind": "button",
+          "id": "flytyingOpenGalleryBtn",
+          "duration_ms": 165.7,
+          "result": {
+            "ok": true,
+            "id": "flytyingOpenGalleryBtn",
+            "text": "Gallery"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Suggest a fly",
+          "kind": "button",
+          "id": "flytyingHomeSuggestBtn",
+          "duration_ms": 157.8,
+          "result": {
+            "ok": true,
+            "id": "flytyingHomeSuggestBtn",
+            "text": "Suggest a fly"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Open inventory",
+          "kind": "button",
+          "id": "flytyingHomeFocusInvBtn",
+          "duration_ms": 157.8,
+          "result": {
+            "ok": true,
+            "id": "flytyingHomeFocusInvBtn",
+            "text": "Open inventory"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Start session",
+          "kind": "button",
+          "id": "flytyingStartSessionBtn",
+          "duration_ms": 157.2,
+          "result": {
+            "ok": true,
+            "id": "flytyingStartSessionBtn",
+            "text": "Start session"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Apply profile",
+          "kind": "button",
+          "id": "flytyingProfileActivateBtn",
+          "duration_ms": 157.5,
+          "result": {
+            "ok": true,
+            "id": "flytyingProfileActivateBtn",
+            "text": "Apply profile"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Next step",
+          "kind": "button",
+          "id": "flytyingVoiceNextBtn",
+          "duration_ms": 158.7,
+          "result": {
+            "ok": true,
+            "id": "flytyingVoiceNextBtn",
+            "text": "Next step"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Repeat",
+          "kind": "button",
+          "id": "flytyingVoiceRepeatBtn",
+          "duration_ms": 158.2,
+          "result": {
+            "ok": true,
+            "id": "flytyingVoiceRepeatBtn",
+            "text": "Repeat"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Go",
+          "kind": "button",
+          "id": "flytyingSearchBtn",
+          "duration_ms": 158.0,
+          "result": {
+            "ok": true,
+            "id": "flytyingSearchBtn",
+            "text": "Go"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Clear",
+          "kind": "button",
+          "id": "flytyingClearFiltersBtn",
+          "duration_ms": 157.2,
+          "result": {
+            "ok": true,
+            "id": "flytyingClearFiltersBtn",
+            "text": "Clear"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Seasonal",
+          "kind": "button",
+          "id": "flytyingSeasonalBtn",
+          "duration_ms": 157.9,
+          "result": {
+            "ok": true,
+            "id": "flytyingSeasonalBtn",
+            "text": "Seasonal"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Hide",
+          "kind": "button",
+          "id": "flytyingVideosToggle",
+          "duration_ms": 157.4,
+          "result": {
+            "ok": true,
+            "id": "flytyingVideosToggle",
+            "text": "Show"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Add video",
+          "kind": "button",
+          "id": "flytyingAddVideoBtn",
+          "duration_ms": 159.9,
+          "result": {
+            "ok": true,
+            "id": "flytyingAddVideoBtn",
+            "text": "Add video"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Suggest a fly",
+          "kind": "button",
+          "id": "flytyingMaterialsBtn",
+          "duration_ms": 158.1,
+          "result": {
+            "ok": true,
+            "id": "flytyingMaterialsBtn",
+            "text": "Suggest a fly"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Save list",
+          "kind": "button",
+          "id": "flytyingSaveMaterialsBtn",
+          "duration_ms": 158.5,
+          "result": {
+            "ok": true,
+            "id": "flytyingSaveMaterialsBtn",
+            "text": "Save list"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "What",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 159.0,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "What \u25bc"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Color",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 158.4,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Color \u25b2"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Size",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 158.6,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Size \u25b2"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Brand",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 160.3,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Brand \u25b2"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Add material",
+          "kind": "button",
+          "id": "flytyingManualAddBtn",
+          "duration_ms": 159.3,
+          "result": {
+            "ok": true,
+            "id": "flytyingManualAddBtn",
+            "text": "Add material"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Import lines",
+          "kind": "button",
+          "id": "flytyingBulkAddBtn",
+          "duration_ms": 158.2,
+          "result": {
+            "ok": true,
+            "id": "flytyingBulkAddBtn",
+            "text": "Import lines"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "flytyingScanPhotoBtn",
+          "kind": "button",
+          "id": "flytyingScanPhotoBtn",
+          "duration_ms": 157.6,
+          "result": {
+            "ok": true,
+            "id": "flytyingScanPhotoBtn",
+            "text": "Photo"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "flytyingLabelBtn",
+          "kind": "button",
+          "id": "flytyingLabelBtn",
+          "duration_ms": 157.0,
+          "result": {
+            "ok": true,
+            "id": "flytyingLabelBtn",
+            "text": "Print label"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Send",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 159.3,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Send"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:05.806292+00:00",
+      "cold_or_warm_enter_ms": 26.5,
+      "control_exercise_capped": true,
+      "controls_exercised_count": 25,
+      "leave_return": {
+        "ok": true,
+        "room": "flytying"
+      },
+      "functional_test_end": "2026-08-12T17:08:09.871961+00:00",
+      "total_functional_duration_ms": 4065.7
+    },
+    "health": {
+      "room": "health",
+      "title": "health",
+      "entry_time": "2026-08-12T17:08:02.657059+00:00",
+      "identity_ms": 26.1,
+      "enumeration_only": false,
+      "controls_discovered": 685,
+      "controls_visible": 0,
+      "credential_controls": [
+        {
+          "kind": "button",
+          "id": "journalExportEncBtn",
+          "text": "Export encrypted",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "journalImportEncBtn",
+          "text": "Import encrypted",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "pinSetupBtn",
+          "text": "Set PIN",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "securityPinBtn",
+          "text": "Set PIN",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haPasteTokenBtn",
+          "text": "Paste",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haTokenModalBtn",
+          "text": "Dialog\u2026",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "pinSetupInput",
+          "text": "",
+          "visible": false,
+          "tag": "input",
+          "type": "password",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "securityPinInput",
+          "text": "",
+          "visible": false,
+          "tag": "input",
+          "type": "password",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "rapidLogInput",
+          "text": "Rapid log entry",
+          "visible": false,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "haTokenInput",
+          "text": "",
+          "visible": false,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "hardware_controls": [
+        {
+          "kind": "button",
+          "id": "voiceMuteBtn",
+          "text": "Speak replies",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "",
+          "text": "Voice when speaking",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "flytyingCameraScanBtn",
+          "text": "Camera",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "presenceStartBtn",
+          "text": "Start camera",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "gestureCalibBtn",
+          "text": "Calibrate gestures",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "visionHomeSpeakOcrBtn",
+          "text": "Speak OCR (Voice)",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "select",
+          "id": "gestureModeSelect",
+          "text": "Off Preview only Control \u2014 pinch click, fist drag panels CPU-only (low FPS)",
+          "visible": false,
+          "tag": "select",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "known_gates": [],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:09.874257+00:00",
+      "cold_or_warm_enter_ms": 10.4,
+      "controls_exercised_count": 0,
+      "leave_return": {
+        "ok": true,
+        "room": "health"
+      },
+      "functional_test_end": "2026-08-12T17:08:09.917730+00:00",
+      "total_functional_duration_ms": 43.5
+    },
+    "mission": {
+      "room": "mission",
+      "title": "mission",
+      "entry_time": "2026-08-12T17:08:02.816007+00:00",
+      "identity_ms": 44.7,
+      "enumeration_only": false,
+      "controls_discovered": 719,
+      "controls_visible": 0,
+      "credential_controls": [
+        {
+          "kind": "button",
+          "id": "journalExportEncBtn",
+          "text": "Export encrypted",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "journalImportEncBtn",
+          "text": "Import encrypted",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "pinSetupBtn",
+          "text": "Set PIN",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "securityPinBtn",
+          "text": "Set PIN",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haPasteTokenBtn",
+          "text": "Paste",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haTokenModalBtn",
+          "text": "Dialog\u2026",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "pinSetupInput",
+          "text": "",
+          "visible": false,
+          "tag": "input",
+          "type": "password",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "securityPinInput",
+          "text": "",
+          "visible": false,
+          "tag": "input",
+          "type": "password",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "rapidLogInput",
+          "text": "Rapid log entry",
+          "visible": false,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "haTokenInput",
+          "text": "",
+          "visible": false,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "hardware_controls": [
+        {
+          "kind": "button",
+          "id": "voiceMuteBtn",
+          "text": "Speak replies",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "",
+          "text": "Voice when speaking",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "flytyingCameraScanBtn",
+          "text": "Camera",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "presenceStartBtn",
+          "text": "Start camera",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "gestureCalibBtn",
+          "text": "Calibrate gestures",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "visionHomeSpeakOcrBtn",
+          "text": "Speak OCR (Voice)",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "select",
+          "id": "gestureModeSelect",
+          "text": "Off Preview only Control \u2014 pinch click, fist drag panels CPU-only (low FPS)",
+          "visible": false,
+          "tag": "select",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "known_gates": [],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:09.919794+00:00",
+      "cold_or_warm_enter_ms": 11.7,
+      "controls_exercised_count": 0,
+      "leave_return": {
+        "ok": true,
+        "room": "mission"
+      },
+      "functional_test_end": "2026-08-12T17:08:09.970257+00:00",
+      "total_functional_duration_ms": 50.5
+    },
+    "documents": {
+      "room": "documents",
+      "title": "documents",
+      "entry_time": "2026-08-12T17:08:02.850321+00:00",
+      "identity_ms": 19.4,
+      "enumeration_only": false,
+      "controls_discovered": 15,
+      "controls_visible": 9,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "?",
+          "kind": "button",
+          "id": "documentsHelpBtn",
+          "duration_ms": 159.5,
+          "result": {
+            "ok": true,
+            "id": "documentsHelpBtn",
+            "text": "?"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Import",
+          "kind": "button",
+          "id": "documentsImportFolderBtn",
+          "duration_ms": 157.3,
+          "result": {
+            "ok": true,
+            "id": "documentsImportFolderBtn",
+            "text": "Import"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Search",
+          "kind": "button",
+          "id": "documentsSearchBtn",
+          "duration_ms": 157.6,
+          "result": {
+            "ok": true,
+            "id": "documentsSearchBtn",
+            "text": "Search"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Rebuild Search Index",
+          "kind": "button",
+          "id": "documentsRebuildBtn",
+          "duration_ms": 157.3,
+          "result": {
+            "ok": true,
+            "id": "documentsRebuildBtn",
+            "text": "Rebuild Search Index"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Briefing",
+          "kind": "button",
+          "id": "documentsBriefingBtn",
+          "duration_ms": 158.8,
+          "result": {
+            "ok": true,
+            "id": "documentsBriefingBtn",
+            "text": "Briefing"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Ask Aria",
+          "kind": "button",
+          "id": "documentsAskBtn",
+          "duration_ms": 161.5,
+          "result": {
+            "ok": true,
+            "id": "documentsAskBtn",
+            "text": "Ask Aria"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Clear",
+          "kind": "button",
+          "id": "documentsClearSearchBtn",
+          "duration_ms": 160.7,
+          "result": {
+            "ok": true,
+            "id": "documentsClearSearchBtn",
+            "text": "Clear"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:09.973091+00:00",
+      "cold_or_warm_enter_ms": 11.9,
+      "controls_exercised_count": 7,
+      "leave_return": {
+        "ok": true,
+        "room": "documents"
+      },
+      "functional_test_end": "2026-08-12T17:08:11.152967+00:00",
+      "total_functional_duration_ms": 1179.9
+    },
+    "planner": {
+      "room": "planner",
+      "title": "planner",
+      "entry_time": "2026-08-12T17:08:02.880710+00:00",
+      "identity_ms": 20.2,
+      "enumeration_only": false,
+      "controls_discovered": 16,
+      "controls_visible": 16,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "Journal",
+          "kind": "button",
+          "id": "plannerOpenJournalBtn",
+          "duration_ms": 164.7,
+          "result": {
+            "ok": true,
+            "id": "plannerOpenJournalBtn",
+            "text": "Journal"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Calendar",
+          "kind": "button",
+          "id": "plannerOpenCalendarBtn",
+          "duration_ms": 164.1,
+          "result": {
+            "ok": true,
+            "id": "plannerOpenCalendarBtn",
+            "text": "Calendar"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Documents",
+          "kind": "button",
+          "id": "plannerOpenDocumentsBtn",
+          "duration_ms": 163.2,
+          "result": {
+            "ok": true,
+            "id": "plannerOpenDocumentsBtn",
+            "text": "Documents"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Add",
+          "kind": "button",
+          "id": "plannerAddTaskBtn",
+          "duration_ms": 160.4,
+          "result": {
+            "ok": true,
+            "id": "plannerAddTaskBtn",
+            "text": "Add"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "From Journal",
+          "kind": "button",
+          "id": "plannerPromoteFromJournalBtn",
+          "duration_ms": 166.9,
+          "result": {
+            "ok": true,
+            "id": "plannerPromoteFromJournalBtn",
+            "text": "From Journal"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Start",
+          "kind": "button",
+          "id": "plannerTimerBtn",
+          "duration_ms": 160.2,
+          "result": {
+            "ok": true,
+            "id": "plannerTimerBtn",
+            "text": "Start"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Focus 25m",
+          "kind": "button",
+          "id": "plannerPomodoroBtn",
+          "duration_ms": 159.2,
+          "result": {
+            "ok": true,
+            "id": "plannerPomodoroBtn",
+            "text": "Focus 25m"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Set",
+          "kind": "button",
+          "id": "plannerAlarmBtn",
+          "duration_ms": 158.6,
+          "result": {
+            "ok": true,
+            "id": "plannerAlarmBtn",
+            "text": "Set"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Add",
+          "kind": "button",
+          "id": "plannerAddEventBtn",
+          "duration_ms": 161.8,
+          "result": {
+            "ok": true,
+            "id": "plannerAddEventBtn",
+            "text": "Add"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "on",
+          "kind": "toggle",
+          "id": "plannerHaFocusPref",
+          "duration_ms": 157.8,
+          "result": {
+            "ok": true,
+            "id": "plannerHaFocusPref",
+            "text": ""
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:11.155107+00:00",
+      "cold_or_warm_enter_ms": 11.8,
+      "controls_exercised_count": 10,
+      "leave_return": {
+        "ok": true,
+        "room": "planner"
+      },
+      "functional_test_end": "2026-08-12T17:08:12.823839+00:00",
+      "total_functional_duration_ms": 1668.7
+    },
+    "calendar": {
+      "room": "calendar",
+      "title": "calendar",
+      "entry_time": "2026-08-12T17:08:02.938721+00:00",
+      "identity_ms": 35.8,
+      "enumeration_only": true,
+      "controls_discovered": 21,
+      "controls_visible": 21,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [
+        "external calendar mutation"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "ENUMERATED \u2014 NOT YET EXERCISED"
+    },
+    "gallery": {
+      "room": "gallery",
+      "title": "gallery",
+      "entry_time": "2026-08-12T17:08:03.006825+00:00",
+      "identity_ms": 20.6,
+      "enumeration_only": false,
+      "controls_discovered": 54,
+      "controls_visible": 37,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "Refresh",
+          "kind": "button",
+          "id": "galleryRefreshBtn",
+          "duration_ms": 161.1,
+          "result": {
+            "ok": true,
+            "id": "galleryRefreshBtn",
+            "text": "Refresh"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Job Center",
+          "kind": "button",
+          "id": "galleryOpenJobsBtn",
+          "duration_ms": 167.6,
+          "result": {
+            "ok": true,
+            "id": "galleryOpenJobsBtn",
+            "text": "Job Center"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Models",
+          "kind": "button",
+          "id": "galleryOpenModelsBtn",
+          "duration_ms": 163.9,
+          "result": {
+            "ok": true,
+            "id": "galleryOpenModelsBtn",
+            "text": "Models"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Maker",
+          "kind": "button",
+          "id": "galleryOpenMakerBtn",
+          "duration_ms": 164.4,
+          "result": {
+            "ok": true,
+            "id": "galleryOpenMakerBtn",
+            "text": "Maker"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Fly tying",
+          "kind": "button",
+          "id": "galleryOpenFlytyingBtn",
+          "duration_ms": 167.7,
+          "result": {
+            "ok": true,
+            "id": "galleryOpenFlytyingBtn",
+            "text": "Fly tying"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Video",
+          "kind": "button",
+          "id": "galleryOpenVideoBtn",
+          "duration_ms": 166.2,
+          "result": {
+            "ok": true,
+            "id": "galleryOpenVideoBtn",
+            "text": "Video"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Meme",
+          "kind": "button",
+          "id": "galleryOpenMemeBtn",
+          "duration_ms": 163.3,
+          "result": {
+            "ok": true,
+            "id": "galleryOpenMemeBtn",
+            "text": "Meme"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Generate",
+          "kind": "button",
+          "id": "galleryGenerateBtn",
+          "duration_ms": 162.8,
+          "result": {
+            "ok": true,
+            "id": "galleryGenerateBtn",
+            "text": "Generate"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Preview enhance",
+          "kind": "button",
+          "id": "galleryEnhancePreviewBtn",
+          "duration_ms": 157.3,
+          "result": {
+            "ok": true,
+            "id": "galleryEnhancePreviewBtn",
+            "text": "Preview enhance"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Advanced",
+          "kind": "button",
+          "id": "galleryAdvancedToggle",
+          "duration_ms": 157.2,
+          "result": {
+            "ok": true,
+            "id": "galleryAdvancedToggle",
+            "text": "Advanced"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Generate another",
+          "kind": "button",
+          "id": "galleryGenAnotherBtn",
+          "duration_ms": 157.2,
+          "result": {
+            "ok": true,
+            "id": "galleryGenAnotherBtn",
+            "text": "Generate another"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Mission Control",
+          "kind": "button",
+          "id": "galleryOpenMcBtn",
+          "duration_ms": 166.6,
+          "result": {
+            "ok": true,
+            "id": "galleryOpenMcBtn",
+            "text": "Mission Control"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Simple",
+          "kind": "button",
+          "id": "imageEngineSimpleBtn",
+          "duration_ms": 157.5,
+          "result": {
+            "ok": true,
+            "id": "imageEngineSimpleBtn",
+            "text": "Simple"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Advanced",
+          "kind": "button",
+          "id": "imageEngineAdvancedBtn",
+          "duration_ms": 158.5,
+          "result": {
+            "ok": true,
+            "id": "imageEngineAdvancedBtn",
+            "text": "Advanced"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Expert",
+          "kind": "button",
+          "id": "imageEngineExpertBtn",
+          "duration_ms": 158.3,
+          "result": {
+            "ok": true,
+            "id": "imageEngineExpertBtn",
+            "text": "Expert"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Search",
+          "kind": "button",
+          "id": "gallerySearchBtn",
+          "duration_ms": 157.9,
+          "result": {
+            "ok": true,
+            "id": "gallerySearchBtn",
+            "text": "Search"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "\u2192 Video storyboard",
+          "kind": "button",
+          "id": "galleryStoryboardBtn",
+          "duration_ms": 160.4,
+          "result": {
+            "ok": true,
+            "id": "galleryStoryboardBtn",
+            "text": "\u2192 Video storyboard"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "New collection",
+          "kind": "button",
+          "id": "galleryCollectionBtn",
+          "duration_ms": 159.7,
+          "result": {
+            "ok": true,
+            "id": "galleryCollectionBtn",
+            "text": "New collection"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Generate metadata",
+          "kind": "button",
+          "id": "galleryVisionMetaBtn",
+          "duration_ms": 159.6,
+          "result": {
+            "ok": true,
+            "id": "galleryVisionMetaBtn",
+            "text": "Generate metadata"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Describe",
+          "kind": "button",
+          "id": "galleryDescribeBtn",
+          "duration_ms": 162.7,
+          "result": {
+            "ok": true,
+            "id": "galleryDescribeBtn",
+            "text": "Describe"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Save caption to Documents",
+          "kind": "button",
+          "id": "gallerySaveDocsBtn",
+          "duration_ms": 164.4,
+          "result": {
+            "ok": true,
+            "id": "gallerySaveDocsBtn",
+            "text": "Save caption to Documents"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Vision\u2192Coding",
+          "kind": "button",
+          "id": "galleryVisionCodingBtn",
+          "duration_ms": 159.3,
+          "result": {
+            "ok": true,
+            "id": "galleryVisionCodingBtn",
+            "text": "Vision\u2192Coding"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Similarity clusters",
+          "kind": "button",
+          "id": "galleryClusterBtn",
+          "duration_ms": 156.8,
+          "result": {
+            "ok": true,
+            "id": "galleryClusterBtn",
+            "text": "Similarity clusters"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "on",
+          "kind": "toggle",
+          "id": "galleryEnhanceToggle",
+          "duration_ms": 156.6,
+          "result": {
+            "ok": true,
+            "id": "galleryEnhanceToggle",
+            "text": ""
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "on",
+          "kind": "toggle",
+          "id": "galleryFavoritesToggle",
+          "duration_ms": 156.8,
+          "result": {
+            "ok": true,
+            "id": "galleryFavoritesToggle",
+            "text": ""
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:12.826477+00:00",
+      "cold_or_warm_enter_ms": 12.8,
+      "control_exercise_capped": true,
+      "controls_exercised_count": 25,
+      "leave_return": {
+        "ok": true,
+        "room": "gallery"
+      },
+      "functional_test_end": "2026-08-12T17:08:16.907976+00:00",
+      "total_functional_duration_ms": 4081.5
+    },
+    "search": {
+      "room": "search",
+      "title": "search",
+      "entry_time": "2026-08-12T17:08:03.102064+00:00",
+      "identity_ms": 40.9,
+      "enumeration_only": false,
+      "controls_discovered": 12,
+      "controls_visible": 8,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "Refresh",
+          "kind": "button",
+          "id": "searchHomeRefreshBtn",
+          "duration_ms": 159.8,
+          "result": {
+            "ok": true,
+            "id": "searchHomeRefreshBtn",
+            "text": "Refresh"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Save search",
+          "kind": "button",
+          "id": "searchSaveBtn",
+          "duration_ms": 158.0,
+          "result": {
+            "ok": true,
+            "id": "searchSaveBtn",
+            "text": "Save search"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Diagnostics",
+          "kind": "button",
+          "id": "searchDiagBtn",
+          "duration_ms": 157.1,
+          "result": {
+            "ok": true,
+            "id": "searchDiagBtn",
+            "text": "Diagnostics"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Search",
+          "kind": "button",
+          "id": "searchHomeRunBtn",
+          "duration_ms": 157.9,
+          "result": {
+            "ok": true,
+            "id": "searchHomeRunBtn",
+            "text": "Search"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Clear history",
+          "kind": "button",
+          "id": "searchClearHistoryBtn",
+          "duration_ms": 157.3,
+          "result": {
+            "ok": true,
+            "id": "searchClearHistoryBtn",
+            "text": "Clear history"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:16.911477+00:00",
+      "cold_or_warm_enter_ms": 14.8,
+      "controls_exercised_count": 5,
+      "leave_return": {
+        "ok": true,
+        "room": "search"
+      },
+      "functional_test_end": "2026-08-12T17:08:17.756515+00:00",
+      "total_functional_duration_ms": 845.0
+    },
+    "coding": {
+      "room": "coding",
+      "title": "coding",
+      "entry_time": "2026-08-12T17:08:03.149516+00:00",
+      "identity_ms": 27.4,
+      "enumeration_only": true,
+      "controls_discovered": 4,
+      "controls_visible": 4,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [
+        "git auth/push"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "ENUMERATED \u2014 NOT YET EXERCISED"
+    },
+    "projects": {
+      "room": "projects",
+      "title": "projects",
+      "entry_time": "2026-08-12T17:08:03.219998+00:00",
+      "identity_ms": 43,
+      "enumeration_only": false,
+      "controls_discovered": 7,
+      "controls_visible": 7,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "?",
+          "kind": "button",
+          "id": "projectsHelpBtn",
+          "duration_ms": 159.2,
+          "result": {
+            "ok": true,
+            "id": "projectsHelpBtn",
+            "text": "?"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Create",
+          "kind": "button",
+          "id": "projectsCreateBtn",
+          "duration_ms": 159.1,
+          "result": {
+            "ok": true,
+            "id": "projectsCreateBtn",
+            "text": "Create"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Import",
+          "kind": "button",
+          "id": "projectsImportBtn",
+          "duration_ms": 157.9,
+          "result": {
+            "ok": true,
+            "id": "projectsImportBtn",
+            "text": "Import"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:17.760170+00:00",
+      "cold_or_warm_enter_ms": 12,
+      "controls_exercised_count": 3,
+      "leave_return": {
+        "ok": true,
+        "room": "projects"
+      },
+      "functional_test_end": "2026-08-12T17:08:18.288646+00:00",
+      "total_functional_duration_ms": 528.5
+    },
+    "memory": {
+      "room": "memory",
+      "title": "memory",
+      "entry_time": "2026-08-12T17:08:03.292497+00:00",
+      "identity_ms": 46,
+      "enumeration_only": false,
+      "controls_discovered": 41,
+      "controls_visible": 40,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "Search",
+          "kind": "button",
+          "id": "memorySearchFocusBtn",
+          "duration_ms": 159.7,
+          "result": {
+            "ok": true,
+            "id": "memorySearchFocusBtn",
+            "text": "Search"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "New",
+          "kind": "button",
+          "id": "memoryAddBtn",
+          "duration_ms": 159.8,
+          "result": {
+            "ok": true,
+            "id": "memoryAddBtn",
+            "text": "New"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Briefing",
+          "kind": "button",
+          "id": "memoryBriefingBtn",
+          "duration_ms": 158.3,
+          "result": {
+            "ok": true,
+            "id": "memoryBriefingBtn",
+            "text": "Briefing"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Assist",
+          "kind": "button",
+          "id": "memoryAssistBtn",
+          "duration_ms": 158.1,
+          "result": {
+            "ok": true,
+            "id": "memoryAssistBtn",
+            "text": "Assist"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "?",
+          "kind": "button",
+          "id": "memoryShortcutsBtn",
+          "duration_ms": 159.0,
+          "result": {
+            "ok": true,
+            "id": "memoryShortcutsBtn",
+            "text": "?"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Update profile",
+          "kind": "button",
+          "id": "profileRetakeBtn",
+          "duration_ms": 159.6,
+          "result": {
+            "ok": true,
+            "id": "profileRetakeBtn",
+            "text": "Update profile"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Edit answers",
+          "kind": "button",
+          "id": "profileInlineEditBtn",
+          "duration_ms": 172.7,
+          "result": {
+            "ok": true,
+            "id": "profileInlineEditBtn",
+            "text": "Edit answers"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Save preferences",
+          "kind": "button",
+          "id": "envPrefsSaveBtn",
+          "duration_ms": 176.0,
+          "result": {
+            "ok": true,
+            "id": "envPrefsSaveBtn",
+            "text": "Save preferences"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Refresh machine facts",
+          "kind": "button",
+          "id": "envMachineSyncBtn",
+          "duration_ms": 169.9,
+          "result": {
+            "ok": true,
+            "id": "envMachineSyncBtn",
+            "text": "Refresh machine facts"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "cheatsheetViewBtn",
+          "kind": "button",
+          "id": "cheatsheetViewBtn",
+          "duration_ms": 167.2,
+          "result": {
+            "ok": true,
+            "id": "cheatsheetViewBtn",
+            "text": "View"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "cheatsheetEditBtn",
+          "kind": "button",
+          "id": "cheatsheetEditBtn",
+          "duration_ms": 160.2,
+          "result": {
+            "ok": true,
+            "id": "cheatsheetEditBtn",
+            "text": "Edit"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "cheatsheetResetBtn",
+          "kind": "button",
+          "id": "cheatsheetResetBtn",
+          "duration_ms": 159.2,
+          "result": {
+            "ok": true,
+            "id": "cheatsheetResetBtn",
+            "text": "Reset default"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "memoryOpenJournalBtn",
+          "kind": "button",
+          "id": "memoryOpenJournalBtn",
+          "duration_ms": 176.5,
+          "result": {
+            "ok": true,
+            "id": "memoryOpenJournalBtn",
+            "text": "Journal"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "memoryOpenProjectsBtn",
+          "kind": "button",
+          "id": "memoryOpenProjectsBtn",
+          "duration_ms": 166.1,
+          "result": {
+            "ok": true,
+            "id": "memoryOpenProjectsBtn",
+            "text": "Projects"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "memoryOpenBrowserBtn",
+          "kind": "button",
+          "id": "memoryOpenBrowserBtn",
+          "duration_ms": 168.0,
+          "result": {
+            "ok": true,
+            "id": "memoryOpenBrowserBtn",
+            "text": "Browser"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "memoryOpenDocumentsBtn",
+          "kind": "button",
+          "id": "memoryOpenDocumentsBtn",
+          "duration_ms": 164.8,
+          "result": {
+            "ok": true,
+            "id": "memoryOpenDocumentsBtn",
+            "text": "Documents"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Knowledge Briefs (research) \u2014 not Connections or Memory",
+          "kind": "button",
+          "id": "memoryOpenKnowledgeBtn",
+          "duration_ms": 164.4,
+          "result": {
+            "ok": true,
+            "id": "memoryOpenKnowledgeBtn",
+            "text": "Knowledge Briefs"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "memoryExportBtn",
+          "kind": "button",
+          "id": "memoryExportBtn",
+          "duration_ms": 160.7,
+          "result": {
+            "ok": true,
+            "id": "memoryExportBtn",
+            "text": "Export"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "memoryImportBtn",
+          "kind": "button",
+          "id": "memoryImportBtn",
+          "duration_ms": 163.0,
+          "result": {
+            "ok": true,
+            "id": "memoryImportBtn",
+            "text": "Import"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "memoryPruneBtn",
+          "kind": "button",
+          "id": "memoryPruneBtn",
+          "duration_ms": 160.3,
+          "result": {
+            "ok": true,
+            "id": "memoryPruneBtn",
+            "text": "Prune stale"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "memoryScrubBtn",
+          "kind": "button",
+          "id": "memoryScrubBtn",
+          "duration_ms": 157.5,
+          "result": {
+            "ok": true,
+            "id": "memoryScrubBtn",
+            "text": "Scrub test junk"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Open Knowledge Briefs",
+          "kind": "button",
+          "id": "memoryOpenKnowledgeBtn2",
+          "duration_ms": 163.3,
+          "result": {
+            "ok": true,
+            "id": "memoryOpenKnowledgeBtn2",
+            "text": "Open Knowledge Briefs"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Open Connections",
+          "kind": "button",
+          "id": "memoryOpenConnectionsBtn",
+          "duration_ms": 166.0,
+          "result": {
+            "ok": true,
+            "id": "memoryOpenConnectionsBtn",
+            "text": "Open Connections"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "on",
+          "kind": "toggle",
+          "id": "memoryBrainMode",
+          "duration_ms": 160.1,
+          "result": {
+            "ok": true,
+            "id": "memoryBrainMode",
+            "text": ""
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "on",
+          "kind": "toggle",
+          "id": "memoryAutoJournalLearn",
+          "duration_ms": 157.6,
+          "result": {
+            "ok": true,
+            "id": "memoryAutoJournalLearn",
+            "text": ""
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:18.291936+00:00",
+      "cold_or_warm_enter_ms": 14.3,
+      "control_exercise_capped": true,
+      "controls_exercised_count": 25,
+      "leave_return": {
+        "ok": true,
+        "room": "memory"
+      },
+      "functional_test_end": "2026-08-12T17:08:22.448241+00:00",
+      "total_functional_duration_ms": 4156.3
+    },
+    "voice": {
+      "room": "voice",
+      "title": "voice",
+      "entry_time": "2026-08-12T17:08:03.381285+00:00",
+      "identity_ms": 68.5,
+      "enumeration_only": true,
+      "controls_discovered": 22,
+      "controls_visible": 20,
+      "credential_controls": [],
+      "hardware_controls": [
+        {
+          "kind": "input",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": true,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": true,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "known_gates": [
+        "microphone",
+        "cloud live"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "ENUMERATED \u2014 NOT YET EXERCISED"
+    },
+    "repair": {
+      "room": "repair",
+      "title": "repair",
+      "entry_time": "2026-08-12T17:08:03.503919+00:00",
+      "identity_ms": 86.7,
+      "enumeration_only": false,
+      "controls_discovered": 5,
+      "controls_visible": 1,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "\u00b7\u00b7\u00b7",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 159.2,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "\u00b7\u00b7\u00b7"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:22.451453+00:00",
+      "cold_or_warm_enter_ms": 16,
+      "controls_exercised_count": 1,
+      "leave_return": {
+        "ok": true,
+        "room": "repair"
+      },
+      "functional_test_end": "2026-08-12T17:08:22.676630+00:00",
+      "total_functional_duration_ms": 225.2
+    },
+    "integrity": {
+      "room": "integrity",
+      "title": "integrity",
+      "entry_time": "2026-08-12T17:08:03.535971+00:00",
+      "identity_ms": 15,
+      "enumeration_only": false,
+      "controls_discovered": 3,
+      "controls_visible": 1,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "\u00b7\u00b7\u00b7",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 160.6,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "\u00b7\u00b7\u00b7"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:22.680601+00:00",
+      "cold_or_warm_enter_ms": 12.5,
+      "controls_exercised_count": 1,
+      "leave_return": {
+        "ok": true,
+        "room": "integrity"
+      },
+      "functional_test_end": "2026-08-12T17:08:22.900653+00:00",
+      "total_functional_duration_ms": 220.0
+    },
+    "home": {
+      "room": "home",
+      "title": "home",
+      "entry_time": "2026-08-12T17:08:03.676408+00:00",
+      "identity_ms": 42.7,
+      "enumeration_only": false,
+      "controls_discovered": 746,
+      "controls_visible": 0,
+      "credential_controls": [
+        {
+          "kind": "button",
+          "id": "journalExportEncBtn",
+          "text": "Export encrypted",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "journalImportEncBtn",
+          "text": "Import encrypted",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "securityPinBtn",
+          "text": "Set PIN",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haPasteTokenBtn",
+          "text": "Paste",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haTokenModalBtn",
+          "text": "Dialog\u2026",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "securityPinInput",
+          "text": "",
+          "visible": false,
+          "tag": "input",
+          "type": "password",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "rapidLogInput",
+          "text": "Rapid log entry",
+          "visible": false,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "haTokenInput",
+          "text": "",
+          "visible": false,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "hardware_controls": [
+        {
+          "kind": "button",
+          "id": "voiceMuteBtn",
+          "text": "Speak replies",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "",
+          "text": "Voice when speaking",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "mc-tab-hardware",
+          "text": "Hardware",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "tab",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "flytyingCameraScanBtn",
+          "text": "Camera",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "presenceStartBtn",
+          "text": "Start camera",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "gestureCalibBtn",
+          "text": "Calibrate gestures",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "visionHomeSpeakOcrBtn",
+          "text": "Speak OCR (Voice)",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "select",
+          "id": "gestureModeSelect",
+          "text": "Off Preview only Control \u2014 pinch click, fist drag panels CPU-only (low FPS)",
+          "visible": false,
+          "tag": "select",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "tab",
+          "id": "mc-tab-hardware",
+          "text": "Hardware",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "tab",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "known_gates": [],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:22.903705+00:00",
+      "cold_or_warm_enter_ms": 9.9,
+      "controls_exercised_count": 0,
+      "leave_return": {
+        "ok": true,
+        "room": "home"
+      },
+      "functional_test_end": "2026-08-12T17:08:22.951118+00:00",
+      "total_functional_duration_ms": 47.4
+    },
+    "automation": {
+      "room": "automation",
+      "title": "automation",
+      "entry_time": "2026-08-12T17:08:03.701221+00:00",
+      "identity_ms": 11.9,
+      "enumeration_only": true,
+      "controls_discovered": 23,
+      "controls_visible": 23,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [
+        "real actuation"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "ENUMERATED \u2014 NOT YET EXERCISED"
+    },
+    "providers": {
+      "room": "providers",
+      "title": "providers",
+      "entry_time": "2026-08-12T17:08:03.797797+00:00",
+      "identity_ms": 10.5,
+      "enumeration_only": false,
+      "controls_discovered": 755,
+      "controls_visible": 0,
+      "credential_controls": [
+        {
+          "kind": "button",
+          "id": "journalExportEncBtn",
+          "text": "Export encrypted",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "journalImportEncBtn",
+          "text": "Import encrypted",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "pinSetupBtn",
+          "text": "Set PIN",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "securityPinBtn",
+          "text": "Set PIN",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haPasteTokenBtn",
+          "text": "Paste",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haTokenModalBtn",
+          "text": "Dialog\u2026",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "pinSetupInput",
+          "text": "",
+          "visible": false,
+          "tag": "input",
+          "type": "password",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "securityPinInput",
+          "text": "",
+          "visible": false,
+          "tag": "input",
+          "type": "password",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "rapidLogInput",
+          "text": "Rapid log entry",
+          "visible": false,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "haTokenInput",
+          "text": "",
+          "visible": false,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "hardware_controls": [
+        {
+          "kind": "button",
+          "id": "voiceMuteBtn",
+          "text": "Speak replies",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "",
+          "text": "Voice when speaking",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "mc-tab-hardware",
+          "text": "Hardware",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "tab",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "flytyingCameraScanBtn",
+          "text": "Camera",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "presenceStartBtn",
+          "text": "Start camera",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "gestureCalibBtn",
+          "text": "Calibrate gestures",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "visionHomeSpeakOcrBtn",
+          "text": "Speak OCR (Voice)",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "select",
+          "id": "gestureModeSelect",
+          "text": "Off Preview only Control \u2014 pinch click, fist drag panels CPU-only (low FPS)",
+          "visible": false,
+          "tag": "select",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "tab",
+          "id": "mc-tab-hardware",
+          "text": "Hardware",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "tab",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "known_gates": [],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:22.954095+00:00",
+      "cold_or_warm_enter_ms": 15.6,
+      "controls_exercised_count": 0,
+      "leave_return": {
+        "ok": true,
+        "room": "providers"
+      },
+      "functional_test_end": "2026-08-12T17:08:23.029295+00:00",
+      "total_functional_duration_ms": 75.2
+    },
+    "home_automation": {
+      "room": "home_automation",
+      "title": "home_automation",
+      "entry_time": "2026-08-12T17:08:03.843935+00:00",
+      "identity_ms": 20.2,
+      "enumeration_only": true,
+      "controls_discovered": 26,
+      "controls_visible": 23,
+      "credential_controls": [
+        {
+          "kind": "button",
+          "id": "haPasteTokenBtn",
+          "text": "",
+          "visible": true,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haTokenModalBtn",
+          "text": "",
+          "visible": true,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "haTokenInput",
+          "text": "",
+          "visible": true,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "hardware_controls": [],
+      "known_gates": [
+        "HA auth",
+        "device actuation"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "ENUMERATED \u2014 NOT YET EXERCISED"
+    },
+    "presence": {
+      "room": "presence",
+      "title": "presence",
+      "entry_time": "2026-08-12T17:08:03.880948+00:00",
+      "identity_ms": 23.1,
+      "enumeration_only": true,
+      "controls_discovered": 7,
+      "controls_visible": 7,
+      "credential_controls": [],
+      "hardware_controls": [
+        {
+          "kind": "button",
+          "id": "presenceStartBtn",
+          "text": "Start camera",
+          "visible": true,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "gestureCalibBtn",
+          "text": "Calibrate gestures",
+          "visible": true,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "select",
+          "id": "gestureModeSelect",
+          "text": "Off Preview only Control \u2014 pinch click, fist drag panels CPU-only (low FPS)",
+          "visible": true,
+          "tag": "select",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "known_gates": [
+        "camera",
+        "gestures"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "ENUMERATED \u2014 NOT YET EXERCISED"
+    },
+    "journal": {
+      "room": "journal",
+      "title": "journal",
+      "entry_time": "2026-08-12T17:08:03.970783+00:00",
+      "identity_ms": 38.6,
+      "enumeration_only": false,
+      "controls_discovered": 56,
+      "controls_visible": 51,
+      "credential_controls": [
+        {
+          "kind": "button",
+          "id": "journalExportEncBtn",
+          "text": "Export encrypted",
+          "visible": true,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "journalImportEncBtn",
+          "text": "Import encrypted",
+          "visible": true,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "rapidLogInput",
+          "text": "Rapid log entry",
+          "visible": true,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "hardware_controls": [],
+      "known_gates": [
+        "encrypted export",
+        "encrypted import"
+      ],
+      "controls_exercised": [
+        {
+          "control": "Daily",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 168.6,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Daily"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Weekly",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 160.4,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Weekly"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Monthly",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 161.5,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Monthly"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Habits",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 162.4,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Habits"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Wellness",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 159.5,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Wellness"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Future",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 160.1,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Future"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Index",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 159.3,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Index"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Collections",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 160.9,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Collections"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Projects",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 161.1,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Projects"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Key",
+          "kind": "button",
+          "id": "",
+          "duration_ms": 158.9,
+          "result": {
+            "ok": true,
+            "id": null,
+            "text": "Key"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Writing mode",
+          "kind": "button",
+          "id": "journalWritingModeBtn",
+          "duration_ms": 160.7,
+          "result": {
+            "ok": true,
+            "id": "journalWritingModeBtn",
+            "text": "Writing mode"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Calendar",
+          "kind": "button",
+          "id": "journalOpenCalendarBtn",
+          "duration_ms": 167.9,
+          "result": {
+            "ok": true,
+            "id": "journalOpenCalendarBtn",
+            "text": "Calendar"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Planner",
+          "kind": "button",
+          "id": "journalOpenPlannerBtn",
+          "duration_ms": 167.6,
+          "result": {
+            "ok": true,
+            "id": "journalOpenPlannerBtn",
+            "text": "Planner"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Memory",
+          "kind": "button",
+          "id": "journalOpenMemoryBtn",
+          "duration_ms": 171.7,
+          "result": {
+            "ok": true,
+            "id": "journalOpenMemoryBtn",
+            "text": "Memory"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Search",
+          "kind": "button",
+          "id": "journalSearchBtn",
+          "duration_ms": 158.2,
+          "result": {
+            "ok": true,
+            "id": "journalSearchBtn",
+            "text": "Search"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Reflect",
+          "kind": "button",
+          "id": "journalReflectBtn",
+          "duration_ms": 158.1,
+          "result": {
+            "ok": true,
+            "id": "journalReflectBtn",
+            "text": "Reflect"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Promote assist",
+          "kind": "button",
+          "id": "journalAssistPromoteBtn",
+          "duration_ms": 158.3,
+          "result": {
+            "ok": true,
+            "id": "journalAssistPromoteBtn",
+            "text": "Promote assist"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Month-end",
+          "kind": "button",
+          "id": "journalMonthWizardBtn",
+          "duration_ms": 158.2,
+          "result": {
+            "ok": true,
+            "id": "journalMonthWizardBtn",
+            "text": "Month-end"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Documents",
+          "kind": "button",
+          "id": "journalOpenDocumentsBtn",
+          "duration_ms": 170.8,
+          "result": {
+            "ok": true,
+            "id": "journalOpenDocumentsBtn",
+            "text": "Documents"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Audio",
+          "kind": "button",
+          "id": "journalOpenAudioBtn",
+          "duration_ms": 167.3,
+          "result": {
+            "ok": true,
+            "id": "journalOpenAudioBtn",
+            "text": "Audio"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Export PDF",
+          "kind": "button",
+          "id": "journalPdfBtn",
+          "duration_ms": 122944.1,
+          "result": {
+            "ok": true,
+            "id": "journalPdfBtn",
+            "text": "Export PDF"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Export JSON",
+          "kind": "button",
+          "id": "journalExportBtn",
+          "duration_ms": 159.2,
+          "result": {
+            "ok": true,
+            "id": "journalExportBtn",
+            "text": "Export JSON"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Import",
+          "kind": "button",
+          "id": "journalImportBtn",
+          "duration_ms": 162.2,
+          "result": {
+            "ok": true,
+            "id": "journalImportBtn",
+            "text": "Import"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Backup now",
+          "kind": "button",
+          "id": "journalBackupBtn",
+          "duration_ms": 161.2,
+          "result": {
+            "ok": true,
+            "id": "journalBackupBtn",
+            "text": "Backup now"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Voice draft",
+          "kind": "button",
+          "id": "journalVoiceLogBtn",
+          "duration_ms": 168.6,
+          "result": {
+            "ok": true,
+            "id": "journalVoiceLogBtn",
+            "text": "Voice draft"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "WAITING FOR JEFF",
+      "functional_test_start": "2026-08-12T17:08:29.523375+00:00",
+      "cold_or_warm_enter_ms": 16.1,
+      "control_exercise_capped": true,
+      "controls_exercised_count": 25,
+      "leave_return": {
+        "ok": true,
+        "room": "journal"
+      },
+      "functional_test_end": "2026-08-12T17:10:36.454450+00:00",
+      "total_functional_duration_ms": 126931.1,
+      "more_menu_defect": "REPAIRED",
+      "encrypted_export": {
+        "status": "JEFF-ATTENDED \u2014 PROVEN",
+        "jeff_attended": true,
+        "evidence": "journal_encrypted_export_resume.json"
+      },
+      "encrypted_import": {
+        "status": "NOT PROVEN \u2014 WAITING FOR JEFF",
+        "jeff_attended": false,
+        "last_resume_at": "2026-08-12T20:12:48.014513+00:00",
+        "last_live_result": "400 Not a Jarvis encrypted journal file",
+        "evidence": "journal_encrypted_import_resume.json"
+      }
+    },
+    "video": {
+      "room": "video",
+      "title": "video",
+      "entry_time": "2026-08-12T17:08:04.006276+00:00",
+      "identity_ms": 18.3,
+      "enumeration_only": true,
+      "controls_discovered": 37,
+      "controls_visible": 20,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [
+        "device playback"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "ENUMERATED \u2014 NOT YET EXERCISED"
+    },
+    "audio": {
+      "room": "audio",
+      "title": "audio",
+      "entry_time": "2026-08-12T17:08:04.189451+00:00",
+      "identity_ms": 18,
+      "enumeration_only": false,
+      "controls_discovered": 757,
+      "controls_visible": 0,
+      "credential_controls": [
+        {
+          "kind": "button",
+          "id": "journalExportEncBtn",
+          "text": "Export encrypted",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "journalImportEncBtn",
+          "text": "Import encrypted",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "pinSetupBtn",
+          "text": "Set PIN",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "securityPinBtn",
+          "text": "Set PIN",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haPasteTokenBtn",
+          "text": "Paste",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "haTokenModalBtn",
+          "text": "Dialog\u2026",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "pinSetupInput",
+          "text": "",
+          "visible": false,
+          "tag": "input",
+          "type": "password",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "securityPinInput",
+          "text": "",
+          "visible": false,
+          "tag": "input",
+          "type": "password",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "rapidLogInput",
+          "text": "Rapid log entry",
+          "visible": false,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "textarea",
+          "id": "haTokenInput",
+          "text": "",
+          "visible": false,
+          "tag": "textarea",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "hardware_controls": [
+        {
+          "kind": "button",
+          "id": "voiceMuteBtn",
+          "text": "Speak replies",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "",
+          "text": "Voice when speaking",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "mc-tab-hardware",
+          "text": "Hardware",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "tab",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "flytyingCameraScanBtn",
+          "text": "Camera",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "presenceStartBtn",
+          "text": "Start camera",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "gestureCalibBtn",
+          "text": "Calibrate gestures",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "button",
+          "id": "visionHomeSpeakOcrBtn",
+          "text": "Speak OCR (Voice)",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "select",
+          "id": "gestureModeSelect",
+          "text": "Off Preview only Control \u2014 pinch click, fist drag panels CPU-only (low FPS)",
+          "visible": false,
+          "tag": "select",
+          "type": "",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "tab",
+          "id": "mc-tab-hardware",
+          "text": "Hardware",
+          "visible": false,
+          "tag": "button",
+          "type": "button",
+          "role": "tab",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "speakRepliesToggle",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "voiceTabSpeakReplies",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "known_gates": [],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:23.033905+00:00",
+      "cold_or_warm_enter_ms": 18.2,
+      "controls_exercised_count": 0,
+      "leave_return": {
+        "ok": true,
+        "room": "audio"
+      },
+      "functional_test_end": "2026-08-12T17:08:23.188217+00:00",
+      "total_functional_duration_ms": 154.3
+    },
+    "browser": {
+      "room": "browser",
+      "title": "browser",
+      "entry_time": "2026-08-12T17:08:04.231293+00:00",
+      "identity_ms": 22.4,
+      "enumeration_only": true,
+      "controls_discovered": 24,
+      "controls_visible": 24,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [
+        "website login"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "ENUMERATED \u2014 NOT YET EXERCISED"
+    },
+    "maker": {
+      "room": "maker",
+      "title": "maker",
+      "entry_time": "2026-08-12T17:08:04.269841+00:00",
+      "identity_ms": 23.9,
+      "enumeration_only": false,
+      "controls_discovered": 25,
+      "controls_visible": 21,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "\u29c9",
+          "kind": "button",
+          "id": "makerFloatBtn",
+          "duration_ms": 161.9,
+          "result": {
+            "ok": true,
+            "id": "makerFloatBtn",
+            "text": "\u29c9"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Generate",
+          "kind": "button",
+          "id": "cadGenerateBtn",
+          "duration_ms": 161.0,
+          "result": {
+            "ok": true,
+            "id": "cadGenerateBtn",
+            "text": "Generate"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Iterate",
+          "kind": "button",
+          "id": "cadIterateBtn",
+          "duration_ms": 158.5,
+          "result": {
+            "ok": true,
+            "id": "cadIterateBtn",
+            "text": "Iterate"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Hello cube",
+          "kind": "button",
+          "id": "cadHelloCubeBtn",
+          "duration_ms": 159.0,
+          "result": {
+            "ok": true,
+            "id": "cadHelloCubeBtn",
+            "text": "Hello cube"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Download STL",
+          "kind": "button",
+          "id": "cadExportBtn",
+          "duration_ms": 161.6,
+          "result": {
+            "ok": true,
+            "id": "cadExportBtn",
+            "text": "Download STL"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Refresh",
+          "kind": "button",
+          "id": "cadRefreshBtn",
+          "duration_ms": 162.6,
+          "result": {
+            "ok": true,
+            "id": "cadRefreshBtn",
+            "text": "Refresh"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Gallery",
+          "kind": "button",
+          "id": "cadOpenGalleryBtn",
+          "duration_ms": 169.0,
+          "result": {
+            "ok": true,
+            "id": "cadOpenGalleryBtn",
+            "text": "Gallery"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Documents",
+          "kind": "button",
+          "id": "cadOpenDocumentsBtn",
+          "duration_ms": 165.0,
+          "result": {
+            "ok": true,
+            "id": "cadOpenDocumentsBtn",
+            "text": "Documents"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Clear gallery",
+          "kind": "button",
+          "id": "cadClearBtn",
+          "duration_ms": 158.1,
+          "result": {
+            "ok": true,
+            "id": "cadClearBtn",
+            "text": "Clear gallery"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "\u29c9",
+          "kind": "button",
+          "id": "printerFloatBtn",
+          "duration_ms": 158.6,
+          "result": {
+            "ok": true,
+            "id": "printerFloatBtn",
+            "text": "\u29c9"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Add",
+          "kind": "button",
+          "id": "printerAddBtn",
+          "duration_ms": 158.4,
+          "result": {
+            "ok": true,
+            "id": "printerAddBtn",
+            "text": "Add"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Discover KE",
+          "kind": "button",
+          "id": "printerDiscoverBtn",
+          "duration_ms": 157.8,
+          "result": {
+            "ok": true,
+            "id": "printerDiscoverBtn",
+            "text": "Discover KE"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Status",
+          "kind": "button",
+          "id": "printerRefreshBtn",
+          "duration_ms": 161.5,
+          "result": {
+            "ok": true,
+            "id": "printerRefreshBtn",
+            "text": "Status"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:23.195432+00:00",
+      "cold_or_warm_enter_ms": 16.8,
+      "controls_exercised_count": 13,
+      "leave_return": {
+        "ok": true,
+        "room": "maker"
+      },
+      "functional_test_end": "2026-08-12T17:08:25.392361+00:00",
+      "total_functional_duration_ms": 2196.9
+    },
+    "meme": {
+      "room": "meme",
+      "title": "meme",
+      "entry_time": "2026-08-12T17:08:04.302066+00:00",
+      "identity_ms": 12.9,
+      "enumeration_only": false,
+      "controls_discovered": 10,
+      "controls_visible": 10,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "Generate in chat",
+          "kind": "button",
+          "id": "memeChatHintBtn",
+          "duration_ms": 187.3,
+          "result": {
+            "ok": true,
+            "id": "memeChatHintBtn",
+            "text": "Generate in chat"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Gallery",
+          "kind": "button",
+          "id": "memeOpenGalleryBtn",
+          "duration_ms": 177.3,
+          "result": {
+            "ok": true,
+            "id": "memeOpenGalleryBtn",
+            "text": "Gallery"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Video",
+          "kind": "button",
+          "id": "memeOpenVideoBtn",
+          "duration_ms": 171.8,
+          "result": {
+            "ok": true,
+            "id": "memeOpenVideoBtn",
+            "text": "Video"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Quick preview (text only)",
+          "kind": "button",
+          "id": "memePreviewBtn",
+          "duration_ms": 160.0,
+          "result": {
+            "ok": true,
+            "id": "memePreviewBtn",
+            "text": "Quick preview (text only)"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Generate meme",
+          "kind": "button",
+          "id": "memeGenerateBtn",
+          "duration_ms": 159.7,
+          "result": {
+            "ok": true,
+            "id": "memeGenerateBtn",
+            "text": "Generate meme"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "on",
+          "kind": "toggle",
+          "id": "memeUseAiCheckbox",
+          "duration_ms": 158.1,
+          "result": {
+            "ok": true,
+            "id": "memeUseAiCheckbox",
+            "text": ""
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:25.397643+00:00",
+      "cold_or_warm_enter_ms": 37.7,
+      "controls_exercised_count": 6,
+      "leave_return": {
+        "ok": true,
+        "room": "meme"
+      },
+      "functional_test_end": "2026-08-12T17:08:26.494401+00:00",
+      "total_functional_duration_ms": 1096.8
+    },
+    "vision": {
+      "room": "vision",
+      "title": "vision",
+      "entry_time": "2026-08-12T17:08:04.356677+00:00",
+      "identity_ms": 28.6,
+      "enumeration_only": true,
+      "controls_discovered": 14,
+      "controls_visible": 12,
+      "credential_controls": [],
+      "hardware_controls": [
+        {
+          "kind": "button",
+          "id": "visionHomeSpeakOcrBtn",
+          "text": "Speak OCR (Voice)",
+          "visible": true,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "toggle",
+          "id": "visionHomeSpeak",
+          "text": "on",
+          "visible": false,
+          "tag": "input",
+          "type": "checkbox",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": false,
+          "hardwareish": true,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "known_gates": [
+        "camera capture"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "ENUMERATED \u2014 NOT YET EXERCISED"
+    },
+    "connections": {
+      "room": "connections",
+      "title": "connections",
+      "entry_time": "2026-08-12T17:08:04.398925+00:00",
+      "identity_ms": 25.8,
+      "enumeration_only": true,
+      "controls_discovered": 16,
+      "controls_visible": 11,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [
+        "graph credentials"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "ENUMERATED \u2014 NOT YET EXERCISED"
+    },
+    "settings": {
+      "room": "settings",
+      "title": "settings",
+      "entry_time": "2026-08-12T17:08:04.432633+00:00",
+      "identity_ms": 16.9,
+      "enumeration_only": false,
+      "controls_discovered": 28,
+      "controls_visible": 14,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "Refresh",
+          "kind": "button",
+          "id": "settingsHomeRefreshBtn",
+          "duration_ms": 161.0,
+          "result": {
+            "ok": true,
+            "id": "settingsHomeRefreshBtn",
+            "text": "Refresh"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Voice & Chat",
+          "kind": "button",
+          "id": "settingsVoiceChatBtn",
+          "duration_ms": 161.0,
+          "result": {
+            "ok": true,
+            "id": "settingsVoiceChatBtn",
+            "text": "Voice & Chat"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Diagnostics",
+          "kind": "button",
+          "id": "settingsDiagBtn",
+          "duration_ms": 157.5,
+          "result": {
+            "ok": true,
+            "id": "settingsDiagBtn",
+            "text": "Diagnostics"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Export",
+          "kind": "button",
+          "id": "settingsExportBtn",
+          "duration_ms": 157.4,
+          "result": {
+            "ok": true,
+            "id": "settingsExportBtn",
+            "text": "Export"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Search",
+          "kind": "button",
+          "id": "settingsSearchBtn",
+          "duration_ms": 157.8,
+          "result": {
+            "ok": true,
+            "id": "settingsSearchBtn",
+            "text": "Search"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Reset appearance",
+          "kind": "button",
+          "id": "settingsResetAppearanceBtn",
+          "duration_ms": 158.3,
+          "result": {
+            "ok": true,
+            "id": "settingsResetAppearanceBtn",
+            "text": "Reset appearance"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Activate",
+          "kind": "button",
+          "id": "settingsActivateProfileBtn",
+          "duration_ms": 161.1,
+          "result": {
+            "ok": true,
+            "id": "settingsActivateProfileBtn",
+            "text": "Activate"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Save profile",
+          "kind": "button",
+          "id": "settingsSaveProfileBtn",
+          "duration_ms": 166.3,
+          "result": {
+            "ok": true,
+            "id": "settingsSaveProfileBtn",
+            "text": "Save profile"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:26.498993+00:00",
+      "cold_or_warm_enter_ms": 13.6,
+      "controls_exercised_count": 8,
+      "leave_return": {
+        "ok": true,
+        "room": "settings"
+      },
+      "functional_test_end": "2026-08-12T17:08:27.836349+00:00",
+      "total_functional_duration_ms": 1337.4
+    },
+    "capabilities": {
+      "room": "capabilities",
+      "title": "capabilities",
+      "entry_time": "2026-08-12T17:08:04.473854+00:00",
+      "identity_ms": 25.3,
+      "enumeration_only": false,
+      "controls_discovered": 8,
+      "controls_visible": 7,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "Refresh",
+          "kind": "button",
+          "id": "capabilitiesRefreshBtn",
+          "duration_ms": 161.2,
+          "result": {
+            "ok": true,
+            "id": "capabilitiesRefreshBtn",
+            "text": "Refresh"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Load enabled",
+          "kind": "button",
+          "id": "capabilitiesLoadAllBtn",
+          "duration_ms": 163.5,
+          "result": {
+            "ok": true,
+            "id": "capabilitiesLoadAllBtn",
+            "text": "Load enabled"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Diagnostics",
+          "kind": "button",
+          "id": "capabilitiesDiagBtn",
+          "duration_ms": 157.5,
+          "result": {
+            "ok": true,
+            "id": "capabilitiesDiagBtn",
+            "text": "Diagnostics"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:27.842115+00:00",
+      "cold_or_warm_enter_ms": 11.3,
+      "controls_exercised_count": 3,
+      "leave_return": {
+        "ok": true,
+        "room": "capabilities"
+      },
+      "functional_test_end": "2026-08-12T17:08:28.371041+00:00",
+      "total_functional_duration_ms": 528.9
+    },
+    "integrations": {
+      "room": "integrations",
+      "title": "integrations",
+      "entry_time": "2026-08-12T17:08:04.507914+00:00",
+      "identity_ms": 21.4,
+      "enumeration_only": false,
+      "controls_discovered": 5,
+      "controls_visible": 5,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [
+        "API keys",
+        "provider credentials"
+      ],
+      "controls_exercised": [],
+      "workflows": [],
+      "status": "WAITING FOR JEFF",
+      "functional_test_start": "2026-08-12T17:10:37.413324+00:00",
+      "cold_or_warm_enter_ms": 22.5
+    },
+    "audit": {
+      "room": "audit",
+      "title": "audit",
+      "entry_time": "2026-08-12T17:08:04.589003+00:00",
+      "identity_ms": 17.7,
+      "enumeration_only": false,
+      "controls_discovered": 3,
+      "controls_visible": 3,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "Mission Control",
+          "kind": "button",
+          "id": "auditOpenMcBtn",
+          "duration_ms": 168.3,
+          "result": {
+            "ok": true,
+            "id": "auditOpenMcBtn",
+            "text": "Mission Control"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Actions",
+          "kind": "button",
+          "id": "auditOpenActionsBtn",
+          "duration_ms": 166.1,
+          "result": {
+            "ok": true,
+            "id": "auditOpenActionsBtn",
+            "text": "Actions"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:28.376303+00:00",
+      "cold_or_warm_enter_ms": 11.1,
+      "controls_exercised_count": 2,
+      "leave_return": {
+        "ok": true,
+        "room": "audit"
+      },
+      "functional_test_end": "2026-08-12T17:08:28.787503+00:00",
+      "total_functional_duration_ms": 411.2
+    },
+    "security": {
+      "room": "security",
+      "title": "security",
+      "entry_time": "2026-08-12T17:08:04.615733+00:00",
+      "identity_ms": 12.4,
+      "enumeration_only": false,
+      "controls_discovered": 5,
+      "controls_visible": 5,
+      "credential_controls": [
+        {
+          "kind": "button",
+          "id": "securityPinBtn",
+          "text": "Set PIN",
+          "visible": true,
+          "tag": "button",
+          "type": "button",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        },
+        {
+          "kind": "input",
+          "id": "securityPinInput",
+          "text": "",
+          "visible": true,
+          "tag": "input",
+          "type": "password",
+          "role": "",
+          "href": "",
+          "disabled": false,
+          "credentialish": true,
+          "hardwareish": false,
+          "destructiveish": false,
+          "consequentialish": false
+        }
+      ],
+      "hardware_controls": [],
+      "known_gates": [
+        "PIN",
+        "lock",
+        "unlock"
+      ],
+      "controls_exercised": [
+        {
+          "control": "Presence",
+          "kind": "button",
+          "id": "securityOpenPresenceBtn",
+          "duration_ms": 175.4,
+          "result": {
+            "ok": true,
+            "id": "securityOpenPresenceBtn",
+            "text": "Presence"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Voice",
+          "kind": "button",
+          "id": "securityOpenVoiceBtn",
+          "duration_ms": 170.6,
+          "result": {
+            "ok": true,
+            "id": "securityOpenVoiceBtn",
+            "text": "Voice"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 gated workflows not yet reached",
+      "functional_test_start": "2026-08-12T17:10:36.459318+00:00",
+      "cold_or_warm_enter_ms": 16.4,
+      "controls_exercised_count": 2,
+      "leave_return": {
+        "ok": true,
+        "room": "security"
+      },
+      "functional_test_end": "2026-08-12T17:10:37.407474+00:00",
+      "total_functional_duration_ms": 948.2
+    },
+    "actions": {
+      "room": "actions",
+      "title": "actions",
+      "entry_time": "2026-08-12T17:08:04.646898+00:00",
+      "identity_ms": 17.5,
+      "enumeration_only": false,
+      "controls_discovered": 5,
+      "controls_visible": 5,
+      "credential_controls": [],
+      "hardware_controls": [],
+      "known_gates": [],
+      "controls_exercised": [
+        {
+          "control": "Clear",
+          "kind": "button",
+          "id": "actionsClearBtn",
+          "duration_ms": 160.7,
+          "result": {
+            "ok": true,
+            "id": "actionsClearBtn",
+            "text": "Clear"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Chat",
+          "kind": "button",
+          "id": "actionsOpenChatBtn",
+          "duration_ms": 171.2,
+          "result": {
+            "ok": true,
+            "id": "actionsOpenChatBtn",
+            "text": "Chat"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Audit",
+          "kind": "button",
+          "id": "actionsOpenAuditBtn",
+          "duration_ms": 162.1,
+          "result": {
+            "ok": true,
+            "id": "actionsOpenAuditBtn",
+            "text": "Audit"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        },
+        {
+          "control": "Mission Control",
+          "kind": "button",
+          "id": "actionsOpenMcBtn",
+          "duration_ms": 165.7,
+          "result": {
+            "ok": true,
+            "id": "actionsOpenMcBtn",
+            "text": "Mission Control"
+          },
+          "status": "INTERACTED \u2014 UI response observed; full workflow state may still be PARTIAL"
+        }
+      ],
+      "workflows": [],
+      "status": "PARTIALLY PROVEN \u2014 controls interacted; full create/save/persist workflows not all completed",
+      "functional_test_start": "2026-08-12T17:08:28.791868+00:00",
+      "cold_or_warm_enter_ms": 9.4,
+      "controls_exercised_count": 4,
+      "leave_return": {
+        "ok": true,
+        "room": "actions"
+      },
+      "functional_test_end": "2026-08-12T17:08:29.519456+00:00",
+      "total_functional_duration_ms": 727.6
+    }
+  },
+  "capabilities": [],
+  "waiting_for_jeff": {
+    "status": "WAITING FOR JEFF",
+    "room": "journal",
+    "capability": "Encrypted import",
+    "workflow": "Journal \u2192 More \u2192 Import encrypted \u2192 choose encrypted export file \u2192 password \u2192 import completes",
+    "jeff_attended": false,
+    "import_completed": false,
+    "resume_received_but_not_verified": true,
+    "why_not_proven": [
+      "Live POST /api/journal/import/encrypted returned 400 Bad Request (only import attempt in serve.log)",
+      "Owner-visible error toast: Not a Jarvis encrypted journal file",
+      "data/journal/bullet_journal.json mtime unchanged (still 2026-08-12T13:26:26)"
+    ],
+    "what_went_wrong_likely": "The file selected in the picker was not accepted as a Jarvis encrypted journal payload (missing/incorrect format field after unwrap), OR a non-encrypted JSON was chosen. Known-good owner files still exist under ~/Downloads from 2026-08-08.",
+    "what_owner_must_do": "In Aria: Journal \u2192 More \u2192 Import encrypted \u2192 select one of:\n  /home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08.json\n  /home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08 (1).json\n  /home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08 (2).json\nEnter the real password. Prefer Merge (OK). Watch for success toast Encrypted journal imported \u2014 not an error toast. Alternatively: Export encrypted again, confirm the new file appears in Downloads, then Import that file. Do NOT paste the password in chat.",
+    "replace_all_caution": "If you click Replace all (Cancel on the merge dialog), the API currently requires confirm_wipe=true which the UI does not send \u2014 that path returns 400 with a wipe warning. Prefer Merge.",
+    "expected_success": "POST /api/journal/import/encrypted \u2192 200; journalNotify Encrypted journal imported; journal file mtime updates; Integrity remains clean/100",
+    "resume_instructions": "After import actually succeeds in Aria, reply exactly: RESUME exhaustive verification \u2014 Journal encrypted import completed.",
+    "evidence": "docs/evidence/exhaustive_functional_verification/journal_encrypted_import_resume.json",
+    "prior_gate_completed": {
+      "capability": "Encrypted export",
+      "status": "JEFF-ATTENDED \u2014 PROVEN"
+    },
+    "integrity_at_stop": {
+      "status": "clean",
+      "score": 100,
+      "clean": true
+    },
+    "waiting_began_at": "2026-08-12T20:12:48.014513+00:00",
+    "do_not": [
+      "skip",
+      "fake",
+      "auto-import",
+      "continue past gate",
+      "mark passed",
+      "mark failed",
+      "create synthetic export",
+      "paste password in chat"
+    ]
+  },
+  "integrity": {},
+  "isolation": {},
+  "stats": {
+    "rooms_entered": 34,
+    "controls_discovered": 4237,
+    "controls_exercised": 171,
+    "workflows_completed": 0,
+    "forms_submitted": 0,
+    "state_mutations": 0,
+    "persistence_checks": 0,
+    "leave_return_checks": 23,
+    "credential_gates_hit": 0
+  },
+  "isol_ready": true,
+  "registry": {
+    "total": 34,
+    "rooms": [
+      {
+        "id": "chat",
+        "title": "chat"
+      },
+      {
+        "id": "flytying",
+        "title": "flytying"
+      },
+      {
+        "id": "health",
+        "title": "health"
+      },
+      {
+        "id": "mission",
+        "title": "mission"
+      },
+      {
+        "id": "documents",
+        "title": "documents"
+      },
+      {
+        "id": "planner",
+        "title": "planner"
+      },
+      {
+        "id": "calendar",
+        "title": "calendar"
+      },
+      {
+        "id": "gallery",
+        "title": "gallery"
+      },
+      {
+        "id": "search",
+        "title": "search"
+      },
+      {
+        "id": "coding",
+        "title": "coding"
+      },
+      {
+        "id": "projects",
+        "title": "projects"
+      },
+      {
+        "id": "memory",
+        "title": "memory"
+      },
+      {
+        "id": "voice",
+        "title": "voice"
+      },
+      {
+        "id": "repair",
+        "title": "repair"
+      },
+      {
+        "id": "integrity",
+        "title": "integrity"
+      },
+      {
+        "id": "home",
+        "title": "home"
+      },
+      {
+        "id": "automation",
+        "title": "automation"
+      },
+      {
+        "id": "providers",
+        "title": "providers"
+      },
+      {
+        "id": "home_automation",
+        "title": "home_automation"
+      },
+      {
+        "id": "presence",
+        "title": "presence"
+      },
+      {
+        "id": "journal",
+        "title": "journal"
+      },
+      {
+        "id": "video",
+        "title": "video"
+      },
+      {
+        "id": "audio",
+        "title": "audio"
+      },
+      {
+        "id": "browser",
+        "title": "browser"
+      },
+      {
+        "id": "maker",
+        "title": "maker"
+      },
+      {
+        "id": "meme",
+        "title": "meme"
+      },
+      {
+        "id": "vision",
+        "title": "vision"
+      },
+      {
+        "id": "connections",
+        "title": "connections"
+      },
+      {
+        "id": "settings",
+        "title": "settings"
+      },
+      {
+        "id": "capabilities",
+        "title": "capabilities"
+      },
+      {
+        "id": "integrations",
+        "title": "integrations"
+      },
+      {
+        "id": "audit",
+        "title": "audit"
+      },
+      {
+        "id": "security",
+        "title": "security"
+      },
+      {
+        "id": "actions",
+        "title": "actions"
+      }
+    ]
+  },
+  "stopped_at": "2026-08-12T17:11:25.879093+00:00",
+  "stop_reason": "Journal enc import; Owner Security Vault architecture documented pending review",
+  "journal_more_menu_defect": {
+    "defect": "More menu opens but menu items are not interactable.",
+    "status_when_reported": "BLOCKED \u2014 OWNER UI DEFECT",
+    "not_jeff_attended_while_blocked": true,
+    "root_cause": "house.css assigned z-index:2 to every .view-panel child; later siblings (.bujo-rapid, #bujoContent) painted above #bujoToolbar. Absolute .bujo-more-panel was visible but clicks hit those siblings. A broad :has(details[open]) fix also elevated #bujoContent when enrichments was open, covering lower items.",
+    "repair": "house.css: elevate only *:has(details.bujo-more-menu[open]) to z-index:60 with specificity matching the z-index:2 rule; style.css .bujo-more-panel z-index:50; cache-bust house.css v=6.4.7-bujo-more-z / style.css v=5.18.4-bujo-more-z",
+    "evidence": "docs/evidence/exhaustive_functional_verification/journal_more_menu_repair.json",
+    "screenshot": "docs/evidence/exhaustive_functional_verification/journal_more_export_enc_password_gate.png",
+    "verified": "Journal \u2192 More \u2192 Export encrypted opens Encrypted export / Export password prompt via real mouse clicks; all More items hittable; regression exercised without production Journal writes/completed exports/backups"
+  },
+  "updated_at": "2026-08-12T21:52:40.433337+00:00",
+  "completed_gates": [
+    {
+      "room": "journal",
+      "capability": "Encrypted export",
+      "status": "JEFF-ATTENDED \u2014 PROVEN",
+      "completed_at": "2026-08-12T19:13:24.111440+00:00",
+      "evidence": "docs/evidence/exhaustive_functional_verification/journal_encrypted_export_resume.json"
+    }
+  ],
+  "owner_export_search": {
+    "status": "STOPPED \u2014 OWNER EXPORTS LOCATED; AWAITING JEFF UI SELECTION",
+    "not": [
+      "WAITING FOR OWNER EXPORT (files were found)",
+      "passed",
+      "failed",
+      "skipped",
+      "auto-imported"
+    ],
+    "searched_at": "2026-08-12T19:38:06.814096+00:00",
+    "pattern": "jarvis-journal-encrypted-*.json",
+    "locations_searched": [
+      "/home/jeff/Downloads",
+      "/home/jeff/Desktop",
+      "/home/jeff/Documents",
+      "/media/jeff/AI/jarvis/data/exports",
+      "/media/jeff/AI/jarvis/data/journal",
+      "/media/jeff/AI/jarvis/data (top-level)",
+      "browser Default/Downloads paths (absent on this host)"
+    ],
+    "aug12_session_download_found": false,
+    "note_aug12": "No jarvis-journal-encrypted-2026-08-12*.json on disk; earlier session POST 200 OK may not have landed in Downloads.",
+    "legitimate_owner_exports_found": [
+      {
+        "path": "/home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08.json",
+        "size_bytes": 113013,
+        "mtime_local": "2026-08-08T09:14:50",
+        "shape": [
+          "ciphertext",
+          "format",
+          "salt"
+        ]
+      },
+      {
+        "path": "/home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08 (1).json",
+        "size_bytes": 112049,
+        "mtime_local": "2026-08-08T09:50:13",
+        "shape": [
+          "ciphertext",
+          "format",
+          "salt"
+        ]
+      },
+      {
+        "path": "/home/jeff/Downloads/jarvis-journal-encrypted-2026-08-08 (2).json",
+        "size_bytes": 112049,
+        "mtime_local": "2026-08-08T09:50:26",
+        "shape": [
+          "ciphertext",
+          "format",
+          "salt"
+        ]
+      }
+    ],
+    "action": "Do not import automatically. Jeff must select a file through Journal \u2192 More \u2192 Import encrypted.",
+    "integrity": {
+      "status": "clean",
+      "score": 100,
+      "clean": true
+    },
+    "files_modified": false
+  },
+  "production_journal_wipe_incident": true,
+  "architecture_doc": "docs/ARIA_OWNER_SECURITY_VAULT_ARCHITECTURE.md",
+  "checkpoint": "docs/evidence/exhaustive_functional_verification/EXHAUSTIVE_CHECKPOINT.json"
+}

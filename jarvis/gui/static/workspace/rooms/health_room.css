@@ -1,0 +1,165 @@
+/**
+ * Native Health Room styles — quiet clinic light.
+ */
+
+body.living-workspace.native-health {
+  --hh-ink: #f2f0eb;
+  --hh-soft: #b8b2a6;
+  --hh-mute: #7a7468;
+  --hh-deep: #0c0e12;
+  --hh-room: #12151c;
+  --hh-lift: #1a1f2a;
+  --hh-sage: #7a9e8e;
+  --hh-rose: #c4a0a0;
+  --hh-line: rgba(242, 240, 235, 0.08);
+  --hh-display: "Fraunces", Georgia, serif;
+  --hh-body: "Bricolage Grotesque", "IBM Plex Sans", system-ui, sans-serif;
+  font-family: var(--hh-body);
+  color: var(--hh-ink);
+  background: var(--hh-deep);
+}
+
+#healthRoom.health-room {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
+  color: var(--hh-ink);
+  font-family: var(--hh-body);
+}
+
+body.living-workspace.native-health .nr-atmosphere__wash {
+  background:
+    radial-gradient(ellipse 65% 45% at 30% 15%, rgba(122, 158, 142, 0.2), transparent 55%),
+    radial-gradient(ellipse 40% 35% at 85% 70%, rgba(196, 160, 160, 0.1), transparent 50%),
+    linear-gradient(180deg, #141820 0%, #0e1116 50%, #0c0e12 100%);
+}
+
+body.living-workspace.native-health .nr-presence__place {
+  color: var(--hh-sage);
+  font-style: italic;
+}
+
+.health-room__body {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr minmax(200px, 260px);
+  gap: 1.5rem;
+  padding: 0.5rem clamp(1rem, 3vw, 2.5rem) 1.75rem;
+  overflow: auto;
+}
+
+.health-room__kicker {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hh-sage);
+  margin: 0;
+}
+
+.health-room__hero h1 {
+  font-family: var(--hh-display);
+  font-weight: 500;
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
+  margin: 0.25rem 0 0.5rem;
+}
+
+.health-room__pulse {
+  color: var(--hh-soft);
+  max-width: 36rem;
+  line-height: 1.5;
+}
+
+.health-room__checkin {
+  margin-top: 1.75rem;
+  max-width: 36rem;
+}
+
+.health-room__checkin h2 {
+  font-family: var(--hh-display);
+  font-size: 1.15rem;
+  font-weight: 500;
+  margin: 0 0 0.75rem;
+}
+
+.health-room__fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+.health-room__fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--hh-mute);
+}
+
+.health-room__fields input {
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--hh-line);
+  background: var(--hh-lift);
+  color: var(--hh-ink);
+}
+
+.health-room__submit {
+  margin-top: 0.85rem;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.55rem 1rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--hh-sage) 45%, transparent);
+  background: color-mix(in srgb, var(--hh-sage) 14%, transparent);
+  color: var(--hh-ink);
+  cursor: pointer;
+}
+
+.health-room__disclaimer {
+  margin-top: 2rem;
+  font-size: 0.72rem;
+  color: var(--hh-mute);
+  max-width: 36rem;
+  line-height: 1.4;
+}
+
+.health-room__card {
+  margin-bottom: 1.25rem;
+}
+
+.health-room__card h2 {
+  font-family: var(--hh-display);
+  font-size: 1rem;
+  font-weight: 500;
+  margin: 0 0 0.4rem;
+}
+
+.health-room__card ul {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--hh-soft);
+  line-height: 1.5;
+  font-size: 0.88rem;
+}
+
+.health-room__card .muted {
+  color: var(--hh-mute);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 800px) {
+  .health-room__body {
+    grid-template-columns: 1fr;
+  }
+  .health-room__fields {
+    grid-template-columns: 1fr;
+  }
+}

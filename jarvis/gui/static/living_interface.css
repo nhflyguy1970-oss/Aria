@@ -1,0 +1,544 @@
+/**
+ * Aria Living Interface — room atmospheres.
+ * One home, many rooms. Extends the shell; does not replace layout or components.
+ * Atmosphere lives on #mainContent (shell deliberately clears body::before).
+ */
+:root {
+  --room-ink: var(--text);
+  --room-muted: var(--text-muted);
+  --room-accent: var(--accent);
+  --room-accent-glow: var(--accent-glow);
+  --room-atmosphere-a: rgba(196, 165, 116, 0.08);
+  --room-atmosphere-b: rgba(90, 130, 110, 0.04);
+  --room-glass: rgba(255, 255, 255, 0.04);
+  --room-glass-border: rgba(255, 255, 255, 0.09);
+  --room-enter: 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  --room-edge: color-mix(in srgb, var(--room-accent) 50%, transparent);
+}
+
+/* ── Room personalities ──────────────────────────────────────── */
+
+body[data-room="home"] {
+  --room-accent: #c4a574;
+  --room-accent-glow: rgba(196, 165, 116, 0.14);
+  --room-atmosphere-a: rgba(196, 165, 116, 0.1);
+  --room-atmosphere-b: rgba(120, 140, 110, 0.06);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #9a7e52;
+}
+
+body[data-room="chat"] {
+  --room-accent: #c4a574;
+  --room-accent-glow: rgba(196, 165, 116, 0.14);
+  --room-atmosphere-a: rgba(196, 165, 116, 0.08);
+  --room-atmosphere-b: rgba(100, 130, 160, 0.04);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #9a7e52;
+}
+
+body[data-room="mission"] {
+  --room-accent: #6ea8d8;
+  --room-accent-glow: rgba(110, 168, 216, 0.16);
+  --room-atmosphere-a: rgba(70, 120, 180, 0.14);
+  --room-atmosphere-b: rgba(40, 80, 140, 0.08);
+  --room-glass: rgba(140, 190, 240, 0.07);
+  --room-glass-border: rgba(140, 190, 240, 0.16);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #4a8ab8;
+}
+
+body[data-room="health"] {
+  --room-accent: #5a9e8e;
+  --room-accent-glow: rgba(90, 158, 142, 0.14);
+  --room-atmosphere-a: rgba(200, 230, 235, 0.07);
+  --room-atmosphere-b: rgba(90, 158, 142, 0.09);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #458078;
+}
+
+body[data-room="flytying"] {
+  --room-accent: #b87333;
+  --room-accent-glow: rgba(184, 115, 51, 0.16);
+  --room-atmosphere-a: rgba(90, 60, 35, 0.2);
+  --room-atmosphere-b: rgba(70, 110, 90, 0.1);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #8f5a28;
+}
+
+body[data-room="coding"] {
+  --room-accent: #7a9eb8;
+  --room-accent-glow: rgba(122, 158, 184, 0.14);
+  --room-atmosphere-a: rgba(35, 45, 60, 0.25);
+  --room-atmosphere-b: rgba(80, 120, 150, 0.06);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #5a7e98;
+}
+
+body[data-room="documents"] {
+  --room-accent: #a68b5b;
+  --room-accent-glow: rgba(166, 139, 91, 0.14);
+  --room-atmosphere-a: rgba(140, 110, 70, 0.1);
+  --room-atmosphere-b: rgba(60, 45, 30, 0.1);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #856f48;
+}
+
+body[data-room="search"] {
+  --room-accent: #9aa3ad;
+  --room-accent-glow: rgba(154, 163, 173, 0.1);
+  --room-atmosphere-a: rgba(255, 255, 255, 0.035);
+  --room-atmosphere-b: transparent;
+  --accent: #c4a574;
+  --accent-glow: rgba(196, 165, 116, 0.12);
+  --accent-dim: #9a7e52;
+}
+
+body[data-room="gallery"] {
+  --room-accent: #d0c8b8;
+  --room-accent-glow: rgba(208, 200, 184, 0.1);
+  --room-atmosphere-a: rgba(0, 0, 0, 0.28);
+  --room-atmosphere-b: rgba(180, 160, 120, 0.05);
+  --accent: #c4a574;
+  --accent-glow: rgba(196, 165, 116, 0.12);
+  --accent-dim: #9a7e52;
+}
+
+body[data-room="planner"] {
+  --room-accent: #c4a06a;
+  --room-accent-glow: rgba(196, 160, 106, 0.14);
+  --room-atmosphere-a: rgba(180, 140, 90, 0.09);
+  --room-atmosphere-b: rgba(120, 90, 60, 0.05);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #9a7a48;
+}
+
+body[data-room="calendar"] {
+  --room-accent: #8a9e7a;
+  --room-accent-glow: rgba(138, 158, 122, 0.14);
+  --room-atmosphere-a: rgba(138, 158, 122, 0.09);
+  --room-atmosphere-b: rgba(180, 160, 120, 0.05);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #6a7e5a;
+}
+
+body[data-room="voice"] {
+  --room-accent: #d4a090;
+  --room-accent-glow: rgba(212, 160, 144, 0.14);
+  --room-atmosphere-a: rgba(212, 160, 144, 0.1);
+  --room-atmosphere-b: rgba(120, 100, 140, 0.04);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #b08070;
+}
+
+body[data-room="browser"] {
+  --room-accent: #8a9bb0;
+  --room-accent-glow: rgba(138, 155, 176, 0.12);
+  --room-atmosphere-a: rgba(100, 120, 150, 0.08);
+  --room-atmosphere-b: rgba(60, 50, 40, 0.05);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #6a7b90;
+}
+
+body[data-room="repair"] {
+  --room-accent: #7a9a8a;
+  --room-accent-glow: rgba(122, 154, 138, 0.12);
+  --room-atmosphere-a: rgba(100, 130, 120, 0.08);
+  --room-atmosphere-b: rgba(80, 90, 100, 0.04);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #5a7a6a;
+}
+
+body[data-room="integrity"] {
+  --room-accent: #8a949e;
+  --room-accent-glow: rgba(138, 148, 158, 0.08);
+  --room-atmosphere-a: rgba(138, 148, 158, 0.04);
+  --room-atmosphere-b: transparent;
+  --accent: #8a949e;
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #6a747e;
+}
+
+body[data-room="presence"] {
+  --room-accent: #9aab7a;
+  --room-accent-glow: rgba(154, 171, 122, 0.14);
+  --room-atmosphere-a: rgba(154, 171, 122, 0.09);
+  --room-atmosphere-b: rgba(180, 140, 90, 0.04);
+  --accent: var(--room-accent);
+  --accent-glow: var(--room-accent-glow);
+  --accent-dim: #7a8b5a;
+}
+
+/* ── Light house — crafted, not inverted ─────────────────────── */
+
+body.light-theme {
+  --bg-deep: #f7f4ef;
+  --bg-panel: #fffcf7;
+  --bg-elevated: #f1ebe3;
+  --bg-hover: #e8e1d6;
+  --border: #d8d0c4;
+  --text: #1c1915;
+  --text-muted: #5e584f;
+  --user-bubble: #ebe4d8;
+  --elev-1: 0 4px 18px rgba(60, 45, 25, 0.08);
+  --elev-2: 0 12px 36px rgba(60, 45, 25, 0.12);
+  --room-glass: rgba(255, 255, 255, 0.65);
+  --room-glass-border: rgba(80, 60, 40, 0.12);
+}
+
+body.light-theme[data-room="mission"] {
+  --bg-deep: #eef3f8;
+  --room-atmosphere-a: rgba(90, 140, 190, 0.12);
+  --room-atmosphere-b: rgba(200, 220, 240, 0.45);
+}
+
+body.light-theme[data-room="health"] {
+  --bg-deep: #f4faf8;
+  --room-atmosphere-a: rgba(180, 220, 230, 0.4);
+  --room-atmosphere-b: rgba(90, 158, 142, 0.1);
+}
+
+body.light-theme[data-room="flytying"] {
+  --bg-deep: #f3eee6;
+  --room-atmosphere-a: rgba(184, 115, 51, 0.1);
+  --room-atmosphere-b: rgba(90, 120, 90, 0.07);
+}
+
+body.light-theme[data-room="documents"] {
+  --bg-deep: #f6f1e8;
+  --room-atmosphere-a: rgba(166, 139, 91, 0.12);
+}
+
+body.light-theme[data-room="gallery"] {
+  --bg-deep: #f0eeea;
+  --room-atmosphere-a: rgba(0, 0, 0, 0.025);
+}
+
+body.light-theme[data-room="coding"] {
+  --bg-deep: #f2f4f6;
+  --room-atmosphere-a: rgba(80, 110, 140, 0.07);
+}
+
+body.light-theme[data-room="search"] {
+  --bg-deep: #f5f5f4;
+  --room-atmosphere-a: rgba(0, 0, 0, 0.02);
+}
+
+/* ── Atmosphere on main stage (survives shell body::before kill) */
+
+#mainContent {
+  position: relative;
+  isolation: isolate;
+}
+
+#mainContent::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 55% at 12% -5%, var(--room-atmosphere-a), transparent 58%),
+    radial-gradient(ellipse 70% 45% at 95% 105%, var(--room-atmosphere-b), transparent 52%);
+  transition: background var(--room-enter);
+}
+
+#mainContent > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Soft room landmark edge */
+#mainContent::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    var(--room-edge),
+    transparent 42%,
+    color-mix(in srgb, var(--room-atmosphere-b) 70%, transparent)
+  );
+  opacity: 0.5;
+  transition: background var(--room-enter), opacity var(--room-enter);
+}
+
+body[data-room="search"] #mainContent::after,
+body[data-room="integrity"] #mainContent::after {
+  opacity: 0.22;
+  width: 2px;
+}
+
+body[data-room="gallery"] #mainContent::after {
+  opacity: 0.3;
+  width: 2px;
+}
+
+/* Room enter */
+.view-panel:not(.hidden) {
+  animation: roomEnter var(--room-enter) both;
+}
+
+@keyframes roomEnter {
+  from {
+    opacity: 0.9;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-panel:not(.hidden) {
+    animation: none;
+  }
+  #mainContent::before,
+  #mainContent::after {
+    transition: none;
+  }
+}
+
+/* ── Flagship room surfaces ──────────────────────────────────── */
+
+/* Mission Control — glass / aerospace, never hacker */
+body[data-room="mission"] #workstationView .mc-hero,
+body[data-room="mission"] #workstationView .mc-card,
+body[data-room="mission"] #workstationView [class*="mc-"] > .card {
+  background: linear-gradient(165deg, var(--room-glass), transparent 72%);
+  border-color: var(--room-glass-border);
+  backdrop-filter: blur(10px);
+}
+
+body[data-room="mission"] #workstationView .mc-hero-stat strong {
+  color: color-mix(in srgb, var(--room-accent) 70%, var(--text));
+  font-variant-numeric: tabular-nums;
+}
+
+/* Health — clinic calm */
+body[data-room="health"] #healthView .health-card,
+body[data-room="health"] #healthView .sidebar-section,
+body[data-room="health"] #healthView [class*="health"] .card {
+  border-radius: var(--radius-lg);
+  border-color: color-mix(in srgb, var(--room-accent) 24%, var(--border));
+  background: color-mix(in srgb, var(--bg-elevated) 90%, var(--room-accent));
+}
+
+/* Fly tying — bench & stream */
+body[data-room="flytying"] #flytyingView {
+  background-image:
+    linear-gradient(180deg, transparent 55%, rgba(40, 28, 16, 0.12)),
+    radial-gradient(ellipse 50% 28% at 82% 12%, rgba(90, 130, 100, 0.09), transparent);
+}
+
+body[data-room="flytying"] #flytyingView .recipe-card,
+body[data-room="flytying"] #flytyingView .fly-card,
+body[data-room="flytying"] #flytyingView article,
+body[data-room="flytying"] #flytyingView .sidebar-section {
+  border-color: color-mix(in srgb, #b87333 32%, var(--border));
+  box-shadow: inset 0 1px 0 rgba(255, 220, 180, 0.045);
+}
+
+body[data-room="flytying"] #flytyingView .recipe-body,
+body[data-room="flytying"] #flytyingView pre,
+body[data-room="flytying"] #flytyingView .markdown-body {
+  font-family: var(--font);
+  line-height: 1.55;
+}
+
+/* Coding — studio focus */
+body[data-room="coding"] #codingView {
+  background-image: linear-gradient(180deg, rgba(40, 50, 65, 0.18), transparent 38%);
+}
+
+body[data-room="coding"] #codingView pre,
+body[data-room="coding"] #codingView code {
+  border-radius: var(--radius-sm);
+}
+
+/* Documents — library lamp */
+body[data-room="documents"] #documentsView {
+  background-image: radial-gradient(ellipse 70% 40% at 8% 0%, rgba(166, 139, 91, 0.08), transparent);
+}
+
+body[data-room="documents"] #documentsView .doc-row:hover,
+body[data-room="documents"] #documentsView .document-item:hover {
+  background: color-mix(in srgb, var(--room-accent) 8%, var(--bg-hover));
+}
+
+/* Search — spotlight quiet */
+body[data-room="search"] #searchView {
+  background-image: radial-gradient(ellipse 55% 35% at 50% 12%, rgba(255, 255, 255, 0.04), transparent);
+}
+
+body[data-room="search"] #searchView input[type="search"],
+body[data-room="search"] #searchView .search-input,
+body[data-room="search"] #searchView input[name="q"] {
+  border-radius: 999px;
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+  padding-inline: 1.1rem;
+  box-shadow: var(--elev-1);
+}
+
+/* Gallery — museum light */
+body[data-room="gallery"] #galleryView {
+  background: radial-gradient(ellipse 80% 45% at 50% 0%, rgba(255, 255, 255, 0.035), transparent 55%);
+}
+
+body[data-room="gallery"] #galleryView .gallery-thumb,
+body[data-room="gallery"] #galleryView .media-thumb,
+body[data-room="gallery"] #galleryView img.thumb {
+  border-radius: 2px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+/* Planner / calendar — paper comfort */
+body[data-room="planner"] #plannerView,
+body[data-room="calendar"] #calendarView {
+  background-image: radial-gradient(ellipse 48% 28% at 0% 0%, var(--room-atmosphere-a), transparent);
+}
+
+body[data-room="planner"] #plannerView li,
+body[data-room="calendar"] #calendarView .cal-day,
+body[data-room="calendar"] #calendarView .cal-block {
+  border-radius: var(--radius-sm);
+}
+
+/* Voice — warm companion */
+body[data-room="voice"] #voiceView,
+body[data-room="voice"] #audioView {
+  background-image: radial-gradient(ellipse 55% 40% at 50% 100%, var(--room-atmosphere-a), transparent);
+}
+
+/* Browser — research desk */
+body[data-room="browser"] #browserView {
+  background-image: radial-gradient(ellipse 60% 35% at 100% 0%, var(--room-atmosphere-a), transparent);
+}
+
+/* Presence — home comfort */
+body[data-room="presence"] #presenceView,
+body[data-room="presence"] #automationView {
+  background-image: radial-gradient(ellipse 55% 35% at 85% 8%, var(--room-atmosphere-a), transparent);
+}
+
+/* Repair — calm technician */
+body[data-room="repair"] #auditView,
+body[data-room="repair"] #securityView {
+  background-image: radial-gradient(ellipse 50% 30% at 0% 100%, var(--room-atmosphere-a), transparent);
+}
+
+/* Integrity — invisible guardian (deliberately quiet) */
+body[data-room="integrity"] #certificationView {
+  background-image: none;
+}
+
+/* Active view tab whispers the room */
+.view-tab.active {
+  color: var(--room-accent, var(--accent));
+  box-shadow: inset 0 -2px 0 var(--room-accent, var(--accent));
+}
+
+body[data-room="integrity"] .view-tab.active {
+  box-shadow: inset 0 -1px 0 var(--room-accent);
+}
+
+/* ── Empty states: invite, teach, stay beautiful ─────────────── */
+
+.empty-state {
+  padding: var(--space-6) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px dashed color-mix(in srgb, var(--room-accent, var(--accent)) 30%, var(--border));
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--room-accent, var(--accent)) 9%, transparent), transparent 55%),
+    var(--bg-elevated);
+  max-width: 28rem;
+  margin-inline: auto;
+}
+
+.empty-state-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--room-accent, var(--accent)) 16%, transparent);
+  color: var(--room-accent, var(--accent));
+  border-color: color-mix(in srgb, var(--room-accent, var(--accent)) 28%, var(--border));
+}
+
+body[data-room="health"] .empty-state {
+  border-style: solid;
+}
+
+body[data-room="flytying"] .empty-state {
+  background:
+    linear-gradient(160deg, rgba(184, 115, 51, 0.11), transparent 50%),
+    var(--bg-elevated);
+}
+
+body[data-room="documents"] .empty-state {
+  background:
+    linear-gradient(160deg, rgba(166, 139, 91, 0.11), transparent 50%),
+    var(--bg-elevated);
+}
+
+body[data-room="gallery"] .empty-state {
+  border-style: solid;
+  background: color-mix(in srgb, var(--bg-deep) 35%, var(--bg-elevated));
+}
+
+/* ── Micro-motion: alive, never flashy ───────────────────────── */
+
+.apply-btn,
+.ghost-btn,
+.icon-btn,
+.preset-btn {
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.apply-btn:hover:not(:disabled),
+.ghost-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.apply-btn:active:not(:disabled),
+.ghost-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.sidebar-section {
+  transition: border-color var(--transition-med), background var(--transition-med);
+}
+
+/* Notifications — shoulder tap, not shout (toast borders stay status-colored) */
+.aria-toast {
+  border-radius: var(--radius-md);
+  box-shadow: var(--elev-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apply-btn:hover:not(:disabled),
+  .ghost-btn:hover:not(:disabled) {
+    transform: none;
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "apis": {
+    "/api/flytying/search?q=Adams": {
+      "status": 200,
+      "ms": 114.0,
+      "ok": true,
+      "msg": ""
+    },
+    "/api/flytying/catalog": {
+      "status": 404,
+      "ms": 3.6,
+      "ok": null,
+      "msg": "Not Found"
+    },
+    "/api/journal/stats": {
+      "status": 200,
+      "ms": 1.9,
+      "ok": true,
+      "msg": ""
+    },
+    "/api/journal/legend": {
+      "status": 404,
+      "ms": 2.7,
+      "ok": null,
+      "msg": "Not Found"
+    },
+    "/api/memory/profile": {
+      "status": 405,
+      "ms": 1.7,
+      "ok": null,
+      "msg": "Method Not Allowed"
+    },
+    "/api/memory/health": {
+      "status": 405,
+      "ms": 1.6,
+      "ok": null,
+      "msg": "Method Not Allowed"
+    },
+    "/api/memory/conflicts": {
+      "status": 200,
+      "ms": 241.7,
+      "ok": true,
+      "msg": ""
+    },
+    "/api/comfyui/settings": {
+      "status": 200,
+      "ms": 6.2,
+      "ok": null,
+      "msg": ""
+    },
+    "/api/browser/status": {
+      "status": 200,
+      "ms": 434.0,
+      "ok": true,
+      "msg": ""
+    },
+    "/api/maker/cad/status": {
+      "status": 404,
+      "ms": 2.9,
+      "ok": null,
+      "msg": "Not Found"
+    },
+    "/api/video/settings": {
+      "status": 200,
+      "ms": 593.4,
+      "ok": null,
+      "msg": ""
+    },
+    "/api/voice/product": {
+      "status": 200,
+      "ms": 2.3,
+      "ok": true,
+      "msg": ""
+    },
+    "/api/planner/focus": {
+      "status": 200,
+      "ms": 2.9,
+      "ok": true,
+      "msg": ""
+    },
+    "/api/search?q=planner": {
+      "status": 404,
+      "ms": 3.0,
+      "ok": null,
+      "msg": "Not Found"
+    },
+    "/api/integrity/home": {
+      "status": 200,
+      "ms": 2.0,
+      "ok": true,
+      "msg": ""
+    },
+    "/api/repair/home": {
+      "status": 200,
+      "ms": 5599.6,
+      "ok": true,
+      "msg": ""
+    }
+  },
+  "fly": {
+    "before": {
+      "cards": 0,
+      "head": "Aria \u00b7 Streamside cabin\nListening quietly\nFly tying\n\n271 catalog patterns \u00b7 library connected \u00b7 smart search on \u00b7 index ready \u00b7 dry 94 \u00b7 terrestrial 72 \u00b7 nymph 54 \u00b7 streamer 35\n\nPattern of the day: Adams CDC\n\nModel\nqwen2.5:7b (recipes \u2014 recommended)\nqwen2.5:14b (design & new patterns)\nqwen2.5:3b (fa"
+    },
+    "after": {
+      "cardCount": 0,
+      "hasAdams": true,
+      "head": "Aria \u00b7 Streamside cabin\nListening quietly\nFly tying\n\n271 catalog patterns \u00b7 library connected \u00b7 smart search on \u00b7 index ready \u00b7 dry 94 \u00b7 terrestrial 72 \u00b7 nymph 54 \u00b7 streamer 35\n\nPattern of the day: Adams CDC\n\nModel\nqwen2.5:7b (recipes \u2014 recommended)\nqwen2.5:14b (design & new patterns)\nqwen2.5:3b (fast)\nSetup\nRefresh\nGallery\n\nSeason (Northeast US, month 8): Tricos, Ants, Hoppers, Flying ants, Evening caddis \u2014 Terrestrial peak \u2014 hoppers and ants. Warmwater poppers/streamers for bass ponds and rive"
+    }
+  },
+  "journal": {
+    "fail": false,
+    "loading": false,
+    "head": "Aria \u00b7 Bullet journal\nListening quietly\nBullet Journal\n\nNotes, thoughts, reflections \u00b7 promote actionable items to Planner \u00b7 scheduled commitments live in Calendar\n\n\u2022\ntask\n\u25cb\nevent\n\u2014\nnote\n\u00d7\ndone\n>\nmigrated\n<\nscheduled\n~\ncancelled\n*\nimportant\n!\ninspiration\n\ud83d\udc41\nexplore\n\nNo special keys? Type t: task \u00b7 e: event \u00b7 n: note \u00b7 or O before text \u00b7 Rapid log: indent 2 spaces to nest.\n\nDaily\nWeekly\nMonthly\nHab"
+  },
+  "memory": {
+    "fail": false,
+    "hasProfile": true,
+    "hasConflicts": true,
+    "loading": false,
+    "head": "Aria \u00b7 Memory archive\nListening quietly\nMemory\n\nWhat Aria knows about you \u2014 autobiographical cognition (ACM), not a note database.\n\nSearch\nNew\nBriefing\nAssist\n?\nAuto-memory\nSmart \u2192 candidates\nExplicit only\nOff\nBrain learning\nJournal \u2192 candidates\nDocs \u2192 candidates\nAuto-checkpoint\nPer-repo namespace\nProfile in prompt\nUpdate profile\nAbout you\nLoading\u2026\nEdit answers\nSafety & authority\nLoading\u2026\nMemory health\nLoading\u2026\n\nSleep & consolidation\nLoading\u2026\nMem"
+  },
+  "repair": {
+    "room": "repair",
+    "hash": "#repair",
+    "btns": 0,
+    "hasMC": false,
+    "head": ""
+  },
+  "integrity": {
+    "room": "integrity",
+    "hash": "#integrity",
+    "btns": 0,
+    "score": false,
+    "head": ""
+  },
+  "voice": {
+    "matches": [
+      "unavailable",
+      "unavailable"
+    ],
+    "head": "Aria \u00b7 Presence\nListening quietly\nVoice\nAudio Presence\n\nState: idle \u00b7 Duplex: off \u00b7 STT: whisper\n\nTTS engine: piper\n\nCloud live unavailable\n\nDuplex\nOff\nHalf\nFull\nSTT backend\nWhisper\nRealtimeSTT\nTTS chunk chars\nSpeak replies\nServer Whisper (mic)\nInterrupt on speak\nChunk sentences\nProfile\n\u2014 none \u2014\nQuiet Office\nHands-Free\nCoding\nPresentation\nDictation\nAccessibility\nCloud Live\nApply profile\nSave settings\nRefresh\nRecovery\nRouter: ?\nRecovery\n\nClick Recovery to diagnose mic, Whisper, Piper, and Cloud L"
+  },
+  "search": {
+    "cards": 0,
+    "hasPlanner": true,
+    "head": "Aria \u00b7 Research study\nListening quietly\nSearch\n\nOne federated engine. Browse everything here \u2014 Ctrl+K for commands, Chat for answers, products own their data.\n\nRefresh\nSave search\nDiagnostics\nSidebar\nFilter navigation (views, settings, tools) \u2014 not content search\nCtrl+K\nCtrl+K \u2014 commands + quick federated search\nSearch Home\nBrowse everything \u2014 facets, previews, history, saved searches\nChat\nAnswer + synthesis (including web)\nVoice\nSpoken search vi"
+  },
+  "video": {
+    "room": "video",
+    "fail": false,
+    "head": "Aria \u00b7 Video studio\nListening quietly\nVideo Studio\n\nStay-in-Studio generation \u00b7 AnimateDiff or Ken Burns \u00b7 shared media queue\n\nGallery\nMeme\nMission Control\nGenerate\n Enhance prompt\nPreset \n\u2014 none \u2014\nFast Draft\nPortrait Motion\nLandscape Pan\nStoryboard Preview\nCinematic\nSocial Clip\n"
+  },
+  "maker": {
+    "room": "maker",
+    "fail": false,
+    "head": "Aria \u00b7 Maker lab\nListening quietly\nMaker lab \u29c9\n\nCAD: OpenSCAD\n\nauto\nOpenSCAD\nbuild123d\nMeshy\nGenerate\nIterate\nHello cube\nSlice\nDownload STL\nRefresh\nGallery\nDocuments\nClear gallery\n\nNo models yet.\nHello cube\nor\nask Chat\nPrinter \u29c9\n\nNo printer configured\n\nSelect model\u2026\nBambu Lab A1 "
+  },
+  "browser": {
+    "room": "browser",
+    "fail": false,
+    "head": "Aria \u00b7 Browser\nListening quietly\nBrowser\n\nLive web interaction agent \u2014 Playwright navigation, screenshots, DOM/Vision tasks. Not a full Chrome replacement. Documents store knowledge; Chat converses.\n\nRefresh\nProjects\nJob Center\nCoding\nMemory\nDocuments\nChat\nCtrl+Shift+B\nReady\nOver"
+  },
+  "gallery": {
+    "room": "gallery",
+    "fail": false,
+    "head": "Aria \u00b7 Museum\nListening quietly\nGallery\n\nLocal AI image product \u2014 generate, browse, organize, and edit stills. Video and Meme stay separate. Chat converses; Documents store knowledge.\n\nRefresh\nJob Center\nModels\nMaker\nFly tying\nVideo\nMeme\nCtrl+Shift+G\n0 images \u00b7 showing 0\n\nGenerat"
+  },
+  "audit": {
+    "room": "audit",
+    "fail": false,
+    "head": "Aria \u00b7 System audit\nListening quietly\nSystem Audit\n\nAudit in progress\u2026\n\nMission Control Actions Run audit\n\n14 phases: OS \u00b7 packages \u00b7 storage/SMART \u00b7 memory \u00b7 hardware/sensors \u00b7 GPU \u00b7 services/desktop \u00b7 containers \u00b7 dev tools \u00b7 integrity \u00b7 performance \u00b7 security \u00b7 network \u00b7 Jarvi"
+  },
+  "chat": {
+    "room": "chat",
+    "fail": false,
+    "head": "Aria is here\nI'm here\nA"
+  },
+  "planner": {
+    "ui": {
+      "hasFocus": true,
+      "lie": true,
+      "head": "Aria \u00b7 Leather notebook\nListening quietly\nPlanner\n\nToday\u2019s actionable work \u00b7 Journal for notes \u00b7 Calendar for commitments \u00b7 Documents\n\nHA Focus mode\nShortcuts: N \u00b7 P \u00b7 F \u00b7 T \u00b7 U\n\nDAILY FOCUS\n\nToday\u2019s day ops\n\nPlanner = actionable work \u00b7 Journal = notes \u00b7 Calendar = commitments\n\nhealthy \u00b7 0 tasks \u00b7 ~612m focus\nTOP 3\nNo open tasks \u2014 add one below\nEVENTS\nNo events today\nTIMERS\nNo running timers\nALARM"
+    },
+    "focus_api": {
+      "open": 0,
+      "top": []
+    }
+  }
+}

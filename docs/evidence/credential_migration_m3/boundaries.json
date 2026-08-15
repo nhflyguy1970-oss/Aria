@@ -1,0 +1,20 @@
+{
+  "updated_at": "2026-08-13T15:28:00+00:00",
+  "secret_leak_found": "no",
+  "files_checked_for_secret_values": 553,
+  "acm": "NO SECRET",
+  "activity": "NO SECRET",
+  "journal": "NO SECRET",
+  "diagnostics": "NO SECRET",
+  "test_artifacts": "NO SECRET",
+  "subprocess_copy_process_env_strips_ha_and_lan": true,
+  "integrity": "clean / 100",
+  "qa_mutating_post": 403,
+  "lan_key_authenticates_owner": false,
+  "lan_key_authenticates_health": false,
+  "legacy_env_retained": true,
+  "legacy_env_mode": "0600",
+  "legacy_env_size": 10616,
+  "secrets_in_evidence": false,
+  "exhaustive_checkpoint": "Journal → More → Import encrypted — not resumed"
+}

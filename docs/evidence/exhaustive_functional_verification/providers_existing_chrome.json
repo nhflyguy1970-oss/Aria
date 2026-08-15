@@ -1,0 +1,69 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "room": "providers",
+  "capability": "AI Providers existing chrome without writing keys",
+  "captured_at": "2026-08-15T13:30:23Z",
+  "result": "PASS — Front Door → AI Providers lands #models h2 Models · Provider bay. Roles first paint with existing assignments and 44 local options. Overview: Ollama reachable · Loaded 1 · Free VRAM 5.49 GB · No missing active models. Providers wizard: 6 rows (ollama/litellm/openai/gemini OK; openrouter Needs setup; huggingface OK). Connections leave/return restored #models and Providers tab. Validate/Save/Pull/key paste not clicked. Keys not recorded. NOT CERTIFICATION.",
+  "not_certification": true,
+  "session_model": "ONE Owner session; no lock/unlock; idle off",
+  "owner_unlocked_during_gate": true,
+  "locked_at_end": false,
+  "idle_seconds": 0,
+  "entry": {
+    "via": "Front Door → AI Providers (Which minds are available)",
+    "hash": "#models",
+    "h2": "Models",
+    "place": "Provider bay",
+    "first_paint": "Roles tab selected; Conversation/Coding/Vision/Image/Embeddings selects present",
+    "usable": "Updated timestamp; 8 tabs; 17 role selects; Listening quietly"
+  },
+  "functions": {
+    "roles": "PASS — default tab; Conversation qwen2.5:7b; Coding qwen2.5-coder:7b; Vision moondream:latest; Image comfyui; Embeddings nomic-embed-text:latest; ~44 options each. Save/Preset/Reset/Import not clicked.",
+    "overview": "PASS — Ollama reachable; Loaded 1; Free VRAM 5.49 GB; No missing active models; Chat model select present (not changed — would update Chat immediately). Free VRAM / Edit roles / Mission Control not clicked.",
+    "providers": "PASS — Provider wizard; ollama OK · 40 model(s); litellm OK; openai OK API key present; gemini OK API key present; openrouter Needs setup API key missing; huggingface OK API key present. Validate not clicked. Key values not shown/recorded."
+  },
+  "leave_return": {
+    "leave": "Front Door recents → Connections → #connections h2 Connections; New/Import not clicked",
+    "return": "Front Door recents → AI Providers → #models h2 Models",
+    "return_state": "Providers tab still selected; Provider wizard restored; place Provider bay",
+    "front_door_copy": "honest while leaving Models — You’re in the middle of Providers; later stale copy possible",
+    "result": "PASS — room, hash, and Providers tab restored"
+  },
+  "not_clicked": [
+    "Save role assignments",
+    "Preset · Fast",
+    "Preset · Quality",
+    "Reset optimized",
+    "Export",
+    "Import",
+    "Assign to Chat",
+    "VRAM check",
+    "Free VRAM",
+    "Validate",
+    "Pull",
+    "Mission Control · Inference",
+    "Open Integrations",
+    "Lock Aria"
+  ],
+  "performance": {
+    "room_entry": "hash #models immediately on Front Door click",
+    "first_meaningful": "h2 Models + Roles selects on first usable paint",
+    "note": "Tool-roundtrip delays are not owner-visible time and were not recorded as room slowness."
+  },
+  "owner_session": {
+    "after_gate": "OWNER_UNLOCKED; locked false; idle_seconds 0; auto_idle_lock false"
+  },
+  "data_mutation": {
+    "role_save": false,
+    "key_paste": false,
+    "validate": false,
+    "journal_post": false,
+    "journal_bytes": 67547,
+    "health_phr": false,
+    "chat_send": false,
+    "coding_apply": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "jeff_action_required": false,
+  "next_exact_capability": "Audio existing studio chrome without Hold/Save. Do not execute Guided Repair. Do not Lock Aria. Do not apply 603973e7. Do not start Owner Residency. Do not certify 34/34. Do not start M5. Do not paste provider keys. Do not New/Import Connections."
+}

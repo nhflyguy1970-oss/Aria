@@ -1,0 +1,51 @@
+{
+  "updated_at": "2026-08-13T15:45:58.655824+00:00",
+  "lock_ms": 2.06,
+  "lock": {
+    "ok": true,
+    "state": "OWNER_LOCKED"
+  },
+  "while_locked": {
+    "health_home": {
+      "http": 423,
+      "ms": 7.17,
+      "locked": true,
+      "ok": false
+    },
+    "health_export": {
+      "http": 423,
+      "locked": true,
+      "step_up_required": false
+    },
+    "ha": {
+      "http": 200,
+      "connected": false,
+      "locked": true
+    },
+    "lan_with_key": {
+      "http": 401
+    },
+    "openai": {
+      "http": 200,
+      "ok": false,
+      "error": "key_missing"
+    },
+    "gemini": {
+      "http": 200,
+      "ok": false,
+      "error": "key_missing"
+    },
+    "huggingface": {
+      "http": 200,
+      "ok": false,
+      "error": "key_missing"
+    },
+    "uncensored": {
+      "http": 200,
+      "owner_unlocked": false,
+      "auth_mode": "owner_security",
+      "session_valid": false
+    }
+  },
+  "secrets_in_evidence": false
+}

@@ -1,0 +1,44 @@
+{
+  "campaign": "exhaustive_functional_verification",
+  "captured_at": "2026-08-13T19:05:41+00:00",
+  "after": "Jeff said done following idle-lock overlay (ARIA locked)",
+  "not_certification": true,
+  "owner": {
+    "state": "OWNER_UNLOCKED",
+    "overlay_display": "none",
+    "overlay_hidden": true,
+    "house_locked": false,
+    "session_present": true
+  },
+  "security_honesty": {
+    "result": "PASS",
+    "copy": "Aria unlocked · one Master Password · optional PIN off",
+    "note": "Re-entered Security after unlock; no stale locked copy"
+  },
+  "ha_unlock_restore": {
+    "result": "PASS — owner UI + API",
+    "hash": "#homeAutomation",
+    "place": "Home control",
+    "homeHealth": "Connected · http://127.0.0.1:8123",
+    "haStatusLine": "Connected",
+    "preview": "Using Owner Vault credential (ha.token). Token is not shown here.",
+    "recovery_hidden": true,
+    "paste_button_hidden": true,
+    "modal_button_hidden": true,
+    "setup_open": false,
+    "api_connected": true,
+    "api_locked": false,
+    "token_vaulted": true,
+    "asks_paste": false,
+    "scenes_clicked": false,
+    "devices_toggled": false
+  },
+  "integrity": "POST /api/integrity/scan 200; overall 100; status clean; artifacts 0",
+  "qa_header": "403 production_isolation",
+  "live_journal_size": 67555,
+  "live_journal_sha256": "2d914b51e1359d3ff67aa1a848a482dd869e9efa90eac526e2e6197d1fc6a431",
+  "journal_post": false,
+  "health_phr_write": false,
+  "remaining_safe_function_gaps": "already walked in remaining_function_slice.json — not re-invented",
+  "do_not": ["certify 34/34", "start Owner Residency", "start M5", "Maker generate/print", "Health writes", "Aug 8 import"]
+}

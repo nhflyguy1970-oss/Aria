@@ -1,0 +1,43 @@
+{
+  "phase": 1,
+  "purpose": "runtime spike evidence \u2014 not a selection",
+  "host": {
+    "display": ":1",
+    "platform": "linux"
+  },
+  "results": [
+    {
+      "candidate": "E3",
+      "engine": "PySide6.QtWebEngine",
+      "host": "QMainWindow",
+      "import_ms": 134.5,
+      "show_to_eventloop_ms": 361.6,
+      "eventloop_ms": 2445.3,
+      "total_wall_ms": 2941.6,
+      "rss_after_import_kb": 73012,
+      "rss_peak_self_kb": 320308,
+      "load_ok": true,
+      "notes": "ru_maxrss is process self only; WebEngine child processes not fully included."
+    },
+    {
+      "candidate": "E1",
+      "ok": true,
+      "exit_code": 0,
+      "wall_ms": 4404.7,
+      "peak_rss_tree_kb": 365152,
+      "peak_rss_tree_mb": 356.6,
+      "stderr_tail": " \"unsafe-eval\" enabled. This exposes users of\n  this app to unnecessary security risks.\n\nFor more information and help, consult\nhttps://electronjs.org/docs/tutorial/security.\nThis warning will not show up\nonce the app is packaged.\", source: node:electron/js2c/sandbox_bundle (2)\n[2977476:0806/132103.609966:ERROR:crypto/nss_util.cc:344] After loading Root Certs, loaded==false: NSS error code: -8018\n",
+      "binary": "/media/jeff/AI/jarvis/scripts/electron-shell/node_modules/electron/dist/electron"
+    },
+    {
+      "candidate": "E2",
+      "engine": "Tauri (system/pinned webview \u2014 policy TBD)",
+      "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+      "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+      "in_repo_scaffold": false,
+      "law2_risk": "On Linux, default Tauri often uses WebKitGTK \u2014 not an external browser install, but engine version is OS-coupled unless a pinned/bundled webview strategy is used. Spike must prove Law 2 on Linux/Windows/macOS with explicit pinning policy.",
+      "measured_runtime": false,
+      "notes": "Tooling present; no product scaffold yet. Defer binary size/startup numbers to dedicated Tauri hello-world spike if shortlisted."
+    }
+  ]
+}
