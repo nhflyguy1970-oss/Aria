@@ -214,4 +214,28 @@ Local `main` is ahead of `origin/main`. **HEAD ≠ origin/main.**
 
 ### Reboot / systemd / owner / integrity
 
-Filled in after the controlled reboot. Production 8765 was left running through the test suite (isolated `data_dir`; live Health/PHR/Journal/vault untouched).
+**REBOOT BLOCKED — SUDO PASSWORD REQUIRED (JEFF-ONLY)**
+
+Pre-reboot checks that did succeed:
+
+| Check | Result |
+| --- | --- |
+| `systemctl --user is-enabled jarvis.service` | **enabled** |
+| `systemctl --user is-active jarvis.service` | **active** |
+| `ss -ltnp \| grep 8765` | exactly one listener, PID **2203482** (`venv` python `main.py serve`) |
+| Duplicate serve | **none** |
+| Cursor in serve chain | **no** (parent is systemd --user) |
+| `JARVIS_DATA_DIR` | `/media/jeff/AI/jarvis/data` (systemd unit) |
+| Working tree | **clean** (`9e60f45`) |
+
+`sudo reboot` was not executed: passwordless sudo is not available, and the Master Password / sudo password must not be entered in chat.
+
+After Jeff performs **one** reboot from the machine:
+
+1. systemd `--user` starts `jarvis.service` → `aria-serve.sh` → `venv/bin/python main.py serve` on **8765**
+2. Aria starts **OWNER_LOCKED** (correct)
+3. Jeff unlocks once with the Aria Master Password
+4. Confirm **OWNER_UNLOCKED**, `auto_idle_lock=false`
+5. Short smoke only (Front Door Lock Aria visible / not clicked, Home, Journal, Health, Fly Tying, Projects, Mission, Connections, Knowledge Briefs, Home Automation, Owner Security, Integrity 100)
+
+Do not rerun the 34-Room campaign.
