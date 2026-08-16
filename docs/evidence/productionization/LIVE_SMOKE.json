@@ -1,0 +1,81 @@
+{
+  "status": "PASS",
+  "date": "2026-08-15",
+  "url": "http://127.0.0.1:8765/?workspace=1",
+  "pid": 2203482,
+  "ppid": 1508,
+  "launch_owner": "systemd",
+  "data_dir": "/media/jeff/AI/jarvis/data",
+  "owner": {
+    "state": "OWNER_UNLOCKED",
+    "session_active": true,
+    "auto_idle_lock": false,
+    "idle_seconds": 0,
+    "vault_unlocked": true,
+    "entry_count": 5
+  },
+  "front_door": {
+    "lock_aria_present": true,
+    "lock_aria_text": "Lock Aria",
+    "lock_aria_visible": true,
+    "clicked": false
+  },
+  "rooms": {
+    "home": "PASS — #dashboard foyer orientation",
+    "journal": "PASS — #journal Bullet journal",
+    "health": "PASS — #health check-in / Wellness clinic (no write)",
+    "flytying": "PASS — #flytying Recipe & video",
+    "projects": "PASS — #projects Home Lab",
+    "mission": "PASS — #workstation Mission Control",
+    "connections": "PASS — 59 nodes / 53 relationships / memgraph",
+    "knowledge_briefs": "PASS — Connections hop → #memory panel visible; existing briefs listed; Run not clicked",
+    "home_automation": "PASS — #homeAutomation; HA connected",
+    "security": "PASS — Aria unlocked · one Master Password · optional PIN off; Lock Aria visible, not clicked",
+    "integrity": "PASS — Truth Score 100 · ready; API score 100 / clean / artifacts 0"
+  },
+  "vault_meta_ids": [
+    "provider.openai.api_key",
+    "provider.gemini.api_key",
+    "provider.huggingface.token",
+    "ha.token",
+    "lan.api_key"
+  ],
+  "migration_sources": {
+    "openai": "vault",
+    "gemini": "vault",
+    "huggingface": "vault",
+    "home_assistant": "vault",
+    "lan": "vault"
+  },
+  "ha": {
+    "configured": true,
+    "connected": true,
+    "locked": false,
+    "token_set": true,
+    "url": "http://127.0.0.1:8123"
+  },
+  "lan": {
+    "lan_enabled": true,
+    "bind_host": "0.0.0.0",
+    "port": 8765,
+    "api_key_required": true,
+    "api_key_localhost_exempt": true,
+    "network_guard": true,
+    "allow_remote": false,
+    "rate_limit": true,
+    "ollama_localhost": true
+  },
+  "integrity": {
+    "score": 100,
+    "status": "clean",
+    "artifacts": 0,
+    "findings": 0
+  },
+  "tray": {
+    "pid": 2208433,
+    "role": "client",
+    "second_serve": false
+  },
+  "lock_aria_clicked": false,
+  "physical_reboot": "NOT_PERFORMED"
+}
