@@ -1,0 +1,78 @@
+{
+  "status": "PASS",
+  "date": "2026-08-16",
+  "url": "http://127.0.0.1:8765/?workspace=1",
+  "physical_reboot": "PERFORMED",
+  "service_active_since": "Sun 2026-08-16 09:33:05 EDT",
+  "pid": 1621,
+  "ppid": 1503,
+  "launch_owner": "systemd",
+  "data_dir": "/media/jeff/AI/jarvis/data",
+  "exec_start": "/media/jeff/AI/jarvis/scripts/aria-serve.sh",
+  "serve_cmd": "/media/jeff/AI/jarvis/venv/bin/python /media/jeff/AI/jarvis/main.py serve",
+  "listeners_8765": 1,
+  "bind": "0.0.0.0:8765",
+  "cursor_in_serve_chain": false,
+  "owner": {
+    "boot_state": "OWNER_LOCKED",
+    "state": "OWNER_UNLOCKED",
+    "session_active": true,
+    "auto_idle_lock": false,
+    "idle_seconds": 0,
+    "vault_exists": true,
+    "vault_unlocked": true,
+    "vault_format": "aria-owner-vault-v1",
+    "entry_count": 5,
+    "pin_role": "convenience_soft_unlock_and_step_up",
+    "vault_root_from_pin": false
+  },
+  "front_door": {
+    "lock_aria_present": true,
+    "lock_aria_text": "Lock Aria",
+    "lock_aria_visible": true,
+    "clicked": false
+  },
+  "rooms": {
+    "home": "PASS — #dashboard foyer orientation",
+    "journal": "PASS — #journal Bullet Journal",
+    "health": "PASS — #health Wellness clinic (no write)",
+    "flytying": "PASS — #flytying catalog connected",
+    "projects": "PASS — #projects Home Lab / workspace identity",
+    "mission": "PASS — #workstation Mission Control",
+    "connections": "PASS — #connections Relationship explorer",
+    "knowledge_briefs": "PASS — #memory Memory / New Briefing visible; Run not clicked",
+    "home_automation": "PASS — #homeAutomation; HA connected",
+    "security": "PASS — Aria unlocked · one Master Password · optional PIN off; Lock Aria visible, not clicked",
+    "integrity": "PASS — Truth Score 100 · API score 100 / clean / artifacts 0 / findings 0"
+  },
+  "vault_meta_ids": [
+    "provider.openai.api_key",
+    "provider.gemini.api_key",
+    "provider.huggingface.token",
+    "ha.token",
+    "lan.api_key"
+  ],
+  "ha": {
+    "configured": true,
+    "connected": true,
+    "locked": false,
+    "token_set": true,
+    "url": "http://127.0.0.1:8123"
+  },
+  "integrity": {
+    "score": 100,
+    "status": "clean",
+    "artifacts": 0,
+    "findings": 0,
+    "pending_repairs": 1,
+    "pending_repairs_note": "historical retrydemo scan in history; current findings empty"
+  },
+  "tray": {
+    "pid": 14050,
+    "ppid": 13998,
+    "role": "client",
+    "second_serve": false
+  },
+  "lock_aria_clicked": false,
+  "campaign": "short smoke only — 34-Room campaign not rerun"
+}

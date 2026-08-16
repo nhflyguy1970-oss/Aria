@@ -1,11 +1,11 @@
 # ARIA — Final Productionization
 
-**Date:** 2026-08-15  
-**Status:** COMPLETE
+**Date:** 2026-08-16  
+**Status:** COMPLETE — reboot verified
 
 ## Success banner
 
-ARIA PRODUCTIONIZED / SYSTEMD ENABLED / CERTIFIED REPAIRS COMMITTED / CLEAN CHECKOUT VERIFIED / ONE PRODUCTION SERVER / CURSOR INDEPENDENT / ONE MASTER PASSWORD / NO AUTOMATIC IDLE LOCK / 34/34 CERTIFIED / INTEGRITY 100 / READY FOR DAILY USE
+ARIA FINALIZED / 34/34 ROOMS CERTIFIED / ALL PRODUCTION REPAIRS COMMITTED / FULL TEST SUITE CLEAN / NO UNEXPLAINED TEST FAILURES / SYSTEMD ENABLED / REBOOT VERIFIED / ONE PRODUCTION SERVER / CURSOR INDEPENDENT / ONE MASTER PASSWORD / NO AUTOMATIC IDLE LOCK / VAULT VERIFIED / INTEGRITY 100 / CLEAN / ARTIFACTS 0 / GIT CLEAN / REMOTE NOT SYNCED (historic `cognitive.db` 294MB exceeds GitHub 100MB; no force push) / READY FOR DAILY USE
 
 ---
 
@@ -160,9 +160,9 @@ Staged commit scan: only test placeholder `sk-abcdefghijklmnopqrstuvwxyz`. No va
 
 | Item | Class |
 | --- | --- |
-| Physical reboot | Executed only after this test-fix commit; see FINAL COMPLETION VERIFICATION |
-| Push to origin | Attempted after the test-fix commit; see FINAL COMPLETION VERIFICATION |
-| Manual Lock Aria click not repeated after cutover | N/A — restart already proved lock; button verified after unlock |
+| Physical reboot | **Done** — Jeff rebooted 2026-08-16; systemd restarted serve PID **1621** |
+| Push to origin | **Blocked** — GitHub rejected historic `cognitive.db` (293.93 MB). No force push. HEAD ≠ origin/main |
+| Manual Lock Aria click not repeated after reboot | N/A — reboot started OWNER_LOCKED; button verified after unlock, not clicked |
 | Owner Residency / M5 | N/A — not started |
 
 ---
@@ -214,28 +214,73 @@ Local `main` is ahead of `origin/main`. **HEAD ≠ origin/main.**
 
 ### Reboot / systemd / owner / integrity
 
-**REBOOT BLOCKED — SUDO PASSWORD REQUIRED (JEFF-ONLY)**
-
-Pre-reboot checks that did succeed:
+**REBOOT VERIFIED** — Jeff rebooted the machine on 2026-08-16. `jarvis.service` entered active at **09:33:05 EDT**. Verification at ~09:38 EDT (uptime ~5 minutes).
 
 | Check | Result |
 | --- | --- |
 | `systemctl --user is-enabled jarvis.service` | **enabled** |
-| `systemctl --user is-active jarvis.service` | **active** |
-| `ss -ltnp \| grep 8765` | exactly one listener, PID **2203482** (`venv` python `main.py serve`) |
+| `systemctl --user is-active jarvis.service` | **active** since 09:33:05 EDT |
+| ExecStart | `/media/jeff/AI/jarvis/scripts/aria-serve.sh` |
+| Serve process | `/media/jeff/AI/jarvis/venv/bin/python /media/jeff/AI/jarvis/main.py serve` |
+| Main PID | **1621** (was 2203482 before reboot) |
+| Parent | PID **1503** = `systemd --user` |
+| Port 8765 | exactly **one** listener (`0.0.0.0:8765`) |
 | Duplicate serve | **none** |
-| Cursor in serve chain | **no** (parent is systemd --user) |
-| `JARVIS_DATA_DIR` | `/media/jeff/AI/jarvis/data` (systemd unit) |
-| Working tree | **clean** (`9e60f45`) |
+| Tray | PID **14050**, `main.py tray`, **client only** (parent 13998, not serve) |
+| Cursor in serve chain | **no** |
+| `JARVIS_DATA_DIR` | `/media/jeff/AI/jarvis/data` |
+| `JARVIS_LAUNCH_OWNER` | `systemd` |
+| systemd `Environment=` | DATA_DIR, VIRTUAL_ENV, LAUNCH_OWNER, NO_BROWSER only — **no secret keys** |
 
-`sudo reboot` was not executed: passwordless sudo is not available, and the Master Password / sudo password must not be entered in chat.
+Owner / vault (after Jeff unlocked once; values not printed):
 
-After Jeff performs **one** reboot from the machine:
+| Check | Result |
+| --- | --- |
+| Boot state | **OWNER_LOCKED** (correct after reboot) |
+| After unlock | `session.state` = **OWNER_UNLOCKED** |
+| `session_active` | true |
+| `auto_idle_lock` | **false** |
+| `idle_seconds` | **0** |
+| Vault | exists, unlocked, format `aria-owner-vault-v1` |
+| Entries | **5**, vault-backed ids only: `provider.openai.api_key`, `provider.gemini.api_key`, `provider.huggingface.token`, `ha.token`, `lan.api_key` |
+| PIN | convenience-only (`vault_root_from_pin` false) |
 
-1. systemd `--user` starts `jarvis.service` → `aria-serve.sh` → `venv/bin/python main.py serve` on **8765**
-2. Aria starts **OWNER_LOCKED** (correct)
-3. Jeff unlocks once with the Aria Master Password
-4. Confirm **OWNER_UNLOCKED**, `auto_idle_lock=false`
-5. Short smoke only (Front Door Lock Aria visible / not clicked, Home, Journal, Health, Fly Tying, Projects, Mission, Connections, Knowledge Briefs, Home Automation, Owner Security, Integrity 100)
+Integrity (live `POST /api/integrity/scan` then score/home):
+
+| Check | Result |
+| --- | --- |
+| Score | **100** |
+| Status | **clean** |
+| Artifacts | **0** |
+| Current findings | **0** |
+| `pending_repairs` | **1** — historical (old retrydemo scan in history). Current findings empty. Not hidden. |
+
+### Short smoke (not a 34-Room campaign)
+
+URL `http://127.0.0.1:8765/?workspace=1`. Front Door **Lock Aria** visible, **not clicked**. Owner lock overlay not showing. No PHR / Journal writes. Knowledge Briefs **Run** not clicked.
+
+| Room | Hash | Result |
+| --- | --- | --- |
+| Home | `#dashboard` | PASS — foyer / Good morning |
+| Journal | `#journal` | PASS — Bullet Journal |
+| Health | `#health` | PASS — Wellness clinic; no write |
+| Fly Tying | `#flytying` | PASS — catalog connected |
+| Projects | `#projects` | PASS — Home Lab / workspace identity |
+| Mission | `#workstation` | PASS — Mission Control |
+| Connections | `#connections` | PASS — Relationship explorer |
+| Knowledge Briefs | `#memory` | PASS — Memory / New Briefing visible; Run not clicked |
+| Home Automation | `#homeAutomation` | PASS — HA UI; `connected: true`, `url: http://127.0.0.1:8123`, `locked: false` |
+| Owner Security | `#security` | PASS — Aria unlocked · one Master Password · optional PIN off |
+| Integrity | `#integrity` | PASS — Truth Score 100 |
+
+Evidence: `docs/evidence/productionization/LIVE_SMOKE_REBOOT.json`
+
+### Secret-leak recheck (post-reboot)
+
+**SECRET LEAK FOUND: no** (git / systemd / this report). systemd `Environment=` has no secrets. Git still only contains the test placeholder `sk-abcdefghijklmnopqrstuvwxyz`. Vault and env files not committed. This report records metadata only. Process environ was not dumped.
+
+### Docs commit for this verification
+
+This follow-up docs/evidence commit records reboot + smoke. It does not amend `20f0b4c` / `9975aad`. History was not rewritten. Force push was not used.
 
 Do not rerun the 34-Room campaign.
