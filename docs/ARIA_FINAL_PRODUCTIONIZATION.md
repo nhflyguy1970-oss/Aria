@@ -198,8 +198,20 @@ This section supersedes the leftover “15 failed / suite hung / push not perfor
 
 ### Production commit for this cleanup
 
-Recorded at commit time (this commit). Does not rewrite `9975aad`.
+`20f0b4c` — `fix(aria): close remaining test failures and the full-suite hang`  
+Does not rewrite `9975aad`. Working tree clean after commit.
 
-### Reboot / systemd / owner / integrity / push
+### Push
 
-Filled in after the controlled reboot and push attempt. Production 8765 was left running through the test suite (isolated `data_dir`; live Health/PHR/Journal/vault untouched).
+**PUSH BLOCKED — REMOTE REJECTED (LARGE FILE IN EXISTING HISTORY)**
+
+Authentication succeeded. Force push was not used. History was not rewritten.
+
+GitHub pre-receive hook declined the push because an already-local file  
+`docs/evidence/room_repair_phase2/pre_delete/cognitive.db` (293.93 MB) exceeds GitHub’s 100 MB limit. That file is not in this cleanup commit; it is in earlier commits still ahead of `origin/main`.
+
+Local `main` is ahead of `origin/main`. **HEAD ≠ origin/main.**
+
+### Reboot / systemd / owner / integrity
+
+Filled in after the controlled reboot. Production 8765 was left running through the test suite (isolated `data_dir`; live Health/PHR/Journal/vault untouched).
