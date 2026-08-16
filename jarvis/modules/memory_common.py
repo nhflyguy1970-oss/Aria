@@ -431,6 +431,9 @@ def divert_acm_read(call: Callable[[], object], *, op: str = "read") -> tuple[bo
     try:
         from aria_core import acm_bridge
 
+        if not acm_bridge.acm_is_authoritative():
+            return False, None
+
         try:
             projected = call()
         except Exception as exc:

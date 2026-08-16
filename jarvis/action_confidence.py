@@ -14,6 +14,13 @@ STORE_FILE = DATA_DIR / "action_confidence.json"
 _lock = threading.Lock()
 _stats: dict[str, dict[str, int]] = {}
 _loaded = False
+_loaded_path: Path | None = None
+
+
+def _store_file() -> Path:
+    from jarvis.config import DATA_DIR as current
+
+    return Path(current) / "action_confidence.json"
 
 MIN_SAMPLES = max(3, int(os.getenv("JARVIS_CONFIDENCE_MIN_SAMPLES", "5")))
 HIGH_THRESHOLD = float(os.getenv("JARVIS_CONFIDENCE_HIGH", "0.75"))
@@ -29,28 +36,33 @@ TRACKED_ACTIONS = frozenset({
 
 
 def _load() -> None:
-    global _stats, _loaded
-    if _loaded:
+    global _stats, _loaded, _loaded_path
+    path = _store_file()
+    if _loaded and _loaded_path == path:
         return
     _loaded = True
-    if not STORE_FILE.is_file():
+    _loaded_path = path
+    if not path.is_file():
         _stats = {}
         return
     try:
-        data = json.loads(STORE_FILE.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(data, dict):
             _stats = {k: v for k, v in data.items() if isinstance(v, dict)}
+        else:
+            _stats = {}
     except (json.JSONDecodeError, OSError):
         _stats = {}
 
 
 def _save() -> None:
-    STORE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    path = _store_file()
+    path.parent.mkdir(parents=True, exist_ok=True)
     from jarvis.live_data_guard import assert_live_write_allowed
 
-    assert_live_write_allowed(STORE_FILE)
+    assert_live_write_allowed(path)
     with _lock:
-        STORE_FILE.write_text(json.dumps(_stats, indent=2), encoding="utf-8")
+        path.write_text(json.dumps(_stats, indent=2), encoding="utf-8")
 
 
 def record_outcome(action_type: str, *, ok: bool) -> None:

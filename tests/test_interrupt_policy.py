@@ -29,11 +29,13 @@ def test_should_interrupt_voice_active():
 def test_evaluate_interrupt_suppressed(monkeypatch):
     from jarvis import interrupt_policy as ip
 
-    ip._focus_mode = True
+    monkeypatch.setattr(
+        "jarvis.config._load_chat_settings",
+        lambda: {"scene_state": {"active_preset": "focus mode"}},
+    )
     monkeypatch.setattr(ip, "_notify", lambda *a, **k: None)
     out = ip.evaluate_interrupt("test", title="T", body="B", tier="useful")
     assert out["fired"] is False
-    ip._focus_mode = False
 
 
 def test_evaluate_interrupt_fires(monkeypatch):

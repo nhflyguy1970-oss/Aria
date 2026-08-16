@@ -314,20 +314,9 @@ def apply_policy_to_route(
         else _fallback_hardware()
     )
 
-    # Per-chat / caller model (session dropdown, API) beats Settings role model
-    # and benchmark winners — keep measured hardware placement when available.
-    if requested and user_model and requested != user_model:
-        return {
-            "model": requested,
-            "hardware": hw or _fallback_hardware(),
-            "reason": "explicit session/caller model (benchmark hardware retained)",
-            "source": "explicit",
-            "workload": workload,
-            "warm_latency_ms": wl.get("warm_latency_ms") if isinstance(wl, dict) else None,
-            "fallback_model": wl.get("fallback_model") if isinstance(wl, dict) else None,
-            "fallback_hardware": wl.get("fallback_hardware") if isinstance(wl, dict) else None,
-        }
-
+    # Settings role model beats benchmark. The `model` argument is the current
+    # route default, not a session lock — treating every caller model as explicit
+    # made benchmarks and Settings dead (gateway always passes a model).
     if user_model:
         return {
             "model": user_model,
@@ -341,17 +330,6 @@ def apply_policy_to_route(
         }
 
     if isinstance(wl, dict) and wl.get("model"):
-        if requested and requested != str(wl.get("model") or ""):
-            return {
-                "model": requested,
-                "hardware": str(wl.get("hardware") or _fallback_hardware()),
-                "reason": "explicit session/caller model (benchmark hardware retained)",
-                "source": "explicit",
-                "workload": workload,
-                "warm_latency_ms": wl.get("warm_latency_ms"),
-                "fallback_model": wl.get("fallback_model"),
-                "fallback_hardware": wl.get("fallback_hardware"),
-            }
         return {
             "model": str(wl["model"]),
             "hardware": str(wl.get("hardware") or "cpu"),

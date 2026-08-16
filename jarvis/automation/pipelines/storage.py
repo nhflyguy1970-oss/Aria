@@ -43,12 +43,9 @@ def _is_pipeline_fixture(data: dict[str, Any], *, path_stem: str = "") -> bool:
 
 def _safe_write(path: Path, payload: dict[str, Any] | list[Any]) -> None:
     ensure_dirs()
-    try:
-        from jarvis.live_data_guard import assert_live_write_allowed
+    from jarvis.live_data_guard import assert_live_write_allowed
 
-        assert_live_write_allowed(path)
-    except Exception:
-        pass
+    assert_live_write_allowed(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
 

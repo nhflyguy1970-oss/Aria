@@ -90,7 +90,7 @@ def test_run_nightly_research_all_categories(research_env, monkeypatch):
     results = run_nightly_research(day="2026-06-17", force=True)
     assert len(results) >= 14
     assert all(r.get("ok") for r in results)
-    assert STATE_FILE.is_file()
+    assert (research_env / "_state.json").is_file()
 
 
 def test_profile_research_categories_from_memory():

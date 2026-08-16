@@ -18,7 +18,7 @@ def chat_api_client(tmp_path, monkeypatch):
     cs._init()
 
     class FakeAssistant:
-        def create_branch(self, name, from_index=None):
+        def create_branch(self, name, from_index=None, **_kwargs):
             return f"branch_{abs(hash(name)) % 100000}"
 
     monkeypatch.setattr("jarvis.assistant_instance.get_assistant", lambda: FakeAssistant())

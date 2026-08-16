@@ -96,8 +96,12 @@ def record_experience(
             )
     except Exception:
         pass
-    if hasattr(store, "similar_exists") and store.similar_exists(content):
-        return None
+    # Do not use semantic similar_exists here: a success after a related
+    # failure must both remain (that is the point of experience memory).
+    if hasattr(store, "list_entries"):
+        for e in store.list_entries(entry_type=outcome, namespace=namespace) or []:
+            if (e.get("content") or "").strip() == content:
+                return e
     return store.add(outcome, content, tags=entry_tags, namespace=namespace)
 
 
@@ -225,6 +229,43 @@ def list_experiences(
     return filter_entry_list(entries[:limit])
 
 
+_RECALL_STOP = {
+    "help",
+    "please",
+    "with",
+    "that",
+    "this",
+    "from",
+    "have",
+    "what",
+    "when",
+    "your",
+    "about",
+}
+
+
+def _lexical_experience_hits(entries: list[dict], query: str) -> list[dict]:
+    """Full-string or token-overlap match when embeddings miss."""
+    ql = (query or "").strip().lower()
+    if not ql:
+        return []
+    tokens = [
+        t
+        for t in re.findall(r"[a-z0-9_.]{3,}", ql)
+        if t not in _RECALL_STOP
+    ]
+    need = min(2, len(tokens)) or 1
+    hits: list[dict] = []
+    for e in entries:
+        content = (e.get("content") or "").lower()
+        if ql in content:
+            hits.append(e)
+            continue
+        if tokens and sum(1 for t in tokens if t in content) >= need:
+            hits.append(e)
+    return hits
+
+
 def recall_experiences(store, query: str, *, limit: int = 8) -> list[dict]:
     from jarvis.trust_memory import filter_entry_list
 
@@ -241,10 +282,7 @@ def recall_experiences(store, query: str, *, limit: int = 8) -> list[dict]:
                 seen.add(e["id"])
                 hits.append(e)
     if not hits:
-        ql = q.lower()
-        for e in list_experiences(store, limit=limit * 3):
-            if ql in e.get("content", "").lower():
-                hits.append(e)
+        hits = _lexical_experience_hits(list_experiences(store, limit=limit * 3), q)
     return filter_entry_list(hits[:limit])
 
 

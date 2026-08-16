@@ -9,8 +9,6 @@ import subprocess
 import threading
 import time
 
-from jarvis.env_loader import load_jarvis_env
-
 logger = logging.getLogger("jarvis.memgraph_docker")
 
 
@@ -33,7 +31,6 @@ def memgraph_http_port() -> int:
 
 
 def should_autostart_memgraph() -> bool:
-    load_jarvis_env()
     from jarvis.service_policy import autostart_memgraph
 
     if not autostart_memgraph():

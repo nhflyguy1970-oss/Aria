@@ -270,6 +270,12 @@ def should_auto_search(message: str) -> bool:
     if len(text) < 8 or len(text) > 500:
         return False
     lower = text.lower()
+    # Greetings / small talk even when they mention "today".
+    if re.search(
+        r"^\s*(hi|hello|hey|how are you|how's it going|good (?:morning|afternoon|evening))\b",
+        lower,
+    ):
+        return False
     if re.search(r"\b(search (the )?web|web search|look up online|google)\b", lower):
         # Explicit web verbs are handled as web_search actions elsewhere.
         return False
@@ -303,12 +309,6 @@ def should_auto_search(message: str) -> bool:
             return True
     except Exception:
         pass
-    # Greetings / small talk even when they mention "today".
-    if re.search(
-        r"^\s*(hi|hello|hey|how are you|how's it going|good (?:morning|afternoon|evening))\b",
-        lower,
-    ):
-        return False
     return any(re.search(p, lower) for p in _AUTO_PATTERNS)
 
 

@@ -30,7 +30,13 @@ def control_device(target: str, action: str, **kwargs) -> tuple[bool, str, str]:
         from jarvis.kasa_devices import _match_device, control_device as kasa_control
 
         if _match_device(target):
-            ok, msg = kasa_control(target, action, brightness=kwargs.get("brightness"))
+            ok, msg = kasa_control(
+                target,
+                action,
+                brightness=kwargs.get("brightness"),
+                hue=kwargs.get("hue"),
+                saturation=kwargs.get("saturation"),
+            )
             return ok, msg, "kasa"
 
     from jarvis.home_assistant import control_entity, ha_enabled
@@ -58,7 +64,13 @@ def control_device(target: str, action: str, **kwargs) -> tuple[bool, str, str]:
     if not ha_entity and kasa_enabled():
         from jarvis.kasa_devices import control_device as kasa_control
 
-        ok, msg = kasa_control(target, action, brightness=kwargs.get("brightness"))
+        ok, msg = kasa_control(
+            target,
+            action,
+            brightness=kwargs.get("brightness"),
+            hue=kwargs.get("hue"),
+            saturation=kwargs.get("saturation"),
+        )
         if ok:
             return ok, msg, "kasa"
         return ok, msg, "kasa"

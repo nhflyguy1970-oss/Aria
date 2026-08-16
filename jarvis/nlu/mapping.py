@@ -538,6 +538,13 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
         return "memory"
     if _EXPLICIT_WEB.search(prompt):
         return "web_search"
+    if re.search(
+        r"\b(?:run\s+)?nightly\s+knowledge\s+research\b|"
+        r"\brun\s+knowledge\s+research\b|"
+        r"\bknowledge\s+research\s+now\b",
+        lower,
+    ):
+        return "knowledge"
     if re.search(r"\blearn\s+about\b", lower):
         return "knowledge"
     if re.search(r"\bfix\s+errors?\s+in\b.+\.py", lower):
@@ -560,7 +567,9 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
                 return "chat"
         except Exception:
             pass
-        return "runtime"
+        # Service names in how-to / configure questions are not live status.
+        if not re.search(r"\b(?:how\s+do\s+i|configure|setup|install)\b", lower):
+            return "runtime"
     if _MY_STATE.search(lower) and re.search(
         r"\b(gpu|graphics|model|hardware|cpu|vram|card)\b", lower, re.I
     ):
@@ -579,13 +588,14 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
             return "runtime"
     if syntax.verb == "using" and syntax.object:
         return "runtime"
-    # Instruction mood alone must not become local docs — require a corpus cue.
-    if (
-        grammar.mood == "instruction"
-        and syntax.verb in ("configure", "setup")
-        and _LOCAL_CORPUS.search(prompt)
+    # How-to configure/setup: local corpus → docs; otherwise encyclopedic knowledge.
+    # Bare "how do I …" must not become local reference_search (empty corpus hits).
+    if re.search(r"\bhow\s+do\s+i\s+(?:configure|setup|install)\b", lower) or (
+        grammar.mood == "instruction" and syntax.verb in ("configure", "setup", "install")
     ):
-        return "reference"
+        if _LOCAL_CORPUS.search(prompt):
+            return "reference"
+        return "knowledge"
     if _LIVE_STATE.search(prompt) and grammar.sentence_type == "interrogative":
         if re.search(r"\b(which|what)\b.+\b(using|running|loaded|active)\b", prompt, re.I):
             return "runtime"
@@ -674,13 +684,16 @@ def apply_intent_guards(result: NLUResult) -> str:
         if not _LIVE_STATE.search(prompt) or syntax.subject in ("documentation", "reference"):
             if not re.search(r"\bis\b.+\brunning\b", prompt, re.I):
                 return "reference"
-    if (
-        syntax.verb in ("configure", "setup")
-        and _LOCAL_CORPUS.search(prompt)
-        and not _LIVE_STATE.search(prompt)
+    if re.search(r"\bhow\s+do\s+i\s+(?:configure|setup|install)\b", prompt, re.I) or (
+        syntax.verb in ("configure", "setup", "install")
     ):
         if not re.search(r"\bis\b.+\brunning\b", prompt, re.I):
-            return "reference"
+            if _LOCAL_CORPUS.search(prompt) and not _LIVE_STATE.search(prompt):
+                return "reference"
+            if not _LIVE_STATE.search(prompt) or re.search(
+                r"\bhow\s+do\s+i\s+(?:configure|setup|install)\b", prompt, re.I
+            ):
+                return "knowledge"
     if _ENCYCLOPEDIC.search(prompt) and not _LIVE_STATE.search(prompt):
         return "knowledge"
     if intent == "runtime" and _ENCYCLOPEDIC.search(prompt) and not _LIVE_STATE.search(prompt):
@@ -809,7 +822,16 @@ def nlu_to_router_intent(result: NLUResult) -> dict[str, Any] | None:
     elif intent == "runtime":
         action = _runtime_action(subject, verb, result.prompt)
     elif intent == "knowledge":
-        if re.search(r"\blearn\s+about\b", result.prompt, re.I):
+        if re.search(
+            r"\b(?:run\s+)?nightly\s+knowledge\s+research\b|"
+            r"\brun\s+knowledge\s+research\b|"
+            r"\bknowledge\s+research\s+now\b",
+            result.prompt,
+            re.I,
+        ):
+            action = "knowledge_research_run"
+            params = {}
+        elif re.search(r"\blearn\s+about\b", result.prompt, re.I):
             from jarvis.knowledge import parse_learn_topic
 
             action = "learn_about"

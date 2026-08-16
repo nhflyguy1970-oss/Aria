@@ -11,7 +11,8 @@ def test_bridge_status_includes_pattern_of_the_day():
     potd = {"ok": True, "name": "Adams", "type": "dry", "day": "2026-07-28"}
     with patch("jarvis.flytying.nightly.pattern_of_the_day", return_value=potd):
         with patch("jarvis.flytying.bridge.gold_available", return_value=False):
-            st = bridge.status()
+            bridge.reset_blackfly_cache()
+            st = bridge.status(force=True)
     assert "pattern_of_the_day" in st
     assert st["pattern_of_the_day"]["name"] == "Adams"
 

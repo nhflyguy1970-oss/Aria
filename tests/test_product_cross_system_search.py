@@ -54,8 +54,9 @@ def test_calendar_day_includes_planner_tasks_for_today(data_dir, monkeypatch):
     from jarvis import planner_store
 
     monkeypatch.setattr(planner_store, "DB_PATH", data_dir / "planner.db")
+    monkeypatch.setattr("jarvis.feature_flags.planner_enabled", lambda: True)
     planner_store._init_db()
-    task = planner_store.add_task("cert-calendar-merge-task")
+    task = planner_store.add_task("pick up fly tying materials")
 
     class FakeJournal:
         def monthly_calendar(self, mk):
@@ -69,4 +70,6 @@ def test_calendar_day_includes_planner_tasks_for_today(data_dir, monkeypatch):
 
     detail = calendar_tab.day_detail(FakeJournal(), date.today().isoformat())
     assert any(t.get("id") == task["id"] for t in detail.get("planner_tasks") or [])
-    assert any("cert-calendar-merge-task" in (t.get("content") or "") for t in detail["planner_tasks"])
+    assert any(
+        "fly tying materials" in (t.get("content") or "") for t in detail["planner_tasks"]
+    )

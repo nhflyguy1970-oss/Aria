@@ -303,6 +303,9 @@ def live():
 def _build_health_payload() -> dict:
     from jarvis.auth import api_key_enabled
     from jarvis.ollama_health import check_ollama as _check_ollama
+    from jarvis.p2_flags import browser_agent_enabled, kasa_enabled
+    from jarvis.p3_flags import cad_enabled, printer_enabled
+    from jarvis.p4_flags import face_auth_enabled
     from jarvis.sandbox import firejail_available, sandbox_enabled
     from jarvis.services import get_status
 
@@ -355,6 +358,11 @@ def _build_health_payload() -> dict:
             ),
             "firejail": firejail_available() if sandbox_enabled() else False,
             "api_key_required": api_key_enabled(),
+            "cad": cad_enabled(),
+            "printer": printer_enabled(),
+            "browser_agent": browser_agent_enabled(),
+            "kasa": kasa_enabled(),
+            "face_auth": face_auth_enabled(),
         },
         "product_registration": reg,
         **status,

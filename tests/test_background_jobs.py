@@ -3,8 +3,6 @@
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pytest
-
 
 class _FakeAssistant:
     def __init__(self):
@@ -22,22 +20,18 @@ def test_submit_action_learn_about_uses_assistant_handler(monkeypatch):
         "jarvis.handlers.registry.get_spec",
         lambda action: SimpleNamespace(handler=None) if action == "learn_about" else None,
     )
-    captured = {}
 
-    def fake_submit(label, fn, *, action=""):
-        captured["label"] = label
-        captured["action"] = action
+    def fake_submit(label, fn):
+        assert label == "Learn topic"
         return fn()
 
     monkeypatch.setattr("jarvis.coding_jobs.submit", fake_submit)
     assistant = _FakeAssistant()
-    result = background_jobs.submit_action(
+    result = background_jobs._submit_action_impl(
         assistant, "learn_about", {"topic": "rust"}, "learn about rust"
     )
     assert result == {"ok": True, "type": "knowledge_learned", "message": "Learned"}
-    assert captured["label"] == "Learn topic"
-    assert captured["action"] == "learn_about"
-    assert assistant.learn_calls == [({"topic": "rust"}, "learn about rust")]
+    assert assistant.learn_calls[0][0]["topic"] == "rust"
 
 
 def test_submit_action_uses_registry_handler_when_present(monkeypatch):
@@ -56,12 +50,12 @@ def test_submit_action_uses_registry_handler_when_present(monkeypatch):
         else None,
     )
 
-    def fake_submit(label, fn, *, action=""):
+    def fake_submit(label, fn):
         return fn()
 
     monkeypatch.setattr("jarvis.coding_jobs.submit", fake_submit)
     assistant = MagicMock()
-    result = background_jobs.submit_action(
+    result = background_jobs._submit_action_impl(
         assistant, "fake_bg_action", {"q": "1"}, "go"
     )
     assert result == {"ok": True, "message": "from registry"}

@@ -2086,6 +2086,24 @@ def _quick_route(
             "route_handler": "RoutingInspector",
         }
 
+    from jarvis.self_upgrade import is_merge_command, is_self_upgrade_task, parse_self_upgrade_task
+
+    if is_self_upgrade_task(message):
+        return {
+            "action": "self_upgrade_run",
+            "params": {"task": parse_self_upgrade_task(message)},
+            "thinking": "self upgrade pipeline",
+            "route_reason": "self_upgrade_run",
+        }
+
+    if is_merge_command(message):
+        return {
+            "action": "self_upgrade_merge",
+            "params": {},
+            "thinking": "self upgrade merge",
+            "route_reason": "self_upgrade_merge",
+        }
+
     if not skip_runtime_priority:
         if runtime_hit := route_runtime_priority(message):
             return runtime_hit
@@ -2123,6 +2141,19 @@ def _quick_route(
             "action": "learn_about",
             "params": {"topic": parse_learn_topic(message)},
             "thinking": "learn about topic",
+        }
+
+    if re.search(
+        r"\b(?:run\s+)?nightly\s+knowledge\s+research\b|"
+        r"\brun\s+knowledge\s+research\b|"
+        r"\bknowledge\s+research\s+now\b",
+        lower,
+    ):
+        return {
+            "action": "knowledge_research_run",
+            "params": {},
+            "thinking": "nightly knowledge research",
+            "route_reason": "knowledge_research_run",
         }
 
     from jarvis.home_assistant import parse_ha_token_message, quick_route_home_assistant
@@ -3506,6 +3537,43 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
                     message,
                     session,
                 )
+
+    from jarvis.self_upgrade import is_merge_command, is_self_upgrade_task, parse_self_upgrade_task
+
+    if is_self_upgrade_task(message):
+        return _finalize_intent(
+            normalize_route_intent(
+                {
+                    "action": "self_upgrade_run",
+                    "params": {"task": parse_self_upgrade_task(message)},
+                    "thinking": "self upgrade pipeline",
+                    "route_reason": "pre_nlu_self_upgrade",
+                    "route_handler": "SelfUpgrade",
+                    "route_confidence": 1.0,
+                    "router": "self_upgrade",
+                    "router_stage": "pre_nlu_self_upgrade",
+                }
+            ),
+            message,
+            session,
+        )
+    if is_merge_command(message):
+        return _finalize_intent(
+            normalize_route_intent(
+                {
+                    "action": "self_upgrade_merge",
+                    "params": {},
+                    "thinking": "self upgrade merge",
+                    "route_reason": "pre_nlu_self_upgrade_merge",
+                    "route_handler": "SelfUpgrade",
+                    "route_confidence": 1.0,
+                    "router": "self_upgrade",
+                    "router_stage": "pre_nlu_self_upgrade_merge",
+                }
+            ),
+            message,
+            session,
+        )
 
     nlu_used = False
     from jarvis.nlu.pipeline import nlu_enabled, route_via_nlu

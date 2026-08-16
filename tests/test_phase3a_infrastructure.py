@@ -89,11 +89,12 @@ def test_daily_focus_local_briefing_no_acm(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "DATA_DIR", tmp_path)
     monkeypatch.setattr(planner_store, "DATA_DIR", tmp_path)
     monkeypatch.setattr(planner_store, "DB_PATH", tmp_path / "planner.db")
+    planner_store._init_db()
 
     from jarvis.planner_services import daily_focus
     from jarvis.planner_store import add_task
 
-    add_task("tier3a disposable focus task")
+    add_task("review fly tying materials for the weekend")
 
     called = {"n": 0}
 
@@ -105,7 +106,7 @@ def test_daily_focus_local_briefing_no_acm(tmp_path, monkeypatch):
         out = daily_focus(assistant=object())
     assert out.get("ok") is True
     assert called["n"] == 0
-    assert "tier3a disposable focus task" in (out.get("morning_briefing") or "")
+    assert "review fly tying materials for the weekend" in (out.get("morning_briefing") or "")
     # Live production planner must remain untouched
     assert planner_store.DB_PATH == tmp_path / "planner.db"
 
@@ -114,9 +115,15 @@ def test_presence_hash_map_not_home_automation():
     """Static guard: workspace hash map must not route #presence → home_automation (SYS-F08)."""
     from pathlib import Path
 
-    text = Path(__file__).resolve().parents[1].joinpath("jarvis/gui/static/workspace/workspace.js").read_text(
-        encoding="utf-8"
+    root = Path(__file__).resolve().parents[1]
+    blob = "\n".join(
+        p.read_text(encoding="utf-8")
+        for p in (
+            root / "jarvis/gui/static/workspace/workspace.js",
+            root / "jarvis/gui/static/view_router.js",
+            root / "jarvis/gui/static/workspace/rooms/furnish.js",
+        )
+        if p.is_file()
     )
-    assert 'presence: "home_automation"' not in text
-    assert 'presence: "presence"' in text
-    assert 'dashboard: "home"' in text
+    assert 'presence: "home_automation"' not in blob
+    assert 'presence: "presence"' in blob

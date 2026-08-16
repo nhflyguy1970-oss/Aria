@@ -12,28 +12,29 @@ from jarvis.memgraph_docker import (
 def test_should_autostart_default_off(monkeypatch):
     monkeypatch.delenv("JARVIS_GRAPH_BACKEND", raising=False)
     monkeypatch.delenv("JARVIS_MEMGRAPH_AUTOSTART", raising=False)
-    monkeypatch.setattr("jarvis.memgraph_docker.shutil.which", lambda _: "/usr/bin/docker")
+    monkeypatch.setattr("jarvis.ha_docker.docker_available", lambda: True)
     assert should_autostart_memgraph() is False
 
 
 def test_should_autostart_on_when_graph_backend_memgraph(monkeypatch):
     monkeypatch.setenv("JARVIS_GRAPH_BACKEND", "memgraph")
     monkeypatch.delenv("JARVIS_MEMGRAPH_AUTOSTART", raising=False)
-    monkeypatch.setattr("jarvis.memgraph_docker.docker_available", lambda: True)
+    monkeypatch.setattr("jarvis.ha_docker.docker_available", lambda: True)
     assert should_autostart_memgraph() is True
 
 
 def test_should_autostart_respects_explicit_off(monkeypatch):
     monkeypatch.setenv("JARVIS_GRAPH_BACKEND", "memgraph")
     monkeypatch.setenv("JARVIS_MEMGRAPH_AUTOSTART", "0")
-    monkeypatch.setattr("jarvis.memgraph_docker.docker_available", lambda: True)
+    monkeypatch.setattr("jarvis.ha_docker.docker_available", lambda: True)
     assert should_autostart_memgraph() is False
 
 
 def test_ensure_skips_when_autostart_off(monkeypatch):
     monkeypatch.setenv("JARVIS_MEMGRAPH_AUTOSTART", "0")
+    monkeypatch.delenv("JARVIS_GRAPH_BACKEND", raising=False)
     with patch("jarvis.memgraph_docker.memgraph_bolt_healthy", return_value=False), patch(
-        "jarvis.memgraph_docker.container_running", return_value=False
+        "jarvis.ha_docker.container_running", return_value=False
     ), patch("jarvis.memgraph_docker.subprocess.run") as run:
         assert ensure_memgraph() is False
         run.assert_not_called()
@@ -44,8 +45,10 @@ def test_ensure_starts_existing_container(monkeypatch):
     monkeypatch.delenv("JARVIS_MEMGRAPH_AUTOSTART", raising=False)
     with patch("jarvis.memgraph_docker.should_autostart_memgraph", return_value=True), patch(
         "jarvis.memgraph_docker.memgraph_bolt_healthy", return_value=False
-    ), patch("jarvis.memgraph_docker.container_running", return_value=False), patch(
-        "jarvis.memgraph_docker.container_exists", return_value=True
+    ), patch("jarvis.ha_docker.container_running", return_value=False), patch(
+        "jarvis.ha_docker.container_exists", return_value=True
+    ), patch(
+        "jarvis.ha_docker.docker_available", return_value=True
     ), patch(
         "jarvis.memgraph_docker.subprocess.run"
     ) as run:
@@ -58,8 +61,10 @@ def test_ensure_creates_container_with_restart_policy(monkeypatch):
     monkeypatch.setenv("JARVIS_GRAPH_BACKEND", "memgraph")
     with patch("jarvis.memgraph_docker.should_autostart_memgraph", return_value=True), patch(
         "jarvis.memgraph_docker.memgraph_bolt_healthy", return_value=False
-    ), patch("jarvis.memgraph_docker.container_running", return_value=False), patch(
-        "jarvis.memgraph_docker.container_exists", return_value=False
+    ), patch("jarvis.ha_docker.container_running", return_value=False), patch(
+        "jarvis.ha_docker.container_exists", return_value=False
+    ), patch(
+        "jarvis.ha_docker.docker_available", return_value=True
     ), patch(
         "jarvis.memgraph_docker.subprocess.run"
     ) as run:

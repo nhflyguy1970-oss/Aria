@@ -95,7 +95,7 @@ def try_local_route(message: str, session: SessionContext) -> dict[str, Any] | N
             _system_prompt(),
             text,
             options={"temperature": 0, "num_predict": 120},
-        )[0]
+        )
         ms = int((time.perf_counter() - t0) * 1000)
         parsed = _parse_json(raw)
         if not parsed:

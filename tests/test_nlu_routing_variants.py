@@ -31,8 +31,9 @@ _VARIANTS: list[tuple[str, str]] = [
     ("Compare Postgres and MySQL.", "knowledge"),
     ("Show Docker Compose documentation.", "reference"),
     ("Show Docker docs.", "reference"),
-    ("How do I configure Docker Compose?", "reference"),
-    ("Configure nginx.", "reference"),
+    # How-to configure without a local corpus cue is knowledge, not local docs.
+    ("How do I configure Docker Compose?", "knowledge"),
+    ("Configure nginx.", "knowledge"),
     ("Find the README for this project.", "reference"),
     ("Search my memory for Docker.", "memory"),
     ("Search memory for vacation plans.", "memory"),
@@ -62,7 +63,7 @@ for topic in ("Docker", "Redis", "Kubernetes", "Python", "GPUs"):
 for topic in ("Docker", "Docker Compose", "nginx", "Postgres"):
     _VARIANTS.append((f"Show {topic} documentation.", "reference"))
     _VARIANTS.append((f"Show {topic} docs.", "reference"))
-    _VARIANTS.append((f"How do I configure {topic}?", "reference"))
+    _VARIANTS.append((f"How do I configure {topic}?", "knowledge"))
 
 # Expand memory / search
 for topic in ("Docker", "vacation", "project notes"):

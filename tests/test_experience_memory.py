@@ -19,12 +19,15 @@ from jarvis.trust_memory import trust_context_for_chat, trust_status
 def store(data_dir, monkeypatch):
     monkeypatch.delenv("JARVIS_VECTOR_BACKEND", raising=False)
     monkeypatch.setattr("jarvis.llm.embed_available", lambda: True)
+    monkeypatch.setattr("aria_core.acm_bridge.acm_is_authoritative", lambda: False)
 
     def _embed(text: str) -> list[float]:
         if not text:
             return []
-        h = abs(hash(text))
-        return [float((h >> i) & 0xFF) / 255.0 for i in range(0, 64, 8)]
+        import hashlib
+
+        digest = hashlib.md5(text.encode("utf-8")).digest()
+        return [b / 255.0 for b in digest[:8]]
 
     monkeypatch.setattr("jarvis.llm.embed_text", _embed)
     return MemoryStore(path=data_dir / "memory.json")

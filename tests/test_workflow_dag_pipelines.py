@@ -12,10 +12,12 @@ import pytest
 def pipe_env(tmp_path, monkeypatch):
     root = tmp_path / "automation_product"
     dags = root / "workflow_dags"
-    dags.mkdir(parents=True)
+    dags.mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr("jarvis.automation.paths.AUTOMATION_ROOT", root)
     monkeypatch.setattr("jarvis.automation.paths.WORKFLOW_DAGS_DIR", dags)
     monkeypatch.setattr("jarvis.automation.paths.EXPORT_DIR", root / "exports")
+    monkeypatch.setattr("jarvis.automation.pipelines.storage.WORKFLOW_DAGS_DIR", dags)
+    monkeypatch.setattr("jarvis.automation.pipelines.storage.EXPORT_DIR", root / "exports")
     monkeypatch.setattr("jarvis.automation.pipelines.runs.RUNS_FILE", root / "pipeline_runs.json")
     monkeypatch.setattr("jarvis.automation.pipelines.jobs._STATE_FILE", root / "pipeline_jobs.json")
     monkeypatch.setattr("jarvis.automation.paths.RUN_HISTORY_FILE", root / "run_history.json")
@@ -297,7 +299,7 @@ def test_ui_and_docs_wiring():
 def test_export_and_favorites(pipe_env):
     from jarvis.automation.pipelines.storage import create_from_template, export_pipelines, set_favorite
 
-    wf = create_from_template("evening_wrap", name="Fav Eve")
+    wf = create_from_template("evening_wrap", name="Weeknight shutdown")
     set_favorite(wf["id"], True)
     exp = export_pipelines([wf["id"]])
     assert exp["count"] >= 1

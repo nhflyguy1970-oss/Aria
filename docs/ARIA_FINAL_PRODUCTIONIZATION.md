@@ -108,11 +108,15 @@ Worktree `/tmp/aria-clean-checkout` at `9975aad`. Isolated server on **18765** w
 
 ## 17. Automated tests
 
-Maintained CI pytest after isolation fixes: **829 passed, 1 skipped, 15 failed** (then ACM hash + automation save fixed; remaining failures are pre-existing NLU accuracy / execution-policy / UI-wiring / prediction-routing — not launch-path regressions).
+Maintained CI pytest: **845 passed, 1 skipped, 0 failed**.
 
-Targeted productionization tests: **44 passed** (launch ownership, server restart, owner session, integrity, connections, checkpoints).
+Full `tests/` suite: **2000 passed, 61 skipped, 0 failed** in 199s. Completes. No hang.
 
-Full `tests/` hung at ~80% on a long-running subprocess test and was stopped. Aria 8765 was not killed.
+Evidence: `docs/evidence/productionization/FULL_SUITE.txt`.
+
+The previous hang was `tests/test_reflection_loop.py::test_run_reflection_no_activity`: historical `action_confidence` counted as “today’s activity”, then `llm.ask_with_system` ran against production Ollama with no timeout. Reflection now requires today’s experiences/journal completions and uses a 20s LLM timeout. Tests mock the LLM.
+
+The original 15 CI failures and the later full-suite failures were investigated and fixed (product defects where real; tests only when the pin was obsolete). None were skipped or marked expected.
 
 ## 18. Live smoke test
 
@@ -156,9 +160,8 @@ Staged commit scan: only test placeholder `sk-abcdefghijklmnopqrstuvwxyz`. No va
 
 | Item | Class |
 | --- | --- |
-| Physical reboot not executed | JEFF-ONLY / HARDWARE-ONLY (machine stay-up) |
-| Push to origin not performed | N/A (local commit; no force push) |
-| CI NLU/UI-wiring leftovers | VERIFIED as pre-existing; not launch regressions |
+| Physical reboot | Executed only after this test-fix commit; see FINAL COMPLETION VERIFICATION |
+| Push to origin | Attempted after the test-fix commit; see FINAL COMPLETION VERIFICATION |
 | Manual Lock Aria click not repeated after cutover | N/A — restart already proved lock; button verified after unlock |
 | Owner Residency / M5 | N/A — not started |
 
@@ -170,4 +173,33 @@ Staged commit scan: only test placeholder `sk-abcdefghijklmnopqrstuvwxyz`. No va
 
 ## B. Live deployment
 
-systemd-owned PID 2203482 is the Aria Jeff will use on `http://127.0.0.1:8765/?workspace=1`.
+systemd-owned production Aria on `http://127.0.0.1:8765/?workspace=1`.
+
+---
+
+## FINAL COMPLETION VERIFICATION
+
+**Date:** 2026-08-16
+
+This section supersedes the leftover “15 failed / suite hung / push not performed” notes above.
+
+### Tests
+
+| Suite | Result |
+| --- | --- |
+| Maintained CI pytest (`scripts/ci_check.py pytest`) | **845 passed, 1 skipped, 0 failed** |
+| Full `tests/` | **2000 passed, 61 skipped, 0 failed** in 199.48s |
+| Hang | **None** — suite completed |
+| Unexplained failures | **0** |
+
+### Hang root cause (resolved)
+
+`test_run_reflection_no_activity` treated historical confidence rows as today’s activity and called Ollama with no timeout. Product: today’s experiences/journal only; LLM `timeout=20`. Test mocks the LLM.
+
+### Production commit for this cleanup
+
+Recorded at commit time (this commit). Does not rewrite `9975aad`.
+
+### Reboot / systemd / owner / integrity / push
+
+Filled in after the controlled reboot and push attempt. Production 8765 was left running through the test suite (isolated `data_dir`; live Health/PHR/Journal/vault untouched).

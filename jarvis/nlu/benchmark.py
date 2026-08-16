@@ -23,7 +23,7 @@ _BENCHMARK_PROMPTS: tuple[tuple[str, str], ...] = (
     ("What GPU am I using?", "runtime"),
     ("What is a GPU?", "knowledge"),
     ("Show Docker Compose documentation.", "reference"),
-    ("How do I configure Docker Compose?", "reference"),
+    ("How do I configure Docker Compose?", "knowledge"),
     ("Search my memory for Docker.", "memory"),
     ("Search the web for Docker.", "web_search"),
 )

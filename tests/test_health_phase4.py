@@ -233,10 +233,16 @@ def test_confirmed_record_guard(health_data):
     assert ok["dose"] == "1000"
 
 
-def test_live_write_still_blocked():
+def test_live_write_still_blocked(monkeypatch):
+    from pathlib import Path
+
+    from jarvis.config import _DATA_DEFAULT
     from jarvis.health_product import store
     from jarvis.health_product.trust import HealthWriteBlocked, is_live_record
 
+    live = Path(_DATA_DEFAULT) / "health_product" / "health.db"
+    assert is_live_record(live)
+    monkeypatch.setattr(store, "DB_PATH", live)
     assert is_live_record()
     with pytest.raises(HealthWriteBlocked):
         store.upsert_family_history({"relation": "father", "condition": "SHOULD_NOT_WRITE"})

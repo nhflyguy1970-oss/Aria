@@ -13,15 +13,19 @@ from pathlib import Path
 from typing import Any
 
 from jarvis.automation.execution import FAILED, SKIPPED, normalize_result
-from jarvis.automation.paths import RULES_FILE, ensure_dirs
+from jarvis.automation.paths import ensure_dirs
 from jarvis.automation.registry import get_action, validate_action
 
 log = logging.getLogger("jarvis.automation.engine")
 
 
 def _rules_path() -> Path:
-    ensure_dirs()
-    return RULES_FILE
+    """Resolve rules.json from the current DATA_DIR (tests patch config.DATA_DIR)."""
+    from jarvis.config import DATA_DIR
+
+    root = Path(DATA_DIR) / "automation_product"
+    root.mkdir(parents=True, exist_ok=True)
+    return root / "rules.json"
 
 
 @dataclass
@@ -78,11 +82,19 @@ def _load() -> None:
                     permissions=list(r.get("permissions") or []),
                 )
             )
-        # Drop leaked certification/test fixture rules from the live house store.
+        # Drop leaked certification/test fixture rules from the live house only.
+        # Isolated test stores may use these action names as negative fixtures.
         fixture_actions = {"definitely_missing_action_xyz", "builtin_skip"}
-        cleaned = [r for r in loaded if r.action not in fixture_actions]
+        try:
+            from jarvis.live_data_guard import _LIVE_DATA_ROOT
+
+            resolved = path.resolve()
+            live = resolved == _LIVE_DATA_ROOT or _LIVE_DATA_ROOT in resolved.parents
+        except Exception:
+            live = False
+        cleaned = [r for r in loaded if (not live) or r.action not in fixture_actions]
         _rules = cleaned
-        if len(cleaned) != len(loaded):
+        if live and len(cleaned) != len(loaded):
             try:
                 _save()
             except Exception as exc:

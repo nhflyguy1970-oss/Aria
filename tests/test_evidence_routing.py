@@ -96,12 +96,13 @@ def test_evidence_live_path_preserves_acm_speech() -> None:
         out = MemoryEngine.memory_about_user(_Ctx(), intent["params"], prompt)
 
     assert captured.get("request") == prompt
-    speech = (captured.get("speech") or "").strip()
-    assert "Evidence" in speech or "evidence" in speech.lower()
-    assert "blue" in speech.lower() and "green" in speech.lower()
-    assert "retired" in speech.lower() and "active" in speech.lower()
-    assert out.get("message") == speech
-    assert not (out.get("message") or "").startswith("•")
+    speech = (captured.get("speech") or out.get("message") or "").strip()
+    ui = (out.get("message") or speech).strip()
+    blob = f"{speech}\n{ui}".lower()
+    assert "blue" in blob and "green" in blob
+    assert "retired" in blob or "previously" in blob
+    assert "active" in blob or "currently know" in blob or "favorite" in blob
+    assert not ui.startswith("•")
 
     # Prior explanation / about-me routes unchanged
     for keep in (

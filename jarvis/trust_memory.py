@@ -381,6 +381,15 @@ def trust_context_for_chat(store, message: str, session=None) -> str:
                 "Recent coding failures/fixes:\n" + "\n".join(f"- {e['content']}" for e in failures)
             )
 
+    try:
+        from jarvis.experience_memory import experience_context_for_chat
+
+        exp = experience_context_for_chat(store, message or "")
+        if exp:
+            lines.append(exp)
+    except Exception:
+        pass
+
     return "\n\n".join(lines)
 
 
@@ -444,6 +453,7 @@ def scrub_store(store) -> dict:
 
 def trust_status(store) -> dict:
     strategies = store.list_entries(entry_type="strategy")
+    successes = store.list_entries(entry_type="success")
     failures = store.list_entries(entry_type="failure")
     artifacts = sum(
         1
@@ -465,6 +475,7 @@ def trust_status(store) -> dict:
         pass
     return {
         "strategies": len(strategies),
+        "successes": len(successes),
         "failures": len(failures),
         "artifact_entries_remaining": artifacts,
         "data_layout": _DATA_LAYOUT_HINT,

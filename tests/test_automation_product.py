@@ -200,7 +200,7 @@ def test_engine_writes_single_rules_file(data_dir):
             "enabled": False,
         }
     )
-    assert p.RULES_FILE.is_file()
+    assert eng._rules_path().is_file()
     assert not legacy.exists()
 
 

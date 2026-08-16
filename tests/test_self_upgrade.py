@@ -25,26 +25,27 @@ def test_branch_name():
 
 
 def test_run_pipeline_no_git(assistant, monkeypatch):
-    monkeypatch.setattr("jarvis.self_upgrade.is_repo", lambda: False)
+    monkeypatch.setattr("jarvis.git_util.is_repo", lambda: False)
     result = run_pipeline(assistant, "add ping")
     assert not result["ok"]
     assert "git" in result["message"].lower()
 
 
 def test_run_pipeline_dirty_tree(assistant, monkeypatch, tmp_path: Path):
-    monkeypatch.setattr("jarvis.self_upgrade.is_repo", lambda: True)
-    monkeypatch.setattr("jarvis.self_upgrade.has_local_changes", lambda: True)
+    monkeypatch.setattr("jarvis.git_util.is_repo", lambda: True)
+    monkeypatch.setattr("jarvis.git_util.has_local_changes", lambda: True)
     result = run_pipeline(assistant, "add ping")
     assert not result["ok"]
     assert "uncommitted" in result["message"].lower()
 
 
 def test_run_pipeline_success(assistant, monkeypatch, tmp_path: Path):
-    monkeypatch.setattr("jarvis.self_upgrade.is_repo", lambda: True)
-    monkeypatch.setattr("jarvis.self_upgrade.has_local_changes", lambda: False)
-    monkeypatch.setattr("jarvis.self_upgrade.create_branch", lambda name: f"Created `{name}`")
+    monkeypatch.setattr("jarvis.git_util.is_repo", lambda: True)
+    monkeypatch.setattr("jarvis.git_util.has_local_changes", lambda: False)
+    monkeypatch.setattr("jarvis.git_util.current_branch", lambda: "main")
+    monkeypatch.setattr("jarvis.git_util.create_branch", lambda name: f"Created `{name}`")
     monkeypatch.setattr(
-        "jarvis.self_upgrade.commit",
+        "jarvis.git_util.commit",
         lambda msg, files=None: "[main abc123] upgrade",
     )
     monkeypatch.setattr("jarvis.self_upgrade.verify_proposal", lambda p, base=None: (True, "pytest ok"))

@@ -42,18 +42,16 @@ class TestToolRegistry(unittest.TestCase):
         self.assertTrue(result.get("ok"))
         self.assertEqual(result.get("tool"), "aria_engineering")
 
-    @patch("jarvis.tools.registry._run_cli")
+    @patch("jarvis.tools.runner.run_sync")
     def test_execute_cli_tool(self, mock_run):
         mock_run.return_value = {"ok": True, "stdout": "done", "returncode": 0}
         tool = get_tool("claude_code")
-        if tool and tool.run:
-            with patch.object(tool, "available", return_value=True):
-                with patch.object(tool, "health", return_value=True):
-                    result = execute_tool("claude_code", {"task": "hello"}, memory_sink=False)
-        else:
-            result = {"ok": False}
-        if get_tool("claude_code") and get_tool("claude_code").available():
-            self.assertTrue(result.get("ok") or result.get("error"))
+        if tool is None:
+            self.skipTest("claude_code tool not registered")
+        with patch.object(tool, "available", return_value=True):
+            with patch.object(tool, "health", return_value=True):
+                result = execute_tool("claude_code", {"task": "hello"}, memory_sink=False)
+        self.assertTrue(result.get("ok") or result.get("error"))
 
 
 class TestToolsBehavior(unittest.TestCase):

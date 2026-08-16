@@ -52,7 +52,13 @@ def _mark_run(day: str, count: int) -> None:
 
 
 def _gather_context(*, memory_store, journal, day: str) -> str:
+    """Return today's activity text, or empty when there is nothing to reflect on.
+
+    Historical action-confidence stats are not today's activity — including them
+    used to trigger a live LLM call (and hang) on an idle day.
+    """
     lines: list[str] = [f"Date: {day}"]
+    today_activity = False
 
     try:
         from jarvis.experience_memory import EXPERIENCE_NAMESPACE
@@ -64,6 +70,7 @@ def _gather_context(*, memory_store, journal, day: str) -> str:
             )
             today_rows = [r for r in rows if (r.get("timestamp") or "").startswith(day)]
             if today_rows:
+                today_activity = True
                 lines.append(f"\n{outcome.title()} experiences ({len(today_rows)}):")
                 for r in today_rows[:8]:
                     lines.append(f"- {(r.get('content') or '')[:200]}")
@@ -75,11 +82,15 @@ def _gather_context(*, memory_store, journal, day: str) -> str:
         bullets = page.get("bullets") or []
         done = [b for b in bullets if b.get("type") == "task" and b.get("status") == "done"]
         if done:
+            today_activity = True
             lines.append(f"\nJournal completions ({len(done)}):")
             for b in done[:8]:
                 lines.append(f"- {b.get('content', '')[:120]}")
     except Exception:
         pass
+
+    if not today_activity:
+        return ""
 
     try:
         from jarvis.action_confidence import snapshot
@@ -92,7 +103,7 @@ def _gather_context(*, memory_store, journal, day: str) -> str:
     except Exception:
         pass
 
-    return "\n".join(lines) if len(lines) > 1 else ""
+    return "\n".join(lines)
 
 
 def _generate_strategies(context: str) -> list[str]:
@@ -116,6 +127,7 @@ def _generate_strategies(context: str) -> list[str]:
             prompt,
             role="reflection",
             options={"num_predict": 280},
+            timeout=20,
         )
         rules = [ln.strip().lstrip("-• ").strip() for ln in (raw or "").splitlines() if ln.strip()]
         return [r for r in rules if len(r) > 10][:3]

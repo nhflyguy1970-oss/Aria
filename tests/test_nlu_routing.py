@@ -17,7 +17,7 @@ VALIDATION_CASES = [
     ("What is a GPU?", "knowledge", "chat"),
     ("Explain Docker Compose.", "knowledge", "chat"),
     # Generic how-tos are conversation/knowledge — not local project docs.
-    ("How do I configure Docker Compose?", "chat", "chat"),
+    ("How do I configure Docker Compose?", "knowledge", "chat"),
     ("Search my memory for Docker.", "memory", "memory_search"),
     ("Search the web for Docker Compose.", "web_search", "web_search"),
     ("What day is today?", "chat", "chat"),

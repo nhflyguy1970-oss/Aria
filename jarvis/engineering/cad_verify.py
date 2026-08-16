@@ -22,13 +22,21 @@ def verify_stl(path: str | Path) -> dict[str, Any]:
 
 def _verify_ascii(text: str, p: Path) -> dict[str, Any]:
     facets = len(re.findall(r"\bfacet\b", text, re.I))
+    verts: list[tuple[float, float, float]] = []
+    for m in re.finditer(
+        r"vertex\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)\s+([-+0-9.eE]+)",
+        text,
+    ):
+        verts.append((float(m.group(1)), float(m.group(2)), float(m.group(3))))
+    bbox = _bbox(verts)
+    volume = _volume_mm3(verts) if len(verts) >= 3 else None
     return {
         "ok": facets > 0,
         "format": "ascii",
         "path": str(p),
         "triangles": facets,
-        "bbox_mm": None,
-        "volume_mm3": None,
+        "bbox_mm": bbox,
+        "volume_mm3": volume,
         "manifold_hint": facets > 0,
         "bytes": len(text.encode("utf-8", errors="replace")),
     }

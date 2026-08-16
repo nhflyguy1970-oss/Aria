@@ -119,8 +119,13 @@ def _live_data_guard():
 
 @pytest.fixture(autouse=True)
 def _no_api_key_in_tests(monkeypatch: pytest.MonkeyPatch):
-    """Tests must not inherit JARVIS_API_KEY from the user's jarvis.env."""
+    """Tests must not inherit live-house secrets or launch env."""
     monkeypatch.setenv("JARVIS_API_KEY", "")
+    monkeypatch.delenv("JARVIS_CLOUD_LIVE_PROVIDER", raising=False)
+    monkeypatch.delenv("JARVIS_CLOUD_LIVE_VOICE", raising=False)
+    monkeypatch.delenv("JARVIS_BROWSER_VLM_MODEL", raising=False)
+    monkeypatch.delenv("JARVIS_GRAPH_BACKEND", raising=False)
+    monkeypatch.delenv("JARVIS_MEMGRAPH_AUTOSTART", raising=False)
     monkeypatch.setattr("jarvis.env_loader.load_jarvis_env", lambda *a, **k: None)
     try:
         import jarvis.gui.server as gui_server
@@ -134,6 +139,8 @@ def _no_api_key_in_tests(monkeypatch: pytest.MonkeyPatch):
 def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Point Jarvis data files at a temp directory."""
     tmp_path.mkdir(parents=True, exist_ok=True)
+    # Never inherit the live house or a leftover isol dir.
+    monkeypatch.setenv("JARVIS_DATA_DIR", str(tmp_path))
     journal_dir = tmp_path / "journal"
     journal_dir.mkdir(exist_ok=True)
     patches = {
@@ -151,6 +158,17 @@ def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "jarvis.modules.journal.JOURNAL_DIR": journal_dir,
         "jarvis.modules.journal.JOURNAL_FILE": journal_dir / "bullet_journal.json",
         "jarvis.modules.journal.JOURNAL_PHOTOS_DIR": journal_dir / "photos",
+        "jarvis.planner_store.DB_PATH": tmp_path / "planner.db",
+        "jarvis.active_project.ACTIVE_FILE": tmp_path / "active_project.json",
+        "jarvis.automation.paths.AUTOMATION_ROOT": tmp_path / "automation_product",
+        "jarvis.automation.paths.WORKFLOW_DAGS_DIR": tmp_path / "automation_product" / "workflow_dags",
+        "jarvis.automation.paths.EXPORT_DIR": tmp_path / "automation_product" / "exports",
+        "jarvis.automation.pipelines.storage.WORKFLOW_DAGS_DIR": tmp_path
+        / "automation_product"
+        / "workflow_dags",
+        "jarvis.automation.pipelines.storage.EXPORT_DIR": tmp_path
+        / "automation_product"
+        / "exports",
         "jarvis.coding_tasks.TASKS_FILE": tmp_path / "coding_tasks.json",
         "jarvis.proposal_store.PROPOSALS_FILE": tmp_path / "pending_proposals.json",
         "jarvis.proposal_store.APPLY_UNDO_FILE": tmp_path / "apply_undo_journal.json",
@@ -161,6 +179,8 @@ def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     for target, value in patches.items():
         monkeypatch.setattr(target, value)
     (tmp_path / "uploads").mkdir(exist_ok=True)
+    (tmp_path / "automation_product" / "workflow_dags").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "automation_product" / "exports").mkdir(parents=True, exist_ok=True)
     return tmp_path
 
 

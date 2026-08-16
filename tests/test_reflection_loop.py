@@ -45,8 +45,13 @@ def test_store_strategies(data_dir, monkeypatch):
 
 def test_run_reflection_no_activity(data_dir, monkeypatch, assistant):
     monkeypatch.setenv("JARVIS_REFLECTION_DAILY", "1")
+    monkeypatch.setattr(
+        "jarvis.llm.ask_with_system",
+        lambda *a, **k: (_ for _ in ()).throw(AssertionError("reflection must not call LLM with no activity")),
+    )
     from jarvis.reflection_loop import run_reflection
 
     out = run_reflection(memory_store=assistant.memory, journal=assistant.journal, force=True)
     assert out.get("ok")
-    assert out.get("skipped") or out.get("strategies", 0) >= 0
+    assert out.get("skipped") is True
+    assert out.get("reason") == "no activity"

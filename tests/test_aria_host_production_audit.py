@@ -154,7 +154,8 @@ def test_tools_cwd_must_be_under_project_or_data(tmp_path, monkeypatch):
     from jarvis.tools.runner import build_command
 
     monkeypatch.setattr("shutil.which", lambda _n: "/usr/bin/claude")
-    outside = tmp_path / "outside"
+    # data_dir autouse points DATA_DIR at tmp_path — "outside" must be a sibling.
+    outside = tmp_path.parent / f"aria-cwd-outside-{tmp_path.name}"
     outside.mkdir()
     built = build_command(
         "claude_code",

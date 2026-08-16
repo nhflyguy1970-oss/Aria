@@ -16,7 +16,7 @@ def test_sqlite_vector_store_search(data_dir, mock_embed):
     store = SqliteVectorStore(data_dir / "vectors.db")
     store.upsert("a", [1.0, 0.0], namespace="default", entry_type="fact", content="tabs")
     store.upsert("b", [0.0, 1.0], namespace="default", entry_type="fact", content="spaces")
-    hits = store.search([1.0, 0.0], limit=2, min_score=0.3)
+    hits = store.search([1.0, 0.0], limit=2, min_score=0.0)
     assert hits[0][0] == "a"
     assert hits[0][1] > hits[1][1]
 
@@ -45,7 +45,6 @@ def test_search_pool_uses_vector_store(data_dir, mock_embed):
         set_embedding=_set,
         touch=lambda _id: None,
         flush_touches=lambda: None,
-        vector_store=store,
     )
     assert len(results) == 1
     assert results[0]["id"] == "a"

@@ -217,11 +217,22 @@ def list_teachings(
         entries = [e for e in entries if tag in (e.get("tags") or [])]
     if query:
         q = query.lower()
-        entries = [
-            e for e in entries
+        tokens = [
+            t
+            for t in re.findall(r"[a-z0-9]{3,}", q)
+            if t not in {"should", "would", "could", "what", "when", "where", "this", "that", "with", "from", "have", "use"}
+        ]
+        matched = [
+            e
+            for e in entries
             if q in e.get("content", "").lower()
             or any(q in t.lower() for t in e.get("tags") or [])
+            or (
+                tokens
+                and sum(1 for t in tokens if t in e.get("content", "").lower()) >= min(2, len(tokens))
+            )
         ]
+        entries = matched or entries
         if llm.embed_available():
             hits = memory.search(query, limit=limit, namespace=TEACHING_NAMESPACE)
             seen = {e["id"] for e in entries}

@@ -19,6 +19,7 @@ from jarvis.modules.memory import MemoryStore
 @pytest.fixture
 def store(data_dir, monkeypatch):
     monkeypatch.delenv("JARVIS_GRAPH_BACKEND", raising=False)
+    monkeypatch.setattr("aria_core.acm_bridge.acm_is_authoritative", lambda: False)
     monkeypatch.setattr("jarvis.llm.embed_available", lambda: False)
     monkeypatch.setattr("jarvis.llm.embed_text", lambda t: [0.1, 0.2] if t else [])
     return MemoryStore(path=data_dir / "memory.json")

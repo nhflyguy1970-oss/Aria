@@ -267,6 +267,12 @@ def research_required(message: str) -> bool:
     text = (message or "").strip()
     if not text:
         return False
+    if re.search(
+        r"^\s*(hi|hello|hey|how are you|how's it going|good (?:morning|afternoon|evening))\b",
+        text,
+        re.I,
+    ):
+        return False
     # Local calendar/clock facts are chat — "today" alone is not web research.
     try:
         from jarvis.nlu.mapping import is_calendar_fact_question

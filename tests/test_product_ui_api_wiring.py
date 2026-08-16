@@ -153,7 +153,9 @@ def test_mc_dollar_accepts_hash_ids_and_audit_controls_wired():
     assert 'replace(/^#/, "")' in mc or "replace(/^#/, '')" in mc
     assert "mcRoutingLiveBtn" in mc
     assert "mcRepairBtn" in mc
-    assert "Repair done" in mc
+    assert "AriaGuidedRepair?.scanAndShow" in mc
+    # Honest completion — do not claim "Repair done" after unverified recover.
+    assert "Legacy recover finished" in mc
     html = Path("jarvis/gui/static/index.html").read_text(encoding="utf-8")
     assert 'id="lockFaceBtn"' in html
     assert 'id="routerWarmBtn"' in html
@@ -632,7 +634,9 @@ def test_command_palette_is_wired():
     assert "document.hidden || window.mediaWorkActive" in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "if (document.hidden) return;" in Path("jarvis/gui/static/presence.js").read_text(encoding="utf-8")
     assert "if (document.hidden) return;" in Path("jarvis/gui/static/world_state_hud.js").read_text(encoding="utf-8")
-    assert "document.hidden || window.mediaWorkActive" in Path("jarvis/gui/static/wakeword_chat.js").read_text(encoding="utf-8")
+    ww = Path("jarvis/gui/static/wakeword_chat.js").read_text(encoding="utf-8")
+    assert "document.hidden" in ww
+    assert "mediaWorkActive" in ww
     assert "if (document.hidden) return;" in Path("jarvis/gui/static/modules/jobs.mjs").read_text(encoding="utf-8")
     assert "if (document.hidden) return;" in Path("jarvis/gui/static/dashboard_home.js").read_text(encoding="utf-8") or "if (document.hidden) return;" in Path("jarvis/gui/static/planner.js").read_text(encoding="utf-8")
     assert "if (document.hidden) return;" in Path("jarvis/gui/static/mission_control.js").read_text(encoding="utf-8")

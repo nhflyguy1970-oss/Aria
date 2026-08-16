@@ -38,6 +38,9 @@ PREDICTION_QUERIES = (
     "When SHOULD I work?",
     "What am I likely to do on my birthday next year?",
     "How confident are you that I'll go hiking this weekend?",
+)
+
+WORLD_KNOWLEDGE_NOT_AUTOBIO = (
     "What will happen in the stock market tomorrow?",
     "Will it rain tomorrow?",
 )
@@ -63,6 +66,12 @@ def test_prediction_queries_route_to_memory_authority() -> None:
         route = resolve_memory_route(q)
         assert route is not None, q
         assert route["action"] == "memory_about_user", q
+
+
+def test_world_knowledge_predictions_are_not_autobio() -> None:
+    """Stock/weather forecasts are not Jeff's memory — do not steal them into ACM."""
+    for q in WORLD_KNOWLEDGE_NOT_AUTOBIO:
+        assert not is_semantic_autobio_query(q), q
 
 
 def test_prediction_stabilization_acceptance() -> None:

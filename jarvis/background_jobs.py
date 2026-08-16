@@ -56,7 +56,7 @@ def _submit_action_impl(
 ) -> str:
     from jarvis.coding_jobs import submit
     from jarvis.handlers import ensure_handlers_loaded
-    from jarvis.handlers.registry import call_action, get_spec
+    from jarvis.handlers.registry import get_spec
 
     ensure_handlers_loaded()
     label = ACTION_LABELS.get(action, action.replace("_", " ").title())
@@ -69,7 +69,7 @@ def _submit_action_impl(
         run_params["_cancel_check"] = lambda: _is_cancelled(job_id_ref["id"])
         spec = get_spec(action)
         if spec and spec.handler:
-            return call_action(assistant, action, run_params, message)
+            return spec.handler(assistant, run_params, message)
 
         method_name = _HANDLER_METHODS.get(action)
         if not method_name:

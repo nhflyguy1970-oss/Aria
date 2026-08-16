@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 
@@ -203,10 +205,14 @@ def test_timeline_questions_coach_consult_preview(health_data):
     assert store.list_table("consultations")
 
 
-def test_pytest_cannot_write_live_health_record():
+def test_pytest_cannot_write_live_health_record(monkeypatch):
+    from jarvis.config import _DATA_DEFAULT
     from jarvis.health_product import store
     from jarvis.health_product.trust import HealthWriteBlocked, is_live_record
 
+    live = Path(_DATA_DEFAULT) / "health_product" / "health.db"
+    assert is_live_record(live)
+    monkeypatch.setattr(store, "DB_PATH", live)
     assert is_live_record()
     with pytest.raises(HealthWriteBlocked):
         store.upsert_medication({"name": "SHOULD_NOT_LAND_IN_LIVE_PHR", "status": "current"})

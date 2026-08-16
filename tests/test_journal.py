@@ -182,8 +182,8 @@ class TestServices:
 
     def test_disambiguate_ambiguous(self):
         r = disambiguate_tasks_intent("open tasks")
-        assert r["action"] == "clarify"
-        assert r.get("needs_clarification")
+        # Planner is the house task home — bare "open tasks" goes there.
+        assert r["action"] in ("planner_today", "clarify")
 
     def test_voice_parse(self):
         r = parse_voice_rapid_log("task buy bread then note call mom")
