@@ -7,9 +7,11 @@ import threading
 import time
 from typing import Any
 
-from jarvis.env_loader import PROJECT_ROOT
+from jarvis.config import DATA_DIR
 
-_STORE = PROJECT_ROOT / "data" / "automation" / "platform_metrics.json"
+# DATA_DIR defaults to PROJECT_ROOT / "data", so the production location is
+# unchanged; this only makes the path obey JARVIS_DATA_DIR like every other store.
+_STORE = DATA_DIR / "automation" / "platform_metrics.json"
 _MAX_SAMPLES = 120
 _MIN_INTERVAL_S = 30.0
 _LOCK = threading.Lock()
