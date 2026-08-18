@@ -185,6 +185,20 @@ def create(
     return mission_id
 
 
+def set_steps(mission_id: str, steps: list[dict[str, Any]]) -> None:
+    """Replace a mission's steps.
+
+    Needed because a step sometimes has to carry the id of the mission that
+    owns it, which only exists once the mission has been created.
+    """
+    _init_db()
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE missions SET steps=?, total_steps=?, updated_at=? WHERE id=?",
+            (json.dumps(steps), len(steps), time.time(), mission_id),
+        )
+
+
 def get(mission_id: str) -> dict[str, Any] | None:
     _init_db()
     with _conn() as conn:

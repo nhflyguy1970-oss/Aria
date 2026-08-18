@@ -1534,3 +1534,70 @@ def test_every_skill_action_is_reachable_by_an_agent(data_dir: Path):
         assert any(agents.get(a.id).permits(action) for a in agent_defs.BUILTIN_AGENTS), (
             f"registered but unreachable: {action}"
         )
+
+
+def test_queued_mission_steps_carry_the_mission_id(data_dir: Path):
+    """Regression, found live: steps had no mission_id.
+
+    Without it the running skill gets no cancel_check, so a cancellation
+    request could never reach a skill mid-flight, and the invocation record
+    was never linked back to its mission.
+    """
+    from jarvis.missions import store as mstore
+
+    reg(make("linked_skill"), lambda ctx, p: {"done": True})
+    out = _call("skill_invoke", {"skill_id": "linked_skill", "inputs": {}, "mission": True})
+    mission_id = out["mission_id"]
+    mission = mstore.get(mission_id)
+    assert all(s["params"]["mission_id"] == mission_id for s in mission["steps"])
+
+
+def test_invocation_is_linked_to_its_mission(data_dir: Path):
+    from jarvis import missions
+
+    reg(make("linked_two"), lambda ctx, p: {"done": True})
+    out = _call("skill_invoke", {"skill_id": "linked_two", "inputs": {}, "mission": True})
+    missions.run(out["mission_id"], missions.ActionStepRunner(None))
+    record = skills.history(skill_id="linked_two")[0]
+    assert record["mission_id"] == out["mission_id"]
+    assert record["status"] == skills.SUCCESS
+
+
+def test_cancellation_reaches_a_skill_running_under_a_mission(data_dir: Path):
+    """mission cancel → skill cancel, with no explicit plumbing by the caller."""
+    from jarvis import missions
+    from jarvis.missions import store as mstore
+
+    reg(make("mid_flight"), lambda ctx, p: {"ran": True})
+    out = _call("skill_invoke", {"skill_id": "mid_flight", "inputs": {}, "mission": True})
+    mission_id = out["mission_id"]
+    assert _call("skill_cancel", {"mission_id": mission_id})["ok"] is True
+
+    step = mstore.get(mission_id)["steps"][0]
+    assert step["params"]["mission_id"] == mission_id
+
+    # Run the step exactly as the worker would: the mission id is already in
+    # the stored params, so the skill sees the cancellation without the caller
+    # plumbing anything through.
+    cancelled = _call("skill_step", step["params"])
+    assert cancelled["ok"] is False
+    assert cancelled["envelope"]["status"] == skills.CANCELLED
+
+    # The same step without a mission id has nothing to observe, and runs.
+    detached = dict(step["params"])
+    detached.pop("mission_id")
+    assert _call("skill_step", detached)["ok"] is True
+    missions.cancel(mission_id)
+
+
+def test_skill_cancel_by_invocation_id_works_end_to_end(data_dir: Path):
+    from jarvis import missions
+
+    reg(make("traced_skill"), lambda ctx, p: {"done": True})
+    out = _call("skill_invoke", {"skill_id": "traced_skill", "inputs": {}, "mission": True})
+    missions.run(out["mission_id"], missions.ActionStepRunner(None))
+    record = skills.history(skill_id="traced_skill")[0]
+    # The mission has finished, so cancelling it is refused honestly.
+    cancelled = _call("skill_cancel", {"invocation_id": record["id"]})
+    assert cancelled["ok"] is False
+    assert "already finished" in cancelled["message"]

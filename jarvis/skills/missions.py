@@ -70,6 +70,15 @@ def create_skill_mission(
 
     defn = registry.resolve(skill_id, version, strategy="compatible" if version else "latest")
     steps = plan_steps(skill_id, inputs, version=version, requester=requester)
-    return missions.create_mission(
+    mission_id = missions.create_mission(
         objective or f"Run skill {defn.ref()}", steps=steps, kind="skill"
     )
+    # Each step has to know which mission owns it: that is how the running
+    # skill sees a cancellation request mid-flight, and how an invocation is
+    # linked back to its mission afterwards. The id only exists now.
+    from jarvis.missions import store as mission_store
+
+    for step in steps:
+        step["params"]["mission_id"] = mission_id
+    mission_store.set_steps(mission_id, steps)
+    return mission_id
