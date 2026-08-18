@@ -530,6 +530,63 @@ def register_routes(app, assistant):
 
     register_product("activity_inbox", register_activity_routes, app, assistant)
 
+    @app.get("/api/browser-use/capabilities")
+    def browser_use_caps():
+        from jarvis import computer_use as cu
+
+        return {
+            "ok": True,
+            "read": list(cu.READ_ACTIONS),
+            "interact": list(cu.INTERACT_ACTIONS),
+            "high_impact": list(cu.HIGH_IMPACT_ACTIONS),
+            "limits": dict(cu.LIMITS),
+        }
+
+    @app.get("/api/browser-use/sessions")
+    def browser_use_sessions_list(include_closed: str = ""):
+        from jarvis import computer_use as cu
+
+        return {"ok": True, "sessions": cu.list_sessions(include_closed=bool(include_closed))}
+
+    @app.post("/api/browser-use/sessions")
+    def browser_use_session_open(owner: str = Form(""), label: str = Form("")):
+        from jarvis import computer_use as cu
+
+        return {"ok": True, "session": cu.open_session(owner=owner, label=label)}
+
+    @app.post("/api/browser-use/sessions/{session_id}/act")
+    def browser_use_session_act(
+        session_id: str,
+        action: str = Form(...),
+        params: str = Form(""),
+        agent_id: str = Form(""),
+        allow_local: str = Form(""),
+    ):
+        from jarvis import computer_use as cu
+
+        try:
+            action_params = json.loads(params) if params.strip() else {}
+        except ValueError:
+            return {"ok": False, "message": "params must be a JSON object"}
+        if not isinstance(action_params, dict):
+            return {"ok": False, "message": "params must be a JSON object"}
+        return cu.perform(
+            session_id, action, action_params,
+            agent_id=agent_id, allow_local=bool(allow_local.strip()),
+        )
+
+    @app.get("/api/browser-use/artifacts")
+    def browser_use_artifacts_usage():
+        from jarvis import computer_use as cu
+
+        return {"ok": True, "usage": cu.usage()}
+
+    @app.post("/api/browser-use/artifacts/prune")
+    def browser_use_artifacts_prune():
+        from jarvis import computer_use as cu
+
+        return {"ok": True, "pruned": cu.prune_screenshots(), "usage": cu.usage()}
+
     @app.get("/api/evidence/claims")
     def evidence_claims_list(context_id: str = ""):
         from jarvis import evidence as ev

@@ -133,6 +133,13 @@ EVIDENCE_READ = (
 EVIDENCE_WRITE = ("evidence_source_add", "evidence_add", "evidence_claim_add", "evidence_link")
 EVIDENCE_VERIFY = ("evidence_verify",)
 
+# Browser authority is granted by impact class, least privilege first. No
+# specialist gets high-impact browser actions by default — those cause
+# real-world side effects and must be granted deliberately.
+BROWSER_READ = ("browser_use_read",)
+BROWSER_INTERACT = ("browser_use_interact",)
+BROWSER_HIGH_IMPACT = ("browser_use_high_impact",)
+
 _DESTRUCTIVE = (
     "aria_self_fix",
     "self_upgrade_run",
@@ -173,8 +180,10 @@ RESEARCH_SPECIALIST = AgentDefinition(
         *EVIDENCE_READ,
         *EVIDENCE_WRITE,
         *EVIDENCE_VERIFY,
+        *BROWSER_READ,
+        *BROWSER_INTERACT,
     ),
-    denied_actions=_DESTRUCTIVE,
+    denied_actions=_DESTRUCTIVE + BROWSER_HIGH_IMPACT,
     preferred_model_role="general",
     model_requirements=("long_context",),
     input_contract=("task",),
@@ -211,7 +220,10 @@ CODING_SPECIALIST = AgentDefinition(
     denied_actions=_DESTRUCTIVE
     + ("research_create", "research_run")
     + EVIDENCE_WRITE
-    + EVIDENCE_VERIFY,
+    + EVIDENCE_VERIFY
+    + BROWSER_READ
+    + BROWSER_INTERACT
+    + BROWSER_HIGH_IMPACT,
     preferred_model_role="coder",
     model_requirements=("code",),
     metadata={"catalog_id": "coder"},
@@ -243,8 +255,13 @@ ANALYSIS_SPECIALIST = AgentDefinition(
         DELEGATE_ACTION,
         *EVIDENCE_READ,
         *EVIDENCE_VERIFY,
+        *BROWSER_READ,
     ),
-    denied_actions=_DESTRUCTIVE + ("research_create", "run_tests") + EVIDENCE_WRITE,
+    denied_actions=_DESTRUCTIVE
+    + ("research_create", "run_tests")
+    + EVIDENCE_WRITE
+    + BROWSER_INTERACT
+    + BROWSER_HIGH_IMPACT,
     preferred_model_role="general",
     metadata={"catalog_id": "synthesizer"},
 )
@@ -272,7 +289,7 @@ GENERAL_SPECIALIST = AgentDefinition(
         DELEGATE_ACTION,
         *EVIDENCE_READ,
     ),
-    denied_actions=_DESTRUCTIVE,
+    denied_actions=_DESTRUCTIVE + BROWSER_READ + BROWSER_INTERACT + BROWSER_HIGH_IMPACT,
     preferred_model_role="general",
     metadata={"fallback": True},
 )
