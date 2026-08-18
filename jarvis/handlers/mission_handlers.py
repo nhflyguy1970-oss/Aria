@@ -47,6 +47,9 @@ def mission_create(assistant, params: dict, message: str) -> dict:
     mission_id = missions.create_mission(
         objective, steps=steps, kind=(params.get("kind") or "generic")
     )
+    # Nudge an idle background worker so the mission starts without waiting
+    # for the next poll, and without the user calling mission_run.
+    missions.worker.wake()
     return ok(
         f"Created mission `{mission_id}` — {objective}", module="general", mission_id=mission_id
     )
@@ -146,3 +149,29 @@ def mission_recover(assistant, params: dict, message: str) -> dict:
         module="general",
         recovered=recovered,
     )
+
+
+@register_action(
+    "mission_worker_status",
+    module="general",
+    description="Show the background mission worker's state",
+    info=True,
+)
+def mission_worker_status(assistant, params: dict, message: str) -> dict:
+    from jarvis.missions import worker
+
+    snapshot = worker.status()
+    lines = [
+        f"**Mission worker:** {'running' if snapshot['running'] else 'stopped'}",
+        f"Pending: {snapshot['pending']}  ·  Active: {snapshot['active']}"
+        f"  ·  Completed this run: {snapshot['completed']}",
+    ]
+    if snapshot.get("current_mission"):
+        lines.append(f"Executing: `{snapshot['current_mission']}`")
+    if snapshot.get("pending_ids"):
+        lines.append("Queued: " + ", ".join(f"`{m}`" for m in snapshot["pending_ids"]))
+    if snapshot.get("recovered"):
+        lines.append(f"Recovered at startup: {len(snapshot['recovered'])}")
+    if snapshot.get("last_error"):
+        lines.append(f"Last error: {snapshot['last_error']}")
+    return ok("\n".join(lines), module="general", worker=snapshot)

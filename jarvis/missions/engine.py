@@ -80,6 +80,7 @@ def run(
     *,
     assistant: Any = None,
     max_steps: int | None = None,
+    should_continue: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
     """Execute (or resume) a mission to completion, cancellation or failure.
 
@@ -115,6 +116,12 @@ def run(
                 store.transition(mission_id, store.PAUSED, detail="step budget exhausted")
                 return store.get(mission_id)  # type: ignore[return-value]
 
+            # Cooperative stop (worker shutdown): yield at a step boundary with
+            # every completed step already checkpointed.
+            if should_continue is not None and not should_continue():
+                store.transition(mission_id, store.PAUSED, detail="stopped at step boundary")
+                return store.get(mission_id)  # type: ignore[return-value]
+
             # Re-read from disk: another process may have requested cancellation.
             if store.cancel_requested(mission_id):
                 raise MissionCancelled()
@@ -147,10 +154,21 @@ def pause(mission_id: str) -> dict[str, Any]:
 
 
 def resume(
-    mission_id: str, runner: StepRunner | StepFn | None = None, *, assistant: Any = None
+    mission_id: str,
+    runner: StepRunner | StepFn | None = None,
+    *,
+    assistant: Any = None,
+    max_steps: int | None = None,
+    should_continue: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
     """Resume a paused or interrupted mission from its latest checkpoint."""
-    return run(mission_id, runner, assistant=assistant)
+    return run(
+        mission_id,
+        runner,
+        assistant=assistant,
+        max_steps=max_steps,
+        should_continue=should_continue,
+    )
 
 
 def cancel(mission_id: str) -> bool:

@@ -348,8 +348,11 @@ def test_mission_survives_module_reload(data_dir: Path):
     mission_id = missions.create_mission("reload me", steps=_steps(2))
     missions.run(mission_id, _counting_runner([]), max_steps=1)
 
+    # Only the store is reloaded. Reloading the engine would rebind its
+    # exception classes, so a RetryableError raised by an already-imported
+    # caller would no longer match the reloaded engine's except clause and
+    # would be misclassified as terminal in every later test.
     importlib.reload(store)
-    importlib.reload(sys.modules["jarvis.missions.engine"])
 
     reloaded = store.get(mission_id)
     assert reloaded["state"] == store.PAUSED

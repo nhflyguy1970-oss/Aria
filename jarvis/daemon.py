@@ -485,6 +485,12 @@ def run_tray(uncensored: bool = False) -> None:
             except Exception:
                 pass
             try:
+                from jarvis.missions import worker as mission_worker
+
+                mission_worker.stop()
+            except Exception:
+                pass
+            try:
                 from jarvis.audio_wakeword import stop_listener
 
                 stop_listener()
@@ -504,6 +510,14 @@ def run_tray(uncensored: bool = False) -> None:
         from jarvis.proactive_scheduler import start as start_scheduler
 
         start_scheduler()
+
+        try:
+            from jarvis.assistant_instance import get_assistant_or_none
+            from jarvis.missions import worker as mission_worker
+
+            mission_worker.start(assistant=get_assistant_or_none())
+        except Exception as exc:
+            logger.warning("Mission worker start failed: %s", exc)
 
         try:
             run_tray_app(

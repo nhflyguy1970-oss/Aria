@@ -38,7 +38,7 @@ TERMINAL = "terminal"
 _ALLOWED: dict[str, tuple[str, ...]] = {
     PENDING: (RUNNING, CANCELLED, FAILED),
     RUNNING: (PAUSED, COMPLETED, FAILED, CANCELLED),
-    PAUSED: (RUNNING, CANCELLED, FAILED),
+    PAUSED: (PENDING, RUNNING, CANCELLED, FAILED),
     COMPLETED: (),
     FAILED: (),
     CANCELLED: (),
@@ -51,16 +51,33 @@ class MissionStateError(RuntimeError):
 
 def _conn() -> sqlite3.Connection:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, timeout=10.0)
+    conn = sqlite3.connect(DB_PATH, timeout=30.0)
     conn.row_factory = sqlite3.Row
-    # WAL keeps a reader (status query) from blocking the executing process.
-    conn.execute("PRAGMA journal_mode=WAL")
+    # Wait rather than fail when the background worker holds a write lock.
+    conn.execute("PRAGMA busy_timeout=30000")
     conn.execute("PRAGMA synchronous=FULL")
     return conn
 
 
 def _init_db() -> None:
     with _conn() as conn:
+        # Cheap fast path: the schema is created once, but the file can be
+        # removed between test cases, so this is checked rather than cached.
+        row = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='missions'"
+        ).fetchone()
+        if row:
+            # Existing database: only ensure Milestone 1 schemas gain the retry
+            # columns. Cheap enough to check on every call.
+            existing = {r["name"] for r in conn.execute("PRAGMA table_info(missions)")}
+            if "attempts" not in existing:
+                conn.execute("ALTER TABLE missions ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0")
+            if "next_attempt_at" not in existing:
+                conn.execute("ALTER TABLE missions ADD COLUMN next_attempt_at REAL")
+            return
+        # WAL lets a status reader run while the worker writes. Setting it takes
+        # an exclusive lock, so it happens only at creation, never per connection.
+        conn.execute("PRAGMA journal_mode=WAL")
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS missions (
@@ -78,7 +95,9 @@ def _init_db() -> None:
                 created_at REAL NOT NULL,
                 updated_at REAL NOT NULL,
                 started_at REAL,
-                finished_at REAL
+                finished_at REAL,
+                attempts INTEGER NOT NULL DEFAULT 0,
+                next_attempt_at REAL
             );
             CREATE TABLE IF NOT EXISTS checkpoints (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -97,6 +116,7 @@ def _init_db() -> None:
             );
             CREATE INDEX IF NOT EXISTS idx_ckpt_mission ON checkpoints(mission_id, seq);
             CREATE INDEX IF NOT EXISTS idx_evt_mission ON mission_events(mission_id, id);
+            CREATE INDEX IF NOT EXISTS idx_missions_queue ON missions(state, created_at);
             """
         )
 
@@ -320,3 +340,121 @@ def recover_interrupted() -> list[str]:
         transition(mission_id, PAUSED, detail="interrupted; recovered for resume")
         recovered.append(mission_id)
     return recovered
+
+
+# --------------------------------------------------------------------------
+# Durable queue + retry scheduling (Milestone 2)
+#
+# The queue is the missions table itself — no second store. "Runnable" means
+# PENDING; ordering is by created_at so the oldest pending mission goes first.
+# A mission PAUSED by a user is deliberately not runnable: only an explicit
+# transition back to PENDING makes it eligible again.
+# --------------------------------------------------------------------------
+
+MAX_ATTEMPTS = 5
+BACKOFF_BASE_S = 2.0
+BACKOFF_CAP_S = 300.0
+
+
+def backoff_seconds(attempts: int) -> float:
+    """Exponential backoff, capped, so retryable work can never spin."""
+    return min(BACKOFF_BASE_S * (2 ** max(0, attempts - 1)), BACKOFF_CAP_S)
+
+
+def next_pending() -> dict[str, Any] | None:
+    """Oldest runnable mission, or None. Durable: survives any restart."""
+    _init_db()
+    with _conn() as conn:
+        row = conn.execute(
+            """SELECT * FROM missions
+               WHERE state=? AND cancel_requested=0
+               ORDER BY created_at ASC LIMIT 1""",
+            (PENDING,),
+        ).fetchone()
+    return _row_to_mission(row) if row else None
+
+
+def pending_count() -> int:
+    _init_db()
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM missions WHERE state=?", (PENDING,)
+        ).fetchone()
+    return int(row["n"])
+
+
+def active_count() -> int:
+    _init_db()
+    with _conn() as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS n FROM missions WHERE state=?", (RUNNING,)
+        ).fetchone()
+    return int(row["n"])
+
+
+def schedule_retry(mission_id: str) -> float | None:
+    """Record an attempt and arm a backoff window.
+
+    Returns the epoch time the mission becomes eligible again, or None when the
+    attempt budget is exhausted (the mission is then made terminally failed).
+    """
+    mission = get(mission_id)
+    if not mission:
+        return None
+    attempts = int(mission.get("attempts") or 0) + 1
+    if attempts >= MAX_ATTEMPTS:
+        with _conn() as conn:
+            conn.execute(
+                "UPDATE missions SET attempts=?, next_attempt_at=NULL, updated_at=? WHERE id=?",
+                (attempts, time.time(), mission_id),
+            )
+        record_event(mission_id, "retry:exhausted", f"after {attempts} attempts")
+        if mission["state"] not in TERMINAL_STATES:
+            with _conn() as conn:
+                conn.execute("UPDATE missions SET error_kind=? WHERE id=?", (TERMINAL, mission_id))
+            transition(mission_id, FAILED, detail="retry budget exhausted")
+        return None
+
+    due = time.time() + backoff_seconds(attempts)
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE missions SET attempts=?, next_attempt_at=?, updated_at=? WHERE id=?",
+            (attempts, due, time.time(), mission_id),
+        )
+    record_event(
+        mission_id, "retry:scheduled", f"attempt {attempts} due in {due - time.time():.1f}s"
+    )
+    return due
+
+
+def due_retries(now: float | None = None) -> list[dict[str, Any]]:
+    """Retryable missions whose backoff window has elapsed.
+
+    Only missions parked by a *retryable* failure qualify; a mission paused by
+    a user has no error_kind and is never picked up automatically.
+    """
+    _init_db()
+    now = time.time() if now is None else now
+    with _conn() as conn:
+        rows = conn.execute(
+            """SELECT * FROM missions
+               WHERE state=? AND error_kind=? AND cancel_requested=0
+                 AND next_attempt_at IS NOT NULL AND next_attempt_at <= ?
+               ORDER BY next_attempt_at ASC""",
+            (PAUSED, RETRYABLE, now),
+        ).fetchall()
+    return [_row_to_mission(r) for r in rows]
+
+
+def make_runnable(mission_id: str, *, detail: str = "requeued") -> dict[str, Any]:
+    """Return a paused/yielded mission to the queue."""
+    return transition(mission_id, PENDING, detail=detail)
+
+
+def clear_retry_state(mission_id: str) -> None:
+    """Forget backoff bookkeeping once a mission makes progress again."""
+    with _conn() as conn:
+        conn.execute(
+            "UPDATE missions SET next_attempt_at=NULL, updated_at=? WHERE id=?",
+            (time.time(), mission_id),
+        )

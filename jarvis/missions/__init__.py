@@ -5,6 +5,7 @@ and cancel. Storage lives under DATA_DIR like every other ARIA store, so it
 follows the existing data-root and test-isolation conventions automatically.
 """
 
+from jarvis.missions import worker
 from jarvis.missions.engine import (
     ActionStepRunner,
     MissionCancelled,
@@ -36,6 +37,7 @@ from jarvis.missions.store import (
 
 __all__ = [
     "ActionStepRunner",
+    "worker",
     "CANCELLED",
     "COMPLETED",
     "FAILED",
