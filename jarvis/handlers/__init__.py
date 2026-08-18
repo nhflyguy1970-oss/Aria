@@ -29,6 +29,7 @@ def ensure_handlers_loaded() -> None:
         research_handlers,
         self_upgrade_handlers,
         skill_handlers,
+        skills_engine_handlers,
         specialists_handlers,
         workflow_handlers,
     )

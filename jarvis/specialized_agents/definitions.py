@@ -156,6 +156,13 @@ CODING_DEV = (
 )
 CODING_HIGH_IMPACT = ("dev_force_push", "dev_history_rewrite", "dev_deploy")
 
+# Skills layer. Holding these lets an agent reach the skills system at all; what
+# it can actually run is still decided by the underlying action permissions
+# above, which stay authoritative. High-impact skill authority and the shell
+# playbook runner are denied to every built-in agent.
+SKILL_USE = ("skill_discover", "skill_describe", "skill_invoke", "skill_history", "skill_catalog")
+SKILL_HIGH_IMPACT = ("skill_invoke_high_impact", "skill_run")
+
 _DESTRUCTIVE = (
     "aria_self_fix",
     "self_upgrade_run",
@@ -198,8 +205,13 @@ RESEARCH_SPECIALIST = AgentDefinition(
         *EVIDENCE_VERIFY,
         *BROWSER_READ,
         *BROWSER_INTERACT,
+        *SKILL_USE,
     ),
-    denied_actions=_DESTRUCTIVE + BROWSER_HIGH_IMPACT + CODING_DEV + CODING_HIGH_IMPACT,
+    denied_actions=_DESTRUCTIVE
+    + BROWSER_HIGH_IMPACT
+    + CODING_DEV
+    + CODING_HIGH_IMPACT
+    + SKILL_HIGH_IMPACT,
     preferred_model_role="general",
     model_requirements=("long_context",),
     input_contract=("task",),
@@ -233,8 +245,10 @@ CODING_SPECIALIST = AgentDefinition(
         "code_search",
         "mission_status",
         *CODING_DEV,
+        *SKILL_USE,
     ),
     denied_actions=_DESTRUCTIVE
+    + SKILL_HIGH_IMPACT
     + ("research_create", "research_run")
     + EVIDENCE_READ
     + EVIDENCE_WRITE
@@ -275,6 +289,7 @@ ANALYSIS_SPECIALIST = AgentDefinition(
         *EVIDENCE_READ,
         *EVIDENCE_VERIFY,
         *BROWSER_READ,
+        *SKILL_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + ("research_create", "run_tests")
@@ -282,7 +297,8 @@ ANALYSIS_SPECIALIST = AgentDefinition(
     + BROWSER_INTERACT
     + BROWSER_HIGH_IMPACT
     + CODING_DEV
-    + CODING_HIGH_IMPACT,
+    + CODING_HIGH_IMPACT
+    + SKILL_HIGH_IMPACT,
     preferred_model_role="general",
     metadata={"catalog_id": "synthesizer"},
 )
@@ -309,8 +325,10 @@ GENERAL_SPECIALIST = AgentDefinition(
         "agent_list",
         DELEGATE_ACTION,
         *EVIDENCE_READ,
+        *SKILL_USE,
     ),
     denied_actions=_DESTRUCTIVE
+    + SKILL_HIGH_IMPACT
     + BROWSER_READ
     + BROWSER_INTERACT
     + BROWSER_HIGH_IMPACT

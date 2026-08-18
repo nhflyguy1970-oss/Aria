@@ -14,6 +14,8 @@ from typing import Any
 from jarvis.specialized_agents import registry
 from jarvis.specialized_agents.definitions import AgentDefinition
 
+SKILL_ACTIONS = frozenset({"skill_invoke", "skill_step"})
+
 log = logging.getLogger("jarvis.specialized_agents")
 
 
@@ -59,7 +61,14 @@ def call_action(
     from jarvis.handlers.registry import call_action as registry_call
 
     ensure_handlers_loaded()
-    return registry_call(assistant, action, dict(params or {}), message or action)
+    payload = dict(params or {})
+    if action in SKILL_ACTIONS:
+        # The skills layer decides authority from the requester, so the agent's
+        # identity is stamped here rather than trusted from the payload. An
+        # agent must not be able to ask for a skill as somebody else — or as
+        # nobody, which would read as unrestricted operator context.
+        payload["requester"] = agent.id
+    return registry_call(assistant, action, payload, message or action)
 
 
 def invoke(
