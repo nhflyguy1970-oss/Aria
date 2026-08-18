@@ -243,3 +243,34 @@ def skill_catalog(assistant, params: dict, message: str) -> dict:
         for r in rows
     ]
     return ok("\n".join(lines) or "No skills registered.", module="general", skills=rows)
+
+
+@register_action("skill_cancel", module="general", description="Cancel a running skill mission")
+def skill_cancel(assistant, params: dict, message: str) -> dict:
+    """Stop a skill that was queued with mission=true.
+
+    The counterpart to queuing: whoever may start a durable skill must be able
+    to stop it, or a long-running skill can never be called off. Cancellation
+    itself is the mission engine's, not a second mechanism — the running
+    skill_step observes it at its next checkpoint and reports cancelled.
+    """
+    from jarvis import missions
+
+    mission_id = (params.get("mission_id") or "").strip()
+    invocation_id = (params.get("invocation_id") or "").strip()
+    if not mission_id and invocation_id:
+        record = _skills().status_of(invocation_id)
+        if not record:
+            return err(f"No such invocation: {invocation_id}", module="general")
+        mission_id = record.get("mission_id") or ""
+    if not mission_id:
+        return err("skill_cancel needs mission_id or invocation_id.", module="general")
+    if not missions.get(mission_id):
+        return err(f"No such mission: {mission_id}", module="general")
+    if not missions.cancel(mission_id):
+        return err(f"Mission `{mission_id}` is already finished.", module="general")
+    return ok(
+        f"Cancellation requested for skill mission `{mission_id}`.",
+        module="general",
+        mission_id=mission_id,
+    )

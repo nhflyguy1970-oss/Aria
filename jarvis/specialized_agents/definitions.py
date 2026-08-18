@@ -160,7 +160,14 @@ CODING_HIGH_IMPACT = ("dev_force_push", "dev_history_rewrite", "dev_deploy")
 # it can actually run is still decided by the underlying action permissions
 # above, which stay authoritative. High-impact skill authority and the shell
 # playbook runner are denied to every built-in agent.
-SKILL_USE = ("skill_discover", "skill_describe", "skill_invoke", "skill_history", "skill_catalog")
+SKILL_USE = (
+    "skill_discover",
+    "skill_describe",
+    "skill_invoke",
+    "skill_cancel",
+    "skill_history",
+    "skill_catalog",
+)
 SKILL_HIGH_IMPACT = ("skill_invoke_high_impact", "skill_run")
 
 _DESTRUCTIVE = (

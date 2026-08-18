@@ -1473,3 +1473,64 @@ def test_queued_mission_rejects_an_unknown_skill(data_dir: Path):
     out = _call("skill_invoke", {"skill_id": "not_a_real_skill", "inputs": {}, "mission": True})
     assert out["ok"] is False
     assert out["error_kind"] == "not_found"
+
+
+def test_queued_skill_mission_can_be_cancelled(data_dir: Path):
+    """Regression: mission=true had no counterpart, so a queued skill could
+    be started but never stopped by the same caller."""
+    from jarvis import missions
+    from jarvis.missions import store as mstore
+
+    reg(make("stoppable"), lambda ctx, p: {"done": True})
+    queued = _call("skill_invoke", {"skill_id": "stoppable", "inputs": {}, "mission": True})
+    mission_id = queued["mission_id"]
+
+    out = _call("skill_cancel", {"mission_id": mission_id})
+    assert out["ok"] is True
+    assert mstore.cancel_requested(mission_id) is True
+
+    # The running step observes it and must not report success.
+    step = _call("skill_step", {"skill_id": "stoppable", "mission_id": mission_id})
+    assert step["ok"] is False
+    assert step["envelope"]["status"] == skills.CANCELLED
+    missions.cancel(mission_id)
+
+
+def test_skill_cancel_resolves_a_mission_from_an_invocation(data_dir: Path):
+    reg(make("traceable"), lambda ctx, p: {"done": True})
+    queued = _call("skill_invoke", {"skill_id": "traceable", "inputs": {}, "mission": True})
+    mission_id = queued["mission_id"]
+    _call("skill_step", {"skill_id": "traceable", "mission_id": mission_id})
+    invocation = skills.history(skill_id="traceable")[0]
+    assert invocation["mission_id"] == mission_id
+    out = _call("skill_cancel", {"invocation_id": invocation["id"]})
+    assert out["ok"] is True
+
+
+def test_skill_cancel_rejects_unknown_targets(data_dir: Path):
+    assert _call("skill_cancel", {})["ok"] is False
+    assert _call("skill_cancel", {"mission_id": "nope"})["ok"] is False
+
+
+def test_every_skill_action_is_reachable_by_an_agent(data_dir: Path):
+    """A registered skill action that no agent may call is dead in production."""
+    from jarvis.handlers import ensure_handlers_loaded
+    from jarvis.handlers.registry import all_actions
+    from jarvis.specialized_agents import definitions as agent_defs
+
+    ensure_handlers_loaded()
+    engine_actions = {
+        "skill_discover",
+        "skill_describe",
+        "skill_invoke",
+        "skill_cancel",
+        "skill_history",
+        "skill_catalog",
+    }
+    registered = {a["action"] for a in all_actions()}
+    assert engine_actions <= registered
+    gated = set(agent_defs.SKILL_HIGH_IMPACT)
+    for action in engine_actions - gated:
+        assert any(agents.get(a.id).permits(action) for a in agent_defs.BUILTIN_AGENTS), (
+            f"registered but unreachable: {action}"
+        )
