@@ -123,6 +123,16 @@ async def lifespan(app: FastAPI):
 
     threading.Thread(target=_warm_flytying_index, daemon=True, name="flytying-warm").start()
 
+    try:
+        # Background mission execution. Off unless JARVIS_MISSION_WORKER=1, so a
+        # deployment cannot silently activate it.
+        from jarvis.missions import worker as mission_worker
+
+        if mission_worker.start(assistant=assistant):
+            _log.getLogger("jarvis.gui.server").info("Mission worker started")
+    except Exception:
+        _log.getLogger("jarvis.gui.server").exception("Mission worker start FAILED")
+
     yield
     # C5: ordered shutdown — each step isolated and logged (never silent pass).
     import logging
@@ -148,6 +158,13 @@ async def lifespan(app: FastAPI):
                 _shutdown_log.info("Shutdown: ACM durable flush complete")
     except Exception:
         _shutdown_log.exception("Shutdown: ACM flush FAILED")
+    try:
+        from jarvis.missions import worker as mission_worker
+
+        mission_worker.stop()
+        _shutdown_log.info("Shutdown: mission worker stopped")
+    except Exception:
+        _shutdown_log.exception("Shutdown: mission worker stop FAILED")
     try:
         from jarvis.media_jobs import has_active_work
 

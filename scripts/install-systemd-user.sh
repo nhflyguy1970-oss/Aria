@@ -20,6 +20,9 @@ Environment=JARVIS_DATA_DIR=${JARVIS_ROOT}/data
 Environment=VIRTUAL_ENV=${JARVIS_ROOT}/venv
 Environment=JARVIS_LAUNCH_OWNER=systemd
 Environment=JARVIS_NO_BROWSER=1
+# Milestone 3 promotion: the background mission worker ships disabled in code
+# (JARVIS_MISSION_WORKER defaults to 0) and is switched on explicitly here.
+Environment=JARVIS_MISSION_WORKER=1
 # Secrets stay in data/jarvis.env and the Owner Vault — never Environment= keys.
 ExecStart=${JARVIS_ROOT}/scripts/aria-serve.sh
 Restart=on-failure
