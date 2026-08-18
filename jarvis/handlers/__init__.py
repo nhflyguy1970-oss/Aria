@@ -22,6 +22,7 @@ def ensure_handlers_loaded() -> None:
         automation_handlers,
         collaboration_handlers,
         computer_use_handlers,
+        dev_agent_handlers,
         evidence_handlers,
         knowledge_handlers,
         mission_handlers,

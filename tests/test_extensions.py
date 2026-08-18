@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import subprocess
 
-import pytest
+from jarvis.config import PROJECT_ROOT
 
 
 def test_extensions_discover_git():
@@ -48,16 +48,27 @@ def test_git_extension_routes():
     assert hit["params"]["name"] == "feature/widgets"
 
 
-def test_git_status_handler_in_repo(assistant, tmp_path, monkeypatch):
-    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True)
-    monkeypatch.setattr(assistant.coding, "_base", lambda: tmp_path)
+def test_git_status_handler_in_repo(assistant):
+    """git_status reports the ARIA repo itself, whatever branch it is on.
+
+    It reads PROJECT_ROOT directly and does not consult assistant.coding._base,
+    so the branch name is whatever is checked out; asserting a literal "main"
+    here only passes by accident and breaks on every feature branch.
+    """
     from jarvis.handlers import ensure_handlers_loaded
     from jarvis.handlers.registry import call_action
 
     ensure_handlers_loaded()
+    expected = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
     out = call_action(assistant, "git_status", {}, "git status")
     assert out["ok"] is True
-    assert "main" in out["message"].lower() or "master" in out["message"].lower()
+    assert expected in out["message"]
 
 
 def test_extensions_api_route(chat_app):

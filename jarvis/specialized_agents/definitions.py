@@ -140,6 +140,21 @@ BROWSER_READ = ("browser_use_read",)
 BROWSER_INTERACT = ("browser_use_interact",)
 BROWSER_HIGH_IMPACT = ("browser_use_high_impact",)
 
+# Autonomous development authority. Deliberately excludes deployment, history
+# rewriting and force-push: the coding agent may propose and commit its own
+# work, never reshape the repository or touch production.
+CODING_DEV = (
+    "dev_task_create",
+    "dev_task_status",
+    "dev_task_list",
+    "dev_task_run",
+    "dev_task_commit",
+    "dev_task_cancel",
+    "dev_step",
+    "dev_command",
+)
+CODING_HIGH_IMPACT = ("dev_force_push", "dev_history_rewrite", "dev_deploy")
+
 _DESTRUCTIVE = (
     "aria_self_fix",
     "self_upgrade_run",
@@ -183,7 +198,7 @@ RESEARCH_SPECIALIST = AgentDefinition(
         *BROWSER_READ,
         *BROWSER_INTERACT,
     ),
-    denied_actions=_DESTRUCTIVE + BROWSER_HIGH_IMPACT,
+    denied_actions=_DESTRUCTIVE + BROWSER_HIGH_IMPACT + CODING_DEV + CODING_HIGH_IMPACT,
     preferred_model_role="general",
     model_requirements=("long_context",),
     input_contract=("task",),
@@ -216,14 +231,17 @@ CODING_SPECIALIST = AgentDefinition(
         "coding_task_status",
         "code_search",
         "mission_status",
+        *CODING_DEV,
     ),
     denied_actions=_DESTRUCTIVE
     + ("research_create", "research_run")
+    + EVIDENCE_READ
     + EVIDENCE_WRITE
     + EVIDENCE_VERIFY
     + BROWSER_READ
     + BROWSER_INTERACT
-    + BROWSER_HIGH_IMPACT,
+    + BROWSER_HIGH_IMPACT
+    + CODING_HIGH_IMPACT,
     preferred_model_role="coder",
     model_requirements=("code",),
     metadata={"catalog_id": "coder"},
@@ -261,7 +279,9 @@ ANALYSIS_SPECIALIST = AgentDefinition(
     + ("research_create", "run_tests")
     + EVIDENCE_WRITE
     + BROWSER_INTERACT
-    + BROWSER_HIGH_IMPACT,
+    + BROWSER_HIGH_IMPACT
+    + CODING_DEV
+    + CODING_HIGH_IMPACT,
     preferred_model_role="general",
     metadata={"catalog_id": "synthesizer"},
 )
@@ -289,7 +309,12 @@ GENERAL_SPECIALIST = AgentDefinition(
         DELEGATE_ACTION,
         *EVIDENCE_READ,
     ),
-    denied_actions=_DESTRUCTIVE + BROWSER_READ + BROWSER_INTERACT + BROWSER_HIGH_IMPACT,
+    denied_actions=_DESTRUCTIVE
+    + BROWSER_READ
+    + BROWSER_INTERACT
+    + BROWSER_HIGH_IMPACT
+    + CODING_DEV
+    + CODING_HIGH_IMPACT,
     preferred_model_role="general",
     metadata={"fallback": True},
 )
