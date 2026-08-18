@@ -113,12 +113,21 @@ def _init_db() -> None:
                 time.sleep(0.05 * (attempt + 1))
 
 
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Additive column migrations for databases created by an earlier build."""
+    have = {r["name"] for r in conn.execute("PRAGMA table_info(coding_tasks_v2)")}
+    for name, ddl in (("baseline_runnable", "INTEGER NOT NULL DEFAULT 1"),):
+        if name not in have:
+            conn.execute(f"ALTER TABLE coding_tasks_v2 ADD COLUMN {name} {ddl}")
+
+
 def _init_once() -> None:
     with _conn() as conn:
         row = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='coding_tasks_v2'"
         ).fetchone()
         if row:
+            _migrate(conn)
             return
         try:
             conn.execute("PRAGMA journal_mode=WAL")
@@ -139,6 +148,7 @@ def _init_once() -> None:
                 files_changed TEXT NOT NULL DEFAULT '[]',
                 baseline_dirty TEXT NOT NULL DEFAULT '[]',
                 baseline_failures TEXT NOT NULL DEFAULT '[]',
+                baseline_runnable INTEGER NOT NULL DEFAULT 1,
                 last_test TEXT,
                 branch TEXT NOT NULL DEFAULT '',
                 head_commit TEXT NOT NULL DEFAULT '',

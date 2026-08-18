@@ -157,7 +157,11 @@ def phase_inspect(task_id: str, *, test_cmd: list[str] | None = None) -> dict[st
         store.bump(task_id, "commands")
         summary = commands.parse_test_output(result["output"])
         baseline_failures = summary["failing_tests"]
-        store.update(task_id, baseline_failures=baseline_failures)
+        store.update(
+            task_id,
+            baseline_failures=baseline_failures,
+            baseline_runnable=summary["errors"] == 0,
+        )
         store.record_event(
             task_id,
             "baseline_tests",
@@ -191,8 +195,15 @@ def phase_implement(
     }
     proposal = editor(task, ws, ctx) or {}
     written = []
+    restore: dict[str, str | None] = {}
     for change in proposal.get("files") or []:
         path = str(change.get("path") or "")
+        # Keep the previous bytes so an edit that breaks the suite can be undone.
+        try:
+            prior = ws.resolve(path)
+            restore[path] = prior.read_text(encoding="utf-8") if prior.is_file() else None
+        except Exception:  # noqa: BLE001 - resolve() re-raises below on a real escape
+            restore[path] = None
         # Every write is path-validated; a model cannot escape the workspace.
         info = ws.write(path, str(change.get("content") or ""))
         store.add_changed_file(task_id, info["path"])
@@ -208,6 +219,7 @@ def phase_implement(
         "files_written": written,
         "summary": proposal.get("summary", ""),
         "target": proposal.get("target"),
+        "restore": restore,
     }
     # An editor that could not produce a change is a failure to report, not a
     # successful phase that happened to write nothing.
@@ -257,11 +269,23 @@ def phase_diagnose(task_id: str) -> dict[str, Any]:
     baseline = set(task.get("baseline_failures") or [])
     caused = sorted(failing - baseline)
     pre_existing = sorted(failing & baseline)
+    # A collection/import error reports no FAILED lines at all, so without this
+    # a broken tree looks "clean" while nothing can even run.
+    broke_the_suite = bool(last.get("errors")) and bool(task.get("baseline_runnable", True))
+    if broke_the_suite:
+        verdict = "broke_the_suite"
+    elif caused:
+        verdict = "caused_by_task"
+    elif pre_existing:
+        verdict = "pre_existing"
+    else:
+        verdict = "clean"
     diagnosis = {
         "failing": sorted(failing),
         "caused_by_task": caused,
         "pre_existing": pre_existing,
-        "verdict": "caused_by_task" if caused else ("pre_existing" if pre_existing else "clean"),
+        "broke_the_suite": broke_the_suite,
+        "verdict": verdict,
     }
     store.record_event(
         task_id,
@@ -388,6 +412,26 @@ def recover() -> list[str]:
     return store.recover_interrupted()
 
 
+def _rollback(task_id: str, restore: dict[str, str | None]) -> list[str]:
+    """Put back what an iteration overwrote, so the next one starts sane."""
+    task = store.get(task_id)
+    if not task or not restore:
+        return []
+    ws = _ws(task)
+    undone = []
+    for rel, prior in restore.items():
+        try:
+            target = ws.resolve(rel)
+            if prior is None:
+                target.unlink(missing_ok=True)
+            else:
+                target.write_text(prior, encoding="utf-8")
+            undone.append(rel)
+        except Exception:  # noqa: BLE001 - a failed undo must not kill the loop
+            log.warning("could not roll back %s", rel, exc_info=True)
+    return undone
+
+
 def run_loop(
     task_id: str,
     editor: Editor,
@@ -432,6 +476,15 @@ def run_loop(
             return {"task": complete(task_id, review), "review": review}
 
         diagnosis = phase_diagnose(task_id)
+        if diagnosis["verdict"] == "broke_the_suite":
+            # Feeding a corrupted file back to the model only compounds it.
+            undone = _rollback(task_id, implemented.get("restore") or {})
+            store.record_event(
+                task_id,
+                "rollback",
+                f"reverted {len(undone)} file(s) that made the suite unrunnable",
+                store.FIXING,
+            )
         # Keep iterating regardless of verdict: a "pre-existing" failure may be
         # exactly what this task was asked to fix, and bailing out here would
         # hand a red tree to complete(), which reports it as a task failure.

@@ -795,3 +795,57 @@ def test_every_registered_dev_action_is_reachable_by_the_coding_specialist(data_
     high_impact = set(definitions.CODING_HIGH_IMPACT)
     unreachable = {a for a in dev_actions - high_impact if not coder.permits(a)}
     assert not unreachable, f"registered but unreachable: {sorted(unreachable)}"
+
+
+def test_edit_that_breaks_collection_is_diagnosed_and_rolled_back(
+    data_dir: Path, fixture_repo: Path, monkeypatch
+):
+    """Regression, seen live: the model wrote test content into the module.
+
+    Collection then fails, so pytest reports an error and no FAILED lines at
+    all. Without this the tree looked "clean" while nothing could run, and the
+    corrupted file was fed straight back to the model on the next iteration.
+    """
+    from jarvis.dev_agent import editors
+
+    corrupt = "from mod import add\n\n\ndef test_add():\n    assert add(2, 3) == 5\n"
+    _fake_llm(monkeypatch, [{"path": "mod.py", "code": corrupt}])
+
+    task = engine.create_task("fix add", str(fixture_repo))
+    engine.phase_plan(task["id"])
+    engine.phase_inspect(task["id"], test_cmd=["pytest", "-q"])
+    assert store.get(task["id"])["baseline_runnable"] == 1
+
+    before = (fixture_repo / "mod.py").read_text()
+    implemented = engine.phase_implement(task["id"], editors.model_editor())
+    assert (fixture_repo / "mod.py").read_text() == corrupt
+
+    tested = engine.phase_test(task["id"], ["pytest", "-q"])
+    assert tested["summary"]["green"] is False
+    assert tested["summary"]["errors"] >= 1
+    assert tested["summary"]["failing_tests"] == []
+
+    diagnosis = engine.phase_diagnose(task["id"])
+    assert diagnosis["verdict"] == "broke_the_suite", diagnosis
+    assert diagnosis["broke_the_suite"] is True
+
+    undone = engine._rollback(task["id"], implemented["restore"])
+    assert undone == ["mod.py"]
+    assert (fixture_repo / "mod.py").read_text() == before
+
+
+def test_loop_rolls_back_a_suite_breaking_edit(data_dir: Path, fixture_repo: Path, monkeypatch):
+    """The loop must not leave the workspace unrunnable."""
+    from jarvis.dev_agent import editors
+
+    corrupt = "from mod import add\n\n\ndef test_add():\n    assert add(2, 3) == 5\n"
+    _fake_llm(monkeypatch, [{"path": "mod.py", "code": corrupt}])
+    before = (fixture_repo / "mod.py").read_text()
+
+    task = engine.create_task("fix add", str(fixture_repo))
+    out = engine.run_loop(task["id"], editors.model_editor(), ["pytest", "-q"], max_iterations=2)
+
+    assert out["task"]["phase"] == store.BOUNDED
+    assert (fixture_repo / "mod.py").read_text() == before, "corrupted file left behind"
+    events = [e["kind"] for e in store.events(task["id"])]
+    assert "rollback" in events
