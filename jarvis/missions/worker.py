@@ -123,7 +123,11 @@ def tick(runner=None, *, assistant: Any = None, slice_steps: int = DEFAULT_SLICE
 
 
 def _loop(runner, assistant: Any, poll_s: float, slice_steps: int) -> None:
-    _state["recovered"] = _recover_interrupted()
+    try:
+        _state["recovered"] = _recover_interrupted()
+    except Exception as exc:  # noqa: BLE001 - startup recovery must never kill the worker
+        logger.exception("Mission worker startup recovery failed")
+        _state["last_error"] = f"recovery: {type(exc).__name__}: {exc}"
     while not _stop.is_set():
         _state["last_tick"] = time.time()
         try:

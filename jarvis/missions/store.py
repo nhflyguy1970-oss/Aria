@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 import time
 import uuid
 from typing import Any
@@ -18,6 +19,9 @@ from typing import Any
 from jarvis.config import DATA_DIR
 
 DB_PATH = DATA_DIR / "missions.db"
+
+# Serialises schema creation between the background worker and request threads.
+_init_lock = threading.Lock()
 
 # Lifecycle states. PENDING/RUNNING/PAUSED are live; the rest are terminal.
 PENDING = "pending"
@@ -60,6 +64,24 @@ def _conn() -> sqlite3.Connection:
 
 
 def _init_db() -> None:
+    """Create or migrate the schema, tolerating concurrent initialisation.
+
+    The background worker and a request thread can reach this simultaneously on
+    a fresh database; setting journal_mode needs an exclusive lock, so a losing
+    racer must retry rather than fail the caller.
+    """
+    with _init_lock:
+        for attempt in range(3):
+            try:
+                _init_db_once()
+                return
+            except sqlite3.OperationalError:
+                if attempt == 2:
+                    raise
+                time.sleep(0.05 * (attempt + 1))
+
+
+def _init_db_once() -> None:
     with _conn() as conn:
         # Cheap fast path: the schema is created once, but the file can be
         # removed between test cases, so this is checked rather than cached.
@@ -76,8 +98,12 @@ def _init_db() -> None:
                 conn.execute("ALTER TABLE missions ADD COLUMN next_attempt_at REAL")
             return
         # WAL lets a status reader run while the worker writes. Setting it takes
-        # an exclusive lock, so it happens only at creation, never per connection.
-        conn.execute("PRAGMA journal_mode=WAL")
+        # an exclusive lock, so it happens only at creation, never per connection —
+        # and losing the race to another initialiser is harmless.
+        try:
+            conn.execute("PRAGMA journal_mode=WAL")
+        except sqlite3.OperationalError:
+            pass
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS missions (

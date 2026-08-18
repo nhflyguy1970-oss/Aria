@@ -375,10 +375,11 @@ def test_worker_status_is_observable(data_dir: Path):
     assert _wait_for(lambda: worker.status()["running"] is True)
     assert _wait_for(lambda: missions.get(mission_id)["state"] == store.COMPLETED)
 
-    snapshot = worker.status()
-    assert snapshot["completed"] >= 1
-    assert snapshot["last_activity"] is not None
-    assert snapshot["active"] == 0
+    # The engine records COMPLETED before the worker's own counters update, so
+    # poll the counter rather than sampling it in that window.
+    assert _wait_for(lambda: worker.status()["completed"] >= 1)
+    assert _wait_for(lambda: worker.status()["active"] == 0)
+    assert worker.status()["last_activity"] is not None
 
 
 def test_worker_status_action_is_registered(data_dir: Path):
