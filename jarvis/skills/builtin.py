@@ -243,11 +243,14 @@ def _research_topic(ctx: SkillContext, params: dict[str, Any]) -> dict[str, Any]
     ctx.call_action("research_run", {"research_id": research_id})
     status = ctx.call_action("research_status", {"research_id": research_id})
     snapshot = status.get("research") or {}
+    # The research engine reports its lifecycle under "status"; reading "state"
+    # here silently produced an empty field on every successful run.
     return {
         "research_id": research_id,
         "objective": params["objective"],
-        "state": snapshot.get("state") or "",
+        "state": snapshot.get("status") or snapshot.get("state") or "",
         "phase": snapshot.get("phase") or "",
+        "confidence": snapshot.get("confidence") or "",
         "provenance": {"research_id": research_id},
     }
 

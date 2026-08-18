@@ -77,6 +77,31 @@ def skill_invoke(assistant, params: dict, message: str) -> dict:
         inputs = {}
     if not isinstance(inputs, dict):
         return err("inputs must be an object.", module="general", error_kind="input_contract")
+
+    if params.get("mission"):
+        # Durable execution: hand the skill to the mission engine rather than
+        # running it inline, so it checkpoints, survives a restart, and can be
+        # cancelled and recovered like any other mission.
+        try:
+            mission_id = skills.create_skill_mission(
+                skill_id,
+                inputs,
+                version=(params.get("version") or "").strip(),
+                requester=(params.get("requester") or params.get("agent_id") or "").strip(),
+                objective=(params.get("objective") or "").strip(),
+            )
+        except skills.SkillRegistryError as exc:
+            return err(str(exc), module="general", error_kind="not_found")
+        from jarvis import missions
+
+        missions.worker.wake()
+        return ok(
+            f"Skill `{skill_id}` queued as mission `{mission_id}`.",
+            module="general",
+            mission_id=mission_id,
+            skill_id=skill_id,
+        )
+
     envelope = skills.execute(
         skill_id,
         inputs,

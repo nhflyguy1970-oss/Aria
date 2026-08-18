@@ -1424,3 +1424,52 @@ def test_tightened_depth_propagates_to_children(data_dir: Path):
     )
     env = skills.execute("td_top", {}, max_depth=2)
     assert env["status"] == skills.BOUNDED
+
+
+def test_research_skill_reports_the_engines_real_state(catalog, data_dir: Path, assistant):
+    """Regression, found live: the skill read a field the engine does not use.
+
+    research_status returns its lifecycle under "status"; the skill read
+    "state" and so reported an empty string on every successful run.
+    """
+    env = skills.execute(
+        "research_topic",
+        {"objective": "orbital resonance"},
+        requester="research_specialist",
+        assistant=assistant,
+    )
+    assert env["status"] == skills.SUCCESS
+    assert env["output"]["state"], "skill reported an empty research state"
+
+    from jarvis.research import store as research_store
+
+    job = research_store.get_job(env["output"]["research_id"])
+    assert env["output"]["state"] == job["status"]
+
+
+def test_skill_can_be_queued_as_a_durable_mission(data_dir: Path):
+    """Regression: create_skill_mission existed but nothing exposed it.
+
+    Durable skill execution was unreachable from the running process, so a
+    long-running skill could never be checkpointed, cancelled or recovered
+    outside of tests.
+    """
+    from jarvis import missions
+
+    reg(make("queued_skill"), lambda ctx, p: {"done": True})
+    out = _call("skill_invoke", {"skill_id": "queued_skill", "inputs": {}, "mission": True})
+    assert out["ok"] is True
+    mission_id = out["mission_id"]
+    snapshot = missions.status(mission_id)
+    assert snapshot["state"] in (missions.PENDING, missions.RUNNING, missions.COMPLETED)
+    assert snapshot["progress"]["total_steps"] == 1
+
+    missions.run(mission_id, missions.ActionStepRunner(None))
+    assert missions.status(mission_id)["state"] == missions.COMPLETED
+    assert skills.history(skill_id="queued_skill")[0]["status"] == skills.SUCCESS
+
+
+def test_queued_mission_rejects_an_unknown_skill(data_dir: Path):
+    out = _call("skill_invoke", {"skill_id": "not_a_real_skill", "inputs": {}, "mission": True})
+    assert out["ok"] is False
+    assert out["error_kind"] == "not_found"
