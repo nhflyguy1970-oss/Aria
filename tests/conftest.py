@@ -66,10 +66,20 @@ _TEST_DATA_SUBDIRS = (
 )
 
 
+# jarvis.nlu.benchmark writes its report to DATA_DIR.parent / "docs" and falls
+# back to the real repository's docs/ when that directory is missing — which is
+# how a test run rewrote the tracked docs/NLU_CLASSIFIER_BENCHMARK.md. This is a
+# sibling of the data root, not a subdirectory of it, so it needs creating
+# explicitly for the fallback never to fire.
+_TEST_SIBLING_DIRS = ("docs",)
+
+
 def _ensure_test_data_tree() -> None:
     _TEST_DATA_ROOT.mkdir(parents=True, exist_ok=True)
     for _sub in _TEST_DATA_SUBDIRS:
         (_TEST_DATA_ROOT / _sub).mkdir(parents=True, exist_ok=True)
+    for _sib in _TEST_SIBLING_DIRS:
+        (_TEST_DATA_ROOT.parent / _sib).mkdir(parents=True, exist_ok=True)
 
 
 def _reset_test_data_tree() -> None:
