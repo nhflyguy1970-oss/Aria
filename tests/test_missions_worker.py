@@ -32,6 +32,12 @@ def _runner(calls: list[tuple[str, int]], delay: float = 0.0):
 
 
 @pytest.fixture(autouse=True)
+def _enable_worker(monkeypatch: pytest.MonkeyPatch):
+    """The worker ships disabled; these tests exercise it, so they opt in."""
+    monkeypatch.setenv("JARVIS_MISSION_WORKER", "1")
+
+
+@pytest.fixture(autouse=True)
 def _stop_worker_after_each_test():
     """No test may leak a running worker thread into the next one."""
     yield
@@ -69,10 +75,37 @@ def test_no_duplicate_worker_starts(data_dir: Path):
     assert worker.is_running() is True
 
 
+def test_worker_disabled_when_env_unset(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
+    """Default is off until the worker is promoted to production."""
+    monkeypatch.delenv("JARVIS_MISSION_WORKER", raising=False)
+    assert worker.start(_runner([])) is False
+    assert worker.is_running() is False
+
+
 def test_worker_disabled_by_env(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("JARVIS_MISSION_WORKER", "0")
     assert worker.start(_runner([])) is False
     assert worker.is_running() is False
+
+
+def test_worker_enabled_by_env(data_dir: Path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("JARVIS_MISSION_WORKER", "1")
+    assert worker.start(_runner([])) is True
+    assert worker.is_running() is True
+
+
+def test_disabled_worker_leaves_pending_missions_untouched(
+    data_dir: Path, monkeypatch: pytest.MonkeyPatch
+):
+    """A gated-off worker must not consume the queue."""
+    monkeypatch.delenv("JARVIS_MISSION_WORKER", raising=False)
+    calls: list[tuple[str, int]] = []
+    mission_id = missions.create_mission("not picked up", steps=_steps(2))
+
+    assert worker.start(_runner(calls), poll_s=0.05) is False
+    time.sleep(0.3)
+    assert calls == []
+    assert missions.get(mission_id)["state"] == store.PENDING
 
 
 # --------------------------------------------------------------------------

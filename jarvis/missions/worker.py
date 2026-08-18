@@ -150,8 +150,10 @@ def start(
 ) -> bool:
     """Start the worker thread. Idempotent — a second call is a no-op."""
     global _thread
-    if os.getenv("JARVIS_MISSION_WORKER", "1") == "0":
-        logger.info("Mission worker disabled by JARVIS_MISSION_WORKER=0")
+    # Disabled by default until the background worker is explicitly promoted to
+    # production. Set JARVIS_MISSION_WORKER=1 to opt in.
+    if os.getenv("JARVIS_MISSION_WORKER", "0") != "1":
+        logger.info("Mission worker disabled (JARVIS_MISSION_WORKER is not 1)")
         return False
     with _lock:
         if _thread and _thread.is_alive():
