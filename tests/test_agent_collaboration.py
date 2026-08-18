@@ -777,3 +777,37 @@ def test_collaboration_recovers_after_real_process_crash(data_dir: Path, tmp_pat
     out = engine.aggregate(cid)
     assert out["succeeded"] == 2
     assert store.get(cid)["status"] == store.COMPLETED
+
+
+def test_collaboration_with_no_tasks_waits_instead_of_completing(data_dir: Path):
+    """Regression: the worker must not complete a collaboration on an empty task set.
+
+    Found in live testing — the mission worker advanced immediately after
+    creation, aggregated zero tasks, and then rejected delegations that were
+    still arriving.
+    """
+    cid = _collab("nothing delegated yet")
+    outcome = engine.step(cid)
+    assert outcome["done"] is False
+    assert outcome.get("waiting") is True
+    assert store.get(cid)["status"] == store.RUNNING
+
+    # Delegation still works after the worker has taken a wave.
+    task = engine.delegate(cid, requester=ANALYSIS, objective="late task", target=GENERAL)
+    assert task["status"] == store.TASK_PENDING
+
+
+def test_collaboration_completes_once_tasks_exist_and_finish(data_dir: Path):
+    cid = _collab()
+    mid = missions.create_mission("t", steps=[])
+    engine.delegate(
+        cid,
+        requester=ANALYSIS,
+        objective="w",
+        target=RESEARCH,
+        action="mission_status",
+        params={"mission_id": mid},
+    )
+    outcome = engine.step(cid)
+    assert outcome["done"] is True
+    assert store.get(cid)["status"] == store.COMPLETED

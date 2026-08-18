@@ -378,6 +378,14 @@ def step(collaboration_id: str, *, assistant: Any = None) -> dict[str, Any]:
         raise DelegationError(f"No collaboration {collaboration_id}")
     if collaboration["status"] in store.TERMINAL_STATES:
         return {"done": True, "status": collaboration["status"]}
+
+    # A collaboration with no delegated work yet is waiting, not finished.
+    # Aggregating here would complete it on an empty task set and reject the
+    # delegations still on their way. The wave budget bounds the wait.
+    if not store.tasks(collaboration_id):
+        store.set_status(collaboration_id, store.RUNNING)
+        return {"done": False, "waiting": True, "executed": 0, "status": store.RUNNING}
+
     outcome = advance(collaboration_id, assistant=assistant)
     if outcome["done"]:
         return {**outcome, **aggregate(collaboration_id)}
