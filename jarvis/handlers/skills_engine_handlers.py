@@ -86,6 +86,7 @@ def skill_invoke(assistant, params: dict, message: str) -> dict:
         assistant=assistant,
         mission_id=(params.get("mission_id") or "").strip(),
         authorized_high_impact=bool(params.get("authorized_high_impact")),
+        max_depth=int(params["max_depth"]) if params.get("max_depth") is not None else None,
     )
     text = (
         f"`{envelope['skill_id']}@{envelope['version']}` → {envelope['status']}"

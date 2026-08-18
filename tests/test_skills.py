@@ -1390,3 +1390,37 @@ def test_model_requirements_are_reported_not_substituted(data_dir: Path):
     reg(make("needs_model", model_requirements=("code",)))
     detail = skills.explain("needs_model")
     assert detail["model_requirements"] == ["code"]
+
+
+def test_max_depth_override_can_only_tighten(data_dir: Path):
+    """An operator may run a skill with tighter limits, never looser ones."""
+    reg(make("od_child"), lambda ctx, p: {"ok": True})
+    reg(
+        make("od_parent", dependencies=(("od_child", "1.0.0"),)),
+        lambda ctx, p: {"c": ctx.call_skill("od_child", {})["output"]},
+    )
+
+    assert skills.execute("od_parent", {})["status"] == skills.SUCCESS
+    tightened = skills.execute("od_parent", {}, max_depth=1)
+    assert tightened["status"] == skills.BOUNDED
+    assert "max_depth (1)" in tightened["error"]
+
+    # A caller cannot raise the ceiling above the configured bound.
+    raised = skills.execute("od_parent", {}, max_depth=999)
+    assert raised["status"] == skills.SUCCESS
+    deep = skills.execute("recursion_probe", {}, max_depth=999)
+    assert deep["status"] == skills.UNAVAILABLE  # not registered; ceiling untouched
+
+
+def test_tightened_depth_propagates_to_children(data_dir: Path):
+    reg(make("td_leaf"), lambda ctx, p: {"d": ctx.depth})
+    reg(
+        make("td_mid", dependencies=(("td_leaf", "1.0.0"),)),
+        lambda ctx, p: {"l": ctx.call_skill("td_leaf", {})["output"]},
+    )
+    reg(
+        make("td_top", dependencies=(("td_mid", "1.0.0"),)),
+        lambda ctx, p: {"m": ctx.call_skill("td_mid", {})["output"]},
+    )
+    env = skills.execute("td_top", {}, max_depth=2)
+    assert env["status"] == skills.BOUNDED

@@ -142,6 +142,7 @@ class SkillContext:
         self.deadline = deadline
         # Shared across the whole tree so bounds are global, not per-node.
         self.budget = budget if budget is not None else {"actions": 0, "children": 0}
+        self.max_depth: int | None = None
         self.actions: list[dict[str, Any]] = []
         self.children: list[dict[str, Any]] = []
         self.side_effects: list[str] = []
@@ -218,6 +219,7 @@ class SkillContext:
             cancel_check=self.cancel_check,
             deadline=self.deadline,
             budget=self.budget,
+            max_depth=self.max_depth,
         )
         self.children.append(
             {
@@ -286,6 +288,7 @@ def execute(
     deadline: float | None = None,
     budget: dict[str, Any] | None = None,
     authorized_high_impact: bool = False,
+    max_depth: int | None = None,
 ) -> dict[str, Any]:
     """Run a skill and return a structured envelope. Never raises for control flow."""
     started = time.time()
@@ -365,12 +368,12 @@ def execute(
     # --- availability --------------------------------------------------
     if not defn.enabled:
         return fail(UNAVAILABLE, f"Skill {defn.ref()} is disabled", "disabled")
-    if depth >= min(BOUNDS["max_depth"], defn.max_depth):
-        return fail(
-            BOUNDED,
-            f"max_depth ({min(BOUNDS['max_depth'], defn.max_depth)}) reached at {defn.ref()}",
-            "bounded",
-        )
+    # An override may only tighten the limit; it can never raise the ceiling.
+    depth_limit = min(BOUNDS["max_depth"], defn.max_depth)
+    if max_depth is not None:
+        depth_limit = min(depth_limit, max(1, int(max_depth)))
+    if depth >= depth_limit:
+        return fail(BOUNDED, f"max_depth ({depth_limit}) reached at {defn.ref()}", "bounded")
 
     # --- dependency integrity -----------------------------------------
     try:
@@ -430,6 +433,7 @@ def execute(
         deadline=own_deadline if deadline is None else min(deadline, own_deadline),
         budget=budget,
     )
+    ctx.max_depth = depth_limit
 
     status, output, error, kind = SUCCESS, None, None, ""
     attempts = 0
