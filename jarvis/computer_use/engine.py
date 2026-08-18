@@ -218,6 +218,20 @@ def _classify(exc: BaseException) -> str:
         return ERR_VALIDATION
     if isinstance(exc, sessions.SessionError):
         return ERR_SESSION
+    # Browser-stack unavailability outranks the action-specific classes: a
+    # missing browser is a retryable environment condition no matter which
+    # action surfaced it, and reporting it as "navigation" hides that.
+    if any(
+        marker in text
+        for marker in (
+            "playwright",
+            "chromium",
+            "browser agent disabled",
+            "no live browser page",
+            "browser session unavailable",
+        )
+    ):
+        return ERR_BROWSER
     if isinstance(exc, TargetNotFound) or "not found" in text or "no element" in text:
         return ERR_TARGET
     if isinstance(exc, NavigationFailure):

@@ -907,3 +907,37 @@ def test_real_browser_navigate_extract_click(data_dir: Path, fixture_server, mon
     )
     assert typed["ok"] is True, typed
     engine.perform(sid, "close", {}, driver=drv)
+
+
+# ------------------------------------------- live-found: stack-unavailable classing
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "Playwright/Chromium not available",
+        "Playwright/Chromium not available — navigation did not occur",
+        "browser agent disabled",
+        "no live browser page",
+        "browser session unavailable",
+    ],
+)
+def test_browser_stack_unavailable_is_not_internal(data_dir: Path, message):
+    """Regression: live ARIA reported 'Playwright/Chromium not available' as an
+    internal error, so a caller could not tell a retryable environment problem
+    from a genuine defect."""
+    sid = _session()
+    drv = FakeDriver(fail={"state": RuntimeError(message)})
+    out = engine.perform(sid, "inspect", {}, driver=drv)
+    assert out["ok"] is False
+    assert out["error_kind"] == engine.ERR_BROWSER, out
+    assert sessions.get(sid)["state"] == sessions.FAILED
+
+
+def test_navigation_stack_failure_classified_as_browser(data_dir: Path):
+    sid = _session()
+    drv = FakeDriver(
+        fail={"navigate": engine.NavigationFailure("Playwright/Chromium not available")}
+    )
+    out = engine.perform(sid, "navigate", {"url": "https://example.com/"}, driver=drv)
+    assert out["error_kind"] == engine.ERR_BROWSER
