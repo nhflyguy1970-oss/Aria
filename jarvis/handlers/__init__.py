@@ -20,6 +20,7 @@ def ensure_handlers_loaded() -> None:
         aria_coder_handlers,
         automation_handlers,
         knowledge_handlers,
+        mission_handlers,
         self_upgrade_handlers,
         skill_handlers,
         specialists_handlers,
