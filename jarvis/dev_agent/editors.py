@@ -8,11 +8,16 @@ model integration.
 from __future__ import annotations
 
 import logging
+import re
+from pathlib import Path
 from typing import Any
 
 from jarvis.dev_agent.workspace import Workspace
 
 log = logging.getLogger("jarvis.dev_agent.editors")
+
+_TEST_NAME = re.compile(r"(^|/)(test_[^/]+|[^/]+_test)\.py$")
+_IMPORT = re.compile(r"^\s*(?:from|import)\s+([A-Za-z_][\w.]*)", re.M)
 
 
 def static_editor(files: list[dict[str, str]], summary: str = "static edit"):
@@ -24,6 +29,65 @@ def static_editor(files: list[dict[str, str]], summary: str = "static edit"):
     return _edit
 
 
+def is_test_file(rel: str) -> bool:
+    return bool(_TEST_NAME.search(rel.replace("\\", "/")))
+
+
+def _sources(ws: Workspace) -> list[str]:
+    out = []
+    for p in sorted(ws.root.rglob("*.py")):
+        if ".git" in p.parts or "venv" in p.parts or "__pycache__" in p.parts:
+            continue
+        out.append(str(p.relative_to(ws.root)))
+    return out
+
+
+def pick_target(task: dict[str, Any], ws: Workspace, context: dict[str, Any]) -> str | None:
+    """Choose the source file to edit.
+
+    Deliberately biased away from test files: the module a failing test imports
+    is the thing to fix, not the test that caught it.
+    """
+    sources = _sources(ws)
+    if not sources:
+        return None
+    by_stem = {Path(s).stem: s for s in sources if not is_test_file(s)}
+
+    failing = list(context.get("failing_tests") or []) or list(task.get("baseline_failures") or [])
+    for entry in failing:
+        rel = str(entry).split("::", 1)[0]
+        candidate = ws.root / rel
+        if not candidate.is_file():
+            continue
+        try:
+            text = candidate.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        # The module under test, reached through the failing test's imports.
+        for mod in _IMPORT.findall(text):
+            hit = by_stem.get(mod.split(".")[0])
+            if hit:
+                return hit
+
+    changed = [f for f in (task.get("files_changed") or []) if not is_test_file(str(f))]
+    if changed:
+        return str(changed[0])
+    non_test = [s for s in sources if not is_test_file(s)]
+    return non_test[0] if non_test else None
+
+
+def _describe(task: dict[str, Any], context: dict[str, Any]) -> str:
+    """Ground the model in the objective plus what is actually failing."""
+    parts = [task["objective"]]
+    failing = context.get("failing_tests") or []
+    if failing:
+        parts.append("Failing tests: " + ", ".join(str(f) for f in failing))
+    output = (context.get("test_output") or "").strip()
+    if output:
+        parts.append("Test output:\n" + output[:4000])
+    return "\n\n".join(parts)
+
+
 def model_editor(assistant: Any = None):
     """Production editor backed by ARIA's existing CodingAgent."""
 
@@ -31,17 +95,45 @@ def model_editor(assistant: Any = None):
         try:
             from jarvis.coding_agent import CodingAgent
 
+            target = pick_target(task, ws, context)
             agent = CodingAgent(ws.root)
-            result = agent.diagnose("", task["objective"])
-            files = []
+            # run() is the method that proposes changes; diagnose() explains
+            # without ever returning files, so it can never drive the loop.
+            result = agent.run(_describe(task, context), path=target)
+            files, refused = [], []
             for item in getattr(result, "files", []) or []:
-                path = item.get("path") if isinstance(item, dict) else None
-                content = item.get("content") if isinstance(item, dict) else None
-                if path and content is not None:
-                    files.append({"path": path, "content": content})
-            return {"files": files, "summary": getattr(result, "message", "") or "model edit"}
+                if not isinstance(item, dict):
+                    continue
+                path = item.get("path")
+                # AgentResult carries the new source under "code".
+                content = item.get("code")
+                if content is None:
+                    content = item.get("content")
+                if not path or content is None:
+                    continue
+                # Never let a red test be "fixed" by rewriting the test itself.
+                if is_test_file(str(path)) and not target_allows_tests(task):
+                    refused.append(str(path))
+                    continue
+                files.append({"path": str(path), "content": str(content)})
+            summary = getattr(result, "message", "") or "model edit"
+            if refused:
+                summary += f" (refused to edit test file(s): {', '.join(refused)})"
+            proposal: dict[str, Any] = {"files": files, "summary": summary, "target": target}
+            if not getattr(result, "ok", True) and not files:
+                proposal["error"] = summary or "model produced no changes"
+            return proposal
         except Exception as exc:  # noqa: BLE001 - a model failure is data, not a crash
-            log.warning("model editor unavailable: %s", exc)
-            return {"files": [], "summary": f"model unavailable: {type(exc).__name__}: {exc}"}
+            log.warning("model editor failed: %s", exc, exc_info=True)
+            return {
+                "files": [],
+                "summary": f"model editor failed: {type(exc).__name__}: {exc}",
+                "error": f"{type(exc).__name__}: {exc}",
+            }
 
     return _edit
+
+
+def target_allows_tests(task: dict[str, Any]) -> bool:
+    """Only edit tests when the objective actually asks for test changes."""
+    return bool(re.search(r"\btests?\b", task.get("objective") or "", re.I))

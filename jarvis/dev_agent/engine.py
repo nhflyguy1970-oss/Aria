@@ -181,7 +181,15 @@ def phase_implement(
 
     store.set_phase(task_id, store.IMPLEMENTING)
     ws = _ws(task)
-    proposal = editor(task, ws, dict(context or {})) or {}
+    # Ground the editor in what is actually failing, so it edits the module the
+    # failing test exercises instead of guessing from the objective alone.
+    last = task.get("last_test") or {}
+    ctx = {
+        "failing_tests": last.get("failing_tests") or task.get("baseline_failures") or [],
+        "test_output": last.get("output") or "",
+        **dict(context or {}),
+    }
+    proposal = editor(task, ws, ctx) or {}
     written = []
     for change in proposal.get("files") or []:
         path = str(change.get("path") or "")
@@ -196,7 +204,17 @@ def phase_implement(
         f"{len(written)} file(s): {proposal.get('summary', '')[:120]}",
         store.IMPLEMENTING,
     )
-    return {"files_written": written, "summary": proposal.get("summary", "")}
+    out = {
+        "files_written": written,
+        "summary": proposal.get("summary", ""),
+        "target": proposal.get("target"),
+    }
+    # An editor that could not produce a change is a failure to report, not a
+    # successful phase that happened to write nothing.
+    error = proposal.get("error")
+    if error or (not written and proposal.get("files") is not None and not proposal.get("files")):
+        out["editor_error"] = error or "editor proposed no changes"
+    return out
 
 
 def phase_test(task_id: str, test_cmd: list[str], *, cancel_check=None) -> dict[str, Any]:
@@ -387,6 +405,7 @@ def run_loop(
     phase_inspect(task_id, test_cmd=test_cmd)
 
     limit = max_iterations or store.BOUNDS["max_iterations"]
+    unproductive = 0
     for _ in range(limit):
         if cancel_check is not None and cancel_check():
             return {"cancelled": True, "task": cancel(task_id)}
@@ -394,6 +413,13 @@ def run_loop(
         implemented = phase_implement(task_id, editor)
         if implemented.get("bounded"):
             return implemented
+        if implemented.get("editor_error"):
+            unproductive += 1
+            if unproductive >= 2:
+                reason = f"editor produced no changes: {implemented['editor_error']}"
+                return {"task": _stop_bounded(task_id, reason), "stop_reason": reason}
+        else:
+            unproductive = 0
 
         tested = phase_test(task_id, test_cmd, cancel_check=cancel_check)
         if tested.get("cancelled"):
