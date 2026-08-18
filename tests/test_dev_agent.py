@@ -15,7 +15,7 @@ from jarvis import specialized_agents as agents
 from jarvis.dev_agent import commands, engine, store, workspace
 from jarvis.dev_agent.editors import static_editor
 from jarvis.missions import store as mstore
-from jarvis.specialized_agents import registry
+from jarvis.specialized_agents import definitions, registry
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -775,3 +775,23 @@ def test_pick_target_prefers_module_over_test(data_dir: Path, fixture_repo: Path
     assert editors.pick_target(task, ws, {}) == "mod.py"
     assert editors.is_test_file("test_mod.py") is True
     assert editors.is_test_file("mod.py") is False
+
+
+def test_every_registered_dev_action_is_reachable_by_the_coding_specialist(data_dir: Path):
+    """Regression: dev_task_recover was registered but denied to every agent.
+
+    An action the coding specialist cannot invoke is dead code in production,
+    which is only visible once the real service is driven over HTTP.
+    """
+    from jarvis.handlers import ensure_handlers_loaded
+    from jarvis.handlers.registry import all_actions
+
+    ensure_handlers_loaded()
+    dev_actions = {
+        a["action"] for a in all_actions() if str(a.get("action", "")).startswith("dev_")
+    }
+    assert dev_actions, "no dev_* actions registered"
+    coder = agents.get("coding_specialist")
+    high_impact = set(definitions.CODING_HIGH_IMPACT)
+    unreachable = {a for a in dev_actions - high_impact if not coder.permits(a)}
+    assert not unreachable, f"registered but unreachable: {sorted(unreachable)}"

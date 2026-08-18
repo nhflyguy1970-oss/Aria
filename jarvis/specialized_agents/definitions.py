@@ -150,6 +150,7 @@ CODING_DEV = (
     "dev_task_run",
     "dev_task_commit",
     "dev_task_cancel",
+    "dev_task_recover",
     "dev_step",
     "dev_command",
 )
