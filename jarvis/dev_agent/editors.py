@@ -89,39 +89,74 @@ def _describe(task: dict[str, Any], context: dict[str, Any]) -> str:
 
 
 def model_editor(assistant: Any = None):
-    """Production editor backed by ARIA's existing CodingAgent."""
+    """Production editor backed by ARIA's coder model.
+
+    Uses the same edit primitive CodingAgent does, but not CodingAgent's own
+    verification gate: for a single-file edit that gate resolves the path on
+    disk and re-checks the *unmodified* file, so it always fails and discards
+    the proposal. The dev agent does not need it — it applies changes inside
+    the confined workspace and runs the real suite, and refuses completion
+    unless the tests are genuinely green.
+    """
 
     def _edit(task: dict[str, Any], ws: Workspace, context: dict[str, Any]) -> dict[str, Any]:
         try:
-            from jarvis.coding_agent import CodingAgent
+            from jarvis import llm
+            from jarvis.code_context import format_context, gather_context
 
             target = pick_target(task, ws, context)
-            agent = CodingAgent(ws.root)
-            # run() is the method that proposes changes; diagnose() explains
-            # without ever returning files, so it can never drive the loop.
-            result = agent.run(_describe(task, context), path=target)
+            if not target:
+                return {
+                    "files": [],
+                    "summary": "no editable source file found",
+                    "error": "no target file",
+                }
+            current = (ws.root / target).read_text(encoding="utf-8", errors="replace")
+            ctx_text = ""
+            try:
+                ctx_text = format_context(gather_context(target, ws.root, task=task["objective"]))
+            except Exception:  # noqa: BLE001 - context is a nicety, not a requirement
+                log.debug("context unavailable for %s", target, exc_info=True)
+
+            explanation, items = llm.generate_patched_edit(
+                _describe(task, context),
+                path=target,
+                content=current,
+                context=ctx_text,
+                errors=(context.get("test_output") or "")[:4000],
+            )
+
             files, refused = [], []
-            for item in getattr(result, "files", []) or []:
+            for item in items or []:
                 if not isinstance(item, dict):
                     continue
-                path = item.get("path")
-                # AgentResult carries the new source under "code".
-                content = item.get("code")
-                if content is None:
-                    content = item.get("content")
-                if not path or content is None:
+                path = str(item.get("path") or target)
+                code = item.get("code")
+                if code is None:
+                    code = item.get("content")
+                if code is None and item.get("hunks"):
+                    from jarvis.patch_util import apply_hunks_to_content
+
+                    original = ""
+                    try:
+                        original = (ws.root / path).read_text(encoding="utf-8", errors="replace")
+                    except OSError:
+                        original = ""
+                    code, _errs = apply_hunks_to_content(original, item["hunks"])
+                if not code:
                     continue
-                # Never let a red test be "fixed" by rewriting the test itself.
-                if is_test_file(str(path)) and not target_allows_tests(task):
-                    refused.append(str(path))
+                # Never let a red test be "fixed" by rewriting the test.
+                if is_test_file(path) and not target_allows_tests(task):
+                    refused.append(path)
                     continue
-                files.append({"path": str(path), "content": str(content)})
-            summary = getattr(result, "message", "") or "model edit"
+                files.append({"path": path, "content": str(code)})
+
+            summary = (explanation or "model edit").strip()
             if refused:
                 summary += f" (refused to edit test file(s): {', '.join(refused)})"
             proposal: dict[str, Any] = {"files": files, "summary": summary, "target": target}
-            if not getattr(result, "ok", True) and not files:
-                proposal["error"] = summary or "model produced no changes"
+            if not files:
+                proposal["error"] = "model produced no usable changes"
             return proposal
         except Exception as exc:  # noqa: BLE001 - a model failure is data, not a crash
             log.warning("model editor failed: %s", exc, exc_info=True)

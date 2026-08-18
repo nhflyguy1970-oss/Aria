@@ -681,109 +681,90 @@ def test_scenario_h_crash_recovery(data_dir: Path, fixture_repo: Path, tmp_path:
 # --------------------------------------------- live-only defects (regression)
 
 
-def test_model_editor_uses_run_not_diagnose_and_reads_code_key(data_dir: Path, fixture_repo: Path):
-    """Regression: the production editor silently produced nothing.
-
-    It called CodingAgent.diagnose("") — an empty path resolves to the workspace
-    directory (Errno 21), and diagnose never returns files by design — then read
-    each proposed file under "content" while AgentResult uses "code".
-    """
-    from jarvis.coding_agent import AgentResult
-    from jarvis.dev_agent import editors
+def _fake_llm(monkeypatch, items, explanation="fixed"):
+    from jarvis import llm
 
     calls = {}
 
-    class FakeAgent:
-        def __init__(self, base):
-            calls["base"] = base
+    def fake(task, *, path, content, context="", errors=None):
+        calls.update(task=task, path=path, content=content, errors=errors)
+        return explanation, items
 
-        def diagnose(self, path, task=""):  # pragma: no cover - must not be used
-            raise AssertionError("diagnose() cannot propose changes")
+    monkeypatch.setattr(llm, "generate_patched_edit", fake)
+    return calls
 
-        def run(self, task, *, path=None, **kw):
-            calls["task"] = task
-            calls["path"] = path
-            return AgentResult(True, "fixed", files=[{"path": "mod.py", "code": TARGET_SRC}])
 
-    import jarvis.coding_agent as ca
+def test_model_editor_applies_the_models_change(data_dir: Path, fixture_repo: Path, monkeypatch):
+    """Regression: the production editor silently produced nothing.
 
-    original = ca.CodingAgent
-    ca.CodingAgent = FakeAgent
-    try:
-        task = engine.create_task("fix add", str(fixture_repo))
-        engine.phase_plan(task["id"])
-        engine.phase_inspect(task["id"], test_cmd=["pytest", "-q"])
-        out = engine.phase_implement(task["id"], editors.model_editor())
-    finally:
-        ca.CodingAgent = original
+    It drove CodingAgent.diagnose(""), where the empty path resolves to the
+    workspace directory (Errno 21) and diagnose() never returns files by
+    design, then read each proposal under "content" while the edit primitive
+    returns it under "code".
+    """
+    from jarvis.dev_agent import editors
+
+    calls = _fake_llm(monkeypatch, [{"path": "mod.py", "code": TARGET_SRC}])
+    task = engine.create_task("fix add", str(fixture_repo))
+    engine.phase_plan(task["id"])
+    engine.phase_inspect(task["id"], test_cmd=["pytest", "-q"])
+    out = engine.phase_implement(task["id"], editors.model_editor())
 
     assert out["files_written"], "model edit was silently dropped"
     assert "editor_error" not in out
     assert (fixture_repo / "mod.py").read_text() == TARGET_SRC
-    # Grounded on the real failure, and aimed at the module, never the test.
+    # Aimed at the module under test, and grounded in the real failure.
     assert calls["path"] == "mod.py"
     assert "test_add" in calls["task"]
 
 
-def test_model_editor_refuses_to_edit_the_failing_test(data_dir: Path, fixture_repo: Path):
+def test_model_editor_refuses_to_edit_the_failing_test(
+    data_dir: Path, fixture_repo: Path, monkeypatch
+):
     """A red test must not be 'fixed' by rewriting the test."""
-    from jarvis.coding_agent import AgentResult
     from jarvis.dev_agent import editors
 
-    class FakeAgent:
-        def __init__(self, base):
-            pass
-
-        def run(self, task, *, path=None, **kw):
-            return AgentResult(
-                True,
-                "edited",
-                files=[{"path": "test_mod.py", "code": "def test_add():\n    pass\n"}],
-            )
-
-    import jarvis.coding_agent as ca
-
-    original = ca.CodingAgent
-    ca.CodingAgent = FakeAgent
-    try:
-        task = engine.create_task("make add correct", str(fixture_repo))
-        before = (fixture_repo / "test_mod.py").read_text()
-        out = engine.phase_implement(task["id"], editors.model_editor())
-    finally:
-        ca.CodingAgent = original
+    _fake_llm(monkeypatch, [{"path": "test_mod.py", "code": "def test_add():\n    pass\n"}])
+    task = engine.create_task("make add correct", str(fixture_repo))
+    before = (fixture_repo / "test_mod.py").read_text()
+    out = engine.phase_implement(task["id"], editors.model_editor())
 
     assert out["files_written"] == []
     assert (fixture_repo / "test_mod.py").read_text() == before
     assert "refused" in out["summary"]
 
 
-def test_editor_failure_is_reported_not_swallowed(data_dir: Path, fixture_repo: Path):
+def test_editor_failure_is_reported_not_swallowed(data_dir: Path, fixture_repo: Path, monkeypatch):
     """Regression: an editor exception was reported as a successful phase."""
+    from jarvis import llm
     from jarvis.dev_agent import editors
 
-    class Boom:
-        def __init__(self, base):
-            raise OSError(21, "Is a directory")
+    def boom(*a, **k):
+        raise OSError(21, "Is a directory")
 
-    import jarvis.coding_agent as ca
+    monkeypatch.setattr(llm, "generate_patched_edit", boom)
+    task = engine.create_task("fix add", str(fixture_repo))
+    out = engine.phase_implement(task["id"], editors.model_editor())
+    assert out["editor_error"], "editor failure was swallowed"
+    assert "Is a directory" in out["editor_error"]
 
-    original = ca.CodingAgent
-    ca.CodingAgent = Boom
-    try:
-        task = engine.create_task("fix add", str(fixture_repo))
-        out = engine.phase_implement(task["id"], editors.model_editor())
-        assert out["editor_error"], "editor failure was swallowed"
-        assert "Is a directory" in out["editor_error"]
-
-        # And the loop must stop on it instead of burning every iteration.
-        engine.cancel(task["id"])  # release the workspace lock first
-        task2 = engine.create_task("fix add again", str(fixture_repo))
-        looped = engine.run_loop(task2["id"], editors.model_editor(), ["pytest", "-q"])
-    finally:
-        ca.CodingAgent = original
-
+    # And the loop must stop on it instead of burning every iteration.
+    engine.cancel(task["id"])  # release the workspace lock first
+    task2 = engine.create_task("fix add again", str(fixture_repo))
+    looped = engine.run_loop(task2["id"], editors.model_editor(), ["pytest", "-q"])
     assert looped["task"]["phase"] == store.BOUNDED
     assert "produced no changes" in looped["stop_reason"]
+
+
+def test_model_editor_end_to_end_reaches_green(data_dir: Path, fixture_repo: Path, monkeypatch):
+    """The whole point: the production editor can actually complete a task."""
+    from jarvis.dev_agent import editors
+
+    _fake_llm(monkeypatch, [{"path": "mod.py", "code": TARGET_SRC}])
+    task = engine.create_task("fix add", str(fixture_repo))
+    out = engine.run_loop(task["id"], editors.model_editor(), ["pytest", "-q"])
+    assert out["task"]["phase"] == store.COMPLETED
+    assert out["task"]["last_test"]["green"] is True
 
 
 def test_pick_target_prefers_module_over_test(data_dir: Path, fixture_repo: Path):
