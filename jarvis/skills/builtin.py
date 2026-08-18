@@ -117,12 +117,17 @@ def _run_test_suite(ctx: SkillContext, params: dict[str, Any]) -> dict[str, Any]
     argv = list(params.get("test_cmd") or ["pytest", "-q"])
     result = ctx.call_action("dev_command", {"task_id": params["task_id"], "argv": argv})
     output = result.get("output") or result.get("message") or ""
+    exit_code = result.get("exit_code")
+    # A command that never ran is not a test run with zero failures. Reporting
+    # success here made an unusable workspace look green.
+    if exit_code is None:
+        raise RuntimeError(f"test command could not run: {result.get('message') or 'no exit code'}")
     summary = commands.parse_test_output(output)
     ctx.record_side_effect(f"ran {' '.join(argv)}")
     return {
         "command": argv,
-        "exit_code": result.get("exit_code"),
-        "ran": result.get("exit_code") is not None,
+        "exit_code": exit_code,
+        "ran": True,
         **summary,
     }
 
@@ -156,6 +161,12 @@ def _analyze_test_failure(ctx: SkillContext, params: dict[str, Any]) -> dict[str
         {"task_id": params["task_id"], "test_cmd": params.get("test_cmd") or ["pytest", "-q"]},
         version="1.0.0",
     )
+    # A diagnosis built on a test run that did not happen is worthless, and
+    # "clean" is the most misleading answer it could give.
+    if child.get("status") != "success":
+        raise RuntimeError(
+            f"cannot diagnose: run_test_suite {child.get('status')}: {child.get('error')}"
+        )
     tests = child.get("output") or {}
     failing = set(tests.get("failing_tests") or [])
     task = dev_store.get(params["task_id"]) or {}
@@ -168,8 +179,11 @@ def _analyze_test_failure(ctx: SkillContext, params: dict[str, Any]) -> dict[str
         verdict = "caused_by_task"
     elif pre_existing:
         verdict = "pre_existing"
+    elif tests.get("errors") or not tests.get("ran"):
+        verdict = "unrunnable"
     else:
-        verdict = "unrunnable" if tests.get("errors") else "clean"
+        # Not green, nothing failed by name: say so rather than calling it clean.
+        verdict = "inconclusive"
     return {
         "verdict": verdict,
         "caused_by_task": caused,

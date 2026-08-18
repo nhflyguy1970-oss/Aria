@@ -1601,3 +1601,41 @@ def test_skill_cancel_by_invocation_id_works_end_to_end(data_dir: Path):
     cancelled = _call("skill_cancel", {"invocation_id": record["id"]})
     assert cancelled["ok"] is False
     assert "already finished" in cancelled["message"]
+
+
+def test_test_skill_fails_when_the_command_cannot_run(catalog, data_dir: Path):
+    """Regression, found live: a failed dev_command was reported as success.
+
+    dev_command against a non-existent task returns no exit code, and the
+    skill parsed the error text as a test summary of zero failures — so an
+    unusable workspace came back green.
+    """
+    env = skills.execute(
+        "run_test_suite", {"task_id": "no_such_task"}, requester="coding_specialist"
+    )
+    assert env["status"] == skills.FAILED
+    assert "could not run" in env["error"]
+
+
+def test_diagnosis_never_calls_an_absent_test_run_clean(catalog, data_dir: Path):
+    """The same failure made analyze_test_failure answer 'clean'."""
+    env = skills.execute(
+        "analyze_test_failure", {"task_id": "no_such_task"}, requester="coding_specialist"
+    )
+    assert env["status"] == skills.FAILED
+    assert env["output"] is None
+    assert "cannot diagnose" in env["error"]
+
+
+def test_diagnosis_is_inconclusive_rather_than_clean(catalog, data_dir: Path, fixture_repo: Path):
+    """A red suite with no named failures is inconclusive, never clean."""
+    from jarvis.dev_agent import engine as dev_engine
+
+    (fixture_repo / "test_mod.py").write_text("import nonexistent_module\n", encoding="utf-8")
+    task = dev_engine.create_task("collection error", str(fixture_repo))
+    env = skills.execute(
+        "analyze_test_failure", {"task_id": task["id"]}, requester="coding_specialist"
+    )
+    assert env["status"] == skills.SUCCESS
+    assert env["output"]["verdict"] != "clean"
+    assert env["output"]["verdict"] == "unrunnable"
