@@ -1,6 +1,7 @@
 """Additional FastAPI routes for journal, memory browser, gallery, export."""
 
 import html
+import json
 import re
 from pathlib import Path
 
@@ -573,6 +574,66 @@ def register_routes(app, assistant):
         except ev.EvidenceError as exc:
             return {"ok": False, "message": str(exc)}
 
+    @app.post("/api/evidence/sources")
+    def evidence_source_create(
+        url: str = Form(...), context_id: str = Form(""), title: str = Form("")
+    ):
+        from jarvis import evidence as ev
+
+        try:
+            sid = ev.add_source(url, context_id=context_id, title=title)
+        except ev.EvidenceError as exc:
+            return {"ok": False, "message": str(exc)}
+        return {"ok": True, "source_id": sid, "source": ev.get_source(sid)}
+
+    @app.post("/api/evidence/claims")
+    def evidence_claim_create(text: str = Form(...), context_id: str = Form("")):
+        from jarvis import evidence as ev
+
+        try:
+            cid = ev.add_claim(text, context_id=context_id)
+        except ev.EvidenceError as exc:
+            return {"ok": False, "message": str(exc)}
+        return {"ok": True, "claim_id": cid, "claim": ev.get_claim(cid)}
+
+    @app.post("/api/evidence/items")
+    def evidence_item_create(
+        source_id: str = Form(...),
+        excerpt: str = Form(...),
+        context_id: str = Form(""),
+        claim_id: str = Form(""),
+        evidence_type: str = Form("snippet"),
+        relation: str = Form(""),
+    ):
+        from jarvis import evidence as ev
+
+        try:
+            eid = ev.add_evidence(
+                source_id,
+                excerpt,
+                context_id=context_id,
+                claim_id=claim_id or None,
+                evidence_type=evidence_type,
+            )
+            if claim_id and relation:
+                ev.link(claim_id, eid, relation)
+        except ev.EvidenceError as exc:
+            return {"ok": False, "message": str(exc)}
+        return {"ok": True, "evidence_id": eid, "evidence": ev.get_evidence(eid)}
+
+    @app.post("/api/evidence/sources/{source_id}/inspected")
+    def evidence_source_inspected(source_id: str, failed: str = Form(""), error: str = Form("")):
+        """Record the real outcome of a retrieval attempt."""
+        from jarvis import evidence as ev
+
+        if not ev.get_source(source_id):
+            return {"ok": False, "message": f"no source {source_id}"}
+        if failed.strip():
+            ev.mark_source_unavailable(source_id, error or "retrieval failed")
+        else:
+            ev.mark_source_inspected(source_id)
+        return {"ok": True, "source": ev.get_source(source_id)}
+
     @app.get("/api/evidence/sources")
     def evidence_sources_list(context_id: str = ""):
         from jarvis import evidence as ev
@@ -605,11 +666,18 @@ def register_routes(app, assistant):
         capability: str = Form(""),
         action: str = Form(""),
         depends_on: str = Form(""),
+        params: str = Form(""),
     ):
         from jarvis.collaboration import engine as collab_engine
         from jarvis.collaboration import graph as collab_graph
 
         deps = [d for d in (depends_on or "").split(",") if d.strip()]
+        try:
+            delegated_params = json.loads(params) if params.strip() else {}
+        except ValueError:
+            return {"ok": False, "message": "params must be a JSON object"}
+        if not isinstance(delegated_params, dict):
+            return {"ok": False, "message": "params must be a JSON object"}
         try:
             task = collab_engine.delegate(
                 collaboration_id,
@@ -618,6 +686,7 @@ def register_routes(app, assistant):
                 target=target,
                 capability=capability,
                 action=action,
+                params=delegated_params,
                 depends_on=[d.strip() for d in deps],
             )
         except (collab_engine.DelegationError, collab_graph.GraphError) as exc:
@@ -666,13 +735,29 @@ def register_routes(app, assistant):
         agent_id: str = Form(""),
         action: str = Form(""),
         capability: str = Form(""),
+        params: str = Form(""),
     ):
         from jarvis import specialized_agents as agents
 
+        # Actions take arguments; without this the evidence operations are
+        # unreachable from the running server.
+        try:
+            action_params = json.loads(params) if params.strip() else {}
+        except ValueError:
+            return {"ok": False, "message": "params must be a JSON object"}
+        if not isinstance(action_params, dict):
+            return {"ok": False, "message": "params must be a JSON object"}
+
         if agent_id:
-            return agents.invoke(agent_id, task, assistant=assistant, action=action)
+            return agents.invoke(
+                agent_id, task, assistant=assistant, action=action, params=action_params
+            )
         return agents.select_and_invoke(
-            task, assistant=assistant, required_capability=capability, action=action
+            task,
+            assistant=assistant,
+            required_capability=capability,
+            action=action,
+            params=action_params,
         )
 
     @app.get("/api/agents/{agent_id}")

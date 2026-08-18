@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import os
 import subprocess
 import sys
@@ -11,7 +12,6 @@ from pathlib import Path
 
 import pytest
 
-import jarvis.evidence.verify as verify  # module, not the re-exported function
 from jarvis import evidence as ev
 from jarvis import missions
 from jarvis import specialized_agents as agents
@@ -21,7 +21,7 @@ from jarvis.specialized_agents import registry
 
 # jarvis.evidence re-exports verify() as a function, which shadows the module
 # attribute, so the module itself is fetched explicitly for its constants.
-verify = importlib.import_module("jarvis.evidence.verify")
+vmod = importlib.import_module("jarvis.evidence.verify")
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CTX = "ctx1"
@@ -230,56 +230,56 @@ def test_no_evidence_is_not_independent(data_dir: Path):
 def test_independent_sources_verification(data_dir: Path):
     cid = _claim_with(["https://nasa.gov/a", "https://nih.gov/b"])
     out = ev.verify(cid, method=ev.INDEPENDENT_SOURCES)
-    assert out["result"] == verify.VERIFIED
-    assert out["confidence"] == verify.HIGH
+    assert out["result"] == vmod.VERIFIED
+    assert out["confidence"] == vmod.HIGH
     assert ev.get_claim(cid)["status"] == store.VERIFIED
 
 
 def test_single_source_cannot_be_verified(data_dir: Path):
     cid = _claim_with(["https://nasa.gov/a"])
     out = ev.verify(cid)
-    assert out["result"] == verify.SUPPORTED
-    assert out["confidence"] != verify.HIGH
+    assert out["result"] == vmod.SUPPORTED
+    assert out["confidence"] != vmod.HIGH
     assert ev.get_claim(cid)["status"] == store.SUPPORTED
 
 
 def test_same_domain_cannot_be_verified(data_dir: Path):
     cid = _claim_with(["https://nasa.gov/a", "https://nasa.gov/b"])
     out = ev.verify(cid)
-    assert out["result"] != verify.VERIFIED
+    assert out["result"] != vmod.VERIFIED
     assert out["independence"]["level"] == store.NOT_INDEPENDENT
 
 
 def test_contradiction_makes_claim_contested(data_dir: Path):
     cid = _claim_with(["https://nasa.gov/a", "https://nih.gov/b"], ["https://blog.example.com/c"])
     out = ev.verify(cid)
-    assert out["result"] == verify.CONTESTED
-    assert out["confidence"] in (verify.LOW, verify.MODERATE)
+    assert out["result"] == vmod.CONTESTED
+    assert out["confidence"] in (vmod.LOW, vmod.MODERATE)
     assert ev.get_claim(cid)["status"] == store.CONTESTED
 
 
 def test_only_contradicting_evidence(data_dir: Path):
     cid = _claim_with([], ["https://blog.example.com/c"])
     out = ev.verify(cid, method=ev.CONTRADICTION_ANALYSIS)
-    assert out["result"] == verify.CONTRADICTED
+    assert out["result"] == vmod.CONTRADICTED
     assert ev.get_claim(cid)["status"] == store.CONTRADICTED
 
 
 def test_insufficient_evidence(data_dir: Path):
     cid = ev.add_claim("nothing supports this", context_id=CTX)
     out = ev.verify(cid)
-    assert out["result"] == verify.INSUFFICIENT
-    assert out["confidence"] == verify.NONE
+    assert out["result"] == vmod.INSUFFICIENT
+    assert out["confidence"] == vmod.NONE
     assert ev.get_claim(cid)["status"] == store.UNRESOLVED
 
 
 def test_direct_inspection_method(data_dir: Path):
     cid = _claim_with(["https://nasa.gov/a", "https://nih.gov/b"], inspected=True)
     out = ev.verify(cid, method=ev.DIRECT_INSPECTION)
-    assert out["result"] == verify.VERIFIED
+    assert out["result"] == vmod.VERIFIED
     snippet_claim = _claim_with(["https://x.gov/a"], ctx="ctx2", inspected=False)
     out2 = ev.verify(snippet_claim, method=ev.DIRECT_INSPECTION)
-    assert out2["result"] == verify.INSUFFICIENT, "snippets counted as direct inspection"
+    assert out2["result"] == vmod.INSUFFICIENT, "snippets counted as direct inspection"
 
 
 def test_source_quality_method(data_dir: Path):
@@ -292,7 +292,7 @@ def test_source_quality_method(data_dir: Path):
 def test_cross_source_consistency_method(data_dir: Path):
     cid = _claim_with(["https://nasa.gov/a", "https://nih.gov/b"])
     out = ev.verify(cid, method=ev.CROSS_SOURCE_CONSISTENCY)
-    assert out["result"] == verify.SUPPORTED
+    assert out["result"] == vmod.SUPPORTED
 
 
 def test_unknown_method_rejected(data_dir: Path):
@@ -343,7 +343,7 @@ def test_strong_contradiction_never_high_confidence(data_dir: Path):
         ["https://nasa.gov/a"], ["https://a.example.com/x", "https://b.example.com/y"]
     )
     out = ev.verify(cid, record=False)
-    assert out["confidence"] == verify.LOW
+    assert out["confidence"] == vmod.LOW
 
 
 def test_model_assertion_does_not_corroborate(data_dir: Path):
@@ -359,7 +359,7 @@ def test_model_assertion_does_not_corroborate(data_dir: Path):
     ev.link(cid, e2, ev.SUPPORTS)
     out = ev.verify(cid, record=False)
     assert out["factors"]["excluded_non_corroborating"] == 1
-    assert out["result"] != verify.VERIFIED, "model assertion counted as corroboration"
+    assert out["result"] != vmod.VERIFIED, "model assertion counted as corroboration"
 
 
 # ------------------------------------------------------------- contradictions
@@ -429,7 +429,7 @@ def test_research_produces_verified_evidence_claims(data_dir: Path, monkeypatch)
 
     assert rstore.get_job(rid)["status"] == "completed"
     claims = rengine._evidence_claims(rid)
-    assert claims and claims[0]["verification"]["result"] == verify.VERIFIED
+    assert claims and claims[0]["verification"]["result"] == vmod.VERIFIED
     assert claims[0]["status"] == store.VERIFIED
     assert ev.sources(rid) and ev.evidence(rid)
 
@@ -674,7 +674,7 @@ def test_handler_round_trip(data_dir: Path):
 
     v = call_action(None, "evidence_verify", {"claim_id": c["claim_id"]}, "")
     assert v["ok"] is True
-    assert v["verification"]["result"] == verify.VERIFIED
+    assert v["verification"]["result"] == vmod.VERIFIED
 
     p = call_action(None, "evidence_provenance", {"claim_id": c["claim_id"]}, "")
     assert p["ok"] is True and len(p["provenance"]["chain"]) == 2
@@ -707,6 +707,9 @@ def test_module_reload_durability(data_dir: Path):
     cid = _claim_with(["https://nasa.gov/a", "https://nih.gov/b"])
     ev.verify(cid)
     importlib.reload(store)
+    # Reloading rebinds EvidenceError; realign the package re-exports so later
+    # `except ev.EvidenceError` still matches raises from the reloaded module.
+    importlib.reload(importlib.import_module("jarvis.evidence"))
     assert store.get_claim(cid)["status"] == store.VERIFIED
     assert store.verifications(cid)
 
@@ -778,5 +781,140 @@ def test_evidence_survives_real_process_crash(data_dir: Path, tmp_path: Path):
     assert len(ev.evidence(ctx)) == before
 
     out = ev.verify(cid)
-    assert out["result"] == verify.VERIFIED
+    assert out["result"] == vmod.VERIFIED
     assert len(ev.claim_evidence(cid)) == 2
+
+
+# ------------------------------------------------- API params channel (live defect)
+
+
+def _routes_app(data_dir: Path):
+    """Build the real extra_routes app the live server exposes."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from jarvis.assistant import JarvisAssistant
+    from jarvis.gui import extra_routes
+
+    app = FastAPI()
+    extra_routes.register_routes(app, JarvisAssistant())
+    return TestClient(app)
+
+
+def test_agent_invoke_route_forwards_params(data_dir: Path):
+    """Regression: evidence actions take arguments and were unreachable live.
+
+    /api/agents/invoke accepted only task/agent_id/action/capability, so every
+    evidence operation that needs a claim_id or source_id could not be driven
+    from the running server.
+    """
+    client = _routes_app(data_dir)
+    cid = _claim_with(["https://nasa.gov/a", "https://nih.gov/b"])
+    ev.verify(cid)
+
+    resp = client.post(
+        "/api/agents/invoke",
+        data={
+            "task": "trace provenance",
+            "agent_id": "research_specialist",
+            "action": "evidence_provenance",
+            "params": json.dumps({"claim_id": cid}),
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["result"]["provenance"]["claim"]["id"] == cid
+    assert len(body["result"]["provenance"]["chain"]) == 2
+
+
+def test_agent_invoke_route_rejects_bad_params(data_dir: Path):
+    client = _routes_app(data_dir)
+    resp = client.post(
+        "/api/agents/invoke",
+        data={"task": "x", "agent_id": "general_specialist", "params": "not json"},
+    )
+    assert resp.json()["ok"] is False
+
+
+def test_collaboration_delegate_route_forwards_params(data_dir: Path):
+    from jarvis.collaboration import engine as cengine
+
+    client = _routes_app(data_dir)
+    cid = _claim_with(["https://nasa.gov/a", "https://nih.gov/b"])
+    ev.verify(cid)
+    collab = cengine.create_collaboration("params handoff", initiator="analysis_specialist")
+
+    resp = client.post(
+        f"/api/collaborations/{collab['collaboration_id']}/delegate",
+        data={
+            "requester": "analysis_specialist",
+            "objective": "report provenance",
+            "target": "research_specialist",
+            "action": "evidence_provenance",
+            "params": json.dumps({"claim_id": cid}),
+        },
+    )
+    body = resp.json()
+    assert body["ok"] is True
+    assert body["task"]["params"] == {"claim_id": cid}
+
+    task = cengine.execute_task(body["task"]["id"])
+    assert task["result"]["output"]["provenance"]["claim"]["id"] == cid
+
+
+def test_evidence_write_routes_round_trip(data_dir: Path):
+    client = _routes_app(data_dir)
+    ctx = "routectx"
+    s1 = client.post(
+        "/api/evidence/sources", data={"url": "https://nasa.gov/a", "context_id": ctx}
+    ).json()
+    s2 = client.post(
+        "/api/evidence/sources", data={"url": "https://nih.gov/b", "context_id": ctx}
+    ).json()
+    assert s1["ok"] and s1["source"]["access_state"] == ev.DISCOVERED
+
+    for s in (s1, s2):
+        client.post(f"/api/evidence/sources/{s['source_id']}/inspected", data={})
+    claim = client.post(
+        "/api/evidence/claims", data={"text": "route claim", "context_id": ctx}
+    ).json()
+    for s in (s1, s2):
+        e = client.post(
+            "/api/evidence/items",
+            data={
+                "source_id": s["source_id"],
+                "excerpt": "body text",
+                "context_id": ctx,
+                "claim_id": claim["claim_id"],
+                "evidence_type": ev.FULL_TEXT,
+                "relation": ev.SUPPORTS,
+            },
+        ).json()
+        assert e["ok"] and e["evidence"]["inspected"] == 1
+
+    v = client.post(f"/api/evidence/claims/{claim['claim_id']}/verify", data={}).json()
+    assert v["ok"] is True
+    assert v["verification"]["result"] == vmod.VERIFIED
+
+
+def test_evidence_route_records_failed_retrieval(data_dir: Path):
+    client = _routes_app(data_dir)
+    s = client.post(
+        "/api/evidence/sources", data={"url": "https://blocked.example.com/x", "context_id": "f"}
+    ).json()
+    client.post(
+        f"/api/evidence/sources/{s['source_id']}/inspected",
+        data={"failed": "1", "error": "403 forbidden"},
+    )
+    assert ev.get_source(s["source_id"])["access_state"] == ev.UNAVAILABLE
+    bad = client.post(
+        "/api/evidence/items",
+        data={
+            "source_id": s["source_id"],
+            "excerpt": "invented body",
+            "context_id": "f",
+            "evidence_type": ev.FULL_TEXT,
+        },
+    ).json()
+    assert bad["ok"] is False, "failed retrieval produced full-text evidence"
