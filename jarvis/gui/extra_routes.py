@@ -529,6 +529,39 @@ def register_routes(app, assistant):
 
     register_product("activity_inbox", register_activity_routes, app, assistant)
 
+    @app.get("/api/deep-research")
+    def deep_research_list():
+        from jarvis.research import store as research_store
+
+        return {"ok": True, "research": research_store.list_jobs(limit=50)}
+
+    @app.post("/api/deep-research")
+    def deep_research_create(objective: str = Form(...)):
+        from jarvis.research import engine as research_engine
+
+        text = (objective or "").strip()
+        if not text:
+            return {"ok": False, "message": "objective required"}
+        return {"ok": True, **research_engine.create_research(text)}
+
+    @app.get("/api/deep-research/{research_id}")
+    def deep_research_status(research_id: str):
+        from jarvis.research import engine as research_engine
+
+        snapshot = research_engine.status(research_id)
+        if not snapshot:
+            return {"ok": False, "message": f"no research {research_id}"}
+        return {"ok": True, "research": snapshot}
+
+    @app.get("/api/deep-research/{research_id}/report")
+    def deep_research_report(research_id: str):
+        from jarvis.research import engine as research_engine
+
+        data = research_engine.report(research_id)
+        if not data:
+            return {"ok": False, "message": f"no research {research_id}"}
+        return {"ok": True, "report": data}
+
     @app.get("/api/knowledge")
     def knowledge_list():
         from jarvis.knowledge import list_topics
