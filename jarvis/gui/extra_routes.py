@@ -529,6 +529,48 @@ def register_routes(app, assistant):
 
     register_product("activity_inbox", register_activity_routes, app, assistant)
 
+    @app.get("/api/agents")
+    def specialized_agents_list():
+        from jarvis import specialized_agents as agents
+
+        return {"ok": True, "agents": [a.to_dict() for a in agents.list_agents()]}
+
+    @app.get("/api/agents/capabilities")
+    def specialized_agents_capabilities():
+        from jarvis import specialized_agents as agents
+
+        return {"ok": True, "capabilities": agents.capabilities()}
+
+    @app.post("/api/agents/select")
+    def specialized_agents_select(task: str = Form(""), capability: str = Form("")):
+        from jarvis import specialized_agents as agents
+
+        return {"ok": True, "selection": agents.select(task, required_capability=capability)}
+
+    @app.post("/api/agents/invoke")
+    def specialized_agents_invoke(
+        task: str = Form(...),
+        agent_id: str = Form(""),
+        action: str = Form(""),
+        capability: str = Form(""),
+    ):
+        from jarvis import specialized_agents as agents
+
+        if agent_id:
+            return agents.invoke(agent_id, task, assistant=assistant, action=action)
+        return agents.select_and_invoke(
+            task, assistant=assistant, required_capability=capability, action=action
+        )
+
+    @app.get("/api/agents/{agent_id}")
+    def specialized_agent_get(agent_id: str):
+        from jarvis import specialized_agents as agents
+
+        agent = agents.get(agent_id)
+        if not agent:
+            return {"ok": False, "message": f"no agent {agent_id}"}
+        return {"ok": True, "agent": agent.to_dict(include_instructions=True)}
+
     @app.get("/api/deep-research")
     def deep_research_list():
         from jarvis.research import store as research_store

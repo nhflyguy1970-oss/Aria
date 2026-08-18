@@ -17,6 +17,7 @@ def ensure_handlers_loaded() -> None:
 
     register_queue_actions()
     from jarvis.handlers import (  # noqa: F401
+        agent_handlers,
         aria_coder_handlers,
         automation_handlers,
         knowledge_handlers,
