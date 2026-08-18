@@ -205,6 +205,12 @@ def phase_analyze(research_id: str) -> dict[str, Any]:
     confidence = _confidence(supports, contradicts, len(supporting_sources))
     store.set_claim_verdict(claim_id, verified=verified, confidence=confidence)
 
+    # Mirror into the shared evidence layer (Milestone 7) so the claim is
+    # traceable and verifiable outside research too. Research keeps its own
+    # tables for backward compatibility; the evidence layer is authoritative
+    # for verification.
+    _mirror_to_evidence(research_id, objective)
+
     if contradicts:
         store.add_unresolved(
             research_id,
@@ -221,6 +227,50 @@ def phase_analyze(research_id: str) -> dict[str, Any]:
         "contradicts": contradicts,
         "verified": verified,
         "confidence": confidence,
+    }
+
+
+def _mirror_to_evidence(research_id: str, objective: str) -> dict[str, Any]:
+    """Project research sources/evidence/claims into the shared evidence model."""
+    from jarvis import evidence as ev
+
+    claim_id = ev.add_claim(objective, context_id=research_id, origin="research")
+    source_map: dict[int, str] = {}
+    for src in store.sources(research_id):
+        try:
+            sid = ev.add_source(
+                src["url"],
+                context_id=research_id,
+                title=src["title"],
+                metadata={"research_source_id": src["id"], "query": src["query"]},
+            )
+        except ev.EvidenceError:
+            continue
+        source_map[src["id"]] = sid
+        if src["inspected"]:
+            ev.mark_source_inspected(sid, retrieved_at=src["inspected_at"])
+        elif src["retrieval_error"]:
+            ev.mark_source_unavailable(sid, src["retrieval_error"])
+
+    for row in store.evidence(research_id):
+        sid = source_map.get(row["source_id"])
+        if not sid:
+            continue
+        source = ev.get_source(sid)
+        # A snippet stays a snippet: only genuinely inspected sources may
+        # contribute full-text evidence.
+        kind = ev.FULL_TEXT if source["access_state"] == ev.INSPECTED else ev.SNIPPET
+        eid = ev.add_evidence(
+            sid, row["excerpt"], context_id=research_id, claim_id=claim_id, evidence_type=kind
+        )
+        relation = ev.CONTRADICTS if _NEGATION.search(row["excerpt"] or "") else ev.SUPPORTS
+        ev.link(claim_id, eid, relation)
+
+    result = ev.verify(claim_id, verifier="research_engine")
+    return {
+        "claim_id": claim_id,
+        "verification": result["result"],
+        "confidence": result["confidence"],
     }
 
 
@@ -373,7 +423,35 @@ def status(research_id: str) -> dict[str, Any] | None:
         "confidence": job.get("confidence"),
         "synthesis": job.get("synthesis"),
         "error": job.get("error"),
+        "evidence_claims": _evidence_claims(research_id),
     }
+
+
+def _provenance_for(research_id: str) -> list[dict[str, Any]]:
+    """Full claim -> evidence -> source -> verification chains for this job."""
+    from jarvis import evidence as ev
+
+    return [ev.provenance(c["id"]) for c in ev.claims(research_id)]
+
+
+def _evidence_claims(research_id: str) -> list[dict[str, Any]]:
+    """Verification state for this research job, from the shared evidence layer."""
+    from jarvis import evidence as ev
+
+    out = []
+    for claim in ev.claims(research_id):
+        vers = ev.verifications(claim["id"])
+        out.append(
+            {
+                "claim_id": claim["id"],
+                "text": claim["text"],
+                "status": claim["status"],
+                "confidence": claim["confidence"],
+                "verification": vers[-1] if vers else None,
+                "conflicts": len(ev.conflicts(claim["id"])),
+            }
+        )
+    return out
 
 
 def report(research_id: str) -> dict[str, Any] | None:
@@ -396,4 +474,6 @@ def report(research_id: str) -> dict[str, Any] | None:
         "evidence": store.evidence(research_id),
         "claims": claim_rows,
         "unresolved": store.unresolved(research_id),
+        "evidence_claims": _evidence_claims(research_id),
+        "provenance": _provenance_for(research_id),
     }

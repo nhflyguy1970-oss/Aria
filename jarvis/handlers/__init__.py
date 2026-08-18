@@ -21,6 +21,7 @@ def ensure_handlers_loaded() -> None:
         aria_coder_handlers,
         automation_handlers,
         collaboration_handlers,
+        evidence_handlers,
         knowledge_handlers,
         mission_handlers,
         research_handlers,

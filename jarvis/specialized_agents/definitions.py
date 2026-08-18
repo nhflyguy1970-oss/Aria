@@ -121,6 +121,18 @@ def validate(definition: AgentDefinition) -> AgentDefinition:
 # specialist cannot delegate unless its definition says it may.
 DELEGATE_ACTION = "collab_delegate"
 
+# Evidence authority is deliberately split: reading provenance is broad, but
+# creating evidence, creating claims and performing verification are separate
+# permissions so a specialist cannot mark its own unsupported claim verified.
+EVIDENCE_READ = (
+    "evidence_claim_get",
+    "evidence_provenance",
+    "evidence_list_claims",
+    "evidence_conflicts",
+)
+EVIDENCE_WRITE = ("evidence_source_add", "evidence_add", "evidence_claim_add", "evidence_link")
+EVIDENCE_VERIFY = ("evidence_verify",)
+
 _DESTRUCTIVE = (
     "aria_self_fix",
     "self_upgrade_run",
@@ -158,6 +170,9 @@ RESEARCH_SPECIALIST = AgentDefinition(
         "research_step",
         "mission_status",
         DELEGATE_ACTION,
+        *EVIDENCE_READ,
+        *EVIDENCE_WRITE,
+        *EVIDENCE_VERIFY,
     ),
     denied_actions=_DESTRUCTIVE,
     preferred_model_role="general",
@@ -193,7 +208,10 @@ CODING_SPECIALIST = AgentDefinition(
         "code_search",
         "mission_status",
     ),
-    denied_actions=_DESTRUCTIVE + ("research_create", "research_run"),
+    denied_actions=_DESTRUCTIVE
+    + ("research_create", "research_run")
+    + EVIDENCE_WRITE
+    + EVIDENCE_VERIFY,
     preferred_model_role="coder",
     model_requirements=("code",),
     metadata={"catalog_id": "coder"},
@@ -223,8 +241,10 @@ ANALYSIS_SPECIALIST = AgentDefinition(
         "document_summarize",
         "mission_status",
         DELEGATE_ACTION,
+        *EVIDENCE_READ,
+        *EVIDENCE_VERIFY,
     ),
-    denied_actions=_DESTRUCTIVE + ("research_create", "run_tests"),
+    denied_actions=_DESTRUCTIVE + ("research_create", "run_tests") + EVIDENCE_WRITE,
     preferred_model_role="general",
     metadata={"catalog_id": "synthesizer"},
 )
@@ -250,6 +270,7 @@ GENERAL_SPECIALIST = AgentDefinition(
         "research_list",
         "agent_list",
         DELEGATE_ACTION,
+        *EVIDENCE_READ,
     ),
     denied_actions=_DESTRUCTIVE,
     preferred_model_role="general",

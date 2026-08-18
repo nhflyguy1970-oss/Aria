@@ -529,6 +529,56 @@ def register_routes(app, assistant):
 
     register_product("activity_inbox", register_activity_routes, app, assistant)
 
+    @app.get("/api/evidence/claims")
+    def evidence_claims_list(context_id: str = ""):
+        from jarvis import evidence as ev
+
+        return {"ok": True, "claims": ev.claims(context_id)}
+
+    @app.get("/api/evidence/claims/{claim_id}")
+    def evidence_claim_detail(claim_id: str):
+        from jarvis import evidence as ev
+
+        claim = ev.get_claim(claim_id)
+        if not claim:
+            return {"ok": False, "message": f"no claim {claim_id}"}
+        return {
+            "ok": True,
+            "claim": claim,
+            "evidence": ev.claim_evidence(claim_id),
+            "verifications": ev.verifications(claim_id),
+            "conflicts": ev.conflicts(claim_id),
+        }
+
+    @app.get("/api/evidence/claims/{claim_id}/provenance")
+    def evidence_claim_provenance(claim_id: str):
+        from jarvis import evidence as ev
+
+        data = ev.provenance(claim_id)
+        if not data:
+            return {"ok": False, "message": f"no claim {claim_id}"}
+        return {"ok": True, "provenance": data}
+
+    @app.post("/api/evidence/claims/{claim_id}/verify")
+    def evidence_claim_verify(claim_id: str, method: str = Form(""), verifier: str = Form("")):
+        from jarvis import evidence as ev
+
+        try:
+            return {
+                "ok": True,
+                "verification": ev.verify(
+                    claim_id, method=method or ev.INDEPENDENT_SOURCES, verifier=verifier
+                ),
+            }
+        except ev.EvidenceError as exc:
+            return {"ok": False, "message": str(exc)}
+
+    @app.get("/api/evidence/sources")
+    def evidence_sources_list(context_id: str = ""):
+        from jarvis import evidence as ev
+
+        return {"ok": True, "sources": ev.sources(context_id)}
+
     @app.get("/api/collaborations")
     def collaborations_list():
         from jarvis.collaboration import store as collab_store
