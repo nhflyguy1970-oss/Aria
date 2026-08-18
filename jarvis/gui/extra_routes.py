@@ -529,6 +529,69 @@ def register_routes(app, assistant):
 
     register_product("activity_inbox", register_activity_routes, app, assistant)
 
+    @app.get("/api/collaborations")
+    def collaborations_list():
+        from jarvis.collaboration import store as collab_store
+
+        return {"ok": True, "collaborations": collab_store.list_collaborations(limit=50)}
+
+    @app.post("/api/collaborations")
+    def collaborations_create(
+        objective: str = Form(...), initiator: str = Form("analysis_specialist")
+    ):
+        from jarvis.collaboration import engine as collab_engine
+
+        try:
+            return {"ok": True, **collab_engine.create_collaboration(objective, initiator=initiator)}
+        except collab_engine.DelegationError as exc:
+            return {"ok": False, "message": str(exc)}
+
+    @app.post("/api/collaborations/{collaboration_id}/delegate")
+    def collaborations_delegate(
+        collaboration_id: str,
+        requester: str = Form(...),
+        objective: str = Form(...),
+        target: str = Form(""),
+        capability: str = Form(""),
+        action: str = Form(""),
+        depends_on: str = Form(""),
+    ):
+        from jarvis.collaboration import engine as collab_engine
+        from jarvis.collaboration import graph as collab_graph
+
+        deps = [d for d in (depends_on or "").split(",") if d.strip()]
+        try:
+            task = collab_engine.delegate(
+                collaboration_id,
+                requester=requester,
+                objective=objective,
+                target=target,
+                capability=capability,
+                action=action,
+                depends_on=[d.strip() for d in deps],
+            )
+        except (collab_engine.DelegationError, collab_graph.GraphError) as exc:
+            return {"ok": False, "message": str(exc)}
+        return {"ok": True, "task": task}
+
+    @app.get("/api/collaborations/{collaboration_id}")
+    def collaborations_status(collaboration_id: str):
+        from jarvis.collaboration import engine as collab_engine
+
+        snapshot = collab_engine.status(collaboration_id)
+        if not snapshot:
+            return {"ok": False, "message": f"no collaboration {collaboration_id}"}
+        return {"ok": True, "collaboration": snapshot}
+
+    @app.get("/api/collaborations/{collaboration_id}/report")
+    def collaborations_report(collaboration_id: str):
+        from jarvis.collaboration import engine as collab_engine
+
+        data = collab_engine.report(collaboration_id)
+        if not data:
+            return {"ok": False, "message": f"no collaboration {collaboration_id}"}
+        return {"ok": True, "report": data}
+
     @app.get("/api/agents")
     def specialized_agents_list():
         from jarvis import specialized_agents as agents

@@ -117,6 +117,10 @@ def validate(definition: AgentDefinition) -> AgentDefinition:
 # Actions map to capabilities ARIA already has. Nothing here grants a
 # specialist authority the corresponding ARIA action does not already have.
 
+# Requesting work from another specialist is itself a permissioned action, so a
+# specialist cannot delegate unless its definition says it may.
+DELEGATE_ACTION = "collab_delegate"
+
 _DESTRUCTIVE = (
     "aria_self_fix",
     "self_upgrade_run",
@@ -153,6 +157,7 @@ RESEARCH_SPECIALIST = AgentDefinition(
         "research_run",
         "research_step",
         "mission_status",
+        DELEGATE_ACTION,
     ),
     denied_actions=_DESTRUCTIVE,
     preferred_model_role="general",
@@ -213,7 +218,12 @@ ANALYSIS_SPECIALIST = AgentDefinition(
         "You are ARIA's analysis specialist. Work only from supplied material. "
         "State assumptions explicitly and separate observation from inference."
     ),
-    allowed_actions=("data_analyze", "document_summarize", "mission_status"),
+    allowed_actions=(
+        "data_analyze",
+        "document_summarize",
+        "mission_status",
+        DELEGATE_ACTION,
+    ),
     denied_actions=_DESTRUCTIVE + ("research_create", "run_tests"),
     preferred_model_role="general",
     metadata={"catalog_id": "synthesizer"},
@@ -234,7 +244,13 @@ GENERAL_SPECIALIST = AgentDefinition(
         "You are ARIA's general assistant. Answer directly. If a specialist would serve "
         "the request better, say which one."
     ),
-    allowed_actions=("mission_status", "mission_list", "research_list", "agent_list"),
+    allowed_actions=(
+        "mission_status",
+        "mission_list",
+        "research_list",
+        "agent_list",
+        DELEGATE_ACTION,
+    ),
     denied_actions=_DESTRUCTIVE,
     preferred_model_role="general",
     metadata={"fallback": True},
