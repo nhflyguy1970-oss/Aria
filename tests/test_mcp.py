@@ -1073,3 +1073,93 @@ def test_history_and_observability(demo):
         "unavailable_reason",
     ):
         assert field in detail, field
+
+
+def test_provider_registration_through_the_action_layer(data_dir: Path):
+    """Regression: a provider could not be configured from the running service."""
+    out = _call(
+        "mcp_provider_register",
+        {
+            "provider_id": "live_style",
+            "name": "Live Style",
+            "command": [PY_BIN, str(DEMO_SERVER)],
+            "allowed_agents": ["research_specialist"],
+        },
+    )
+    assert out["ok"] is True
+    # Registration never confers trust.
+    assert out["provider"]["trust"] == defs.UNTRUSTED
+    assert mcp.call_tool("live_style", "add_numbers", {"a": 1, "b": 1})["status"] == (
+        mcp_engine.DENIED
+    )
+    _call("mcp_set_trust", {"provider_id": "live_style", "trust": defs.TRUSTED})
+    mcp.discover("live_style")
+    assert mcp.call_tool("live_style", "add_numbers", {"a": 1, "b": 1})["status"] == (
+        mcp_engine.SUCCESS
+    )
+
+
+def test_registration_refuses_a_shell_string(data_dir: Path):
+    out = _call("mcp_provider_register", {"provider_id": "shelly", "command": "rm -rf /"})
+    assert out["ok"] is False
+    assert out["error_kind"] == "command_form"
+
+
+def test_registration_refuses_an_unapproved_binary(data_dir: Path):
+    out = _call("mcp_provider_register", {"provider_id": "curly", "command": ["curl", "x"]})
+    assert out["ok"] is False
+    assert out["error_kind"] == "invalid_provider"
+
+
+def test_registration_stores_env_as_keys_only(data_dir: Path):
+    out = _call(
+        "mcp_provider_register",
+        {
+            "provider_id": "with_env",
+            "command": [PY_BIN, str(DEMO_SERVER)],
+            "env": {"API_TOKEN": "sk-should-never-surface-9999"},
+        },
+    )
+    assert out["ok"] is True
+    assert out["env_keys"] == ["API_TOKEN"]
+    assert "sk-should-never-surface-9999" not in str(out)
+    assert "sk-should-never-surface-9999" not in mcp_store.DB_PATH.read_bytes().decode(
+        "utf-8", "ignore"
+    )
+
+
+def test_persisted_providers_are_restored_into_a_fresh_process(data_dir: Path):
+    """Regression: nothing called load_persisted, so config vanished on restart."""
+    _call(
+        "mcp_provider_register", {"provider_id": "survivor", "command": [PY_BIN, str(DEMO_SERVER)]}
+    )
+    mcp_registry.reset()
+    import jarvis.mcp as mcp_pkg
+
+    mcp_pkg._skills_loaded = False  # simulate a fresh process
+    _call("mcp_provider_list", {})
+    assert mcp_registry.get("survivor") is not None, "configuration did not survive"
+
+
+def test_provider_removal_clears_secrets(data_dir: Path):
+    _call(
+        "mcp_provider_register",
+        {
+            "provider_id": "temporary",
+            "command": [PY_BIN, str(DEMO_SERVER)],
+            "env": {"TOKEN": "sk-temp-value-1234"},
+        },
+    )
+    assert mcp_secrets.env_keys("temporary") == ["TOKEN"]
+    out = _call("mcp_provider_remove", {"provider_id": "temporary"})
+    assert out["ok"] is True
+    assert mcp_secrets.env_keys("temporary") == []
+
+
+def test_no_agent_may_configure_providers(data_dir: Path):
+    """Configuration is an operator action, not something an agent can do."""
+    from jarvis.specialized_agents import definitions as agent_defs
+
+    for agent in agent_defs.BUILTIN_AGENTS:
+        for action in ("mcp_provider_register", "mcp_provider_remove", "mcp_set_trust"):
+            assert agent.permits(action) is False, f"{agent.id} may {action}"

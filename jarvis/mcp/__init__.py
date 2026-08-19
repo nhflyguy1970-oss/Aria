@@ -90,6 +90,14 @@ def ensure_mcp_skills_loaded() -> None:
     if _skills_loaded and skill_registry.get("mcp_tool_call"):
         return
     load_mcp_skills(replace=True)
+    # Provider configuration is durable, but nothing restored it into a fresh
+    # process, so a configured provider silently vanished on every restart.
+    try:
+        load_persisted()
+    except Exception:  # noqa: BLE001 - a bad stored row must not block the layer
+        import logging
+
+        logging.getLogger("jarvis.mcp").warning("could not load persisted providers", exc_info=True)
     _skills_loaded = True
 
 

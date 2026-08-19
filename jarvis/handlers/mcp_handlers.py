@@ -336,3 +336,98 @@ def mcp_step(assistant, params: dict, message: str) -> dict:
             raise RetryableError(detail)
         raise RuntimeError(detail)
     return ok(f"mcp {operation} ok", module="general", envelope=envelope)
+
+
+@register_action(
+    "mcp_provider_register",
+    module="general",
+    description="Register or update an MCP provider configuration",
+)
+def mcp_provider_register(assistant, params: dict, message: str) -> dict:
+    """Configuration, not use.
+
+    A provider registered here starts untrusted and can do nothing until an
+    operator raises its trust and names the agents it accepts. Environment
+    values go to the secrets file, never to the configuration record.
+    """
+    mcp = _mcp()
+    from jarvis.mcp import definitions as mcp_defs
+    from jarvis.mcp import secrets as mcp_secrets
+
+    provider_id = (params.get("provider_id") or "").strip()
+    if not provider_id:
+        return err("mcp_provider_register needs provider_id.", module="general")
+
+    command = params.get("command") or []
+    if isinstance(command, str):
+        # An argv list is required; a shell string is never split and run.
+        return err(
+            "command must be a list of arguments, not a shell string.",
+            module="general",
+            error_kind="command_form",
+        )
+    tool_impacts = params.get("tool_impacts") or {}
+    if not isinstance(tool_impacts, dict):
+        return err("tool_impacts must be an object.", module="general", error_kind="schema")
+
+    try:
+        defn = mcp_defs.ProviderDefinition(
+            provider_id=provider_id,
+            name=(params.get("name") or provider_id).strip(),
+            description=(params.get("description") or "").strip(),
+            transport=(params.get("transport") or mcp_defs.STDIO).strip(),
+            command=tuple(str(c) for c in command),
+            cwd=(params.get("cwd") or "").strip(),
+            url=(params.get("url") or "").strip(),
+            allow_local=bool(params.get("allow_local")),
+            # Never trusted on arrival, whatever the caller asks for.
+            trust=mcp_defs.UNTRUSTED,
+            impact=(params.get("impact") or mcp_defs.READ).strip(),
+            tool_impacts=tuple(sorted((str(k), str(v)) for k, v in tool_impacts.items())),
+            allowed_agents=tuple(params.get("allowed_agents") or ()),
+            denied_agents=tuple(params.get("denied_agents") or ()),
+            allowed_skills=tuple(params.get("allowed_skills") or ()),
+            allowed_tools=tuple(params.get("allowed_tools") or ()),
+            denied_tools=tuple(params.get("denied_tools") or ()),
+            required_actions=tuple(params.get("required_actions") or ()),
+            timeout_s=float(params.get("timeout_s") or 30.0),
+        )
+        mcp.register(defn, replace=True, persist=True)
+    except mcp.ProviderDefinitionError as exc:
+        return err(str(exc), module="general", error_kind="invalid_provider")
+    except (TypeError, ValueError) as exc:
+        return err(str(exc), module="general", error_kind="invalid_provider")
+
+    env = params.get("env")
+    env_keys: list[str] = []
+    if isinstance(env, dict) and env:
+        env_keys = mcp_secrets.set_provider_env(
+            provider_id, {str(k): str(v) for k, v in env.items()}
+        )
+
+    return ok(
+        f"Provider `{provider_id}` registered as {defn.trust}. "
+        "Raise its trust explicitly before it can execute anything.",
+        module="general",
+        provider=defn.to_dict(),
+        env_keys=env_keys,
+    )
+
+
+@register_action(
+    "mcp_provider_remove", module="general", description="Remove an MCP provider configuration"
+)
+def mcp_provider_remove(assistant, params: dict, message: str) -> dict:
+    mcp = _mcp()
+    from jarvis.mcp import secrets as mcp_secrets
+
+    provider_id = (params.get("provider_id") or "").strip()
+    if not provider_id:
+        return err("mcp_provider_remove needs provider_id.", module="general")
+    removed = mcp.unregister(provider_id)
+    mcp_secrets.clear_provider_env(provider_id)
+    if not removed:
+        return err(
+            f"No such MCP provider: {provider_id}", module="general", error_kind="unknown_provider"
+        )
+    return ok(f"Provider `{provider_id}` removed.", module="general")

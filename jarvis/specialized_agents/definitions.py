@@ -184,7 +184,12 @@ MCP_USE = (
     "mcp_prompt",
     "mcp_history",
 )
-MCP_HIGH_IMPACT = ("mcp_invoke_high_impact", "mcp_set_trust")
+MCP_HIGH_IMPACT = (
+    "mcp_invoke_high_impact",
+    "mcp_set_trust",
+    "mcp_provider_register",
+    "mcp_provider_remove",
+)
 
 _DESTRUCTIVE = (
     "aria_self_fix",
