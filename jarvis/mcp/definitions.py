@@ -307,9 +307,18 @@ def _validate_command(defn: ProviderDefinition) -> None:
     elif shutil.which(first) is None:
         raise ProviderDefinitionError(f"{defn.provider_id}: executable not found on PATH: {first}")
     if defn.cwd:
-        root = Path(defn.cwd)
+        raw = defn.cwd
+        if ".." in Path(raw).parts:
+            raise ProviderDefinitionError(f"{defn.provider_id}: cwd must not contain '..': {raw}")
+        root = Path(raw)
+        if not root.is_absolute():
+            raise ProviderDefinitionError(f"{defn.provider_id}: cwd must be absolute: {raw}")
+        if root.resolve() != root:
+            raise ProviderDefinitionError(
+                f"{defn.provider_id}: cwd must be a resolved path: {raw} -> {root.resolve()}"
+            )
         if not root.is_dir():
-            raise ProviderDefinitionError(f"{defn.provider_id}: cwd is not a directory: {defn.cwd}")
+            raise ProviderDefinitionError(f"{defn.provider_id}: cwd is not a directory: {raw}")
 
 
 def _validate_url(defn: ProviderDefinition) -> None:

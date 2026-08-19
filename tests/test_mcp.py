@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -1367,3 +1368,46 @@ def test_mcp_skills_are_present_without_a_prior_mcp_action(data_dir: Path):
     )
     assert queued["ok"] is True, queued.get("message")
     assert queued["mission_id"]
+
+
+def test_cwd_traversal_refused(data_dir: Path):
+    """Regression, found live: a traversal cwd was accepted because it resolved."""
+    with pytest.raises(defs.ProviderDefinitionError, match="must not contain"):
+        defs.validate(provider(cwd="/../../etc"))
+    with pytest.raises(defs.ProviderDefinitionError, match="must be absolute"):
+        defs.validate(provider(cwd="relative/dir"))
+    defs.validate(provider(cwd=str(data_dir)))
+
+
+def test_schema_is_enforced_even_without_a_cached_discovery(data_dir: Path):
+    """Regression, found live: after a restart there was no cached schema, so
+    model-generated arguments went to the provider entirely unchecked."""
+    reg(provider())
+    # Deliberately no discover() call: this is the freshly-restarted state.
+    assert mcp_registry.cached_discovery("fixture_demo") is None
+    env = mcp.call_tool("fixture_demo", "add_numbers", {"a": "not a number", "b": 1})
+    assert env["status"] == mcp_engine.INVALID
+    assert env["error_kind"] == "schema"
+
+
+def test_provider_secret_values_are_scrubbed_whatever_their_shape(data_dir: Path):
+    """Regression, found live: a token that did not look credential-shaped
+    survived redaction and reached the audit database in a tool result."""
+    token = "sk-live-milestone11-must-never-appear-99"
+    reg(provider(), persist=True)
+    mcp_secrets.set_provider_env("fixture_demo", {"PROVIDER_TOKEN": token})
+    mcp.discover("fixture_demo")
+
+    env = mcp.call_tool("fixture_demo", "echo_credential", {"token": token})
+    assert env["status"] == mcp_engine.SUCCESS
+    assert token not in json.dumps(env), "secret survived in the envelope"
+
+    record = mcp_store.get_invocation(env["invocation_id"])
+    assert token not in json.dumps(record), "secret reached the audit record"
+    assert token.encode() not in mcp_store.DB_PATH.read_bytes(), "secret reached the database"
+
+
+def test_generic_redaction_still_applies(demo):
+    """The shaped-secret rules keep working alongside the literal scrub."""
+    env = mcp.call_tool("fixture_demo", "echo_credential", {"token": "sk-abcdefghijklmnop"})
+    assert "sk-abcdefghijklmnop" not in json.dumps(env["arguments"])

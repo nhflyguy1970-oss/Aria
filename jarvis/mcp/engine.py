@@ -151,6 +151,28 @@ def _envelope(**kw: Any) -> dict[str, Any]:
     return env
 
 
+def _scrub_known_secrets(envelope: dict[str, Any], provider_id: str) -> dict[str, Any]:
+    """Replace this provider's configured secret values wherever they appear."""
+    from jarvis.mcp import secrets as mcp_secrets
+
+    values = [v for v in mcp_secrets.get_provider_env(provider_id).values() if v and len(v) >= 4]
+    if not values:
+        return envelope
+    try:
+        blob = json.dumps(envelope, default=str)
+    except (TypeError, ValueError):
+        return envelope
+    replaced = blob
+    for value in values:
+        replaced = replaced.replace(value, "[redacted]")
+    if replaced == blob:
+        return envelope
+    try:
+        return json.loads(replaced)
+    except ValueError:
+        return envelope
+
+
 def _finish(env: dict[str, Any], defn: defs.ProviderDefinition | None) -> dict[str, Any]:
     env["duration_ms"] = round((time.time() - env["started_at"]) * 1000, 2)
     # Redaction happens once, here, so nothing credential-shaped reaches the
@@ -158,6 +180,11 @@ def _finish(env: dict[str, Any], defn: defs.ProviderDefinition | None) -> dict[s
     env["arguments"] = redact(env.get("arguments") or {})
     env["result"] = redact(env.get("result"))
     env["error"] = redact(env.get("error")) if env.get("error") else env.get("error")
+    # The generic rules only recognise credential-*shaped* text. ARIA knows this
+    # provider's actual secret values, so scrub those literally too: a token
+    # that does not look like one still must not reach the audit trail.
+    if defn is not None:
+        env = _scrub_known_secrets(env, defn.provider_id)
     try:
         env["invocation_id"] = store.record_invocation(env)
         if defn is not None:
@@ -305,7 +332,14 @@ def call_tool(
     payload = dict(arguments or {})
     try:
         _check_input_size(payload)
-        schema = (registry.find_tool(provider_id, tool) or {}).get("input_schema") or {}
+        known = registry.find_tool(provider_id, tool)
+        if known is None:
+            # Discovery lives in memory, so after a restart there was no schema
+            # and model-generated arguments went to the provider unchecked.
+            # Fetch it once rather than skipping the check.
+            discover(provider_id, requester=requester, refresh=True)
+            known = registry.find_tool(provider_id, tool)
+        schema = (known or {}).get("input_schema") or {}
         if schema:
             # Model-generated arguments are validated against the provider's own
             # schema before anything is sent.
