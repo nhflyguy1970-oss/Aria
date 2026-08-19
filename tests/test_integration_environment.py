@@ -587,6 +587,20 @@ def test_a_session_reads_its_own_page_normally(data_dir: Path):
     assert out["result"]["text"] == "Example Domain"
 
 
+def test_status_reports_research_that_is_actually_running(data_dir: Path):
+    """The active branch only runs when something is live, so a wrong key there
+    stayed invisible until real research was in flight."""
+    from jarvis.research import store as research_store
+
+    research_id = research_store.create_job("What does example.com publish?")
+    research_store.set_status(research_id, "running")
+
+    section = env.environment_status()["research"]
+    assert section["active"], "running research is not reported"
+    assert section["active"][0]["research_id"] == research_id
+    assert env.environment_status()["unavailable"] == {}
+
+
 def test_collaboration_can_actually_be_opened(data_dir: Path):
     """Delegation needs a collaboration to delegate into; only delegate was
     granted, so every collaboration_id a specialist could name did not exist."""

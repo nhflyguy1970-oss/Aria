@@ -90,7 +90,8 @@ def _research(limit: int) -> dict[str, Any]:
         "total": len(rows),
         "active": [
             {
-                "research_id": r["research_id"],
+                # research_jobs keys its rows "id", like every other store here.
+                "research_id": r["id"],
                 "objective": (r.get("objective") or "")[:100],
                 "state": lifecycle.unify("research", r.get("status", "")),
             }
