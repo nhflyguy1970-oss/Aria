@@ -174,3 +174,100 @@ def model_routing_history(assistant, params: dict, message: str) -> dict:
         for r in rows
     ]
     return ok("\n".join(lines), module="general", invocations=rows)
+
+
+@register_action(
+    "model_execute",
+    module="general",
+    description="Run a prompt on a routed model, with bounded fallback",
+)
+def model_execute(assistant, params: dict, message: str) -> dict:
+    """Route, invoke and fall back — the whole path in one action.
+
+    This is where routing stops being advice and becomes what actually ran.
+    The result names the model that produced it, and says plainly when that was
+    not the first choice.
+    """
+    routing = _routing()
+    prompt = (params.get("prompt") or message or "").strip()
+    if not prompt:
+        return err("model_execute needs a prompt.", module="general")
+    try:
+        request = _request_from_params(params)
+    except ValueError as exc:
+        return err(str(exc), module="general", error_kind="invalid_request")
+
+    mission_id = request.mission_id
+    cancel_check = None
+    if mission_id:
+        from jarvis.missions import store as mstore
+
+        def cancel_check() -> bool:  # noqa: E306
+            return mstore.cancel_requested(mission_id)
+
+    validator = None
+    if request.require_structured_output:
+        import json as _json
+
+        def validator(result) -> bool:  # noqa: E306
+            try:
+                _json.loads(str(result))
+                return True
+            except (TypeError, ValueError):
+                return False
+
+    payload = {
+        "prompt": prompt,
+        "system": (params.get("system") or "").strip(),
+        "role": request.role or "conversation",
+    }
+    if request.require_structured_output:
+        # Ollama constrains decoding to JSON when asked; this is the provider
+        # feature the structured_output capability is based on.
+        payload["options"] = {"format": "json"}
+
+    envelope = routing.execute(request, payload, cancel_check=cancel_check, validator=validator)
+    text = (
+        f"`{envelope['final_model'] or envelope['selected_model']}` → {envelope['status']}"
+        f" ({envelope['duration_ms']}ms)"
+    )
+    if envelope["status"] != routing.SUCCESS:
+        return err(
+            envelope.get("error") or text,
+            module="general",
+            error_kind=envelope.get("failure_kind") or envelope["status"],
+            envelope=envelope,
+        )
+    return ok(
+        text
+        + (f" [fallback ×{envelope['fallback_count']}]" if envelope["fallback_active"] else ""),
+        module="general",
+        envelope=envelope,
+        response=envelope["result"],
+        model=envelope["final_model"],
+    )
+
+
+@register_action(
+    "model_step",
+    module="general",
+    description="Run a routed model call as a mission step (used by the mission worker)",
+)
+def model_step(assistant, params: dict, message: str) -> dict:
+    """Mission-backed routed execution; honours mission cancellation."""
+    routing = _routing()
+    result = model_execute(assistant, params, message)
+    if result.get("ok"):
+        return result
+    envelope = result.get("envelope") or {}
+    status = envelope.get("status")
+    # A returned dict counts as a completed step, so a failed or cancelled model
+    # call has to raise or the mission would record work that did not happen.
+    from jarvis.missions.engine import MissionCancelled, RetryableError
+
+    detail = f"model {status}: {envelope.get('error') or result.get('message')}"
+    if status == routing.CANCELLED:
+        raise MissionCancelled(detail)
+    if envelope.get("failure_kind") in ("timeout", "connection_failure", "unavailable"):
+        raise RetryableError(detail)
+    raise RuntimeError(detail)

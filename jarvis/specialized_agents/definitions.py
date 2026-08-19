@@ -200,6 +200,11 @@ MODEL_ROUTING_READ = (
     "model_route",
     "model_health",
     "model_routing_history",
+    # Running a prompt on a routed model. An agent can already cause model
+    # calls; this one is governed by routing and recorded, which is strictly
+    # more accountable than the ungoverned path.
+    "model_execute",
+    "model_step",
 )
 MODEL_ROUTING_ADMIN = ("model_health_reset",)
 

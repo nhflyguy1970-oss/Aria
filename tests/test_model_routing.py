@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib
 import time
 from pathlib import Path
 
@@ -14,7 +15,12 @@ from jarvis.model_routing import failures, health, profiles, router
 from jarvis.model_routing import store as routing_store
 from jarvis.model_routing.profiles import ModelProfile
 from jarvis.model_routing.request import RoutingRequest
+
 from jarvis.specialized_agents import registry as agent_registry
+
+# The package re-exports execute() as a function, which shadows the submodule
+# of the same name, so fetch the module itself to patch its default invoker.
+mr_execute = importlib.import_module("jarvis.model_routing.execute")
 
 
 @pytest.fixture(autouse=True)
@@ -1151,3 +1157,127 @@ def test_agent_can_explain_its_own_routing(data_dir: Path):
     )
     assert out["ok"] is True
     assert out["result"]["decision"]["selected_model"] == "toolish:7b"
+
+
+def test_model_execute_runs_and_reports_the_model(data_dir: Path, monkeypatch):
+    """Routing becomes what actually ran, not just advice."""
+    register(make_profile("only:7b"))
+    monkeypatch.setattr(mr_execute, "default_invoker", lambda m, p: f"reply from {m}")
+    out = _call("model_execute", {"prompt": "hello"})
+    assert out["ok"] is True
+    assert out["model"] == "only:7b"
+    assert out["response"] == "reply from only:7b"
+    assert out["envelope"]["fallback_active"] is False
+
+
+def test_model_execute_reports_fallback_openly(data_dir: Path, monkeypatch):
+    register(make_profile("first:7b", general_strength=0.99), make_profile("second:7b"))
+
+    def invoker(model, payload):
+        if model == "first:7b":
+            raise ConnectionError("connection refused")
+        return "recovered"
+
+    monkeypatch.setattr(mr_execute, "default_invoker", invoker)
+    out = _call("model_execute", {"prompt": "hi"})
+    assert out["ok"] is True
+    assert out["model"] == "second:7b"
+    assert "fallback" in out["message"]
+    assert out["envelope"]["fallback_count"] == 1
+
+
+def test_model_execute_failure_is_not_a_success(data_dir: Path, monkeypatch):
+    register(make_profile("only:7b"))
+
+    def invoker(model, payload):
+        raise ConnectionError("down")
+
+    monkeypatch.setattr(mr_execute, "default_invoker", invoker)
+    out = _call("model_execute", {"prompt": "hi"})
+    assert out["ok"] is False
+    assert out["envelope"]["status"] == mr.FAILED
+
+
+def test_model_execute_requires_a_prompt(data_dir: Path):
+    from jarvis.handlers import ensure_handlers_loaded
+    from jarvis.handlers.registry import call_action
+
+    ensure_handlers_loaded()
+    # The chat message doubles as the prompt, so "nothing to do" means both are
+    # empty rather than just the parameter.
+    assert call_action(None, "model_execute", {}, "")["ok"] is False
+
+
+def test_model_execute_unroutable_never_invokes(data_dir: Path, monkeypatch):
+    register(make_profile("blind:7b"))
+    tried = []
+    monkeypatch.setattr(mr_execute, "default_invoker", lambda m, p: tried.append(m))
+    out = _call("model_execute", {"prompt": "describe this image", "require_vision": True})
+    assert out["ok"] is False
+    assert out["error_kind"] == failures.CAPABILITY_MISMATCH
+    assert tried == []
+
+
+def test_model_step_raises_so_a_mission_cannot_report_false_success(data_dir: Path, monkeypatch):
+    from jarvis import missions
+
+    register(make_profile("only:7b"))
+    monkeypatch.setattr(
+        mr_execute,
+        "default_invoker",
+        lambda m, p: (_ for _ in ()).throw(RuntimeError("model exploded")),
+    )
+    mission_id = missions.create_mission(
+        "routed model work",
+        steps=[{"name": "model", "action": "model_step", "params": {"prompt": "hi"}}],
+        kind="model",
+    )
+    missions.run(mission_id, missions.ActionStepRunner(None))
+    assert missions.status(mission_id)["state"] != missions.COMPLETED
+
+
+def test_model_step_cancellation_lands_cancelled(data_dir: Path, monkeypatch):
+    from jarvis import missions
+    from jarvis.missions import store as mstore
+
+    register(make_profile("only:7b"))
+    monkeypatch.setattr(mr_execute, "default_invoker", lambda m, p: "never")
+    mission_id = missions.create_mission(
+        "cancelled model work",
+        steps=[
+            {
+                "name": "model",
+                "action": "model_step",
+                "params": {"prompt": "hi", "mission_id": "PLACEHOLDER"},
+            }
+        ],
+        kind="model",
+    )
+    steps = mstore.get(mission_id)["steps"]
+    steps[0]["params"]["mission_id"] = mission_id
+    mstore.set_steps(mission_id, steps)
+    mstore.request_cancel(mission_id)
+    missions.run(mission_id, missions.ActionStepRunner(None))
+    assert missions.status(mission_id)["state"] == missions.CANCELLED
+
+
+def test_mission_routed_call_is_recorded_against_the_mission(data_dir: Path, monkeypatch):
+    from jarvis import missions
+
+    register(make_profile("only:7b"))
+    monkeypatch.setattr(mr_execute, "default_invoker", lambda m, p: "ok")
+    mission_id = missions.create_mission(
+        "routed",
+        steps=[
+            {"name": "m", "action": "model_step", "params": {"prompt": "hi", "mission_id": "X"}}
+        ],
+        kind="model",
+    )
+    from jarvis.missions import store as mstore
+
+    steps = mstore.get(mission_id)["steps"]
+    steps[0]["params"]["mission_id"] = mission_id
+    mstore.set_steps(mission_id, steps)
+    missions.run(mission_id, missions.ActionStepRunner(None))
+    assert missions.status(mission_id)["state"] == missions.COMPLETED
+    assert mr.history(mission_id=mission_id)
