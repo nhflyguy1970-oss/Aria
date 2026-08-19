@@ -121,6 +121,11 @@ def validate(definition: AgentDefinition) -> AgentDefinition:
 # specialist cannot delegate unless its definition says it may.
 DELEGATE_ACTION = "collab_delegate"
 
+# Delegation needs a collaboration to delegate *into*. Granting only the
+# delegate action left the whole layer unreachable: no specialist could open
+# one, so every collaboration_id a specialist could name did not exist.
+COLLABORATION_USE = ("collab_create", "collab_status", "collab_list")
+
 # Evidence authority is deliberately split: reading provenance is broad, but
 # creating evidence, creating claims and performing verification are separate
 # permissions so a specialist cannot mark its own unsupported claim verified.
@@ -139,6 +144,22 @@ EVIDENCE_VERIFY = ("evidence_verify",)
 BROWSER_READ = ("browser_use_read",)
 BROWSER_INTERACT = ("browser_use_interact",)
 BROWSER_HIGH_IMPACT = ("browser_use_high_impact",)
+
+# The three names above are impact *gates*, checked inside the browser layer —
+# they are not registered actions. Without the registry actions below, the
+# invoke path denied every browser call before the gate was ever consulted, so
+# the gates guarded a door no specialist could reach. Granting the actions does
+# not widen authority: each call is still classified by impact and checked
+# against the gates, and high-impact stays denied.
+BROWSER_ACTIONS = (
+    "browser_use_open",
+    "browser_use_act",
+    "browser_step",
+    "browser_use_close",
+    "browser_use_sessions",
+    "browser_use_artifacts",
+    "browser_use_capabilities",
+)
 
 # Autonomous development authority. Deliberately excludes deployment, history
 # rewriting and force-push: the coding agent may propose and commit its own
@@ -278,11 +299,13 @@ RESEARCH_SPECIALIST = AgentDefinition(
         "research_step",
         "mission_status",
         DELEGATE_ACTION,
+        *COLLABORATION_USE,
         *EVIDENCE_READ,
         *EVIDENCE_WRITE,
         *EVIDENCE_VERIFY,
         *BROWSER_READ,
         *BROWSER_INTERACT,
+        *BROWSER_ACTIONS,
         *SKILL_USE,
         *MCP_USE,
         *MODEL_ROUTING_READ,
@@ -324,8 +347,7 @@ CODING_SPECIALIST = AgentDefinition(
     ),
     allowed_actions=(
         "git_status",
-        "run_tests",
-        "coding_task_status",
+        "coding_run_tests",
         "code_search",
         "mission_status",
         *CODING_DEV,
@@ -345,6 +367,7 @@ CODING_SPECIALIST = AgentDefinition(
     + EVIDENCE_VERIFY
     + BROWSER_READ
     + BROWSER_INTERACT
+    + BROWSER_ACTIONS
     + BROWSER_HIGH_IMPACT
     + CODING_HIGH_IMPACT,
     preferred_model_role="coder",
@@ -372,13 +395,14 @@ ANALYSIS_SPECIALIST = AgentDefinition(
         "State assumptions explicitly and separate observation from inference."
     ),
     allowed_actions=(
-        "data_analyze",
         "document_summarize",
         "mission_status",
         DELEGATE_ACTION,
+        *COLLABORATION_USE,
         *EVIDENCE_READ,
         *EVIDENCE_VERIFY,
         *BROWSER_READ,
+        *BROWSER_ACTIONS,
         *SKILL_USE,
         *MCP_USE,
         *MODEL_ROUTING_READ,
@@ -386,7 +410,7 @@ ANALYSIS_SPECIALIST = AgentDefinition(
         *ENVIRONMENT_USE,
     ),
     denied_actions=_DESTRUCTIVE
-    + ("research_create", "run_tests")
+    + ("research_create", "coding_run_tests")
     + EVIDENCE_WRITE
     + BROWSER_INTERACT
     + BROWSER_HIGH_IMPACT
@@ -420,6 +444,7 @@ GENERAL_SPECIALIST = AgentDefinition(
         "research_list",
         "agent_list",
         DELEGATE_ACTION,
+        *COLLABORATION_USE,
         *EVIDENCE_READ,
         *SKILL_USE,
         "mcp_provider_list",
@@ -436,6 +461,7 @@ GENERAL_SPECIALIST = AgentDefinition(
     + ("mcp_invoke", "mcp_resource", "mcp_prompt", "mcp_discover")
     + BROWSER_READ
     + BROWSER_INTERACT
+    + BROWSER_ACTIONS
     + BROWSER_HIGH_IMPACT
     + CODING_DEV
     + CODING_HIGH_IMPACT,

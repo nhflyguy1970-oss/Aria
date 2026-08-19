@@ -451,6 +451,94 @@ def test_provenance_records_model_fallback(data_dir: Path, monkeypatch):
     health.reset()
 
 
+# ------------------------------------------------------- reachability
+
+
+def _registered_actions() -> set[str]:
+    from jarvis.handlers import ensure_handlers_loaded
+    from jarvis.handlers.registry import all_actions
+
+    ensure_handlers_loaded()
+    return {a["action"] for a in all_actions()}
+
+
+def test_every_granted_action_name_is_real(data_dir: Path):
+    """The recurring defect: a capability listed but unreachable.
+
+    An allow-list name that matches no registered action grants nothing while
+    reading as authority. Impact *gates* are exempt — they are checked inside a
+    subsystem rather than dispatched. Deny-side names are exempt too: denying an
+    action that does not exist yet is deliberate.
+    """
+    from jarvis.computer_use import permissions as browser_permissions
+
+    gates = set(browser_permissions.GATE.values())
+    real = _registered_actions()
+    for agent in agents.list_agents():
+        ghosts = (set(agent.allowed_actions) - real) - gates
+        assert not ghosts, f"{agent.id} is granted names that are not actions: {sorted(ghosts)}"
+
+
+def test_browser_is_reachable_by_the_agents_granted_it(data_dir: Path):
+    """The gates guarded a door no specialist could open: every registered
+    browser action was missing from every allow list."""
+    for agent_id in ("research_specialist", "analysis_specialist"):
+        agent = agents.get(agent_id)
+        assert agent.permits("browser_use_open"), f"{agent_id} cannot open a browser"
+        assert agent.permits("browser_use_act"), f"{agent_id} cannot drive a browser"
+    # Deny still beats allow where browser authority was never intended.
+    for agent_id in ("coding_specialist", "general_specialist"):
+        assert not agents.get(agent_id).permits("browser_use_act")
+
+
+def test_browser_authority_is_still_gated_by_impact(data_dir: Path):
+    """Granting the actions must not widen authority past the impact classes."""
+    from jarvis.computer_use import permissions as browser_permissions
+
+    agent = agents.get("research_specialist")
+    assert agent.permits(browser_permissions.READ_ACTION)
+    assert not agent.permits(browser_permissions.HIGH_IMPACT_ACTION)
+    analysis = agents.get("analysis_specialist")
+    assert not analysis.permits(browser_permissions.INTERACT_ACTION), "read-only agent may interact"
+
+
+def test_browser_calls_carry_the_real_agent_identity(data_dir: Path, monkeypatch):
+    """The browser reads the acting agent from its payload, so a specialist
+    could otherwise borrow another agent's browser authority by naming it."""
+    import jarvis.handlers.registry as registry
+    from jarvis.specialized_agents.invoke import call_action as agent_call_action
+
+    seen: dict = {}
+    monkeypatch.setattr(
+        registry, "call_action", lambda assistant, action, params, message: seen.update(params)
+    )
+    agent_call_action(
+        agents.get("research_specialist"),
+        None,
+        "browser_use_act",
+        {"agent_id": "coding_specialist", "session_id": "s", "action": "click"},
+    )
+    assert seen["agent_id"] == "research_specialist", "payload identity was trusted"
+
+
+def test_collaboration_can_actually_be_opened(data_dir: Path):
+    """Delegation needs a collaboration to delegate into; only delegate was
+    granted, so every collaboration_id a specialist could name did not exist."""
+    for agent_id in ("research_specialist", "analysis_specialist", "general_specialist"):
+        agent = agents.get(agent_id)
+        assert agent.permits("collab_create"), f"{agent_id} cannot open a collaboration"
+        assert agent.permits("collab_delegate")
+
+
+def test_an_unregistered_action_reports_itself_clearly(data_dir: Path):
+    """A stale name should say so, not surface as a bare KeyError."""
+    from jarvis.handlers.registry import UnknownAction, call_action
+
+    with pytest.raises(UnknownAction) as excinfo:
+        call_action(None, "definitely_not_an_action", {}, "probe")
+    assert "definitely_not_an_action" in str(excinfo.value)
+
+
 # -------------------------------------------------------------- recovery
 
 

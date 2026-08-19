@@ -33,6 +33,22 @@ SKILL_ACTIONS = frozenset(
     }
 )
 
+# The browser gates authority by impact class, and reads the acting agent from
+# its payload. Same rule as the skills layer: stamp the caller's real identity
+# rather than trust the payload, or an agent could borrow another agent's
+# browser authority by naming it.
+BROWSER_ACTIONS = frozenset(
+    {
+        "browser_use_open",
+        "browser_use_act",
+        "browser_step",
+        "browser_use_close",
+        "browser_use_sessions",
+        "browser_use_artifacts",
+        "browser_use_capabilities",
+    }
+)
+
 log = logging.getLogger("jarvis.specialized_agents")
 
 
@@ -124,6 +140,8 @@ def call_action(
         # agent must not be able to ask for a skill as somebody else — or as
         # nobody, which would read as unrestricted operator context.
         payload["requester"] = agent.id
+    if action in BROWSER_ACTIONS:
+        payload["agent_id"] = agent.id
     return registry_call(assistant, action, payload, message or action)
 
 

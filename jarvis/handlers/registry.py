@@ -96,15 +96,17 @@ def is_info_action(name: str) -> bool:
 def all_actions() -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for spec in sorted(_REGISTRY.values(), key=lambda s: s.name):
-        out.append({
-            "action": spec.name,
-            "queue": spec.queue,
-            "info": spec.info,
-            "module": spec.module,
-            "description": spec.description,
-            "extension": spec.extension,
-            "registered": spec.handler is not None,
-        })
+        out.append(
+            {
+                "action": spec.name,
+                "queue": spec.queue,
+                "info": spec.info,
+                "module": spec.module,
+                "description": spec.description,
+                "extension": spec.extension,
+                "registered": spec.handler is not None,
+            }
+        )
     return out
 
 
@@ -128,6 +130,13 @@ def action_catalog_text() -> str:
     return "\n".join(lines)
 
 
+class UnknownAction(KeyError):
+    """No handler is registered under this name."""
+
+    def __str__(self) -> str:  # KeyError repr quotes its argument
+        return f"No registered action named {self.args[0]!r}"
+
+
 def call_action(assistant: JarvisAssistant, action: str, params: dict, message: str) -> dict:
     from jarvis.modules.capability_adapter import capability_invoke
 
@@ -137,5 +146,7 @@ def call_action(assistant: JarvisAssistant, action: str, params: dict, message: 
 def _call_action_impl(assistant: JarvisAssistant, action: str, params: dict, message: str) -> dict:
     spec = _REGISTRY.get(action)
     if not spec or not spec.handler:
-        raise KeyError(action)
+        # A name that is not a registered action is a configuration mistake, not
+        # a handler crash: say so, rather than leaking a bare KeyError.
+        raise UnknownAction(action)
     return spec.handler(assistant, params, message)
