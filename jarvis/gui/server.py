@@ -124,11 +124,37 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=_warm_flytying_index, daemon=True, name="flytying-warm").start()
 
     try:
+        # Recovery runs before the worker takes anything new, so work a dead
+        # process abandoned is resumable rather than competing with fresh work
+        # — or silently forgotten.
+        from jarvis.integration import recovery as environment_recovery
+
+        outcome = environment_recovery.recover_on_startup()
+        if outcome["total"]:
+            _log.getLogger("jarvis.gui.server").info(
+                "Environment recovery: %s item(s) resumable %s",
+                outcome["total"], outcome["recovered"],
+            )
+        if outcome["errors"]:
+            _log.getLogger("jarvis.gui.server").warning(
+                "Environment recovery incomplete: %s", outcome["errors"]
+            )
+    except Exception:
+        _log.getLogger("jarvis.gui.server").exception("Environment recovery FAILED")
+
+    try:
         # Background mission execution. Off unless JARVIS_MISSION_WORKER=1, so a
         # deployment cannot silently activate it.
         from jarvis.missions import worker as mission_worker
 
-        if mission_worker.start(assistant=assistant):
+        from jarvis.integration import policy as environment_policy
+
+        if environment_policy.safe_mode():
+            _log.getLogger("jarvis.gui.server").warning(
+                "Safe mode: autonomous execution is off. Stored work stays durable "
+                "and inspectable; clear JARVIS_SAFE_MODE to resume."
+            )
+        elif mission_worker.start(assistant=assistant):
             _log.getLogger("jarvis.gui.server").info("Mission worker started")
     except Exception:
         _log.getLogger("jarvis.gui.server").exception("Mission worker start FAILED")

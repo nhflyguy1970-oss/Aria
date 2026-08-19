@@ -228,6 +228,19 @@ WORKFLOW_USE = (
     "workflow_step",
 )
 
+# The environment control surface. Read-only inspection plus recovery: these
+# explain what ARIA is doing and make interrupted work resumable. They start no
+# work themselves, and every capability they describe is still gated by the
+# system that owns it.
+ENVIRONMENT_USE = (
+    "aria_status",
+    "aria_plan",
+    "aria_autonomy",
+    "aria_recover",
+    "aria_provenance",
+    "aria_lifecycle",
+)
+
 _DESTRUCTIVE = (
     "aria_self_fix",
     "self_upgrade_run",
@@ -274,6 +287,7 @@ RESEARCH_SPECIALIST = AgentDefinition(
         *MCP_USE,
         *MODEL_ROUTING_READ,
         *WORKFLOW_USE,
+        *ENVIRONMENT_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + BROWSER_HIGH_IMPACT
@@ -319,6 +333,7 @@ CODING_SPECIALIST = AgentDefinition(
         *MCP_USE,
         *MODEL_ROUTING_READ,
         *WORKFLOW_USE,
+        *ENVIRONMENT_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + SKILL_HIGH_IMPACT
@@ -368,6 +383,7 @@ ANALYSIS_SPECIALIST = AgentDefinition(
         *MCP_USE,
         *MODEL_ROUTING_READ,
         *WORKFLOW_USE,
+        *ENVIRONMENT_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + ("research_create", "run_tests")
@@ -411,6 +427,7 @@ GENERAL_SPECIALIST = AgentDefinition(
         "mcp_tools",
         *MODEL_ROUTING_READ,
         *WORKFLOW_USE,
+        *ENVIRONMENT_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + SKILL_HIGH_IMPACT
