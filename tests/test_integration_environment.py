@@ -521,6 +521,72 @@ def test_browser_calls_carry_the_real_agent_identity(data_dir: Path, monkeypatch
     assert seen["agent_id"] == "research_specialist", "payload identity was trusted"
 
 
+def test_a_browser_session_records_the_agent_that_opened_it(data_dir: Path, monkeypatch):
+    """Provenance has to name someone: agent-opened sessions were recorded as
+    'unattributed', and a supplied owner must not override the real caller."""
+    import jarvis.handlers.registry as registry
+    from jarvis.specialized_agents.invoke import call_action as agent_call_action
+
+    opened: dict = {}
+
+    def fake_open(**kwargs):
+        opened.update(kwargs)
+        return {"id": "cus_test", "owner": kwargs.get("owner")}
+
+    import jarvis.computer_use as cu
+
+    monkeypatch.setattr(cu, "open_session", fake_open)
+    real_call = registry.call_action
+    agent_call_action(
+        agents.get("research_specialist"), None, "browser_use_open", {"owner": "somebody_else"}
+    )
+    assert real_call is registry.call_action
+    assert opened["owner"] == "research_specialist"
+
+
+def test_a_session_refuses_to_read_a_page_something_else_moved(data_dir: Path):
+    """Computer-use sessions share one browser page, so a session could return
+    another session's page as its own — and that content became evidence
+    attributed to a source it never came from."""
+    from jarvis.computer_use import engine, sessions
+
+    class FakeDriver:
+        """Reports a page that has moved since the session's last action."""
+
+        def state(self):
+            return {"url": "https://somewhere-else.example/", "title": "not ours"}
+
+        def extract(self, limit):  # pragma: no cover - must never be reached
+            raise AssertionError("read a page the session does not own")
+
+    session = sessions.create(owner="research_specialist")
+    sessions.record_action(session["id"], action="navigate", url="https://example.com/", title="")
+
+    out = engine.perform(session["id"], "extract", {}, driver=FakeDriver())
+    assert out["ok"] is False
+    assert out["error_kind"] == engine.ERR_DIVERGED
+    assert "example.com" in out["error"] and "somewhere-else" in out["error"]
+
+
+def test_a_session_reads_its_own_page_normally(data_dir: Path):
+    """The guard must not block a session whose page is where it left it."""
+    from jarvis.computer_use import engine, sessions
+
+    class FakeDriver:
+        def state(self):
+            return {"url": "https://example.com/", "title": "Example Domain"}
+
+        def extract(self, limit):
+            return {"text": "Example Domain", "url": "https://example.com/"}
+
+    session = sessions.create(owner="research_specialist")
+    sessions.record_action(session["id"], action="navigate", url="https://example.com/", title="")
+
+    out = engine.perform(session["id"], "extract", {}, driver=FakeDriver())
+    assert out["ok"] is True, out.get("error")
+    assert out["result"]["text"] == "Example Domain"
+
+
 def test_collaboration_can_actually_be_opened(data_dir: Path):
     """Delegation needs a collaboration to delegate into; only delegate was
     granted, so every collaboration_id a specialist could name did not exist."""

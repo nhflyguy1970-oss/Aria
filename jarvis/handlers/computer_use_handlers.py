@@ -13,7 +13,10 @@ def browser_use_open(assistant, params: dict, message: str) -> dict:
     from jarvis import computer_use as cu
 
     session = cu.open_session(
-        owner=(params.get("owner") or "").strip(),
+        # The invoking agent's identity is stamped into the payload, and takes
+        # precedence over a supplied owner: a session an agent opened must not
+        # be recorded as somebody else's, or as nobody's.
+        owner=(params.get("agent_id") or params.get("owner") or "").strip(),
         task_id=(params.get("task_id") or "").strip(),
         label=(params.get("label") or "").strip(),
     )

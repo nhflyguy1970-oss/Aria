@@ -33,6 +33,7 @@ ERR_TIMEOUT = "timeout"
 ERR_BLOCKED = "blocked"
 ERR_PERMISSION = "permission_denied"
 ERR_SESSION = "session"
+ERR_DIVERGED = "session_diverged"
 ERR_BROWSER = "browser_unavailable"
 ERR_VALIDATION = "validation"
 ERR_INTERNAL = "internal"
@@ -292,6 +293,25 @@ def perform(
             return out
 
         drv = driver or PlaywrightDriver(allow_local=allow_local)
+
+        # A computer-use session is bookkeeping over one shared browser page, so
+        # anything else driving that page — another session, a background task,
+        # a person at the keyboard — can move it between two of this session's
+        # actions. Reading it afterwards would report another page's content as
+        # this session's, and downstream that becomes evidence attributed to a
+        # source it never came from. Detect the divergence and refuse.
+        if action not in ("navigate", "close") and session.get("url"):
+            live_url = (drv.state() or {}).get("url") or ""
+            if live_url and live_url != session["url"]:
+                out.update(
+                    error=(
+                        f"this session's page is now {live_url!r}, but the session last "
+                        f"left it at {session['url']!r}; something else moved it — "
+                        "navigate again before reading"
+                    ),
+                    error_kind=ERR_DIVERGED,
+                )
+                return out
 
         if action == "navigate":
             url = A.check_url(params["url"], allow_local=allow_local)
