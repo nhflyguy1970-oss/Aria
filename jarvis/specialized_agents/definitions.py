@@ -170,6 +170,22 @@ SKILL_USE = (
 )
 SKILL_HIGH_IMPACT = ("skill_invoke_high_impact", "skill_run")
 
+# MCP is an external authority boundary. Holding these lets an agent reach the
+# ecosystem at all; each provider still names which agents it accepts, and a
+# provider's own claims never grant an agent anything. High-impact MCP tools
+# and trust changes are denied to every built-in agent.
+MCP_USE = (
+    "mcp_provider_list",
+    "mcp_provider_status",
+    "mcp_discover",
+    "mcp_tools",
+    "mcp_invoke",
+    "mcp_resource",
+    "mcp_prompt",
+    "mcp_history",
+)
+MCP_HIGH_IMPACT = ("mcp_invoke_high_impact", "mcp_set_trust")
+
 _DESTRUCTIVE = (
     "aria_self_fix",
     "self_upgrade_run",
@@ -213,12 +229,14 @@ RESEARCH_SPECIALIST = AgentDefinition(
         *BROWSER_READ,
         *BROWSER_INTERACT,
         *SKILL_USE,
+        *MCP_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + BROWSER_HIGH_IMPACT
     + CODING_DEV
     + CODING_HIGH_IMPACT
-    + SKILL_HIGH_IMPACT,
+    + SKILL_HIGH_IMPACT
+    + MCP_HIGH_IMPACT,
     preferred_model_role="general",
     model_requirements=("long_context",),
     input_contract=("task",),
@@ -253,9 +271,11 @@ CODING_SPECIALIST = AgentDefinition(
         "mission_status",
         *CODING_DEV,
         *SKILL_USE,
+        *MCP_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + SKILL_HIGH_IMPACT
+    + MCP_HIGH_IMPACT
     + ("research_create", "research_run")
     + EVIDENCE_READ
     + EVIDENCE_WRITE
@@ -297,6 +317,7 @@ ANALYSIS_SPECIALIST = AgentDefinition(
         *EVIDENCE_VERIFY,
         *BROWSER_READ,
         *SKILL_USE,
+        *MCP_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + ("research_create", "run_tests")
@@ -305,7 +326,8 @@ ANALYSIS_SPECIALIST = AgentDefinition(
     + BROWSER_HIGH_IMPACT
     + CODING_DEV
     + CODING_HIGH_IMPACT
-    + SKILL_HIGH_IMPACT,
+    + SKILL_HIGH_IMPACT
+    + MCP_HIGH_IMPACT,
     preferred_model_role="general",
     metadata={"catalog_id": "synthesizer"},
 )
@@ -333,9 +355,14 @@ GENERAL_SPECIALIST = AgentDefinition(
         DELEGATE_ACTION,
         *EVIDENCE_READ,
         *SKILL_USE,
+        "mcp_provider_list",
+        "mcp_provider_status",
+        "mcp_tools",
     ),
     denied_actions=_DESTRUCTIVE
     + SKILL_HIGH_IMPACT
+    + MCP_HIGH_IMPACT
+    + ("mcp_invoke", "mcp_resource", "mcp_prompt", "mcp_discover")
     + BROWSER_READ
     + BROWSER_INTERACT
     + BROWSER_HIGH_IMPACT

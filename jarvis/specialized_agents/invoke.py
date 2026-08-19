@@ -14,7 +14,17 @@ from typing import Any
 from jarvis.specialized_agents import registry
 from jarvis.specialized_agents.definitions import AgentDefinition
 
-SKILL_ACTIONS = frozenset({"skill_invoke", "skill_step"})
+SKILL_ACTIONS = frozenset(
+    {
+        "skill_invoke",
+        "skill_step",
+        "mcp_invoke",
+        "mcp_resource",
+        "mcp_prompt",
+        "mcp_discover",
+        "mcp_step",
+    }
+)
 
 log = logging.getLogger("jarvis.specialized_agents")
 
