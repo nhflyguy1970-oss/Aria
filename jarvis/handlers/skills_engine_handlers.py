@@ -15,6 +15,18 @@ def _skills():
     from jarvis import skills
 
     skills.ensure_catalog_loaded()
+    # The MCP skills live in the MCP package (which depends on skills, not the
+    # other way round), so they have to be registered from here. Without this
+    # they only appeared once some MCP action had happened to run first, and a
+    # freshly restarted process reported "No such skill: mcp_tool_call".
+    try:
+        from jarvis import mcp
+
+        mcp.ensure_mcp_skills_loaded()
+    except Exception:  # noqa: BLE001 - the skills layer must work without MCP
+        import logging
+
+        logging.getLogger("jarvis.skills").warning("MCP skills unavailable", exc_info=True)
     return skills
 
 

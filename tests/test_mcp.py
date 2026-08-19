@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-from jarvis import skills
-
+from jarvis import mcp, skills
 from jarvis import specialized_agents as agents
-
-import subprocess
-
-from jarvis import mcp
 from jarvis.mcp import client as mcp_client
 from jarvis.mcp import definitions as defs
 from jarvis.mcp import engine as mcp_engine
@@ -1330,3 +1326,44 @@ def test_cancelled_mcp_call_reports_cancelled_through_the_skill(data_dir: Path):
     )
     assert env["status"] == skills.CANCELLED
     assert env["ok"] is False
+
+
+def test_mcp_skills_are_present_without_a_prior_mcp_action(data_dir: Path):
+    """Regression, found live: the MCP skills only existed after an MCP action.
+
+    A freshly restarted process answered "No such skill: mcp_tool_call" until
+    something happened to touch the MCP layer first.
+    """
+    import jarvis.mcp as mcp_pkg
+
+    skill_registry.reset()
+    mcp_pkg._skills_loaded = False  # a fresh process
+
+    listed = _call("skill_catalog", {})
+    assert listed["ok"] is True
+    ids = {r["skill_id"] for r in listed["skills"]}
+    assert {"mcp_tool_call", "mcp_fetch_resource"} <= ids
+
+    skill_registry.reset()
+    mcp_pkg._skills_loaded = False
+    described = _call("skill_describe", {"skill_id": "mcp_tool_call"})
+    assert described["ok"] is True
+
+    skill_registry.reset()
+    mcp_pkg._skills_loaded = False
+    reg(provider())
+    mcp.discover("fixture_demo")
+    queued = _call(
+        "skill_invoke",
+        {
+            "skill_id": "mcp_tool_call",
+            "mission": True,
+            "inputs": {
+                "provider_id": "fixture_demo",
+                "tool": "add_numbers",
+                "arguments": {"a": 1, "b": 1},
+            },
+        },
+    )
+    assert queued["ok"] is True, queued.get("message")
+    assert queued["mission_id"]
