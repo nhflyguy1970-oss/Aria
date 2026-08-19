@@ -1371,3 +1371,42 @@ def test_failed_browser_probe_is_not_cached_as_long_as_a_working_one(data_dir: P
     bp._CACHE["ts"] = time.time() - (bp._NEGATIVE_TTL + 1)
     assert bp.browser_stack_ready()["chromium"] is True
     assert len(calls) == 2, "a healthy stack was needlessly re-probed"
+
+
+def test_handler_passes_every_declared_constraint_through(data_dir: Path):
+    """Regression, found live: preferred_provider was accepted and ignored.
+
+    A constraint the caller states must reach the router. Dropping it silently
+    is worse than rejecting it, because the answer looks like compliance.
+    """
+    from jarvis.handlers.model_routing_handlers import _request_from_params
+
+    request = _request_from_params(
+        {
+            "preferred_provider": "cloud",
+            "output_reserve_tokens": 4096,
+            "timeout_s": 30,
+            "excluded_models": ["a:7b"],
+            "local_only": False,
+        }
+    )
+    assert request.preferred_provider == "cloud"
+    assert request.output_reserve_tokens == 4096
+    assert request.timeout_s == 30
+    assert request.excluded_models == ("a:7b",)
+
+
+def test_local_only_with_a_remote_provider_is_unroutable(data_dir: Path):
+    """The two constraints are contradictory here, and must not quietly pass."""
+    register(make_profile("local:7b"))
+    out = _call("model_route", {"local_only": True, "preferred_provider": "cloud"})
+    assert out["ok"] is False
+    assert out["error_kind"] == "no_compatible_model"
+
+
+def test_provider_constraint_rejects_other_providers(data_dir: Path):
+    register(make_profile("ollama_one:7b"), make_profile("other_one:7b", provider="other"))
+    decision = mr.route(RoutingRequest(preferred_provider="other", local_only=False))
+    assert decision.selected_model == "other_one:7b"
+    rejected = [c for c in decision.rejected() if c.model_id == "ollama_one:7b"]
+    assert rejected and "not the required" in rejected[0].rejection_reason

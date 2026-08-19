@@ -13,7 +13,11 @@ def _routing():
 
 
 def _request_from_params(params: dict):
-    from jarvis.model_routing.request import BALANCED, RoutingRequest
+    from jarvis.model_routing.request import (
+        BALANCED,
+        DEFAULT_OUTPUT_RESERVE,
+        RoutingRequest,
+    )
 
     excluded = params.get("excluded_models") or []
     if isinstance(excluded, str):
@@ -31,6 +35,9 @@ def _request_from_params(params: dict):
         require_structured_output=bool(params.get("require_structured_output")),
         local_only=bool(params.get("local_only", True)),
         preferred_model=(params.get("preferred_model") or "").strip(),
+        preferred_provider=(params.get("preferred_provider") or "").strip(),
+        output_reserve_tokens=int(params.get("output_reserve_tokens") or DEFAULT_OUTPUT_RESERVE),
+        timeout_s=float(params.get("timeout_s") or 120.0),
         excluded_models=tuple(excluded),
         latency_preference=(params.get("latency_preference") or BALANCED).strip(),
         max_fallbacks=int(params.get("max_fallbacks") or 2),
