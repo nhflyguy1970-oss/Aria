@@ -537,12 +537,22 @@ def _collect_outputs(workflow_id: str) -> dict[str, Any]:
 
 
 def run(workflow_id: str, *, assistant: Any = None, max_steps: int | None = None) -> dict[str, Any]:
-    """Drive a workflow to completion, or until it is bounded or blocked."""
+    """Drive a workflow forward, at most `max_steps` steps in total.
+
+    max_steps bounds the whole call, not the width of one slice: asking to
+    advance a workflow by two steps has to actually stop after two, or there is
+    no way to inspect a workflow part-way through — which is what a bounded,
+    resumable engine exists for.
+    """
     definition_steps = len((store.get(workflow_id) or {}).get("definition", {}).get("steps") or [])
+    executed = 0
     slices = 0
     while slices <= definition_steps + 2:
         slices += 1
-        result = run_slice(workflow_id, assistant=assistant, max_steps=max_steps or 1)
+        if max_steps is not None and executed >= max_steps:
+            return store.get(workflow_id)  # type: ignore[return-value]
+        result = run_slice(workflow_id, assistant=assistant, max_steps=1)
+        executed += len(result.get("ran") or [])
         workflow = result["workflow"]
         if workflow["state"] in ("completed", "partial", "failed", "cancelled", "paused"):
             return workflow

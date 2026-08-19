@@ -1495,3 +1495,63 @@ def test_agent_can_create_and_run_a_workflow_end_to_end(data_dir: Path):
     )
     assert started["ok"] is True
     assert started["result"]["workflow"]["state"] == wf.COMPLETED
+
+
+def test_max_steps_bounds_the_whole_call_not_one_slice(data_dir: Path):
+    """Regression, found live: asking for two steps ran the whole workflow.
+
+    Without this there is no way to advance a workflow part-way and inspect it,
+    which is exactly what a bounded, resumable engine is for.
+    """
+    workflow = wf.create_workflow(
+        definition(
+            steps=[
+                {
+                    "step_id": f"s{i}",
+                    "action": "mission_list",
+                    "params": {"limit": 1},
+                    **({"depends_on": [f"s{i - 1}"]} if i else {}),
+                }
+                for i in range(4)
+            ]
+        ),
+        create_mission=False,
+    )
+    wid = workflow["id"]
+
+    wf.run(wid, max_steps=2)
+    states = wf_store.step_states(wid)
+    assert sum(1 for s in states.values() if s == wf.STEP_SUCCEEDED) == 2
+    assert wf.get(wid)["state"] == wf.RUNNING, "a part-way workflow must stay running"
+
+    # Continuing finishes the rest without repeating anything.
+    wf.run(wid)
+    assert wf.get(wid)["state"] == wf.COMPLETED
+    assert wf.get(wid)["usage"]["actions"] == 4, "a step was executed twice"
+
+
+def test_partially_run_workflow_survives_and_resumes(data_dir: Path):
+    """The property crash recovery depends on: stop, reload, continue."""
+    workflow = wf.create_workflow(
+        definition(
+            steps=[
+                {
+                    "step_id": f"s{i}",
+                    "action": "mission_list",
+                    "params": {"limit": 1},
+                    **({"depends_on": [f"s{i - 1}"]} if i else {}),
+                }
+                for i in range(3)
+            ]
+        ),
+        create_mission=False,
+    )
+    wid = workflow["id"]
+    wf.run(wid, max_steps=1)
+    assert wf_store.step_states(wid)["s0"] == wf.STEP_SUCCEEDED
+    assert wf_store.step_states(wid)["s1"] == wf.STEP_PENDING
+
+    reloaded = wf.get(wid)
+    assert reloaded["state"] == wf.RUNNING
+    assert wf.run(wid)["state"] == wf.COMPLETED
+    assert wf.get(wid)["usage"]["actions"] == 3
