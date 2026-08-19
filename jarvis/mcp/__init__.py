@@ -6,7 +6,12 @@ The protocol comes from the official `mcp` SDK; ARIA supplies the trust model,
 the permission enforcement, the bounds and the audit trail.
 """
 
-from jarvis.mcp.client import McpProtocolError, McpTimeout, McpUnavailable
+from jarvis.mcp.client import (
+    McpCancelled,
+    McpProtocolError,
+    McpTimeout,
+    McpUnavailable,
+)
 from jarvis.mcp.definitions import (
     ALLOWED_COMMANDS,
     BOUNDS,

@@ -17,6 +17,7 @@ import asyncio
 import logging
 import os
 import threading
+import time
 from concurrent.futures import Future
 from typing import Any
 
@@ -31,6 +32,10 @@ class McpUnavailable(RuntimeError):
 
 class McpProtocolError(RuntimeError):
     """The provider answered, but not in a way MCP allows."""
+
+
+class McpCancelled(RuntimeError):
+    """ARIA stopped waiting because the work was cancelled."""
 
 
 class McpTimeout(TimeoutError):
@@ -69,24 +74,42 @@ class _Runner:
             self._loop, self._thread = loop, thread
             return loop
 
-    def run(self, coro, timeout: float):
-        """Run a coroutine, waiting at most `timeout` seconds."""
+    def run(self, coro, timeout: float, cancel_check=None):
+        """Run a coroutine, waiting at most `timeout` seconds.
+
+        With a cancel_check the wait is polled, so a cancellation reaches ARIA
+        promptly instead of after the full timeout. The remote side is asked to
+        stop, but whether it does is the provider's business and is never
+        claimed here.
+        """
         loop = self._ensure()
         future: Future = asyncio.run_coroutine_threadsafe(coro, loop)
-        try:
-            return future.result(timeout=timeout)
-        except TimeoutError as exc:
-            # Stop waiting, and ask the remote side to stop too. Whether it
-            # actually stops is the provider's business, not something to claim.
-            future.cancel()
-            raise McpTimeout(f"MCP operation exceeded {timeout}s") from exc
+        if cancel_check is None:
+            try:
+                return future.result(timeout=timeout)
+            except TimeoutError as exc:
+                future.cancel()
+                raise McpTimeout(f"MCP operation exceeded {timeout}s") from exc
+
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                future.cancel()
+                raise McpTimeout(f"MCP operation exceeded {timeout}s")
+            try:
+                return future.result(timeout=min(0.25, remaining))
+            except TimeoutError:
+                if cancel_check():
+                    future.cancel()
+                    raise McpCancelled("cancelled while the provider was still working")
 
 
 _runner = _Runner()
 
 
-def run_bounded(coro, timeout: float):
-    return _runner.run(coro, timeout)
+def run_bounded(coro, timeout: float, cancel_check=None):
+    return _runner.run(coro, timeout, cancel_check)
 
 
 # ------------------------------------------------------------------ transport
@@ -342,11 +365,14 @@ def call_tool(
     arguments: dict[str, Any] | None = None,
     *,
     timeout: float | None = None,
+    cancel_check=None,
 ) -> dict[str, Any]:
     limit = timeout or defn.timeout_s or defs.BOUNDS["call_timeout_s"]
     try:
-        return run_bounded(_call_tool(defn, tool, dict(arguments or {}), limit), limit + 5.0)
-    except McpTimeout:
+        return run_bounded(
+            _call_tool(defn, tool, dict(arguments or {}), limit), limit + 5.0, cancel_check
+        )
+    except (McpTimeout, McpCancelled):
         raise
     except Exception as exc:  # noqa: BLE001
         raise McpUnavailable(f"{defn.provider_id}:{tool}: {type(exc).__name__}: {exc}") from exc

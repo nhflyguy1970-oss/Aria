@@ -211,12 +211,17 @@ def skill_step(assistant, params: dict, message: str) -> dict:
         authorized_high_impact=bool(params.get("authorized_high_impact")),
     )
     if envelope["status"] != skills.SUCCESS:
-        return err(
-            envelope.get("error") or f"skill {skill_id} {envelope['status']}",
-            module="general",
-            error_kind=envelope.get("error_kind") or envelope["status"],
-            envelope=envelope,
-        )
+        # The mission runner treats a returned dict as a completed step, so a
+        # failing skill has to raise or the mission would report success for
+        # work that did not happen.
+        from jarvis.missions.engine import MissionCancelled, RetryableError
+
+        detail = f"skill {skill_id} {envelope['status']}: {envelope.get('error') or 'no detail'}"
+        if envelope["status"] == skills.CANCELLED:
+            raise MissionCancelled(detail)
+        if envelope["status"] in (skills.UNAVAILABLE, skills.TIMED_OUT):
+            raise RetryableError(detail)
+        raise RuntimeError(detail)
     return ok(f"skill {skill_id} ok", module="general", envelope=envelope)
 
 

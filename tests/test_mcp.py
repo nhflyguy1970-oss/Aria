@@ -1214,3 +1214,71 @@ def test_operator_route_rejects_unsafe_configuration(chat_app, data_dir: Path):
         },
     ).json()
     assert ssrf["ok"] is False
+
+
+def test_cancellation_ends_an_in_flight_wait_promptly(data_dir: Path):
+    """Regression, found live: a cancelled call still waited the full timeout.
+
+    ARIA cannot make a remote provider stop, but it must stop waiting as soon
+    as the work is cancelled rather than sitting until its own timeout.
+    """
+    import time as _t
+
+    reg(provider(timeout_s=25.0))
+    mcp.discover("fixture_demo")
+    cancelled_at = _t.monotonic() + 1.0
+    started = _t.monotonic()
+    env = mcp.call_tool(
+        "fixture_demo",
+        "slow_op",
+        {"seconds": 20},
+        cancel_check=lambda: _t.monotonic() > cancelled_at,
+    )
+    elapsed = _t.monotonic() - started
+    assert env["status"] == mcp_engine.CANCELLED
+    assert env["ok"] is False
+    assert elapsed < 10, f"waited {elapsed:.1f}s instead of stopping on cancellation"
+    # It does not claim the provider stopped, only that ARIA did.
+    assert env["provenance"]["remote_state"] == "unknown_after_cancel"
+
+
+def test_failed_skill_does_not_complete_its_mission(data_dir: Path):
+    """Regression, found live: a failing skill step completed the mission.
+
+    The mission runner treats a returned dict as a completed step, so a skill
+    that failed was recorded as work successfully done.
+    """
+    from jarvis import missions
+
+    def boom(ctx, params):
+        raise RuntimeError("skill failed")
+
+    skill_registry.register(
+        skills.SkillDefinition(
+            skill_id="failing_probe", name="Failing Probe", description="always fails"
+        ),
+        boom,
+        replace=True,
+    )
+    out = _call("skill_invoke", {"skill_id": "failing_probe", "inputs": {}, "mission": True})
+    mission_id = out["mission_id"]
+    missions.run(mission_id, missions.ActionStepRunner(None))
+    final = missions.status(mission_id)
+    assert final["state"] != missions.COMPLETED, "a failed skill completed its mission"
+    assert final["state"] == missions.FAILED
+
+
+def test_cancelled_skill_mission_lands_cancelled_not_failed(data_dir: Path):
+    from jarvis import missions
+    from jarvis.missions import store as mstore
+
+    skill_registry.register(
+        skills.SkillDefinition(skill_id="slow_probe", name="Slow Probe", description="slow"),
+        lambda ctx, p: {"done": True},
+        replace=True,
+    )
+    out = _call("skill_invoke", {"skill_id": "slow_probe", "inputs": {}, "mission": True})
+    mission_id = out["mission_id"]
+    mstore.request_cancel(mission_id)
+    missions.run(mission_id, missions.ActionStepRunner(None))
+    assert missions.status(mission_id)["state"] == missions.CANCELLED

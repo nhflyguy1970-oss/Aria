@@ -319,7 +319,15 @@ def call_tool(
 
     try:
         launch = registry.launch_definition(provider_id)
-        raw = client.call_tool(launch, tool, payload, timeout=timeout)
+        raw = client.call_tool(launch, tool, payload, timeout=timeout, cancel_check=cancel_check)
+    except client.McpCancelled as exc:
+        env.update(
+            status=CANCELLED,
+            error=str(exc),
+            error_kind="cancelled",
+            provenance=_provenance(defn, "tool", tool, remote_state="unknown_after_cancel"),
+        )
+        return _finish(env, defn)
     except client.McpTimeout as exc:
         # ARIA stopped waiting. Whether the provider stopped is unknown, and is
         # reported as such rather than claimed as a cancellation.

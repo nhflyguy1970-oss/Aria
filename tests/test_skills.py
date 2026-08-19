@@ -841,6 +841,7 @@ def test_mission_plans_dependencies_in_order(data_dir: Path):
 
 def test_mission_cancellation_cancels_the_skill(data_dir: Path):
     """mission cancel → skill cancel → no success."""
+    from jarvis import missions
     from jarvis.missions import store as mstore
 
     def watcher(ctx, params):
@@ -854,14 +855,15 @@ def test_mission_cancellation_cancels_the_skill(data_dir: Path):
     from jarvis.handlers.registry import call_action
 
     ensure_handlers_loaded()
-    out = call_action(
-        None,
-        "skill_step",
-        {"skill_id": "cancellable", "mission_id": mission_id},
-        "step",
-    )
-    assert out["ok"] is False
-    assert out["envelope"]["status"] == skills.CANCELLED
+    # A cancelled step raises so the mission records CANCELLED rather than
+    # completing work that never happened.
+    with pytest.raises(missions.MissionCancelled):
+        call_action(
+            None,
+            "skill_step",
+            {"skill_id": "cancellable", "mission_id": mission_id},
+            "step",
+        )
 
 
 def test_mission_skill_recovers_after_interruption(data_dir: Path):
@@ -1489,11 +1491,9 @@ def test_queued_skill_mission_can_be_cancelled(data_dir: Path):
     assert out["ok"] is True
     assert mstore.cancel_requested(mission_id) is True
 
-    # The running step observes it and must not report success.
-    step = _call("skill_step", {"skill_id": "stoppable", "mission_id": mission_id})
-    assert step["ok"] is False
-    assert step["envelope"]["status"] == skills.CANCELLED
-    missions.cancel(mission_id)
+    # Running the mission observes it and lands cancelled, not completed.
+    missions.run(mission_id, missions.ActionStepRunner(None))
+    assert missions.status(mission_id)["state"] == missions.CANCELLED
 
 
 def test_skill_cancel_resolves_a_mission_from_an_invocation(data_dir: Path):
@@ -1579,9 +1579,8 @@ def test_cancellation_reaches_a_skill_running_under_a_mission(data_dir: Path):
     # Run the step exactly as the worker would: the mission id is already in
     # the stored params, so the skill sees the cancellation without the caller
     # plumbing anything through.
-    cancelled = _call("skill_step", step["params"])
-    assert cancelled["ok"] is False
-    assert cancelled["envelope"]["status"] == skills.CANCELLED
+    with pytest.raises(missions.MissionCancelled):
+        _call("skill_step", step["params"])
 
     # The same step without a mission id has nothing to observe, and runs.
     detached = dict(step["params"])
