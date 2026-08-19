@@ -41,7 +41,7 @@ def _request_from_params(params: dict):
         excluded_models=tuple(excluded),
         latency_preference=(params.get("latency_preference") or BALANCED).strip(),
         max_fallbacks=int(params.get("max_fallbacks") or 2),
-        agent_id=(params.get("agent_id") or "").strip(),
+        agent_id=(params.get("agent_id") or params.get("requester") or "").strip(),
         skill_id=(params.get("skill_id") or "").strip(),
         mission_id=(params.get("mission_id") or "").strip(),
         requester=(params.get("requester") or params.get("agent_id") or "").strip(),

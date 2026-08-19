@@ -14,6 +14,10 @@ from typing import Any
 from jarvis.specialized_agents import registry
 from jarvis.specialized_agents.definitions import AgentDefinition
 
+# Actions whose own layer decides authority or provenance from the requester.
+# The agent's identity is stamped here rather than trusted from the payload, so
+# an agent cannot ask as somebody else — or as nobody, which would read as
+# unrestricted operator context, and would leave a routed call unattributable.
 SKILL_ACTIONS = frozenset(
     {
         "skill_invoke",
@@ -23,6 +27,9 @@ SKILL_ACTIONS = frozenset(
         "mcp_prompt",
         "mcp_discover",
         "mcp_step",
+        "model_execute",
+        "model_step",
+        "model_route",
     }
 )
 

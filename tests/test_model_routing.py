@@ -1410,3 +1410,34 @@ def test_provider_constraint_rejects_other_providers(data_dir: Path):
     assert decision.selected_model == "other_one:7b"
     rejected = [c for c in decision.rejected() if c.model_id == "ollama_one:7b"]
     assert rejected and "not the required" in rejected[0].rejection_reason
+
+
+def test_routed_call_is_attributable_to_the_agent(data_dir: Path, monkeypatch):
+    """Regression, found live: routed invocations recorded no requester.
+
+    The audit exists to answer "who asked for this, and what actually ran?" —
+    an empty requester makes half of that unanswerable.
+    """
+    register(make_profile("only:7b"))
+    monkeypatch.setattr(mr_execute, "default_invoker", lambda m, p: "ok")
+    out = agents.invoke(
+        "research_specialist", "do it", action="model_execute", params={"prompt": "hi"}
+    )
+    assert out["ok"] is True
+    envelope = out["result"]["envelope"]
+    assert envelope["requester"] == "research_specialist"
+    record = routing_store.get(envelope["invocation_id"])
+    assert record["requester"] == "research_specialist"
+    assert record["agent_id"] == "research_specialist"
+
+
+def test_agent_cannot_attribute_a_routed_call_to_someone_else(data_dir: Path, monkeypatch):
+    register(make_profile("only:7b"))
+    monkeypatch.setattr(mr_execute, "default_invoker", lambda m, p: "ok")
+    out = agents.invoke(
+        "research_specialist",
+        "spoof",
+        action="model_execute",
+        params={"prompt": "hi", "requester": "coding_specialist"},
+    )
+    assert out["result"]["envelope"]["requester"] == "research_specialist"
