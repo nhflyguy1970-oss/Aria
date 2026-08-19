@@ -26,6 +26,7 @@ def ensure_handlers_loaded() -> None:
         evidence_handlers,
         knowledge_handlers,
         mcp_handlers,
+        model_routing_handlers,
         mission_handlers,
         research_handlers,
         self_upgrade_handlers,

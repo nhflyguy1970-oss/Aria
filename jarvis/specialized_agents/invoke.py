@@ -38,13 +38,52 @@ class ContractError(ValueError):
 
 
 def resolve_model(agent: AgentDefinition) -> str:
-    """Model for this specialist via ARIA's existing model interface."""
+    """Model for this specialist, chosen by the router."""
+    return resolve_model_decision(agent).get("model", "")
+
+
+def resolve_model_decision(agent: AgentDefinition) -> dict[str, Any]:
+    """The specialist's model plus the reasoning behind it.
+
+    Routing reads the agent's own declared role and requirements; it never
+    changes what the agent is permitted to do. If routing cannot run, this
+    degrades to the configured registry rather than to no model at all.
+    """
+    try:
+        from jarvis.model_routing import route
+        from jarvis.model_routing.integration import request_for_agent
+
+        decision = route(request_for_agent(agent))
+        if decision.ok:
+            return {
+                "model": decision.selected_model,
+                "provider": decision.provider,
+                "selection_method": decision.selection_method,
+                "reason": decision.reason,
+                "routed": True,
+                "capability_evidence": dict(decision.capability_evidence),
+                "candidates_considered": len(decision.candidates),
+                "compatible": len(decision.accepted()),
+            }
+        # Nothing compatible is a real answer, not a reason to invent one.
+        log.warning("no compatible model for agent %s: %s", agent.id, decision.reason)
+        return {"model": "", "routed": True, "reason": decision.reason, "provider": ""}
+    except Exception:  # noqa: BLE001 - model selection must never break invocation
+        log.warning("routing unavailable for agent %s", agent.id, exc_info=True)
+
     try:
         from jarvis.config import MODELS
 
-        return MODELS.get(agent.preferred_model_role, "") or MODELS.get("general", "")
-    except Exception:  # noqa: BLE001 - model config must never break invocation
-        return ""
+        fallback = MODELS.get(agent.preferred_model_role, "") or MODELS.get("general", "")
+        return {
+            "model": fallback,
+            "provider": "ollama",
+            "selection_method": "configured_registry",
+            "reason": "routing unavailable; used the configured role model",
+            "routed": False,
+        }
+    except Exception:  # noqa: BLE001
+        return {"model": "", "routed": False, "reason": "no model configuration available"}
 
 
 def check_permission(agent: AgentDefinition, action: str) -> None:
@@ -110,7 +149,8 @@ def invoke(
     except ContractError as exc:
         return {"ok": False, "agent_id": agent.id, "error": str(exc), "error_kind": "contract"}
 
-    model = resolve_model(agent)
+    routing = resolve_model_decision(agent)
+    model = routing.get("model", "")
     result: dict[str, Any] = {
         "ok": True,
         "agent_id": agent.id,
@@ -118,6 +158,7 @@ def invoke(
         "role": agent.role,
         "task": task,
         "model": model,
+        "model_routing": routing,
         "allowed_actions": list(agent.allowed_actions),
         "denied_actions": list(agent.denied_actions),
         "system_instructions": agent.system_instructions,

@@ -1,0 +1,176 @@
+"""Model routing handlers — inventory, explainable routing, health, audit."""
+
+from __future__ import annotations
+
+from jarvis.handlers.registry import register_action
+from jarvis.response import err, ok
+
+
+def _routing():
+    from jarvis import model_routing
+
+    return model_routing
+
+
+def _request_from_params(params: dict):
+    from jarvis.model_routing.request import BALANCED, RoutingRequest
+
+    excluded = params.get("excluded_models") or []
+    if isinstance(excluded, str):
+        excluded = [excluded]
+    required = params.get("required_capabilities") or []
+    if isinstance(required, str):
+        required = [required]
+    return RoutingRequest(
+        task_type=(params.get("task_type") or "general").strip(),
+        role=(params.get("role") or "").strip(),
+        required_capabilities=tuple(required),
+        min_context_tokens=int(params.get("min_context_tokens") or 0),
+        require_tools=bool(params.get("require_tools")),
+        require_vision=bool(params.get("require_vision")),
+        require_structured_output=bool(params.get("require_structured_output")),
+        local_only=bool(params.get("local_only", True)),
+        preferred_model=(params.get("preferred_model") or "").strip(),
+        excluded_models=tuple(excluded),
+        latency_preference=(params.get("latency_preference") or BALANCED).strip(),
+        max_fallbacks=int(params.get("max_fallbacks") or 2),
+        agent_id=(params.get("agent_id") or "").strip(),
+        skill_id=(params.get("skill_id") or "").strip(),
+        mission_id=(params.get("mission_id") or "").strip(),
+        requester=(params.get("requester") or params.get("agent_id") or "").strip(),
+    )
+
+
+@register_action(
+    "model_inventory",
+    module="general",
+    description="List available models with discovered capabilities",
+    info=True,
+)
+def model_inventory(assistant, params: dict, message: str) -> dict:
+    routing = _routing()
+    models = routing.all_profiles(force=bool(params.get("refresh")))
+    if not models:
+        return err(
+            "No models discovered. Is the model provider reachable?",
+            module="general",
+            error_kind="no_models",
+            models=[],
+        )
+    rows = [m.to_dict() for m in models]
+    lines = [
+        f"- `{m['model_id']}` ctx={m['context_window'] or '?'} "
+        f"tools={m['capabilities'].get('tool_use', 'unknown')} "
+        f"vision={m['capabilities'].get('vision', 'unknown')} "
+        f"[{m['latency_class']}]"
+        for m in rows[: int(params.get("limit") or 20)]
+    ]
+    return ok("\n".join(lines), module="general", models=rows, count=len(rows))
+
+
+@register_action(
+    "model_route",
+    module="general",
+    description="Explain which model would be selected for a task",
+    info=True,
+)
+def model_route(assistant, params: dict, message: str) -> dict:
+    routing = _routing()
+    try:
+        request = _request_from_params(params)
+    except ValueError as exc:
+        return err(str(exc), module="general", error_kind="invalid_request")
+    decision = routing.route(request)
+    if not decision.ok:
+        return err(
+            decision.reason,
+            module="general",
+            error_kind="no_compatible_model",
+            decision=decision.to_dict(),
+        )
+    lines = [
+        f"**{decision.selected_model}** ({decision.provider}) — {decision.selection_method}",
+        decision.reason,
+        f"Compatible: {len(decision.accepted())} · Rejected: {len(decision.rejected())}",
+    ]
+    if decision.capability_evidence:
+        lines.append(
+            "Evidence: "
+            + ", ".join(f"{k}={v}" for k, v in sorted(decision.capability_evidence.items()))
+        )
+    return ok("\n".join(lines), module="general", decision=decision.to_dict())
+
+
+@register_action(
+    "model_health",
+    module="general",
+    description="Show model health and routing counters",
+    info=True,
+)
+def model_health(assistant, params: dict, message: str) -> dict:
+    routing = _routing()
+    entries = routing.snapshot()
+    counters = routing.counters()
+    if not entries:
+        return ok(
+            "No model health recorded yet.",
+            module="general",
+            health=[],
+            counters=counters,
+        )
+    lines = [
+        f"- `{h['model_id']}` ok={h['successes']} fail={h['failures']} "
+        f"rate={h['failure_rate']} avg={h['average_latency_ms']}ms"
+        + (f" AVOIDED ({h['last_failure_kind']})" if h["avoided"] else "")
+        for h in entries
+    ]
+    return ok("\n".join(lines), module="general", health=entries, counters=counters)
+
+
+@register_action(
+    "model_health_reset", module="general", description="Clear a model's temporary avoidance"
+)
+def model_health_reset(assistant, params: dict, message: str) -> dict:
+    routing = _routing()
+    model = (params.get("model") or "").strip()
+    if not model:
+        return err("model_health_reset needs model.", module="general")
+    if not routing.clear_health(model):
+        return err(f"No health record for {model}.", module="general", error_kind="not_tracked")
+    return ok(f"Cleared avoidance for `{model}`.", module="general", model=model)
+
+
+@register_action(
+    "model_routing_history",
+    module="general",
+    description="Show routed model invocations",
+    info=True,
+)
+def model_routing_history(assistant, params: dict, message: str) -> dict:
+    routing = _routing()
+    invocation_id = (params.get("invocation_id") or "").strip()
+    if invocation_id:
+        from jarvis.model_routing import store as routing_store
+
+        record = routing_store.get(invocation_id)
+        if not record:
+            return err(f"No such routing record: {invocation_id}", module="general")
+        return ok(
+            f"`{record['final_model'] or record['selected_model']}` — {record['status']}",
+            module="general",
+            invocation=record,
+        )
+    rows = routing.history(
+        model=(params.get("model") or "").strip(),
+        requester=(params.get("requester") or "").strip(),
+        mission_id=(params.get("mission_id") or "").strip(),
+        limit=int(params.get("limit") or 20),
+    )
+    if not rows:
+        return ok("No routed invocations recorded.", module="general", invocations=[])
+    lines = [
+        f"- `{r['id']}` {r['final_model'] or r['selected_model']} [{r['status']}]"
+        + (f" fallback×{r['fallback_count']}" if r["fallback_count"] else "")
+        for r in rows
+    ]
+    return ok("\n".join(lines), module="general", invocations=rows)
