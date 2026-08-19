@@ -36,6 +36,11 @@ WEIGHTS = {
     "quality": 1.0,
     "health": 1.0,
     "priority": 0.5,
+    # A model whose weights do not fit in free accelerator memory will either
+    # fail to load or crawl on CPU. That is a strong preference, not a hard
+    # requirement: offloading is legitimate, and an unknown reading must not
+    # rule anything out.
+    "memory_fit": 1.5,
 }
 
 # Which strength matters for which task.
@@ -123,7 +128,9 @@ def _hard_filter(profile: ModelProfile, request: RoutingRequest) -> str:
     return ""
 
 
-def _score(profile: ModelProfile, request: RoutingRequest, task: str) -> tuple[float, dict]:
+def _score(
+    profile: ModelProfile, request: RoutingRequest, task: str, free_bytes: int = -1
+) -> tuple[float, dict]:
     breakdown: dict[str, float] = {}
 
     if request.preferred_model and profile.model_id == request.preferred_model:
@@ -171,6 +178,10 @@ def _score(profile: ModelProfile, request: RoutingRequest, task: str) -> tuple[f
 
     breakdown["priority"] = min(max(profile.priority, -5), 5) / 5.0 * WEIGHTS["priority"]
 
+    fits = profiles.fits_in_memory(profile, free_bytes)
+    if fits is not None:
+        breakdown["memory_fit"] = (1.0 if fits else 0.0) * WEIGHTS["memory_fit"]
+
     return round(sum(breakdown.values()), 6), breakdown
 
 
@@ -188,6 +199,8 @@ def route(
         preferred_model_status="not_requested" if not request.preferred_model else "unknown",
     )
 
+    # Read free memory once so every candidate is judged against the same state.
+    free_bytes = profiles.available_vram_bytes()
     evaluated: list[tuple[float, ModelProfile, dict]] = []
     for profile in sorted(pool, key=lambda p: p.model_id):
         reason = _hard_filter(profile, request)
@@ -196,7 +209,7 @@ def route(
             if request.preferred_model and profile.model_id == request.preferred_model:
                 decision.preferred_model_status = f"rejected: {reason}"
             continue
-        score, breakdown = _score(profile, request, task)
+        score, breakdown = _score(profile, request, task, free_bytes)
         evaluated.append((score, profile, breakdown))
         decision.candidates.append(
             Candidate(

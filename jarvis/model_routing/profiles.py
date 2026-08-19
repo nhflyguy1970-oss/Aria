@@ -28,6 +28,10 @@ SLOW = "slow"
 LATENCY_CLASSES = (FAST, MEDIUM, SLOW)
 
 DISCOVERY_TTL_S = 300.0
+VRAM_TTL_S = 60.0
+# Weights are not the whole story at run time (KV cache, context), so leave room
+# before calling a model a comfortable fit.
+VRAM_HEADROOM = 0.85
 SHOW_TIMEOUT_S = 10.0
 
 # Strength hints keyed by model-name substring. These are preferences, never
@@ -258,6 +262,49 @@ def build_profile(model_id: str, tag: dict[str, Any], show: dict[str, Any]) -> M
         general_strength=_strength(model_id, (), params_b),
         discovered_at=time.time(),
     )
+
+
+_vram_cache: dict[str, Any] = {"ts": 0.0, "free_bytes": 0}
+
+
+def available_vram_bytes(*, force: bool = False) -> int:
+    """Free accelerator memory, or 0 when that cannot be determined.
+
+    Unknown means unknown: with no reading, model size stops influencing the
+    ranking rather than being guessed at.
+    """
+    now = time.time()
+    with _lock:
+        if not force and now - float(_vram_cache["ts"]) < VRAM_TTL_S:
+            return int(_vram_cache["free_bytes"])
+    free = 0
+    try:
+        import subprocess
+
+        out = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.free", "--format=csv,noheader,nounits"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        values = [int(v.strip()) for v in out.stdout.split() if v.strip().isdigit()]
+        if values:
+            free = max(values) * 1024 * 1024
+    except Exception:  # noqa: BLE001 - no accelerator, or no tooling to ask
+        free = 0
+    with _lock:
+        _vram_cache["ts"] = now
+        _vram_cache["free_bytes"] = free
+    return free
+
+
+def fits_in_memory(profile: "ModelProfile", free_bytes: int = -1) -> bool | None:
+    """Whether a model's weights comfortably fit. None when unknown."""
+    free = available_vram_bytes() if free_bytes < 0 else free_bytes
+    if not free or not profile.size_bytes:
+        return None
+    return profile.size_bytes <= free * VRAM_HEADROOM
 
 
 def _ollama_tags(timeout: float) -> list[dict[str, Any]]:

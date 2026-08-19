@@ -1595,3 +1595,52 @@ def test_recent_failures_reorder_the_fallback_chain(data_dir: Path):
     )
     assert first, second
     assert health.get(first[0]).failures >= 1
+
+
+def test_memory_fit_prefers_models_that_actually_fit(data_dir: Path, monkeypatch):
+    """Found live: routing spent three attempts on models too large for the GPU.
+
+    They failed with cudaMalloc out of memory, which health tracking would
+    eventually learn — but a model whose weights do not fit is a poor choice
+    before it has failed even once.
+    """
+    monkeypatch.setattr(profiles, "available_vram_bytes", lambda **kw: 12 * 1024**3)
+    register(
+        make_profile(
+            "huge:32b", size_bytes=20 * 1024**3, general_strength=0.9, parameter_size_b=32.0
+        ),
+        make_profile("modest:7b", size_bytes=4 * 1024**3, general_strength=0.85),
+    )
+    decision = mr.route(RoutingRequest(task_type="general"))
+    assert decision.selected_model == "modest:7b"
+    scores = {c.model_id: c.score_breakdown for c in decision.accepted()}
+    assert scores["modest:7b"]["memory_fit"] > scores["huge:32b"]["memory_fit"]
+
+
+def test_memory_fit_is_a_preference_not_a_hard_requirement(data_dir: Path, monkeypatch):
+    """CPU offload is legitimate, so an oversized model is still usable."""
+    monkeypatch.setattr(profiles, "available_vram_bytes", lambda **kw: 4 * 1024**3)
+    register(make_profile("huge:32b", size_bytes=20 * 1024**3))
+    decision = mr.route(RoutingRequest(task_type="general"))
+    assert decision.ok is True
+    assert decision.selected_model == "huge:32b"
+
+
+def test_unknown_memory_does_not_influence_ranking(data_dir: Path, monkeypatch):
+    """No reading means no opinion, rather than a guess."""
+    monkeypatch.setattr(profiles, "available_vram_bytes", lambda **kw: 0)
+    register(make_profile("a:7b", size_bytes=20 * 1024**3))
+    decision = mr.route(RoutingRequest())
+    assert "memory_fit" not in decision.accepted()[0].score_breakdown
+    assert profiles.fits_in_memory(make_profile("a:7b", size_bytes=1), 0) is None
+
+
+def test_missing_accelerator_tooling_is_not_an_error(data_dir: Path, monkeypatch):
+    import subprocess as sp
+
+    def boom(*a, **k):
+        raise FileNotFoundError("nvidia-smi")
+
+    monkeypatch.setattr(sp, "run", boom)
+    profiles._vram_cache["ts"] = 0.0
+    assert profiles.available_vram_bytes(force=True) == 0
