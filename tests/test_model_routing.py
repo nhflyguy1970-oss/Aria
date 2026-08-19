@@ -1111,3 +1111,43 @@ def test_real_inventory_handler(data_dir: Path):
     assert out["ok"] is True
     assert out["count"] > 0
     assert all("capabilities" in m for m in out["models"])
+
+
+def test_read_only_routing_actions_are_reachable_by_agents(data_dir: Path):
+    """Regression, found live: routing actions were registered but no agent
+    could call them, so routing was unexplainable from the running service."""
+    from jarvis.handlers import ensure_handlers_loaded
+    from jarvis.handlers.registry import all_actions
+    from jarvis.specialized_agents import definitions as agent_defs
+
+    ensure_handlers_loaded()
+    registered = {a["action"] for a in all_actions()}
+    assert set(agent_defs.MODEL_ROUTING_READ) <= registered
+    for action in agent_defs.MODEL_ROUTING_READ:
+        assert any(a.permits(action) for a in agent_defs.BUILTIN_AGENTS), (
+            f"registered but unreachable: {action}"
+        )
+
+
+def test_routing_admin_action_is_denied_to_every_agent(data_dir: Path):
+    """Clearing a model's avoidance is an operator decision."""
+    from jarvis.specialized_agents import definitions as agent_defs
+
+    for agent_def in agent_defs.BUILTIN_AGENTS:
+        for action in agent_defs.MODEL_ROUTING_ADMIN:
+            assert agent_def.permits(action) is False, f"{agent_def.id} may {action}"
+
+
+def test_agent_can_explain_its_own_routing(data_dir: Path):
+    register(
+        make_profile("plain:7b"),
+        make_profile("toolish:7b", capabilities={caps.TOOL_USE: caps.SUPPORTED}),
+    )
+    out = agents.invoke(
+        "research_specialist",
+        "which model",
+        action="model_route",
+        params={"require_tools": True},
+    )
+    assert out["ok"] is True
+    assert out["result"]["decision"]["selected_model"] == "toolish:7b"

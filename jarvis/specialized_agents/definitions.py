@@ -191,6 +191,18 @@ MCP_HIGH_IMPACT = (
     "mcp_provider_remove",
 )
 
+# Model routing. These are read-only: they explain which model would run a task
+# and how the models are behaving. Routing decides which model does the work,
+# never what an agent may do, so seeing the decision grants nothing. Clearing a
+# model's avoidance is an operator action and stays denied.
+MODEL_ROUTING_READ = (
+    "model_inventory",
+    "model_route",
+    "model_health",
+    "model_routing_history",
+)
+MODEL_ROUTING_ADMIN = ("model_health_reset",)
+
 _DESTRUCTIVE = (
     "aria_self_fix",
     "self_upgrade_run",
@@ -235,13 +247,15 @@ RESEARCH_SPECIALIST = AgentDefinition(
         *BROWSER_INTERACT,
         *SKILL_USE,
         *MCP_USE,
+        *MODEL_ROUTING_READ,
     ),
     denied_actions=_DESTRUCTIVE
     + BROWSER_HIGH_IMPACT
     + CODING_DEV
     + CODING_HIGH_IMPACT
     + SKILL_HIGH_IMPACT
-    + MCP_HIGH_IMPACT,
+    + MCP_HIGH_IMPACT
+    + MODEL_ROUTING_ADMIN,
     preferred_model_role="general",
     model_requirements=("long_context",),
     input_contract=("task",),
@@ -277,10 +291,12 @@ CODING_SPECIALIST = AgentDefinition(
         *CODING_DEV,
         *SKILL_USE,
         *MCP_USE,
+        *MODEL_ROUTING_READ,
     ),
     denied_actions=_DESTRUCTIVE
     + SKILL_HIGH_IMPACT
     + MCP_HIGH_IMPACT
+    + MODEL_ROUTING_ADMIN
     + ("research_create", "research_run")
     + EVIDENCE_READ
     + EVIDENCE_WRITE
@@ -323,6 +339,7 @@ ANALYSIS_SPECIALIST = AgentDefinition(
         *BROWSER_READ,
         *SKILL_USE,
         *MCP_USE,
+        *MODEL_ROUTING_READ,
     ),
     denied_actions=_DESTRUCTIVE
     + ("research_create", "run_tests")
@@ -332,7 +349,8 @@ ANALYSIS_SPECIALIST = AgentDefinition(
     + CODING_DEV
     + CODING_HIGH_IMPACT
     + SKILL_HIGH_IMPACT
-    + MCP_HIGH_IMPACT,
+    + MCP_HIGH_IMPACT
+    + MODEL_ROUTING_ADMIN,
     preferred_model_role="general",
     metadata={"catalog_id": "synthesizer"},
 )
@@ -363,10 +381,12 @@ GENERAL_SPECIALIST = AgentDefinition(
         "mcp_provider_list",
         "mcp_provider_status",
         "mcp_tools",
+        *MODEL_ROUTING_READ,
     ),
     denied_actions=_DESTRUCTIVE
     + SKILL_HIGH_IMPACT
     + MCP_HIGH_IMPACT
+    + MODEL_ROUTING_ADMIN
     + ("mcp_invoke", "mcp_resource", "mcp_prompt", "mcp_discover")
     + BROWSER_READ
     + BROWSER_INTERACT
