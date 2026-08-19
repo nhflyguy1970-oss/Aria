@@ -12,6 +12,18 @@ def _routing():
     return model_routing
 
 
+def _number(params: dict, key: str, default):
+    """Read a number, keeping an explicit zero.
+
+    `params.get(key) or default` quietly turns a deliberate 0 into the default,
+    which silently gave "no fallbacks" two of them.
+    """
+    raw = params.get(key)
+    if raw is None or raw == "":
+        return default
+    return raw
+
+
 def _request_from_params(params: dict):
     from jarvis.model_routing.request import (
         BALANCED,
@@ -29,18 +41,18 @@ def _request_from_params(params: dict):
         task_type=(params.get("task_type") or "general").strip(),
         role=(params.get("role") or "").strip(),
         required_capabilities=tuple(required),
-        min_context_tokens=int(params.get("min_context_tokens") or 0),
+        min_context_tokens=int(_number(params, "min_context_tokens", 0)),
         require_tools=bool(params.get("require_tools")),
         require_vision=bool(params.get("require_vision")),
         require_structured_output=bool(params.get("require_structured_output")),
         local_only=bool(params.get("local_only", True)),
         preferred_model=(params.get("preferred_model") or "").strip(),
         preferred_provider=(params.get("preferred_provider") or "").strip(),
-        output_reserve_tokens=int(params.get("output_reserve_tokens") or DEFAULT_OUTPUT_RESERVE),
-        timeout_s=float(params.get("timeout_s") or 120.0),
+        output_reserve_tokens=int(_number(params, "output_reserve_tokens", DEFAULT_OUTPUT_RESERVE)),
+        timeout_s=float(_number(params, "timeout_s", 120.0)),
         excluded_models=tuple(excluded),
         latency_preference=(params.get("latency_preference") or BALANCED).strip(),
-        max_fallbacks=int(params.get("max_fallbacks") or 2),
+        max_fallbacks=int(_number(params, "max_fallbacks", 2)),
         agent_id=(params.get("agent_id") or params.get("requester") or "").strip(),
         skill_id=(params.get("skill_id") or "").strip(),
         mission_id=(params.get("mission_id") or "").strip(),

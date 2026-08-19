@@ -192,7 +192,12 @@ def execute(
     # The ordered list of models to try: the choice, then the next best
     # compatible candidates. Only models that already passed hard filtering
     # appear here, so a fallback can never violate a requirement.
-    ordered = [c.model_id for c in decision.accepted()]
+    # Next-best first. decision.candidates is in name order for readability, so
+    # sorting by score here is what makes a fallback the *next best* model
+    # rather than merely the next one alphabetically — which is how a "fast"
+    # request ended up falling back onto the slowest models available.
+    ranked = sorted(decision.accepted(), key=lambda c: (-c.score, c.model_id))
+    ordered = [c.model_id for c in ranked]
     if decision.selected_model in ordered:
         ordered.remove(decision.selected_model)
     chain = [decision.selected_model, *ordered][: 1 + max(0, request.max_fallbacks)]

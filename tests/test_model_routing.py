@@ -1499,3 +1499,99 @@ def test_cancellation_noticed_while_a_model_is_still_working(data_dir: Path):
     assert env["status"] == mr.CANCELLED
     assert tried == ["slow:7b"], "a second model ran after cancellation"
     assert time.monotonic() - started < 15
+
+
+def test_explicit_zero_fallbacks_is_respected(data_dir: Path, monkeypatch):
+    """Regression, found live: max_fallbacks=0 still tried three models.
+
+    `params.get(key) or default` turns a deliberate 0 into the default, so
+    "do not fall back" quietly meant "fall back twice".
+    """
+    from jarvis.handlers.model_routing_handlers import _request_from_params
+
+    assert _request_from_params({"max_fallbacks": 0}).max_fallbacks == 0
+    assert _request_from_params({}).max_fallbacks == 2
+    assert _request_from_params({"output_reserve_tokens": 0}).output_reserve_tokens == 0
+
+    register(make_profile("a:7b"), make_profile("b:7b"), make_profile("c:7b"))
+    tried = []
+
+    def invoker(model, payload):
+        tried.append(model)
+        raise ConnectionError("down")
+
+    monkeypatch.setattr(mr_execute, "default_invoker", invoker)
+    out = _call("model_execute", {"prompt": "hi", "max_fallbacks": 0})
+    assert out["ok"] is False
+    assert len(tried) == 1, f"expected exactly one attempt, got {tried}"
+
+
+def test_fallback_follows_the_ranking_not_the_alphabet(data_dir: Path):
+    """Regression, found live: a 'fast' request fell back onto the slowest models.
+
+    The candidate list is in name order so a decision reads well; the fallback
+    chain has to be in score order or the next model tried is merely the next
+    one alphabetically.
+    """
+    register(
+        make_profile("aaa_slow:7b", latency_class=profiles.SLOW, general_strength=0.2),
+        make_profile("bbb_slow:7b", latency_class=profiles.SLOW, general_strength=0.2),
+        make_profile("zzz_fast:7b", latency_class=profiles.FAST, general_strength=0.9),
+    )
+    tried = []
+
+    def invoker(model, payload):
+        tried.append(model)
+        if len(tried) == 1:
+            raise ConnectionError("down")
+        return "ok"
+
+    env = mr.execute(RoutingRequest(latency_preference="fast"), {}, invoker=invoker, persist=False)
+    assert env["status"] == mr.SUCCESS
+    # The best model is tried first, and the fallback is the next best.
+    assert tried[0] == "zzz_fast:7b"
+    ranked = sorted(env["decision"]["candidates"], key=lambda c: -c["score"])
+    assert tried[1] == ranked[1]["model_id"]
+
+
+def test_fallback_chain_order_is_deterministic(data_dir: Path):
+    register(*[make_profile(f"m{i}:7b", general_strength=0.5) for i in range(5)])
+    chains = []
+    for _ in range(3):
+        # Health is deliberately part of ranking, so a model that just failed is
+        # ranked lower next time. Reset it to test the ordering itself.
+        health.reset()
+        tried = []
+
+        def invoker(model, payload):
+            tried.append(model)
+            raise ConnectionError("down")
+
+        mr.execute(RoutingRequest(max_fallbacks=3), {}, invoker=invoker, persist=False)
+        chains.append(tuple(tried))
+    assert len(set(chains)) == 1, chains
+
+
+def test_recent_failures_reorder_the_fallback_chain(data_dir: Path):
+    """Health is part of ranking: a model that just failed is tried later."""
+    register(*[make_profile(f"m{i}:7b", general_strength=0.5) for i in range(3)])
+
+    def failing(model, payload):
+        raise ConnectionError("down")
+
+    first = []
+    mr.execute(
+        RoutingRequest(max_fallbacks=2),
+        {},
+        invoker=lambda m, p: first.append(m) or failing(m, p),
+        persist=False,
+    )
+    second = []
+    mr.execute(
+        RoutingRequest(max_fallbacks=2),
+        {},
+        invoker=lambda m, p: second.append(m) or failing(m, p),
+        persist=False,
+    )
+    assert first, second
+    assert health.get(first[0]).failures >= 1
