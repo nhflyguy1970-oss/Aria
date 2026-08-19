@@ -164,7 +164,7 @@ def test_f3_deep_chain_is_iterative(data_dir: Path):
 
 def test_f4_depth_limit_enforced(data_dir: Path):
     steps = [{"step_id": "s0", "action": "mission_list"}]
-    for i in range(1, 10):
+    for i in range(1, wf.LIMITS["max_depth"] + 4):
         steps.append({"step_id": f"s{i}", "action": "mission_list", "depends_on": [f"s{i - 1}"]})
     report = wf.validate(wf.WorkflowDefinition.from_dict(definition(steps=steps)))
     assert any("exceeds max_depth" in p for p in report["problems"])
@@ -1555,3 +1555,61 @@ def test_partially_run_workflow_survives_and_resumes(data_dir: Path):
     assert reloaded["state"] == wf.RUNNING
     assert wf.run(wid)["state"] == wf.COMPLETED
     assert wf.get(wid)["usage"]["actions"] == 3
+
+
+def test_one_graph_problem_does_not_manufacture_false_reference_errors(data_dir: Path):
+    """Regression, found live: a depth violation made every reference look broken.
+
+    Ancestor traversal was skipped whenever the graph had any problem at all, so
+    a single real error reported a pile of spurious "does not depend on it"
+    failures alongside it.
+    """
+    steps = [{"step_id": "s0", "action": "mission_list"}]
+    for i in range(1, 20):  # deliberately deeper than max_depth
+        steps.append(
+            {
+                "step_id": f"s{i}",
+                "action": "mission_list",
+                "depends_on": [f"s{i - 1}"],
+                "params": {"x": f"${{steps.s{i - 1}.output.value}}"},
+            }
+        )
+    report = wf.validate(wf.WorkflowDefinition.from_dict(definition(steps=steps)))
+    assert report["ok"] is False
+    assert any("exceeds max_depth" in p for p in report["problems"])
+    # The references are all legitimate; only the depth is wrong.
+    assert not [p for p in report["problems"] if "without depending on it" in p]
+
+
+def test_a_real_multi_system_chain_fits_within_the_depth_bound(data_dir: Path):
+    """route -> research -> run -> evidence -> claim -> verify -> summarise -> synthesis."""
+    chain = [
+        "route",
+        "research",
+        "run_research",
+        "source",
+        "claim",
+        "verify",
+        "summarise",
+        "synthesis",
+    ]
+    steps = []
+    for i, step_id in enumerate(chain):
+        steps.append(
+            {
+                "step_id": step_id,
+                "action": "mission_list",
+                **({"depends_on": [chain[i - 1]]} if i else {}),
+            }
+        )
+    report = wf.validate(wf.WorkflowDefinition.from_dict(definition(steps=steps)))
+    assert report["ok"] is True, report["problems"]
+    assert report["depth"] == len(chain)
+
+
+def test_depth_is_still_bounded(data_dir: Path):
+    steps = [{"step_id": "s0", "action": "mission_list"}]
+    for i in range(1, wf.LIMITS["max_depth"] + 3):
+        steps.append({"step_id": f"s{i}", "action": "mission_list", "depends_on": [f"s{i - 1}"]})
+    report = wf.validate(wf.WorkflowDefinition.from_dict(definition(steps=steps)))
+    assert any("exceeds max_depth" in p for p in report["problems"])

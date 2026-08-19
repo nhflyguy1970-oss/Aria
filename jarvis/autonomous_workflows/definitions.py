@@ -77,7 +77,9 @@ DEPENDENCY_POLICIES = (
 # Conservative defaults. A workflow may lower these, never raise them.
 LIMITS = {
     "max_steps": 40,
-    "max_depth": 6,
+    # A genuine multi-system workflow (route -> research -> browse -> evidence
+    # -> verify -> delegate -> synthesise) chains deeper than six.
+    "max_depth": 12,
     "max_parallel": 4,
     "max_runtime_s": 3600,
     "max_retries": 2,

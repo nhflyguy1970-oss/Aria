@@ -69,6 +69,7 @@ def validate(definition: WorkflowDefinition) -> dict[str, Any]:
 
     structure = graph.validate_graph(definition)
     problems.extend(structure["problems"])
+    has_cycle = any("cycle" in problem for problem in structure["problems"])
 
     known_ids = {s.step_id for s in definition.steps}
     for step in definition.steps:
@@ -107,7 +108,10 @@ def validate(definition: WorkflowDefinition) -> dict[str, Any]:
         except conditions.ConditionError as exc:
             problems.append(f"{step.step_id}: {exc}")
 
-        ancestors = graph.ancestors_of(definition, step.step_id) if structure["ok"] else set()
+        # Only a cycle makes ancestor traversal unsafe. Skipping it for any other
+        # problem made one real error (say, depth) manufacture a false
+        # "does not depend on it" for every reference in the workflow.
+        ancestors = graph.ancestors_of(definition, step.step_id) if not has_cycle else set()
         for reference in refs.references_in(step.params):
             problems.extend(_reference_problems(step, reference, known_ids, ancestors))
 
