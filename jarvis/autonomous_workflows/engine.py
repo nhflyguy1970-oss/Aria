@@ -478,6 +478,13 @@ def _finalise(
     if workflow.get("state") in ("completed", "partial", "failed", "cancelled"):
         return workflow
 
+    # A workflow with a step still in flight is still running. Its mission may
+    # be driving it from the worker while a direct call runs another slice, and
+    # declaring a result here would report the whole workflow finished while
+    # somebody else is mid-step.
+    if any(state == STEP_RUNNING for state in states.values()) and not bounded:
+        return workflow
+
     if outstanding and not bounded:
         # Still work to do, unless nothing can become ready.
         ready = graph.ready_steps(definition, states)

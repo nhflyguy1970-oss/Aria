@@ -1613,3 +1613,55 @@ def test_depth_is_still_bounded(data_dir: Path):
         steps.append({"step_id": f"s{i}", "action": "mission_list", "depends_on": [f"s{i - 1}"]})
     report = wf.validate(wf.WorkflowDefinition.from_dict(definition(steps=steps)))
     assert any("exceeds max_depth" in p for p in report["problems"])
+
+
+def test_a_workflow_with_a_step_in_flight_is_not_finalised(data_dir: Path):
+    """Regression, found live: a workflow reported partial mid-step.
+
+    Its mission drives it from the worker while a direct call can run another
+    slice, so finalising on "nothing ready" declared the whole workflow finished
+    while another executor still had a step running.
+    """
+    workflow = wf.create_workflow(
+        definition(
+            steps=[
+                {"step_id": "slow", "action": "mission_list", "params": {"limit": 1}},
+                {
+                    "step_id": "after",
+                    "action": "mission_list",
+                    "depends_on": ["slow"],
+                    "params": {"limit": 1},
+                },
+            ]
+        ),
+        create_mission=False,
+    )
+    wid = workflow["id"]
+    # Pretend another executor picked up "slow" and is still working on it.
+    wf_store.set_state(wid, wf.RUNNING)
+    wf_store.set_step(wid, "slow", state=wf.STEP_RUNNING)
+
+    result = wf.run_slice(wid)
+    assert result["workflow"]["state"] == wf.RUNNING, "finalised while a step was in flight"
+    assert wf.get(wid)["state"] not in wf.TERMINAL_STATES
+
+
+def test_in_flight_guard_does_not_block_bounded_stops(data_dir: Path):
+    """A bound still stops the workflow, even with something running."""
+    workflow = wf.create_workflow(
+        definition(
+            steps=[
+                {"step_id": "a", "action": "mission_list", "params": {"limit": 1}},
+                {
+                    "step_id": "b",
+                    "action": "mission_list",
+                    "depends_on": ["a"],
+                    "params": {"limit": 1},
+                },
+            ],
+            limits={"max_tool_calls": 1},
+        ),
+        create_mission=False,
+    )
+    final = wf.run(workflow["id"])
+    assert final["state"] in wf.TERMINAL_STATES
