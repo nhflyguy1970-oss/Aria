@@ -122,6 +122,7 @@ __all__ = [
     "MCP_HIGH_IMPACT_GATE",
     "MCP_INVOKE",
     "MODIFY",
+    "McpCancelled",
     "McpDenied",
     "McpProtocolError",
     "McpTimeout",

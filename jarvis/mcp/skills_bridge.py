@@ -14,7 +14,7 @@ from jarvis.mcp import definitions as mcp_defs
 from jarvis.mcp import engine as mcp_engine
 from jarvis.skills import registry as skill_registry
 from jarvis.skills.definitions import LOW_IMPACT, READ, RESEARCH, SkillDefinition
-from jarvis.skills.executor import SkillContext, SkillDenied
+from jarvis.skills.executor import SkillCancelled, SkillContext, SkillDenied
 
 MCP_TOOL_SKILL = SkillDefinition(
     skill_id="mcp_tool_call",
@@ -56,6 +56,10 @@ def _mcp_tool_call(ctx: SkillContext, params: dict[str, Any]) -> dict[str, Any]:
     if envelope["status"] == mcp_engine.DENIED:
         # Denial propagates; a skill must not convert it into a soft failure.
         raise SkillDenied(envelope["error"] or "MCP tool denied")
+    if envelope["status"] == mcp_engine.CANCELLED:
+        # Cancelled is not failed. Collapsing the two would report called-off
+        # work as broken work, all the way up to the mission's final state.
+        raise SkillCancelled(envelope["error"] or "MCP tool cancelled")
     if envelope["status"] != mcp_engine.SUCCESS:
         raise RuntimeError(
             f"MCP tool {envelope['provider_id']}:{envelope['target']} "
@@ -104,6 +108,8 @@ def _mcp_fetch_resource(ctx: SkillContext, params: dict[str, Any]) -> dict[str, 
     )
     if envelope["status"] == mcp_engine.DENIED:
         raise SkillDenied(envelope["error"] or "MCP resource denied")
+    if envelope["status"] == mcp_engine.CANCELLED:
+        raise SkillCancelled(envelope["error"] or "MCP resource cancelled")
     if envelope["status"] != mcp_engine.SUCCESS:
         raise RuntimeError(
             f"MCP resource {envelope['provider_id']} {envelope['status']}: {envelope.get('error')}"

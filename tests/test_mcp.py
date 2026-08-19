@@ -1282,3 +1282,51 @@ def test_cancelled_skill_mission_lands_cancelled_not_failed(data_dir: Path):
     mstore.request_cancel(mission_id)
     missions.run(mission_id, missions.ActionStepRunner(None))
     assert missions.status(mission_id)["state"] == missions.CANCELLED
+
+
+def test_cancelled_mcp_call_cancels_the_mission_rather_than_failing_it(data_dir: Path):
+    """Regression, found live: a cancelled MCP call landed the mission as failed.
+
+    Cancelled is not failed. Collapsing the two reports work that was
+    deliberately called off as work that broke.
+    """
+    from jarvis import missions
+    from jarvis.missions import store as mstore
+
+    reg(provider(timeout_s=25.0))
+    mcp.discover("fixture_demo")
+    mcp.ensure_mcp_skills_loaded()
+
+    out = _call(
+        "skill_invoke",
+        {
+            "skill_id": "mcp_tool_call",
+            "mission": True,
+            "inputs": {
+                "provider_id": "fixture_demo",
+                "tool": "slow_op",
+                "arguments": {"seconds": 20},
+            },
+        },
+    )
+    mission_id = out["mission_id"]
+    mstore.request_cancel(mission_id)
+    missions.run(mission_id, missions.ActionStepRunner(None))
+
+    assert missions.status(mission_id)["state"] == missions.CANCELLED
+    rows = [r for r in mcp.history(provider_id="fixture_demo") if r["mission_id"] == mission_id]
+    assert not [r for r in rows if r["status"] == mcp_engine.SUCCESS]
+
+
+def test_cancelled_mcp_call_reports_cancelled_through_the_skill(data_dir: Path):
+    reg(provider(timeout_s=25.0))
+    mcp.discover("fixture_demo")
+    mcp.ensure_mcp_skills_loaded()
+    env = skills.execute(
+        "mcp_tool_call",
+        {"provider_id": "fixture_demo", "tool": "slow_op", "arguments": {"seconds": 20}},
+        requester="research_specialist",
+        cancel_check=lambda: True,
+    )
+    assert env["status"] == skills.CANCELLED
+    assert env["ok"] is False
