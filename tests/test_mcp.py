@@ -1163,3 +1163,54 @@ def test_no_agent_may_configure_providers(data_dir: Path):
     for agent in agent_defs.BUILTIN_AGENTS:
         for action in ("mcp_provider_register", "mcp_provider_remove", "mcp_set_trust"):
             assert agent.permits(action) is False, f"{agent.id} may {action}"
+
+
+def test_operator_http_routes(chat_app, data_dir: Path):
+    """The operator path an agent deliberately does not have."""
+    res = chat_app.post(
+        "/api/mcp/providers",
+        data={
+            "provider_id": "route_fixture",
+            "command": f'["{PY_BIN}", "{DEMO_SERVER}"]',
+            "allowed_agents": '["research_specialist"]',
+        },
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["ok"] is True
+    assert body["provider"]["trust"] == defs.UNTRUSTED
+
+    listed = chat_app.get("/api/mcp/providers").json()
+    assert any(p["provider_id"] == "route_fixture" for p in listed["providers"])
+
+    trusted = chat_app.post(
+        "/api/mcp/providers/route_fixture/trust", data={"trust": defs.TRUSTED}
+    ).json()
+    assert trusted["ok"] is True
+    assert mcp_registry.get("route_fixture").may_execute() is True
+
+    removed = chat_app.delete("/api/mcp/providers/route_fixture").json()
+    assert removed["ok"] is True
+    assert mcp_registry.get("route_fixture") is None
+
+
+def test_operator_route_rejects_unsafe_configuration(chat_app, data_dir: Path):
+    bad = chat_app.post(
+        "/api/mcp/providers",
+        data={
+            "provider_id": "bad_one",
+            "command": '["curl", "http://evil.example"]',
+        },
+    ).json()
+    assert bad["ok"] is False
+    assert bad["error_kind"] == "invalid_provider"
+
+    ssrf = chat_app.post(
+        "/api/mcp/providers",
+        data={
+            "provider_id": "ssrf_one",
+            "transport": "http",
+            "url": "http://169.254.169.254/mcp",
+        },
+    ).json()
+    assert ssrf["ok"] is False

@@ -697,6 +697,80 @@ def register_routes(app, assistant):
 
         return {"ok": True, "sources": ev.sources(context_id)}
 
+    # ---------------------------------------------------------------- MCP
+    # Provider configuration is an operator concern: these routes are the
+    # counterpart to the agent-denied configuration actions, so an external
+    # authority boundary can be set up and reviewed without any agent being
+    # able to do it for itself.
+
+    @app.get("/api/mcp/providers")
+    def mcp_providers_list():
+        from jarvis import mcp
+
+        mcp.ensure_mcp_skills_loaded()
+        return {
+            "ok": True,
+            "providers": [mcp.health(p.provider_id) for p in mcp.list_providers()],
+        }
+
+    def _mcp_action(action: str, params: dict, message: str):
+        from jarvis.handlers import ensure_handlers_loaded
+        from jarvis.handlers.registry import call_action
+
+        ensure_handlers_loaded()
+        return call_action(assistant, action, params, message)
+
+    def _mcp_json(raw: str, default):
+        if not (raw or "").strip():
+            return default
+        try:
+            return json.loads(raw)
+        except ValueError:
+            return default
+
+    @app.post("/api/mcp/providers")
+    def mcp_providers_register(
+        provider_id: str = Form(...),
+        name: str = Form(""),
+        transport: str = Form("stdio"),
+        command: str = Form(""),
+        url: str = Form(""),
+        allow_local: bool = Form(False),
+        impact: str = Form("read"),
+        tool_impacts: str = Form(""),
+        allowed_agents: str = Form(""),
+        denied_tools: str = Form(""),
+        timeout_s: float = Form(30.0),
+        env: str = Form(""),
+    ):
+        params = {
+            "provider_id": provider_id,
+            "name": name or provider_id,
+            "transport": transport,
+            "command": _mcp_json(command, []),
+            "url": url,
+            "allow_local": allow_local,
+            "impact": impact,
+            "tool_impacts": _mcp_json(tool_impacts, {}),
+            "allowed_agents": _mcp_json(allowed_agents, []),
+            "denied_tools": _mcp_json(denied_tools, []),
+            "timeout_s": timeout_s,
+            "env": _mcp_json(env, {}),
+        }
+        return _mcp_action("mcp_provider_register", params, "register mcp provider")
+
+    @app.post("/api/mcp/providers/{provider_id}/trust")
+    def mcp_provider_trust(provider_id: str, trust: str = Form(...)):
+        return _mcp_action(
+            "mcp_set_trust", {"provider_id": provider_id, "trust": trust}, "set mcp trust"
+        )
+
+    @app.delete("/api/mcp/providers/{provider_id}")
+    def mcp_provider_delete(provider_id: str):
+        return _mcp_action(
+            "mcp_provider_remove", {"provider_id": provider_id}, "remove mcp provider"
+        )
+
     @app.get("/api/collaborations")
     def collaborations_list():
         from jarvis.collaboration import store as collab_store
