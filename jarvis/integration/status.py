@@ -174,11 +174,27 @@ def environment_status(*, limit: int = 50) -> dict[str, Any]:
         active_states.extend(item["state"] for item in (data.get("active") or []))
 
     busy = bool(active_states)
+    # What the last restart picked up. Startup logging is emitted before the
+    # service's handlers are attached, so this is the only place an operator can
+    # actually see that recovery ran.
+    from jarvis.integration import recovery as _recovery
+
+    startup = _recovery.last_startup_recovery()
     return {
         "state": lifecycle.summarise(active_states) if busy else "idle",
         "busy": busy,
         "doing": _doing(sections),
         "policy": policy.snapshot(),
+        "startup_recovery": (
+            {
+                "total": startup["total"],
+                "recovered": startup["recovered"],
+                "at": startup.get("at"),
+                "errors": startup["errors"],
+            }
+            if startup
+            else None
+        ),
         **sections,
         "unavailable": unavailable,
         "controls": {

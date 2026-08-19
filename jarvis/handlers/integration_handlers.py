@@ -84,17 +84,24 @@ def aria_autonomy(assistant, params: dict, message: str) -> dict:
 @register_action(
     "aria_recover",
     module="general",
-    description="Make work interrupted by a restart resumable",
+    description="Report work interrupted by a restart (apply+force to make it resumable)",
+    info=True,
 )
 def aria_recover(assistant, params: dict, message: str) -> dict:
     env = _env()
-    outcome = env.recover_all()
+    apply = bool(params.get("apply"))
+    outcome = env.recover_on_demand(apply=apply, force=bool(params.get("force")))
     parts = [f"{k}: {len(v)}" for k, v in outcome["recovered"].items() if v]
-    text = (
-        f"Recovered {outcome['total']} item(s) — " + ", ".join(parts)
-        if outcome["total"]
-        else "No interrupted work."
-    )
+    if outcome["total"]:
+        head = "Recovered" if outcome.get("applied") else "Interrupted work"
+        text = f"{head} {outcome['total']} item(s) — " + ", ".join(parts)
+    else:
+        text = "No interrupted work."
+    if outcome.get("refused"):
+        text += "\n\n" + outcome["refused"]
+    startup = outcome.get("startup") or {}
+    if startup.get("total"):
+        text += f"\n\nThis process recovered {startup['total']} item(s) at startup."
     if outcome["errors"]:
         return err(
             text + f" (errors: {outcome['errors']})",
@@ -142,7 +149,6 @@ def aria_provenance(assistant, params: dict, message: str) -> dict:
     info=True,
 )
 def aria_lifecycle(assistant, params: dict, message: str) -> dict:
-    env = _env()
     kind = (params.get("kind") or "").strip()
     state = (params.get("state") or "").strip()
     if not kind or not state:

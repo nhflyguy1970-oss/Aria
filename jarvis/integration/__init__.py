@@ -69,7 +69,13 @@ from jarvis.integration.policy import (
 )
 from jarvis.integration.policy import snapshot as policy_snapshot
 from jarvis.integration.provenance import for_request, for_workflow
-from jarvis.integration.recovery import recover_all, recover_on_startup
+from jarvis.integration.recovery import (
+    last_startup_recovery,
+    pending_recovery,
+    recover_all,
+    recover_on_demand,
+    recover_on_startup,
+)
 from jarvis.integration.status import environment_status
 
 __all__ = [
@@ -119,7 +125,10 @@ __all__ = [
     "new_request_id",
     "permits",
     "policy_snapshot",
+    "last_startup_recovery",
+    "pending_recovery",
     "recover_all",
+    "recover_on_demand",
     "recover_on_startup",
     "safe_mode",
     "suggested_agent",

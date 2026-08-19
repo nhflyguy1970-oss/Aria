@@ -45,6 +45,16 @@ def simple_workflow(**kw) -> dict:
     return base
 
 
+def _two_step() -> dict:
+    """A workflow that reaches a live state after one step, leaving one to interrupt."""
+    return simple_workflow(
+        steps=[
+            {"step_id": "a", "action": "mission_list", "params": {"limit": 1}},
+            {"step_id": "b", "action": "mission_list", "depends_on": ["a"], "params": {"limit": 1}},
+        ]
+    )
+
+
 # ------------------------------------------------------------ lifecycle
 
 
@@ -477,6 +487,87 @@ def test_recovery_makes_interrupted_work_resumable(data_dir: Path):
     assert states["a"] == wf.STEP_SUCCEEDED, "completed work was undone"
     assert states["b"] == wf.STEP_PENDING
     assert wf.run(wid)["state"] == wf.COMPLETED
+
+
+def test_on_demand_recovery_reports_instead_of_mutating(data_dir: Path):
+    """A dry run must tell the truth about what it would touch, and touch nothing."""
+    from jarvis.autonomous_workflows import store as wf_store
+
+    workflow = wf.create_workflow(_two_step(), create_mission=False)
+    wid = workflow["id"]
+    wf.run(wid, max_steps=1)
+    wf_store.set_step(wid, "b", state=wf.STEP_RUNNING)
+
+    outcome = recovery.recover_on_demand()
+    assert outcome["applied"] is False
+    assert wid in outcome["recovered"]["workflows"], "a dry run still reports what it would touch"
+    assert wf_store.step_states(wid)["b"] == wf.STEP_RUNNING, "dry run mutated a live step"
+
+
+def test_on_demand_recovery_refuses_to_apply_without_force(data_dir: Path):
+    """After startup a live state means 'executing', not 'abandoned'."""
+    from jarvis.autonomous_workflows import store as wf_store
+
+    wid = wf.create_workflow(_two_step(), create_mission=False)["id"]
+    wf.run(wid, max_steps=1)
+    wf_store.set_step(wid, "b", state=wf.STEP_RUNNING)
+
+    outcome = recovery.recover_on_demand(apply=True)
+    assert outcome["applied"] is False
+    assert outcome["refused"]
+    assert wf_store.step_states(wid)["b"] == wf.STEP_RUNNING
+
+    forced = recovery.recover_on_demand(apply=True, force=True)
+    assert forced["applied"] is True and forced["forced"] is True
+    assert wf_store.step_states(wid)["b"] == wf.STEP_PENDING
+
+
+def test_recovery_does_not_cause_an_in_flight_step_to_run_twice(data_dir: Path):
+    """The defect this guards: recovery reset an executing step, so a second
+    driver picked it up and the side effect happened twice."""
+    import threading
+    import time
+
+    from jarvis.autonomous_workflows import store as wf_store
+    from jarvis.handlers.registry import register_action
+    from jarvis.response import ok
+
+    calls: list[float] = []
+
+    @register_action("test_slow_side_effect", module="general", description="probe")
+    def _slow(assistant, params, message):
+        calls.append(time.time())
+        time.sleep(2.0)
+        return ok("done", module="general")
+
+    wid = wf.create_workflow(
+        simple_workflow(steps=[{"step_id": "a", "action": "test_slow_side_effect", "params": {}}]),
+        create_mission=False,
+    )["id"]
+    driver = threading.Thread(target=lambda: wf.run(wid), daemon=True)
+    driver.start()
+    for _ in range(100):
+        if wf_store.step_states(wid).get("a") == wf.STEP_RUNNING:
+            break
+        time.sleep(0.02)
+
+    recovery.recover_on_demand(apply=True)  # the operator-facing path
+    assert wf_store.step_states(wid)["a"] == wf.STEP_RUNNING, "an executing step was reset"
+
+    threading.Thread(target=lambda: wf.run(wid), daemon=True).start()
+    driver.join(timeout=20)
+    time.sleep(1.0)
+    assert len(calls) == 1, f"side effect ran {len(calls)} times"
+
+
+def test_startup_recovery_is_recorded_and_visible(data_dir: Path):
+    """Startup logging happens before the log handlers attach, so status is the
+    only place an operator can see that recovery ran."""
+    outcome = recovery.recover_on_startup()
+    assert recovery.last_startup_recovery() == outcome
+    assert outcome["applied"] is True and outcome["at"]
+    snapshot = env.environment_status()
+    assert snapshot["startup_recovery"]["total"] == outcome["total"]
 
 
 def test_recovery_survives_a_broken_subsystem(data_dir: Path, monkeypatch):
