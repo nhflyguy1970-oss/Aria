@@ -208,6 +208,26 @@ MODEL_ROUTING_READ = (
 )
 MODEL_ROUTING_ADMIN = ("model_health_reset",)
 
+# Autonomous workflows. An agent may plan, inspect and drive a workflow, but a
+# workflow grants no authority of its own: every step still runs under the
+# permissions of whoever the step names, and validation refuses a workflow whose
+# step an agent could not invoke directly. workflow_step is the mission worker's
+# entry point and belongs to the same set.
+WORKFLOW_USE = (
+    "workflow_create",
+    "workflow_validate",
+    "workflow_status",
+    "workflow_index",
+    "workflow_start",
+    "workflow_pause",
+    "workflow_resume",
+    "workflow_cancel",
+    "workflow_recover",
+    "workflow_templates",
+    "workflow_events",
+    "workflow_step",
+)
+
 _DESTRUCTIVE = (
     "aria_self_fix",
     "self_upgrade_run",
@@ -253,6 +273,7 @@ RESEARCH_SPECIALIST = AgentDefinition(
         *SKILL_USE,
         *MCP_USE,
         *MODEL_ROUTING_READ,
+        *WORKFLOW_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + BROWSER_HIGH_IMPACT
@@ -297,6 +318,7 @@ CODING_SPECIALIST = AgentDefinition(
         *SKILL_USE,
         *MCP_USE,
         *MODEL_ROUTING_READ,
+        *WORKFLOW_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + SKILL_HIGH_IMPACT
@@ -345,6 +367,7 @@ ANALYSIS_SPECIALIST = AgentDefinition(
         *SKILL_USE,
         *MCP_USE,
         *MODEL_ROUTING_READ,
+        *WORKFLOW_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + ("research_create", "run_tests")
@@ -387,6 +410,7 @@ GENERAL_SPECIALIST = AgentDefinition(
         "mcp_provider_status",
         "mcp_tools",
         *MODEL_ROUTING_READ,
+        *WORKFLOW_USE,
     ),
     denied_actions=_DESTRUCTIVE
     + SKILL_HIGH_IMPACT

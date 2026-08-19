@@ -1441,3 +1441,57 @@ def test_a_pending_workflow_can_be_paused_before_it_starts(data_dir: Path):
     assert wf_store.step_states(wid)["one"] == wf.STEP_PENDING, "paused work still started"
     wf.resume(wid)
     assert wf.get(wid)["state"] == wf.COMPLETED
+
+
+def test_workflow_actions_are_reachable_by_agents(data_dir: Path):
+    """Regression, found live: every workflow action came back permission_denied.
+
+    Registering an action is not enough — if no agent may call it, the whole
+    orchestration layer is unreachable from the running service.
+    """
+    from jarvis.handlers import ensure_handlers_loaded
+    from jarvis.handlers.registry import all_actions
+    from jarvis.specialized_agents import definitions as agent_defs
+
+    ensure_handlers_loaded()
+    registered = {a["action"] for a in all_actions()}
+    assert set(agent_defs.WORKFLOW_USE) <= registered
+    for action in agent_defs.WORKFLOW_USE:
+        assert any(a.permits(action) for a in agent_defs.BUILTIN_AGENTS), (
+            f"registered but unreachable: {action}"
+        )
+
+
+def test_agent_orchestration_grants_no_new_authority(data_dir: Path):
+    """An agent can drive a workflow, but not one whose steps it could not run."""
+    bad = definition(
+        steps=[
+            {"step_id": "x", "action": "dev_task_create", "agent_id": "research_specialist"},
+        ]
+    )
+    out = _call("workflow_create", {"definition": bad, "mission": False})
+    assert out["ok"] is False
+    assert "may not invoke" in out["message"]
+
+
+def test_agent_can_create_and_run_a_workflow_end_to_end(data_dir: Path):
+    out = agents.invoke(
+        "general_specialist",
+        "orchestrate",
+        action="workflow_create",
+        params={
+            "definition": definition(
+                steps=[
+                    {"step_id": "one", "action": "mission_list", "params": {"limit": 1}},
+                ]
+            ),
+            "mission": False,
+        },
+    )
+    assert out["ok"] is True
+    wid = out["result"]["workflow_id"]
+    started = agents.invoke(
+        "general_specialist", "run", action="workflow_start", params={"workflow_id": wid}
+    )
+    assert started["ok"] is True
+    assert started["result"]["workflow"]["state"] == wf.COMPLETED
