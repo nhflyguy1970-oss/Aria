@@ -9,6 +9,11 @@ log = logging.getLogger("jarvis.browser.playwright")
 
 _CACHE: dict = {"ts": 0.0, "stack": {}}
 _TTL = 45.0
+# A working stack stays cached; a failed probe does not. The chromium probe
+# launches a real browser, so it can fail transiently under load — and caching
+# that for the full TTL turns one blip into browsing being unavailable for
+# nearly a minute.
+_NEGATIVE_TTL = 5.0
 
 
 def playwright_importable() -> bool:
@@ -37,8 +42,12 @@ def chromium_installed() -> bool:
 
 def browser_stack_ready(*, probe_chromium: bool = True) -> dict[str, bool]:
     now = time.time()
-    if _CACHE.get("stack") and now - float(_CACHE.get("ts") or 0) < _TTL:
-        return dict(_CACHE["stack"])
+    cached = _CACHE.get("stack")
+    if cached:
+        healthy = bool(cached.get("playwright") and cached.get("chromium"))
+        ttl = _TTL if healthy else _NEGATIVE_TTL
+        if now - float(_CACHE.get("ts") or 0) < ttl:
+            return dict(cached)
     pw = playwright_importable()
     chrom = chromium_installed() if (pw and probe_chromium) else False
     stack = {"playwright": pw, "chromium": chrom}

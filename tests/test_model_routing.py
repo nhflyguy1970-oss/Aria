@@ -1281,3 +1281,93 @@ def test_mission_routed_call_is_recorded_against_the_mission(data_dir: Path, mon
     missions.run(mission_id, missions.ActionStepRunner(None))
     assert missions.status(mission_id)["state"] == missions.COMPLETED
     assert mr.history(mission_id=mission_id)
+
+
+def test_routing_is_authoritative_over_the_inference_gateway(data_dir: Path, monkeypatch):
+    """Regression, found live: the gateway substituted its own model.
+
+    The routed model was advisory, so an embedding model "answered" a chat
+    request — the gateway had quietly run something else, and the audit trail
+    recorded the model that was asked for rather than the one that ran.
+    """
+    from jarvis.inference import gateway
+
+    seen = {}
+
+    def fake_chat(model, messages, *, role="general", route=None, **kwargs):
+        seen["model"] = model
+        seen["route_model"] = getattr(route, "model", None)
+        seen["route_reason"] = getattr(route, "reason", None)
+        return "hello", {"execution_model": model}
+
+    monkeypatch.setattr(gateway, "chat_with_usage", fake_chat)
+    result = mr_execute.default_invoker("chosen:7b", {"prompt": "hi", "role": "conversation"})
+    assert result == "hello"
+    # The decision is pinned onto the call rather than left to be re-decided.
+    assert seen["route_model"] == "chosen:7b"
+    assert seen["route_reason"] == "model_routing_decision"
+
+
+def test_substituted_model_is_a_failure_not_a_silent_success(data_dir: Path, monkeypatch):
+    """If something does substitute, it must not be recorded as the choice."""
+    from jarvis.inference import gateway
+
+    def substituting_chat(model, messages, *, role="general", route=None, **kwargs):
+        return "hello", {"execution_model": "somebody_else:7b"}
+
+    monkeypatch.setattr(gateway, "chat_with_usage", substituting_chat)
+    with pytest.raises(mr_execute.ExecutedElsewhere) as exc:
+        mr_execute.default_invoker("chosen:7b", {"prompt": "hi"})
+    assert exc.value.requested == "chosen:7b"
+    assert exc.value.executed == "somebody_else:7b"
+
+
+def test_substitution_does_not_produce_a_false_provenance_record(data_dir: Path, monkeypatch):
+    from jarvis.inference import gateway
+
+    register(make_profile("chosen:7b", general_strength=0.99), make_profile("other:7b"))
+
+    def substituting_chat(model, messages, *, role="general", route=None, **kwargs):
+        return "hello", {"execution_model": "ghost:7b"}
+
+    monkeypatch.setattr(gateway, "chat_with_usage", substituting_chat)
+    env = mr.execute(RoutingRequest(), {"prompt": "hi"}, persist=False)
+    assert env["status"] == mr.FAILED
+    assert env["final_model"] == ""
+    assert "gateway executed" in str(env["error"])
+
+
+def test_failed_browser_probe_is_not_cached_as_long_as_a_working_one(data_dir: Path, monkeypatch):
+    """Regression: one transient probe failure disabled browsing for 45s.
+
+    The chromium probe launches a real browser, so under load it can fail for
+    reasons that have nothing to do with the install. Caching that verdict for
+    the full TTL turned a blip into "Playwright/Chromium not available" long
+    after the browser was fine again — which is what surfaced as an unrelated
+    browser test failing in long runs.
+    """
+    import jarvis.browser_playwright as bp
+
+    calls = []
+
+    def probe():
+        calls.append(1)
+        return len(calls) > 1  # fails once, then works
+
+    monkeypatch.setattr(bp, "playwright_importable", lambda: True)
+    monkeypatch.setattr(bp, "chromium_installed", probe)
+    bp._CACHE.clear()
+    bp._CACHE.update({"ts": 0.0, "stack": {}})
+
+    first = bp.browser_stack_ready()
+    assert first["chromium"] is False
+
+    # A negative verdict expires quickly instead of sticking.
+    bp._CACHE["ts"] = time.time() - (bp._NEGATIVE_TTL + 1)
+    second = bp.browser_stack_ready()
+    assert second["chromium"] is True, "a transient probe failure stayed cached"
+
+    # A positive verdict is still cached for the full TTL.
+    bp._CACHE["ts"] = time.time() - (bp._NEGATIVE_TTL + 1)
+    assert bp.browser_stack_ready()["chromium"] is True
+    assert len(calls) == 2, "a healthy stack was needlessly re-probed"

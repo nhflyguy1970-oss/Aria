@@ -37,19 +37,48 @@ class PolicyDenied(RuntimeError):
     """ARIA refused. A different model would not make it allowed."""
 
 
-def default_invoker(model: str, payload: dict[str, Any]) -> Any:
-    """Invoke through ARIA's existing model interface — no second chat engine."""
-    from jarvis import llm
+class ExecutedElsewhere(RuntimeError):
+    """The call ran on a different model than the router chose."""
 
-    messages = payload.get("messages")
-    if messages:
-        return llm.ask(model, messages, **(payload.get("options") or {}))
+    def __init__(self, requested: str, executed: str) -> None:
+        super().__init__(
+            f"routing selected {requested!r} but the inference gateway executed {executed!r}"
+        )
+        self.requested = requested
+        self.executed = executed
+
+
+def default_invoker(model: str, payload: dict[str, Any]) -> Any:
+    """Invoke through ARIA's existing model interface — no second chat engine.
+
+    The inference gateway applies its own policy overlay and can substitute a
+    different model. For a routed call that would make the decision advisory
+    and the audit trail wrong, so the chosen model is pinned with an explicit
+    route, and the model the gateway reports having executed is checked against
+    the one that was asked for.
+    """
+    from jarvis.inference.gateway import chat_with_usage
+    from jarvis.inference.policy import InferenceRoute
+
     system = payload.get("system") or ""
-    user = payload.get("prompt") or ""
     role = payload.get("role") or "conversation"
+    messages = payload.get("messages")
+    if not messages:
+        messages = [{"role": "user", "content": payload.get("prompt") or ""}]
     if system:
-        return llm.ask_with_system(model, system, user, role=role, **(payload.get("options") or {}))
-    return llm.ask(model, [{"role": "user", "content": user}], **(payload.get("options") or {}))
+        messages = [{"role": "system", "content": system}, *messages]
+
+    pinned = InferenceRoute(
+        backend="ollama", model=model, reason="model_routing_decision", local=True
+    )
+    text, usage = chat_with_usage(
+        model, messages, role=role, route=pinned, **(payload.get("options") or {})
+    )
+    executed = str((usage or {}).get("execution_model") or model)
+    if executed and executed != model:
+        # Never record somebody else's model as though it were the choice.
+        raise ExecutedElsewhere(model, executed)
+    return text
 
 
 def _attempt_record(model: str, ok: bool, ms: float, kind: str = "", error: str = "") -> dict:
@@ -219,10 +248,8 @@ def execute(
     return finish(
         status=FAILED,
         failure_kind=last_kind or failures.PROVIDER_ERROR,
-        error=(
-            f"{'all ' + str(len(chain)) + ' candidate model(s) failed' if exhausted else 'model failed'}"
-            f": {last_error}"
-        ),
+        error=(f"all {len(chain)} candidate model(s) failed" if exhausted else "model failed")
+        + f": {last_error}",
         final_model="",
         fallback_count=max(0, len(envelope["attempts"]) - 1),
         fallback_active=len(envelope["attempts"]) > 1,

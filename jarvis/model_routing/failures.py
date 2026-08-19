@@ -80,6 +80,7 @@ _PATTERNS = (
     ),
     (re.compile(r"permission|denied|not permitted|unauthorized", re.I), POLICY_DENIED),
     (re.compile(r"unavailable|unload|out of memory|insufficient memory", re.I), UNAVAILABLE),
+    (re.compile(r"gateway executed", re.I), PROVIDER_ERROR),
 )
 
 
