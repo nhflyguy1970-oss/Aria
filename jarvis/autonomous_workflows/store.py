@@ -345,6 +345,28 @@ def step_outputs(workflow_id: str) -> dict[str, Any]:
     return {r["step_id"]: {"output": _json(r["output"], None), "state": r["state"]} for r in rows}
 
 
+def record_agent(workflow_id: str, agent_id: str) -> int:
+    """Remember which agents a workflow has involved.
+
+    Distinct agents, not agent-dispatched steps: how many steps run is already
+    bounded by max_steps, and counting every step against max_child_agents made
+    an ordinary workflow look like agent sprawl.
+    """
+    _init_db()
+    with _conn() as conn:
+        row = conn.execute("SELECT usage FROM workflows WHERE id=?", (workflow_id,)).fetchone()
+        usage = _json(row["usage"] if row else "{}", {})
+        agents = list(usage.get("agents") or [])
+        if agent_id and agent_id not in agents:
+            agents.append(agent_id)
+        usage["agents"] = agents
+        conn.execute(
+            "UPDATE workflows SET usage=?, updated_at=? WHERE id=?",
+            (json.dumps(usage), time.time(), workflow_id),
+        )
+    return len(usage["agents"])
+
+
 def bump_usage(workflow_id: str, counter: str, amount: int = 1) -> dict[str, Any]:
     """Track bounded resource use. Read-modify-write under the row lock."""
     _init_db()

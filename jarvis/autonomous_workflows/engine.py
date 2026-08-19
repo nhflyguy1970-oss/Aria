@@ -218,12 +218,14 @@ def _bounds_exceeded(workflow: dict[str, Any], definition: WorkflowDefinition) -
     for counter, limit_name in (
         ("actions", "max_tool_calls"),
         ("model_calls", "max_model_calls"),
-        ("agent_calls", "max_child_agents"),
         ("browser_actions", "max_browser_actions"),
     ):
         limit = definition.limit(limit_name)
         if int(usage.get(counter, 0)) >= limit:
             return f"{limit_name} ({limit}) reached"
+    distinct_agents = len(usage.get("agents") or [])
+    if distinct_agents > definition.limit("max_child_agents"):
+        return f"max_child_agents ({definition.limit('max_child_agents')}) reached"
     started = workflow.get("started_at")
     if started:
         runtime = time.time() - float(started)
@@ -400,7 +402,7 @@ def _run_step(
 
         store.bump_usage(workflow_id, "actions")
         if step.agent_id:
-            store.bump_usage(workflow_id, "agent_calls")
+            store.record_agent(workflow_id, step.agent_id)
         outcome = dispatch.dispatch(
             step,
             params,

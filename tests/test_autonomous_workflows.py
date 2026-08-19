@@ -1665,3 +1665,63 @@ def test_in_flight_guard_does_not_block_bounded_stops(data_dir: Path):
     )
     final = wf.run(workflow["id"])
     assert final["state"] in wf.TERMINAL_STATES
+
+
+def test_agent_bound_counts_distinct_agents_not_every_step(data_dir: Path):
+    """Regression, found live: an 11-step workflow stopped after 8.
+
+    Every step named an agent, and each one was counted against
+    max_child_agents — but how many steps run is already bounded by max_steps.
+    The agent bound is about how many different agents get involved.
+    """
+    steps = []
+    for i in range(10):
+        steps.append(
+            {
+                "step_id": f"s{i}",
+                "action": "mission_list",
+                "agent_id": "general_specialist",
+                "params": {"limit": 1},
+                **({"depends_on": [f"s{i - 1}"]} if i else {}),
+            }
+        )
+    workflow = wf.create_workflow(definition(steps=steps), create_mission=False)
+    final = wf.run(workflow["id"])
+    assert final["state"] == wf.COMPLETED, wf.status(workflow["id"])["steps_by_state"]
+    usage = wf.get(workflow["id"])["usage"]
+    assert usage["agents"] == ["general_specialist"]
+    assert usage["actions"] == 10
+
+
+def test_too_many_distinct_agents_is_still_bounded(data_dir: Path):
+    workflow = wf.create_workflow(
+        definition(
+            steps=[
+                {
+                    "step_id": "a",
+                    "action": "model_route",
+                    "agent_id": "general_specialist",
+                    "params": {"task_type": "general"},
+                },
+                {
+                    "step_id": "b",
+                    "action": "model_route",
+                    "agent_id": "research_specialist",
+                    "depends_on": ["a"],
+                    "params": {"task_type": "general"},
+                },
+                {
+                    "step_id": "c",
+                    "action": "model_route",
+                    "agent_id": "analysis_specialist",
+                    "depends_on": ["b"],
+                    "params": {"task_type": "general"},
+                },
+            ],
+            limits={"max_child_agents": 1},
+        ),
+        create_mission=False,
+    )
+    final = wf.run(workflow["id"])
+    assert final["state"] in wf.TERMINAL_STATES
+    assert final["state"] != wf.COMPLETED
