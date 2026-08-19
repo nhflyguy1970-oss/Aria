@@ -1411,3 +1411,30 @@ def test_generic_redaction_still_applies(demo):
     """The shaped-secret rules keep working alongside the literal scrub."""
     env = mcp.call_tool("fixture_demo", "echo_credential", {"token": "sk-abcdefghijklmnop"})
     assert "sk-abcdefghijklmnop" not in json.dumps(env["arguments"])
+
+
+def test_operator_route_passes_cwd_through_to_validation(chat_app, data_dir: Path):
+    """Regression, found live: the route dropped cwd, so a bad one was never
+    rejected — it was simply ignored, which looked like acceptance."""
+    bad = chat_app.post(
+        "/api/mcp/providers",
+        data={
+            "provider_id": "cwd_traversal",
+            "command": f'["{PY_BIN}", "{DEMO_SERVER}"]',
+            "cwd": "/../../etc",
+        },
+    ).json()
+    assert bad["ok"] is False
+    assert bad["error_kind"] == "invalid_provider"
+    assert "cwd" in bad["message"]
+
+    good = chat_app.post(
+        "/api/mcp/providers",
+        data={
+            "provider_id": "cwd_ok",
+            "command": f'["{PY_BIN}", "{DEMO_SERVER}"]',
+            "cwd": str(data_dir),
+        },
+    ).json()
+    assert good["ok"] is True
+    assert good["provider"]["cwd"] == str(data_dir)
