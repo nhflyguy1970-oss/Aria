@@ -1441,3 +1441,61 @@ def test_agent_cannot_attribute_a_routed_call_to_someone_else(data_dir: Path, mo
         params={"prompt": "hi", "requester": "coding_specialist"},
     )
     assert out["result"]["envelope"]["requester"] == "research_specialist"
+
+
+def test_r2_timeout_is_enforced_by_aria_not_only_the_provider(data_dir: Path):
+    """Regression: timeout_s was validated and then never applied.
+
+    A model that never answers must not hold a request open indefinitely.
+    """
+    register(make_profile("hung:7b", general_strength=0.99), make_profile("quick:7b"))
+
+    def invoker(model, payload):
+        if model == "hung:7b":
+            time.sleep(5)
+        return "ok"
+
+    started = time.monotonic()
+    env = mr.execute(RoutingRequest(timeout_s=1.0), {}, invoker=invoker, persist=False)
+    elapsed = time.monotonic() - started
+
+    assert env["status"] == mr.SUCCESS, env
+    assert env["final_model"] == "quick:7b"
+    assert env["attempts"][0]["failure_kind"] == failures.TIMEOUT
+    assert elapsed < 15, f"waited {elapsed:.1f}s despite a 1s bound"
+
+
+def test_timeout_exhaustion_reports_truthfully(data_dir: Path):
+    register(make_profile("hung:7b"))
+
+    def invoker(model, payload):
+        time.sleep(5)
+
+    env = mr.execute(
+        RoutingRequest(timeout_s=1.0, max_fallbacks=0), {}, invoker=invoker, persist=False
+    )
+    assert env["status"] == mr.FAILED
+    assert env["failure_kind"] == failures.TIMEOUT
+    assert env["final_model"] == ""
+
+
+def test_cancellation_noticed_while_a_model_is_still_working(data_dir: Path):
+    """Cancelling mid-call must stop the wait and must not start another model."""
+    register(make_profile("slow:7b", general_strength=0.99), make_profile("other:7b"))
+    started = time.monotonic()
+    tried = []
+
+    def invoker(model, payload):
+        tried.append(model)
+        time.sleep(5)
+
+    env = mr.execute(
+        RoutingRequest(timeout_s=20.0),
+        {},
+        invoker=invoker,
+        cancel_check=lambda: time.monotonic() - started > 1.0,
+        persist=False,
+    )
+    assert env["status"] == mr.CANCELLED
+    assert tried == ["slow:7b"], "a second model ran after cancellation"
+    assert time.monotonic() - started < 15

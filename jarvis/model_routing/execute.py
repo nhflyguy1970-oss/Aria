@@ -81,6 +81,42 @@ def default_invoker(model: str, payload: dict[str, Any]) -> Any:
     return text
 
 
+def _call_bounded(
+    call: Callable[[str, dict[str, Any]], Any],
+    model: str,
+    body: dict[str, Any],
+    timeout_s: float,
+    cancel_check: Callable[[], bool] | None,
+) -> Any:
+    """Invoke with a wall-clock bound ARIA controls.
+
+    A model that never answers must not hold a request open forever, and a
+    cancellation must be noticed while the call is still in flight rather than
+    only at the boundaries around it. The provider call cannot be interrupted,
+    so the worker is left to finish on its own — ARIA simply stops waiting, and
+    says which of the two happened.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+    from concurrent.futures import TimeoutError as FutureTimeout
+
+    pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix=f"aria-model-{model[:16]}")
+    future = pool.submit(call, model, body)
+    try:
+        deadline = time.monotonic() + max(0.001, float(timeout_s))
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError(f"model {model} exceeded {timeout_s}s; ARIA stopped waiting")
+            try:
+                return future.result(timeout=min(0.25, remaining))
+            except FutureTimeout:
+                if cancel_check is not None and cancel_check():
+                    raise RoutingCancelled(f"cancelled while {model} was still working") from None
+    finally:
+        # Do not block shutdown on a model that is still generating.
+        pool.shutdown(wait=False, cancel_futures=True)
+
+
 def _attempt_record(model: str, ok: bool, ms: float, kind: str = "", error: str = "") -> dict:
     record = {"model": model, "ok": ok, "duration_ms": round(ms, 2)}
     if not ok:
@@ -174,7 +210,7 @@ def execute(
 
         attempt_started = time.time()
         try:
-            result = call(model, body)
+            result = _call_bounded(call, model, body, request.timeout_s, cancel_check)
             elapsed = (time.time() - attempt_started) * 1000
 
             if validator is not None and not validator(result):
