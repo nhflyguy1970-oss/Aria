@@ -828,6 +828,97 @@ async function openCorrectFlowFixed(id) {
   acts.append(cancel, go);
 }
 
+/* --- Windowed archive rendering ---------------------------------------
+   The archive is the whole memory: rendering every row put ~10,000 DOM nodes
+   on the page for ~1,100 entries. Only a window is rendered, and the next
+   chunk is appended as the sentinel scrolls into view, so the full dataset
+   stays reachable while the DOM stays small. Filtering and search are still
+   done server-side over the entire dataset, so nothing is hidden from a
+   search by not being rendered yet. */
+const MEMORY_WINDOW_SIZE = 60;
+let _memoryWindowObserver = null;
+
+function memoryRowHtml(e) {
+  return `
+      <div class="memory-item" data-id="${window.escapeHtml(e.id)}">
+        <div class="memory-item-head">
+          <span class="memory-badge type-${window.escapeHtml(e.type)}">${window.escapeHtml(e.type)}</span>
+          <span class="memory-badge ns">${window.escapeHtml(e.namespace || "default")}</span>
+        </div>
+        <p class="memory-content">${window.escapeHtml(e.content)}</p>
+        <div class="memory-item-actions">
+          <button type="button" class="memory-edit-btn ghost-btn tiny" data-id="${window.escapeHtml(e.id)}">Edit</button>
+          <button type="button" class="memory-forget-btn ghost-btn tiny" data-id="${window.escapeHtml(e.id)}">Forget</button>
+        </div>
+      </div>`;
+}
+
+function renderMemoryWindow(el, entries) {
+  if (_memoryWindowObserver) {
+    _memoryWindowObserver.disconnect();
+    _memoryWindowObserver = null;
+  }
+  if (!entries.length) {
+    el.innerHTML = `<p class="memory-empty">No memories match. <button type="button" class="ghost-btn tiny" id="memoryEmptyChatBtn">Ask Chat</button></p>`;
+    el.querySelector("#memoryEmptyChatBtn")?.addEventListener("click", () => {
+      window.switchToView?.("chat");
+      window.jarvisSendToChat?.("Remember that ");
+    });
+    return;
+  }
+
+  let shown = 0;
+  const appendChunk = () => {
+    const next = entries.slice(shown, shown + MEMORY_WINDOW_SIZE);
+    if (!next.length) return false;
+    const frag = document.createElement("div");
+    frag.innerHTML = next.map(memoryRowHtml).join("");
+    const sentinel = el.querySelector(".memory-window-sentinel");
+    while (frag.firstElementChild) {
+      el.insertBefore(frag.firstElementChild, sentinel);
+    }
+    shown += next.length;
+    bindMemoryCardActions(el);
+    if (sentinel) {
+      const remaining = entries.length - shown;
+      sentinel.dataset.remaining = String(remaining);
+      const btn = sentinel.querySelector(".memory-window-more");
+      if (remaining <= 0) {
+        sentinel.remove();
+      } else if (btn) {
+        btn.textContent = `Show ${Math.min(MEMORY_WINDOW_SIZE, remaining)} more (${remaining} remaining)`;
+      }
+    }
+    return true;
+  };
+
+  el.innerHTML = `<div class="memory-window-sentinel">
+      <button type="button" class="ghost-btn tiny memory-window-more"></button>
+    </div>`;
+  const sentinel = el.querySelector(".memory-window-sentinel");
+  const moreBtn = el.querySelector(".memory-window-more");
+  // An explicit control, not just an observer: it works for keyboard users, it
+  // is testable, and it does not depend on which ancestor happens to scroll.
+  if (moreBtn) moreBtn.addEventListener("click", () => appendChunk());
+  appendChunk();
+
+  if (sentinel && typeof IntersectionObserver !== "undefined") {
+    _memoryWindowObserver = new IntersectionObserver(
+      (hits) => {
+        if (hits.some((h) => h.isIntersecting)) {
+          if (!appendChunk() && _memoryWindowObserver) {
+            _memoryWindowObserver.disconnect();
+            _memoryWindowObserver = null;
+          }
+        }
+      },
+      { rootMargin: "600px" },
+    );
+    _memoryWindowObserver.observe(sentinel);
+  }
+  el.dataset.totalEntries = String(entries.length);
+}
+
 async function loadMemoryListOnly() {
   const el = document.getElementById("memoryList");
   const statsEl = document.getElementById("memoryStats");
@@ -869,23 +960,7 @@ async function loadMemoryListOnly() {
       nsFilter.value = cur;
     }
     const entries = (data.entries || []).filter((e) => !["strategy", "failure"].includes(e.type));
-    el.innerHTML = entries.map((e) => `
-      <div class="memory-item" data-id="${window.escapeHtml(e.id)}">
-        <div class="memory-item-head">
-          <span class="memory-badge type-${window.escapeHtml(e.type)}">${window.escapeHtml(e.type)}</span>
-          <span class="memory-badge ns">${window.escapeHtml(e.namespace || "default")}</span>
-        </div>
-        <p class="memory-content">${window.escapeHtml(e.content)}</p>
-        <div class="memory-item-actions">
-          <button type="button" class="memory-edit-btn ghost-btn tiny" data-id="${window.escapeHtml(e.id)}">Edit</button>
-          <button type="button" class="memory-forget-btn ghost-btn tiny" data-id="${window.escapeHtml(e.id)}">Forget</button>
-        </div>
-      </div>`).join("") || `<p class="memory-empty">No memories match. <button type="button" class="ghost-btn tiny" id="memoryEmptyChatBtn">Ask Chat</button></p>`;
-    el.querySelector("#memoryEmptyChatBtn")?.addEventListener("click", () => {
-      window.switchToView?.("chat");
-      window.jarvisSendToChat?.("Remember that ");
-    });
-    bindMemoryCardActions(el);
+    renderMemoryWindow(el, entries);
   } catch (err) {
     if (window.AriaNet?.isRoomAbort?.(err)) return;
     el.innerHTML = `<p class="memory-empty">${window.escapeHtml(err.message || "Failed")}</p>`;
@@ -897,12 +972,19 @@ async function loadMemoryListOnly() {
 async function loadMemoryBrowser() {
   // Briefs are a visible Memory section — do not wait for the archive list.
   const briefsP = loadKnowledgeResearchPanel();
-  await loadMemorySettings();
-  await loadEnvironmentPreferences();
+  // Settings and environment preferences are independent of the archive and of
+  // each other — neither populates the filters the list reads. Awaiting them in
+  // turn put two full round-trips in front of the thing the user came for, and
+  // while the connection pool is busy each of those waits for a free socket.
+  // Start them now, collect them with the other secondary panels below.
+  const settingsP = loadMemorySettings();
+  const prefsP = loadEnvironmentPreferences();
   // Searchable archive first — secondary panels must not block Chat→Memory verify
   // (BUG-013: About you / cheatsheet hangs left #memoryList empty).
   await loadMemoryListOnly();
   await Promise.allSettled([
+    settingsP,
+    prefsP,
     loadCognitiveHome(),
     loadMemoryConflicts(),
     loadMemoryTrustStatus(),
