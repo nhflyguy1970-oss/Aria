@@ -53,3 +53,31 @@ def test_an_unregistered_action_is_named_not_a_bare_keyerror(data_dir):
     with pytest.raises(UnknownAction) as excinfo:
         call_action(None, "no_such_action_anywhere", {}, "x")
     assert "no_such_action_anywhere" in str(excinfo.value)
+
+
+def test_an_unhonoured_model_preference_is_stated_not_swallowed(data_dir):
+    """The status was recorded but never said out loud: a caller who asked for
+    a specific model got a different one with no mention of it."""
+    result = call_action(
+        None,
+        "model_route",
+        {"task_type": "general", "preferred_model": "totally-not-a-model:999b"},
+        "x",
+    )
+    assert result["ok"] is True
+    decision = result["decision"]
+    assert decision["preferred_model_used"] is False
+    assert decision["preferred_model_status"] == "not_registered"
+    assert "totally-not-a-model:999b" in decision["reason"], "the caller is not told"
+
+
+def test_an_honoured_preference_does_not_carry_a_warning(data_dir):
+    baseline = call_action(None, "model_route", {"task_type": "general"}, "x")
+    chosen = baseline["decision"]["selected_model"]
+
+    result = call_action(
+        None, "model_route", {"task_type": "general", "preferred_model": chosen}, "x"
+    )
+    decision = result["decision"]
+    assert decision["preferred_model_used"] is True
+    assert "was not used" not in decision["reason"]

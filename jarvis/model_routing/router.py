@@ -257,6 +257,14 @@ def route(
             f"{chosen.model_id} scored highest ({score:.3f}) for task {task!r} "
             f"among {len(evaluated)} compatible model(s)"
         )
+        if request.preferred_model:
+            # The status was recorded but never said out loud: a caller who
+            # asked for a specific model was handed a different one with no
+            # mention that its request could not be honoured.
+            decision.reason += (
+                f"; requested {request.preferred_model!r} was not used "
+                f"({decision.preferred_model_status})"
+            )
     return decision
 
 
