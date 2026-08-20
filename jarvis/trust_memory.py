@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from functools import lru_cache
 
 from jarvis import llm
 from jarvis.memory_context import should_inject_resume_context
@@ -74,11 +75,23 @@ _CORRECT_PATTERNS = (
 )
 
 
+@lru_cache(maxsize=8192)
+def _is_test_artifact_cached(text: str) -> bool:
+    return bool(_TEST_ARTIFACT_RE.search(text))
+
+
 def is_test_artifact(content: str) -> bool:
+    """Is this content a pytest/cert scratch artifact?
+
+    Pure function of the text, so the answer is cached. Memory Home evaluated
+    this 11,731 times for ~1,100 entries — the same multi-kilobyte strings
+    rescanned about ten times each against a 22-branch case-insensitive
+    pattern, which was 86% of that endpoint's runtime.
+    """
     text = (content or "").strip()
     if not text:
         return False
-    return bool(_TEST_ARTIFACT_RE.search(text))
+    return _is_test_artifact_cached(text)
 
 
 def should_skip_checkpoint_in_prompt(content: str) -> bool:
@@ -416,9 +429,7 @@ def scrub_acm_artifacts() -> int:
         return 0
     removed = 0
     try:
-        rows = acm_bridge.project_list_entries(
-            limit=50_000, include_test_artifacts=True
-        )
+        rows = acm_bridge.project_list_entries(limit=50_000, include_test_artifacts=True)
     except TypeError:
         rows = acm_bridge.project_list_entries(limit=50_000)
     seen: set[str] = set()
@@ -466,9 +477,7 @@ def trust_status(store) -> dict:
         if acm_bridge.acm_is_authoritative():
             artifacts = sum(
                 1
-                for e in acm_bridge.project_list_entries(
-                    limit=50_000, include_test_artifacts=True
-                )
+                for e in acm_bridge.project_list_entries(limit=50_000, include_test_artifacts=True)
                 if is_test_artifact(e.get("content", ""))
             )
     except Exception:

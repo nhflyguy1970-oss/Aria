@@ -405,6 +405,12 @@ function bindAdvanced(statusEl) {
     if (data.running && !wakewordPoll) {
       wakewordPoll = setInterval(() => {
         if (document.hidden) return;
+        // Only poll while the readout is actually on screen. This ran every two
+        // seconds for as long as the wake word was enabled, from whatever room
+        // the user happened to be in, and accounted for 44% of all idle API
+        // traffic — competing for the browser's six connections with real work.
+        const readout = document.getElementById("audioWakewordStatus");
+        if (!readout || readout.offsetParent === null) return;
         refreshWakewordStatus();
       }, 2000);
     } else if (!data.running && wakewordPoll) {
