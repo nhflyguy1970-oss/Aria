@@ -132,7 +132,17 @@
   }
 
   /** Run original product inits — required for full furniture. */
+  let _lastLegacyInit = { view: null, at: 0 };
+
+  /* One room transition reaches this more than once — the room shell and the
+     view router each initialise the panel — so every panel loader ran two or
+     three times and the Memory room fetched its archive six times over. A
+     repeat of the same view within a moment is that storm, not a navigation;
+     a genuine re-entry later still re-initialises and re-renders. */
   function runLegacyInit(view) {
+    const _now = Date.now();
+    if (view === _lastLegacyInit.view && _now - _lastLegacyInit.at < 1200) return;
+    _lastLegacyInit = { view, at: _now };
     if (!view) return;
     if (view === "dashboard" && window.initDashboard) window.initDashboard();
     else if (view !== "dashboard") window.stopDashboardClock?.();

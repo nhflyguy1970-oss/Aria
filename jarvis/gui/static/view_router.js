@@ -35,7 +35,18 @@
     return !!(window.AriaRoomKit?.get?.(room)?.enter || window.AriaHouse?.isNative?.(room));
   }
 
+  let _lastRouterInit = { view: null, at: 0 };
+
+
+  }
+
   function runInits(view) {
+    // The room shell also initialises this panel on the same transition, so a
+    // repeat of the same view within a moment is that overlap, not navigation:
+    // it fetched every panel twice. A genuine re-entry later still re-runs.
+    const _now = Date.now();
+    if (view === _lastRouterInit.view && _now - _lastRouterInit.at < 1200) return;
+    _lastRouterInit = { view, at: _now };
     if (hasNativeRoom(view)) return;
 
     if (view === "dashboard" && window.initDashboard) window.initDashboard();

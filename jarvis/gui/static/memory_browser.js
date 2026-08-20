@@ -960,7 +960,13 @@ async function loadMemoryListOnly() {
       nsFilter.value = cur;
     }
     const entries = (data.entries || []).filter((e) => !["strategy", "failure"].includes(e.type));
-    renderMemoryWindow(el, entries);
+    // Entering the room re-renders its shell, which can replace #memoryList
+    // while this load is in flight. Rendering into the handle captured at the
+    // top would then draw into a detached node and leave the live list showing
+    // its skeleton for ever, so resolve the element again here.
+    const target = document.getElementById("memoryList") || el;
+    renderMemoryWindow(target, entries);
+    target.setAttribute("aria-busy", "false");
   } catch (err) {
     if (window.AriaNet?.isRoomAbort?.(err)) return;
     el.innerHTML = `<p class="memory-empty">${window.escapeHtml(err.message || "Failed")}</p>`;
