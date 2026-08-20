@@ -75,7 +75,9 @@ def _ensure_pw_thread() -> None:
         _PW_THREAD.start()
 
 
-def run_on_browser_thread(fn: Callable[..., T], *args: Any, timeout: float = 120.0, **kwargs: Any) -> T:
+def run_on_browser_thread(
+    fn: Callable[..., T], *args: Any, timeout: float = 120.0, **kwargs: Any
+) -> T:
     """Run callable on the dedicated Playwright thread (re-entrant)."""
     if _PW_THREAD_ID is not None and threading.get_ident() == _PW_THREAD_ID:
         return fn(*args, **kwargs)
@@ -95,6 +97,44 @@ def get_page():
         return _PAGE
 
 
+def open_isolated_page():
+    """A page of the caller's own, inside the shared browser context.
+
+    Autonomous callers used the one shared page, so two of them navigating at
+    the same time read each other's content. A tab per caller is real isolation
+    within the same profile and the same Playwright thread.
+    """
+    result = ensure_session()
+    if isinstance(result, dict) and result.get("ok") is False:
+        raise RuntimeError(result.get("error") or "browser session unavailable")
+
+    def _new():
+        with _LOCK:
+            context = _CONTEXT
+        if context is None:
+            raise RuntimeError("no live browser context")
+        return context.new_page()
+
+    return run_on_browser_thread(_new)
+
+
+def close_isolated_page(page) -> None:
+    """Close one caller's page without touching the shared session."""
+    if page is None:
+        return
+
+    def _close():
+        try:
+            page.close()
+        except Exception:  # noqa: BLE001 - closing must not raise
+            pass
+
+    try:
+        run_on_browser_thread(_close, timeout=30.0)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _agent_paused_flags() -> tuple[bool, bool]:
     from jarvis import browser_agent as ba
 
@@ -107,7 +147,9 @@ def is_paused() -> bool:
     return paused or takeover
 
 
-def append_step(action: str, detail: str = "", *, ok: bool = True, extra: dict | None = None) -> dict[str, Any]:
+def append_step(
+    action: str, detail: str = "", *, ok: bool = True, extra: dict | None = None
+) -> dict[str, Any]:
     step = {
         "ts": time.time(),
         "action": action,
@@ -134,7 +176,11 @@ def clear_steps() -> None:
 def stack_ready(*, force: bool = False) -> dict[str, bool]:
     now = time.time()
     with _LOCK:
-        if not force and _STACK_CACHE.get("stack") and now - float(_STACK_CACHE.get("ts") or 0) < _STACK_TTL:
+        if (
+            not force
+            and _STACK_CACHE.get("stack")
+            and now - float(_STACK_CACHE.get("ts") or 0) < _STACK_TTL
+        ):
             return dict(_STACK_CACHE["stack"])
     from jarvis.browser_playwright import browser_stack_ready
 
@@ -353,7 +399,11 @@ def _goto_impl(url: str, timeout_ms: int) -> dict[str, Any]:
         return {"ok": False, **ensured}
     page = _PAGE
     if page is None:
-        return {"ok": False, "error": "No page after launch", "recovery": "Retry Open or Restart session"}
+        return {
+            "ok": False,
+            "error": "No page after launch",
+            "recovery": "Retry Open or Restart session",
+        }
     try:
         page.goto(url, wait_until="domcontentloaded", timeout=timeout_ms)
         try:
@@ -406,7 +456,9 @@ def _goto_impl(url: str, timeout_ms: int) -> dict[str, Any]:
 def goto(url: str, *, timeout_ms: int = 30000) -> dict[str, Any]:
     """Navigate the live page. Fail closed on errors."""
     try:
-        return run_on_browser_thread(_goto_impl, url, timeout_ms, timeout=max(60.0, timeout_ms / 1000.0 + 15.0))
+        return run_on_browser_thread(
+            _goto_impl, url, timeout_ms, timeout=max(60.0, timeout_ms / 1000.0 + 15.0)
+        )
     except Exception as exc:
         return {
             "ok": False,
@@ -511,7 +563,12 @@ def extract_text(*, limit: int = 8000) -> dict[str, Any]:
         try:
             text = page.inner_text("body")
             append_step("extract", f"{len(text)} chars")
-            return {"ok": True, "text": (text or "")[:limit], "url": page.url, "title": page.title()}
+            return {
+                "ok": True,
+                "text": (text or "")[:limit],
+                "url": page.url,
+                "title": page.title(),
+            }
         except Exception as exc:
             return {"ok": False, "message": _owner_error(exc)}
 

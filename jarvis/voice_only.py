@@ -109,33 +109,16 @@ def _voice_on_detect(model: str, score: float) -> None:
 
 
 def _execute_confirm(confirm_id: str, approved: bool, *, assistant) -> dict[str, Any]:
-    from jarvis.action_log import log_event
-    from jarvis.handlers.registry import call_action, has_action
-    from jarvis.tool_permissions import pop_pending
+    from jarvis.tool_permissions import execute_confirm
 
-    row = pop_pending(confirm_id)
-    if not row:
-        return {"ok": False, "message": "Confirm expired."}
-    log_event(
-        "tool_confirm",
-        tool=row.get("tool"),
-        action=row.get("action"),
-        approved=approved,
-        message=(row.get("message") or "")[:200],
-    )
-    if not approved:
-        return {"ok": True, "message": "Cancelled."}
-    action = row.get("action") or ""
-    params = dict(row.get("params") or {})
-    params["_confirmed"] = True
-    message = row.get("message") or ""
-    if has_action(action):
-        return call_action(assistant, action, params, message)
-    if action == "ha_control":
-        return assistant._ha_control(params, message)
-    if action == "ha_scene":
-        return assistant._ha_scene(params, message)
-    return {"ok": False, "message": f"Unknown confirmed action: {action}"}
+    outcome = execute_confirm(confirm_id, approved, assistant=assistant)
+    if outcome["status"] == "expired":
+        return {"ok": False, "message": outcome["message"]}
+    if outcome["status"] == "declined":
+        return {"ok": True, "message": outcome["message"]}
+    if outcome["status"] == "unknown_action":
+        return {"ok": False, "message": outcome["message"]}
+    return outcome["result"]
 
 
 def _handle_confirm_followup(text: str, assistant) -> bool:

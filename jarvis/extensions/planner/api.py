@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+
 def register_routes(app, assistant) -> None:
     @app.get("/api/planner")
     @app.get("/api/planner/snapshot")
@@ -138,7 +139,9 @@ def register_routes(app, assistant) -> None:
         try:
             return {
                 "ok": True,
-                "timer": update_timer(timer_id, label=body.get("label"), duration=body.get("duration")),
+                "timer": update_timer(
+                    timer_id, label=body.get("label"), duration=body.get("duration")
+                ),
             }
         except ValueError as exc:
             return JSONResponse(status_code=400, content={"ok": False, "message": str(exc)})
@@ -339,18 +342,19 @@ def register_routes(app, assistant) -> None:
 
     @app.post("/api/tool-confirm")
     async def tool_confirm(request: Request):
-        from jarvis.tool_permissions import pop_pending
+        from jarvis.tool_permissions import execute_confirm
 
         body = await request.json()
         confirm_id = (body.get("id") or "").strip()
         approved = bool(body.get("approved"))
-        row = pop_pending(confirm_id)
-        if not row:
-            return JSONResponse(status_code=404, content={"ok": False, "message": "Confirm expired."})
-        if not approved:
-            return {"ok": True, "approved": False, "message": "Cancelled."}
-        action = row.get("action") or ""
-        params = row.get("params") or {}
-        message = row.get("message") or ""
-        result = assistant.dispatch(action, params, message)
-        return {"ok": True, "approved": True, "result": result}
+        outcome = execute_confirm(confirm_id, approved, assistant=assistant)
+        status = outcome["status"]
+        if status == "expired":
+            return JSONResponse(
+                status_code=404, content={"ok": False, "message": outcome["message"]}
+            )
+        if status == "declined":
+            return {"ok": True, "approved": False, "message": outcome["message"]}
+        if status == "unknown_action":
+            return {"ok": False, "approved": True, "message": outcome["message"]}
+        return {"ok": True, "approved": True, "result": outcome["result"]}

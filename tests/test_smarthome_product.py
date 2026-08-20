@@ -8,7 +8,9 @@ from unittest.mock import MagicMock, patch
 def test_product_status_pipeline():
     from jarvis.home_assistant_product.engine import product_status
 
-    with patch("jarvis.home_assistant.status_payload", return_value={"ok": True, "url": "http://ha"}):
+    with patch(
+        "jarvis.home_assistant.status_payload", return_value={"ok": True, "url": "http://ha"}
+    ):
         st = product_status()
     assert st["ok"] is True
     assert st["product"] == "Smart Home"
@@ -30,10 +32,25 @@ def test_recovery_guided():
 def test_home_payload_shape():
     from jarvis.home_assistant_product.engine import home_payload
 
-    with patch("jarvis.home_assistant_product.engine.recovery_status", return_value={"ready": True, "connection": {"ok": True}, "steps": [], "hint": "ok", "status": {}}):
-        with patch("jarvis.home_assistant_product.favorites.favorites_payload", return_value={"ok": True, "entities": [], "count": 0}):
+    with patch(
+        "jarvis.home_assistant_product.engine.recovery_status",
+        return_value={
+            "ready": True,
+            "connection": {"ok": True},
+            "steps": [],
+            "hint": "ok",
+            "status": {},
+        },
+    ):
+        with patch(
+            "jarvis.home_assistant_product.favorites.favorites_payload",
+            return_value={"ok": True, "entities": [], "count": 0},
+        ):
             with patch("jarvis.home_assistant_product.rooms.list_rooms", return_value=[]):
-                with patch("jarvis.scene_presets.list_presets", return_value=[{"id": "relax", "label": "Relax"}]):
+                with patch(
+                    "jarvis.scene_presets.list_presets",
+                    return_value=[{"id": "relax", "label": "Relax"}],
+                ):
                     home = home_payload()
     assert home["ok"] is True
     assert "favorites" in home
@@ -64,7 +81,10 @@ def test_rooms_upsert(tmp_path, monkeypatch):
     monkeypatch.setattr(rm, "ROOMS_FILE", tmp_path / "rooms.json")
     row = rm.upsert_room({"name": "Kitchen", "entity_ids": ["light.kitchen"]})
     assert row.get("name") == "Kitchen" or row.get("id")
-    assert any(r.get("name") == "Kitchen" or "kitchen" in str(r.get("id") or "").lower() for r in rm.list_rooms(seed=False))
+    assert any(
+        r.get("name") == "Kitchen" or "kitchen" in str(r.get("id") or "").lower()
+        for r in rm.list_rooms(seed=False)
+    )
 
 
 def test_history_redaction(tmp_path, monkeypatch):
@@ -72,7 +92,12 @@ def test_history_redaction(tmp_path, monkeypatch):
 
     monkeypatch.setattr(hist, "HISTORY_FILE", tmp_path / "h.jsonl")
     entry = hist.add_entry(
-        {"kind": "control", "summary": "open", "detail": "secret device note", "uncensored_origin": True}
+        {
+            "kind": "control",
+            "summary": "open",
+            "detail": "secret device note",
+            "uncensored_origin": True,
+        }
     )
     closed = hist.presentation_for_profile(entry, censored=True)
     assert closed["redacted"] is True
@@ -83,8 +108,14 @@ def test_history_redaction(tmp_path, monkeypatch):
 def test_mission_panel():
     from jarvis.home_assistant_product.mission_bridge import smarthome_mission_panel
 
-    with patch("jarvis.home_assistant_product.engine.product_status", return_value={"ok": True, "ha": {}, "profiles": {}}):
-        with patch("jarvis.home_assistant_product.engine.recovery_status", return_value={"ready": False, "hint": "setup", "steps": [], "connection": {}}):
+    with patch(
+        "jarvis.home_assistant_product.engine.product_status",
+        return_value={"ok": True, "ha": {}, "profiles": {}},
+    ):
+        with patch(
+            "jarvis.home_assistant_product.engine.recovery_status",
+            return_value={"ready": False, "hint": "setup", "steps": [], "connection": {}},
+        ):
             panel = smarthome_mission_panel()
     assert panel["product"] == "Smart Home"
     assert "deep_links" in panel
@@ -158,3 +189,26 @@ def test_planner_calendar_candidates():
     c = calendar_candidates(kind="meeting")
     assert p["ok"] and p["candidates"]
     assert c["ok"] and c["candidates"]
+
+
+def test_candidate_routes_answer_over_http():
+    """The bridges were tested directly, so route signatures that passed
+    arguments the bridges never accepted returned 500 to every real caller."""
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from jarvis.home_assistant_product.api import register_product_routes
+
+    app = FastAPI()
+    register_product_routes(app, MagicMock())
+    client = TestClient(app)
+
+    for path in (
+        "/api/smarthome/product/planner/candidates",
+        "/api/smarthome/product/calendar/candidates",
+        "/api/smarthome/product/automation/candidates",
+    ):
+        r = client.get(path)
+        assert r.status_code == 200, f"{path} -> {r.status_code} {r.text[:200]}"
+        body = r.json()
+        assert body["ok"] is True and body["candidates"], path

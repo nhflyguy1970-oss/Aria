@@ -60,7 +60,9 @@ def register_product_routes(app, assistant) -> None:
         try:
             return {"ok": True, "profile": activate_profile(profile_id)}
         except ValueError:
-            return JSONResponse(status_code=404, content={"ok": False, "message": "profile_not_found"})
+            return JSONResponse(
+                status_code=404, content={"ok": False, "message": "profile_not_found"}
+            )
 
     @app.post("/api/smarthome/product/profiles/{profile_id}/duplicate")
     def smarthome_profiles_dup(profile_id: str):
@@ -68,7 +70,9 @@ def register_product_routes(app, assistant) -> None:
 
         profile = duplicate_profile(profile_id)
         if not profile:
-            return JSONResponse(status_code=404, content={"ok": False, "message": "profile_not_found"})
+            return JSONResponse(
+                status_code=404, content={"ok": False, "message": "profile_not_found"}
+            )
         return {"ok": True, "profile": profile}
 
     @app.delete("/api/smarthome/product/profiles/{profile_id}")
@@ -76,7 +80,9 @@ def register_product_routes(app, assistant) -> None:
         from jarvis.home_assistant_product.profiles import delete_profile
 
         if not delete_profile(profile_id):
-            return JSONResponse(status_code=404, content={"ok": False, "message": "profile_not_found"})
+            return JSONResponse(
+                status_code=404, content={"ok": False, "message": "profile_not_found"}
+            )
         return {"ok": True, "deleted": profile_id}
 
     @app.get("/api/smarthome/product/profiles/export")
@@ -139,7 +145,11 @@ def register_product_routes(app, assistant) -> None:
     async def smarthome_entities_resolve(request: Request):
         from jarvis.home_assistant_product.entities import resolve
 
-        body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+        body = (
+            await request.json()
+            if request.headers.get("content-type", "").startswith("application/json")
+            else {}
+        )
         return resolve(
             str(body.get("q") or body.get("query") or body.get("target") or ""),
             domain=(body.get("domain") or None),
@@ -159,7 +169,9 @@ def register_product_routes(app, assistant) -> None:
         body = await request.json()
         eid = str(body.get("entity_id") or "").strip()
         if not eid:
-            return JSONResponse(status_code=400, content={"ok": False, "message": "entity_id required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "entity_id required"}
+            )
         try:
             return {"ok": True, "entity_ids": pin(eid)}
         except ValueError as exc:
@@ -172,7 +184,9 @@ def register_product_routes(app, assistant) -> None:
         body = await request.json()
         eid = str(body.get("entity_id") or "").strip()
         if not eid:
-            return JSONResponse(status_code=400, content={"ok": False, "message": "entity_id required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "entity_id required"}
+            )
         return {"ok": True, "entity_ids": unpin(eid)}
 
     @app.post("/api/smarthome/product/favorites/reorder")
@@ -182,7 +196,9 @@ def register_product_routes(app, assistant) -> None:
         body = await request.json()
         ids = body.get("entity_ids") or body.get("order") or []
         if not isinstance(ids, list):
-            return JSONResponse(status_code=400, content={"ok": False, "message": "entity_ids list required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "entity_ids list required"}
+            )
         return {"ok": True, "entity_ids": reorder(ids)}
 
     @app.get("/api/smarthome/product/rooms")
@@ -216,11 +232,15 @@ def register_product_routes(app, assistant) -> None:
         body = await request.json()
         target = str(body.get("target") or body.get("entity_id") or "").strip()
         if not target:
-            return JSONResponse(status_code=400, content={"ok": False, "message": "target required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "target required"}
+            )
         return control_device(
             target,
             str(body.get("action") or "toggle"),
-            brightness=body.get("brightness") if body.get("brightness") is not None else body.get("brightness_pct"),
+            brightness=body.get("brightness")
+            if body.get("brightness") is not None
+            else body.get("brightness_pct"),
             color_name=body.get("color_name") or body.get("color"),
             rgb=body.get("rgb"),
             hs=body.get("hs"),
@@ -266,7 +286,9 @@ def register_product_routes(app, assistant) -> None:
         body = await request.json()
         command = str(body.get("command") or body.get("action") or "").strip()
         if not command:
-            return JSONResponse(status_code=400, content={"ok": False, "message": "command required"})
+            return JSONResponse(
+                status_code=400, content={"ok": False, "message": "command required"}
+            )
         return home_command(
             command,
             target=str(body.get("target") or body.get("entity_id") or ""),
@@ -278,19 +300,21 @@ def register_product_routes(app, assistant) -> None:
         )
 
     @app.get("/api/smarthome/product/planner/candidates")
-    def smarthome_planner_candidates(kind: str = "home_tasks", scene: str = ""):
+    def smarthome_planner_candidates(kind: str = "home_tasks", title: str = "", notes: str = ""):
         from jarvis.home_assistant_product.planner_bridge import planner_candidates
 
-        return planner_candidates(kind=kind, scene=scene)
+        return planner_candidates(kind=kind, title=title, notes=notes)
 
     @app.get("/api/smarthome/product/calendar/candidates")
-    def smarthome_calendar_candidates(kind: str = "ha_mode", scene: str = "", days: int = 1):
+    def smarthome_calendar_candidates(kind: str = "ha_mode", title: str = "", notes: str = ""):
         from jarvis.home_assistant_product.calendar_bridge import calendar_candidates
 
-        return calendar_candidates(kind=kind, scene=scene, days=days)
+        return calendar_candidates(kind=kind, title=title, notes=notes)
 
     @app.get("/api/smarthome/product/automation/candidates")
-    def smarthome_automation_candidates(kind: str = "webhook_scene", scene: str = "", entity_id: str = ""):
+    def smarthome_automation_candidates(
+        kind: str = "webhook_scene", scene: str = "", entity_id: str = ""
+    ):
         from jarvis.home_assistant_product.automation_bridge import automation_candidates
 
         return automation_candidates(kind=kind, scene=scene, entity_id=entity_id)
@@ -311,7 +335,11 @@ def register_product_routes(app, assistant) -> None:
     async def smarthome_exp_kg(request: Request):
         from jarvis.home_assistant_product.experimental import link_knowledge_graph
 
-        body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+        body = (
+            await request.json()
+            if request.headers.get("content-type", "").startswith("application/json")
+            else {}
+        )
         return link_knowledge_graph(
             entity_id=str(body.get("entity_id") or ""),
             room=str(body.get("room") or ""),

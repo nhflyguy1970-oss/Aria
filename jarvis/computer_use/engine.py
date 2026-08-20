@@ -17,6 +17,7 @@ action into a success, and content that was never retrieved is never returned.
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from typing import Any, Protocol
 
@@ -52,6 +53,48 @@ class Driver(Protocol):
     def close(self) -> dict[str, Any]: ...
 
 
+# One Playwright page per computer-use session. Keyed by session id so a
+# session keeps the same tab across calls, and so closing a session closes only
+# its own tab.
+_SESSION_PAGES: dict[str, Any] = {}
+_SESSION_PAGES_LOCK = threading.Lock()
+
+
+def _session_page(session_id: str):
+    from jarvis.browser_product.session import open_isolated_page
+
+    with _SESSION_PAGES_LOCK:
+        page = _SESSION_PAGES.get(session_id)
+    if page is not None and not _page_closed(page):
+        return page
+    page = open_isolated_page()
+    with _SESSION_PAGES_LOCK:
+        existing = _SESSION_PAGES.get(session_id)
+        if existing is not None and not _page_closed(existing):
+            # Another caller raced us to it; keep one page per session.
+            from jarvis.browser_product.session import close_isolated_page
+
+            close_isolated_page(page)
+            return existing
+        _SESSION_PAGES[session_id] = page
+    return page
+
+
+def _page_closed(page) -> bool:
+    try:
+        return bool(page.is_closed())
+    except Exception:  # noqa: BLE001 - an unusable handle counts as closed
+        return True
+
+
+def _close_session_page(session_id: str) -> None:
+    from jarvis.browser_product.session import close_isolated_page
+
+    with _SESSION_PAGES_LOCK:
+        page = _SESSION_PAGES.pop(session_id, None)
+    close_isolated_page(page)
+
+
 class PlaywrightDriver:
     """Adapter over ARIA's existing browser session thread.
 
@@ -62,12 +105,18 @@ class PlaywrightDriver:
     unreachable (local test fixtures, deliberate internal endpoints).
     """
 
-    def __init__(self, *, allow_local: bool = False):
+    def __init__(self, *, allow_local: bool = False, session_id: str = ""):
         self.allow_local = allow_local
+        # A computer-use session drives a page of its own. Without one, two
+        # sessions navigating at the same time read each other's content, and
+        # whatever they extract gets attributed to the URL they *asked* for.
+        self.session_id = (session_id or "").strip()
 
     def _page(self):
         from jarvis.browser_product.session import ensure_session, get_page
 
+        if self.session_id:
+            return _session_page(self.session_id)
         result = ensure_session()
         if isinstance(result, dict) and result.get("ok") is False:
             raise RuntimeError(result.get("error") or "browser session unavailable")
@@ -82,23 +131,37 @@ class PlaywrightDriver:
         return run_on_browser_thread(fn, *args, timeout=timeout, **kwargs)
 
     def navigate(self, url: str) -> dict[str, Any]:
-        if self.allow_local:
+        if not self.allow_local and not self.session_id:
+            # Shared page: browser_agent owns it, and applies the host policy.
+            from jarvis.browser_agent import navigate as agent_navigate
 
-            def _go(page):
-                page.goto(url, timeout=A.LIMITS["navigation_timeout_ms"])
-                return {"url": page.url, "title": page.title()}
+            result = agent_navigate(url) or {}
+            if not result.get("ok"):
+                raise NavigationFailure(result.get("message") or "navigation failed")
+            return self.state()
 
-            try:
-                return self._run(_go, self._page())
-            except Exception as exc:  # noqa: BLE001
-                raise NavigationFailure(str(exc)) from exc
+        if not self.allow_local:
+            # Driving our own page still has to satisfy the same host policy
+            # browser_agent would have applied — isolation must not become a
+            # way around SSRF and private-address checks.
+            from jarvis.browser_agent import _check_url_safe, browser_agent_enabled
 
-        from jarvis.browser_agent import navigate as agent_navigate
+            if not browser_agent_enabled():
+                raise NavigationFailure("Browser agent disabled")
+            safe, reason = _check_url_safe(url, allow_risky=False)
+            if not safe:
+                raise A.NavigationBlocked(reason)
 
-        result = agent_navigate(url) or {}
-        if not result.get("ok"):
-            raise NavigationFailure(result.get("message") or "navigation failed")
-        return self.state()
+        def _go(page):
+            page.goto(url, timeout=A.LIMITS["navigation_timeout_ms"])
+            return {"url": page.url, "title": page.title()}
+
+        try:
+            return self._run(_go, self._page())
+        except A.NavigationBlocked:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise NavigationFailure(str(exc)) from exc
 
     def state(self) -> dict[str, Any]:
         def _read(page):
@@ -187,12 +250,19 @@ class PlaywrightDriver:
     def screenshot(self, label: str) -> dict[str, Any]:
         from jarvis.browser_product.screenshots import capture
 
-        result = capture(label=label, reason="computer_use") or {}
+        # Photograph this session's own page, not whatever the shared page shows.
+        page = self._page() if self.session_id else None
+        result = capture(label=label, reason="computer_use", page=page) or {}
         if not result.get("ok"):
             raise RuntimeError(result.get("error") or "screenshot failed")
         return {"path": result.get("path") or ""}
 
     def close(self) -> dict[str, Any]:
+        # Closing one computer-use session must not tear down the browser other
+        # sessions — and the user's own browser view — are still using.
+        if self.session_id:
+            _close_session_page(self.session_id)
+            return {"closed": True}
         try:
             from jarvis.browser_product.session import close as close_session
 
@@ -219,6 +289,10 @@ def _classify(exc: BaseException) -> str:
         return ERR_VALIDATION
     if isinstance(exc, sessions.SessionError):
         return ERR_SESSION
+    # A refused action is a decision, not a malfunction: reporting it as
+    # "internal" told the caller ARIA broke when it had in fact said no.
+    if isinstance(exc, PermissionError):
+        return ERR_PERMISSION
     # Browser-stack unavailability outranks the action-specific classes: a
     # missing browser is a retryable environment condition no matter which
     # action surfaced it, and reporting it as "navigation" hides that.
@@ -292,7 +366,7 @@ def perform(
             out.update(error="cancelled at action boundary", error_kind="cancelled")
             return out
 
-        drv = driver or PlaywrightDriver(allow_local=allow_local)
+        drv = driver or PlaywrightDriver(allow_local=allow_local, session_id=session_id)
 
         # A computer-use session is bookkeeping over one shared browser page, so
         # anything else driving that page — another session, a background task,
@@ -376,7 +450,10 @@ def perform(
 
 
 def open_session(*, owner: str = "", task_id: str = "", label: str = "") -> dict[str, Any]:
-    sessions.reap_expired()
+    # A session that timed out still owns a tab; reaping the record without the
+    # page would leak one browser tab per abandoned session.
+    for expired in sessions.reap_expired():
+        _close_session_page(expired)
     return sessions.create(owner=owner, task_id=task_id, label=label)
 
 

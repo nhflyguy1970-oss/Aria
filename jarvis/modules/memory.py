@@ -191,7 +191,14 @@ class JsonMemoryStore:
         entry["embedding"] = embedding
         return entry
 
-    def similar_exists(self, content: str, threshold: float = 0.88) -> bool:
+    def similar_exists(
+        self, content: str, threshold: float = 0.88, *, namespace: str | None = None
+    ) -> bool:
+        """Is this already remembered? Scoped to `namespace` when given.
+
+        See the SQLite store: callers passed a namespace this signature never
+        accepted, so those calls raised TypeError rather than deduplicating.
+        """
         from aria_core.acm_store_facade import acm_similar_exists
         from jarvis.modules.memory_common import divert_acm_read
 
@@ -204,13 +211,15 @@ class JsonMemoryStore:
         norm = content.lower().strip()
         if not norm:
             return True
-        for e in self._data["entries"]:
+        ns = (namespace or "").strip()
+        scoped = [e for e in self._data["entries"] if not ns or e.get("namespace") == ns]
+        for e in scoped:
             if e["content"].lower().strip() == norm:
                 return True
         emb = llm.embed_text(content)
         if not emb:
             return False
-        for e in self._data["entries"]:
+        for e in scoped:
             e_emb = self._embeddings.get(e["id"])
             if e_emb and llm.cosine_similarity(emb, e_emb) >= threshold:
                 return True

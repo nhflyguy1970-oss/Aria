@@ -211,7 +211,16 @@ class SqliteMemoryStore:
         entry["embedding"] = embedding
         return entry
 
-    def similar_exists(self, content: str, threshold: float = 0.88) -> bool:
+    def similar_exists(
+        self, content: str, threshold: float = 0.88, *, namespace: str | None = None
+    ) -> bool:
+        """Is this already remembered? Scoped to `namespace` when given.
+
+        Callers have always passed a namespace — deduplication that ignored it
+        would let one namespace suppress a fact another namespace has never
+        recorded — but the parameter did not exist, so those calls raised
+        TypeError instead of checking anything.
+        """
         from aria_core.acm_store_facade import acm_similar_exists
         from jarvis.modules.memory_common import divert_acm_read
 
@@ -224,16 +233,20 @@ class SqliteMemoryStore:
         norm = content.lower().strip()
         if not norm:
             return True
-        row = self._conn.execute(
-            "SELECT id FROM memories WHERE lower(trim(content)) = ? LIMIT 1",
-            (norm,),
-        ).fetchone()
-        if row:
+        ns = (namespace or "").strip()
+        sql = "SELECT id FROM memories WHERE lower(trim(content)) = ?"
+        args: list[object] = [norm]
+        if ns:
+            sql += " AND namespace = ?"
+            args.append(ns)
+        if self._conn.execute(sql + " LIMIT 1", args).fetchone():
             return True
         emb = llm.embed_text(content)
         if not emb:
             return False
         for r in self._all_rows():
+            if ns and r["namespace"] != ns:
+                continue
             e_emb = self._embeddings.get(r["id"])
             if e_emb and llm.cosine_similarity(emb, e_emb) >= threshold:
                 return True

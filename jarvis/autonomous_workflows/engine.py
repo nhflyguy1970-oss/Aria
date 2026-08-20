@@ -54,8 +54,41 @@ class WorkflowError(RuntimeError):
 # --------------------------------------------------------------- validation
 
 
-def validate(definition: WorkflowDefinition) -> dict[str, Any]:
-    """Everything that can be checked before doing any work."""
+def _delegation_problems(step: StepDefinition, requester: str) -> list[str]:
+    """Deny beats allow across a composition boundary, not just inside one.
+
+    An action explicitly denied to the author stays denied however the author
+    wraps the request — a workflow naming another agent is still the author
+    asking for it. An action merely absent from the author's allow list may be
+    delegated, which is what delegation is for.
+    """
+    if not requester or not step.agent_id or not step.action:
+        return []
+    from jarvis import specialized_agents as agents
+    from jarvis.specialized_agents.definitions import DELEGATE_ACTION
+
+    author = agents.get(requester)
+    if author is None:
+        return []
+    problems: list[str] = []
+    if author.denies(step.action):
+        problems.append(
+            f"{step.step_id}: {requester} may not invoke {step.action!r}, so it may not "
+            f"have {step.agent_id} do it either"
+        )
+    if step.agent_id != requester and not author.permits(DELEGATE_ACTION):
+        problems.append(f"{step.step_id}: {requester} may not delegate work to {step.agent_id}")
+    return problems
+
+
+def validate(definition: WorkflowDefinition, *, requester: str = "") -> dict[str, Any]:
+    """Everything that can be checked before doing any work.
+
+    `requester` is the agent authoring the workflow. Without it a specialist
+    could reach an action it is forbidden simply by naming a specialist that
+    holds it: the step's own agent was checked, but nobody asked whether the
+    author was allowed to ask for that work.
+    """
     problems: list[str] = []
 
     if not (definition.name or "").strip():
@@ -89,6 +122,7 @@ def validate(definition: WorkflowDefinition) -> dict[str, Any]:
                 problems.append(
                     f"{step.step_id}: agent {step.agent_id} may not invoke {step.action!r}"
                 )
+            problems.extend(_delegation_problems(step, requester))
         if step.max_retries < 0 or step.max_retries > LIMITS["max_retries"]:
             problems.append(
                 f"{step.step_id}: max_retries must be between 0 and {LIMITS['max_retries']}"
@@ -166,7 +200,7 @@ def create_workflow(
         if isinstance(definition, WorkflowDefinition)
         else WorkflowDefinition.from_dict(definition)
     )
-    report = validate(parsed)
+    report = validate(parsed, requester=requester)
     if not report["ok"]:
         raise WorkflowDefinitionError("; ".join(report["problems"]))
 

@@ -134,7 +134,9 @@ def _local_lookup(code: str) -> dict[str, Any] | None:
     }
 
 
-def _http_json(url: str, *, headers: dict[str, str] | None = None, timeout: float = 8.0) -> dict | None:
+def _http_json(
+    url: str, *, headers: dict[str, str] | None = None, timeout: float = 8.0
+) -> dict | None:
     req = urllib.request.Request(
         url,
         headers={
@@ -148,14 +150,22 @@ def _http_json(url: str, *, headers: dict[str, str] | None = None, timeout: floa
             body = resp.read().decode("utf-8", errors="replace")
             data = json.loads(body)
             return data if isinstance(data, dict) else None
-    except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError, json.JSONDecodeError, OSError):
+    except (
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        TimeoutError,
+        json.JSONDecodeError,
+        OSError,
+    ):
         return None
 
 
 def _lookup_open_food_facts(code: str) -> dict[str, Any] | None:
     if os.environ.get("JARVIS_UPC_LOOKUP", "1").strip().lower() in ("0", "false", "no"):
         return None
-    data = _http_json(f"https://world.openfoodfacts.org/api/v2/product/{code}.json?fields=product_name,brands,quantity,categories")
+    data = _http_json(
+        f"https://world.openfoodfacts.org/api/v2/product/{code}.json?fields=product_name,brands,quantity,categories"
+    )
     if not data or data.get("status") != 1:
         return None
     product = data.get("product") or {}
@@ -184,7 +194,11 @@ def _lookup_upcitemdb(code: str) -> dict[str, Any] | None:
     if os.environ.get("JARVIS_UPC_LOOKUP", "1").strip().lower() in ("0", "false", "no"):
         return None
     key = (os.environ.get("JARVIS_UPCITEMDB_KEY") or "").strip()
-    base = "https://api.upcitemdb.com/prod/v1/lookup" if key else "https://api.upcitemdb.com/prod/trial/lookup"
+    base = (
+        "https://api.upcitemdb.com/prod/v1/lookup"
+        if key
+        else "https://api.upcitemdb.com/prod/trial/lookup"
+    )
     url = f"{base}?upc={code}"
     headers: dict[str, str] = {}
     if key:
@@ -248,15 +262,39 @@ def lookup_barcode(raw: str, *, online: bool = True) -> dict[str, Any]:
     }
 
 
-def decode_barcodes_from_image(image_bytes: bytes) -> list[str]:
-    """Optional server-side decode via pyzbar (pip install pyzbar Pillow)."""
-    try:
-        from io import BytesIO
+def pyzbar_status() -> dict[str, Any]:
+    """Whether server-side barcode decoding is actually available.
 
-        from PIL import Image
-        from pyzbar.pyzbar import decode as zbar_decode
+    The scan route reports this to the user so "no barcode found" is not
+    confused with "this machine cannot decode barcodes at all".
+    """
+    try:
+        import PIL  # noqa: F401
     except ImportError:
-        return []
+        return {"available": False, "reason": "Pillow not installed"}
+    try:
+        import pyzbar.pyzbar  # noqa: F401
+    except ImportError:
+        return {"available": False, "reason": "pyzbar not installed"}
+    except Exception as exc:  # zbar shared library missing is not an ImportError
+        return {"available": False, "reason": f"pyzbar unusable: {exc}"[:120]}
+    return {"available": True, "reason": ""}
+
+
+def decode_barcodes_from_image(image_bytes: bytes) -> tuple[list[str], str]:
+    """Decode barcodes server-side. Returns (codes, reason_if_none).
+
+    The reason distinguishes "decoder unavailable" from "nothing in the image",
+    which is what the caller shows the user.
+    """
+    status = pyzbar_status()
+    if not status["available"]:
+        return [], status["reason"]
+    from io import BytesIO
+
+    from PIL import Image
+    from pyzbar.pyzbar import decode as zbar_decode
+
     try:
         img = Image.open(BytesIO(image_bytes))
         if img.mode not in ("L", "RGB"):
@@ -269,9 +307,9 @@ def decode_barcodes_from_image(image_bytes: bytes) -> list[str]:
             if norm and norm not in seen:
                 seen.add(norm)
                 codes.append(norm)
-        return codes
-    except Exception:
-        return []
+        return codes, "" if codes else "no barcode detected in the image"
+    except Exception as exc:  # noqa: BLE001 - an unreadable upload is not a crash
+        return [], f"could not read the image: {exc}"[:120]
 
 
 def make_custom_barcode(name: str) -> str:

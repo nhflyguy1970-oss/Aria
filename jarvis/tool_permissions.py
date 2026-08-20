@@ -107,3 +107,48 @@ def pop_pending(confirm_id: str) -> dict[str, Any] | None:
 
 def list_pending() -> list[dict[str, Any]]:
     return [{"id": k, **v} for k, v in _load_pending().items()]
+
+
+def execute_confirm(confirm_id: str, approved: bool, *, assistant: Any) -> dict[str, Any]:
+    """Run — or decline — a tool the user was asked to confirm.
+
+    One implementation for every surface that offers the confirmation. The web
+    route had its own copy that called a method the assistant does not have, so
+    approving a tool from the UI raised AttributeError instead of running it.
+
+    Returns an envelope — ``status`` is one of "expired", "declined",
+    "executed", "unknown_action" — so each surface can shape its own reply
+    without a second copy of the decision logic.
+    """
+    from jarvis.action_log import log_event
+    from jarvis.handlers.registry import call_action, has_action
+
+    row = pop_pending(confirm_id)
+    if not row:
+        return {"status": "expired", "message": "Confirm expired.", "result": None}
+    log_event(
+        "tool_confirm",
+        tool=row.get("tool"),
+        action=row.get("action"),
+        approved=approved,
+        message=(row.get("message") or "")[:200],
+    )
+    if not approved:
+        return {"status": "declined", "message": "Cancelled.", "result": None}
+
+    action = row.get("action") or ""
+    params = dict(row.get("params") or {})
+    # Marks the call as already authorised, so the tool gate does not ask again.
+    params["_confirmed"] = True
+    message = row.get("message") or ""
+    if has_action(action):
+        return {"status": "executed", "result": call_action(assistant, action, params, message)}
+    if action == "ha_control":
+        return {"status": "executed", "result": assistant._ha_control(params, message)}
+    if action == "ha_scene":
+        return {"status": "executed", "result": assistant._ha_scene(params, message)}
+    return {
+        "status": "unknown_action",
+        "message": f"Unknown confirmed action: {action}",
+        "result": None,
+    }

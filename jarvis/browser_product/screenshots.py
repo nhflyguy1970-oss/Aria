@@ -18,15 +18,21 @@ def _owner_error(exc: BaseException) -> str:
     return msg
 
 
-def capture(*, label: str = "shot", reason: str = "") -> dict[str, Any]:
-    """Capture a fresh screenshot from the live page. Never invent success."""
+def capture(*, label: str = "shot", reason: str = "", page: Any = None) -> dict[str, Any]:
+    """Capture a fresh screenshot from a live page. Never invent success.
+
+    `page` lets a caller that drives its own page photograph *that* page. Without
+    it every screenshot came from the shared page, so an isolated session's
+    screenshot showed somebody else's screen.
+    """
     from jarvis.browser_product.session import append_step, run_on_browser_thread
 
     def _impl() -> dict[str, Any]:
         from jarvis.browser_product import session as sess
 
-        page = sess._PAGE  # thread-local handle; only touch on Playwright thread
-        if page is None:
+        # thread-local handle; only touch on Playwright thread
+        target = page if page is not None else sess._PAGE
+        if target is None:
             return {
                 "ok": False,
                 "error": "No live page to capture",
@@ -36,7 +42,7 @@ def capture(*, label: str = "shot", reason: str = "") -> dict[str, Any]:
         SHOT_DIR.mkdir(parents=True, exist_ok=True)
         path = SHOT_DIR / f"{label}-{int(time.time() * 1000)}.png"
         try:
-            page.screenshot(path=str(path), full_page=False)
+            target.screenshot(path=str(path), full_page=False)
             append_step("screenshot", f"{reason or label} → {path.name}")
             return {
                 "ok": True,

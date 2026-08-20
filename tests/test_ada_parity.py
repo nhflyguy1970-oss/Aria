@@ -58,3 +58,30 @@ def test_iterate_cad_handler_registered():
     ensure_handlers_loaded()
     fn = get_action("iterate_cad")
     assert fn is not None
+
+
+def test_curated_news_never_claims_a_curation_it_did_not_do():
+    """The endpoint reported curated=true even when the LLM step fell back, and
+    an unbounded model call made a user-facing request take over a minute."""
+    import jarvis.curated_news as cn
+
+    raw = [{"title": f"Story {i}", "category": "Top Stories", "body": ""} for i in range(10)]
+
+    def slow(_raw, *, limit=6):
+        import time
+
+        time.sleep(5)
+        return _raw[:limit]
+
+    original, cn.CURATION_TIMEOUT_S = cn.CURATION_TIMEOUT_S, 0.2
+    cn._CACHE.clear()
+    try:
+        cn._curate_with_llm, real = slow, cn._curate_with_llm
+        headlines, note = cn._curate_bounded(raw, limit=6)
+    finally:
+        cn._curate_with_llm = real
+        cn.CURATION_TIMEOUT_S = original
+        cn._CACHE.clear()
+
+    assert len(headlines) == 6, "no headlines served when curation overran"
+    assert "exceeded" in note, "an overrun curation must be reported, not hidden"

@@ -17,6 +17,12 @@ _CACHE: dict[str, tuple[float, dict[str, Any]]] = {}
 _CACHE_TTL = 15 * 60
 _DDGS_SKIP_REASON = "duckduckgo-search not installed"
 
+# LLM curation is a nicety on a user-facing request the desktop client makes at
+# startup. Unbounded, a slow local model made that request take over a minute.
+# Past this bound the raw headlines are served instead — and reported as
+# uncurated, rather than claiming a curation that did not happen.
+CURATION_TIMEOUT_S = float(os.getenv("JARVIS_NEWS_CURATION_TIMEOUT_S", "12"))
+
 
 def _ddgs_available() -> bool:
     from jarvis.ddgs_install import ddgs_importable
@@ -57,7 +63,12 @@ def _fetch_raw_ddgs() -> list[dict[str, str]]:
 
 def _fetch_raw_rss_fallback() -> list[dict[str, str]]:
     """Google News RSS fallback when DDGS is unavailable (mirrors briefing_news)."""
-    from jarvis.briefing_news import _fetch_bytes, _filter_quality_headlines, _google_news_rss, _parse_google_news_rss
+    from jarvis.briefing_news import (
+        _fetch_bytes,
+        _filter_quality_headlines,
+        _google_news_rss,
+        _parse_google_news_rss,
+    )
 
     payload = _fetch_bytes(_google_news_rss()) or b""
     hits = _filter_quality_headlines(
@@ -91,6 +102,36 @@ def _fetch_raw() -> tuple[list[dict[str, str]], str | None]:
     return [], None
 
 
+def _curate_bounded(
+    raw: list[dict[str, str]], *, limit: int = 6
+) -> tuple[list[dict[str, str]], str]:
+    """Curate within CURATION_TIMEOUT_S, or hand back the raw headlines.
+
+    Returns (headlines, reason) where a non-empty reason means curation did not
+    happen — the caller must not report the result as curated.
+    """
+    import concurrent.futures
+
+    if not raw:
+        return [], ""
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    try:
+        future = pool.submit(_curate_with_llm, raw, limit=limit)
+        try:
+            return future.result(timeout=CURATION_TIMEOUT_S), ""
+        except concurrent.futures.TimeoutError:
+            log.info(
+                "curated news: curation exceeded %.0fs; serving raw headlines", CURATION_TIMEOUT_S
+            )
+            return raw[:limit], f"curation exceeded {CURATION_TIMEOUT_S:.0f}s"
+        except Exception as exc:  # noqa: BLE001 - never fail the request over a nicety
+            log.debug("curated news curation failed: %s", exc)
+            return raw[:limit], f"curation failed: {type(exc).__name__}"
+    finally:
+        # Do not block the response on a call that already overran its bound.
+        pool.shutdown(wait=False)
+
+
 def _curate_with_llm(raw: list[dict[str, str]], *, limit: int = 6) -> list[dict[str, str]]:
     if not raw:
         return []
@@ -98,7 +139,7 @@ def _curate_with_llm(raw: list[dict[str, str]], *, limit: int = 6) -> list[dict[
         from jarvis.llm import ask_with_system
 
         titles = "\n".join(
-            f"{i+1}. [{r.get('category')}] {r.get('title')} — {r.get('body', '')[:120]}"
+            f"{i + 1}. [{r.get('category')}] {r.get('title')} — {r.get('body', '')[:120]}"
             for i, r in enumerate(raw[:15])
         )
         prompt = (
@@ -154,11 +195,18 @@ def get_curated_headlines(
         else:
             filtered = [r for r in raw if (r.get("category") or "").lower() == cat_key]
         raw = filtered or raw
-    headlines = _curate_with_llm(raw, limit=6) if use_ai and raw else raw[:8]
+    curation_note = ""
+    if use_ai and raw:
+        headlines, curation_note = _curate_bounded(raw, limit=6)
+    else:
+        headlines = raw[:8]
     breaking = headlines[0] if headlines else None
     payload: dict[str, Any] = {
         "enabled": True,
-        "curated": bool(use_ai),
+        # Only true when an LLM actually picked these, so the UI cannot present
+        # raw headlines as a curated briefing.
+        "curated": bool(use_ai) and not curation_note,
+        "curation_note": curation_note,
         "category": category or "all",
         "fetched_at": datetime.now().isoformat(timespec="seconds"),
         "headlines": headlines,

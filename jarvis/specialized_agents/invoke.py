@@ -33,6 +33,11 @@ SKILL_ACTIONS = frozenset(
     }
 )
 
+# Authoring a workflow is asking for work to be done — by other agents, with
+# their authority. The author's identity decides what may be delegated, so it is
+# stamped rather than read from the payload.
+WORKFLOW_AUTHOR_ACTIONS = frozenset({"workflow_create", "workflow_instantiate"})
+
 # The browser gates authority by impact class, and reads the acting agent from
 # its payload. Same rule as the skills layer: stamp the caller's real identity
 # rather than trust the payload, or an agent could borrow another agent's
@@ -142,6 +147,8 @@ def call_action(
         payload["requester"] = agent.id
     if action in BROWSER_ACTIONS:
         payload["agent_id"] = agent.id
+    if action in WORKFLOW_AUTHOR_ACTIONS:
+        payload["requester"] = agent.id
     return registry_call(assistant, action, payload, message or action)
 
 

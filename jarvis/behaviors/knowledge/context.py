@@ -19,8 +19,13 @@ class KnowledgeContext:
         self._orchestrator.refresh_system_prompt()
 
     def resolve_document_path(self, params: dict) -> str:
-        from jarvis.config import DATA_DIR, PROJECT_ROOT, UPLOAD_DIR
+        from jarvis.config import DATA_DIR, PROJECT_ROOT
         from jarvis.document_pipeline import documents_dir
+
+        # jarvis.config has never exported UPLOAD_DIR; importing it raised
+        # ImportError, so every document action that resolves a path failed.
+        # Uploads live where the rest of ARIA puts them.
+        upload_dir = DATA_DIR / "uploads"
 
         raw = (params.get("path") or "").strip()
         if not raw:
@@ -28,7 +33,7 @@ class KnowledgeContext:
         path = Path(raw)
         if path.is_absolute() and path.exists():
             return str(path)
-        for base in (PROJECT_ROOT, DATA_DIR, UPLOAD_DIR, documents_dir()):
+        for base in (PROJECT_ROOT, DATA_DIR, upload_dir, documents_dir()):
             candidate = (base / raw).resolve()
             if candidate.exists():
                 return str(candidate)

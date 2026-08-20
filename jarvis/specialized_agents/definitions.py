@@ -60,6 +60,16 @@ class AgentDefinition:
             return True
         return name in self.allowed_actions
 
+    def denies(self, action: str) -> bool:
+        """Is this action *explicitly* forbidden to this agent?
+
+        Distinct from `not permits(...)`: an action can be absent from the allow
+        list without being forbidden. Composition boundaries use this to decide
+        what may never be reached indirectly, however the request is wrapped.
+        """
+        name = (action or "").strip()
+        return bool(name) and name in self.denied_actions
+
     def matches(self, capability: str) -> bool:
         return (capability or "").strip().lower() in {c.lower() for c in self.capabilities}
 
