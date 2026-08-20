@@ -12,6 +12,8 @@
     const orig = window.fetch.bind(window);
     const live = new Set();
     const ROOM_ABORT = "aria-room-leave";
+    /* Long enough for a slow local model, short enough that nothing hangs. */
+    const ARIA_FETCH_TIMEOUT_MS = 120000;
     function isRoomAbort(err) {
       if (!err) return false;
       if (err.cancelled === true && (err.kind === "room-leave" || err.ownerVisible === false)) return true;
@@ -65,6 +67,22 @@
       }
       const ctrl = new AbortController();
       live.add(ctrl);
+      /* Chrome allows six connections per host. A room that opens more than
+         that queues the rest, and a queued request never settles — the Memory
+         room's Forget button fetched its preview and then hung for good, with
+         no dialog and no message. Bound every request so a wedged one fails
+         visibly instead of waiting forever. Streaming endpoints opt out. */
+      const timeoutMs = Number(
+        (init && init.ariaTimeoutMs) || (init && init.ariaExempt ? 0 : ARIA_FETCH_TIMEOUT_MS),
+      );
+      let timer = null;
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          const err = new Error("Request timed out — the browser had too many open connections");
+          err.name = "AriaTimeoutError";
+          try { ctrl.abort(err); } catch (_) { ctrl.abort(); }
+        }, timeoutMs);
+      }
       const parent = init && init.signal;
       if (parent) {
         if (parent.aborted) ctrl.abort(roomLeaveError());
@@ -78,7 +96,10 @@
           }
           throw err;
         })
-        .finally(() => live.delete(ctrl));
+        .finally(() => {
+          if (timer) clearTimeout(timer);
+          live.delete(ctrl);
+        });
     };
     let _absorbTimer = null;
     window.AriaNet = {

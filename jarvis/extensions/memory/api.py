@@ -5,6 +5,8 @@ from __future__ import annotations
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
+from jarvis.production_guard import ProductionIsolationError
+
 
 def _memory_settings_payload(assistant) -> dict:
     from jarvis.brain_memory import brain_mode_status
@@ -205,6 +207,14 @@ def register_routes(app, assistant) -> None:
             )
         except ValueError as e:
             return JSONResponse(status_code=400, content={"ok": False, "error": str(e)})
+        except ProductionIsolationError as e:
+            # A deliberate refusal, not a malfunction: live memory declines
+            # test/cert payloads. Surfacing it as a 500 told the user only
+            # "Server error" and hid the reason entirely.
+            return JSONResponse(
+                status_code=400,
+                content={"ok": False, "error": str(e), "refused": "production_isolation"},
+            )
         assistant.refresh_system_prompt()
         return {"ok": True, "entry": assistant.memory.to_public(entry)}
 
@@ -232,7 +242,11 @@ def register_routes(app, assistant) -> None:
             ok = assistant.memory.delete_id(entry_id)
         if ok:
             assistant.refresh_system_prompt()
-        return {"ok": ok, "deprecated": True, "hint": "Use POST /api/memory/{id}/forget with confirm"}
+        return {
+            "ok": ok,
+            "deprecated": True,
+            "hint": "Use POST /api/memory/{id}/forget with confirm",
+        }
 
     @app.get("/api/memory/{entry_id}/forget-preview")
     def memory_forget_preview(entry_id: str):
@@ -333,7 +347,11 @@ def register_routes(app, assistant) -> None:
     def memory_export():
         data = assistant.memory.export_data()
         if isinstance(data, dict):
-            data = {**data, "source_of_truth": "acm", "note": "Export is a snapshot; ACM PRIMARY remains authority."}
+            data = {
+                **data,
+                "source_of_truth": "acm",
+                "note": "Export is a snapshot; ACM PRIMARY remains authority.",
+            }
         return data
 
     @app.post("/api/memory/import")

@@ -661,8 +661,14 @@ function bindMemoryCardActions(root) {
 
 async function openForgetFlow(id) {
   if (!id) return;
+  // Answer the click straight away. The room opens enough parallel requests to
+  // saturate the browser's connection pool for a while after it loads, so this
+  // preview can take seconds to come back — and until it did, Forget looked
+  // like a button that does nothing at all.
+  openMemoryDialog("Safe forget", `<p class="muted">Checking what forgetting this would change…</p>`, []);
   const prev = await fetch(`/api/memory/${id}/forget-preview`).then((r) => r.json()).catch(() => ({}));
   if (!prev.ok) {
+    closeMemoryDialog();
     window.showAriaToast?.(prev.error || "Preview failed", "err", 4000);
     return;
   }
@@ -671,7 +677,10 @@ async function openForgetFlow(id) {
     `<button type="button" class="ghost-btn small forget-act" data-act="${window.escapeHtml(a.id)}"><strong>${window.escapeHtml(a.label)}</strong><br/><span class="muted">${window.escapeHtml(a.explanation)}</span></button>`
   ).join("");
   const related = (prev.related || []).map((r) => `<li>${window.escapeHtml(r.content || "")}</li>`).join("");
-  await openMemoryDialog(
+  // openMemoryDialog resolves only when the user dismisses it, so awaiting it
+  // here bound the action handlers *after* the dialog had already closed —
+  // every forget option was inert for as long as it was on screen.
+  const dismissed = openMemoryDialog(
     "Safe forget",
     `<p><strong>${window.escapeHtml(entry.content || "")}</strong></p>
      <p class="muted">${window.escapeHtml(prev.message || "")}</p>
@@ -710,6 +719,7 @@ async function openForgetFlow(id) {
       loadMemoryBrowser();
     };
   });
+  await dismissed;
 }
 
 async function openEditMemoryDialog(id, itemEl) {
@@ -750,7 +760,13 @@ async function openEditMemoryDialog(id, itemEl) {
       namespace: document.getElementById("memEditNs")?.value?.trim() || "default",
       tags: (document.getElementById("memEditTags")?.value || "").split(",").map((t) => t.trim()).filter(Boolean),
     };
-    if (!payload.content) return;
+    if (!payload.content) {
+      // A bare return here made Encode look like a dead button: nothing was
+      // saved and nothing was said.
+      window.showAriaToast?.("Add something to remember first.", "err", 3000);
+      document.getElementById("memEditContent")?.focus();
+      return;
+    }
     try {
       const result = await window.ariaMutate({
         request: () =>
