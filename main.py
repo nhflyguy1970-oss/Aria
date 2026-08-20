@@ -41,12 +41,12 @@ def _bootstrap_platform_runtime() -> None:
     try:
         from jarvis.platform_runtime import bootstrap_runtime_connection
 
-        report = bootstrap_runtime_connection()
-        if not report.get("ok"):
-            logger.warning(
-                "Runtime connection incomplete: %s",
-                "; ".join(report.get("issues") or []),
-            )
+        # bootstrap_runtime_connection now returns as soon as the connection
+        # itself is established and reports the full self-test from its own
+        # thread once the first snapshot has synced. Judging this immediate
+        # report would warn "not synced yet" on every boot, before the sync it
+        # is complaining about has had any chance to happen.
+        bootstrap_runtime_connection()
     except Exception as exc:
         logger.warning("Platform runtime bootstrap failed: %s", exc)
 
@@ -109,12 +109,14 @@ def main():
 
     # aria capability new <name> …
     if module_name in ("capability", "capabilities"):
-        sub = (sys.argv[2].lower() if len(sys.argv) > 2 else "")
+        sub = sys.argv[2].lower() if len(sys.argv) > 2 else ""
         if sub in ("new", "scaffold"):
             from jarvis.capabilities_product.scaffold import scaffold_cli
 
             raise SystemExit(scaffold_cli(sys.argv[3:]))
-        print("Usage: python main.py capability new <name> [--description ...] [--category ...] [--permission P]")
+        print(
+            "Usage: python main.py capability new <name> [--description ...] [--category ...] [--permission P]"
+        )
         raise SystemExit(2)
 
     if module_name == "chat":

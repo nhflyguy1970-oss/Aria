@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from typing import Any
 
 logger = logging.getLogger("jarvis.platform_runtime")
@@ -14,33 +16,55 @@ def bootstrap_runtime_connection() -> dict[str, Any]:
 
     client = get_runtime_client()
     report = client.connect()
-    validation = validate_runtime_startup()
-    merged = {**report, **validation}
-    # Soft-start intelligence platform (connectors + automation); never block boot
-    try:
-        from jarvis.intelligence.platform_bus import bootstrap_platform
 
-        intel = bootstrap_platform(start_automation=True)
-        merged["intelligence"] = {
-            "ok": bool(intel.get("ok")),
-            "connectors": intel.get("connectors"),
-            "workflows_seeded": intel.get("workflows_seeded"),
-            "automation": (intel.get("automation") or {}).get("running"),
-        }
-    except Exception as exc:
-        logger.warning("Intelligence platform bootstrap skipped: %s", exc)
-        merged["intelligence"] = {"ok": False, "error": str(exc)}
-    if not merged.get("ok"):
-        logger.warning(
-            "Runtime connection incomplete: %s",
-            "; ".join(merged.get("issues") or merged.get("warnings") or []),
-        )
-    else:
-        logger.info(
-            "Platform Connected · Mission Control Connected · Runtime Synced (%s)",
-            merged.get("connection_mode"),
-        )
-    return merged
+    def _self_test() -> None:
+        """Validate the runtime, off the boot path.
+
+        The self-test forces a full Mission Control snapshot — a dashboard
+        aggregation that shells out to the GitHub CLI and rebuilds the ACM
+        dashboard, around 5.4s. It is a self-test that logs; nothing waits on
+        its result, so running it inline simply delayed the moment ARIA could
+        answer a request. It still runs, and still reports, every boot.
+        """
+        merged = dict(report)
+        # The snapshot warm-up runs in its own thread; judging the runtime
+        # before it has finished would report "not synced yet" every boot.
+        deadline = time.time() + 60.0
+        while time.time() < deadline:
+            if client.connection_report().get("runtime_synced"):
+                break
+            time.sleep(0.5)
+        try:
+            merged.update(validate_runtime_startup())
+        except Exception as exc:  # noqa: BLE001 - a self-test must not kill the process
+            logger.warning("Runtime self-test failed: %s", exc)
+            merged["ok"] = False
+        try:
+            from jarvis.intelligence.platform_bus import bootstrap_platform
+
+            intel = bootstrap_platform(start_automation=True)
+            merged["intelligence"] = {
+                "ok": bool(intel.get("ok")),
+                "connectors": intel.get("connectors"),
+                "workflows_seeded": intel.get("workflows_seeded"),
+                "automation": (intel.get("automation") or {}).get("running"),
+            }
+        except Exception as exc:
+            logger.warning("Intelligence platform bootstrap skipped: %s", exc)
+            merged["intelligence"] = {"ok": False, "error": str(exc)}
+        if not merged.get("ok"):
+            logger.warning(
+                "Runtime connection incomplete: %s",
+                "; ".join(merged.get("issues") or merged.get("warnings") or []),
+            )
+        else:
+            logger.info(
+                "Platform Connected · Mission Control Connected · Runtime Synced (%s)",
+                merged.get("connection_mode"),
+            )
+
+    threading.Thread(target=_self_test, name="runtime-self-test", daemon=True).start()
+    return report
 
 
 def validate_runtime_startup() -> dict[str, Any]:
@@ -66,8 +90,7 @@ def validate_runtime_startup() -> dict[str, Any]:
         checks["applications_visible"] = bool(snap.get("applications"))
         checks["services_visible"] = snap.get("services") is not None
         checks["providers_visible"] = bool(
-            (snap.get("overview") or {}).get("inference_provider")
-            or snap.get("inference")
+            (snap.get("overview") or {}).get("inference_provider") or snap.get("inference")
         )
         report["runtime_synced"] = True
     except RuntimeClientError as exc:

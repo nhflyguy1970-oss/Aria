@@ -61,6 +61,28 @@ class RuntimeClient:
         except (urllib.error.URLError, OSError, TimeoutError):
             return False
 
+    def _warm_snapshot_async(self) -> None:
+        """Pull the first Mission Control snapshot without holding up boot.
+
+        Establishing the connection costs ~0.1s; the snapshot behind it is a
+        full dashboard aggregation — it shells out to the GitHub CLI for CI
+        status and rebuilds the ACM dashboard, about 5.4s. None of that is
+        needed before ARIA can serve a request, so it is warmed in the
+        background and any failure is recorded exactly as before.
+        """
+        import threading
+
+        def _warm() -> None:
+            try:
+                self.snapshot(force_refresh=True)
+            except RuntimeClientError as exc:
+                self._last_error = str(exc)
+                self._warnings.append(self._last_error)
+            except Exception as exc:  # noqa: BLE001 - a warm-up must never crash boot
+                self._warnings.append(f"snapshot warm-up failed: {exc}")
+
+        threading.Thread(target=_warm, name="runtime-snapshot-warm", daemon=True).start()
+
     def connect(self) -> dict[str, Any]:
         """Discover platform, attach application host, verify Mission Control."""
         self._warnings = []
@@ -74,19 +96,11 @@ class RuntimeClient:
         if self.is_mission_control_reachable():
             self._connection_mode = "http"
             self._last_error = None
-            try:
-                self.snapshot(force_refresh=True)
-            except RuntimeClientError as exc:
-                self._last_error = str(exc)
-                self._warnings.append(self._last_error)
+            self._warm_snapshot_async()
         elif self._in_process_available():
             self._connection_mode = "in_process"
             self._last_error = None
-            try:
-                self.snapshot(force_refresh=True)
-            except RuntimeClientError as exc:
-                self._last_error = str(exc)
-                self._warnings.append(self._last_error)
+            self._warm_snapshot_async()
         else:
             self._connection_mode = "none"
             self._last_error = "Mission Control API not reachable"
