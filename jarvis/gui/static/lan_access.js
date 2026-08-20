@@ -140,7 +140,7 @@
     document.getElementById("lanCopyUrlBtn")?.addEventListener("click", async () => {
       if (!lanPrimaryUrl) return;
       try {
-        await navigator.clipboard.writeText(lanPrimaryUrl);
+        await window.ariaCopy(lanPrimaryUrl, 'address');
         const st = document.getElementById("statusText");
         if (st) st.textContent = "LAN URL copied";
         window.showAriaToast?.("LAN URL copied", "ok", 2500);

@@ -518,7 +518,7 @@
     });
     $("autoExportBtn")?.addEventListener("click", async () => {
       const data = await api("/api/automation/rules/export");
-      await navigator.clipboard?.writeText(JSON.stringify(data, null, 2));
+      await window.ariaCopy(JSON.stringify(data, null, 2), 'automation');
       window.showAriaToast?.("Rules exported to clipboard", "ok", 2500);
     });
     $("autoImportBtn")?.addEventListener("click", async () => {
@@ -748,7 +748,7 @@
     });
     $("autoPipeExportBtn")?.addEventListener("click", async () => {
       const data = await api("/api/automation/pipelines/export", { method: "POST", body: "{}" });
-      await navigator.clipboard?.writeText(JSON.stringify(data, null, 2));
+      await window.ariaCopy(JSON.stringify(data, null, 2), 'automation');
       window.showAriaToast?.(`Exported ${data.count || 0} pipelines`, "ok", 2500);
     });
     $("autoPipeNlBtn")?.addEventListener("click", () => {
@@ -871,7 +871,7 @@
     $("autoWebhookCloseBtn")?.addEventListener("click", () => $("autoWebhookModal")?.classList.add("hidden"));
     $("autoWebhookCopyBtn")?.addEventListener("click", async () => {
       const url = home?.health?.webhook?.url || "";
-      if (url) await navigator.clipboard?.writeText(url);
+      if (url) await window.ariaCopy(url, 'link');
       window.showAriaToast?.(url ? "Webhook URL copied" : "No URL", url ? "ok" : "warn", 2500);
     });
     $("autoWebhookTestBtn")?.addEventListener("click", async () => {

@@ -894,7 +894,7 @@ def primary_forget(
             # so "Forget ARIA-REPAIR-MEM-1" cannot cool every memory mentioning those stems.
             if not concept_id:
                 q = (query or "").strip().lower()
-                for exp in engine.store.experiences.values():
+                for exp in list(engine.store.experiences.values()):
                     content = str(getattr(exp, "summary", "") or "").lower()
                     if not content or not q or q not in content:
                         continue
@@ -933,7 +933,7 @@ def primary_forget(
         }
         if query:
             q = (query or "").strip().lower()
-            for exp in engine.store.experiences.values():
+            for exp in list(engine.store.experiences.values()):
                 content = str(getattr(exp, "summary", "") or "").lower()
                 if not content or not q or q not in content:
                     continue
@@ -987,7 +987,7 @@ def primary_forget(
                 tagged = True
         if query:
             q = (query or "").strip().lower()
-            for exp in engine.store.experiences.values():
+            for exp in list(engine.store.experiences.values()):
                 content = str(getattr(exp, "summary", "") or "").lower()
                 if not content or not q or q not in content:
                     continue
@@ -998,7 +998,7 @@ def primary_forget(
             forgotten = set(getattr(engine.store, "host_forgotten_ids", ()) or [])
             if query:
                 q = (query or "").strip().lower()
-                for exp in engine.store.experiences.values():
+                for exp in list(engine.store.experiences.values()):
                     content = str(getattr(exp, "summary", "") or "").lower()
                     if content and q and q in content:
                         forgotten.add(str(exp.id))
@@ -1179,6 +1179,10 @@ def project_list_entries(
     include_test_artifacts: bool = False,
 ) -> list[dict[str, Any]]:
     """Host-shaped ACM projection for list_entries façades (not legacy SoT)."""
+
+    # The store's dicts are live: another thread remembering something while a
+    # projection is being built raised "dictionary changed size during
+    # iteration", which surfaced as a 500 on Memory Home. Iterate a snapshot.
     if not acm_is_authoritative():
         return []
     from jarvis.trust_memory import is_test_artifact
@@ -1187,7 +1191,7 @@ def project_list_entries(
     out: list[dict[str, Any]] = []
     q = (query or "").strip().lower()
     ns = (namespace or "").strip()
-    for exp in engine.store.experiences.values():
+    for exp in list(engine.store.experiences.values()):
         tags = list(getattr(exp, "context_tags", ()) or [])
         content = str(getattr(exp, "summary", "") or "")
         if not include_test_artifacts and is_test_artifact(content):
@@ -1292,7 +1296,7 @@ def project_list_entries(
             for eid in forgotten_ids
             if eid in engine.store.experiences
         )
-        for concept in engine.store.concepts.values():
+        for concept in list(engine.store.concepts.values()):
             access = str(engine.store.accessibility.get(concept.id) or "accessible")
             if access in (
                 "archived",
@@ -1340,7 +1344,7 @@ def project_latest_checkpoint(namespace: str | None = None) -> dict[str, Any] | 
     ns = (namespace or "").strip()
     best: dict[str, Any] | None = None
     best_ts = ""
-    for exp in engine.store.experiences.values():
+    for exp in list(engine.store.experiences.values()):
         tags = [str(t) for t in (getattr(exp, "context_tags", ()) or ())]
         if "checkpoint" not in tags:
             continue

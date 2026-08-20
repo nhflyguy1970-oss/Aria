@@ -69,7 +69,7 @@
       const data = await res.json();
       const text = data.text || JSON.stringify(data, null, 2);
       if (navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
+        await window.ariaCopy(text);
         const st = statusEl();
         if (st) st.textContent = "Debug bundle copied to clipboard";
         window.showAriaToast?.("Debug bundle copied", "ok", 2500);

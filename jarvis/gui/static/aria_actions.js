@@ -114,7 +114,7 @@
         const data = await res.json();
         const text = data.text || JSON.stringify(data, null, 2);
         if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(text);
+          await window.ariaCopy(text);
           window.showAriaToast?.("Debug bundle copied", "ok", 2500);
         } else {
           if (window.ariaPrompt) {

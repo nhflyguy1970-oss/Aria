@@ -176,7 +176,7 @@
     $("specRunActivityBtn")?.addEventListener("click", () => window.AriaActivity?.open?.());
     $("specRunExportBtn")?.addEventListener("click", async () => {
       if (!lastRun) return;
-      await navigator.clipboard?.writeText(JSON.stringify(lastRun, null, 2));
+      await window.ariaCopy(JSON.stringify(lastRun, null, 2), 'run');
       window.showAriaToast?.("Run exported to clipboard", "ok", 2000);
     });
   }

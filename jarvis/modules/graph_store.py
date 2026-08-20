@@ -180,7 +180,9 @@ class GraphMemoryStore(Protocol):
 
     def search_nodes(self, query: str, *, limit: int = 12) -> list[dict]: ...
 
-    def related_triples(self, names: list[str], *, depth: int = 1, limit: int = 24) -> list[dict]: ...
+    def related_triples(
+        self, names: list[str], *, depth: int = 1, limit: int = 24
+    ) -> list[dict]: ...
 
     def stats(self) -> dict[str, int]: ...
 
@@ -259,7 +261,9 @@ class SqliteGraphStore:
             "updated_at": str(row["updated_at"] or props.get("updated") or ""),
         }
 
-    def _row_edge(self, row: sqlite3.Row, *, src_name: str = "", dst_name: str = "") -> dict[str, Any]:
+    def _row_edge(
+        self, row: sqlite3.Row, *, src_name: str = "", dst_name: str = ""
+    ) -> dict[str, Any]:
         props = _parse_props(row["props"])
         src_name = src_name or self._node_name(str(row["src"]))
         dst_name = dst_name or self._node_name(str(row["dst"]))
@@ -358,8 +362,12 @@ class SqliteGraphStore:
         if memory_id and "source" not in incoming:
             incoming["source"] = "memory"
         incoming.setdefault("updated", now)
-        src = self.merge_node(subject, namespace=namespace, props={"source": incoming.get("source", "manual")})
-        dst = self.merge_node(obj, namespace=namespace, props={"source": incoming.get("source", "manual")})
+        src = self.merge_node(
+            subject, namespace=namespace, props={"source": incoming.get("source", "manual")}
+        )
+        dst = self.merge_node(
+            obj, namespace=namespace, props={"source": incoming.get("source", "manual")}
+        )
         row = self._conn.execute(
             "SELECT id, props FROM edges WHERE src = ? AND dst = ? AND rel = ? AND namespace = ?",
             (src, dst, rel, namespace),
@@ -472,7 +480,10 @@ class SqliteGraphStore:
             """,
             (*args, limit, offset),
         ).fetchall()
-        return [self._row_edge(r, src_name=str(r["src_name"]), dst_name=str(r["dst_name"])) for r in rows]
+        return [
+            self._row_edge(r, src_name=str(r["src_name"]), dst_name=str(r["dst_name"]))
+            for r in rows
+        ]
 
     def namespaces(self) -> list[dict[str, Any]]:
         rows = self._conn.execute(
@@ -673,7 +684,13 @@ class SqliteGraphStore:
         for e in edges:
             items.append({"kind": "relationship", "at": e.get("created_at") or "", "item": e})
         for n in nodes:
-            items.append({"kind": "entity", "at": n.get("updated_at") or n.get("created_at") or "", "item": n})
+            items.append(
+                {
+                    "kind": "entity",
+                    "at": n.get("updated_at") or n.get("created_at") or "",
+                    "item": n,
+                }
+            )
         items.sort(key=lambda x: x.get("at") or "", reverse=True)
         return items[:limit]
 
@@ -893,16 +910,25 @@ class BoltGraphStore:
         return {"ok": True, "deleted": "node", "snapshot": {"name": name}}
 
     def delete_edge(self, edge_id: str) -> dict[str, Any]:
-        return {"ok": False, "error": "bolt edge delete by id not supported; use subject/predicate/object"}
+        return {
+            "ok": False,
+            "error": "bolt edge delete by id not supported; use subject/predicate/object",
+        }
 
     def prune_orphans(self, *, namespace: str = "") -> dict[str, Any]:
         with self._driver.session() as session:
             result = session.run(
+                # `NOT (n)--()` is a Neo4j-ism: Memgraph rejects the anonymous
+                # pattern outright ("Not yet implemented: atom expression"), so
+                # pruning always failed with a 500 against a Memgraph backend.
+                # Counting incident relationships is plain Cypher and works on
+                # both.
                 f"""
                 MATCH (n:{ENTITY_LABEL})
-                WHERE NOT (n)--()
-                  AND ($namespace = '' OR n.namespace = $namespace)
-                WITH n, n.name AS name
+                WHERE ($namespace = '' OR n.namespace = $namespace)
+                OPTIONAL MATCH (n)-[r]-()
+                WITH n, count(r) AS degree
+                WHERE degree = 0
                 DETACH DELETE n
                 RETURN count(*) AS c
                 """,
@@ -929,16 +955,22 @@ class BoltGraphStore:
                 RETURN coalesce(n.namespace, 'default') AS namespace, count(*) AS nodes
                 """
             )
-            return [{"namespace": r["namespace"], "nodes": int(r["nodes"]), "edges": 0} for r in result]
+            return [
+                {"namespace": r["namespace"], "nodes": int(r["nodes"]), "edges": 0} for r in result
+            ]
 
-    def list_nodes(self, *, namespace: str = "", kind: str = "", limit: int = 50, offset: int = 0, q: str = "") -> list[dict]:
+    def list_nodes(
+        self, *, namespace: str = "", kind: str = "", limit: int = 50, offset: int = 0, q: str = ""
+    ) -> list[dict]:
         cypher, params = _bolt_list_nodes_query(
             namespace=namespace, kind=kind, limit=limit, offset=offset, q=q
         )
         with self._driver.session() as session:
             return [dict(rec) for rec in session.run(cypher, **params)]
 
-    def list_edges(self, *, namespace: str = "", limit: int = 50, offset: int = 0, q: str = "") -> list[dict]:
+    def list_edges(
+        self, *, namespace: str = "", limit: int = 50, offset: int = 0, q: str = ""
+    ) -> list[dict]:
         cypher, params = _bolt_list_edges_query(
             namespace=namespace, limit=limit, offset=offset, q=q
         )
@@ -969,7 +1001,9 @@ class BoltGraphStore:
     def get_edge(self, edge_id: str) -> dict[str, Any] | None:
         return None
 
-    def merge_entities(self, keep_name: str, drop_name: str, *, namespace: str = "default") -> dict[str, Any]:
+    def merge_entities(
+        self, keep_name: str, drop_name: str, *, namespace: str = "default"
+    ) -> dict[str, Any]:
         self.delete_node(drop_name, namespace=namespace)
         return {"ok": True, "merged_into": keep_name, "snapshot": {}}
 

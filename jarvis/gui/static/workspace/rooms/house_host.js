@@ -108,6 +108,14 @@
       },
       version: "1.0.4-residency",
     };
+
+    /* Leaving a room aborts its in-flight fetches on purpose. Callers that do
+       not catch that rejection turned ordinary navigation into uncaught
+       AbortErrors in the console. Absorb room-leave aborts only — every other
+       rejection still surfaces. */
+    window.addEventListener("unhandledrejection", (event) => {
+      if (isRoomAbort(event.reason)) event.preventDefault();
+    });
   })();
 
   let _room = null;
