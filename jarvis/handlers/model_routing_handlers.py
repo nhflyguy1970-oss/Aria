@@ -37,6 +37,12 @@ def _request_from_params(params: dict):
     required = params.get("required_capabilities") or []
     if isinstance(required, str):
         required = [required]
+    # Validate names here so an unknown capability is reported as a bad request.
+    # Normalisation happens deep inside routing, where the ValueError escaped the
+    # handler and surfaced as an internal "execution" failure instead.
+    from jarvis.model_routing import capabilities as caps
+
+    required = [caps.normalise(c) for c in required]
     return RoutingRequest(
         task_type=(params.get("task_type") or "general").strip(),
         role=(params.get("role") or "").strip(),

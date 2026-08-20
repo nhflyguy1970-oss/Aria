@@ -77,30 +77,58 @@ def normalize_key(raw: str) -> str | None:
     return ALIASES.get(k)
 
 
+def _entries(memory_store) -> list[dict]:
+    """Cheatsheet entries, read the same way they are written.
+
+    Reading `_data` went straight to the legacy vault while `add()` is diverted
+    to ACM when ACM is authoritative. Reader and writer looked at different
+    stores, so the list was always empty, the caller reseeded on every request,
+    and each page load wrote the whole default set into memory again.
+    """
+    lister = getattr(memory_store, "list_entries", None)
+    if callable(lister):
+        try:
+            return list(lister(namespace=CHEATSHEET_NAMESPACE) or [])
+        except Exception:  # noqa: BLE001 - fall back to the raw projection
+            pass
+    return list((memory_store._data or {}).get("entries") or [])
+
+
 def find_by_key(memory_store, key: str) -> dict | None:
     want = normalize_key(key) or key.lower()
-    for entry in memory_store._data.get("entries", []):
+    for entry in _entries(memory_store):
         if parse_key(entry) == want and is_cheatsheet_entry(entry):
             return entry
     return None
 
 
 def list_cheatsheets(memory_store) -> list[dict]:
-    out = []
-    for entry in memory_store._data.get("entries", []):
+    """One cheatsheet per key — the most recently written wins.
+
+    A cheatsheet is identified by its key, so duplicates are never meaningful.
+    Reseeding ran on every request while the reader saw nothing, leaving many
+    copies of each default behind; listing them all would make the page
+    unusable. Deduplicating on read fixes what the user sees without deleting
+    anything.
+    """
+    latest: dict[str, dict] = {}
+    for entry in _entries(memory_store):
         if not is_cheatsheet_entry(entry):
             continue
         key = parse_key(entry)
         if not key:
             continue
-        content = entry.get("content", "")
-        out.append({
+        stamp = str(entry.get("timestamp") or "")
+        previous = latest.get(key)
+        if previous is not None and str(previous.get("updated") or "") >= stamp:
+            continue
+        latest[key] = {
             "key": key,
-            "title": default_title(key, content),
+            "title": default_title(key, entry.get("content", "")),
             "id": entry.get("id"),
             "updated": entry.get("timestamp"),
-        })
-    return sorted(out, key=lambda x: x["key"])
+        }
+    return sorted(latest.values(), key=lambda x: x["key"])
 
 
 def seed_cheatsheets(memory_store, *, keys: list[str] | None = None) -> list[str]:
@@ -158,7 +186,10 @@ def reset_cheatsheet(memory_store, key: str) -> dict | None:
 
 def resolve_key_from_message(message: str) -> str | None:
     lower = message.lower()
-    if m := re.search(r"\b(?:reset|restore)\s+(?:the\s+)?(?:[\w-]+\s+)?cheatsheet(?:\s+for|\s+on)?\s+([\w-]+)", lower):
+    if m := re.search(
+        r"\b(?:reset|restore)\s+(?:the\s+)?(?:[\w-]+\s+)?cheatsheet(?:\s+for|\s+on)?\s+([\w-]+)",
+        lower,
+    ):
         return normalize_key(m.group(1))
     if m := re.search(r"\bcheatsheet(?:\s+for|\s+on)?\s+([\w\s-]+?)(?:\?|$)", lower):
         return normalize_key(m.group(1).strip())

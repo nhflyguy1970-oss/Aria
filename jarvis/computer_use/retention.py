@@ -60,10 +60,14 @@ def usage() -> dict[str, Any]:
     }
 
 
-def prune_screenshots(
-    *, keep: int = MAX_SCREENSHOTS, min_age_s: float = MIN_AGE_S
-) -> dict[str, Any]:
-    """Bound screenshot growth. Only ever deletes *.png inside the screenshot dir."""
+def prune_screenshots(*, keep: int | None = None, min_age_s: float | None = None) -> dict[str, Any]:
+    """Bound screenshot growth. Only ever deletes *.png inside the screenshot dir.
+
+    The limits are read at call time so a deployment (or a test) can change them
+    without the value having been frozen into a default at import.
+    """
+    keep = MAX_SCREENSHOTS if keep is None else keep
+    min_age_s = MIN_AGE_S if min_age_s is None else min_age_s
     shots = screenshot_dir()
     if not shots.is_dir():
         return {"pruned": 0, "kept": 0, "bytes_freed": 0}

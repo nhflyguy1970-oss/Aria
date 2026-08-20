@@ -7,6 +7,7 @@ at a source it never came from.
 
 from __future__ import annotations
 
+import os
 import threading
 
 import pytest
@@ -154,3 +155,28 @@ def test_isolation_does_not_bypass_the_host_policy(isolated_pages, data_dir):
     drv = engine.PlaywrightDriver(allow_local=False, session_id=sid)
     with pytest.raises((A.NavigationBlocked, engine.NavigationFailure)):
         drv.navigate("http://127.0.0.1:8765/api/ping")
+
+
+def test_screenshot_retention_is_actually_enforced(data_dir, monkeypatch, tmp_path):
+    """The policy existed and was reachable by hand, but nothing ran it, so
+    screenshots grew one file per navigation forever."""
+    import time
+
+    from jarvis.computer_use import engine, retention
+
+    shots = tmp_path / "shots"
+    shots.mkdir()
+    monkeypatch.setattr(retention, "screenshot_dir", lambda: shots)
+    old = time.time() - 7200
+    for i in range(12):
+        path = shots / f"shot-{i}.png"
+        path.write_bytes(b"x" * 100)
+        os.utime(path, (old + i, old + i))
+
+    monkeypatch.setattr(retention, "MAX_SCREENSHOTS", 5)
+    engine.open_session(owner="research_specialist")
+
+    remaining = sorted(p.name for p in shots.glob("*.png"))
+    assert len(remaining) == 5, f"retention not applied: {remaining}"
+    # The newest survive; the oldest are reclaimed.
+    assert "shot-11.png" in remaining and "shot-0.png" not in remaining

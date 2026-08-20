@@ -454,7 +454,29 @@ def open_session(*, owner: str = "", task_id: str = "", label: str = "") -> dict
     # page would leak one browser tab per abandoned session.
     for expired in sessions.reap_expired():
         _close_session_page(expired)
+    _prune_artifacts()
     return sessions.create(owner=owner, task_id=task_id, label=label)
+
+
+def _prune_artifacts() -> None:
+    """Apply the screenshot retention policy.
+
+    The policy existed and was reachable by hand, but nothing ever ran it, so
+    screenshots grew one file per navigation forever. Opening a session is the
+    natural boundary: it is exactly when new ones start being produced.
+    """
+    try:
+        from jarvis.computer_use.retention import prune_screenshots
+
+        outcome = prune_screenshots()
+        if outcome.get("pruned"):
+            log.info(
+                "pruned %s screenshot(s), freed %.1f MB",
+                outcome["pruned"],
+                outcome.get("bytes_freed", 0) / 1048576,
+            )
+    except Exception:  # noqa: BLE001 - housekeeping must never block a session
+        log.debug("screenshot pruning skipped", exc_info=True)
 
 
 def run_steps(
