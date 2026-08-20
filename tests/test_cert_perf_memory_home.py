@@ -67,3 +67,104 @@ def test_repeated_scanning_of_a_large_corpus_stays_fast():
 
 def test_the_cache_is_bounded():
     assert trust_memory._is_test_artifact_cached.cache_info().maxsize is not None
+
+
+def test_calendar_memory_dates_is_not_recomputed_every_visit(data_dir, monkeypatch):
+    """Four ACM searches, each a full cognitive activation: 5.4s every time the
+    Calendar room opened, for suggestions that only change when memory does."""
+    from jarvis import calendar_services
+
+    calls = {"n": 0}
+
+    class FakeMemory:
+        def search(self, query, limit=3):
+            calls["n"] += 1
+            return [{"content": f"{query} of Sam is in June"}]
+
+    class FakeAssistant:
+        memory = FakeMemory()
+
+    calendar_services._MEMORY_DATES_CACHE.update({"at": 0.0, "value": None, "generation": None})
+    monkeypatch.setattr(calendar_services, "_memory_generation", lambda _a: ("stable",))
+
+    first = calendar_services.memory_dates(FakeAssistant())
+    after_first = calls["n"]
+    assert after_first > 0 and first["reminders"]
+
+    for _ in range(5):
+        again = calendar_services.memory_dates(FakeAssistant())
+    assert calls["n"] == after_first, "the searches ran again"
+    assert again["reminders"] == first["reminders"]
+
+
+def test_calendar_memory_dates_refreshes_when_memory_changes(data_dir, monkeypatch):
+    from jarvis import calendar_services
+
+    calls = {"n": 0}
+    generation = {"value": ("a",)}
+
+    class FakeMemory:
+        def search(self, query, limit=3):
+            calls["n"] += 1
+            return [{"content": f"{query} note"}]
+
+    class FakeAssistant:
+        memory = FakeMemory()
+
+    calendar_services._MEMORY_DATES_CACHE.update({"at": 0.0, "value": None, "generation": None})
+    monkeypatch.setattr(calendar_services, "_memory_generation", lambda _a: generation["value"])
+
+    calendar_services.memory_dates(FakeAssistant())
+    baseline = calls["n"]
+    calendar_services.memory_dates(FakeAssistant())
+    assert calls["n"] == baseline, "cache did not hold"
+
+    generation["value"] = ("b",)  # memory changed
+    calendar_services.memory_dates(FakeAssistant())
+    assert calls["n"] > baseline, "a memory change did not invalidate the cache"
+
+
+def test_startup_summary_is_not_rebuilt_on_every_request(data_dir, monkeypatch):
+    """Assembling it collects the whole Mission Control picture — ~78
+    subprocesses and a registry walk, 3.5s — and it ran on every request."""
+    from jarvis import runtime_introspection
+
+    builds = {"n": 0}
+
+    def fake_build():
+        builds["n"] += 1
+        return {"ok": True, "summary": "built"}
+
+    monkeypatch.setattr(runtime_introspection, "_build_startup_summary", fake_build)
+    runtime_introspection._STARTUP_SUMMARY_CACHE.update({"at": 0.0, "value": None})
+
+    first = runtime_introspection.format_startup_summary()
+    for _ in range(6):
+        again = runtime_introspection.format_startup_summary()
+
+    assert builds["n"] == 1, f"rebuilt {builds['n']} times"
+    assert again == first
+
+
+def test_startup_summary_cache_expires(data_dir, monkeypatch):
+    """A late-arriving component must not stay hidden."""
+    import time
+
+    from jarvis import runtime_introspection
+
+    builds = {"n": 0}
+    monkeypatch.setattr(
+        runtime_introspection,
+        "_build_startup_summary",
+        lambda: (builds.__setitem__("n", builds["n"] + 1), {"ok": True})[1],
+    )
+    runtime_introspection._STARTUP_SUMMARY_CACHE.update({"at": 0.0, "value": None})
+    runtime_introspection.format_startup_summary()
+    assert builds["n"] == 1
+
+    # Age the cache past its TTL.
+    runtime_introspection._STARTUP_SUMMARY_CACHE["at"] = (
+        time.time() - runtime_introspection._STARTUP_SUMMARY_TTL - 1
+    )
+    runtime_introspection.format_startup_summary()
+    assert builds["n"] == 2, "the cache never expires"

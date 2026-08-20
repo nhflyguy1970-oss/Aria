@@ -716,7 +716,31 @@ def format_status_summary(data: dict[str, Any] | None = None) -> str:
         return _format_connection_warning(str(exc))
 
 
+_STARTUP_SUMMARY_CACHE: dict[str, Any] = {"at": 0.0, "value": None}
+_STARTUP_SUMMARY_TTL = 30.0
+
+
 def format_startup_summary() -> dict[str, Any]:
+    """How this ARIA process started.
+
+    Assembling it collects the whole Mission Control picture — around 78
+    subprocesses and a full workstation registry walk, 3.5s — and it was
+    rebuilt on every request. What it describes barely moves, so it is held
+    briefly; the TTL keeps a late-arriving component from being hidden for
+    long.
+    """
+    import time as _time
+
+    cached = _STARTUP_SUMMARY_CACHE
+    if cached["value"] is not None and (_time.time() - cached["at"]) < _STARTUP_SUMMARY_TTL:
+        return dict(cached["value"])
+
+    result = _build_startup_summary()
+    _STARTUP_SUMMARY_CACHE.update({"at": _time.time(), "value": result})
+    return dict(result)
+
+
+def _build_startup_summary() -> dict[str, Any]:
     from jarvis.platform_runtime import runtime_connection_status
 
     conn = runtime_connection_status()

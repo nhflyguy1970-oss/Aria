@@ -92,7 +92,11 @@ def parse_natural_schedule(text: str) -> dict[str, Any]:
         "target": "journal",
         "requires_confirmation": True,
     }
-    return {"ok": True, "proposal": proposal, "message": f"Schedule “{title}” on {when}" + (f" at {time_str}" if time_str else "") + "?"}
+    return {
+        "ok": True,
+        "proposal": proposal,
+        "message": f"Schedule “{title}” on {when}" + (f" at {time_str}" if time_str else "") + "?",
+    }
 
 
 def detect_conflicts(journal, day: str | None = None) -> dict[str, Any]:
@@ -100,7 +104,11 @@ def detect_conflicts(journal, day: str | None = None) -> dict[str, Any]:
 
     d = (day or today_iso())[:10]
     detail = schedule_for_day(journal, d)
-    timed = [i for i in detail.get("items") or [] if i.get("time") and i.get("kind") in ("event", "block")]
+    timed = [
+        i
+        for i in detail.get("items") or []
+        if i.get("time") and i.get("kind") in ("event", "block")
+    ]
     conflicts = []
     for i, a in enumerate(timed):
         a0 = int(a["time"][:2]) * 60 + int(a["time"][3:5])
@@ -140,7 +148,9 @@ def detect_conflicts(journal, day: str | None = None) -> dict[str, Any]:
     if free:
         best = max(free, key=lambda w: w.get("minutes", 0))
         if best.get("minutes", 0) >= 45:
-            suggestions.append(f"Focus opportunity {best['start_hm']}–{best['end_hm']} ({best['minutes']}m)")
+            suggestions.append(
+                f"Focus opportunity {best['start_hm']}–{best['end_hm']} ({best['minutes']}m)"
+            )
     return {
         "ok": True,
         "day": d,
@@ -205,7 +215,9 @@ def meeting_prep(journal, item_id: str | None = None, *, assistant: Any = None) 
         from jarvis.planner_store import list_tasks
 
         for t in list_tasks()[:5]:
-            if any(w in (t.get("text") or "").lower() for w in title.lower().split()[:3] if len(w) > 3):
+            if any(
+                w in (t.get("text") or "").lower() for w in title.lower().split()[:3] if len(w) > 3
+            ):
                 tasks.append(t.get("text"))
     except Exception:
         pass
@@ -264,7 +276,40 @@ def focus_suggestions(journal, day: str | None = None) -> dict[str, Any]:
     }
 
 
+_MEMORY_DATES_CACHE: dict[str, Any] = {"at": 0.0, "value": None, "generation": None}
+_MEMORY_DATES_TTL = 120.0
+
+
+def _memory_generation(assistant: Any | None) -> Any:
+    """A cheap marker that changes when memory does."""
+    try:
+        from aria_core import acm_bridge
+
+        store = acm_bridge.get_engine().store
+        return (len(store.experiences), len(store.concepts))
+    except Exception:  # noqa: BLE001 - the cache simply falls back to its TTL
+        return None
+
+
 def memory_dates(assistant: Any | None = None) -> dict[str, Any]:
+    """Recurring-date reminders drawn from memory.
+
+    Four ACM searches, each of which runs a full cognitive activation: 5.4s
+    every time the Calendar room opened, for suggestions that only change when
+    memory does. The result is cached against a memory marker, with a TTL so a
+    missing marker can never pin a stale answer.
+    """
+    import time as _time
+
+    generation = _memory_generation(assistant)
+    cached = _MEMORY_DATES_CACHE
+    if (
+        cached["value"] is not None
+        and cached["generation"] == generation
+        and (_time.time() - cached["at"]) < _MEMORY_DATES_TTL
+    ):
+        return dict(cached["value"])
+
     hits = []
     try:
         if assistant is not None and getattr(assistant, "memory", None):
@@ -282,7 +327,9 @@ def memory_dates(assistant: Any | None = None) -> dict[str, Any]:
             continue
         seen.add(key)
         unique.append(h)
-    return {"ok": True, "reminders": unique[:10], "requires_confirmation": True}
+    result = {"ok": True, "reminders": unique[:10], "requires_confirmation": True}
+    _MEMORY_DATES_CACHE.update({"at": _time.time(), "value": result, "generation": generation})
+    return dict(result)
 
 
 def vision_extract_events(path: str) -> dict[str, Any]:
@@ -305,7 +352,9 @@ def vision_extract_events(path: str) -> dict[str, Any]:
         if parsed.get("ok"):
             candidates.append({**parsed["proposal"], "selected": True, "raw": line})
         else:
-            candidates.append({"title": line, "day": today_iso(), "time": None, "selected": True, "raw": line})
+            candidates.append(
+                {"title": line, "day": today_iso(), "time": None, "selected": True, "raw": line}
+            )
         if len(candidates) >= 15:
             break
     return {
@@ -355,7 +404,11 @@ def ha_calendar_mode(mode: str, *, enabled: bool | None = None) -> dict[str, Any
         set_pref("ha_calendar_active_mode", None)
         return {"ok": True, "mode": None, "home_assistant": None}
     if not prefer:
-        return {"ok": True, "mode": mode, "home_assistant": {"skipped": True, "reason": "disabled in prefs"}}
+        return {
+            "ok": True,
+            "mode": mode,
+            "home_assistant": {"skipped": True, "reason": "disabled in prefs"},
+        }
     set_pref("ha_calendar_active_mode", mode)
     ha_result = None
     try:
