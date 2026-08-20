@@ -38,7 +38,6 @@
   let _lastRouterInit = { view: null, at: 0 };
 
 
-  }
 
   function runInits(view) {
     // The room shell also initialises this panel on the same transition, so a
