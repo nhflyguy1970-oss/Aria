@@ -1393,8 +1393,14 @@ def register_routes(app, assistant):
         except ValueError as e:
             return JSONResponse(status_code=400, content={"ok": False, "message": str(e)})
 
+    # Plain `def`, not `async def`: reflection runs a local model for a minute or
+    # more, and an async handler would hold the event loop for that whole time —
+    # every other request stalls behind it, and ARIA's own health watchdog then
+    # restarts the server as unresponsive. FastAPI runs sync handlers in a
+    # threadpool, so the work happens off the loop. Same for the other handlers
+    # here that call a model or OCR.
     @app.post("/api/journal/assist/reflect")
-    async def journal_assist_reflect(scope: str = Form("today")):
+    def journal_assist_reflect(scope: str = Form("today")):
         from jarvis.journal_services import reflect_assistant
 
         return reflect_assistant(journal, scope)
@@ -1418,7 +1424,7 @@ def register_routes(app, assistant):
         return memory_surface(journal, q)
 
     @app.post("/api/journal/assist/writing")
-    async def journal_assist_writing(text: str = Form(...), mode: str = Form("organize")):
+    def journal_assist_writing(text: str = Form(...), mode: str = Form("organize")):
         from jarvis.journal_services import writing_assistant
 
         return writing_assistant(text, mode)
@@ -1430,7 +1436,7 @@ def register_routes(app, assistant):
         return parse_voice_rapid_log(transcript)
 
     @app.post("/api/journal/assist/vision")
-    async def journal_assist_vision(
+    def journal_assist_vision(
         ocr_text: str = Form(""),
         path: str = Form(""),
         source: str = Form("scan"),
@@ -1549,7 +1555,7 @@ def register_routes(app, assistant):
         return {"ok": True, **journal.migrate_month(from_month, to_month, dest=dest or "monthly")}
 
     @app.post("/api/journal/reflect")
-    async def journal_reflect(scope: str = Form("week")):
+    def journal_reflect(scope: str = Form("week")):
         text = journal.ai_reflect(scope)
         return {"ok": True, "reflection": text}
 
