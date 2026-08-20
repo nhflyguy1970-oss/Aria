@@ -59,3 +59,22 @@ def test_empty_content_is_rejected_before_any_write(memory_app):
     r = client.post("/api/memory", json={"content": "   "})
     assert r.status_code == 400
     assistant.memory.add.assert_not_called()
+
+
+def test_the_store_raises_a_refusal_not_a_bare_runtime_error(data_dir, monkeypatch):
+    """The store re-raised a plain RuntimeError with the real class name only in
+    the message text, so a route could not tell a refusal from a malfunction."""
+    import inspect
+
+    from jarvis.modules import memory as legacy_memory
+    from jarvis.modules import memory_sqlite
+
+    for module in (memory_sqlite.SqliteMemoryStore, legacy_memory.JsonMemoryStore):
+        src = inspect.getsource(module.add)
+        assert "ProductionIsolationError(" in src, f"{module.__name__} still raises a bare error"
+        assert 'raise RuntimeError(\n                        f"ACM authoritative' not in src
+
+
+def test_a_refusal_is_still_a_runtime_error_for_existing_callers():
+    """Callers that catch RuntimeError must keep working."""
+    assert issubclass(ProductionIsolationError, RuntimeError)

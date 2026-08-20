@@ -154,6 +154,7 @@ class SqliteMemoryStore:
                 note_legacy_write_while_primary,
                 redirect_legacy_write_to_acm,
             )
+            from jarvis.production_guard import ProductionIsolationError
 
             try:
                 redirected = redirect_legacy_write_to_acm(
@@ -162,7 +163,10 @@ class SqliteMemoryStore:
             except Exception as exc:
                 if acm_is_authoritative():
                     note_legacy_write_while_primary()
-                    raise RuntimeError(
+                    # A deliberate refusal. ProductionIsolationError subclasses
+                    # RuntimeError, so existing callers still catch it, while a
+                    # route can tell "we said no" apart from "we broke".
+                    raise ProductionIsolationError(
                         f"ACM authoritative: legacy MemoryStore write refused "
                         f"({type(exc).__name__})"
                     ) from exc
@@ -171,7 +175,7 @@ class SqliteMemoryStore:
                 return redirected
             if acm_is_authoritative():
                 note_legacy_write_while_primary()
-                raise RuntimeError(
+                raise ProductionIsolationError(
                     "ACM authoritative: legacy MemoryStore write refused "
                     "(redirect returned no entry)"
                 )
