@@ -176,6 +176,13 @@ def clear_steps() -> None:
 def stack_ready(*, force: bool = False) -> dict[str, bool]:
     now = time.time()
     with _LOCK:
+        # A live browser is proof the stack works. Probing again launches a
+        # second Chromium against the profile this process already holds, which
+        # fails — and the failure was reported as "Playwright/Chromium not
+        # available", so ARIA declared its own running browser missing and
+        # refused every new session while research was using it.
+        if _PAGE is not None or _CONTEXT is not None:
+            return {"playwright": True, "chromium": True}
         if (
             not force
             and _STACK_CACHE.get("stack")

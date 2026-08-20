@@ -180,3 +180,36 @@ def test_screenshot_retention_is_actually_enforced(data_dir, monkeypatch, tmp_pa
     assert len(remaining) == 5, f"retention not applied: {remaining}"
     # The newest survive; the oldest are reclaimed.
     assert "shot-11.png" in remaining and "shot-0.png" not in remaining
+
+
+def test_a_live_browser_is_not_reported_as_missing(monkeypatch):
+    """The health probe launched a second Chromium against the profile this
+    process already holds. It failed, and ARIA declared its own running browser
+    unavailable — refusing every new session while research was using it."""
+    from jarvis.browser_product import session as sess
+
+    probed = {"count": 0}
+
+    def _never_probe(**kw):
+        probed["count"] += 1
+        return {"playwright": False, "chromium": False}
+
+    monkeypatch.setattr("jarvis.browser_playwright.browser_stack_ready", _never_probe)
+    monkeypatch.setattr(sess, "_PAGE", object())
+
+    assert sess.stack_ready() == {"playwright": True, "chromium": True}
+    assert probed["count"] == 0, "probed while a live browser was already open"
+
+
+def test_without_a_live_browser_the_probe_still_runs(monkeypatch):
+    from jarvis.browser_product import session as sess
+
+    monkeypatch.setattr(sess, "_PAGE", None)
+    monkeypatch.setattr(sess, "_CONTEXT", None)
+    sess._STACK_CACHE["ts"] = 0.0
+    sess._STACK_CACHE["stack"] = {}
+    monkeypatch.setattr(
+        "jarvis.browser_playwright.browser_stack_ready",
+        lambda **kw: {"playwright": True, "chromium": False},
+    )
+    assert sess.stack_ready() == {"playwright": True, "chromium": False}
