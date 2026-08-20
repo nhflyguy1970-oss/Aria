@@ -21,6 +21,13 @@ UNVERIFIED_READY_BLOCKER = (
 
 
 def _ensure() -> None:
+    """Create the evidence directory. Only ever call this when about to write.
+
+    A production install that has never certified anything should hold no
+    certification artifacts at all, so merely reading the page must not bring
+    the directory into being — Production Integrity would then report it as
+    development residue, which is exactly what it is.
+    """
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -81,7 +88,6 @@ def _invalidate_run_if_needed(run_id: str) -> tuple[dict[str, Any] | None, bool]
 
 
 def invalidate_unverified_ready_runs() -> dict[str, Any]:
-    _ensure()
     idx = _read_json(INDEX_FILE, {"runs": []})
     run_ids = {str(row.get("id")) for row in idx.get("runs") or [] if row.get("id")}
     latest = _read_json(LATEST_FILE, None)
@@ -123,7 +129,6 @@ def invalidate_unverified_ready_runs() -> dict[str, Any]:
 
 
 def list_runs(*, limit: int = 40) -> list[dict[str, Any]]:
-    _ensure()
     invalidate_unverified_ready_runs()
     idx = _read_json(INDEX_FILE, {"runs": []})
     runs = idx.get("runs") or []
@@ -273,14 +278,23 @@ def list_evidence_files(run_id: str) -> list[dict[str, Any]]:
 
 
 def ingest_legacy_probes() -> dict[str, Any]:
-    """Index prior probe JSON files as historical evidence references."""
-    _ensure()
+    """Index prior probe JSON files as historical evidence references.
+
+    The index is not itself a probe. Including it meant every read appended a
+    record of the file's own previous size, so the file grew by a generation
+    each time the certification page was opened. And with nothing to index
+    there is nothing worth writing: an install that has never certified
+    anything keeps no certification directory.
+    """
+    if not CERT_ROOT.is_dir():
+        return {"ok": True, "count": 0, "probes": []}
     found = []
     for p in sorted(CERT_ROOT.glob("*.json")):
-        if p.name in ("index.json", "latest_run.json"):
+        if p.name in ("index.json", "latest_run.json", "legacy_probes.json"):
             continue
         found.append({"name": p.name, "path": str(p), "bytes": p.stat().st_size})
-    _write_json(CERT_ROOT / "legacy_probes.json", {"probes": found, "ts": time.time()})
+    if found:
+        _write_json(CERT_ROOT / "legacy_probes.json", {"probes": found, "ts": time.time()})
     return {"ok": True, "count": len(found), "probes": found}
 
 
