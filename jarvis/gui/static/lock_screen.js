@@ -76,13 +76,19 @@
   function showLock(show) {
     $("lockScreen")?.classList.toggle("hidden", !show);
     if (show) {
+      // Focus whichever field is actually on screen. Status may not have
+      // arrived at first paint, and focusing the hidden PIN field left the
+      // first screen a user ever sees with nothing focused at all.
       const master = $("lockMasterInput");
       const pin = $("lockPinInput");
-      if (lastStatus?.unlock_with === "master_password") {
-        master?.focus();
-      } else {
-        pin?.focus();
-      }
+      const visible = (el) => el && el.offsetParent !== null;
+      const target =
+        lastStatus?.unlock_with === "master_password"
+          ? master
+          : visible(pin)
+            ? pin
+            : master;
+      (visible(target) ? target : visible(master) ? master : pin)?.focus();
     }
   }
 
@@ -191,7 +197,10 @@
       if (master) body.master_password = master;
       else if (pin) body.pin = pin;
       else {
-        if (err) err.textContent = "Aria is locked. Enter your Aria Master Password to unlock the house.";
+        // A message identical to the standing prompt reads as the button doing
+        // nothing at all, so say what is missing instead.
+        if (err) err.textContent = "Enter your Aria Master Password first.";
+        $("lockMasterInput")?.focus();
         return;
       }
     } else {
