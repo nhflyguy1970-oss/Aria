@@ -106,11 +106,60 @@ class Workspace:
         return out
 
 
+# Directories a coding agent must never be handed as a workspace, even though
+# they exist and are writable. Confinement *within* a root is useless if the
+# root itself can be the system.
+_FORBIDDEN_ROOTS = (
+    "/",
+    "/bin",
+    "/boot",
+    "/dev",
+    "/etc",
+    "/lib",
+    "/lib64",
+    "/opt",
+    "/proc",
+    "/root",
+    "/run",
+    "/sbin",
+    "/srv",
+    "/sys",
+    "/usr",
+    "/var",
+)
+
+ALLOWED_ROOTS_ENV = "JARVIS_CODING_ROOTS"
+
+
+def _root_policy_error(path: Path) -> str:
+    """Why this directory may not be a workspace, or "" if it may."""
+    resolved = path.resolve()
+    if str(resolved) in _FORBIDDEN_ROOTS:
+        return f"{resolved} is a system directory"
+    if resolved == Path.home().resolve():
+        return "the home directory itself is too broad; use a project inside it"
+
+    allowed = [a for a in (os.getenv(ALLOWED_ROOTS_ENV) or "").split(os.pathsep) if a.strip()]
+    if allowed:
+        bases = [Path(a).expanduser().resolve() for a in allowed]
+        if not any(resolved == b or b in resolved.parents for b in bases):
+            return f"{resolved} is outside {ALLOWED_ROOTS_ENV}"
+
+    # Every undo path the agent has — rollback, baseline-dirty protection,
+    # commit review — is git. Without a repository there is no way back.
+    if not is_repo(resolved):
+        return f"{resolved} is not a git repository, so changes could not be undone"
+    return ""
+
+
 def open_workspace(root: str | Path, *, task_id: str = "") -> Workspace:
     """Authorize a workspace and snapshot pre-existing user modifications."""
     path = Path(root).expanduser()
     if not path.is_dir():
         raise WorkspaceError(f"Workspace root does not exist: {root}")
+    problem = _root_policy_error(path)
+    if problem:
+        raise WorkspaceError(f"Refusing workspace {root}: {problem}")
     ws = Workspace(root=path.resolve(), task_id=task_id)
     ws.baseline_dirty = tuple(dirty_files(ws.root))
     ws.branch = current_branch(ws.root)

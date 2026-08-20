@@ -59,6 +59,29 @@ class ActionStepRunner:
         return result if isinstance(result, dict) else {"result": result}
 
 
+class StepFailed(Exception):
+    """A step reported failure without raising.
+
+    ARIA actions signal failure by returning ``ok: False``; only exceptions were
+    treated as failures here, so a mission whose every step failed still
+    finished as "completed" with the failure buried in its result context.
+    """
+
+    def __init__(self, message: str, *, kind: str = ""):
+        super().__init__(message)
+        self.kind = kind
+
+
+def _raise_if_step_failed(step: dict[str, Any], index: int, output: Any) -> None:
+    if not isinstance(output, dict) or "ok" not in output:
+        return
+    if output.get("ok"):
+        return
+    name = step.get("name") or step.get("action") or f"step {index}"
+    message = str(output.get("message") or output.get("error") or "step reported failure")
+    raise StepFailed(f"{name}: {message}", kind=str(output.get("error_kind") or ""))
+
+
 def create_mission(
     objective: str, steps: list[dict[str, Any]] | None = None, *, kind: str = "generic"
 ) -> str:
@@ -129,6 +152,7 @@ def run(
             step = steps[index]
             store.record_event(mission_id, "step:start", f"{index}:{step.get('name') or ''}")
             output = runner(step, context)
+            _raise_if_step_failed(step, index, output)
             if isinstance(output, dict):
                 context.update(output)
 
@@ -142,6 +166,8 @@ def run(
         return store.transition(mission_id, store.CANCELLED, detail="cancelled mid-execution")
     except RetryableError as exc:
         return store.record_failure(mission_id, str(exc), kind=store.RETRYABLE)
+    except StepFailed as exc:
+        return store.record_failure(mission_id, str(exc), kind=store.TERMINAL)
     except Exception as exc:  # noqa: BLE001 - any step failure must be persisted
         log.exception("Mission %s failed", mission_id)
         return store.record_failure(mission_id, f"{type(exc).__name__}: {exc}", kind=store.TERMINAL)

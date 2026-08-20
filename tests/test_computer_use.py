@@ -588,12 +588,15 @@ def test_workflow_f_browser_failure_recovers(data_dir: Path, monkeypatch):
         ],
     )
     missions.run(mid, _mission_runner())
-    # The mission step completes (an action reporting failure is not an
-    # exception), but the browser layer records the truth: the step failed and
-    # the session is marked failed rather than silently reused.
-    result = missions.get(mid)["result"]["context"]
-    assert result["ok"] is False
-    assert result["error_kind"] == engine.ERR_BROWSER
+    # A step that reports failure fails the mission: this used to finish as
+    # "completed" with the failure buried in the result context. The browser
+    # layer records the truth too — the session is marked failed rather than
+    # silently reused.
+    mission = missions.get(mid)
+    assert mission["state"] == mstore.FAILED
+    assert engine.ERR_BROWSER in (mission.get("error") or "") or "browser" in (
+        mission.get("error") or ""
+    )
     assert sessions.get(sid)["state"] == sessions.FAILED
     # A fresh session recovers cleanly.
     new_sid = _session()

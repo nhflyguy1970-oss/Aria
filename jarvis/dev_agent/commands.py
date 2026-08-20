@@ -74,6 +74,22 @@ FORBIDDEN_BINARIES = (
 )
 FORBIDDEN_GIT = ("push", "reset", "clean", "rebase", "filter-branch", "gc", "prune", "remote")
 
+# The interpreter is allowed so the agent can run tests and project scripts.
+# Left unrestricted it also reinstates every forbidden binary: `python -c` runs
+# arbitrary code, and `python -m pip install` walks straight past the pip ban.
+# So inline code is refused, and -m is limited to development tooling.
+PY_ALLOWED_MODULES = (
+    "pytest",
+    "unittest",
+    "ruff",
+    "mypy",
+    "black",
+    "compileall",
+    "doctest",
+    "json.tool",
+    "venv",
+)
+
 LIMITS = {
     "timeout_s": 300,
     "max_output_chars": 40000,
@@ -108,9 +124,31 @@ def classify(argv: list[str]) -> str:
             raise CommandDenied(f"git {sub!r} is not permitted")
         return READ_ONLY
 
+    if binary in ("python", "python3"):
+        _check_python(argv)
+
     if allowed_sub and sub and sub not in allowed_sub:
         raise CommandDenied(f"{binary} {sub!r} is not permitted")
     return impact
+
+
+def _check_python(argv: list[str]) -> None:
+    """Keep the interpreter from becoming a way around every other rule."""
+    args = argv[1:]
+    if not args:
+        raise CommandDenied("An interactive interpreter is not permitted")
+    first = args[0]
+    if first in ("-c", "--command"):
+        raise CommandDenied("python -c runs arbitrary code and is denied")
+    if first == "-m":
+        module = args[1] if len(args) > 1 else ""
+        if module not in PY_ALLOWED_MODULES:
+            raise CommandDenied(f"python -m {module!r} is not on the development allowlist")
+        return
+    if first.startswith("-"):
+        raise CommandDenied(f"python {first!r} is not permitted")
+    if not first.endswith(".py"):
+        raise CommandDenied(f"python may only run a .py file from the workspace, not {first!r}")
 
 
 # Python tooling is frequently absent from PATH while importable, so it is run

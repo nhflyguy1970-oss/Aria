@@ -180,7 +180,10 @@ def test_command_runs_inside_workspace(data_dir: Path, fixture_repo: Path):
 
 def test_command_timeout_bounded(data_dir: Path, fixture_repo: Path):
     ws = _ws(fixture_repo)
-    out = commands.run(["python3", "-c", "import time; time.sleep(5)"], ws, timeout_s=1)
+    # A workspace script rather than `python -c`: inline code is denied outright,
+    # since it would reinstate every forbidden binary.
+    (fixture_repo / "slow.py").write_text("import time\ntime.sleep(5)\n", encoding="utf-8")
+    out = commands.run(["python3", "slow.py"], ws, timeout_s=1)
     assert out["ok"] is False and out["error_kind"] == "timeout"
 
 
