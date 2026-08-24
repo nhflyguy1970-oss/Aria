@@ -1,5 +1,47 @@
 # ARIA Repair Changelog
 
+## 2026-08-24 — BACKGROUND JOB ROUTING (false "server restart" on Deep Research)
+
+```text
+DATE: 2026-08-24
+PHASE: Frontend job routing only — Deep Research / Learn topic reported as lost
+SYMPTOM:
+  Chat showed "Lost track of this job after a server restart. Check Gallery for
+  your image." ~8s after a Learn topic / Deep Research request.
+ROOT CAUSE (forensic, not job persistence):
+  The ARIA server never restarted. chat_done.js routed ANY response carrying
+  pending=true to pollMediaJob(). _enqueue_background() returns
+  type="background_job", pending=true, and background_job had no frontend
+  handler, so Learn topic fell through to the media poller and queried
+  /api/media/job/<id>. Background jobs live in the coding registry and are only
+  readable at /api/coding/job/<id>, so the media endpoint 404s immediately and
+  permanently. media_jobs.js then assumed 404 == server restart and said so.
+  The research job kept running and completed normally, unseen.
+CODE:
+  - jarvis/gui/static/chat_done.js — resolveJobKind(); job *type* selects the
+    poller (coding_job | background_job | media_job); `pending` demoted to a
+    legacy fallback for untyped image/video producers only
+  - jarvis/gui/static/coding_jobs.js — one poller now serves coding and
+    background kinds over the shared /api/coding/job/<id> endpoint;
+    jarvisPollBackgroundJob exported
+  - jarvis/gui/static/media_jobs.js — 404 no longer claims a server restart
+TESTS:
+  - tests/test_chat_job_routing.py (21 checks)
+  - tests/js/job_routing_harness.mjs — loads the real static JS under node and
+    records fetched endpoints; verified to FAIL against pre-fix code
+VERIFY:
+  - Live production, real incident job ids:
+      /api/coding/job/d59ed9810986 -> 200 (label "Learn topic", result present)
+      /api/media/job/d59ed9810986  -> 404 (the old, broken route)
+  - Full suite: 3152 tests
+  - Production PID 1765 unchanged, systemd NRestarts=0 (no restart performed)
+NOT TOUCHED: coding_jobs/background_jobs registries, Deep Research engine, web
+  search, LLM routing, systemd config, restart policy, checkpoint/resume
+FOLLOW-UP (separate milestone): durable checkpoint/resume for background jobs —
+  they persist metadata but carry no resume payload, so a genuinely interrupted
+  research job still cannot be resumed.
+```
+
 ## 2026-08-11 — RELEASE BLOCKERS FIXED (BUG-026 / BUG-025 / GALLERY INFRA)
 
 ```text

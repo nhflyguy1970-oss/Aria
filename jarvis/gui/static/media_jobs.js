@@ -150,11 +150,14 @@
         if (!res.ok) {
           if (res.status === 404 && Date.now() - started > 8000) {
             finishJob();
+            // A 404 here only means this id is not in the media registry. It is not
+            // evidence of a server restart, so do not claim one.
             const body = messageEl?.querySelector?.(".msg-body") || messageEl;
-            if (body) {
+            if (body && !body.querySelector(".media-job-lost")) {
               body.insertAdjacentHTML(
                 "beforeend",
-                '<p class="warn">Lost track of this job after a server restart. Check <strong>Gallery</strong> for your image.</p>',
+                '<p class="warn media-job-lost">This media job is no longer tracked by the server. '
+                + 'If it finished, the result will be in <strong>Gallery</strong>.</p>',
               );
             }
             return;

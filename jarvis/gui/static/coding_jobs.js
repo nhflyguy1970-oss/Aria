@@ -7,17 +7,53 @@
     return d.innerHTML;
   }
 
-  async function pollCodingJob(jobId, messageEl) {
+  // Coding jobs and background jobs (Learn topic, document summarize, …) share one worker
+  // registry and one status endpoint — /api/coding/job/<id>. Only the surrounding copy
+  // differs, so one poller serves both kinds.
+  const JOB_KINDS = {
+    coding_job: {
+      prefix: "coding",
+      statusClass: "coding-job-status",
+      lostClass: "coding-job-lost",
+      working: "Coding agent working…",
+      failed: "Coding job failed",
+      lost: "Coding job is no longer tracked by the server. Send the same request again to retry.",
+      pollFailed: "Coding job polling failed",
+      stopToast: "Coding job stop requested",
+      stopError: "Could not stop coding job",
+      notifyTitle: "Coding ready",
+      notifyBody: "Proposal ready — Apply or Dismiss in chat",
+      nativeResult: true,
+    },
+    background_job: {
+      prefix: "background",
+      statusClass: "background-job-status",
+      lostClass: "background-job-lost",
+      working: "Working…",
+      failed: "Background job failed",
+      lost: "This job is no longer tracked by the server. Check <strong>Job center</strong> for its status.",
+      pollFailed: "Background job polling failed",
+      stopToast: "Job stop requested",
+      stopError: "Could not stop job",
+      notifyTitle: "Result ready",
+      notifyBody: "Your background job finished — see chat",
+      nativeResult: false,
+    },
+  };
+
+  async function pollCodingJob(jobId, messageEl, kind = "coding_job") {
+    const cfg = JOB_KINDS[kind] || JOB_KINDS.coding_job;
+    const trackKey = `${cfg.prefix}-${jobId}`;
     if (!window.activeMediaJobs) window.activeMediaJobs = new Set();
-    if (!jobId || window.activeMediaJobs.has(`coding-${jobId}`)) return;
-    window.activeMediaJobs.add(`coding-${jobId}`);
+    if (!jobId || window.activeMediaJobs.has(trackKey)) return;
+    window.activeMediaJobs.add(trackKey);
 
     const started = Date.now();
     const maxPollMs = 30 * 60 * 1000;
     const pollDelay = () => (window.isNativeApp?.() ? 3000 : 1500);
 
     const finishJob = () => {
-      window.activeMediaJobs.delete(`coding-${jobId}`);
+      window.activeMediaJobs.delete(trackKey);
     };
 
     const tick = async () => {
@@ -27,11 +63,10 @@
           if (res.status === 404 && Date.now() - started > 8000) {
             finishJob();
             const body = messageEl?.querySelector?.(".msg-body") || messageEl;
-            if (body && !body.querySelector(".coding-job-lost")) {
+            if (body && !body.querySelector(`.${cfg.lostClass}`)) {
               body.insertAdjacentHTML(
                 "beforeend",
-                "<p class=\"warn coding-job-lost\">Coding job was interrupted by a server restart. "
-                + "Send the same request again to retry.</p>",
+                `<p class="warn ${cfg.lostClass}">${cfg.lost}</p>`,
               );
             }
             return;
@@ -54,13 +89,13 @@
         }
         const body = messageEl?.querySelector?.(".msg-body") || messageEl;
         if (body) {
-          let note = body.querySelector(".coding-job-status");
+          let note = body.querySelector(`.${cfg.statusClass}`);
           if (!note) {
             note = document.createElement("p");
-            note.className = "coding-job-status muted";
+            note.className = `${cfg.statusClass} muted`;
             body.appendChild(note);
           }
-          note.textContent = data.message || "Coding agent working…";
+          note.textContent = data.message || cfg.working;
           if (data.steps?.length) {
             let stepsEl = body.querySelector(".coding-job-steps");
             if (!stepsEl) {
@@ -84,10 +119,10 @@
                     const err = await r.json().catch(() => ({}));
                     throw new Error(err.message || err.detail || `Cancel failed (${r.status})`);
                   }
-                  window.showAriaToast?.("Coding job stop requested", "ok", 2500);
+                  window.showAriaToast?.(cfg.stopToast, "ok", 2500);
                 })
                 .catch((e) => {
-                  window.showAriaToast?.(e.message || "Could not stop coding job", "err", 5000);
+                  window.showAriaToast?.(e.message || cfg.stopError, "err", 5000);
                 });
             });
             body.appendChild(btn);
@@ -96,7 +131,7 @@
         if (data.done) {
           finishJob();
           if (data.result?.ok) {
-            const prepare = window.prepareNativeCodingResult || ((r) => r);
+            const prepare = (cfg.nativeResult && window.prepareNativeCodingResult) || ((r) => r);
             const result = prepare(data.result);
             const mountResult = () => {
               window.handleDone?.(result, result.message || "", false, {
@@ -104,10 +139,10 @@
                 replaceQueued: true,
               });
               if (window.isNativeApp?.() && window.jarvisNotify) {
-                window.jarvisNotify("Coding ready", "Proposal ready — Apply or Dismiss in chat");
+                window.jarvisNotify(cfg.notifyTitle, cfg.notifyBody);
               }
             };
-            if (window.isNativeApp?.()) {
+            if (cfg.nativeResult && window.isNativeApp?.()) {
               setTimeout(mountResult, 900);
             } else {
               mountResult();
@@ -115,7 +150,7 @@
           } else if (body) {
             body.insertAdjacentHTML(
               "beforeend",
-              `<p class="warn">${escapeHtml(data.error || data.result?.message || "Coding job failed")}</p>`,
+              `<p class="warn">${escapeHtml(data.error || data.result?.message || cfg.failed)}</p>`,
             );
           }
           return;
@@ -127,7 +162,7 @@
         } else {
           finishJob();
           window.showAriaToast?.(
-            `Coding job polling failed: ${err?.message || err}`,
+            `${cfg.pollFailed}: ${err?.message || err}`,
             "err",
             5000,
           );
@@ -137,6 +172,10 @@
     tick();
   }
 
+  const pollBackgroundJob = (jobId, messageEl) => pollCodingJob(jobId, messageEl, "background_job");
+
   window.pollCodingJob = pollCodingJob;
   window.jarvisPollCodingJob = pollCodingJob;
+  window.pollBackgroundJob = pollBackgroundJob;
+  window.jarvisPollBackgroundJob = pollBackgroundJob;
 })();

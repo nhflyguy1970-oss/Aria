@@ -10,6 +10,22 @@
     lastMsg.appendChild(el);
   }
 
+  // Which poller owns a queued job. The job *type* decides — never `pending`, which every
+  // queued job sets regardless of registry. coding_job/background_job live in the coding
+  // registry (/api/coding/job/<id>); media_job lives in the media registry
+  // (/api/media/job/<id>). Polling a background job at the media endpoint 404s forever.
+  function resolveJobKind(data) {
+    if (!data?.job_id) return null;
+    const hasType = (t) => data.type === t || data.result_type === t;
+    if (hasType("coding_job")) return "coding_job";
+    if (hasType("background_job")) return "background_job";
+    if (hasType("media_job")) return "media_job";
+    // Untyped queued jobs: honour the backend queue hint, else fall back to the media
+    // registry, which is where the legacy untyped image/video producers still queue.
+    if (data.queue === "coding") return "background_job";
+    return data.pending ? "media_job" : null;
+  }
+
   function handleDone(data, text, streamed = false, options = {}) {
     const isNativeApp = () => window.isNativeApp?.() === true;
     const formatMessage = window.formatMessage || ((t) => t);
@@ -214,16 +230,17 @@
       }
     }
 
-    if (data.job_id && (data.type === "coding_job" || data.result_type === "coding_job")) {
-      const msg = document.querySelector(".message.assistant:last-child");
-      window.jarvisPollCodingJob?.(data.job_id, msg);
-    } else if (
-      data.job_id
-      && (data.type === "media_job" || data.result_type === "media_job" || data.pending)
-    ) {
-      const msg = options.targetBody?.closest?.(".message")
-        || document.querySelector(".message.assistant:last-child");
-      window.pollMediaJob?.(data.job_id, msg);
+    const jobKind = resolveJobKind(data);
+    if (jobKind) {
+      const lastMsg = document.querySelector(".message.assistant:last-child");
+      const targetMsg = options.targetBody?.closest?.(".message") || lastMsg;
+      if (jobKind === "coding_job") {
+        window.jarvisPollCodingJob?.(data.job_id, lastMsg);
+      } else if (jobKind === "background_job") {
+        window.jarvisPollBackgroundJob?.(data.job_id, targetMsg);
+      } else {
+        window.pollMediaJob?.(data.job_id, targetMsg);
+      }
     }
 
     if (data.memory_citations?.length) {
@@ -333,5 +350,5 @@
     }
   }
 
-  Object.assign(window, { handleDone, showChatWarnings });
+  Object.assign(window, { handleDone, showChatWarnings, resolveJobKind });
 })();
