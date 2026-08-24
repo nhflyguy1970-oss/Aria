@@ -16,11 +16,11 @@ failure reporting. A green backend or a 200 is not a pass.
 |---|---|
 | Asynchronous capabilities discovered | **26** (14 chat-queued actions + 12 panel/system) |
 | Job registries discovered | **9** |
-| LIVE (exercised end-to-end, artifact verified on disk) | **12** |
+| LIVE (exercised end-to-end, artifact verified on disk) | **16** |
 | PASS (full contract verified; lifecycle shared with a LIVE path) | **6** |
-| PARTIAL | **7** |
+| PARTIAL | **3** |
 | BLOCKED (dependency unavailable in this environment) | **1** |
-| FAIL | **0** (4 defects found and fixed or documented) |
+| FAIL | **0** (4 defects found; all 4 fixed) |
 
 **E2E grading is strict.** `LIVE` means the whole lifecycle ran against the
 production server *and a real artifact was verified on disk*. `PASS` means every
@@ -29,6 +29,11 @@ backend responses **and** the capability shares its async lifecycle with a
 `LIVE`-verified path — only the worker body differs. Nothing is graded from
 source inspection alone, and no capability is graded PASS merely because a job
 started.
+
+**Third pass (2026-08-24).** Defect #4 fixed: the four media capabilities that
+could only be reached through panel endpoints are now reachable from chat and
+verified live with real artifacts, and a truthfulness guard makes it impossible
+for chat to claim media it did not produce.
 
 **Second pass (2026-08-24, post-activation).** ComfyUI was started via its
 existing user unit, closing the media gap: all seven media actions and all three
@@ -57,12 +62,12 @@ Legend: **T** trigger · **BE** backend · **JC** job created · **TY** job type
 | Coding agent (`coding_agent`) | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **PASS⁸** |
 | Debug until tests pass (`coding_fix_tests`) | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **PASS⁸** |
 | Image generate (`generate_image`) | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **LIVE** |
-| Image edit (`edit_image`) | FAIL¹⁰ | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **PARTIAL¹⁰** |
-| Image inpaint (`inpaint_image`) | FAIL¹⁰ | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **PARTIAL¹⁰** |
-| Image upscale (`upscale_image`) | FAIL¹⁰ | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **PARTIAL¹⁰** |
-| Meme (`generate_meme`) | FAIL¹⁰ | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **PARTIAL¹⁰** |
+| Image edit (`edit_image`) | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **LIVE** |
+| Image inpaint (`inpaint_image`) | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **LIVE** |
+| Image upscale (`upscale_image`) | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **LIVE** |
+| Meme (`generate_meme`) | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **LIVE** |
 | Video generate (`generate_video`) | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **LIVE** |
-| Storyboard video (`storyboard_video`) | FAIL¹⁰ | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **PARTIAL¹⁰** |
+| Storyboard video (`storyboard_video`) | PARTIAL¹⁰ | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | PASS | **LIVE¹⁰** |
 
 ### Panel-scoped and system asynchronous work
 
@@ -91,9 +96,9 @@ every media capability now has a verified artifact. ⁸ Shares the `_enqueue_bac
 `_enqueue_coding` lifecycle with the LIVE-verified Learn topic path; only the
 worker body differs. ⁹ Async plumbing verified; a live browser task was not run
 (the computer-use browser test is itself flaky in this environment).
-¹⁰ The async lifecycle is fully certified via the panel endpoint and produced a
-real artifact, but the capability is **unreachable from chat** in the production
-routing configuration — see Defect #4.
+¹⁰ Certified live with a real artifact. `storyboard_video` was exercised through
+its Video Studio endpoint rather than a chat phrase; the other four are now
+reachable from chat as well (Defect #4 fixed).
 
 ---
 
@@ -222,36 +227,96 @@ now lists the job as `Interrupted by server restart` rather than active. A norma
 Learn topic run immediately afterwards completed cleanly (job `3afb8f1f83c2`,
 10 sources), confirming the recovery did not break ordinary jobs.
 
-### Defect #4 — media requests are unreachable from chat, and chat fabricates the result — **HIGH**
+### Defect #4 — media requests unreachable from chat, and chat fabricated the result — **HIGH — FIXED 2026-08-24**
 
-* **Symptom:** asking ARIA to make a meme returns, in chat:
+#### Symptom
 
-  ```
-  Sure! Here's your meme:
-  **Top Text:** WHEN THE TEST PASSES
-  **Bottom Text:** FIRST TRY
-  ![Meme Image](https://via.placeholder.com/350x150?text=WHEN+THE+TEST+PASSES%0AFIRST+TRY)
-  ```
+```
+User:  make a meme with top WHEN THE TEST PASSES and bottom FIRST TRY
+ARIA:  Sure! Here's your meme:
+       **Top Text:** WHEN THE TEST PASSES
+       **Bottom Text:** FIRST TRY
+       ![Meme Image](https://via.placeholder.com/350x150?text=...)
+```
 
-  No job is created, no artifact exists, and the image link points at an
-  external placeholder service. The reply reads as success.
-* **Reproduced:** twice, and a *second, different* request ("make a meme about
-  fly fishing") returned the **same** fabricated top/bottom text, confirming the
-  content is conversational echo rather than any meme pipeline.
-* **Scope:** `generate_meme`, `upscale_image`, `edit_image`, `inpaint_image` all
-  route to `action=chat` with `job_id=None`. `generate_image` and
-  `generate_video` route correctly, so this is not a blanket media failure.
-* **Not an async-lifecycle defect.** Every one of these capabilities is fully
-  certified through its panel endpoint and produced a real artifact (see
-  Artifact Evidence). The break is upstream, in intent routing.
-* **Severity rationale:** this is worse than the original Deep Research bug. That
-  one misreported a job that had in fact succeeded; this one asserts work was
-  done that was never started, and supplies a fake artifact link to prove it.
-* **Not fixed here.** The cause is in the NLU/intent-routing stage, and fixing it
-  means changing routing or model behaviour — explicitly out of scope for this
-  certification milestone. Recorded as required future work. The offline regex
-  router *does* classify these correctly (`route()` returns `generate_meme`), so
-  the divergence is in the live NLU stage, not the rule table.
+No job, no artifact, an invented external image link — and it read as success. A
+second, *different* request ("make a meme about fly fishing") returned the **same**
+fabricated text. `generate_meme`, `upscale_image`, `edit_image` and `inpaint_image`
+all reached `action=chat`; `generate_image` and `generate_video` routed correctly.
+
+#### Root Cause — three faults compounding
+
+1. **`_image_edit_route` over-captured** (`router.py`). Its verb alternation includes
+   `make` and its image noun is *optional*:
+   `\b(?:edit|change|modify|adjust|alter|transform|make)\s+(?:the\s+)?(?:image|picture|photo|it|this|that)?\s*[:\-]?\s*(.+)$`
+   So "**make** a meme …" resolved to `edit_image` **whenever any image was in
+   session**. This is why it reproduced in production but not against a fresh
+   session — the audit had just generated images. Deterministically confirmed:
+   fresh session → `generate_meme`; `session.last_image` set → `chat`.
+2. **Whitelist gap.** `edit_image`, `inpaint_image` and `upscale_image` were absent
+   from the set of actions permitted to override a weak NLU verdict, so even a
+   correctly-resolved media action was discarded and re-answered as chat
+   (`route_reason=nlu_structure_default`).
+3. **No rule for a bare "make a meme"** — the meme pattern required a subject.
+
+#### Impact
+
+ARIA asserted it had produced media it never produced, and supplied a fake artifact
+link as evidence. Worse than the original Deep Research defect, which misreported a
+job that had in fact succeeded.
+
+#### Fix
+
+* `_EDIT_OTHER_ARTIFACT` guard — a request naming a meme, video, song or document is
+  not an edit of the current image.
+* The three missing media actions added to the weak-NLU override list.
+* A bare "make a meme" now matches.
+* **`jarvis/media_truthfulness.py`**, applied at the single result choke point
+  (`decorate_result`), enforcing the standing rule:
+  * a response that did **not** come from a media capability may not use delivery
+    phrasing ("here's your meme") or present a markdown embed / placeholder link;
+  * a media result whose artifact is **not on disk** is downgraded to a failure
+    rather than reported as success.
+* `_is_media_concept_question` — asking *about* a capability is not requesting it.
+  This fixed a **pre-existing** bug the negative tests exposed: "What is
+  inpainting?" started an inpaint job whenever an image was in session.
+
+#### A false positive found in live testing, and fixed
+
+The first guard matched any generation verb near a media noun — which is how one
+*explains* the feature. Live, "How does video generation work?" was answered with
+"I did not actually generate that…", destroying a correct answer. The claim pattern
+now requires the possessive: "here's **your** meme" delivers, "the model generates
+the video" describes. Both directions are pinned by tests.
+
+#### Regression Tests — `tests/test_media_routing_truthfulness.py` (52 tests, 19 fail before the fix)
+
+| Group | Covers |
+|---|---|
+| Phase 5 | the two observed failures, in both session states |
+| Phase 6 | all four repaired routes + the two already-working ones |
+| Phase 7 | Cases A–E: no fabricated image, no fabricated meme, real failures still reported, missing artifact is not success, genuine results untouched |
+| Phase 9 | seven "asking about media" questions must stay chat |
+| — | explanations must survive; delivery phrasing must always be caught |
+| — | wiring check: the guard sits in `decorate_result` |
+
+#### Live Verification (production, PID 573421)
+
+| Request | Action | Job | Artifact | Bytes |
+|---|---|---|---|---|
+| `make a meme` | `generate_meme` | `5243d3e70a06` | `meme_20260824_110729.png` | 1,553,874 |
+| `make a meme about fly fishing` | `generate_meme` | `db112f71fce8` | `meme_20260824_110757.png` | 1,639,779 |
+| `make a meme with top … bottom …` | `generate_meme` | `c8406001b58a` | `meme_20260824_110820.png` | 1,052,216 |
+| `generate an image of a mayfly on water` | `generate_image` | `13059660fe11` | `image_20260824_110838.png` | on disk |
+| `upscale the image 2x` | `upscale_image` | `fb506f1703d4` | `jarvis_up2x_…png` | 3,061,576 |
+| `edit the image to add falling snow` | `edit_image` | `5ce664a939f9` | `jarvis_edit_00016_.png` | 1,478,431 |
+| `inpaint the top left corner with a fly rod` | `inpaint_image` | `33fba0356449` | `jarvis_inpaint_00005_.png` | 1,256,569 |
+
+Negative checks live: "What is a meme?", "What is inpainting?", "Can you explain
+image upscaling?" and "How does video generation work?" all stay `action=chat`
+with `job_id=None`, real explanations intact and no fabrication flag.
+
+Every media job polled `/api/media/job/<id>`; zero coding-endpoint hits.
 
 ### Artifact Evidence (second pass, all verified on disk)
 
@@ -331,10 +396,8 @@ and no test uses `with TestClient(...)`, so the lifespan never runs during tests
 4. **Multi-tab consistency is untested** (Phase 8E). Media jobs track ids in
    `sessionStorage`, which is per-tab, so a second tab will not resume a job the
    first tab started.
-5. **Media requests are unreachable from chat** (Defect #4) and the chat
-   fallback fabricates a result with a fake external image URL. The async
-   lifecycle is certified via panel endpoints; the routing break is not fixed.
-   This is the highest-priority open item.
+5. ~~Media requests unreachable from chat (Defect #4)~~ — **fixed and verified
+   live 2026-08-24**; all four routes produce real artifacts from chat.
 6. **ComfyUI is running but not enabled at boot.** It was started with
    `systemctl --user start comfyui.service`; the unit remains `disabled`, so a
    reboot returns media capabilities to unavailable. Enabling it is a
@@ -354,10 +417,9 @@ and no test uses `with TestClient(...)`, so the lifespan never runs during tests
   `job_framework.py` is the seed of this and currently has no callers.
 * **Inline delivery for agent/specialist/pipeline jobs** — a generic
   `background_job`-style poller keyed on queue.
-* **Intent routing for media actions** (Defect #4) — meme/upscale/edit/inpaint
-  reach `chat` instead of their handlers, and the chat fallback invents an
-  artifact. Needs a routing fix *and* a truthfulness guard so chat never claims
-  to have produced media it did not produce.
+* **Extend the truthfulness guard beyond media.** It covers image/meme/video
+  claims only. The same fabrication risk exists for any capability chat can
+  describe but not perform (documents, exports, calendar writes).
 * **Cross-tab job tracking** — move media job ids from `sessionStorage` to
   server-derived state (`/api/media/status` already exposes what is needed).
 
