@@ -341,6 +341,90 @@ Phase 10 recovery checks: an unknown media id returns `404 {"ok": false,
 remain discoverable with their artifact path; `/api/media/status` still lists
 recent jobs for post-reconnect discovery.
 
+## Truthfulness Coverage (extended 2026-08-24)
+
+The rule established by Defect #4, now applied to every externally consequential
+capability:
+
+> ARIA must never claim it performed an action unless the corresponding capability
+> actually performed it and there is authoritative evidence the result occurred.
+
+One check, four families, at the single choke point in `decorate_result`
+(`jarvis/capability_truthfulness.py`, formerly `media_truthfulness.py` — renamed
+because its scope changed, with `verify_media_claims` kept as an alias).
+
+| Capability | Action Routing | Execution Evidence | Artifact / Side-Effect Verification | False Success Guard | Capability Questions | Live E2E |
+|---|---|---|---|---|---|---|
+| **Media** | PASS | PASS | PASS (file on disk) | PASS | LIVE | **LIVE** |
+| **Documents** | PASS | PASS | PASS (file on disk) | PASS | LIVE | **PARTIAL¹** |
+| **Exports** | PASS | PASS | PASS (file on disk) | PASS | LIVE | **PARTIAL¹** |
+| **Calendar** | PASS | PASS | PARTIAL² | PASS | LIVE | **BLOCKED³** |
+
+¹ The guard and artifact check are covered by tests and the shared code path is
+the one media exercised live; no new document/export artifact was generated in
+this pass.
+² A calendar write leaves a record, not a file. The evidence is the action
+identity plus the planner's own success — `create_commitment` returns
+`item_id: planner:<id>`, but `planner_add_event`'s chat result does not surface
+it. That is the strongest confirmation the integration exposes today; **no
+event-ID field was invented** to make the check look stronger than it is.
+³ `planner_add_event` writes to the owner's real `data/planner.db`, and there is
+no test calendar, dedicated account or dry-run mode. **No real event was created
+to earn a certification PASS.** Closing this needs a safe test procedure — see
+Future Work.
+
+### Evidence per family
+
+| Family | Actions treated as authoritative | Evidence used |
+|---|---|---|
+| media | `generate_image`, `edit_image`, `inpaint_image`, `upscale_image`, `generate_meme`, `generate_video`, `storyboard_video` | `image_path` / `video_path` / `output_path` / `audio_path` on disk |
+| document | `data_export`, `document_export`, `journal_export` | `doc_path` / `export_path` / `file_path` / `output_path` on disk |
+| export | `data_export`, `health_export`, `health_backup` | `export_path` / `file_path` / `output_path` on disk |
+| calendar | `planner_add_event`, `planner_add_task`, `planner_set_alarm`, `planner_set_timer`, `journal_schedule` | action identity + `ok` (no artifact file exists) |
+
+### Why this is not a keyword filter
+
+The previous milestone's over-correction — replacing a correct answer to "How does
+video generation work?" with a did-not-generate notice — is the failure this design
+exists to avoid. A claim counts only as a **first-person delivery assertion**, and
+three classes of sentence are explicitly exempt:
+
+| Sentence | Why it is not a claim |
+|---|---|
+| "How does calendar writing work?" | ends in `?` |
+| "What would happen if I added this to my calendar?" | contains a literal *"I added this to my calendar"* — exempt via the hypothetical guard (`would`, `if I`, `suppose`, `for example`) |
+| "The report was created by the finance team." | passive / third person, not ARIA claiming |
+| "Calendar writes create events in your calendar." | describes the feature |
+| "I added it to your calendar." | **is** a claim — requires a real planner write |
+
+### Regression Tests
+
+`tests/test_capability_truthfulness.py` — **64 tests, 24 fail against the
+media-only guard**. Cases A–F per family, nine capability questions, seven
+explanations, seven hypotheticals, five keyword false-positive probes, plus the
+video-explanation regression and a choke-point wiring check.
+`tests/test_media_routing_truthfulness.py` (52 tests) passes **unchanged**.
+
+### Live verification (production PID 687927)
+
+Capability questions all returned genuine explanations with no fabrication flag
+and **no side effects**:
+
+```
+How do you create a PDF?                          -> chat, stripped=None
+Can you export CSV files?                         -> chat, stripped=None
+How does calendar integration work?               -> chat, stripped=None
+What would happen if I added this to my calendar? -> chat, stripped=None
+Why would someone export to CSV?                  -> chat, stripped=None
+```
+
+Side-effect audit after the probes: `data/planner.db` still holds **0 events and
+0 tasks** with an unchanged mtime (2026-08-20), and `data/exports/` gained no
+files. Asking about a capability created nothing.
+
+The claim-catching direction is certified by fixtures rather than live traffic,
+because forcing a live fabrication would require issuing a real write request.
+
 ## Certification Gaps (why the Deep Research bug escaped)
 
 | # | What was tested before | What was missing | How the bug escaped |
@@ -417,9 +501,12 @@ and no test uses `with TestClient(...)`, so the lifespan never runs during tests
   `job_framework.py` is the seed of this and currently has no callers.
 * **Inline delivery for agent/specialist/pipeline jobs** — a generic
   `background_job`-style poller keyed on queue.
-* **Extend the truthfulness guard beyond media.** It covers image/meme/video
-  claims only. The same fabrication risk exists for any capability chat can
-  describe but not perform (documents, exports, calendar writes).
+* **A safe calendar test procedure** — a test calendar, a dedicated account or a
+  dry-run flag — so calendar writes can be certified LIVE without touching the
+  owner's real planner. This is the one BLOCKED cell in the truthfulness matrix.
+* **Surface `item_id` on `planner_add_event`'s chat result.** `create_commitment`
+  already returns it; the chat path drops it. Carrying it through would upgrade
+  calendar side-effect verification from PARTIAL to PASS.
 * **Cross-tab job tracking** — move media job ids from `sessionStorage` to
   server-derived state (`/api/media/status` already exposes what is needed).
 
