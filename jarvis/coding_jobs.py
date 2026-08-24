@@ -26,6 +26,7 @@ _active_ids: set[str] = set()
 _history: deque[str] = deque(maxlen=32)
 _state_file = DATA_DIR / "coding_jobs_state.json"
 _loaded = False
+_recovered = False
 
 JOB_TIMEOUT_SEC = float(os.getenv("JARVIS_CODING_JOB_TIMEOUT_SEC", "600"))
 WORKER_COUNT = max(1, min(4, int(os.getenv("JARVIS_CODING_WORKERS", "1"))))
@@ -82,6 +83,48 @@ def _load_persisted_state() -> None:
             if jid and jid not in _jobs:
                 _jobs[jid] = dict(item)
                 _history.append(jid)
+
+
+def recover_stale_jobs() -> int:
+    """After a restart, close out jobs that were still running when we died.
+
+    Coding and background jobs carry no resume payload, so an interrupted run
+    cannot continue — but it must not keep reporting itself as running either.
+    Without this, a job killed mid-flight is reloaded with done=False and the
+    UI polls "Working…" against a corpse until its client-side timeout.
+
+    Reaching this at process start IS evidence of a restart, so the message may
+    say so. A mid-poll 404 is not, and must never make that claim.
+    """
+    global _recovered
+    if _recovered:
+        return 0
+    _recovered = True
+    _load_persisted_state()
+    interrupted = 0
+    with _lock:
+        for job in list(_jobs.values()):
+            if job.get("done"):
+                continue
+            interrupted += 1
+            label = job.get("label") or "Job"
+            job["done"] = True
+            job["pct"] = 100
+            job["cancelled"] = False
+            job["error"] = "Interrupted by server restart"
+            job["message"] = job["error"]
+            job["result"] = {
+                "ok": False,
+                "message": (
+                    f"**{label}** was interrupted when the server restarted and "
+                    "could not be resumed. Send the request again to retry."
+                ),
+            }
+            _stats["failed"] += 1
+            logger.warning("Recovered stale coding job %s (%s)", job.get("id"), label)
+    if interrupted:
+        _persist_state()
+    return interrupted
 
 
 def job_stats() -> dict[str, Any]:

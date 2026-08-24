@@ -67,6 +67,7 @@ assistant = _AssistantProxy()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from jarvis import audio_wakeword
+    from jarvis.coding_jobs import recover_stale_jobs as recover_stale_coding_jobs
     from jarvis.media_jobs import recover_stale_jobs, resume_interrupted_jobs
     from jarvis.production_guard import ProductionIsolationError, assert_environment_consistent
     import logging as _log
@@ -80,6 +81,7 @@ async def lifespan(app: FastAPI):
         raise
 
     recover_stale_jobs()
+    recover_stale_coding_jobs()
     try:
         # Re-queue resumable media work once the assistant proxy is live.
         threading.Thread(
