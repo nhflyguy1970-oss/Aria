@@ -216,14 +216,23 @@ frontend router over real backend responses.
 
 ## Test Suite Triage (Phase 12)
 
-Full suite in the isolated worktree: **3099 passed, 3 failed, 61 skipped**.
-No unrelated test was weakened, skipped or deleted to obtain a green run.
+Final full suite in the isolated worktree: **3115 passed, 4 failed, 61 skipped**.
+Control run with all four new test files excluded: **3064 passed, 3 failed**.
+No unrelated test was weakened, skipped, deleted or modified to obtain a green run.
 
 | Failure | Class | Evidence | Action |
 |---|---|---|---|
-| `test_async_job_contract::test_every_queued_action_is_discovered` | **New — mine, order-dependent** | Passed in isolation, failed in the full run. Other tests register probe actions into the process-global handler registry. | **Fixed.** Discovery now runs in a clean subprocess, so it is order-independent by construction. Verified against a 551-test mixed slice. |
-| `test_computer_use::test_real_browser_navigate_extract_click` | **Pre-existing flake** | Passes alone (1 passed), with the new tests (90 passed), and with its whole file (69 passed). A control run of the full suite with the new test file excluded still failed identically (3069 passed, 1 failed). Chromium is installed. | Left alone. Not caused by this work; unrelated to async jobs. |
-| `test_health_phase4::test_live_write_still_blocked` | **Environmental — worktree artifact** | `sqlite3.OperationalError: unable to open database file`. Fails in the worktree, passes in the production checkout. The worktree has no `data/` tree (gitignored), so the health DB cannot open. | Left alone. An artifact of running isolated, which Phase 13 requires. Touches no file changed here. |
+| `test_async_job_contract::test_every_queued_action_is_discovered` | **New — mine, order-dependent** | Passed alone, failed in the full run. Other tests register probe actions into the process-global handler registry. | **Fixed.** Discovery now runs in a clean subprocess, order-independent by construction. Verified against a 551-test mixed slice; absent from all later runs. |
+| `test_computer_use::test_real_browser_navigate_extract_click` | **Pre-existing flake** | Passes alone (1), with the new tests (90), with its whole file (69). Fails in the control run with the new tests excluded. Chromium is installed. | Left alone. Unrelated to async jobs. |
+| `test_health_phase4::test_live_write_still_blocked` | **Environmental — worktree artifact** | `sqlite3.OperationalError: unable to open database file`. Fails in the worktree, passes in the production checkout: the worktree has no `data/` tree (gitignored). Also fails in the control run. | Left alone. An artifact of the isolation Phase 13 requires. |
+| `test_inference::test_chat_with_usage_defaults_to_ollama` | **Pre-existing flake** | **Fails in the control run with every new test file excluded** — decisive. Passes alone. Depends on process-global inference-gateway routing state. | Left alone. |
+| `test_world_state::test_world_state_cache_ttl` | **Pre-existing intermittent flake** | Failed 1 of 3 full runs. Passed 15/15 in isolation. Passed when run directly after all four new test files (56 passed), so there is no deterministic interaction. Asserts `a["ts"] == b["ts"]` against a time-based module-global cache — racy under load. | Left alone. |
+
+**Blast-radius check.** This work touched `coding_jobs.py`, `gui/server.py`,
+`job_framework.py` and `static/audio_studio.js`. Neither flaky module references
+any of them (0 matches). The `server.py` change lives in the FastAPI lifespan,
+and no test uses `with TestClient(...)`, so the lifespan never runs during tests
+— the new recovery call cannot perturb any other test.
 
 ## Remaining Risks
 
