@@ -36,14 +36,17 @@ MEDIA_RESULT_TYPES = frozenset({"image_result", "video_result", "media_job"})
 # Keys that name a produced artifact.
 ARTIFACT_KEYS = ("image_path", "video_path", "output_path", "audio_path")
 
-# "Here's your meme", "I generated the video", "I've upscaled the image", …
+# Only *delivery* phrasing counts as a claim. "Here's your meme" hands something
+# over; "the model generates the video in latent space" explains how a feature
+# works. An earlier, looser pattern matched the explanation too and replaced a
+# perfectly good answer to "How does video generation work?" — so the possessive
+# is required, which is what separates handing over from describing.
 _MEDIA_CLAIM = re.compile(
-    r"(?:here(?:'|’)?s|here is)\s+(?:your|the|a|an)\s+"
+    r"(?:here(?:'|’)?s|here is)\s+your\s+"
     r"(?:image|images|meme|memes|video|videos|picture|photo|gif|animation|render)\b"
-    r"|(?:i(?:'|’)?(?:ve| have)?\s*)?"
+    r"|i(?:'|’)?(?:ve| have)?\s*(?:just\s+)?"
     r"(?:created|generated|made|produced|rendered|drew|drawn|upscaled|enlarged|"
-    r"edited|retouched|inpainted)\s+"
-    r"(?:the|your|a|an|this)?\s*"
+    r"edited|retouched|inpainted)\s+your\s+"
     r"(?:image|meme|video|picture|photo|gif|animation)\b",
     re.I,
 )

@@ -245,6 +245,49 @@ def test_ordinary_chat_is_untouched():
     assert verify_media_claims(dict(plain), action="chat") == plain
 
 
+@pytest.mark.parametrize(
+    "explanation",
+    [
+        "Video generation works by denoising latents over many steps. The model "
+        "generates the video frame by frame.",
+        "Image upscaling increases resolution using a model created for that purpose.",
+        "Inpainting fills a masked region. The model generates the image content "
+        "that belongs there.",
+        "When I generate an image, a diffusion model turns noise into pixels.",
+        "A meme is an idea or image that spreads from person to person.",
+    ],
+)
+def test_explaining_media_is_not_claiming_media(explanation):
+    """Regression: the first guard replaced a real answer to "How does video
+    generation work?" with the did-not-generate notice. Describing a feature is
+    not delivering an artifact."""
+    from jarvis.media_truthfulness import verify_media_claims
+
+    out = verify_media_claims({"ok": True, "message": explanation}, action="chat")
+    assert not out.get("fabricated_media_claim_removed"), (
+        f"explanatory answer was wrongly treated as a fabricated claim: {explanation!r}"
+    )
+    assert out["message"] == explanation
+
+
+@pytest.mark.parametrize(
+    "delivery",
+    [
+        "Sure! Here's your meme:\n![Meme](https://via.placeholder.com/350x150)",
+        "Here's your image of a trout.",
+        "I've generated your video, enjoy!",
+        "I just created your meme.",
+    ],
+)
+def test_delivery_phrasing_is_always_caught(delivery):
+    from jarvis.media_truthfulness import verify_media_claims
+
+    out = verify_media_claims({"ok": True, "message": delivery}, action="chat")
+    assert out.get("fabricated_media_claim_removed") is True, (
+        f"fabricated delivery slipped through: {delivery!r}"
+    )
+
+
 def test_guard_runs_on_every_dispatched_result():
     """Wiring check: the guard must sit at the shared result choke point."""
     from pathlib import Path
