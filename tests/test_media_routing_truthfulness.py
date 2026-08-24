@@ -163,7 +163,7 @@ FABRICATED_MEME = {
 
 
 def test_case_a_chat_cannot_fabricate_an_image():
-    from jarvis.media_truthfulness import verify_media_claims
+    from jarvis.capability_truthfulness import verify_media_claims
 
     out = verify_media_claims(
         {"ok": True, "message": "Here's your image of a trout!\n![img](http://example.com/a.png)"},
@@ -175,7 +175,7 @@ def test_case_a_chat_cannot_fabricate_an_image():
 
 
 def test_case_b_chat_cannot_fabricate_a_meme():
-    from jarvis.media_truthfulness import verify_media_claims
+    from jarvis.capability_truthfulness import verify_media_claims
 
     out = verify_media_claims(dict(FABRICATED_MEME), action="chat")
     assert out.get("fabricated_media_claim_removed") is True
@@ -184,7 +184,7 @@ def test_case_b_chat_cannot_fabricate_a_meme():
 
 
 def test_case_c_failed_media_operation_still_reports_failure():
-    from jarvis.media_truthfulness import verify_media_claims
+    from jarvis.capability_truthfulness import verify_media_claims
 
     failed = {"ok": False, "type": "image_result", "message": "ComfyUI refused the workflow"}
     out = verify_media_claims(failed, action="generate_image")
@@ -193,7 +193,7 @@ def test_case_c_failed_media_operation_still_reports_failure():
 
 
 def test_case_d_missing_artifact_is_not_a_success(tmp_path):
-    from jarvis.media_truthfulness import verify_media_claims
+    from jarvis.capability_truthfulness import verify_media_claims
 
     out = verify_media_claims(
         {
@@ -210,7 +210,7 @@ def test_case_d_missing_artifact_is_not_a_success(tmp_path):
 
 
 def test_case_e_real_media_result_passes_through_untouched(tmp_path):
-    from jarvis.media_truthfulness import verify_media_claims
+    from jarvis.capability_truthfulness import verify_media_claims
 
     art = tmp_path / "real.png"
     art.write_bytes(b"\x89PNG\r\n\x1a\n" + b"0" * 64)
@@ -226,7 +226,7 @@ def test_case_e_real_media_result_passes_through_untouched(tmp_path):
 
 def test_queued_media_job_is_not_treated_as_a_fabrication():
     """The pending stub says work is under way — that claim is true."""
-    from jarvis.media_truthfulness import verify_media_claims
+    from jarvis.capability_truthfulness import verify_media_claims
 
     queued = {
         "ok": True,
@@ -239,7 +239,7 @@ def test_queued_media_job_is_not_treated_as_a_fabrication():
 
 
 def test_ordinary_chat_is_untouched():
-    from jarvis.media_truthfulness import verify_media_claims
+    from jarvis.capability_truthfulness import verify_media_claims
 
     plain = {"ok": True, "message": "A meme is an idea that spreads from person to person."}
     assert verify_media_claims(dict(plain), action="chat") == plain
@@ -261,7 +261,7 @@ def test_explaining_media_is_not_claiming_media(explanation):
     """Regression: the first guard replaced a real answer to "How does video
     generation work?" with the did-not-generate notice. Describing a feature is
     not delivering an artifact."""
-    from jarvis.media_truthfulness import verify_media_claims
+    from jarvis.capability_truthfulness import verify_media_claims
 
     out = verify_media_claims({"ok": True, "message": explanation}, action="chat")
     assert not out.get("fabricated_media_claim_removed"), (
@@ -280,7 +280,7 @@ def test_explaining_media_is_not_claiming_media(explanation):
     ],
 )
 def test_delivery_phrasing_is_always_caught(delivery):
-    from jarvis.media_truthfulness import verify_media_claims
+    from jarvis.capability_truthfulness import verify_media_claims
 
     out = verify_media_claims({"ok": True, "message": delivery}, action="chat")
     assert out.get("fabricated_media_claim_removed") is True, (
@@ -295,6 +295,6 @@ def test_guard_runs_on_every_dispatched_result():
     src = Path(__file__).resolve().parent.parent / "jarvis" / "conversation_pipeline.py"
     text = src.read_text(encoding="utf-8")
     start = text.index("def decorate_result(")
-    assert "verify_media_claims" in text[start : start + 1500], (
+    assert "verify_capability_claims" in text[start : start + 1500], (
         "the truthfulness guard is not applied in decorate_result"
     )
