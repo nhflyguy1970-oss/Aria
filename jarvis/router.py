@@ -89,12 +89,25 @@ def _image_generation_route(message: str, lower: str | None = None) -> dict | No
     return {"action": "generate_image", "params": {"prompt": prompt}}
 
 
+# A request to make some *other* artifact is not an image edit, even when an image
+# is in context. _image_edit_route's verb list includes "make" and its image noun is
+# optional, so without this "make a meme …" is captured as edit_image the moment a
+# generated image exists in the session.
+_EDIT_OTHER_ARTIFACT = re.compile(
+    r"\b(?:meme|video|gif|animation|storyboard|song|music|audio|voice|podcast|"
+    r"document|report|summary|chart|graph|slide|presentation)s?\b",
+    re.I,
+)
+
+
 def _image_edit_route(message: str, lower: str, session: SessionContext) -> dict | None:
     """Whole-image img2img edit when the user has a recent image in context."""
     path = session.last_image
     if not path:
         return None
     if re.search(r"\b(?:inpaint|in-?paint|mask)\b", lower):
+        return None
+    if _EDIT_OTHER_ARTIFACT.search(lower):
         return None
     if re.search(
         r"\b(?:generate|create|draw|paint|make)\s+(?:an?\s+)?(?:new\s+)?"
@@ -725,9 +738,33 @@ def _extract_inpaint_prompt(message: str) -> str:
     return message.strip()
 
 
+# Asking *about* a capability is not requesting it. Without this, "What is
+# inpainting?" starts an inpaint job as soon as any image is in session.
+_MEDIA_CONCEPT_QUESTION = re.compile(
+    r"^\s*(?:what(?:'|’)?s|what\s+is|what\s+are|what\s+does|how\s+do(?:es)?|"
+    r"how\s+can|why\s+do(?:es)?|when\s+should|which|can\s+you\s+explain|"
+    r"explain|tell\s+me\s+about|define)\b",
+    re.I,
+)
+
+
+def _is_media_concept_question(message: str) -> bool:
+    """True for questions about media features rather than instructions to run them."""
+    text = (message or "").strip()
+    if not text:
+        return False
+    if not _MEDIA_CONCEPT_QUESTION.search(text):
+        return False
+    # "How do I upscale this image?" is still a request for action on *this* image;
+    # a bare concept question is not.
+    return not re.search(r"\b(?:this|that|it|my|the)\s+(?:image|picture|photo|pic)\b", text, re.I)
+
+
 def _maybe_inpaint_route(message: str, lower: str, session: SessionContext) -> dict | None:
     """Route inpaint only when the user clearly means edit an existing image region."""
     if _is_meta_self_question(message):
+        return None
+    if _is_media_concept_question(message):
         return None
     if _INPAINT_NOT_IMAGE.search(message):
         return None
@@ -3044,6 +3081,10 @@ def _quick_route(
     if m := re.search(r"\b(?:make|create|generate)\s+(?:an?\s+)?meme\s+(?:about\s+)?(.+)", lower):
         return {"action": "generate_meme", "params": {"idea": m.group(1).strip()}}
 
+    # "make a meme" with no subject is still a meme request, not conversation.
+    if re.search(r"\b(?:make|create|generate)\s+(?:an?\s+)?meme\b\s*$", lower):
+        return {"action": "generate_meme", "params": {"idea": ""}}
+
     if re.search(r"\bmeme\s+(?:generator|time|ify)\b", lower):
         return {"action": "generate_meme", "params": {"idea": message}}
 
@@ -3677,6 +3718,11 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
                     "generate_video",
                     "generate_meme",
                     "storyboard_video",
+                    # Without these three a correctly-resolved media action was
+                    # dropped on the floor and answered as generic chat.
+                    "edit_image",
+                    "inpaint_image",
+                    "upscale_image",
                 ):
                     quick_override = normalize_route_intent(quick_override)
                     quick_override.setdefault(

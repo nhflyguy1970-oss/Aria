@@ -159,6 +159,10 @@ def decorate_result(
     result["action"] = action
     result["thinking"] = intent.get("thinking", "")
     result["uncensored"] = is_uncensored()
+    # ARIA may not claim it produced media unless a media capability actually did.
+    from jarvis.media_truthfulness import verify_media_claims
+
+    result = verify_media_claims(result, action=action)
     if is_info_action(action) or action in ("capabilities", "models_info", "greeting"):
         result["type"] = "info"
     if result.get("module"):
