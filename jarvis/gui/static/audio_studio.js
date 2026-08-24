@@ -34,10 +34,14 @@ async function pollAudioJob(jobId, statusEl, onDone, progressWrap, progressFill)
   activeAudioJobId = jobId;
   const cancelBtn = document.getElementById("audioJobCancelBtn");
   cancelBtn?.classList.remove("hidden");
+  // Distinguish "the job vanished from the registry" from "we waited too long" —
+  // audio jobs are in-memory only, so a restart drops them and the old code
+  // reported that as a timeout, which it never was.
+  let lost = false;
   while (Date.now() - start < maxWait) {
     const res = await fetch(`/api/audio/job/${encodeURIComponent(jobId)}`);
     const data = await res.json();
-    if (!data.ok) break;
+    if (!data.ok) { lost = true; break; }
     updateAudioJobProgress(data.pct, data.message, statusEl, progressWrap, progressFill);
     if (data.done) {
       activeAudioJobId = null;
@@ -57,7 +61,11 @@ async function pollAudioJob(jobId, statusEl, onDone, progressWrap, progressFill)
     }
     await new Promise((r) => setTimeout(r, 1200));
   }
-  if (statusEl) statusEl.textContent = "Job timed out";
+  if (statusEl) {
+    statusEl.textContent = lost
+      ? "This audio job is no longer tracked by the server — run it again to retry."
+      : "Job timed out";
+  }
   activeAudioJobId = null;
   cancelBtn?.classList.add("hidden");
   return null;
