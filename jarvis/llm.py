@@ -1,10 +1,12 @@
 import json
+import logging
 import os
 import queue
 import re
 import threading
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
+from contextlib import contextmanager
 
 from ollama import chat, embed, generate
 
@@ -212,6 +214,104 @@ _EMBED_AVAIL_TTL_OK = float(os.getenv("JARVIS_EMBED_AVAIL_TTL", "60"))
 _EMBED_AVAIL_TTL_FAIL = float(os.getenv("JARVIS_EMBED_AVAIL_FAIL_TTL", "5"))
 
 
+class EmbeddingError(RuntimeError):
+    """An embedding call failed. Distinct from "this text has no vector".
+
+    embed_text returns [] for both "the model is offline" and "the call blew
+    up", and documents_rag stored that [] as the chunk's embedding -- an index
+    entry that looks indexed but can never match anything. Callers that build
+    an index need to tell the two apart, so the batch API raises instead.
+    """
+
+
+def embed_timeout() -> float:
+    """Seconds any single embedding request may take.
+
+    There was no timeout at all. A cold nomic-embed load alone measures ~21 s
+    (keep_alive=0 pays it on every call), so the ceiling has to clear that
+    while still bounding a stalled runner instead of blocking forever.
+    """
+    try:
+        return max(5.0, float(os.getenv("JARVIS_EMBED_TIMEOUT", "90")))
+    except ValueError:
+        return 90.0
+
+
+def _embed_keep_alive() -> float | str:
+    """0 normally; a real TTL while a bulk session holds the model.
+
+    keep_alive=0 exists because OLLAMA_MAX_LOADED_MODELS=1 means a resident
+    embed runner evicts the chat model and costs 45 s+ on the next token
+    stream. That is right for a one-off embed and catastrophic for a rebuild:
+    every chunk pays a fresh cold load. A session opts into residency for its
+    own duration and hands the slot back at the end.
+    """
+    session = _EMBED_SESSION.get("keep_alive")
+    return session if session is not None else 0
+
+
+_EMBED_SESSION: dict[str, object] = {"keep_alive": None, "depth": 0}
+
+
+@contextmanager
+def embed_session(*, keep_alive: str | None = None) -> Iterator[None]:
+    """Keep the embedding model resident for a batch of work.
+
+    Measured on this box: 20.49 s per text with keep_alive=0, versus 3.4 ms
+    per text inside a session once the model is loaded -- the difference
+    between a six-hour document rebuild and a twenty-five-second one.
+
+    The slot is given back on exit so chat is not left competing with an idle
+    embed runner.
+    """
+    ttl = keep_alive or os.getenv("JARVIS_EMBED_SESSION_KEEPALIVE", "5m")
+    _EMBED_SESSION["depth"] = int(_EMBED_SESSION.get("depth") or 0) + 1
+    _EMBED_SESSION["keep_alive"] = ttl
+    try:
+        yield
+    finally:
+        _EMBED_SESSION["depth"] = max(0, int(_EMBED_SESSION.get("depth") or 1) - 1)
+        if not _EMBED_SESSION["depth"]:
+            _EMBED_SESSION["keep_alive"] = None
+            try:
+                from jarvis.ollama_runtime import unload_model
+
+                unload_model(model_for("embed"), timeout=10)
+            except Exception as exc:
+                logging.getLogger("jarvis").debug(
+                    "embed session unload failed (harmless): %s", exc
+                )
+
+
+def _embed_client():
+    from ollama import Client
+
+    return Client(timeout=embed_timeout())
+
+
+def embed_batch(texts: Sequence[str]) -> list[list[float]]:
+    """Embed several texts in one request. Raises EmbeddingError on failure.
+
+    The Ollama embed API takes a sequence, so a batch costs one round trip and
+    one model load instead of N of each.
+    """
+    items = [t for t in texts]
+    if not items:
+        return []
+    try:
+        response = _embed_client().embed(
+            model=model_for("embed"), input=items, keep_alive=_embed_keep_alive()
+        )
+        vectors = list(response["embeddings"])
+    except Exception as exc:
+        raise EmbeddingError(f"{type(exc).__name__}: {exc}") from exc
+    if len(vectors) != len(items):
+        raise EmbeddingError(
+            f"asked for {len(items)} embeddings, got {len(vectors)}"
+        )
+    return [list(v) for v in vectors]
+
+
 def embed_text(text: str) -> list[float]:
     global _embed_warned
     try:
@@ -222,43 +322,24 @@ def embed_text(text: str) -> list[float]:
             return []
     except Exception:
         pass
-    vectors: list[float] = []
     try:
-        # keep_alive=0: do not leave nomic-embed resident. With
-        # OLLAMA_MAX_LOADED_MODELS=1 it otherwise evicts the chat model and
-        # forces a 45s+ cold reload on the next token stream.
-        #
-        # Do NOT follow with a synchronous unload_model(/api/generate,
-        # timeout=15): that alone exceeded the Search corpus wall (~12s) and
-        # made documents retrieval hang until timeout. keep_alive=0 is enough.
-        response = embed(model=model_for("embed"), input=text, keep_alive=0)
-        vectors = response["embeddings"][0]
-    except TypeError:
-        # Older ollama clients may not accept keep_alive on embed().
-        try:
-            response = embed(model=model_for("embed"), input=text)
-            vectors = response["embeddings"][0]
-        except Exception as exc:
-            if not _embed_warned:
-                import logging
-
-                logging.getLogger("jarvis").warning(
-                    "Embedding model unavailable (%s) — memory search may be degraded",
-                    exc,
-                )
-                _embed_warned = True
-            return []
-    except Exception as exc:
+        return embed_batch([text])[0]
+    except EmbeddingError as exc:
         if not _embed_warned:
-            import logging
-
             logging.getLogger("jarvis").warning(
-                "Embedding model unavailable (%s) — memory search may be degraded",
+                "Embedding model unavailable (%s) - memory search may be degraded",
                 exc,
             )
             _embed_warned = True
         return []
-    return vectors
+    except Exception as exc:
+        if not _embed_warned:
+            logging.getLogger("jarvis").warning(
+                "Embedding model unavailable (%s) - memory search may be degraded",
+                exc,
+            )
+            _embed_warned = True
+        return []
 
 
 def cosine_similarity(a: list[float], b: list[float]) -> float:

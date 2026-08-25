@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
+import os
 import re
 from pathlib import Path
 
 from jarvis import llm
 from jarvis.config import DATA_DIR
 from jarvis.document_pipeline import DOCUMENT_EXTENSIONS, DOCUMENTS_DIR, parse_document
+from jarvis.model_store import model_for
 
 log = logging.getLogger("jarvis.documents_rag")
 
@@ -23,12 +26,24 @@ INDEX_EXTENSIONS = frozenset(DOCUMENT_EXTENSIONS)
 _INDEX_MEM: dict[str, object] = {"mtime": None, "chunks": None}
 
 
+def _doc_sha(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8", "replace")).hexdigest()
+
+
 def _chunks(text: str, source: str, title: str) -> list[dict]:
+    sha = _doc_sha(text)
     parts = []
     for i in range(0, len(text), MAX_CHUNK):
         chunk = text[i : i + MAX_CHUNK].strip()
         if chunk:
-            parts.append({"source": source, "title": title, "text": chunk})
+            parts.append({
+                "source": source, "title": title, "text": chunk,
+                # What this chunk was made from, so a later run can tell an
+                # unchanged document from a changed one without re-embedding
+                # it to find out.
+                "doc_sha": sha,
+                "embed_model": model_for("embed"),
+            })
     return parts
 
 
@@ -155,16 +170,11 @@ def build_index(*, force: bool = False) -> list[dict]:
     return knowledge_index_build(CORPUS_DOCUMENT_LIBRARY, _build_index_impl, force=force)
 
 
-def _build_index_impl(*, force: bool = False) -> list[dict]:
-    if not force:
-        existing = _read_index_file()
-        if existing is not None and not index_needs_rebuild():
-            return existing
-    chunks: list[dict] = []
+def _collect_documents() -> list[tuple[str, str, str]]:
+    """(relative path, title, text) for every indexable document."""
+    out: list[tuple[str, str, str]] = []
     if not DOCUMENTS_DIR.is_dir():
-        INDEX_FILE.parent.mkdir(parents=True, exist_ok=True)
-        INDEX_FILE.write_text("[]", encoding="utf-8")
-        return []
+        return out
     for path in sorted(DOCUMENTS_DIR.rglob("*")):
         if not path.is_file() or path.suffix.lower() not in INDEX_EXTENSIONS:
             continue
@@ -175,20 +185,147 @@ def _build_index_impl(*, force: bool = False) -> list[dict]:
             text = doc.full_text.strip()
             if not text:
                 continue
-            rel = str(path.relative_to(DOCUMENTS_DIR))
-            chunks.extend(_chunks(text, rel, doc.title or path.stem))
+            out.append((str(path.relative_to(DOCUMENTS_DIR)),
+                        doc.title or path.stem, text))
         except Exception as exc:
             log.warning("Skip document index %s: %s", path, exc)
-    embed_ok = llm.embed_available()
-    for c in chunks:
-        c["embedding"] = llm.embed_text(c["text"]) if embed_ok else []
+    return out
+
+
+def _write_index(chunks: list[dict]) -> None:
     INDEX_FILE.parent.mkdir(parents=True, exist_ok=True)
     from jarvis.live_data_guard import assert_live_write_allowed
 
     assert_live_write_allowed(INDEX_FILE)
-    INDEX_FILE.write_text(json.dumps(chunks, indent=0), encoding="utf-8")
-    log.info("Document index built: %d chunks", len(chunks))
-    return chunks
+    tmp = INDEX_FILE.with_suffix(INDEX_FILE.suffix + ".tmp")
+    tmp.write_text(json.dumps(chunks, indent=0), encoding="utf-8")
+    os.replace(tmp, INDEX_FILE)
+    _INDEX_MEM["mtime"] = None
+    _INDEX_MEM["chunks"] = None
+
+
+def _unembedded(chunks: list[dict]) -> list[dict]:
+    """Chunks that carry no vector, and say so.
+
+    An empty `embedding` is what semantic scoring skips, and `embed_pending`
+    makes the reason explicit rather than leaving a caller to infer it from an
+    empty list -- the difference between "indexed, matched nothing" and "never
+    embedded".
+    """
+    out = []
+    for c in chunks:
+        c["embedding"] = []
+        c["embed_pending"] = True
+        out.append(c)
+    return out
+
+
+def _build_index_impl(*, force: bool = False) -> list[dict]:
+    """Bring the index up to date, embedding only what actually changed.
+
+    A full rebuild used to be the only option, and at ~20 s per chunk (every
+    embedding paid a cold model load) that put a 1,000-chunk corpus at roughly
+    six hours -- so in practice the index was never rebuilt, and withdrawn
+    documents kept being served. Reusing the vectors of unchanged documents
+    and embedding the rest inside one resident session turns that into a job
+    measured in seconds.
+
+    `force` re-reads every document but still reuses vectors whose document
+    content and embedding model are unchanged; only a model change or an edit
+    costs a new embedding.
+    """
+    existing = _read_index_file() or []
+    if not force and existing and not index_needs_rebuild():
+        return existing
+
+    docs = _collect_documents()
+    if not docs:
+        _write_index([])
+        return []
+
+    model = model_for("embed")
+    # Vectors worth keeping: same document content, same embedding model, and
+    # an embedding that is actually there. A chunk stored with an empty vector
+    # is an index entry that can never match, so it is treated as missing.
+    reusable: dict[tuple[str, str, str], list[dict]] = {}
+    for c in existing:
+        if not c.get("embedding"):
+            continue
+        if str(c.get("embed_model") or "") != model:
+            continue
+        key = (str(c.get("source") or ""), str(c.get("doc_sha") or ""),
+               str(c.get("text") or ""))
+        reusable.setdefault(key, []).append(c)
+
+    final: list[dict] = []
+    needed: list[dict] = []
+    for rel, title, text in docs:
+        for chunk in _chunks(text, rel, title):
+            key = (chunk["source"], chunk["doc_sha"], chunk["text"])
+            hit = reusable.get(key)
+            if hit:
+                final.append(hit.pop())
+                if not hit:
+                    reusable.pop(key, None)
+            else:
+                needed.append(chunk)
+
+    if not needed:
+        log.info("Document index current: %d chunks, nothing to embed", len(final))
+        _write_index(final)
+        return final
+
+    if not llm.embed_available():
+        # No embedding model. The chunk text is still worth indexing --
+        # _search_impl scores only chunks that actually carry a vector and
+        # falls back to keyword search -- so dropping these would lose
+        # keyword retrieval for no gain. Mark them so the state is truthful
+        # and the next build retries them.
+        log.warning(
+            "Embedding model unavailable - %d chunk(s) indexed for keyword "
+            "search only", len(needed),
+        )
+        final.extend(_unembedded(needed))
+        _write_index(final)
+        return final
+
+    batch_size = max(1, int(os.getenv("JARVIS_EMBED_BATCH", "32")))
+    embedded = failed = 0
+    with llm.embed_session():
+        for start in range(0, len(needed), batch_size):
+            batch = needed[start : start + batch_size]
+            try:
+                vectors = llm.embed_batch([c["text"] for c in batch])
+            except llm.EmbeddingError as exc:
+                # Bounded: this batch is done being tried. The text is still
+                # indexed for keyword search, flagged as carrying no vector so
+                # nothing treats it as semantically searchable and the next
+                # build picks it up again.
+                failed += len(batch)
+                log.error("Embedding batch failed (%s) - %d chunk(s) indexed "
+                          "for keyword search only", exc, len(batch))
+                final.extend(_unembedded(batch))
+                _write_index(final)
+                continue
+            for chunk, vec in zip(batch, vectors):
+                if not vec:
+                    failed += 1
+                    final.extend(_unembedded([chunk]))
+                    continue
+                chunk["embedding"] = vec
+                chunk.pop("embed_pending", None)
+                final.append(chunk)
+                embedded += 1
+            # Checkpoint after every batch so an interrupted run resumes from
+            # here instead of starting the whole corpus again.
+            _write_index(final)
+
+    _write_index(final)
+    log.info(
+        "Document index updated: %d chunks (%d reused, %d embedded, %d failed)",
+        len(final), len(final) - embedded, embedded, failed,
+    )
+    return final
 
 
 def _load_index(*, auto_refresh: bool = True) -> list[dict]:
