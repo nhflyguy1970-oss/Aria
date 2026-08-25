@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from typing import Any
 
 from jarvis.flytying.config import blackfly_data_available, recipe_source_path
 from jarvis.flytying.hook_utils import hook_matches_filter
+from jarvis.flytying.quarantine import STATUS_ERROR, filter_records, quarantine_state
+
+log = logging.getLogger("jarvis.flytying.index")
 
 _CACHE: dict[str, Any] = {
     "mtime": 0,
@@ -17,6 +21,8 @@ _CACHE: dict[str, Any] = {
     "by_name": {},
     "browse_sorted": [],
     "browse_rows": [],
+    "quarantined": 0,
+    "raw_count": 0,
 }
 _LOCK = threading.Lock()
 
@@ -83,9 +89,33 @@ def _load() -> None:
     path = recipe_source_path()
     mtime = path.stat().st_mtime if path.is_file() else 0
     path_s = str(path)
-    if _CACHE["mtime"] == mtime and _CACHE["path"] == path_s and _CACHE["recipes"]:
+    # The quarantine is part of what this index *is*, so its manifest belongs
+    # in the cache key: releasing a record must not need a dataset touch to
+    # take effect, and quarantining one must not wait for the next rebuild.
+    state = quarantine_state()
+    stamp = (mtime, state["status"], state["count"])
+    if _CACHE["mtime"] == stamp and _CACHE["path"] == path_s and _CACHE["recipes"]:
+        return
+    if state["status"] == STATUS_ERROR:
+        # Blackfly says some records are fabricated but will not say which.
+        # Serving the library unfiltered would serve those records, so serve
+        # nothing and make the reason obvious.
+        log.error(
+            "fly-tying library withheld: quarantine manifest at %s could not "
+            "be read, so quarantined records cannot be excluded", state["path"],
+        )
+        _CACHE["mtime"] = stamp
+        _CACHE["path"] = path_s
+        _CACHE["recipes"] = []
+        _CACHE["by_id"] = {}
+        _CACHE["by_name"] = {}
+        _CACHE["browse_sorted"] = []
+        _CACHE["browse_rows"] = []
+        _CACHE["quarantined"] = 0
+        _CACHE["raw_count"] = 0
         return
     recipes: list[dict[str, Any]] = []
+    raw: list[dict[str, Any]] = []
     by_id: dict[str, dict[str, Any]] = {}
     by_name: dict[str, dict[str, Any]] = {}
     if path.is_file():
@@ -99,15 +129,26 @@ def _load() -> None:
                 continue
             if not isinstance(item, dict):
                 continue
-            recipes.append(item)
-            rid = _recipe_id(item)
-            name = _recipe_name(item).lower()
-            by_id[rid] = item
-            if name:
-                prev = by_name.get(name)
-                if prev is None or _recipe_lookup_rank(item) > _recipe_lookup_rank(prev):
-                    by_name[name] = item
-    _CACHE["mtime"] = mtime
+            raw.append(item)
+    # Filter once here, before by_id / by_name / browse are derived, so every
+    # structure this index exposes is built from the same clean corpus and no
+    # reader has to remember to re-apply the rule.
+    kept, dropped = filter_records(raw, state["ids"])
+    if dropped:
+        log.info("fly-tying index: excluded %d quarantined record(s) of %d",
+                 dropped, len(raw))
+    for item in kept:
+        recipes.append(item)
+        rid = _recipe_id(item)
+        name = _recipe_name(item).lower()
+        by_id[rid] = item
+        if name:
+            prev = by_name.get(name)
+            if prev is None or _recipe_lookup_rank(item) > _recipe_lookup_rank(prev):
+                by_name[name] = item
+    _CACHE["quarantined"] = dropped
+    _CACHE["raw_count"] = len(raw)
+    _CACHE["mtime"] = stamp
     _CACHE["path"] = path_s
     _CACHE["recipes"] = recipes
     _CACHE["by_id"] = by_id

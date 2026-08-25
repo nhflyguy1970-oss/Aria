@@ -75,6 +75,8 @@ def enrich_article_embeds(*, limit: int = 8) -> dict[str, Any]:
     from jarvis.flytying.video_fetch import discover_videos_from_url
     from jarvis.flytying.videos_store import get_cached_videos, set_cached_videos
 
+    from jarvis.flytying.quarantine import is_quarantined as _is_quarantined
+
     path = recipe_source_path()
     if not path.is_file():
         return {"ok": False, "enriched": 0, "message": "Blackfly scraped database missing"}
@@ -102,6 +104,8 @@ def enrich_article_embeds(*, limit: int = 8) -> dict[str, Any]:
                 if has_embed:
                     continue
                 if get_cached_videos(source):
+                    continue
+                if _is_quarantined(recipe):
                     continue
                 targets.append((source, name))
     except OSError as exc:
@@ -180,6 +184,14 @@ def pattern_of_the_day(*, day: str | None = None) -> dict[str, Any]:
                     recipes.append(item)
     except OSError as exc:
         return {"ok": False, "message": str(exc)}
+    # Pattern of the Day reads the raw scrape directly, so it applies the
+    # quarantine itself -- and learn_recipe_of_the_day writes the result into
+    # Memory, which would make a fabricated pattern permanent. Filtering before
+    # the index arithmetic below also keeps the choice deterministic over the
+    # clean corpus rather than shifting with what happens to be excluded.
+    from jarvis.flytying.quarantine import filter_records
+
+    recipes, _dropped = filter_records(recipes)
     if not recipes:
         return {"ok": False, "message": "empty library"}
 

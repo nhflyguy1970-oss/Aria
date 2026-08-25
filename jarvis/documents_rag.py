@@ -50,13 +50,43 @@ def _latest_document_mtime() -> float:
     return latest
 
 
+def _eligible_documents() -> set[str]:
+    """Relative paths of every file the index is supposed to cover."""
+    out: set[str] = set()
+    if not DOCUMENTS_DIR.is_dir():
+        return out
+    for path in DOCUMENTS_DIR.rglob("*"):
+        if not path.is_file() or path.name.startswith("."):
+            continue
+        if path.suffix.lower() not in INDEX_EXTENSIONS:
+            continue
+        if ".cache" in path.parts:
+            continue
+        try:
+            out.add(str(path.relative_to(DOCUMENTS_DIR)))
+        except ValueError:
+            continue
+    return out
+
+
 def index_needs_rebuild() -> bool:
     if not INDEX_FILE.is_file():
         return True
     try:
-        return _latest_document_mtime() > INDEX_FILE.stat().st_mtime
+        if _latest_document_mtime() > INDEX_FILE.stat().st_mtime:
+            return True
     except OSError:
         return True
+    # An mtime comparison only ever notices documents that were added or
+    # edited. Deleting one leaves every surviving mtime untouched, so the
+    # index went on serving documents that no longer exist -- which is exactly
+    # how a withdrawn document stays retrievable. Compare membership too.
+    cached = _read_index_file()
+    if cached is None:
+        return True
+    indexed = {str(c.get("source") or "") for c in cached}
+    indexed.discard("")
+    return indexed != _eligible_documents()
 
 
 def _read_index_file() -> list[dict] | None:

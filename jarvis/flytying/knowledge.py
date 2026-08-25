@@ -73,6 +73,12 @@ def sync_library(*, force: bool = False) -> dict[str, Any]:
     if not gold.is_file():
         return {"ok": False, "message": "Blackfly recipe library missing", "exported": 0}
 
+    # Every recipe written here becomes a document in ARIA's RAG index and is
+    # then reachable from main chat, so a quarantined record must never be
+    # materialised as one.
+    from jarvis.flytying.quarantine import is_quarantined, quarantined_ids
+
+    quarantined = quarantined_ids()
     FLYTYING_RECIPES_DIR.mkdir(parents=True, exist_ok=True)
     exported = 0
     try:
@@ -81,6 +87,8 @@ def sync_library(*, force: bool = False) -> dict[str, Any]:
             if not line:
                 continue
             recipe = json.loads(line)
+            if is_quarantined(recipe, quarantined):
+                continue
             rid = str(recipe.get("id") or recipe.get("recipe_id") or "")
             name = str(recipe.get("fly_name") or recipe.get("name") or "pattern")
             dest = FLYTYING_RECIPES_DIR / f"{_slug(name, rid)}.md"

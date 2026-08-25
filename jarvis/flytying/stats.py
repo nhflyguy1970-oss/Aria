@@ -28,11 +28,22 @@ def read_status() -> dict[str, Any]:
     gold_count = 0
     types: dict[str, int] = {}
     index_built = (out / "gold_index").is_dir() or (out / "index").is_dir()
+    # The index has already applied the quarantine, so its size is the honest
+    # answer to "how many recipes are there": counting lines in the raw scrape
+    # reported the fabricated records as part of the library.
+    retrievable: int | None = None
+    quarantined_count = 0
     try:
         from jarvis.flytying import index as recipe_index
+        from jarvis.flytying.quarantine import quarantine_state
 
-        if recipe_index.recipes():
+        rows = recipe_index.recipes()
+        if rows:
             index_built = True
+        retrievable = len(rows)
+        quarantined_count = int(recipe_index._CACHE.get("quarantined") or 0)
+        if quarantine_state()["status"] == "error":
+            retrievable = 0
     except Exception:
         pass
     if stats_file.is_file():
@@ -47,6 +58,9 @@ def read_status() -> dict[str, Any]:
     if gold_count == 0:
         gold_count = count_jsonl_lines(gold)
     loaded_count = count_jsonl_lines(source)
+    source_line_count = loaded_count
+    if retrievable is not None:
+        loaded_count = retrievable
     enablement = blackfly_enablement()
     recipe_source_kind = "missing"
     if scraped.is_file():
@@ -69,6 +83,8 @@ def read_status() -> dict[str, Any]:
         "recipe_source_note": "scraped JSONL preferred; gold is optional fallback when scrape missing",
         "recipe_count": loaded_count,
         "record_count": loaded_count,
+        "source_line_count": source_line_count,
+        "quarantined_count": quarantined_count,
         "loaded": loaded,
         "blackfly_loaded": loaded,
         "types": types,
