@@ -337,14 +337,17 @@ def search_pool(
         return []
 
     scored: list[tuple[float, dict]] = []
-    for e in pool:
-        emb = get_embedding(e)
-        if not emb:
-            emb = llm.embed_text(e["content"])
-            set_embedding(e, emb)
-        sim = llm.cosine_similarity(query_emb, emb)
-        if sim > 0.3:
-            scored.append((sim * relevance_score(e), e))
+    # Session keeps the embed model resident; without it every item
+    # paid a full model load+unload (_embed_keep_alive() == 0).
+    with llm.embed_session():
+        for e in pool:
+            emb = get_embedding(e)
+            if not emb:
+                emb = llm.embed_text(e["content"])
+                set_embedding(e, emb)
+            sim = llm.cosine_similarity(query_emb, emb)
+            if sim > 0.3:
+                scored.append((sim * relevance_score(e), e))
     scored.sort(key=lambda x: x[0], reverse=True)
     results = [e for _, e in scored[:limit]]
     for e in results:

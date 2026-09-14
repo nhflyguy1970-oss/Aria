@@ -330,12 +330,18 @@ def _similar_strategy_exists(store, content: str, threshold: float = 0.88) -> bo
     norm = content.lower().strip()
     if not norm:
         return True
-    for e in store.list_entries(entry_type="strategy"):
+    entries = store.list_entries(entry_type="strategy")
+    for e in entries:
         if e.get("content", "").lower().strip() == norm:
             return True
-        emb = llm.embed_text(content)
+    # The embedding is of `content`, not of the entry, so it never varied
+    # across the loop -- one strategy store meant one embed per entry.
+    emb = llm.embed_text(content)
+    if not emb:
+        return False
+    for e in entries:
         e_emb = e.get("embedding") or []
-        if emb and e_emb and llm.cosine_similarity(emb, e_emb) >= threshold:
+        if e_emb and llm.cosine_similarity(emb, e_emb) >= threshold:
             return True
     return False
 

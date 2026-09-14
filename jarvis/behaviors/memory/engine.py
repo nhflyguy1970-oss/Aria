@@ -407,24 +407,27 @@ class MemoryEngine:
         if mode == "smart":
             facts = filter_extracted_facts(facts, user_msg)
         ns = ctx.session.memory_namespace or load_memory_namespace()
-        for fact in facts[:2]:
-            try:
-                if ctx.memory.similar_exists(fact):
-                    continue
-            except Exception:
-                pass
-            try:
-                propose_candidate(
-                    fact,
-                    source="chat_auto",
-                    entry_type="auto",
-                    namespace=ns,
-                    tags=["auto-extracted", "candidate"],
-                    evidence=(user_msg or "")[:160],
-                    confidence=0.45,
-                )
-            except Exception:
-                pass
+        # similar_exists() embeds every fact, so this loop paid a full
+        # embed-model load+unload per fact. One session for the batch.
+        with llm.embed_session():
+            for fact in facts[:2]:
+                try:
+                    if ctx.memory.similar_exists(fact):
+                        continue
+                except Exception:
+                    pass
+                try:
+                    propose_candidate(
+                        fact,
+                        source="chat_auto",
+                        entry_type="auto",
+                        namespace=ns,
+                        tags=["auto-extracted", "candidate"],
+                        evidence=(user_msg or "")[:160],
+                        confidence=0.45,
+                    )
+                except Exception:
+                    pass
 
     @classmethod
     def sync_project_namespace(cls, ctx: MemoryContext) -> str | None:
@@ -681,16 +684,19 @@ class MemoryEngine:
         facts = MemoryStore.split_remember_facts(content)
         stored: list[str] = []
         try:
-            for fact in facts:
-                if ctx.memory.similar_exists(fact):
-                    continue
-                entry = ctx.memory.add(entry_type, fact, namespace=namespace)
-                from jarvis.memory.hierarchy import infer_layer, tag_layer
+            # similar_exists() and add() each embed, so this loop paid a full
+            # embed-model load+unload per fact. One session for the batch.
+            with llm.embed_session():
+                for fact in facts:
+                    if ctx.memory.similar_exists(fact):
+                        continue
+                    entry = ctx.memory.add(entry_type, fact, namespace=namespace)
+                    from jarvis.memory.hierarchy import infer_layer, tag_layer
 
-                layer = infer_layer({**entry, "type": entry_type, "namespace": namespace})
-                tagged = tag_layer(entry, layer)
-                ctx.memory.update(entry["id"], tags=tagged.get("tags"))
-                stored.append(fact)
+                    layer = infer_layer({**entry, "type": entry_type, "namespace": namespace})
+                    tagged = tag_layer(entry, layer)
+                    ctx.memory.update(entry["id"], tags=tagged.get("tags"))
+                    stored.append(fact)
         except ValueError as exc:
             return err(str(exc))
         if not stored:
@@ -1202,10 +1208,13 @@ class MemoryEngine:
             return ok("Nothing new worth storing from this conversation.", module="memory")
         ns = ctx.session.memory_namespace or load_memory_namespace()
         added = 0
-        for fact in facts[:5]:
-            if not ctx.memory.similar_exists(fact):
-                ctx.memory.add("auto", fact, tags=["conversation-summary"], namespace=ns)
-                added += 1
+        # similar_exists() and add() each embed, so this loop paid a full
+        # embed-model load+unload per fact. One session for the batch.
+        with llm.embed_session():
+            for fact in facts[:5]:
+                if not ctx.memory.similar_exists(fact):
+                    ctx.memory.add("auto", fact, tags=["conversation-summary"], namespace=ns)
+                    added += 1
         if added:
             ctx.refresh_system_prompt()
         lines = "\n".join(f"• {fact}" for fact in facts[:5])

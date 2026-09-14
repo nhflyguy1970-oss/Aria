@@ -250,7 +250,7 @@ def _embed_keep_alive() -> float | str:
     return session if session is not None else 0
 
 
-_EMBED_SESSION: dict[str, object] = {"keep_alive": None, "depth": 0}
+_EMBED_SESSION: dict[str, object] = {"keep_alive": None, "depth": 0, "embedded": False}
 
 
 @contextmanager
@@ -273,14 +273,22 @@ def embed_session(*, keep_alive: str | None = None) -> Iterator[None]:
         _EMBED_SESSION["depth"] = max(0, int(_EMBED_SESSION.get("depth") or 1) - 1)
         if not _EMBED_SESSION["depth"]:
             _EMBED_SESSION["keep_alive"] = None
-            try:
-                from jarvis.ollama_runtime import unload_model
+            # Only hand back a slot the session actually took. Sites like
+            # search_pool open a session for a loop that usually finds every
+            # embedding cached; unloading anyway would cost a blocking round
+            # trip per chat turn and could evict a model another process is
+            # mid-batch on.
+            embedded = bool(_EMBED_SESSION.get("embedded"))
+            _EMBED_SESSION["embedded"] = False
+            if embedded:
+                try:
+                    from jarvis.ollama_runtime import unload_model
 
-                unload_model(model_for("embed"), timeout=10)
-            except Exception as exc:
-                logging.getLogger("jarvis").debug(
-                    "embed session unload failed (harmless): %s", exc
-                )
+                    unload_model(model_for("embed"), timeout=10)
+                except Exception as exc:
+                    logging.getLogger("jarvis").debug(
+                        "embed session unload failed (harmless): %s", exc
+                    )
 
 
 def _embed_client():
@@ -298,6 +306,8 @@ def embed_batch(texts: Sequence[str]) -> list[list[float]]:
     items = [t for t in texts]
     if not items:
         return []
+    if _EMBED_SESSION.get("depth"):
+        _EMBED_SESSION["embedded"] = True
     try:
         response = _embed_client().embed(
             model=model_for("embed"), input=items, keep_alive=_embed_keep_alive()

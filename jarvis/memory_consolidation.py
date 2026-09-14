@@ -82,29 +82,32 @@ def run_consolidation(memory_store, *, target_namespace: str = "profile") -> dic
 
     ns = target_namespace or detect_project_namespace()
     added = 0
-    for fact in facts:
-        try:
-            from aria_core import acm_bridge
+    # similar_exists() and add() each embed, so this loop paid a full
+    # embed-model load+unload per fact. One session for the batch.
+    with llm.embed_session():
+        for fact in facts:
+            try:
+                from aria_core import acm_bridge
 
-            if acm_bridge.acm_is_authoritative():
-                acm_bridge.primary_remember(
-                    fact,
-                    entry_type="fact",
-                    tags=[_CONSOLIDATION_TAG, "auto-learn"],
-                    namespace=ns,
-                )
-                added += 1
+                if acm_bridge.acm_is_authoritative():
+                    acm_bridge.primary_remember(
+                        fact,
+                        entry_type="fact",
+                        tags=[_CONSOLIDATION_TAG, "auto-learn"],
+                        namespace=ns,
+                    )
+                    added += 1
+                    continue
+            except Exception:
+                pass
+            if memory_store.similar_exists(fact, namespace=ns):
                 continue
-        except Exception:
-            pass
-        if memory_store.similar_exists(fact, namespace=ns):
-            continue
-        memory_store.add(
-            "fact",
-            fact,
-            tags=[_CONSOLIDATION_TAG, "auto-learn"],
-            namespace=ns,
-        )
-        added += 1
+            memory_store.add(
+                "fact",
+                fact,
+                tags=[_CONSOLIDATION_TAG, "auto-learn"],
+                namespace=ns,
+            )
+            added += 1
 
     return {"skipped": False, "added": added, "sources": len(sources), "namespace": ns}

@@ -73,8 +73,10 @@ def _build_index_impl(root: Path | None = None) -> list[dict]:
         rel = str(p.relative_to(root))
         chunks.extend(_chunks(text, rel))
 
-    for c in chunks:
-        c["embedding"] = llm.embed_text(c["text"][:2000])
+    # See rag.py: without a session each chunk reloads the embed model.
+    with llm.embed_session():
+        for c in chunks:
+            c["embedding"] = llm.embed_text(c["text"][:2000])
 
     CODE_INDEX.parent.mkdir(parents=True, exist_ok=True)
     CODE_INDEX.write_text(json.dumps(chunks, indent=0), encoding="utf-8")

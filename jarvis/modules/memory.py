@@ -337,21 +337,24 @@ class JsonMemoryStore:
                 )
         except ImportError:
             pass
-        for e in self._data["entries"]:
-            if e.get("id") != entry_id:
-                continue
-            if content is not None:
-                e["content"] = content.strip()
-                self._embeddings.set(entry_id, llm.embed_text(e["content"]))
-            if entry_type and entry_type in MEMORY_TYPES:
-                e["type"] = entry_type
-            if tags is not None:
-                e["tags"] = tags
-            if namespace is not None:
-                e["namespace"] = namespace.strip() or DEFAULT_NAMESPACE
-            e["timestamp"] = utc_now()
-            self._save()
-            return True
+        # Session keeps the embed model resident; without it every item
+        # paid a full model load+unload (_embed_keep_alive() == 0).
+        with llm.embed_session():
+            for e in self._data["entries"]:
+                if e.get("id") != entry_id:
+                    continue
+                if content is not None:
+                    e["content"] = content.strip()
+                    self._embeddings.set(entry_id, llm.embed_text(e["content"]))
+                if entry_type and entry_type in MEMORY_TYPES:
+                    e["type"] = entry_type
+                if tags is not None:
+                    e["tags"] = tags
+                if namespace is not None:
+                    e["namespace"] = namespace.strip() or DEFAULT_NAMESPACE
+                e["timestamp"] = utc_now()
+                self._save()
+                return True
         return False
 
     def search(
@@ -643,40 +646,43 @@ class JsonMemoryStore:
             self._embeddings.delete_many(old_ids)
         existing_ids = {e.get("id") for e in self._data["entries"]}
         existing_content = {e["content"].lower().strip() for e in self._data["entries"]}
-        for raw in incoming:
-            if not isinstance(raw, dict):
-                continue
-            content = str(raw.get("content", "")).strip()
-            if not content or content.lower() in existing_content:
-                continue
-            entry_type = raw.get("type") if raw.get("type") in MEMORY_TYPES else "fact"
-            tags = raw.get("tags") if isinstance(raw.get("tags"), list) else []
-            namespace = str(raw.get("namespace") or DEFAULT_NAMESPACE)
-            eid = raw.get("id")
-            if eid in existing_ids:
-                eid = self._next_id()
-            eid = eid or self._next_id()
-            emb = (
-                raw.get("embedding")
-                if isinstance(raw.get("embedding"), list)
-                else llm.embed_text(content)
-            )
-            entry = {
-                "id": eid,
-                "type": entry_type,
-                "content": content,
-                "tags": tags,
-                "namespace": namespace,
-                "timestamp": raw.get("timestamp") or utc_now(),
-                "access_count": int(raw.get("access_count") or 0),
-                "relevance": float(raw.get("relevance") or 1.0),
-            }
-            self._data["entries"].append(entry)
-            if emb:
-                self._embeddings.set(eid, emb)
-            existing_ids.add(eid)
-            existing_content.add(content.lower())
-            added += 1
+        # Session keeps the embed model resident; without it every item
+        # paid a full model load+unload (_embed_keep_alive() == 0).
+        with llm.embed_session():
+            for raw in incoming:
+                if not isinstance(raw, dict):
+                    continue
+                content = str(raw.get("content", "")).strip()
+                if not content or content.lower() in existing_content:
+                    continue
+                entry_type = raw.get("type") if raw.get("type") in MEMORY_TYPES else "fact"
+                tags = raw.get("tags") if isinstance(raw.get("tags"), list) else []
+                namespace = str(raw.get("namespace") or DEFAULT_NAMESPACE)
+                eid = raw.get("id")
+                if eid in existing_ids:
+                    eid = self._next_id()
+                eid = eid or self._next_id()
+                emb = (
+                    raw.get("embedding")
+                    if isinstance(raw.get("embedding"), list)
+                    else llm.embed_text(content)
+                )
+                entry = {
+                    "id": eid,
+                    "type": entry_type,
+                    "content": content,
+                    "tags": tags,
+                    "namespace": namespace,
+                    "timestamp": raw.get("timestamp") or utc_now(),
+                    "access_count": int(raw.get("access_count") or 0),
+                    "relevance": float(raw.get("relevance") or 1.0),
+                }
+                self._data["entries"].append(entry)
+                if emb:
+                    self._embeddings.set(eid, emb)
+                existing_ids.add(eid)
+                existing_content.add(content.lower())
+                added += 1
         if added:
             self._save()
         return added

@@ -47,8 +47,11 @@ def _build_index_impl(root: Path | None = None) -> list[dict]:
             chunks.extend(_chunks(p.read_text(encoding="utf-8", errors="ignore"), str(p.relative_to(root))))
         except OSError:
             pass
-    for c in chunks:
-        c["embedding"] = llm.embed_text(c["text"])
+    # Without a session _embed_keep_alive() is 0, so each chunk paid a
+    # full embed-model load+unload (~2-3s) instead of ~3ms.
+    with llm.embed_session():
+        for c in chunks:
+            c["embedding"] = llm.embed_text(c["text"])
     import json
     RAG_INDEX.parent.mkdir(parents=True, exist_ok=True)
     RAG_INDEX.write_text(json.dumps(chunks, indent=0), encoding="utf-8")

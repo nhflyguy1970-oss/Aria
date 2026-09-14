@@ -81,12 +81,32 @@ def test_a_session_returns_the_slot_even_when_the_body_raises(monkeypatch):
     from jarvis import llm
 
     unloaded = []
+    monkeypatch.setattr(
+        llm, "_embed_client",
+        lambda: type("C", (), {"embed": staticmethod(
+            lambda **kw: {"embeddings": [[0.1]]})})(),
+    )
     monkeypatch.setattr("jarvis.ollama_runtime.unload_model",
                         lambda model, **k: unloaded.append(model) or True)
     with pytest.raises(ValueError):
         with llm.embed_session():
+            llm.embed_batch(["a"])
             raise ValueError("boom")
     assert unloaded, "a failure inside the session leaked model residency"
+
+
+def test_a_session_that_embeds_nothing_does_not_unload(monkeypatch):
+    """search_pool opens a session per memory search and usually finds every
+    embedding cached. Unloading anyway would cost a blocking round trip on
+    each chat turn and could evict a model another process is mid-batch on."""
+    from jarvis import llm
+
+    unloaded = []
+    monkeypatch.setattr("jarvis.ollama_runtime.unload_model",
+                        lambda model, **k: unloaded.append(model) or True)
+    with llm.embed_session():
+        pass
+    assert not unloaded, "unloaded a slot the session never took"
 
 
 def test_nested_sessions_release_once(monkeypatch):

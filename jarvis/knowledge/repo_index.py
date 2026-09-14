@@ -37,36 +37,45 @@ def build_repo_index(
     root = root.resolve()
     if changed_files:
         chunks = _load_chunks(index_path)
-        for rel in changed_files:
-            chunks = [c for c in chunks if c.get("source") != rel]
-            path = root / rel
-            if not _should_index(path, root):
-                continue
-            try:
-                text = path.read_text(encoding="utf-8", errors="ignore")
-            except OSError:
-                continue
-            new_chunks = _chunks(text, rel)
-            for c in new_chunks:
-                c["embedding"] = llm.embed_text(c["text"][:2000])
-                c["repo"] = str(root)
-            chunks.extend(new_chunks)
+        # Session keeps the embed model resident; without it every item
+        # paid a full model load+unload (_embed_keep_alive() == 0).
+        with llm.embed_session():
+            for rel in changed_files:
+                chunks = [c for c in chunks if c.get("source") != rel]
+                path = root / rel
+                if not _should_index(path, root):
+                    continue
+                try:
+                    text = path.read_text(encoding="utf-8", errors="ignore")
+                except OSError:
+                    continue
+                new_chunks = _chunks(text, rel)
+                # Without a session _embed_keep_alive() is 0, so each chunk paid a
+                # full embed-model load+unload (~2-3s) instead of ~3ms.
+                with llm.embed_session():
+                    for c in new_chunks:
+                        c["embedding"] = llm.embed_text(c["text"][:2000])
+                        c["repo"] = str(root)
+                chunks.extend(new_chunks)
         _save_chunks(index_path, chunks)
         return len(chunks)
 
     chunks: list[dict] = []
-    for p in root.rglob("*"):
-        if not _should_index(p, root):
-            continue
-        try:
-            text = p.read_text(encoding="utf-8", errors="ignore")
-        except OSError:
-            continue
-        rel = str(p.relative_to(root))
-        for c in _chunks(text, rel):
-            c["embedding"] = llm.embed_text(c["text"][:2000])
-            c["repo"] = str(root)
-            chunks.append(c)
+    # Session keeps the embed model resident; without it every item
+    # paid a full model load+unload (_embed_keep_alive() == 0).
+    with llm.embed_session():
+        for p in root.rglob("*"):
+            if not _should_index(p, root):
+                continue
+            try:
+                text = p.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            rel = str(p.relative_to(root))
+            for c in _chunks(text, rel):
+                c["embedding"] = llm.embed_text(c["text"][:2000])
+                c["repo"] = str(root)
+                chunks.append(c)
 
     _save_chunks(index_path, chunks)
     return len(chunks)
