@@ -25,9 +25,21 @@ class TestAgentCoordinator(unittest.TestCase):
     def test_run_chain_executes_steps(self, mock_call, _has):
         mock_call.return_value = {"ok": True, "message": "step done"}
         coord = AgentCoordinator(MagicMock())
-        result = coord.run_chain("research LiteLLM", roles=["research", "operations"])
+        result = coord.run_chain(
+            "research LiteLLM", roles=["research", "operations"], confirm=True
+        )
         self.assertEqual(len(result.get("steps") or []), 2)
         self.assertTrue(result.get("ok"))
+
+    @patch("jarvis.handlers.registry.call_action")
+    def test_run_chain_without_confirmation_runs_nothing(self, mock_call):
+        # The wrapper used to supply confirm=True itself; now the caller must.
+        coord = AgentCoordinator(MagicMock())
+        result = coord.run_chain("research LiteLLM", roles=["research", "operations"])
+        self.assertEqual(result.get("status"), "permission_required")
+        self.assertFalse(result.get("ok"))
+        self.assertTrue(result.get("confirmation_required"))
+        mock_call.assert_not_called()
 
     def test_agent_actions_registered(self):
         register_behaviors()

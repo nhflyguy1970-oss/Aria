@@ -79,6 +79,15 @@ def tick(runner=None, *, assistant: Any = None, slice_steps: int = DEFAULT_SLICE
     without threads.
     """
     _promote_due_retries()
+    from jarvis.integration import policy
+
+    refused = policy.refusal("mission")
+    if refused:
+        # Execution is not permitted (safe mode or autonomy level). Leave the
+        # queue untouched — every mission stays durable and resumes once the
+        # policy allows it. Checked per tick, not only when the thread starts.
+        _state["last_error"] = refused
+        return None
     mission = store.next_pending()
     if not mission:
         return None
@@ -114,6 +123,12 @@ def tick(runner=None, *, assistant: Any = None, slice_steps: int = DEFAULT_SLICE
 
         _state["last_activity"] = time.time()
         return mission_id
+    except policy.PolicyError as exc:
+        # Refused by the execution policy: the engine left it paused and
+        # checkpointed. Not requeued, so the worker does not spin on it.
+        logger.warning("Mission %s not run: %s", mission_id, exc)
+        _state["last_error"] = str(exc)
+        return None
     except Exception as exc:  # noqa: BLE001 - a worker must never die on one mission
         logger.exception("Mission worker tick failed for %s", mission_id)
         _state["last_error"] = f"{type(exc).__name__}: {exc}"

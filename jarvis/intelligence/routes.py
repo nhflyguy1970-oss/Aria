@@ -63,12 +63,13 @@ def register_intelligence_routes(app, assistant: Any = None) -> None:
             assistant,
             str(body.get("goal") or ""),
             specialists=body.get("specialists"),
-            confirm=bool(body.get("confirm", True)),  # legacy default execute
+            # Absent means not approved: a request must say so to run or write.
+            confirm=bool(body.get("confirm")),
             stop_on_error=bool(body.get("stop_on_error")),
-            budget={"require_confirm": False, "max_specialists": int(body.get("max_agents") or 6)},
+            budget={"max_specialists": int(body.get("max_agents") or 6)},
             trigger="intelligence_api",
             emit_bridges=True,
-            approve_writes=bool(body.get("approve_writes", True)),
+            approve_writes=bool(body.get("approve_writes")),
             parallel_readers=bool(body.get("parallel_readers")),
             critic_loop=bool(body.get("critic_loop")),
         )

@@ -571,7 +571,7 @@ def test_research_provenance_survives_delegation(data_dir: Path, monkeypatch):
             {"url": "https://nih.gov/b", "title": "B", "snippet": "also supports"},
         ],
     )
-    monkeypatch.setattr(research_engine, "_default_fetch", lambda url: "agreeing body")
+    monkeypatch.setattr(research_engine, "_default_fetch", lambda url: "Provenance is recorded.")
     rid = research_engine.create_research("provenance")["research_id"]
     for phase in research_engine.PHASES:
         research_engine.run_phase(rid, phase)

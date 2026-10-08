@@ -52,6 +52,12 @@ def check_authority(
     authorized_high_impact: bool = False,
 ) -> None:
     """Every reason ARIA might refuse, decided before the provider is contacted."""
+    if for_execution:
+        from jarvis.integration import policy
+
+        refused = policy.refusal("tool")
+        if refused:
+            raise McpDenied(f"{defn.provider_id}: {refused}")
     if for_execution and not defn.may_execute():
         raise McpDenied(f"{defn.provider_id}: {defn.unavailable_reason()}")
     if not for_execution and not defn.may_discover():

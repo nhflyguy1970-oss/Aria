@@ -71,12 +71,27 @@ def list_jobs(*, status: str | None = None) -> list[CheckpointedJob]:
 
 
 def start_agent_job(
-    assistant: Any, goal: str, *, roles: list[str] | None = None
+    assistant: Any,
+    goal: str,
+    *,
+    roles: list[str] | None = None,
+    approve_writes: bool = False,
 ) -> CheckpointedJob:
+    """Start a specialist team job the caller asked for.
+
+    Starting the job is the confirmation of the team run. Write approval is
+    separate and only ever comes from the caller; it is recorded on the job so
+    a restart re-run carries exactly the approval that was granted, no more.
+    """
     job = CheckpointedJob(
         id=uuid.uuid4().hex[:12], kind="specialist_team", goal=goal, status="running"
     )
-    job.checkpoint = {"roles": roles or [], "step": 0, "resumable": False}
+    job.checkpoint = {
+        "roles": roles or [],
+        "step": 0,
+        "resumable": False,
+        "approve_writes": bool(approve_writes),
+    }
     save_job(job)
 
     def _run() -> None:
@@ -91,10 +106,9 @@ def start_agent_job(
                 specialists=map_roles_to_specialists(roles) if roles else None,
                 confirm=True,
                 stop_on_error=False,
-                budget={"require_confirm": False},
                 trigger="agent_job",
                 emit_bridges=True,
-                approve_writes=True,
+                approve_writes=bool(approve_writes),
             )
             st = result.get("status") or ("completed" if result.get("ok") else "failed")
             # Map to checkpoint statuses
@@ -146,10 +160,11 @@ def resume_incomplete_jobs(assistant: Any) -> list[str]:
                     specialists=map_roles_to_specialists(role_list) if role_list else None,
                     confirm=True,
                     stop_on_error=False,
-                    budget={"require_confirm": False},
                     trigger="agent_job_resume",
                     emit_bridges=True,
-                    approve_writes=True,
+                    # Only what was granted at start; jobs recorded before
+                    # approvals were stored get none.
+                    approve_writes=bool(existing.checkpoint.get("approve_writes")),
                 )
                 existing.status = "completed" if result.get("ok") else "failed"
                 existing.progress = 1.0

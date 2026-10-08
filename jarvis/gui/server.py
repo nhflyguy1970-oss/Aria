@@ -1101,7 +1101,12 @@ def agent_jobs_start(body: dict):
     roles = body.get("roles")
     if isinstance(roles, str):
         roles = [r.strip() for r in roles.split(",") if r.strip()]
-    job = start_agent_job(get_assistant(), goal, roles=roles if isinstance(roles, list) else None)
+    job = start_agent_job(
+        get_assistant(),
+        goal,
+        roles=roles if isinstance(roles, list) else None,
+        approve_writes=bool(body.get("approve_writes")),
+    )
     return {"ok": True, "job": job.to_dict()}
 
 
@@ -1154,7 +1159,13 @@ def agents_chain(body: dict):
     if not goal:
         return {"ok": False, "error": "goal required"}
     roles = body.get("roles")
-    return run_agent_chain(get_assistant(), goal, roles=roles)
+    return run_agent_chain(
+        get_assistant(),
+        goal,
+        roles=roles,
+        confirm=bool(body.get("confirm")),
+        approve_writes=bool(body.get("approve_writes")),
+    )
 
 
 @app.post("/api/services/ensure")

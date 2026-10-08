@@ -311,6 +311,17 @@ def run_slice(
     if workflow["state"] == PAUSED:
         return {"workflow": workflow, "ran": [], "paused": True}
 
+    # Every slice — direct run, resume or a mission's workflow_step — passes
+    # through here, so this is where the execution policy is enforced.
+    # Raised, not recorded as a step failure: nothing has run, and the
+    # workflow stays resumable once the policy permits it.
+    from jarvis.integration import policy
+
+    refused = policy.refusal("workflow")
+    if refused:
+        store.record_event(workflow_id, "policy:refused", refused)
+        raise policy.PolicyError(refused)
+
     def cancelled() -> bool:
         if store.cancel_requested(workflow_id):
             return True

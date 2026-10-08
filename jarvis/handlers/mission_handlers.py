@@ -96,11 +96,21 @@ def mission_run(assistant, params: dict, message: str) -> dict:
     if not missions.get(mission_id):
         return err(f"No mission `{mission_id}`.", module="general")
     max_steps = params.get("max_steps")
-    missions.run(
-        mission_id,
-        assistant=assistant,
-        max_steps=int(max_steps) if max_steps else None,
-    )
+    from jarvis.integration.policy import PolicyError
+
+    try:
+        missions.run(
+            mission_id,
+            assistant=assistant,
+            max_steps=int(max_steps) if max_steps else None,
+        )
+    except PolicyError as exc:
+        return err(
+            f"Mission `{mission_id}` was not started: {exc}",
+            module="general",
+            error_kind="policy_denied",
+            mission=missions.status(mission_id),
+        )
     snapshot = missions.status(mission_id)
     return ok(_format_status(snapshot or {}), module="general", mission=snapshot)
 

@@ -155,10 +155,17 @@ def test_compat_wrappers(spec_env, monkeypatch):
 
     assert suggest_agents("plan the roadmap")
     assert resolve_specialists("research docs")
-    r1 = run_multi_agent(None, "plan a morning routine", specialists=["planner", "writer"])
+    r1 = run_multi_agent(
+        None, "plan a morning routine", specialists=["planner", "writer"], confirm=True
+    )
     assert r1.get("run_id") or r1.get("specialists")
-    r2 = run_agent_chain(None, "research the bug", roles=["research", "planning"])
+    r2 = run_agent_chain(None, "research the bug", roles=["research", "planning"], confirm=True)
     assert "chain_id" in r2 or "run_id" in r2
+    # Without the caller's confirmation the wrappers propose; they never approve.
+    assert run_multi_agent(None, "plan a morning routine")["status"] == "permission_required"
+    unconfirmed = run_agent_chain(None, "research the bug", roles=["research"])
+    assert unconfirmed["status"] == "permission_required"
+    assert not unconfirmed.get("run_id")
 
 
 def test_parallel_and_critic(spec_env, monkeypatch):

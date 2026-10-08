@@ -382,6 +382,11 @@ def execute(
         return fail(INVALID, str(exc), "dependencies")
 
     # --- authority -----------------------------------------------------
+    from jarvis.integration import policy
+
+    refused = policy.refusal("skill")
+    if refused:
+        return fail(DENIED, refused, "policy_denied")
     try:
         check_authority(defn, requester)
     except SkillDenied as exc:

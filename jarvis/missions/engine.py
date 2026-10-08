@@ -20,6 +20,7 @@ import logging
 from collections.abc import Callable
 from typing import Any, Protocol
 
+from jarvis.integration.policy import PolicyError
 from jarvis.missions import store
 
 log = logging.getLogger("jarvis.missions")
@@ -82,6 +83,32 @@ def _raise_if_step_failed(step: dict[str, Any], index: int, output: Any) -> None
     raise StepFailed(f"{name}: {message}", kind=str(output.get("error_kind") or ""))
 
 
+def capabilities_for(mission: dict[str, Any]) -> tuple[str, ...]:
+    """The execution-policy capabilities a mission needs before it may run."""
+    if mission.get("kind") == "workflow":
+        return ("mission", "workflow")
+    return ("mission",)
+
+
+def refusal(mission: dict[str, Any]) -> str:
+    """Why this mission may not run now, or "" when it may."""
+    from jarvis.integration import policy
+
+    for capability in capabilities_for(mission):
+        reason = policy.refusal(capability)
+        if reason:
+            return reason
+    return ""
+
+
+def authorize(mission: dict[str, Any]) -> None:
+    """Raise PolicyError if the mission may not run; record why on the mission."""
+    reason = refusal(mission)
+    if reason:
+        store.record_event(mission["id"], "policy:refused", reason)
+        raise PolicyError(reason)
+
+
 def create_mission(
     objective: str, steps: list[dict[str, Any]] | None = None, *, kind: str = "generic"
 ) -> str:
@@ -108,12 +135,19 @@ def run(
     """Execute (or resume) a mission to completion, cancellation or failure.
 
     Returns the mission's final persisted record.
+
+    Raises PolicyError, without touching the mission's state, when the
+    environment's execution policy does not allow it to run. This is the one
+    path every mission takes — direct handler, worker tick, research and
+    workflow missions alike — so the check lives here rather than only where
+    the worker thread is started.
     """
     mission = store.get(mission_id)
     if not mission:
         raise store.MissionStateError(f"No such mission: {mission_id}")
     if mission["state"] in store.TERMINAL_STATES:
         return mission
+    authorize(mission)
 
     if runner is None:
         if assistant is None:
@@ -164,6 +198,13 @@ def run(
             )
     except MissionCancelled:
         return store.transition(mission_id, store.CANCELLED, detail="cancelled mid-execution")
+    except PolicyError as exc:
+        # A step reached a boundary the execution policy does not allow. That
+        # is not the work failing: pause with every completed step
+        # checkpointed, so it resumes intact once the policy permits it.
+        store.record_event(mission_id, "policy:refused", str(exc))
+        store.transition(mission_id, store.PAUSED, detail=f"policy: {exc}")
+        raise
     except RetryableError as exc:
         return store.record_failure(mission_id, str(exc), kind=store.RETRYABLE)
     except StepFailed as exc:

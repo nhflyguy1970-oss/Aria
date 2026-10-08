@@ -6,6 +6,7 @@ import logging
 import time
 from typing import Any
 
+from jarvis.tools.memory_sink import status as memory_sink_status
 from jarvis.tools.registry import ToolDescriptor, get_tool, list_tools
 
 logger = logging.getLogger("jarvis.tools.executor")
@@ -67,6 +68,11 @@ def execute_tool(
     tool = get_tool(tool_id)
     if tool is None:
         return {"ok": False, "error": f"Unknown tool: {tool_id}"}
+    from jarvis.integration import policy
+
+    refused = policy.refusal("tool")
+    if refused:
+        return {"ok": False, "tool": tool_id, "error": refused, "error_kind": "policy_denied"}
     if not tool.available():
         return {"ok": False, "error": f"Tool unavailable: {tool.label}"}
 
@@ -101,8 +107,11 @@ def execute_tool(
     result["label"] = tool.label
     result["elapsed_ms"] = int((time.time() - started) * 1000)
 
+    if memory_sink:
+        # Success and failure are both outcomes worth keeping; the receipt says
+        # whether it was actually stored.
+        result["memory"] = _remember_tool_result(tool, params, result)
     if memory_sink and result.get("ok"):
-        _remember_tool_result(tool, params, result)
         try:
             from jarvis.personalization.learner import learn_from_tool_result
 
@@ -136,22 +145,18 @@ def _run_aria_engineering(params: dict[str, Any]) -> dict[str, Any]:
 
 def _remember_tool_result(
     tool: ToolDescriptor, params: dict[str, Any], result: dict[str, Any]
-) -> None:
-    try:
-        from jarvis.assistant_instance import get_assistant
+) -> dict[str, Any]:
+    """Record the outcome through the shared adapter; returns its receipt."""
+    from jarvis.tools.memory_sink import record_tool_outcome
 
-        assistant = get_assistant()
-        task = str(params.get("task") or params.get("prompt") or "")[:200]
-        summary = (result.get("stdout") or result.get("message") or "")[:500]
-        if hasattr(assistant, "memory") and assistant.memory:
-            assistant.memory.add(
-                f"[tool:{tool.id}] {task}\n{summary}",
-                entry_type="tool_result",
-                namespace="tools",
-                metadata={"tool": tool.id, "ok": result.get("ok")},
-            )
-    except Exception as exc:
-        logger.debug("Tool memory sink failed: %s", exc)
+    return record_tool_outcome(
+        tool.id,
+        str(params.get("task") or params.get("prompt") or ""),
+        ok=bool(result.get("ok")),
+        summary=str(
+            result.get("stdout") or result.get("message") or result.get("error") or ""
+        ),
+    )
 
 
 def tool_status() -> dict[str, Any]:
@@ -162,6 +167,7 @@ def tool_status() -> dict[str, Any]:
         "total": len(tools),
         "available": len(available),
         "tools": [t.to_dict() for t in tools],
+        "memory_sink": memory_sink_status(),
     }
 
 

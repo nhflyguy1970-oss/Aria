@@ -198,6 +198,19 @@ def invoke(
     }
 
     if action:
+        from jarvis.integration import policy
+
+        refused = policy.refusal("agent")
+        if refused:
+            # Delegated execution answers to the same policy as a direct run.
+            return {
+                "ok": False,
+                "agent_id": agent.id,
+                "action": action,
+                "error": refused,
+                "error_kind": "permission_denied",
+                "policy_denied": True,
+            }
         try:
             result["result"] = call_action(agent, assistant, action, params, task)
             result["action"] = action

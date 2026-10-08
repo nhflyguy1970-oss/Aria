@@ -43,6 +43,7 @@ class ToolRun:
     stdout: str = ""
     stderr: str = ""
     error: str = ""
+    memory: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -220,6 +221,9 @@ def start_background(tool_id: str, params: dict[str, Any]) -> ToolRun:
             tool_run.error = str(exc)[:300]
         finally:
             tool_run.finished_at = time.time()
+            # Every finished background run records its outcome, and the run
+            # file keeps the receipt — so a failed write is inspectable.
+            tool_run.memory = _remember_run_outcome(tool_run)
             save_run(tool_run)
             with _lock:
                 _active.pop(tool_run.id, None)
@@ -228,10 +232,8 @@ def start_background(tool_id: str, params: dict[str, Any]) -> ToolRun:
                     from jarvis.personalization.learner import learn_from_tool_result
 
                     learn_from_tool_result(tool_id, {"ok": True, "stdout": tool_run.stdout})
-                    if tool_id == "opencode":
-                        _remember_opencode_result(tool_run)
                 except Exception:
-                    pass
+                    logger.warning("Tool learner failed for run %s", tool_run.id, exc_info=True)
 
     try:
         proc = subprocess.Popen(
@@ -258,22 +260,16 @@ def start_background(tool_id: str, params: dict[str, Any]) -> ToolRun:
     return run
 
 
-def _remember_opencode_result(run: ToolRun) -> None:
-    if not run.stdout:
-        return
-    try:
-        from jarvis.assistant_instance import get_assistant
+def _remember_run_outcome(run: ToolRun) -> dict[str, Any]:
+    from jarvis.tools.memory_sink import record_tool_outcome
 
-        assistant = get_assistant()
-        if hasattr(assistant, "memory") and assistant.memory:
-            assistant.memory.add(
-                f"[opencode:{run.id}] {run.task}\n{run.stdout[:600]}",
-                entry_type="tool_result",
-                namespace="opencode",
-                tags=["opencode", "coding"],
-            )
-    except Exception:
-        pass
+    return record_tool_outcome(
+        run.tool_id,
+        run.task,
+        ok=run.status == "completed",
+        summary=run.stdout or run.error or run.stderr,
+        run_id=run.id,
+    )
 
 
 def run_status(run_id: str) -> dict[str, Any]:

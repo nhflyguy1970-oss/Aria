@@ -215,7 +215,8 @@ def test_supporting_evidence_yields_verified_high_confidence(data_dir: Path):
     _run_all(
         rid,
         fake_search(default=SUPPORTING),
-        fake_fetch({h["url"]: "clear agreement" for h in SUPPORTING}),
+        # The pages must address the claim: unrelated text never verifies.
+        fake_fetch({h["url"]: "Measurements confirm the sky is blue." for h in SUPPORTING}),
     )
     claim = store.claims(rid)[0]
     assert claim["verified"] == 1
@@ -224,8 +225,8 @@ def test_supporting_evidence_yields_verified_high_confidence(data_dir: Path):
 
 def test_contradiction_is_detected_and_preserved(data_dir: Path):
     rid = engine.create_research("the earth is flat")["research_id"]
-    pages = {h["url"]: "supporting text" for h in SUPPORTING}
-    pages[CONTRADICTING[0]["url"]] = "This is false and a myth, refuted by data."
+    pages = {h["url"]: "Some surveys say the earth is flat." for h in SUPPORTING}
+    pages[CONTRADICTING[0]["url"]] = "That the earth is flat is false and a myth, refuted by data."
     _run_all(rid, fake_search(default=SUPPORTING + CONTRADICTING), fake_fetch(pages))
 
     claim = store.claims(rid)[0]
@@ -241,7 +242,7 @@ def test_contradiction_is_detected_and_preserved(data_dir: Path):
 def test_single_source_support_is_low_confidence_and_flagged(data_dir: Path):
     rid = engine.create_research("solo claim")["research_id"]
     one = [SUPPORTING[0]]
-    _run_all(rid, fake_search(default=one), fake_fetch({one[0]["url"]: "agreement"}))
+    _run_all(rid, fake_search(default=one), fake_fetch({one[0]["url"]: "The solo claim holds."}))
     claim = store.claims(rid)[0]
     assert claim["confidence"] == "low"
     assert claim["verified"] == 0
@@ -258,7 +259,9 @@ def test_no_evidence_is_reported_as_uncertainty(data_dir: Path):
 def test_independent_verification_recorded(data_dir: Path):
     rid = engine.create_research("verified thing")["research_id"]
     _run_all(
-        rid, fake_search(default=SUPPORTING), fake_fetch({h["url"]: "agree" for h in SUPPORTING})
+        rid,
+        fake_search(default=SUPPORTING),
+        fake_fetch({h["url"]: "The verified thing is confirmed." for h in SUPPORTING}),
     )
     linked = store.claim_evidence(store.claims(rid)[0]["id"])
     assert any(r["stance"] == store.VERIFIES for r in linked)
@@ -269,7 +272,7 @@ def test_independent_verification_recorded(data_dir: Path):
 
 def test_citations_trace_source_to_evidence_to_claim(data_dir: Path):
     rid = engine.create_research("traceable")["research_id"]
-    pages = {h["url"]: f"body of {h['title']}" for h in SUPPORTING}
+    pages = {h["url"]: f"{h['title']} confirms this is traceable." for h in SUPPORTING}
     _run_all(rid, fake_search(default=SUPPORTING), fake_fetch(pages))
 
     rep = engine.report(rid)
@@ -305,7 +308,11 @@ def test_synthesis_marks_uninspected_sources(data_dir: Path):
 
 def test_final_result_persists_and_completes(data_dir: Path):
     rid = engine.create_research("final")["research_id"]
-    _run_all(rid, fake_search(default=SUPPORTING), fake_fetch({h["url"]: "t" for h in SUPPORTING}))
+    _run_all(
+        rid,
+        fake_search(default=SUPPORTING),
+        fake_fetch({h["url"]: "The final figures stand." for h in SUPPORTING}),
+    )
     job = store.get_job(rid)
     assert job["status"] == store.COMPLETED
     assert job["synthesis"].startswith("# Research:")
@@ -415,10 +422,14 @@ def test_multiple_research_jobs_do_not_interfere(data_dir: Path):
     a = engine.create_research("job A")["research_id"]
     b = engine.create_research("job B")["research_id"]
     _run_all(
-        a, fake_search(default=SUPPORTING), fake_fetch({h["url"]: "a body" for h in SUPPORTING})
+        a,
+        fake_search(default=SUPPORTING),
+        fake_fetch({h["url"]: "Records describe job A." for h in SUPPORTING}),
     )
     _run_all(
-        b, fake_search(default=CONTRADICTING), fake_fetch({CONTRADICTING[0]["url"]: "false myth"})
+        b,
+        fake_search(default=CONTRADICTING),
+        fake_fetch({CONTRADICTING[0]["url"]: "Job B is a false myth."}),
     )
 
     assert {s["research_id"] for s in store.sources(a)} == {a}
@@ -488,7 +499,11 @@ def test_report_handler_returns_traceable_structure(data_dir: Path):
 
     ensure_handlers_loaded()
     rid = engine.create_research("report handler")["research_id"]
-    _run_all(rid, fake_search(default=SUPPORTING), fake_fetch({h["url"]: "b" for h in SUPPORTING}))
+    _run_all(
+        rid,
+        fake_search(default=SUPPORTING),
+        fake_fetch({h["url"]: "Notes on the report handler." for h in SUPPORTING}),
+    )
     out = call_action(None, "research_report", {"research_id": rid}, "")
     assert out["ok"] is True
     assert out["report"]["claims"][0]["evidence"]

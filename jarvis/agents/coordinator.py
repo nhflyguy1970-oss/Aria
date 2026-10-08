@@ -64,19 +64,38 @@ class AgentCoordinator:
         *,
         roles: list[str] | None = None,
         stop_on_error: bool = True,
+        confirm: bool = False,
+        approve_writes: bool = False,
     ) -> dict[str, Any]:
+        """Run a team. `confirm` and `approve_writes` must come from the caller.
+
+        This wrapper used to supply both itself, which turned every legacy call
+        into an approved, write-capable run. An unconfirmed call now returns the
+        proposed team with status permission_required, exactly as run_team does.
+        """
         result = run_team(
             self._assistant,
             goal,
             roles=roles,
             specialists=map_roles_to_specialists(roles) if roles else None,
-            confirm=True,
+            confirm=confirm,
             stop_on_error=stop_on_error,
-            budget={"require_confirm": False},
             trigger="compat-legacy",
             emit_bridges=True,
-            approve_writes=True,
+            approve_writes=approve_writes,
         )
+        if result.get("status") == "permission_required":
+            return {
+                "ok": False,
+                "goal": goal,
+                "status": "permission_required",
+                "confirmation_required": bool(result.get("confirmation_required")),
+                "proposal": result.get("proposal"),
+                "error": result.get("error") or "confirmation required",
+                "error_kind": result.get("error_kind") or "confirmation_required",
+                "steps": [],
+                "summary": "",
+            }
         # Legacy field names
         return {
             "ok": result.get("ok"),

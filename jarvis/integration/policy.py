@@ -126,18 +126,30 @@ def apply_bounds(limits: dict[str, Any] | None, level: str = "") -> dict[str, An
     return merged
 
 
-def check(capability: str, *, level: str = "", detail: str = "") -> None:
-    """Raise if the environment's autonomy level does not extend this far."""
+def refusal(capability: str, *, level: str = "", detail: str = "") -> str:
+    """Why this capability may not start now, or "" when it may.
+
+    For execution boundaries that report outcomes in an envelope rather than
+    raising. Read at the moment of execution, not when work was queued, so a
+    mission created before safe mode was switched on still cannot run.
+    """
     if safe_mode() and capability != "answer":
-        raise PolicyError(
+        return (
             f"safe mode is on: {capability} is not started. Existing state is unchanged "
             "and remains inspectable; clear JARVIS_SAFE_MODE to resume."
         )
     if not permits(capability, level):
-        raise PolicyError(
-            f"autonomy level {effective_level(level)} does not permit {capability}"
-            + (f" ({detail})" if detail else "")
+        return f"autonomy level {effective_level(level)} does not permit {capability}" + (
+            f" ({detail})" if detail else ""
         )
+    return ""
+
+
+def check(capability: str, *, level: str = "", detail: str = "") -> None:
+    """Raise if the environment's autonomy level does not extend this far."""
+    reason = refusal(capability, level=level, detail=detail)
+    if reason:
+        raise PolicyError(reason)
 
 
 def snapshot() -> dict[str, Any]:

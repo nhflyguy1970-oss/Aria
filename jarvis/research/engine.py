@@ -172,9 +172,55 @@ _NEGATION = re.compile(
     re.I,
 )
 
+_STOPWORDS = frozenset(
+    """a an the and or of to in on at by for with from as is are was were be been being
+    it its this that these those there their they them we our you your he she his her
+    do does did can could should would will may might must has have had not no yes
+    what which who whom whose when where why how than then so such about into over
+    under more most less very also just only any some all each every""".split()
+)
+
+
+def _terms(text: str) -> set[str]:
+    terms = set()
+    for word in re.findall(r"[a-z0-9]+", (text or "").lower()):
+        if len(word) < 3 or word in _STOPWORDS:
+            continue
+        terms.add(word[:-1] if len(word) > 4 and word.endswith("s") else word)
+    return terms
+
+
+def addresses_claim(claim: str, excerpt: str) -> bool:
+    """Does this excerpt even talk about the claim's subject?
+
+    A lexical relevance gate, not entailment: an excerpt must mention the
+    claim's content terms (all of them for short claims, two thirds for longer
+    ones) before it can count for or against it. Unrelated text — the failure
+    this exists to stop — never counts as support.
+    """
+    wanted = _terms(claim)
+    if not wanted:
+        return False
+    found = wanted & _terms(excerpt)
+    needed = len(wanted) if len(wanted) <= 3 else -(-2 * len(wanted) // 3)
+    return len(found) >= needed
+
+
+def _publisher(url: str) -> str:
+    from jarvis.evidence.store import publisher_of
+
+    return publisher_of(url)
+
 
 def phase_analyze(research_id: str) -> dict[str, Any]:
-    """Build claims from evidence and record supporting/contradicting stances."""
+    """Build claims from evidence and record supporting/contradicting stances.
+
+    Verification requires all of: evidence that addresses the claim, from at
+    least two independent publishers whose pages were actually inspected, no
+    contradiction, and agreement from the shared evidence layer, which is the
+    authoritative verdict. Snippets, unavailable pages and unrelated text can
+    at most leave a claim supported-but-unverified.
+    """
     job = store.get_job(research_id)
     if not job:
         raise ValueError(f"No research job {research_id}")
@@ -182,9 +228,13 @@ def phase_analyze(research_id: str) -> dict[str, Any]:
 
     claim_id = store.add_claim(research_id, objective, kind=store.FACT)
     rows = store.evidence(research_id)
-    supports = contradicts = 0
+    sources = {src["id"]: src for src in store.sources(research_id)}
+    supports = contradicts = unrelated = 0
 
     for ev in rows:
+        if not addresses_claim(objective, ev["excerpt"] or ""):
+            unrelated += 1
+            continue
         stance = store.CONTRADICTS if _NEGATION.search(ev["excerpt"] or "") else store.SUPPORTS
         store.link_evidence(claim_id, ev["id"], stance)
         if stance == store.CONTRADICTS:
@@ -192,24 +242,37 @@ def phase_analyze(research_id: str) -> dict[str, Any]:
         else:
             supports += 1
 
-    # Independent verification: agreeing evidence from distinct sources.
     linked = store.claim_evidence(claim_id)
     supporting_sources = {r["source_id"] for r in linked if r["stance"] == store.SUPPORTS}
-    if len(supporting_sources) >= 2:
-        for r in linked:
-            if r["stance"] == store.SUPPORTS:
-                store.link_evidence(claim_id, r["evidence_id"], store.VERIFIES)
-                break
-
-    verified = len(supporting_sources) >= 2 and contradicts == 0
-    confidence = _confidence(supports, contradicts, len(supporting_sources))
-    store.set_claim_verdict(claim_id, verified=verified, confidence=confidence)
+    # Independent = distinct publishers whose content was actually inspected.
+    inspected_publishers = {
+        _publisher(sources[sid]["url"])
+        for sid in supporting_sources
+        if sid in sources and sources[sid]["inspected"]
+    }
+    confidence = _confidence(supports, contradicts, len(inspected_publishers))
 
     # Mirror into the shared evidence layer (Milestone 7) so the claim is
     # traceable and verifiable outside research too. Research keeps its own
     # tables for backward compatibility; the evidence layer is authoritative
-    # for verification.
-    _mirror_to_evidence(research_id, objective)
+    # for verification, so its verdict decides.
+    mirrored = _mirror_to_evidence(research_id, objective)
+    from jarvis.evidence.verify import VERIFIED
+
+    verified = (
+        len(inspected_publishers) >= 2
+        and contradicts == 0
+        and mirrored.get("verification") == VERIFIED
+    )
+    if not verified and confidence == "high":
+        # Never report more confidence than the authoritative layer gives.
+        confidence = mirrored.get("confidence") or "low"
+    if verified:
+        for r in linked:
+            if r["stance"] == store.SUPPORTS:
+                store.link_evidence(claim_id, r["evidence_id"], store.VERIFIES)
+                break
+    store.set_claim_verdict(claim_id, verified=verified, confidence=confidence)
 
     if contradicts:
         store.add_unresolved(
@@ -218,21 +281,38 @@ def phase_analyze(research_id: str) -> dict[str, Any]:
         )
     if not rows:
         store.add_unresolved(research_id, f"No evidence was collected for: {objective}")
+    if unrelated:
+        store.add_unresolved(
+            research_id,
+            f"{unrelated} collected excerpt(s) did not address the claim and were not counted: "
+            f"{objective}",
+        )
+    if rows and not supports and not contradicts:
+        store.add_unresolved(research_id, f"No collected evidence addresses: {objective}")
     if supports and len(supporting_sources) < 2:
         store.add_unresolved(research_id, f"Only one independent source supports: {objective}")
+    elif supports and not verified and not contradicts:
+        store.add_unresolved(
+            research_id,
+            f"Supported but not verified (needs inspected sources from two independent "
+            f"publishers): {objective}",
+        )
 
     return {
         "claims": len(store.claims(research_id)),
         "supports": supports,
         "contradicts": contradicts,
+        "unrelated": unrelated,
         "verified": verified,
         "confidence": confidence,
+        "evidence_verification": mirrored.get("verification"),
     }
 
 
 def _mirror_to_evidence(research_id: str, objective: str) -> dict[str, Any]:
     """Project research sources/evidence/claims into the shared evidence model."""
     from jarvis import evidence as ev
+    from jarvis.evidence import store as ev_store
 
     claim_id = ev.add_claim(objective, context_id=research_id, origin="research")
     source_map: dict[int, str] = {}
@@ -263,7 +343,13 @@ def _mirror_to_evidence(research_id: str, objective: str) -> dict[str, Any]:
         eid = ev.add_evidence(
             sid, row["excerpt"], context_id=research_id, claim_id=claim_id, evidence_type=kind
         )
-        relation = ev.CONTRADICTS if _NEGATION.search(row["excerpt"] or "") else ev.SUPPORTS
+        if not addresses_claim(objective, row["excerpt"] or ""):
+            # Kept for provenance, but it says nothing about the claim.
+            relation = ev_store.CONTEXTUALIZES
+        elif _NEGATION.search(row["excerpt"] or ""):
+            relation = ev.CONTRADICTS
+        else:
+            relation = ev.SUPPORTS
         ev.link(claim_id, eid, relation)
 
     result = ev.verify(claim_id, verifier="research_engine")
@@ -296,6 +382,13 @@ def phase_synthesize(research_id: str) -> dict[str, Any]:
     open_questions = store.unresolved(research_id)
     lines: list[str] = [f"# Research: {job['objective']}", ""]
     overall = "none"
+    # The shared evidence layer's latest verdict per claim — shown alongside
+    # the research claim so the synthesis never hides its caution.
+    shared = {
+        c["text"]: (c.get("verification") or {})
+        for c in _evidence_claims(research_id)
+        if c.get("verification")
+    }
 
     for claim in claim_rows:
         linked = store.claim_evidence(claim["id"])
@@ -308,6 +401,12 @@ def phase_synthesize(research_id: str) -> dict[str, Any]:
             f"- kind: {claim['kind']} · confidence: {claim['confidence']} · "
             f"verified: {'yes' if claim['verified'] else 'no'}"
         )
+        verdict = shared.get(claim["text"])
+        if verdict:
+            lines.append(
+                f"- evidence layer: {verdict.get('result')} ({verdict.get('confidence')})"
+                + (f" — {verdict.get('explanation')}" if verdict.get("explanation") else "")
+            )
         lines.append(f"- supporting evidence: {len(sup)} · contradicting: {len(con)}")
         if ver:
             lines.append(f"- independently corroborated by {len(ver)} source(s)")

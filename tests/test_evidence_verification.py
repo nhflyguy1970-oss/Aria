@@ -422,7 +422,8 @@ def test_research_produces_verified_evidence_claims(data_dir: Path, monkeypatch)
             {"url": "https://nih.gov/b", "title": "B", "snippet": "also supports"},
         ],
     )
-    monkeypatch.setattr(rengine, "_default_fetch", lambda u: "agreeing body")
+    # Inspected bodies that address the claim; unrelated text cannot verify.
+    monkeypatch.setattr(rengine, "_default_fetch", lambda u: "Water boils at 100C at sea level.")
     rid = rengine.create_research("water boils at 100C")["research_id"]
     for phase in rengine.PHASES:
         rengine.run_phase(rid, phase)
@@ -450,7 +451,11 @@ def test_research_contradiction_survives_into_evidence_layer(data_dir: Path, mon
     monkeypatch.setattr(
         rengine,
         "_default_fetch",
-        lambda u: "this is false, a myth, refuted" if "blog.example" in u else "supporting body",
+        lambda u: (
+            "The contested topic is false, a myth, refuted"
+            if "blog.example" in u
+            else "The contested topic is accurate."
+        ),
     )
     rid = rengine.create_research("contested topic")["research_id"]
     for phase in rengine.PHASES:

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from jarvis.config import DATA_DIR
 from jarvis.conversation import Conversation
+from jarvis.conversation_archive import ARCHIVE_DIRNAME, ConversationArchive
 from jarvis.session import SessionContext
 
 BRANCHES_FILE = DATA_DIR / "chat_branches.json"
@@ -26,6 +27,28 @@ class BranchManager:
             except (json.JSONDecodeError, OSError):
                 pass
         return {"active": "main", "branches": {"main": {"name": "Main", "messages": [], "created": ""}}}
+
+    def archive_for(self, branch_id: str | None) -> ConversationArchive:
+        """The branch's complete source history — kept next to the branch store."""
+        bid = branch_id or self.active_id or "main"
+        return ConversationArchive(bid, BRANCHES_FILE.parent / ARCHIVE_DIRNAME)
+
+    def _open_archive(self, bid: str) -> ConversationArchive:
+        """Open a branch's archive, seeding it once from the branch store.
+
+        A branch that predates the archive only has its already-pruned context
+        on disk. Those turns are copied in, labelled with where they came from;
+        anything pruned before this point is not in that store and is not
+        reconstructed.
+        """
+        archive = self.archive_for(bid)
+        if not archive.exists():
+            branch = self._data["branches"].get(bid, {})
+            parent = branch.get("forked_from")
+            origin = f"fork:{parent}" if parent else "chat_branches.json"
+            archive.mark("opened", origin=origin, name=branch.get("name", bid))
+            archive.seed(branch.get("messages", []), origin=origin)
+        return archive
 
     def _ensure_default_branches(self) -> None:
         branches = self._data.setdefault("branches", {})
@@ -64,7 +87,7 @@ class BranchManager:
                 "created": datetime.now(timezone.utc).isoformat(),
             }
         if bid not in self._conversations:
-            conv = Conversation()
+            conv = Conversation(archive=self._open_archive(bid))
             conv.messages = list(self._data["branches"][bid].get("messages", []))
             if not conv.messages or conv.messages[0].get("role") != "system":
                 conv.messages.insert(0, {"role": "system", "content": system_prompt})
@@ -175,6 +198,9 @@ class BranchManager:
         bid = (branch_id or "").strip()
         if not bid or bid == "main" or bid not in self._data.get("branches", {}):
             return False
+        # The branch leaves the chat list; its source history is kept. Opened
+        # first so a branch never loaded this session is seeded before it goes.
+        self._open_archive(bid).mark("deleted")
         self._data["branches"].pop(bid, None)
         self._conversations.pop(bid, None)
         if self.active_id == bid:
@@ -196,8 +222,9 @@ class BranchManager:
         bid = (branch_id or "").strip() or "main"
         if bid not in self._data.get("branches", {}):
             return False
-        conv = Conversation()
+        conv = Conversation(archive=self._open_archive(bid))
         conv.messages = [{"role": "system", "content": system_prompt}]
+        conv.archive.mark("cleared")
         self._conversations[bid] = conv
         self._data["branches"][bid]["messages"] = conv.messages
         self._data["branches"][bid]["session"] = SessionContext().to_dict()

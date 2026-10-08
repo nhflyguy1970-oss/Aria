@@ -61,12 +61,13 @@ def independence(rows: list[dict[str, Any]]) -> dict[str, Any]:
     """
     source_ids = {r["source_id"] for r in rows}
     domains = {(r.get("domain") or "").lower() for r in rows if r.get("domain")}
+    publishers = {store.publisher_of(d) for d in domains}
     blank_domains = any(not (r.get("domain") or "") for r in rows)
 
     if len(source_ids) <= 1:
         level = store.NOT_INDEPENDENT
-    elif len(domains) <= 1:
-        # Distinct URLs on one domain — same publisher, so not corroboration.
+    elif len(publishers) <= 1:
+        # Distinct URLs or subdomains of one publisher are not corroboration.
         level = store.NOT_INDEPENDENT
     elif blank_domains:
         level = store.UNKNOWN_INDEPENDENCE
@@ -77,8 +78,18 @@ def independence(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "level": level,
         "distinct_sources": len(source_ids),
         "distinct_domains": len(domains),
+        "distinct_publishers": len(publishers),
         "domains": sorted(d for d in domains if d),
     }
+
+
+def _inspected(row: dict[str, Any]) -> bool:
+    """Evidence read from a source that was actually retrieved — not a search snippet."""
+    return (
+        bool(row.get("inspected"))
+        and row.get("access_state") == store.INSPECTED
+        and row.get("evidence_type") != store.SNIPPET
+    )
 
 
 def _partition(claim_id: str) -> dict[str, list[dict[str, Any]]]:
@@ -94,6 +105,15 @@ def _partition(claim_id: str) -> dict[str, list[dict[str, Any]]]:
             if r["relation"] == store.SUPPORTS and r["evidence_type"] not in NON_CORROBORATING
         ],
         "inspected": [r for r in rows if r["inspected"]],
+        # The only evidence that can establish verification: supporting,
+        # corroborating, and read from a source that was actually retrieved.
+        "inspected_corroborating": [
+            r
+            for r in rows
+            if r["relation"] == store.SUPPORTS
+            and r["evidence_type"] not in NON_CORROBORATING
+            and _inspected(r)
+        ],
     }
 
 
@@ -130,7 +150,11 @@ def score_confidence(
             "factors": factors,
             "reason": "supporting and contradicting evidence both present",
         }
-    if indep["level"] == store.INDEPENDENT and inspected and best_tier <= 2:
+    if (
+        indep["level"] == store.INDEPENDENT
+        and independence(parts["inspected_corroborating"])["level"] == store.INDEPENDENT
+        and best_tier <= 2
+    ):
         return {
             "confidence": HIGH,
             "factors": factors,
@@ -170,9 +194,13 @@ def verify(
     confidence = scored["confidence"]
 
     if method == DIRECT_INSPECTION:
-        result = VERIFIED if parts["inspected"] and not parts["contradicting"] else INSUFFICIENT
+        result = (
+            VERIFIED
+            if parts["inspected_corroborating"] and not parts["contradicting"]
+            else INSUFFICIENT
+        )
         explanation = (
-            f"{len(parts['inspected'])} inspected evidence item(s); "
+            f"{len(parts['inspected_corroborating'])} inspected supporting evidence item(s); "
             f"{len(parts['contradicting'])} contradicting"
         )
     elif method == CONTRADICTION_ANALYSIS:
@@ -202,9 +230,15 @@ def verify(
         )
         explanation = f"independence={indep['level']}, domains={indep['distinct_domains']}"
     else:  # INDEPENDENT_SOURCES
+        # Verification needs independent publishers whose content was actually
+        # inspected. Snippets and unavailable pages can support, never verify.
+        inspected_indep = independence(parts["inspected_corroborating"])
         if parts["contradicting"]:
             result = CONTESTED
-        elif indep["level"] == store.INDEPENDENT and len(parts["corroborating"]) >= 2:
+        elif (
+            inspected_indep["level"] == store.INDEPENDENT
+            and len(parts["inspected_corroborating"]) >= 2
+        ):
             result = VERIFIED
         elif parts["corroborating"]:
             result = SUPPORTED
@@ -212,7 +246,9 @@ def verify(
             result = INSUFFICIENT
         explanation = (
             f"{len(parts['corroborating'])} corroborating item(s) across "
-            f"{indep['distinct_domains']} domain(s); independence={indep['level']}"
+            f"{indep['distinct_publishers']} publisher(s); independence={indep['level']}; "
+            f"{len(parts['inspected_corroborating'])} from inspected sources "
+            f"(independence={inspected_indep['level']})"
         )
 
     if result == INSUFFICIENT:

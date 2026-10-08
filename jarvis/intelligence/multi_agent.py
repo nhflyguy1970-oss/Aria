@@ -31,18 +31,20 @@ def run_multi_agent(
     specialists: list[str] | None = None,
     stop_on_error: bool = False,
     max_agents: int = 6,
+    confirm: bool = False,
+    approve_writes: bool = False,
 ) -> dict[str, Any]:
-    """Legacy entry — confirms automatically for API compatibility; prefer explicit confirm."""
+    """Legacy entry. Confirmation and write approval come from the caller only."""
     result = run_team(
         assistant,
         goal,
         specialists=(specialists or [])[:max_agents] or None,
-        confirm=True,
+        confirm=confirm,
         stop_on_error=stop_on_error,
-        budget={"max_specialists": max_agents, "require_confirm": False},
+        budget={"max_specialists": max_agents},
         trigger="compat-legacy",
         emit_bridges=True,
-        approve_writes=True,  # legacy callers expected execution
+        approve_writes=approve_writes,
     )
     # Shape compat fields
     result.setdefault("specialists", result.get("team"))

@@ -2,10 +2,23 @@ from jarvis.config import MAX_CONTEXT_CHARS, MAX_MESSAGES
 
 
 class Conversation:
-    def __init__(self, system_prompt: str | None = None):
+    """The bounded context sent to models.
+
+    `messages` is pruned to MAX_MESSAGES / MAX_CONTEXT_CHARS. When an `archive`
+    is attached (branch conversations), every user/assistant turn is written
+    to it before pruning, so pruning only ever narrows the model's context and
+    never discards the source history.
+    """
+
+    def __init__(self, system_prompt: str | None = None, *, archive=None):
         self.messages: list[dict] = []
+        self.archive = archive
         if system_prompt:
             self.messages.append({"role": "system", "content": system_prompt})
+
+    def _archive(self, role: str, content: str) -> None:
+        if self.archive is not None:
+            self.archive.record(role, content)
 
     def add_system(self, content: str) -> None:
         self.messages.append({"role": "system", "content": content})
@@ -13,19 +26,26 @@ class Conversation:
 
     def add_user(self, content: str) -> None:
         self.messages.append({"role": "user", "content": content})
+        self._archive("user", content)
         self._prune()
 
     def add_assistant(self, content: str) -> None:
         self.messages.append({"role": "assistant", "content": content})
+        self._archive("assistant", content)
         self._prune()
 
     def clear(self) -> None:
         system = [m for m in self.messages if m["role"] == "system"]
         self.messages = system[:1] if system else []
+        if self.archive is not None:
+            self.archive.mark("cleared")
 
     def pop_last_user(self) -> bool:
         if self.messages and self.messages[-1].get("role") == "user":
-            self.messages.pop()
+            removed = self.messages.pop()
+            if self.archive is not None:
+                # The turn was said; it is only withdrawn from the context.
+                self.archive.mark("retracted", role="user", content=removed.get("content"))
             return True
         return False
 
@@ -39,6 +59,8 @@ class Conversation:
         if mark and mark.strip() not in keep:
             keep = f"{keep}{mark}" if keep else mark.strip()
         self.messages[-1]["content"] = keep
+        if self.archive is not None:
+            self.archive.mark("truncated", role="assistant", kept=keep)
         return True
 
     def set_system_content(self, content: str) -> None:

@@ -55,18 +55,33 @@ def run_team(
     on_progress: Callable[[dict[str, Any]], None] | None = None,
     correlation_id: str | None = None,
 ) -> dict[str, Any]:
-    """Execute a Specialist Team run. Requires confirm=True unless trigger is internal test with confirm."""
+    """Execute a Specialist Team run.
+
+    Requires confirm=True from the caller, and write specialists additionally
+    need approve_writes=True. Both must reflect what the requester actually
+    authorised: no trigger name exempts a run from confirmation.
+    """
     goal = (goal or "").strip()
     if not goal:
         return {"ok": False, "status": "failed", "error": "goal required"}
+
+    from jarvis.integration import policy
+
+    refused = policy.refusal("agent")
+    if refused:
+        return {
+            "ok": False,
+            "status": "permission_required",
+            "error": refused,
+            "error_kind": "policy_denied",
+        }
 
     bud = budget if isinstance(budget, TeamBudget) else TeamBudget.from_dict(budget)
     if critic_loop:
         bud.allow_critic_loop = True
     if parallel_readers:
         bud.allow_parallel_readers = True
-    if bud.require_confirm and not confirm and trigger not in ("compat-legacy",):
-        # Allow legacy compat path to set confirm via wrapper
+    if bud.require_confirm and not confirm:
         proposal = propose_team(goal, specialists=specialists)
         return {
             "ok": False,

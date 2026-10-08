@@ -39,7 +39,22 @@ def _chain(assistant, params: dict, message: str) -> dict:
         goal,
         roles=roles if isinstance(roles, list) else None,
         stop_on_error=not bool(params.get("continue_on_error")),
+        confirm=bool(params.get("confirm")),
+        approve_writes=bool(params.get("approve_writes")),
     )
+    if result.get("status") == "permission_required":
+        team = ", ".join((result.get("proposal") or {}).get("team") or [])
+        return {
+            "ok": False,
+            "message": (
+                f"Nothing has run yet: {result.get('error')}."
+                + (f" Proposed team: {team}." if team else "")
+                + " Confirm to run it; writes need separate approval."
+            ),
+            "confirmation_required": bool(result.get("confirmation_required")),
+            "error_kind": result.get("error_kind") or "confirmation_required",
+            "data": result,
+        }
     return {
         "ok": result.get("ok", False),
         "message": result.get("summary") or "Agent chain complete.",
@@ -56,7 +71,12 @@ def _job_start(assistant, params: dict, message: str) -> dict:
     roles = params.get("roles")
     if isinstance(roles, str):
         roles = [r.strip() for r in roles.split(",") if r.strip()]
-    job = start_agent_job(assistant, goal, roles=roles if isinstance(roles, list) else None)
+    job = start_agent_job(
+        assistant,
+        goal,
+        roles=roles if isinstance(roles, list) else None,
+        approve_writes=bool(params.get("approve_writes")),
+    )
     return {
         "ok": True,
         "message": f"Started job `{job.id}` — {job.kind}",

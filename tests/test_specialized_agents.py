@@ -485,7 +485,9 @@ def test_research_specialist_evidence_stays_traceable(data_dir: Path, monkeypatc
             {"url": "https://nih.gov/b", "title": "B", "snippet": "also supports"},
         ],
     )
-    monkeypatch.setattr(research_engine, "_default_fetch", lambda url: "agreeing body")
+    monkeypatch.setattr(
+        research_engine, "_default_fetch", lambda url: "This is traceable via a specialist."
+    )
     rid = research_engine.create_research("traceable via specialist")["research_id"]
     for phase in research_engine.PHASES:
         research_engine.run_phase(rid, phase)

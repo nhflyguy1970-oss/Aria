@@ -8,6 +8,7 @@ because workflow_list and workflow_run already belong to that system.
 from __future__ import annotations
 
 from jarvis.handlers.registry import register_action
+from jarvis.integration.policy import PolicyError
 from jarvis.response import err, ok
 
 
@@ -164,6 +165,12 @@ def workflow_start(assistant, params: dict, message: str) -> dict:
         )
     except workflows.WorkflowError as exc:
         return err(str(exc), module="general", error_kind="workflow")
+    except PolicyError as exc:
+        return err(
+            f"Workflow `{workflow_id}` was not started: {exc}",
+            module="general",
+            error_kind="policy_denied",
+        )
     snapshot = workflows.status(workflow_id) or {}
     return ok(
         f"Workflow `{workflow_id}` — {snapshot.get('state')}"
@@ -200,6 +207,12 @@ def workflow_resume(assistant, params: dict, message: str) -> dict:
         workflows.resume(workflow_id, assistant=assistant)
     except workflows.WorkflowStateError as exc:
         return err(str(exc), module="general", error_kind="illegal_transition")
+    except PolicyError as exc:
+        return err(
+            f"Workflow `{workflow_id}` was not resumed: {exc}",
+            module="general",
+            error_kind="policy_denied",
+        )
     return ok(
         f"Workflow `{workflow_id}` resumed.",
         module="general",

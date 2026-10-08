@@ -80,6 +80,28 @@ def domain_of(url: str) -> str:
     return host[4:] if host.startswith("www.") else host
 
 
+# Second-level labels under which registrations happen one level deeper
+# (example.co.uk, example.com.au). Deliberately small: an unknown suffix makes
+# two publishers look like one, which errs towards "not independent".
+_SECOND_LEVEL = frozenset({"co", "com", "org", "net", "gov", "ac", "edu", "ne", "or", "go"})
+
+
+def publisher_of(domain_or_url: str) -> str:
+    """The registrable domain — who published it, not which host served it.
+
+    news.example.org and blog.example.org are one publisher; counting them as
+    two would let one organisation corroborate itself.
+    """
+    host = domain_of(domain_or_url) if "/" in (domain_or_url or "") else (domain_or_url or "")
+    host = host.lower().split(":")[0].strip(".")
+    labels = [label for label in host.split(".") if label]
+    if len(labels) <= 2 or all(label.isdigit() for label in labels):
+        return host
+    if len(labels[-1]) == 2 and labels[-2] in _SECOND_LEVEL:
+        return ".".join(labels[-3:])
+    return ".".join(labels[-2:])
+
+
 def _conn() -> sqlite3.Connection:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH, timeout=30.0)
