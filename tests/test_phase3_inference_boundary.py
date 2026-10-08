@@ -391,3 +391,15 @@ def test_tests_cannot_reach_live_inference():
 
     with pytest.raises(urllib.error.URLError, match="blocked in tests"):
         urllib.request.urlopen("http://127.0.0.1:11434/api/generate", timeout=1)
+
+
+def test_receipt_explains_when_policy_replaced_the_requested_model(monkeypatch):
+    monkeypatch.setattr(
+        "jarvis.inference.execution_policy.apply_policy_to_route",
+        lambda *, model, role="general": {"model": LOCAL, "hardware": "cpu", "source": "user_config"},
+    )
+    with patch.object(gateway, "_ollama_chat_with_usage", return_value=("ok", {})):
+        _t, usage = gateway.chat_with_usage(CLOUD, MSG)
+    receipt = usage["receipt"]
+    assert receipt["requested_model"] == CLOUD and receipt["executed_model"] == LOCAL
+    assert any("user_config" in p and LOCAL in p for p in receipt["policy"])

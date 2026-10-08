@@ -197,6 +197,15 @@ def _prepare(model: str, role: str, kwargs: dict[str, Any]) -> tuple[dict, str, 
     return overlay, chosen_model, hardware, lock
 
 
+def _note_overlay(receipt, requested: str, chosen_model: str, overlay: dict, route) -> None:
+    """Say so when execution policy replaced the requested model before routing."""
+    if route is None and chosen_model and chosen_model != requested:
+        receipt.policy.append(
+            f"execution policy ({overlay.get('source') or 'default'}) selected "
+            f"{chosen_model} instead of {requested}"
+        )
+
+
 def _authorize(
     chosen: InferenceRoute, role: str, receipt: boundary.Receipt
 ) -> InferenceRoute:
@@ -312,6 +321,7 @@ def chat_with_usage(
         privacy=boundary.privacy_class(messages, privacy),
         stream=False,
     )
+    _note_overlay(receipt, model, chosen_model, overlay, route)
     chosen = route or select_route(chosen_model, role=role, messages=messages, lock_model=lock)
     chosen = _authorize(chosen, role, receipt)
     boundary.check_capabilities(chosen.model, boundary.requirements_from_kwargs(kwargs, messages))
@@ -423,6 +433,7 @@ def chat_with_tools(
         privacy=boundary.privacy_class(messages, privacy),
         stream=False,
     )
+    _note_overlay(receipt, model, chosen_model, overlay, route)
     chosen = route or select_route(chosen_model, role=role, messages=messages, lock_model=lock)
     chosen = _authorize(chosen, role, receipt)
     _trace(chosen, hardware, overlay, stream=False)
@@ -548,6 +559,7 @@ def stream_chat(
         privacy=boundary.privacy_class(messages, privacy),
         stream=True,
     )
+    _note_overlay(receipt, model, chosen_model, overlay, route)
     chosen = route or select_route(chosen_model, role=role, messages=messages, lock_model=lock)
     chosen = _authorize(chosen, role, receipt)
     boundary.check_capabilities(chosen.model, boundary.requirements_from_kwargs(kwargs, messages))
