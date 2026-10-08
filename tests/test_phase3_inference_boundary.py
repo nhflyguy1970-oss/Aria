@@ -41,7 +41,21 @@ def cloud_route() -> policy.InferenceRoute:
 
 
 def enable_cloud(monkeypatch):
+    """Cloud on, plus what Phase 4 requires before any paid call: an owner
+    authorization, a budget and a price (all in the isolated test data)."""
+    import json
+
+    from jarvis.inference import cloud_policy
+
     monkeypatch.setenv("JARVIS_CLOUD_INFERENCE", "1")
+    cloud_policy.reset_for_tests()
+    cloud_policy.BUDGET_FILE.write_text(json.dumps({
+        "monthly_total_usd": 10.0,
+        "per_task_max_usd": 1.0,
+        "providers": {"openai": {"monthly_usd": 5.0}, "anthropic": {"monthly_usd": 5.0}},
+        "prices": {CLOUD: {"input_per_mtok": 1.0, "output_per_mtok": 2.0}},
+    }))
+    cloud_policy.create_authorization("openai", max_cost_usd=1.0)
 
 
 # ------------------------------------------------- defect 1: cloud-disable bypass

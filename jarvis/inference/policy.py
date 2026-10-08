@@ -151,6 +151,20 @@ def select_route(
                 reason=f"cloud_refused: {refusal}",
                 local=True,
             )
+        if mode != "ollama":
+            from jarvis.inference.providers import has_credentials, split_model
+
+            provider, _native = split_model(model)
+            if has_credentials(provider):
+                # Native adapter: the gateway still requires an owner
+                # authorization, a price and budget before anything is sent.
+                return InferenceRoute(
+                    backend="native",
+                    model=model,
+                    reason=f"cloud model via native {provider} adapter",
+                    local=False,
+                    cloud=True,
+                )
         if mode != "ollama" and litellm_available():
             return InferenceRoute(
                 backend="litellm",
@@ -171,6 +185,22 @@ def select_route(
         return InferenceRoute(backend="ollama", model=model, reason=reason, local=True)
 
     reason = vram_reason or "local_default"
+
+    # Operator opt-in only: otherwise the default conversation stays local.
+    if not lock_model and mode != "ollama":
+        from jarvis.inference.provider_routing import choose, routing_config
+
+        if routing_config().get("auto_escalate"):
+            decision = choose(role, context_tokens=context_tokens, include_cloud=True)
+            if decision.chosen is not None and decision.chosen.locality == "cloud":
+                return InferenceRoute(
+                    backend="native",
+                    model=decision.chosen.model,
+                    reason="auto: "
+                    + next((e for e in decision.explanation if e.startswith("chose ")), "ranked best"),
+                    local=False,
+                    cloud=True,
+                )
 
     # Large-context escalation needs an operator-named cloud model; ARIA does
     # not hardcode one (names change; availability is per account).

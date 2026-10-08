@@ -248,6 +248,11 @@ def _live_data_guard():
 def _no_api_key_in_tests(monkeypatch: pytest.MonkeyPatch):
     """Tests must not inherit live-house secrets or launch env."""
     monkeypatch.setenv("JARVIS_API_KEY", "")
+    # Provider API keys: never inherited, and anything a test writes into
+    # os.environ (e.g. via the secrets bus) is removed again afterwards —
+    # a leaked fake key made later tests see a configured cloud provider.
+    for provider_key in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        monkeypatch.delenv(provider_key, raising=False)
     monkeypatch.delenv("JARVIS_CLOUD_LIVE_PROVIDER", raising=False)
     monkeypatch.delenv("JARVIS_CLOUD_LIVE_VOICE", raising=False)
     monkeypatch.delenv("JARVIS_BROWSER_VLM_MODEL", raising=False)
@@ -266,7 +271,7 @@ _LIVE_INFERENCE_PATHS = ("/api/generate", "/api/chat", "/api/embed", "/api/embed
 
 
 @pytest.fixture(autouse=True)
-def _no_live_inference(monkeypatch: pytest.MonkeyPatch):
+def _no_live_inference(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest):
     """Tests must never run inference on the machine's real Ollama.
 
     Two repair-product tests forced a 5 s generate probe against production
@@ -280,10 +285,18 @@ def _no_live_inference(monkeypatch: pytest.MonkeyPatch):
 
     real_urlopen = urllib.request.urlopen
 
+    allow_network = request.node.get_closest_marker("network") is not None
+
     def guarded(url, *args, **kwargs):
+        from urllib.parse import urlsplit
+
         target = url.full_url if hasattr(url, "full_url") else str(url)
         if any(path in target for path in _LIVE_INFERENCE_PATHS):
             raise urllib.error.URLError("live inference is blocked in tests")
+        host = (urlsplit(target).hostname or "").lower()
+        if host and host not in ("127.0.0.1", "localhost", "::1") and not allow_network:
+            # No test may reach a cloud API: provider tests use simulated transports.
+            raise urllib.error.URLError(f"outbound network to {host} is blocked in tests")
         return real_urlopen(url, *args, **kwargs)
 
     monkeypatch.setattr(urllib.request, "urlopen", guarded)

@@ -247,7 +247,9 @@ def model_capabilities(model: str) -> frozenset[str] | None:
     caps: frozenset[str] | None = None
     try:
         if is_cloud_model(model):
-            caps = _litellm_capabilities(model)
+            from jarvis.inference.providers import discovered_capabilities
+
+            caps = discovered_capabilities(model) or _litellm_capabilities(model)
         else:
             from ollama import show
 

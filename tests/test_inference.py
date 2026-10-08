@@ -43,6 +43,18 @@ class TestInferenceGateway(unittest.TestCase):
     @patch.dict("os.environ", {"JARVIS_CLOUD_INFERENCE": "1"}, clear=False)
     @patch("jarvis.inference.gateway._litellm_chat_with_usage", return_value=("cloud", {"backend": "litellm"}))
     def test_chat_with_usage_honors_route(self, mock_litellm):
+        import json
+
+        from jarvis.inference import cloud_policy
+
+        # Paid cloud inference needs an owner authorization, budget and price.
+        cloud_policy.reset_for_tests()
+        cloud_policy.BUDGET_FILE.write_text(json.dumps({
+            "monthly_total_usd": 1.0, "per_task_max_usd": 1.0,
+            "providers": {"openai": {"monthly_usd": 1.0}},
+            "prices": {"gpt-4o-mini": {"input_per_mtok": 1.0, "output_per_mtok": 1.0}},
+        }))
+        cloud_policy.create_authorization("openai", max_cost_usd=1.0)
         route = InferenceRoute(backend="litellm", model="gpt-4o-mini", reason="test", cloud=True)
         text, usage = chat_with_usage("gpt-4o-mini", [{"role": "user", "content": "hi"}], route=route)
         self.assertEqual(text, "cloud")

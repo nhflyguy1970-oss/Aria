@@ -7,12 +7,13 @@ import logging
 import os
 import time
 import urllib.error
+from dataclasses import dataclass
 import urllib.request
 from collections.abc import Iterator
 from typing import Any
 
 from jarvis.inference import boundary
-from jarvis.inference.policy import InferenceRoute, select_route
+from jarvis.inference.policy import InferenceRoute, _estimate_context_tokens, select_route
 
 logger = logging.getLogger("jarvis.inference")
 
@@ -101,10 +102,15 @@ def _ollama_stream(
 
 
 def _cloud_guard(model: str) -> None:
-    """Last line before network egress: the global cloud policy, re-checked."""
+    """Last line before network egress: the global cloud policy, re-checked,
+    and — for paid cloud models — an owner-authorized, priced reservation."""
     refusal = boundary.cloud_refusal(model)
     if refusal:
         raise boundary.CloudNotPermitted(f"cloud call to {model!r} blocked: {refusal}")
+    if boundary.is_cloud_model(model):
+        from jarvis.inference.cloud_policy import require_reservation
+
+        require_reservation(boundary.provider_of(model))
 
 
 def _litellm_chat_with_usage(model: str, messages: list[dict], **kwargs) -> tuple[str, dict]:
@@ -206,6 +212,25 @@ def _note_overlay(receipt, requested: str, chosen_model: str, overlay: dict, rou
         )
 
 
+# Short structured jobs. An uncapped utility call let a base completion model
+# generate for 8+ minutes on the 7k-token router prompt (it never emits a stop
+# token); a thinking model spends its budget thinking. Callers' explicit
+# options still win.
+UTILITY_OUTPUT_CAPS = {"router": 256, "tool_calling": 256, "summarization": 512, "learning": 512}
+
+
+def _utility_defaults(role: str, chosen: InferenceRoute, kwargs: dict) -> None:
+    cap = UTILITY_OUTPUT_CAPS.get(role)
+    if cap is None or chosen.backend != "ollama":
+        return
+    options = dict(kwargs.get("options") or {})
+    options.setdefault("num_predict", cap)
+    kwargs["options"] = options
+    caps = boundary.model_capabilities(chosen.model)
+    if caps and "thinking" in caps:
+        kwargs.setdefault("think", False)
+
+
 def _authorize(
     chosen: InferenceRoute, role: str, receipt: boundary.Receipt
 ) -> InferenceRoute:
@@ -220,8 +245,8 @@ def _authorize(
                 reason=f"cloud_refused: {refusal}",
                 local=True,
             )
-        if chosen.backend != "litellm":
-            # A cloud target with no cloud gateway: answer locally, say so.
+        if chosen.backend not in ("litellm", "native"):
+            # A cloud target with no cloud transport: answer locally, say so.
             receipt.policy.append("cloud gateway unavailable; installed local model used")
             return InferenceRoute(
                 backend="ollama",
@@ -236,6 +261,141 @@ def _authorize(
     return chosen
 
 
+@dataclass
+class _CloudCall:
+    provider: str
+    native_model: str
+    reservation: Any
+    disclosure: Any
+    max_output_tokens: int
+
+
+def _max_output(kwargs: dict) -> int:
+    options = kwargs.get("options") or {}
+    try:
+        return max(1, int(options.get("num_predict") or kwargs.get("max_tokens") or 1024))
+    except (TypeError, ValueError):
+        return 1024
+
+
+def _admit_cloud(
+    chosen: InferenceRoute, role: str, receipt: boundary.Receipt, messages: list[dict], kwargs: dict
+) -> tuple[InferenceRoute, _CloudCall | None]:
+    """Owner authorization, pricing, budget and disclosure — before any send.
+
+    A refusal is a decision, not a fault: the request is answered by the
+    installed local model and the receipt says why. Nothing is transmitted.
+    """
+    if chosen.backend == "litellm" and not boundary.is_cloud_model(chosen.model):
+        return chosen, None  # a local model served through the LiteLLM proxy
+    if chosen.backend not in ("native", "litellm"):
+        return chosen, None
+    from jarvis.inference import cloud_policy
+    from jarvis.inference.providers import split_model
+
+    provider, native_model = split_model(chosen.model)
+    max_out = _max_output(kwargs)
+    try:
+        reservation = cloud_policy.preflight(
+            provider,
+            chosen.model,
+            role,
+            input_tokens=_estimate_context_tokens(messages),
+            max_output_tokens=max_out,
+        )
+        disclosure = cloud_policy.prepare_messages(messages, reservation.context_classes)
+    except cloud_policy.PolicyRefused as exc:
+        receipt.policy.append(f"cloud refused: {exc}")
+        return (
+            InferenceRoute(
+                backend="ollama",
+                model=boundary.local_fallback(role),
+                reason=f"cloud_refused: {exc}",
+                local=True,
+            ),
+            None,
+        )
+    receipt.policy.append(
+        f"cloud authorized by {reservation.authorization_id}: shares "
+        f"{', '.join(sorted(disclosure.shared)) or 'nothing'}; withheld "
+        f"{', '.join(sorted(disclosure.withheld)) or 'nothing'}; worst case "
+        f"${reservation.worst_case_usd:.4f}"
+    )
+    return chosen, _CloudCall(provider, native_model, reservation, disclosure, max_out)
+
+
+def _native_request(cloud: _CloudCall, kwargs: dict, tools=None, cancel_check=None):
+    from jarvis.inference.providers.base import Request
+
+    options = kwargs.get("options") or {}
+    return Request(
+        model=cloud.native_model,
+        messages=cloud.disclosure.messages,
+        tools=tools,
+        max_output_tokens=cloud.max_output_tokens,
+        temperature=options.get("temperature"),
+        timeout=float(os.getenv("JARVIS_CLOUD_TIMEOUT", "120")),
+        cancel_check=cancel_check,
+    )
+
+
+def _settle(cloud: _CloudCall, receipt: boundary.Receipt, attempt, status: str) -> None:
+    from jarvis.inference import cloud_policy
+
+    try:
+        cost = cloud_policy.record_usage(
+            cloud.reservation,
+            receipt_id=receipt.id,
+            status=status,
+            input_tokens=attempt.prompt_tokens,
+            output_tokens=attempt.completion_tokens,
+        )
+        receipt.policy.append(f"estimated cost ${cost:.6f} ({status})")
+    except Exception:  # noqa: BLE001 - accounting must never hide the outcome
+        logger.exception("Cloud usage accounting failed for %s", receipt.id)
+
+
+def _native_call(chosen: InferenceRoute, cloud: _CloudCall, kwargs: dict, receipt, tools=None):
+    """One paid call through a native adapter, under its reservation."""
+    from jarvis.inference import cloud_policy
+    from jarvis.inference.providers import adapter_for
+
+    adapter = adapter_for(cloud.provider)
+    attempt = receipt.attempt(chosen.model)
+    cloud_policy.record_disclosure(
+        cloud.disclosure,
+        receipt_id=receipt.id,
+        provider=cloud.provider,
+        model=chosen.model,
+        role=receipt.role,
+        authorization_id=cloud.reservation.authorization_id,
+    )
+    token = cloud_policy.activate(cloud.reservation)
+    try:
+        result = adapter.chat(_native_request(cloud, kwargs, tools=tools))
+    except boundary.InferenceError as exc:
+        attempt.finish("failed", error=str(exc))
+        _settle(cloud, receipt, attempt, "failed")
+        raise
+    finally:
+        cloud_policy.deactivate(token)
+    attempt.output_chars = len(result.text or "")
+    attempt.prompt_tokens = result.usage.input_tokens
+    attempt.completion_tokens = result.usage.output_tokens
+    if result.finish in ("length", "filtered"):
+        receipt.policy.append(f"provider finished with {result.finish!r}")
+    attempt.finish("completed")
+    _settle(cloud, receipt, attempt, "completed")
+    usage = {
+        "prompt_tokens": result.usage.input_tokens,
+        "completion_tokens": result.usage.output_tokens,
+        "provider_model": result.model,
+        "provider_request_id": result.provider_request_id,
+        "finish": result.finish,
+    }
+    return result, usage
+
+
 def _trace(chosen: InferenceRoute, hardware: str, overlay: dict, *, stream: bool) -> None:
     try:
         from jarvis.routing_trace import record_gateway
@@ -248,7 +408,7 @@ def _trace(chosen: InferenceRoute, hardware: str, overlay: dict, *, stream: bool
             "execution_path": "cloud"
             if getattr(chosen, "cloud", False)
             else ("local_gpu" if hardware != "cpu" else "cpu"),
-            "provider": "litellm" if chosen.backend == "litellm" else "ollama",
+            "provider": chosen.backend if chosen.backend in ("litellm", "native") else "ollama",
             "policy_source": overlay.get("source"),
         }
         if stream:
@@ -262,7 +422,7 @@ def _usage_fields(
     usage: dict, chosen: InferenceRoute, hardware: str, overlay: dict, receipt: boundary.Receipt
 ) -> None:
     final = receipt.final
-    usage["backend"] = "litellm" if chosen.backend == "litellm" else "ollama"
+    usage["backend"] = chosen.backend if chosen.backend in ("litellm", "native") else "ollama"
     usage["route_reason"] = chosen.reason
     usage["execution_model"] = final.model if final else chosen.model
     usage["execution_hardware"] = hardware
@@ -276,25 +436,52 @@ def _usage_fields(
     usage["receipt"] = receipt.to_dict()
 
 
-def _run_sync(chosen: InferenceRoute, messages: list[dict], kwargs: dict, receipt) -> tuple[str, dict]:
+def _run_sync(
+    chosen: InferenceRoute, messages: list[dict], kwargs: dict, receipt, cloud=None
+) -> tuple[str, dict]:
+    if chosen.backend == "native":
+        result, usage = _native_call(chosen, cloud, kwargs, receipt)
+        return result.text, usage
     attempt = receipt.attempt(chosen.model)
+    token = None
     try:
         if chosen.backend == "litellm":
+            if cloud is not None:
+                from jarvis.inference import cloud_policy
+
+                cloud_policy.record_disclosure(
+                    cloud.disclosure, receipt_id=receipt.id, provider=cloud.provider,
+                    model=chosen.model, role=receipt.role,
+                    authorization_id=cloud.reservation.authorization_id,
+                )
+                messages = cloud.disclosure.messages
+                token = cloud_policy.activate(cloud.reservation)
             text, usage = _litellm_chat_with_usage(chosen.model, messages, **kwargs)
         else:
             text, usage = _ollama_chat_with_usage(chosen.model, messages, **kwargs)
     except boundary.InferenceError as exc:
         attempt.finish("failed", error=str(exc))
+        if cloud is not None:
+            _settle(cloud, receipt, attempt, "failed")
         raise
     except Exception as exc:  # noqa: BLE001 - classified: provider fault
         attempt.finish("failed", error=f"{type(exc).__name__}: {exc}")
+        if cloud is not None:
+            _settle(cloud, receipt, attempt, "failed")
         raise boundary.ProviderUnavailable(
             f"{attempt.provider} model {chosen.model!r} failed: {exc}"
         ) from exc
+    finally:
+        if token is not None:
+            from jarvis.inference import cloud_policy
+
+            cloud_policy.deactivate(token)
     attempt.output_chars = len(text or "")
     attempt.prompt_tokens = (usage or {}).get("prompt_tokens")
     attempt.completion_tokens = (usage or {}).get("completion_tokens")
     attempt.finish("completed")
+    if cloud is not None:
+        _settle(cloud, receipt, attempt, "completed")
     return text, dict(usage or {})
 
 
@@ -325,11 +512,13 @@ def chat_with_usage(
     chosen = route or select_route(chosen_model, role=role, messages=messages, lock_model=lock)
     chosen = _authorize(chosen, role, receipt)
     boundary.check_capabilities(chosen.model, boundary.requirements_from_kwargs(kwargs, messages))
+    chosen, cloud = _admit_cloud(chosen, role, receipt, messages, kwargs)
+    _utility_defaults(role, chosen, kwargs)
     _trace(chosen, hardware, overlay, stream=False)
     try:
-        text, usage = _run_sync(chosen, messages, kwargs, receipt)
+        text, usage = _run_sync(chosen, messages, kwargs, receipt, cloud)
     except boundary.ProviderUnavailable as exc:
-        if not (chosen.backend == "litellm" and exc.fallback_eligible):
+        if not (chosen.backend in ("litellm", "native") and exc.fallback_eligible):
             receipt.close("failed")
             raise
         logger.warning("Cloud attempt failed (%s); trying installed local model", exc)
@@ -436,32 +625,67 @@ def chat_with_tools(
     _note_overlay(receipt, model, chosen_model, overlay, route)
     chosen = route or select_route(chosen_model, role=role, messages=messages, lock_model=lock)
     chosen = _authorize(chosen, role, receipt)
+    chosen, cloud = _admit_cloud(chosen, role, receipt, messages, kwargs)
     _trace(chosen, hardware, overlay, stream=False)
 
     def run(target: InferenceRoute) -> tuple[dict, dict]:
         boundary.check_capabilities(target.model, {"tools"})
+        if target.backend == "native":
+            native, usage = _native_call(target, cloud, kwargs, receipt, tools=tools)
+            return (
+                {
+                    "content": native.text,
+                    "tool_calls": [
+                        {"id": c.id, "name": c.name, "arguments": c.arguments}
+                        for c in native.tool_calls
+                    ],
+                },
+                usage,
+            )
         attempt = receipt.attempt(target.model)
+        token = None
         try:
             if target.backend == "litellm":
-                result, usage = _litellm_tools(target.model, messages, tools)
+                sent = messages
+                if cloud is not None:
+                    from jarvis.inference import cloud_policy
+
+                    cloud_policy.record_disclosure(
+                        cloud.disclosure, receipt_id=receipt.id, provider=cloud.provider,
+                        model=target.model, role=receipt.role,
+                        authorization_id=cloud.reservation.authorization_id,
+                    )
+                    sent = cloud.disclosure.messages
+                    token = cloud_policy.activate(cloud.reservation)
+                try:
+                    result, usage = _litellm_tools(target.model, sent, tools)
+                finally:
+                    if token is not None:
+                        cloud_policy.deactivate(token)
             else:
                 result, usage = _ollama_tools(target.model, messages, tools)
         except boundary.InferenceError as exc:
             attempt.finish("failed", error=str(exc))
+            if target.backend == "litellm" and cloud is not None:
+                _settle(cloud, receipt, attempt, "failed")
             raise
         except Exception as exc:  # noqa: BLE001
             attempt.finish("failed", error=f"{type(exc).__name__}: {exc}")
+            if target.backend == "litellm" and cloud is not None:
+                _settle(cloud, receipt, attempt, "failed")
             raise boundary.ProviderUnavailable(f"{target.model!r} failed: {exc}") from exc
         attempt.prompt_tokens = usage.get("prompt_tokens")
         attempt.completion_tokens = usage.get("completion_tokens")
         attempt.finish("completed")
+        if target.backend == "litellm" and cloud is not None:
+            _settle(cloud, receipt, attempt, "completed")
         return result, usage
 
     try:
         try:
             result, usage = run(chosen)
         except boundary.ProviderUnavailable:
-            if chosen.backend != "litellm":
+            if chosen.backend not in ("litellm", "native"):
                 raise
             receipt.policy.append("cloud tool turn failed before answering; local fallback")
             chosen = InferenceRoute(
@@ -486,13 +710,28 @@ def _attempt_stream(
     receipt: boundary.Receipt,
     usage: dict | None,
     cancel_check,
+    cloud: _CloudCall | None = None,
 ) -> Iterator[str]:
     """One streaming attempt. Failure before output → ProviderUnavailable;
     failure after output → StreamInterrupted (never continued elsewhere)."""
+    if chosen.backend == "native":
+        yield from _native_stream(chosen, cloud, kwargs, receipt, usage, cancel_check)
+        return
     attempt = receipt.attempt(chosen.model)
     produced = 0
+    token = None
     try:
         if chosen.backend == "litellm":
+            if cloud is not None:
+                from jarvis.inference import cloud_policy
+
+                cloud_policy.record_disclosure(
+                    cloud.disclosure, receipt_id=receipt.id, provider=cloud.provider,
+                    model=chosen.model, role=receipt.role,
+                    authorization_id=cloud.reservation.authorization_id,
+                )
+                messages = cloud.disclosure.messages
+                token = cloud_policy.activate(cloud.reservation)
             source = _litellm_stream(chosen.model, messages, **kwargs)
         else:
             source = _ollama_stream(chosen.model, messages, usage=usage, **kwargs)
@@ -512,8 +751,12 @@ def _attempt_stream(
             yield chunk
     except boundary.InferenceError as exc:
         attempt.finish("failed", error=str(exc))
+        if cloud is not None:
+            _settle(cloud, receipt, attempt, "failed")
         raise
     except Exception as exc:  # noqa: BLE001 - classified below
+        if cloud is not None:
+            _settle(cloud, receipt, attempt, "interrupted" if produced else "failed")
         if produced:
             attempt.finish("interrupted", error=f"{type(exc).__name__}: {exc}")
             raise boundary.StreamInterrupted(
@@ -528,10 +771,82 @@ def _attempt_stream(
         raise boundary.ProviderUnavailable(
             f"{attempt.provider} model {chosen.model!r} failed before answering: {exc}"
         ) from exc
+    finally:
+        if token is not None:
+            from jarvis.inference import cloud_policy
+
+            cloud_policy.deactivate(token)
     if usage is not None:
         attempt.prompt_tokens = usage.get("prompt_tokens")
         attempt.completion_tokens = usage.get("completion_tokens")
     attempt.finish("completed")
+    if cloud is not None:
+        _settle(cloud, receipt, attempt, "completed")
+
+
+def _native_stream(
+    chosen: InferenceRoute,
+    cloud: _CloudCall,
+    kwargs: dict,
+    receipt: boundary.Receipt,
+    usage: dict | None,
+    cancel_check,
+) -> Iterator[str]:
+    """A native provider stream with the same pre/post-output rules."""
+    from jarvis.inference import cloud_policy
+    from jarvis.inference.providers import adapter_for
+
+    adapter = adapter_for(cloud.provider)
+    attempt = receipt.attempt(chosen.model)
+    cloud_policy.record_disclosure(
+        cloud.disclosure,
+        receipt_id=receipt.id,
+        provider=cloud.provider,
+        model=chosen.model,
+        role=receipt.role,
+        authorization_id=cloud.reservation.authorization_id,
+    )
+    produced = 0
+    token = cloud_policy.activate(cloud.reservation)
+    try:
+        events = adapter.stream(_native_request(cloud, kwargs, cancel_check=cancel_check))
+        for event in events:
+            if event.type == "text" and event.text:
+                if attempt.first_token_ms is None:
+                    attempt.first_token_ms = round((time.time() - attempt.started_at) * 1000, 1)
+                produced += len(event.text)
+                attempt.output_chars = produced
+                yield event.text
+            elif event.type == "usage" and event.usage is not None:
+                attempt.prompt_tokens = event.usage.input_tokens
+                attempt.completion_tokens = event.usage.output_tokens
+            elif event.type == "done":
+                if event.finish in ("length", "filtered"):
+                    receipt.policy.append(f"provider finished with {event.finish!r}")
+    except boundary.InferenceCancelled:
+        attempt.finish("cancelled")
+        _settle(cloud, receipt, attempt, "cancelled")
+        return
+    except boundary.InferenceError as exc:
+        status = "interrupted" if produced else "failed"
+        attempt.finish(status, error=str(exc))
+        _settle(cloud, receipt, attempt, status)
+        if produced:
+            raise boundary.StreamInterrupted(
+                f"The {attempt.provider} response was interrupted after {produced} characters. "
+                "The partial answer is incomplete and was not continued by another model.",
+                provider=attempt.provider,
+                model=chosen.model,
+                partial_chars=produced,
+            ) from exc
+        raise
+    finally:
+        cloud_policy.deactivate(token)
+    if usage is not None:
+        usage["prompt_tokens"] = attempt.prompt_tokens
+        usage["completion_tokens"] = attempt.completion_tokens
+    attempt.finish("completed")
+    _settle(cloud, receipt, attempt, "completed")
 
 
 def stream_chat(
@@ -563,15 +878,17 @@ def stream_chat(
     chosen = route or select_route(chosen_model, role=role, messages=messages, lock_model=lock)
     chosen = _authorize(chosen, role, receipt)
     boundary.check_capabilities(chosen.model, boundary.requirements_from_kwargs(kwargs, messages))
+    chosen, cloud = _admit_cloud(chosen, role, receipt, messages, kwargs)
+    _utility_defaults(role, chosen, kwargs)
     _trace(chosen, hardware, overlay, stream=True)
     if usage is not None:
         _usage_fields(usage, chosen, hardware, overlay, receipt)
     status = "failed"
     try:
         try:
-            yield from _attempt_stream(chosen, messages, kwargs, receipt, usage, cancel_check)
+            yield from _attempt_stream(chosen, messages, kwargs, receipt, usage, cancel_check, cloud)
         except boundary.ProviderUnavailable as exc:
-            if chosen.backend != "litellm":
+            if chosen.backend not in ("litellm", "native"):
                 raise
             logger.warning("Cloud stream failed before output (%s); local fallback", exc)
             receipt.policy.append("cloud stream failed before output; local fallback")

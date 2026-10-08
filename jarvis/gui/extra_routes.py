@@ -1887,6 +1887,95 @@ def register_routes(app, assistant):
         bid = assistant.fork_branch(name, int(display_index))
         return {"ok": True, "branch_id": bid, "active": bid}
 
+    def _owner_may_modify_providers() -> dict:
+        from jarvis.security.owner.provider_credentials import bound_owner_service
+
+        try:
+            return bound_owner_service().authorize("integrations.modify", room="providers")
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "reason": f"owner security unavailable: {type(exc).__name__}"}
+
+    @app.get("/api/cloud/status")
+    def cloud_status_api():
+        """Read-only: credentials (presence only), discovery, budget, authorizations."""
+        from jarvis.inference import boundary, cloud_policy, providers
+
+        return {
+            "ok": True,
+            "policy": {
+                "cloud_enabled": boundary.cloud_enabled(),
+                "offline": boundary.offline(),
+                "permitted_providers": sorted(boundary.permitted_providers() or []) or None,
+            },
+            "providers": providers.status(),
+            "spending": cloud_policy.status(),
+            "recent_disclosures": cloud_policy.disclosure_rows(10),
+        }
+
+    @app.get("/api/cloud/authorizations")
+    def cloud_authorizations_api():
+        from jarvis.inference import cloud_policy
+
+        return {"ok": True, "authorizations": cloud_policy.list_authorizations()}
+
+    @app.post("/api/cloud/authorizations")
+    async def cloud_authorize_api(request: Request):
+        """Owner-only: allow paid inference for one provider, within a cap."""
+        auth = _owner_may_modify_providers()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason") or "not authorized"}, 403)
+        from jarvis.inference import cloud_policy
+
+        body = await request.json()
+        try:
+            aid = cloud_policy.create_authorization(
+                str(body.get("provider") or ""),
+                max_cost_usd=float(body.get("max_cost_usd") or 0),
+                context_classes=list(body.get("context_classes") or ["current_turn"]),
+                roles=list(body.get("roles") or ["*"]),
+                expires_in_s=float(body.get("expires_in_s") or 3600),
+                note=str(body.get("note") or ""),
+            )
+        except ValueError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 400)
+        return {"ok": True, "authorization_id": aid}
+
+    @app.delete("/api/cloud/authorizations/{authorization_id}")
+    def cloud_revoke_api(authorization_id: str):
+        auth = _owner_may_modify_providers()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason") or "not authorized"}, 403)
+        from jarvis.inference import cloud_policy
+
+        return {"ok": cloud_policy.revoke_authorization(authorization_id)}
+
+    @app.post("/api/cloud/discover/{provider}")
+    def cloud_discover_api(provider: str):
+        """List the models this account can use. Free, but outbound — so it obeys
+        cloud-disable, offline mode and the provider allowlist like any call."""
+        auth = _owner_may_modify_providers()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason") or "not authorized"}, 403)
+        from jarvis.inference import boundary, providers
+
+        try:
+            found = providers.discover(provider)
+        except (boundary.InferenceError, ValueError) as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 409)
+        return {"ok": True, "models": len(found["models"])}
+
+    @app.get("/api/cloud/routing")
+    def cloud_routing_api(role: str = "conversation"):
+        """Read-only: how ARIA would choose a model for this role, and why."""
+        from jarvis.inference.provider_routing import choose
+
+        decision = choose(role, include_cloud=True)
+        return {
+            "ok": True,
+            "chosen": decision.chosen.model if decision.chosen else None,
+            "explanation": decision.explanation,
+        }
+
     @app.get("/api/inference/receipts")
     def inference_receipts_api(limit: int = 20):
         """Read-only: what recent model calls actually ran, and why."""
