@@ -21,6 +21,7 @@ def ensure_handlers_loaded() -> None:
         aria_coder_handlers,
         automation_handlers,
         autonomous_workflow_handlers,
+        coding_agent_cli_handlers,
         collaboration_handlers,
         computer_use_handlers,
         continuity_handlers,

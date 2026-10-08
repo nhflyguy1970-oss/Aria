@@ -200,10 +200,14 @@ def update_project(
     title: str | None = None,
     description: str | None = None,
     git_path: str | None = None,
+    agent_settings: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:
     meta = get_project(slug)
     if not meta:
         return None
+    if agent_settings is not None:
+        # Coding-agent settings (test command, protected paths) — owner-set only.
+        meta["agent_settings"] = dict(agent_settings)
     if title is not None:
         meta["title"] = str(title).strip() or meta.get("title") or slug
     if description is not None:

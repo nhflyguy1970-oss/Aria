@@ -332,14 +332,15 @@ def probe_cli_tool(tool_id: str, *, smoke_task: str = "Reply with exactly: OK") 
         return probe_opencode()
 
     if tool_id == "claude_code":
-        result = run_sync(
-            tool_id,
-            {"task": smoke_task, "timeout": 45},
-            timeout=45,
-        )
-        return _result(
-            bool(result.get("ok")), (result.get("stdout") or result.get("error") or "")[:200]
-        )
+        # Version + auth status only: a smoke prompt would spend the owner's
+        # subscription on every health probe.
+        from jarvis.coding_agents.discovery import discover
+
+        st = discover().get("claude_code")
+        if not st or not st.installed:
+            return _result(False, "not installed")
+        detail = f"{st.version}; sign-in {st.auth.get('state', 'unknown')}"
+        return _result(st.usable, (detail + ("; " + "; ".join(st.notes) if st.notes else ""))[:200])
 
     if tool_id == "gemini_cli":
         result = run_sync(tool_id, {"task": smoke_task, "timeout": 45}, timeout=45)

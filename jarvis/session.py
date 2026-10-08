@@ -28,6 +28,10 @@ class SessionContext:
     project_slug: str = ""
     recent_files: list[str] = field(default_factory=list)
     pending_clarification: dict | None = None
+    # The action the previous turn routed to — follow-ups ("make it 15") bind to it.
+    last_action: str = ""
+    last_action_params: dict[str, Any] = field(default_factory=dict)
+    last_action_at: float = 0.0
 
     def note_file(self, path: str) -> None:
         self.last_file = path
@@ -206,6 +210,9 @@ class SessionContext:
         self.project_slug = ""
         self.recent_files.clear()
         self.pending_clarification = None
+        self.last_action = ""
+        self.last_action_params = {}
+        self.last_action_at = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -230,6 +237,9 @@ class SessionContext:
             "project_slug": self.project_slug,
             "recent_files": list(self.recent_files),
             "pending_clarification": self.pending_clarification,
+            "last_action": self.last_action,
+            "last_action_params": dict(self.last_action_params),
+            "last_action_at": self.last_action_at,
         }
 
     @classmethod
@@ -258,4 +268,7 @@ class SessionContext:
             project_slug=data.get("project_slug", ""),
             recent_files=list(data.get("recent_files") or []),
             pending_clarification=data.get("pending_clarification"),
+            last_action=data.get("last_action", ""),
+            last_action_params=dict(data.get("last_action_params") or {}),
+            last_action_at=float(data.get("last_action_at") or 0.0),
         )

@@ -46,7 +46,6 @@ def select_tool(task: str, *, prefer: str = "") -> ToolDescriptor | None:
         for tid in (
             "aria_engineering",
             "opencode",
-            "claude_code",
             "cursor",
             "continue",
             "gemini_cli",
@@ -56,6 +55,9 @@ def select_tool(task: str, *, prefer: str = "") -> ToolDescriptor | None:
                 return tool
 
     return tools[0] if tools else None
+
+
+SUPERVISED_AGENT_TOOLS = frozenset({"claude_code", "codex", "antigravity"})
 
 
 def execute_tool(
@@ -73,6 +75,16 @@ def execute_tool(
     refused = policy.refusal("tool")
     if refused:
         return {"ok": False, "tool": tool_id, "error": refused, "error_kind": "policy_denied"}
+    if tool_id in SUPERVISED_AGENT_TOOLS:
+        # Coding-agent CLIs run only as approved, sandboxed, verified plans
+        # (jarvis.coding_agents) — never as a free-form tool call in a real checkout.
+        return {
+            "ok": False,
+            "tool": tool_id,
+            "error": "Coding agents run only through a supervised plan the owner approves "
+            "(ask e.g. \"have Claude review …\").",
+            "error_kind": "supervision_required",
+        }
     if not tool.available():
         return {"ok": False, "error": f"Tool unavailable: {tool.label}"}
 

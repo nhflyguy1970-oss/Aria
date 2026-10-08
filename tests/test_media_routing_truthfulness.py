@@ -114,7 +114,7 @@ def test_media_actions_may_override_a_weak_nlu_verdict():
 
     from jarvis import router
 
-    src = inspect.getsource(router.route)
+    src = inspect.getsource(router._route)  # route() wraps _route() since Phase 5
     start = src.index("quick_override = _quick_route")
     block = src[start : start + 1400]
     for action in ("edit_image", "inpaint_image", "upscale_image", "generate_meme"):

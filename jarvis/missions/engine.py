@@ -87,6 +87,8 @@ def capabilities_for(mission: dict[str, Any]) -> tuple[str, ...]:
     """The execution-policy capabilities a mission needs before it may run."""
     if mission.get("kind") == "workflow":
         return ("mission", "workflow")
+    if mission.get("kind") == "coding_agent":
+        return ("mission", "coding")
     return ("mission",)
 
 

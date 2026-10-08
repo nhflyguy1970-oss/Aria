@@ -326,8 +326,14 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
         return news_intent
 
     if re.search(
-        r"\b(apply (it|that|the changes?|the proposal|that proposal|this proposal)|yes apply|go ahead|do it)\b",
+        r"\b(apply (it|that|the changes?|the proposal|that proposal|this proposal)|yes apply)\b",
         lower,
+    ):
+        return {"action": "apply_proposal", "params": {}, "thinking": "follow-up"}
+    # Bare "go ahead" / "do it" only confirm a proposal this conversation is
+    # holding — as a substring it sent "I don't know how to do it" to apply.
+    if session.last_proposal_id and re.match(
+        r"^(?:yes[, ]+|ok(?:ay)?[, ]+)?(?:go ahead|do it)(?:[, ]+please)?[\s!.]*$", lower
     ):
         return {"action": "apply_proposal", "params": {}, "thinking": "follow-up"}
 
@@ -794,9 +800,11 @@ def _maybe_inpaint_route(message: str, lower: str, session: SessionContext) -> d
     ):
         prompt = _extract_inpaint_prompt(message)
         if len(prompt) > 2:
+            region = parse_region(message, None)
+            # No region named → a whole-image edit, not inpainting.
             return {
-                "action": "inpaint_image",
-                "params": {"prompt": prompt, "region": parse_region(message, None)},
+                "action": "inpaint_image" if region else "edit_image",
+                "params": {"prompt": prompt, "region": region} if region else {"prompt": prompt},
             }
 
     if m := re.search(
@@ -857,6 +865,8 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
             "clarification_question": intent.get("clarification_question") or "",
             "original_prompt": message,
         }
+        if intent.get("choice_intents"):
+            session.pending_clarification["choice_intents"] = intent["choice_intents"]
 
     try:
         from jarvis.capability_routing import capability_for_action_and_message, role_for_capability
@@ -3179,6 +3189,32 @@ def _resolve_ambiguous_path(path: str, session) -> dict | None:
 
 
 def route(message: str, session: SessionContext, attachment: dict | None = None) -> dict:
+    intent = _route(message, session, attachment)
+    try:
+        from jarvis.action_routing import note_routed
+
+        note_routed(session, intent)
+    except Exception:
+        pass
+    return intent
+
+
+def _route(message: str, session: SessionContext, attachment: dict | None = None) -> dict:
+    if session.pending_clarification and session.pending_clarification.get("type") in (
+        "action_choice",
+        "deictic",
+    ):
+        # Our own questions: a matching answer resolves; anything else is a new request.
+        pending = session.pending_clarification
+        session.pending_clarification = None
+        if pending.get("type") == "action_choice":
+            from jarvis.action_routing import resolve_pending_choice
+
+            answered, resolved = resolve_pending_choice(message, pending)
+            if answered and resolved:
+                return _finalize_intent(
+                    normalize_route_intent(resolved), pending.get("original_prompt") or message, session
+                )
     if session.pending_clarification:
         # Explicit memory imperatives are new intents, not clarification answers.
         # Stale NLU clarification must not demote "please remember…" to chat
@@ -3460,6 +3496,19 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
                 return _finalize_intent(normalize_route_intent(intent), message, session)
         except Exception:
             pass
+
+        # Follow-ups bound to the previous action, "delete it" with no referent,
+        # and unambiguous commands (timers, alarms, tasks, missions, …).
+        from jarvis.action_routing import apply_rules, deictic_clarification, resolve_follow_up
+
+        if action_hit := (
+            resolve_follow_up(message, session)
+            or deictic_clarification(message, session)
+            or apply_rules(message, session)
+        ):
+            if not action_hit.get("needs_clarification"):
+                action_hit = normalize_route_intent(action_hit)
+            return _finalize_intent(action_hit, message, session)
 
         if natural := _natural_intent_route(message):
             return _finalize_intent(
@@ -3756,6 +3805,22 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
                     session.pending_clarification = None
                     nlu_intent = quick_override
                     return _finalize_intent(nlu_intent, message, session)
+                # NLU fell back to chat: optionally let the router model pick
+                # among a short candidate list (side effects come back as a question).
+                if nlu_action in ("chat", "clarify", "nlu_clarify", "coding_chat"):
+                    try:
+                        from jarvis.action_routing import choose_with_model
+
+                        picked = choose_with_model(message, nlu_action=nlu_action)
+                        if picked and picked.get("action"):
+                            session.pending_clarification = None
+                            if not picked.get("needs_clarification"):
+                                picked = normalize_route_intent(picked)
+                            return _finalize_intent(picked, message, session)
+                        if picked:
+                            nlu_intent["routing_receipt"] = picked["_receipt"]
+                    except Exception:
+                        pass
             return _finalize_intent(nlu_intent, message, session)
 
     quick = _quick_route(message, attachment, session, skip_runtime_priority=nlu_used)

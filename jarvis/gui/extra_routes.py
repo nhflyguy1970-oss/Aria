@@ -1991,6 +1991,80 @@ def register_routes(app, assistant):
             "receipts": boundary.recent_receipts(max(1, min(int(limit), 50))),
         }
 
+    # ---- Coding-agent CLIs (Codex, Claude Code, Antigravity) — Phase 5
+    def _owner_may_run_agents() -> dict:
+        from jarvis.security.owner.provider_credentials import bound_owner_service
+
+        try:
+            return bound_owner_service().authorize("git.write", room="coding")
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "reason": f"owner security unavailable: {type(exc).__name__}"}
+
+    @app.get("/api/coding-agents/status")
+    def coding_agents_status_api(refresh: bool = False):
+        """Read-only: installed agents, sign-in method/billing class (no identities), modes."""
+        from jarvis.coding_agents import discovery
+
+        return {"ok": True, "agents": {k: v.to_dict() for k, v in discovery.discover(refresh=refresh).items()}}
+
+    @app.get("/api/coding-agents/runs")
+    def coding_agent_runs_api(project: str = "", limit: int = 20):
+        from jarvis.coding_agents import runs
+
+        return {"ok": True, "runs": runs.list_runs(project=project, limit=max(1, min(int(limit), 100)))}
+
+    @app.get("/api/coding-agents/runs/{run_id}")
+    def coding_agent_run_api(run_id: str):
+        from jarvis.coding_agents import runs
+
+        run = runs.get_run(run_id)
+        if not run:
+            return JSONResponse({"ok": False, "error": "no such run"}, 404)
+        return {"ok": True, "run": run, "events": runs.events(run_id)}
+
+    @app.post("/api/coding-agents/plans/{plan_id}/approve")
+    def coding_agent_approve_api(plan_id: str):
+        """Owner-only (step-up): approve a proposed plan and start it."""
+        auth = _owner_may_run_agents()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason") or "not authorized"}, 403)
+        from jarvis.coding_agents import runs
+
+        try:
+            run = runs.start(plan_id, token=runs.approval_token(plan_id), via="owner_api")
+        except runs.AgentRunError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 409)
+        return {"ok": True, "run": run}
+
+    @app.post("/api/coding-agents/runs/{run_id}/cancel")
+    def coding_agent_cancel_api(run_id: str):
+        from jarvis.coding_agents import runs
+
+        try:
+            return {"ok": True, "run": runs.cancel(run_id)}
+        except runs.AgentRunError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 404)
+
+    @app.post("/api/coding-agents/projects")
+    async def coding_agent_register_project_api(request: Request):
+        """Owner-only: register a confirmed git repository for agent work."""
+        auth = _owner_may_run_agents()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason") or "not authorized"}, 403)
+        from jarvis.coding_agents import projects
+
+        body = await request.json()
+        try:
+            rec = projects.register(
+                str(body.get("path") or ""),
+                title=str(body.get("title") or ""),
+                test_command=str(body.get("test_command") or ""),
+                protected_paths=list(body.get("protected_paths") or []),
+            )
+        except (ValueError, OSError) as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 400)
+        return {"ok": True, "project": rec}
+
     @app.get("/api/continuity/status")
     def continuity_status_api():
         from jarvis.continuity import status
