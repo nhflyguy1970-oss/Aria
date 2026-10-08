@@ -147,6 +147,7 @@ def _ingest_event(event: dict[str, Any]) -> tuple[int, int]:
         branch=branch,
         ts=ts,
         project=project,
+        episode_kind=kind,
         # Only turns spoken since the archive existed are encoded into ACM.
         # Seeded and imported history is indexed locally; promoting it into
         # ACM is a separate, approved step.
@@ -163,6 +164,7 @@ def derive_records(
     ts: float,
     project: str = "",
     encode: bool = True,
+    episode_kind: str = "message",
 ) -> int:
     """Classify one episode and record what it means for continuity."""
     result = classify(role, content)
@@ -179,6 +181,7 @@ def derive_records(
         branch=branch,
         episode_ids=[episode_id],
         source_ref=f"episode:{episode_id}",
+        detail={"episode_kind": episode_kind},
     )
     if actor == store.USER:
         _link(record_id, result.kind, result.status, content, branch=branch, ts=ts)

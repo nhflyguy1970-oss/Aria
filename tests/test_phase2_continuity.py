@@ -118,7 +118,7 @@ def test_natural_questions_retrieve_the_right_things(acm, assistant):
     assert yesterday.status == continuity.HITS
     assert any("SQLite" in i.text for i in yesterday.items)
 
-    decided = continuity.retrieve("What did we decide about the storage, SQLite?")
+    decided = continuity.retrieve("What did we decide about SQLite?")
     assert any("Let's go with SQLite" in i.text for i in decided.sections.get("decisions", []))
 
     # Every item cites a real archived turn.
@@ -537,3 +537,27 @@ def test_health_statements_are_withheld_unless_asked_and_never_sent_to_acm(acm, 
     assert "blood pressure" not in general.to_prompt() and general.withheld >= 1
     asked = continuity.retrieve("What did we decide about my blood pressure medication?")
     assert "blood pressure" in asked.to_prompt()
+
+
+def test_sharing_one_topic_word_is_not_a_match(acm, assistant):
+    """Live regression: turns mentioning only "application" answered a
+    question about a "fishing application" idea."""
+    _speak(assistant.conversation, [
+        ("assistant", "The application server restarts cleanly now."),
+        ("user", "Next we need to deploy the application server."),
+    ])
+    ingest.sync_all(missions=False)
+    result = continuity.retrieve("Remember that fishing application idea?")
+    assert result.status == continuity.NO_RECORD, continuity.answer(result)
+
+
+def test_seeded_turns_say_their_time_is_unknown(acm, data_dir):
+    from jarvis.branches import BRANCHES_FILE, BranchManager
+
+    BRANCHES_FILE.write_text(json.dumps({"branches": {"main": {"messages": [
+        {"role": "user", "content": "Next we need to wax the drift boat."},
+    ]}}}))
+    BranchManager().get_conversation("main", "sys")
+    ingest.sync_all(missions=False)
+    reply = continuity.answer(continuity.retrieve("Where did we leave off?", branch="main"))
+    assert "drift boat" in reply and "original time unknown" in reply

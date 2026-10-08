@@ -266,11 +266,17 @@ def _fts_query(terms: set[str]) -> str:
 
 
 _IMPORTED_NOTE = "imported from a backup; date is the branch's, approximate"
+_SEEDED_NOTE = "from history before the archive existed; original time unknown"
 
 
 def _record_item(section: str, rec: dict[str, Any], note: str = "") -> Item:
+    extra = ""
     if (rec.get("branch") or "").startswith("import:"):
-        note = f"{note}; {_IMPORTED_NOTE}" if note else _IMPORTED_NOTE
+        extra = _IMPORTED_NOTE
+    elif (rec.get("detail") or {}).get("episode_kind") == "seed":
+        extra = _SEEDED_NOTE
+    if extra:
+        note = f"{note}; {extra}" if note else extra
     return Item(
         section=section,
         text=rec["text"],
@@ -293,7 +299,11 @@ def _episode_item(ep: dict[str, Any]) -> Item:
         ref=ep["id"],
         episode_ids=[ep["id"]],
         branch=ep["branch"],
-        note=_IMPORTED_NOTE if ep["kind"] == "import" else "",
+        note=(
+            _IMPORTED_NOTE
+            if ep["kind"] == "import"
+            else _SEEDED_NOTE if ep["kind"] == "seed" else ""
+        ),
     )
 
 
@@ -440,11 +450,11 @@ def _select_records(
         records = store.search_records(match, limit=40) if match else []
         if start is not None:
             records = [r for r in records if start <= r["ts"] < (end or now + 1)]
-        # Precision: keep records sharing the most topic terms with the question.
-        scored = [(len(topic & key_terms(r["text"])), r) for r in records]
-        top = max((s for s, _ in scored), default=0)
-        floor = max(1, min(top, (len(topic) + 1) // 2))
-        out["records"] = [r for s, r in scored if s >= floor]
+        # Precision over recall: an item must mention most of what was asked
+        # about (both words of "fishing application"). Falling back to items
+        # that share one word returned unrelated turns as if they answered.
+        floor = len(topic) if len(topic) <= 2 else -(-2 * len(topic) // 3)
+        out["records"] = [r for r in records if len(topic & key_terms(r["text"])) >= floor]
         episodes = store.search_episodes(match, start=start, end=end, limit=20) if match else []
         episodes = [e for e in episodes if e["content"].strip() != query.strip()]
         episodes = [e for e in episodes if len(topic & key_terms(e["content"])) >= floor]
