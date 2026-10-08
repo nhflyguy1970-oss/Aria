@@ -1887,6 +1887,21 @@ def register_routes(app, assistant):
         bid = assistant.fork_branch(name, int(display_index))
         return {"ok": True, "branch_id": bid, "active": bid}
 
+    @app.get("/api/inference/receipts")
+    def inference_receipts_api(limit: int = 20):
+        """Read-only: what recent model calls actually ran, and why."""
+        from jarvis.inference import boundary
+
+        return {
+            "ok": True,
+            "policy": {
+                "cloud_enabled": boundary.cloud_enabled(),
+                "offline": boundary.offline(),
+                "permitted_providers": sorted(boundary.permitted_providers() or []) or None,
+            },
+            "receipts": boundary.recent_receipts(max(1, min(int(limit), 50))),
+        }
+
     @app.get("/api/continuity/status")
     def continuity_status_api():
         from jarvis.continuity import status

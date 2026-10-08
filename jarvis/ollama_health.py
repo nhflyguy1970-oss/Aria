@@ -21,6 +21,10 @@ _probe_cache: dict = {
 }
 _PROBE_TTL = float(os.getenv("JARVIS_OLLAMA_HEALTH_PROBE_TTL", "120"))
 _PROBE_TIMEOUT = float(os.getenv("JARVIS_OLLAMA_HEALTH_PROBE_TIMEOUT", "5"))
+# A forced probe of a model that is not resident has to wait for the load:
+# 5 s aborted gemma4:12b's ~40 s cold load every time, leaving a half-loaded
+# runner and a false "degraded" verdict (measured 2026-10-08).
+_COLD_PROBE_TIMEOUT = float(os.getenv("JARVIS_OLLAMA_COLD_PROBE_TIMEOUT", "120"))
 _PROBE_NUM_PREDICT = int(os.getenv("JARVIS_OLLAMA_HEALTH_PROBE_TOKENS", "1"))
 
 
@@ -291,7 +295,10 @@ def refresh_inference_probe(
                 "age_s": 0.0,
                 "skipped_cold": True,
             }
-    result = _soft_generate_probe(host, model, timeout=_PROBE_TIMEOUT)
+    timeout = _PROBE_TIMEOUT
+    if force and not _model_is_loaded(model, _loaded_runner_names(host)):
+        timeout = max(_PROBE_TIMEOUT, _COLD_PROBE_TIMEOUT)
+    result = _soft_generate_probe(host, model, timeout=timeout)
     with _probe_lock:
         _probe_cache["at"] = time.time()
         _probe_cache["ok"] = bool(result.get("ok"))

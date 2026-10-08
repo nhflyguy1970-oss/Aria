@@ -97,6 +97,10 @@ def ask_with_system(model: str, system: str, user: str, *, role: str = "conversa
         )
         return text
     except Exception as e:
+        from jarvis.inference.boundary import InferenceError
+
+        if isinstance(e, InferenceError):
+            raise
         raise RuntimeError(
             f"Ollama error with model '{resolved}': {e}. Is Ollama running? Try: ollama serve"
         ) from e
@@ -158,13 +162,26 @@ def ask_stream(
         from jarvis.inference.gateway import stream_chat
 
         role = kwargs.pop("role", "general")
-        stream = stream_chat(model, messages, role=role, usage=usage, **kwargs)
+        stream = stream_chat(
+            model,
+            messages,
+            role=role,
+            usage=usage,
+            cancel_check=(lambda: is_cancelled(cancel_key)) if cancel_key else None,
+            **kwargs,
+        )
         for chunk in _iter_blocking_cancellable(stream, cancel_key=cancel_key):
             if cancel_key and is_cancelled(cancel_key):
                 break
             if chunk:
                 yield chunk
     except Exception as e:
+        from jarvis.inference.boundary import InferenceError
+
+        if isinstance(e, InferenceError):
+            # Already precise (policy refusal, interrupted cloud stream, missing
+            # local fallback) — relabelling it as an Ollama error would mislead.
+            raise
         raise RuntimeError(
             f"Ollama error with model '{model}': {e}. Is Ollama running? Try: ollama serve"
         ) from e
@@ -428,12 +445,21 @@ def route_with_tools(message: str, context: str, attachment: dict | None) -> dic
         f"User: {message}"
     )
     try:
-        response = chat(
-            model=router_model,
-            messages=[{"role": "user", "content": prompt}],
-            tools=ROUTER_TOOLS,
+        # Through the gateway: the same locality policy, capability check (a
+        # model that cannot call tools is refused before any request) and
+        # routing receipt as every other model call.
+        from jarvis.inference.gateway import chat_with_tools
+
+        result, _usage = chat_with_tools(
+            router_model,
+            [{"role": "user", "content": prompt}],
+            ROUTER_TOOLS,
+            role="tool_calling",
         )
-        tool_calls = response.get("message", {}).get("tool_calls") or []
+        tool_calls = [
+            {"function": {"name": c["name"], "arguments": c["arguments"]}}
+            for c in result.get("tool_calls") or []
+        ]
         if tool_calls:
             args = tool_calls[0].get("function", {}).get("arguments", "{}")
             if isinstance(args, str):

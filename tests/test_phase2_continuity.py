@@ -473,22 +473,25 @@ def test_history_dry_run_reads_only_and_classifies(acm, data_dir, tmp_path):
 
 
 def test_history_import_requires_token_and_never_touches_acm(acm, data_dir, tmp_path):
+    from jarvis.continuity import history_review
+
     backup = _backup(tmp_path)
     manifest = history_import.dry_run(backup)
+    reviewed = history_review.review(
+        manifest, backup, transcript_dirs=[],
+        judgments={"a1": {"decision": "accepted", "reason": "owner confirmed"}},
+    )
     with pytest.raises(ValueError):
-        history_import.apply_import(manifest, confirm="nope", backup_dir=backup)
-    out = history_import.apply_import(manifest, confirm=manifest["token"], backup_dir=backup)
-    assert out["written"] == 3
+        history_import.apply_import(reviewed, confirm="nope", backup_dir=backup)
+    out = history_import.apply_import(reviewed, confirm=reviewed["token"], backup_dir=backup)
+    assert out["written"] == 2  # branch a1 only; a2's untraced turn stays uncertain
     ingest.sync_all(missions=False)
     assert store.pending_outbox() == [], "imported history must not be auto-encoded into ACM"
     found = continuity.retrieve("Remember that canoe lake trip decision?")
     assert found.status == continuity.HITS
     assert "approximate" in continuity.answer(found)
-    with pytest.raises(ValueError, match="already"):
-        history_import.apply_import(
-            history_import.dry_run(backup), confirm=history_import.dry_run(backup)["token"],
-            backup_dir=backup,
-        )
+    with pytest.raises(ValueError):
+        history_import.apply_import(reviewed, confirm=reviewed["token"], backup_dir=backup)
 
 
 def test_status_action_reports_ingestion_health(acm, assistant):

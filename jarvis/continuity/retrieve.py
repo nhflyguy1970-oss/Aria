@@ -265,7 +265,7 @@ def _fts_query(terms: set[str]) -> str:
     return " OR ".join(f"{t}*" for t in safe if t)
 
 
-_IMPORTED_NOTE = "imported from a backup; date is the branch's, approximate"
+_IMPORTED_NOTE = "imported from a backup; date approximate"
 _SEEDED_NOTE = "from history before the archive existed; original time unknown"
 
 

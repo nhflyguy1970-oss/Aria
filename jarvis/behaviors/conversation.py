@@ -498,11 +498,23 @@ class ConversationEngine:
             pass
         return text
 
+    def _requested_model(self, params: dict) -> str:
+        return str(params.get("model") or getattr(self._a.session, "chat_model", "") or "").strip()
+
+    def _needs_local_runtime(self, params: dict) -> bool:
+        """Only a request that will run locally depends on Ollama being up."""
+        from jarvis.inference.boundary import needs_local_runtime
+
+        return needs_local_runtime(self._requested_model(params))
+
     def execute(self, params: dict, message: str) -> dict:
         from jarvis.branding import assistant_name
 
         # Tags-only: soft generate probes compete with real chat for VRAM/time.
-        ollama = check_ollama(soft_probe=False)
+        # A permitted cloud target does not depend on local Ollama health.
+        ollama = (
+            check_ollama(soft_probe=False) if self._needs_local_runtime(params) else {"running": True}
+        )
         if not ollama["running"]:
             return _err(
                 "Ollama is still starting. Wait a few seconds and try again — "
@@ -605,7 +617,9 @@ class ConversationEngine:
         # Tags-only reachability — never soft-probe generate on the chat hot path.
         # A generate probe (up to ~5s) serializes behind / contends with the real
         # first token and is a systemic FIRST_PROGRESS_TIMEOUT contributor.
-        ollama = check_ollama(soft_probe=False)
+        ollama = (
+            check_ollama(soft_probe=False) if self._needs_local_runtime(params) else {"running": True}
+        )
         if not ollama["running"]:
             yield {
                 "type": "done",
@@ -690,13 +704,19 @@ class ConversationEngine:
             action="chat",
         )
         yield {"type": "status", "message": "Calling model…"}
+        from jarvis.inference.boundary import needs_local_runtime, provider_of
+
         try:
+            if not needs_local_runtime(chat_model):
+                raise LookupError("cloud target: no local model to warm")
             from jarvis.ollama_runtime import ensure_chat_model_ready
 
             # SSE layer already ensured GPU residency outside the first-progress
             # clock. Never unload/reload here — size_vram=0 reload was measured
             # burning the FIRST_PROGRESS budget on alternating follow-ups.
             ensure_chat_model_ready(chat_model, allow_reload=False)
+        except LookupError:
+            pass
         except Exception:
             try:
                 from jarvis.ollama_runtime import free_slot_for_chat_model
@@ -714,7 +734,7 @@ class ConversationEngine:
 
             tr = active_trace()
             if tr is not None:
-                tr.note_provider(provider="ollama", model=chat_model, role=chat_role)
+                tr.note_provider(provider=provider_of(chat_model), model=chat_model, role=chat_role)
                 tr.note_model(model=chat_model, role=chat_role)
                 tr.start_stage("provider_stream", model=chat_model)
         except Exception:
@@ -751,9 +771,18 @@ class ConversationEngine:
                             pass
                     yield {"type": "token", "content": chunk}
         except Exception as exc:
+            from jarvis.inference.boundary import StreamInterrupted
+
             if saved_user:
                 self._a.conversation.pop_last_user()
-            yield {"type": "done", "ok": False, "message": str(exc)}
+            failed = {"type": "done", "ok": False, "message": str(exc)}
+            if isinstance(exc, StreamInterrupted):
+                # The partial text already shown is incomplete; never saved as an answer.
+                failed["interrupted"] = True
+                failed["partial_chars"] = exc.partial_chars
+            if usage.get("receipt"):
+                failed["receipt"] = usage["receipt"]
+            yield failed
             return
         finally:
             finish_cancel(request_id)

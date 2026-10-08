@@ -40,12 +40,25 @@ class TestInferenceGateway(unittest.TestCase):
         self.assertEqual(text, "hello")
         mock_ollama.assert_called_once()
 
+    @patch.dict("os.environ", {"JARVIS_CLOUD_INFERENCE": "1"}, clear=False)
     @patch("jarvis.inference.gateway._litellm_chat_with_usage", return_value=("cloud", {"backend": "litellm"}))
     def test_chat_with_usage_honors_route(self, mock_litellm):
         route = InferenceRoute(backend="litellm", model="gpt-4o-mini", reason="test", cloud=True)
         text, usage = chat_with_usage("gpt-4o-mini", [{"role": "user", "content": "hi"}], route=route)
         self.assertEqual(text, "cloud")
         mock_litellm.assert_called_once()
+
+    @patch.dict("os.environ", {"JARVIS_CLOUD_INFERENCE": "0"}, clear=False)
+    @patch("jarvis.inference.boundary.local_fallback", return_value="qwen2.5:7b")
+    @patch("jarvis.inference.gateway._ollama_chat_with_usage", return_value=("local", {}))
+    @patch("jarvis.inference.gateway._litellm_chat_with_usage")
+    def test_cloud_route_is_refused_when_cloud_disabled(self, mock_litellm, mock_ollama, _fb):
+        # An explicit cloud route is a request, not an authorisation.
+        route = InferenceRoute(backend="litellm", model="gpt-4o-mini", reason="test", cloud=True)
+        text, usage = chat_with_usage("gpt-4o-mini", [{"role": "user", "content": "hi"}], route=route)
+        mock_litellm.assert_not_called()
+        self.assertEqual(mock_ollama.call_args[0][0], "qwen2.5:7b")
+        self.assertEqual(usage["execution_locality"], "local")
 
     def test_gateway_status_shape(self):
         status = gateway_status()

@@ -175,21 +175,27 @@ def dry_run(
 
 
 def apply_import(
-    manifest: dict[str, Any],
+    reviewed: dict[str, Any],
     *,
     confirm: str,
     backup_dir: Path | str,
     archive_root: Path | None = None,
 ) -> dict[str, Any]:
-    """Write importable turns to a dedicated import archive. Requires approval."""
+    """Import the *accepted* turns of a reviewed manifest. Requires approval.
+
+    ``reviewed`` comes from ``history_review.review``. Only entries decided
+    ``accepted`` are written; ``uncertain`` and ``rejected`` never are. The
+    confirmation must be the reviewed manifest's token, and the backup and live
+    history must still match the dry run the review was based on.
+    """
     from jarvis.live_data_guard import assert_live_write_allowed
 
-    if not confirm or confirm != manifest.get("token"):
-        raise ValueError("confirmation token does not match this manifest")
+    if not confirm or confirm != reviewed.get("token"):
+        raise ValueError("confirmation token does not match this reviewed manifest")
     backup_dir = Path(backup_dir)
     fresh = dry_run(backup_dir, preview_chars=0)
-    if fresh["token"] != manifest["token"]:
-        raise ValueError("live history or backup changed since the dry run; run it again")
+    if fresh["token"] != (reviewed.get("summary") or {}).get("source_manifest_token"):
+        raise ValueError("live history or backup changed since the dry run; review again")
     if archive_root is None:
         from jarvis.continuity.ingest import archive_root as default_root
 
@@ -201,22 +207,31 @@ def apply_import(
     contents = {
         (t["branch"], t["position"]): t["content"] for t in _turns(backup_dir / "chat_branches.json")
     }
-    written = 0
+    accepted = [e for e in reviewed["entries"] if e["decision"] == "accepted"]
     target.parent.mkdir(parents=True, exist_ok=True)
     with open(target, "w", encoding="utf-8") as fh:
-        for entry in manifest["entries"]:
-            if entry["status"] != "importable":
-                continue
+        for entry in accepted:
+            date = entry.get("approx_date") or entry.get("branch_created") or ""
             event = {
                 "id": uuid.uuid4().hex,
-                "ts": entry["branch_created"] or datetime.now().isoformat(),
+                "ts": _approx_ts(date),
                 "branch": f"import:{entry['branch']}",
                 "kind": "import",
                 "role": entry["role"],
                 "content": contents[(entry["branch"], entry["position"])],
                 "origin": entry["provenance"],
                 "undated_message": True,
+                "approx_date": date,
+                "review_reason": entry["reason"],
             }
             fh.write(json.dumps(event, ensure_ascii=False) + "\n")
-            written += 1
-    return {"ok": True, "written": written, "archive": str(target)}
+    return {"ok": True, "written": len(accepted), "archive": str(target)}
+
+
+def _approx_ts(date: str) -> str:
+    """An ISO timestamp for an approximate date ("2026-08-11" → noon that day)."""
+    if not date:
+        return datetime.now().isoformat()
+    if len(date) == 10:
+        return f"{date}T12:00:00"
+    return date

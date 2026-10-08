@@ -262,6 +262,33 @@ def _no_api_key_in_tests(monkeypatch: pytest.MonkeyPatch):
         pass
 
 
+_LIVE_INFERENCE_PATHS = ("/api/generate", "/api/chat", "/api/embed", "/api/embeddings")
+
+
+@pytest.fixture(autouse=True)
+def _no_live_inference(monkeypatch: pytest.MonkeyPatch):
+    """Tests must never run inference on the machine's real Ollama.
+
+    Two repair-product tests forced a 5 s generate probe against production
+    Ollama; each aborted a ~40 s model load mid-way, and a concurrent model run
+    paid for the reloads. Inference requests made through urllib fail here as
+    "Ollama unavailable"; a test that needs a response fakes urlopen itself,
+    which takes precedence over this guard.
+    """
+    import urllib.error
+    import urllib.request
+
+    real_urlopen = urllib.request.urlopen
+
+    def guarded(url, *args, **kwargs):
+        target = url.full_url if hasattr(url, "full_url") else str(url)
+        if any(path in target for path in _LIVE_INFERENCE_PATHS):
+            raise urllib.error.URLError("live inference is blocked in tests")
+        return real_urlopen(url, *args, **kwargs)
+
+    monkeypatch.setattr(urllib.request, "urlopen", guarded)
+
+
 @pytest.fixture(autouse=True)
 def data_dir() -> Path:
     """The isolated data root every Jarvis storage binding already points at.

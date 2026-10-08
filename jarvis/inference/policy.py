@@ -31,12 +31,15 @@ def gateway_mode() -> str:
 
 
 def cloud_enabled() -> bool:
-    return os.getenv("JARVIS_CLOUD_INFERENCE", "0").lower() in ("1", "true", "yes", "on")
+    from jarvis.inference.boundary import cloud_enabled as _enabled
+
+    return _enabled()
 
 
 def _is_cloud_model(model: str) -> bool:
-    lower = (model or "").strip().lower()
-    return any(lower.startswith(prefix) for prefix in CLOUD_PREFIXES)
+    from jarvis.inference.boundary import is_cloud_model
+
+    return is_cloud_model(model)
 
 
 def _litellm_model_name(model: str) -> str:
@@ -132,12 +135,23 @@ def select_route(
     else:
         vram_reason = "benchmark_locked"
 
-    if mode == "ollama":
-        reason = vram_reason or "gateway=ollama"
-        return InferenceRoute(backend="ollama", model=model, reason=reason, local=True)
-
     if cloud_model:
-        if litellm_available():
+        # An explicit cloud model is a request, not an authorisation: the
+        # cloud-disable switch, offline mode and the provider allowlist all
+        # apply. A refused or unreachable cloud target is answered by an
+        # installed local model for the role — never by handing the cloud
+        # model id to Ollama.
+        from jarvis.inference.boundary import cloud_refusal, local_fallback
+
+        refusal = cloud_refusal(model)
+        if refusal:
+            return InferenceRoute(
+                backend="ollama",
+                model=local_fallback(role),
+                reason=f"cloud_refused: {refusal}",
+                local=True,
+            )
+        if mode != "ollama" and litellm_available():
             return InferenceRoute(
                 backend="litellm",
                 model=_litellm_model_name(model),
@@ -147,17 +161,28 @@ def select_route(
             )
         return InferenceRoute(
             backend="ollama",
-            model=model,
-            reason="cloud model requested but litellm offline",
-            local=False,
-            cloud=True,
+            model=local_fallback(role),
+            reason="cloud_gateway_unavailable_local_fallback",
+            local=True,
         )
+
+    if mode == "ollama":
+        reason = vram_reason or "gateway=ollama"
+        return InferenceRoute(backend="ollama", model=model, reason=reason, local=True)
 
     reason = vram_reason or "local_default"
 
-    if context_tokens > int(os.getenv("JARVIS_LOCAL_CTX_LIMIT", "12000")) and cloud_enabled():
-        if litellm_available():
-            cloud_default = os.getenv("JARVIS_CLOUD_MODEL", "gpt-4o-mini")
+    # Large-context escalation needs an operator-named cloud model; ARIA does
+    # not hardcode one (names change; availability is per account).
+    cloud_default = os.getenv("JARVIS_CLOUD_MODEL", "").strip()
+    if (
+        cloud_default
+        and context_tokens > int(os.getenv("JARVIS_LOCAL_CTX_LIMIT", "12000"))
+        and cloud_enabled()
+    ):
+        from jarvis.inference.boundary import cloud_refusal
+
+        if not cloud_refusal(cloud_default) and litellm_available():
             return InferenceRoute(
                 backend="litellm",
                 model=cloud_default,
