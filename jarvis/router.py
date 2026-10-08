@@ -3420,6 +3420,28 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
                 message,
                 session,
             )
+        # Conversation continuity — "where did we leave off?", "what did we
+        # decide about X?", "remember that fishing app idea?" — answered from
+        # the archived record. Before memory verbs, so a recall *question*
+        # starting with "remember" is never stored as a new memory, and before
+        # the working-on overview, which only sees planner tasks.
+        from jarvis.continuity.retrieve import is_recall_question
+
+        if is_recall_question(message):
+            return _finalize_intent(
+                {
+                    "action": "continuity_recall",
+                    "params": {"query": message.strip()},
+                    "thinking": "conversation continuity",
+                    "route_reason": "natural_continuity",
+                    "route_handler": "Memory",
+                    "route_confidence": 1.0,
+                    "router_stage": "pre_memory_continuity",
+                },
+                message,
+                session,
+            )
+
         # Memory verbs before natural intent — "remember… fly-tying…" must not
         # become fly_search, and "remind me what…" must hit Memory Authority.
         try:

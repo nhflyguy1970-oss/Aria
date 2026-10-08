@@ -612,6 +612,74 @@ def primary_remember(
     return host
 
 
+def experience_for_episode(episode_id: str) -> str:
+    """The ACM experience already encoded from this source episode, if any."""
+    tag = f"episode:{episode_id}"
+    engine = get_engine()
+    for exp in list(engine.store.experiences.values()):
+        if tag in (getattr(exp, "context_tags", ()) or ()):
+            return str(exp.id)
+    return ""
+
+
+def encode_continuity_statement(
+    content: str,
+    *,
+    kind: str,
+    episode_id: str,
+    branch: str = "",
+    project: str = "",
+    ts: float | None = None,
+) -> dict[str, Any]:
+    """Encode one user statement from the conversation archive into ACM.
+
+    The statement keeps its true provenance — something the user said in
+    conversation (or a correction), never a deliberate teaching — and an
+    ``episode:<id>`` tag that links it to the verbatim source turn. Encoding is
+    idempotent per episode: an episode already present in ACM is not encoded
+    again, which is what makes a retry after a crash safe.
+    """
+    from aria_acm.acm.context.frame import ContextFrame
+    from aria_acm.acm.provenance import TRUSTED_USER_CORRECTION, TRUSTED_USER_STATEMENT
+
+    if not acm_is_authoritative():
+        return {"encoded": False, "reason": "acm_not_authoritative"}
+    existing = experience_for_episode(episode_id)
+    if existing:
+        return {"encoded": True, "experience_id": existing, "duplicate": True}
+    tags = [
+        "continuity",
+        f"continuity:{kind}",
+        f"episode:{episode_id}",
+        "ns:conversation",
+        "legacy_type:project",
+    ]
+    if branch:
+        tags.append(f"branch:{branch}")
+    if project:
+        tags.append(f"project:{project}")
+    provenance = TRUSTED_USER_CORRECTION if kind == "correction" else TRUSTED_USER_STATEMENT
+    t0 = time.perf_counter()
+    with engine_exclusive() as engine:
+        engine.context = ContextFrame()
+        out = engine.encode(
+            content,
+            kind="experience",
+            pin=True,
+            context_tags=tuple(tags),
+            provenance=provenance,
+            t_start=ts,
+        )
+    _record_ms((time.perf_counter() - t0) * 1000.0)
+    _bump("continuity_encode")
+    exp_id = str(out.get("experience_id") or "")
+    return {
+        "encoded": bool(out.get("encoded") or exp_id),
+        "experience_id": exp_id,
+        "reason": out.get("reason") or out.get("detail"),
+    }
+
+
 def primary_classify_request(text: str) -> dict[str, Any]:
     """Cognitive Intent Classification — ownership before speech (D039)."""
     engine = get_engine()

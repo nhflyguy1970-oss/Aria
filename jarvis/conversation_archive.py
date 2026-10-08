@@ -44,6 +44,16 @@ _lock = threading.Lock()
 _status: dict[str, Any] = {"writes": 0, "errors": 0, "last_error": None}
 
 
+def _active_project() -> str:
+    """The project active when the turn was spoken; "" if none or unreadable."""
+    try:
+        from jarvis.active_project import get_active_slug
+
+        return get_active_slug()
+    except Exception:  # noqa: BLE001 - attribution is best effort, never blocks chat
+        return ""
+
+
 def _safe_name(branch_id: str) -> str:
     name = re.sub(r"[^A-Za-z0-9_.-]", "_", branch_id or "main").strip(".")
     return name or "main"
@@ -90,7 +100,11 @@ class ConversationArchive:
         """Record one turn verbatim. Returns its event id ("" if it could not be written)."""
         if role not in ARCHIVED_ROLES:
             return ""
-        return self._append({"kind": "message", "role": role, "content": str(content or "")})
+        event = {"kind": "message", "role": role, "content": str(content or "")}
+        project = _active_project()
+        if project:
+            event["project"] = project
+        return self._append(event)
 
     def mark(self, kind: str, **detail: Any) -> str:
         return self._append({"kind": kind, **detail})

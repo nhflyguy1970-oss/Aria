@@ -161,6 +161,17 @@ async def lifespan(app: FastAPI):
     except Exception:
         _log.getLogger("jarvis.gui.server").exception("Mission worker start FAILED")
 
+    try:
+        # Conversation continuity: index the archive, mirror mission outcomes and
+        # drain queued user statements into ACM. Indexing is inspection, not
+        # autonomous execution, so it runs in safe mode too.
+        from jarvis.continuity import ingest as continuity_ingest
+
+        if continuity_ingest.start():
+            _log.getLogger("jarvis.gui.server").info("Continuity sync started")
+    except Exception:
+        _log.getLogger("jarvis.gui.server").exception("Continuity sync start FAILED")
+
     yield
     # C5: ordered shutdown — each step isolated and logged (never silent pass).
     import logging
@@ -171,6 +182,15 @@ async def lifespan(app: FastAPI):
         _shutdown_log.info("Shutdown: chat branches persisted")
     except Exception:
         _shutdown_log.exception("Shutdown: branch persist FAILED")
+    try:
+        from jarvis.continuity import ingest as continuity_ingest
+
+        continuity_ingest.stop()
+        # Index what this session said; anything not encoded stays queued.
+        continuity_ingest.sync_all(missions=True, drain=True)
+        _shutdown_log.info("Shutdown: continuity index synced")
+    except Exception:
+        _shutdown_log.exception("Shutdown: continuity sync FAILED")
     try:
         assistant.auto_checkpoint(reason="shutdown")
         _shutdown_log.info("Shutdown: auto_checkpoint complete")

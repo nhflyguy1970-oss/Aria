@@ -98,6 +98,8 @@ class ContextNeeds:
     health: bool
     relationships: bool
     local_clock: bool
+    # Earlier conversations, decisions and unfinished work from the archive.
+    continuity: bool = False
 
 
 def is_lightweight_chat(message: str) -> bool:
@@ -131,6 +133,18 @@ def needs_memory_lookup(message: str) -> bool:
     if is_lightweight_chat(message):
         return bool(_MEMORY_RE.search(message or ""))
     return bool(_MEMORY_RE.search(message or ""))
+
+
+def needs_continuity(message: str) -> bool:
+    """Questions about earlier conversations — no "remember"/"recall" required.
+
+    The lexical gate missed "what did we decide about ARIA?" and "where did we
+    leave off?" because neither says remember. Continuity retrieval is a local
+    SQLite lookup, so asking for it costs no model load.
+    """
+    from jarvis.continuity.retrieve import is_continuity_query
+
+    return is_continuity_query(message or "")
 
 
 def needs_project_extras(message: str) -> bool:
@@ -243,9 +257,10 @@ def context_needs(message: str) -> ContextNeeds:
     except Exception:
         web = False
 
+    continuity = needs_continuity(text)
     return ContextNeeds(
         lightweight=False,
-        memory=needs_memory_lookup(text),
+        memory=needs_memory_lookup(text) or continuity,
         planning_tasks=tasks,
         weather=weather,
         knowledge_topics=bool(_KNOWLEDGE_TOPIC_RE.search(text)),
@@ -256,6 +271,7 @@ def context_needs(message: str) -> ContextNeeds:
         health=health,
         relationships=needs_relationships(text),
         local_clock=False,
+        continuity=continuity,
     )
 
 

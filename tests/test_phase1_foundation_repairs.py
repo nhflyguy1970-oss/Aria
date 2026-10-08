@@ -397,54 +397,32 @@ def test_branch_behaviour_is_unchanged(data_dir):
 
 
 # ============================================================ 3. tool-result memory
+# Phase 2 moved outcomes from ACM (where they were stamped as user teaching) to
+# the continuity store as tool-actor records; the Phase 1 guarantees still hold.
 
 
-class _StrictMemory:
-    """Binds calls against the real memory backend's add() signature."""
-
-    def __init__(self, fail: Exception | None = None):
-        import inspect
-
-        from jarvis.modules.memory import JsonMemoryStore
-        from jarvis.modules.memory_sqlite import SqliteMemoryStore
-
-        self.signature = inspect.signature(SqliteMemoryStore.add)
-        assert self.signature == inspect.signature(JsonMemoryStore.add)
-        self.calls: list = []
-        self.fail = fail
-
-    def add(self, *args, **kwargs):
-        self.signature.bind(self, *args, **kwargs)  # raises TypeError on a bad call
-        self.calls.append((args, kwargs))
-        if self.fail:
-            raise self.fail
-        return {"id": "mem_1"}
-
-
-def test_tool_outcome_uses_the_real_memory_signature(data_dir):
+def test_tool_outcome_is_recorded_as_a_tool_reported_outcome(data_dir):
+    from jarvis.continuity import store
     from jarvis.tools.memory_sink import record_tool_outcome
 
-    memory = _StrictMemory()
-    receipt = record_tool_outcome(
-        "claude_code", "fix the bug", ok=True, summary="patched", memory=memory
-    )
-    assert receipt == {"recorded": True, "entry_id": "mem_1", "namespace": "tools"}
-    (args, kwargs), = memory.calls
-    assert args[0] == "success"  # diagnostic outcome, not a fact
-    assert "fix the bug" in args[1] and "patched" in args[1]
-    assert "tool:claude_code" in args[2]
-    assert kwargs == {"namespace": "tools"}
+    receipt = record_tool_outcome("claude_code", "fix the bug", ok=True, summary="patched")
+    assert receipt["recorded"] is True and receipt["store"] == "continuity"
+    record = store.get_record(receipt["record_id"])
+    assert record["actor"] == store.TOOL and record["kind"] == store.OUTCOME
+    assert "fix the bug" in record["text"] and "patched" in record["text"]
+    assert record["verified"] is False  # reported by the tool, not verified
 
 
 def test_tool_outcome_failure_is_reported_not_swallowed(data_dir, caplog):
     from jarvis.tools import memory_sink
 
     before = memory_sink.status()["failed"]
-    with caplog.at_level(logging.WARNING, logger="jarvis.tools.memory_sink"):
-        receipt = memory_sink.record_tool_outcome(
-            "claude_code", "task", ok=False, memory=_StrictMemory(fail=RuntimeError("acm down"))
-        )
-    assert receipt["recorded"] is False and "acm down" in receipt["error"]
+    with (
+        patch("jarvis.continuity.record_tool_outcome", side_effect=RuntimeError("disk full")),
+        caplog.at_level(logging.WARNING, logger="jarvis.tools.memory_sink"),
+    ):
+        receipt = memory_sink.record_tool_outcome("claude_code", "task", ok=False)
+    assert receipt["recorded"] is False and "disk full" in receipt["error"]
     assert memory_sink.status()["failed"] == before + 1
     assert "not recorded" in caplog.text
 
@@ -452,60 +430,50 @@ def test_tool_outcome_failure_is_reported_not_swallowed(data_dir, caplog):
 def test_execute_tool_attaches_memory_receipt(data_dir):
     from jarvis.tools import executor
 
-    memory = _StrictMemory()
     tool = SimpleNamespace(id="probe_tool", label="Probe", run=None, available=lambda: True)
     with (
         patch.object(executor, "get_tool", return_value=tool),
         patch("jarvis.tools.runner.build_command", return_value=(["true"], "")),
         patch("jarvis.tools.runner.run_sync", return_value={"ok": True, "stdout": "done"}),
-        patch("jarvis.tools.memory_sink._default_memory", return_value=memory),
     ):
         out = executor.execute_tool("probe_tool", {"task": "do it"})
     assert out["ok"] is True
-    assert out["memory"]["recorded"] is True
-    assert memory.calls, "outcome never reached memory"
+    assert out["memory"]["recorded"] is True and out["memory"]["record_id"]
 
 
 def test_background_run_keeps_its_memory_receipt_on_disk(data_dir):
     from jarvis.tools import runner
 
     run = runner.ToolRun(id="r1", tool_id="claude_code", task="t", status="failed", error="boom")
-    with patch(
-        "jarvis.tools.memory_sink._default_memory",
-        return_value=_StrictMemory(fail=RuntimeError("acm down")),
-    ):
+    with patch("jarvis.continuity.record_tool_outcome", side_effect=RuntimeError("disk full")):
         run.memory = runner._remember_run_outcome(run)
     runner.save_run(run)
     reloaded = runner.load_run("r1")
-    assert reloaded.memory["recorded"] is False and "acm down" in reloaded.memory["error"]
+    assert reloaded.memory["recorded"] is False and "disk full" in reloaded.memory["error"]
 
 
-def test_tool_outcome_persists_in_acm_across_restart(data_dir, tmp_path, monkeypatch):
+def test_tool_outcome_survives_restart_and_never_enters_acm(data_dir, tmp_path, monkeypatch):
     from aria_core import acm_bridge, memory_manager
 
-    from jarvis.modules.memory import MemoryStore
+    from jarvis.continuity import store
     from jarvis.tools.memory_sink import record_tool_outcome
 
     monkeypatch.setenv("ARIA_ACM_PRIMARY", "1")
     monkeypatch.setenv("ARIA_ACM_ROLLBACK", "0")
-    monkeypatch.setenv("ARIA_ACM_SHADOW", "0")
-    monkeypatch.setenv("ARIA_ACM_AUTO_PERSIST", "1")
     monkeypatch.setenv("ARIA_ACM_PERSIST_PATH", str(tmp_path / "acm.db"))
     memory_manager.reset_for_tests()
     acm_bridge.reset_for_tests()
     try:
         receipt = record_tool_outcome(
-            "claude_code",
-            "refactor the importer",
-            ok=True,
-            summary="importer refactor completed with tests passing",
-            memory=MemoryStore(),
+            "claude_code", "refactor the importer", ok=True, summary="tests passing"
         )
-        assert receipt["recorded"] is True and receipt["entry_id"]
-
-        acm_bridge.reset_for_tests()  # restart: a fresh engine on the same store
-        entry = acm_bridge.primary_get(receipt["entry_id"])
-        assert entry and "importer refactor completed" in entry["content"]
+        store.reset_for_tests()  # restart: fresh handles on the same database
+        acm_bridge.reset_for_tests()
+        assert "refactor the importer" in store.get_record(receipt["record_id"])["text"]
+        assert not any(
+            "refactor the importer" in (e.summary or "")
+            for e in acm_bridge.get_engine().store.experiences.values()
+        )
     finally:
         memory_manager.reset_for_tests()
         acm_bridge.reset_for_tests()

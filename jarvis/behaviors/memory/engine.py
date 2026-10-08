@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import random
 import re
 import time
@@ -12,6 +13,8 @@ from typing import Any
 from jarvis import llm
 from jarvis.behaviors.memory.context import MemoryContext
 from jarvis.response import err, ok
+
+log = logging.getLogger("jarvis.behaviors.memory")
 
 
 class MemoryEngine:
@@ -287,10 +290,16 @@ class MemoryEngine:
         from aria_core import acm_bridge
 
         if acm_bridge.acm_is_authoritative():
+            # Hits carry citations: the honesty gate decides "no memory" from
+            # citations, so returning ACM evidence without them made real
+            # memories look absent.
             try:
                 parts = acm_bridge.primary_context_fragments(message, limit=5)
                 if parts:
-                    return parts, []
+                    return parts, [
+                        {"id": f"acm-fragment-{i}", "type": "acm", "date": "", "content": p[:160]}
+                        for i, p in enumerate(parts)
+                    ]
                 # Cognitive path miss → lexical fallback (alias-expanded) for recall coverage.
                 lexical = cls._acm_lexical_hits(message, limit=3)
                 relevant = [
@@ -303,10 +312,15 @@ class MemoryEngine:
                         f"Relevant memories:\n- {(e.get('content') or '').strip()[:400]}"
                         for e in relevant[:3]
                     ]
-                    return lines, []
+                    return lines, [cls.memory_citation(e) for e in relevant[:3]]
                 return [], []
-            except Exception:
-                return [], []
+            except Exception as exc:
+                # "Memory unavailable" is not "no memory": tell the model which.
+                log.warning("ACM context retrieval failed: %s", exc, exc_info=True)
+                return [
+                    "Memory: UNAVAILABLE — the memory search failed this turn. Do not "
+                    "claim there is no stored memory; say it could not be checked."
+                ], []
 
         parts: list[str] = []
         citations: list[dict] = []

@@ -1887,6 +1887,24 @@ def register_routes(app, assistant):
         bid = assistant.fork_branch(name, int(display_index))
         return {"ok": True, "branch_id": bid, "active": bid}
 
+    @app.get("/api/continuity/status")
+    def continuity_status_api():
+        from jarvis.continuity import status
+
+        return {"ok": True, **status()}
+
+    @app.get("/api/continuity/recall")
+    def continuity_recall_api(q: str = ""):
+        """Read-only: what ARIA would retrieve for a continuity question."""
+        from jarvis import continuity
+
+        result = continuity.retrieve(q)
+        return {
+            "ok": result.status != continuity.UNAVAILABLE,
+            "result": result.to_dict(),
+            "context_block": result.to_prompt(),
+        }
+
     @app.get("/api/branches")
     def branches_list():
         return {

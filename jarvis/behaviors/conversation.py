@@ -156,6 +156,27 @@ class ConversationEngine:
                 "injected": False,
             }
 
+        if needs.continuity:
+            t0 = _time.perf_counter()
+            try:
+                from jarvis import continuity
+
+                branches = getattr(self._a, "branches", None)
+                found = continuity.retrieve(message, branch=getattr(branches, "active_id", None))
+                block = found.to_prompt()
+                parts.append(block)
+                if found.status in (continuity.HITS, continuity.PARTIAL):
+                    citations.extend(found.citations())
+                inventory["continuity_status"] = found.status
+                _note("continuity", t0, block, used=True)
+            except Exception as exc:  # noqa: BLE001 - say so; never imply "no record"
+                parts.append(
+                    "Conversation history: UNAVAILABLE — the history search failed "
+                    f"({type(exc).__name__}). Do not claim there is no record."
+                )
+                inventory["continuity_status"] = "UNAVAILABLE"
+                _note("continuity", t0, "", used=True)
+
         if needs.planning_tasks or needs.weather:
             from jarvis.behaviors.planning import get_planning_behavior
 

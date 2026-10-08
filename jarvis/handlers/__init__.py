@@ -23,6 +23,7 @@ def ensure_handlers_loaded() -> None:
         autonomous_workflow_handlers,
         collaboration_handlers,
         computer_use_handlers,
+        continuity_handlers,
         dev_agent_handlers,
         evidence_handlers,
         integration_handlers,
