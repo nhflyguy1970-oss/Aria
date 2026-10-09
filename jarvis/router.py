@@ -531,14 +531,46 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
             "thinking": "document follow-up",
         }
 
-    if session.last_document_path and (
-        session.last_module == "document"
-        or re.search(r"\b(the document|this pdf|the warranty|that clause|the contract)\b", lower)
-    ):
-        if re.search(
-            r"\b(what|which|when|where|who|how|does|is there|are there|find|clause|section|coverage|warranty|expire)\b",
+    if session.last_document_path:
+        # Same defect as sticky vision, and broader: bare question words anywhere
+        # ("what"/"who"/"how") or any trailing "?" — with no length bound — sent
+        # "What time is it?" and "Who wrote Hamlet?" to document_query. Require
+        # document semantics, keeping this rule's own vocabulary.
+        document_reference = re.search(
+            r"\b((the|this|that) (document|pdf|file|contract|warranty|policy|manual|report)|"
+            r"(the|that) clause)\b",
             lower,
-        ) or message.strip().endswith("?"):
+        )
+        # Domain nouns from this rule's original vocabulary, plus terms already
+        # used by document follow-ups. A generic "what/who/how" is not enough.
+        document_terms = re.search(
+            r"\b(clause|section|coverage|warranty|expires?|expired|expiration|deductible|"
+            r"policy|premium|page|paragraph|appendix|addendum|exclusion|liability|"
+            r"signature|effective date|terms?\s+and\s+conditions)\b",
+            lower,
+        )
+        # "what does it say about X", "what's in it", "according to that"
+        deictic_document = (
+            re.search(r"\b(this|that|it)\b", lower)
+            and re.search(
+                r"\b(says?|state[sd]?|mentions?|covers?|contains?|includes?|"
+                r"according to)\b",
+                lower,
+            )
+        ) or re.search(
+            r"\b(in (this|that|it)|about (this|that|it)|it about)\b",
+            lower,
+        )
+        # Policy A: deictics / bare domain terms require ACTIVE document context.
+        # Explicit document nouns may still resolve against a retained path.
+        active_document = session.last_module == "document"
+        if active_document:
+            document_follow_up = bool(
+                document_reference or document_terms or deictic_document
+            )
+        else:
+            document_follow_up = bool(document_reference)
+        if document_follow_up:
             return {
                 "action": "document_query",
                 "params": {"path": session.last_document_path, "question": message},
@@ -552,32 +584,52 @@ def _follow_up_route(message: str, session: SessionContext) -> dict | None:
             "thinking": "follow-up",
         }
 
-    if session.last_image and session.last_module == "vision":
+    if session.last_image:
         if not (
             _is_capabilities_question(lower)
             or _is_models_question(lower)
             or _is_greeting(lower)
             or re.match(r"^clear\b", lower)
             or re.search(
-                r"\b(remember|recall|search the web|generate|create|implement|fix |debug )\b", lower
+                r"\b(remember|recall|search the web|generate|create|implement|fix |debug |"
+                r"edit |upscale|enlarge|inpaint)\b",
+                lower,
             )
         ):
-            vision_follow_up = (
-                re.search(
-                    r"\b(in (the|this) (image|photo|picture|screenshot)|"
-                    r"about (the|this) (image|photo|picture|screenshot)|"
-                    r"the (image|photo|screenshot|picture))\b",
-                    lower,
-                )
-                or re.match(
-                    r"^(what color|what text|what does|what is|what are|what's|"
-                    r"where is|where are|how many|how much|who is|"
-                    r"is there|are there|can you see|can you read|"
-                    r"does it|do you see)\b",
-                    lower,
-                )
-                or (message.strip().endswith("?") and len(message.strip()) < 240)
+            # A question is a vision follow-up only when it actually refers to
+            # the image. Matching broad question prefixes ("what is …") or any
+            # short question ending in "?" sent unrelated turns to the previous
+            # picture — "What is 7 plus 7?", "Who wrote Hamlet?", "what is my
+            # GPU?" all became analyze_image, ahead of NLU and the LLM router.
+            image_reference = re.search(
+                r"\b((in|about|on|from) (the|this|that) (image|photo|picture|screenshot|frame)|"
+                r"(the|this|that) (image|photo|screenshot|picture|frame))\b",
+                lower,
             )
+            # Policy A: implicit deictics require ACTIVE vision context
+            # (last_module == "vision"). Explicit image nouns may still resolve
+            # against a retained last_image after an unrelated turn.
+            active_vision = session.last_module == "vision"
+            if active_vision:
+                # Deictic + visual attribute/action. Prefixes like "what is" /
+                # "can you see" alone are not enough — that was the over-capture.
+                deictic_visual = re.search(r"\b(this|that|it)\b", lower) and re.search(
+                    r"\b(colou?rs?|text|read|reads?|see|seen|seeing|show|shows|showing|"
+                    r"display|displays|visible|objects?|pictured|shown|says?|written|"
+                    r"looking at)\b",
+                    lower,
+                )
+                looking_at = re.search(r"\bwhat am i looking at\b", lower)
+                # Bare deictic question after an image ("What is this?") stays vision.
+                deictic_question = re.match(
+                    r"^(what|what's|whats|who|who's)\s+(is\s+|are\s+)?(this|that|it)\b",
+                    lower,
+                )
+                vision_follow_up = (
+                    image_reference or deictic_visual or looking_at or deictic_question
+                )
+            else:
+                vision_follow_up = bool(image_reference)
             if vision_follow_up:
                 return {
                     "action": "analyze_image",
@@ -927,10 +979,13 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
     action = intent.get("action")
 
     # General task policy — reject local-docs/runtime catch-alls for world/research asks.
+    # An intent that already carries a fixed, honest reply (unsupported capability,
+    # policy refusal) keeps it.
     try:
         from jarvis.orchestration_policy import route_override_for_policy
 
-        override = route_override_for_policy(message, str(action or "chat"))
+        fixed = (intent.get("params") or {}).get("policy_fixed_reply")
+        override = None if fixed else route_override_for_policy(message, str(action or "chat"))
         if override:
             intent = {**intent, **override}
             action = intent.get("action")
@@ -1367,8 +1422,9 @@ def _natural_intent_route(message: str) -> dict | None:
         r"\b("
         r"(?:generate|create|make|draw|render)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|photo|illustration)|"
         r"(?:generate|create|make)\s+(?:me\s+)?(?:a\s+)?(?:video|clip)|"
-        r"image\s+of\b|"
-        r"picture\s+of\b"
+        # "image of …" only as a request — not "the image of the river in my head"
+        r"^(?:please\s+)?(?:an?\s+)?(?:image|picture)\s+of\b|"
+        r"(?:want|need|give\s+me|show\s+me|get\s+me|send\s+me)\s+(?:an?\s+)?(?:image|picture)\s+of\b"
         r")\b",
         lower,
     ):
@@ -1463,7 +1519,9 @@ def _natural_intent_route(message: str) -> dict | None:
             "route_confidence": 1.0,
         }
 
-    if re.search(
+    from jarvis.action_routing import is_conceptual_question
+
+    if not is_conceptual_question(message) and re.search(
         r"\bwhat('s| is) on my (plate|list)\b|"
         r"\bwhat(?:'s| is) left on my (plate|list)\b|"
         r"\banything left (?:on my plate|for today|today)\b|"
@@ -1515,7 +1573,8 @@ def _natural_intent_route(message: str) -> dict | None:
             "route_confidence": 1.0,
         }
 
-    if re.search(r"\bwhat(?:'s|\s+is|\s+do i)\b.*\b(color|favourite|favorite)\b", lower) or re.search(
+    if re.search(r"\bwhat(?:'s|\s+is)\s+my\b.*\b(color|colour|favourite|favorite)\b|"
+                 r"\bwhat\s+do\s+i\b.*\b(color|favourite|favorite)\b", lower) or re.search(
         r"\bwhat color do i like\b", lower
     ):
         return {
@@ -3405,6 +3464,13 @@ def _route(message: str, session: SessionContext, attachment: dict | None = None
                 message,
                 session,
             )
+
+    # "Cancel it" with nothing in flight names real candidates instead of "Stopped."
+    if not attachment:
+        from jarvis.action_routing import cancel_reference
+
+        if cancel_hit := cancel_reference(message, session):
+            return _finalize_intent(cancel_hit, message, session)
 
     # Reflex Layer (Phase 8) — before NLU / Cap Bus / Cognition / organs.
     if not attachment:

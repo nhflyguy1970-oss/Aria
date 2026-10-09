@@ -1,133 +1,79 @@
-# Coding agents under ARIA supervision (Phase 5)
+# Coding agents under ARIA supervision — Phases 5–6
 
-Code: `jarvis/coding_agents/` (discovery, adapters, workspace, contract, runs, projects, supervisor); chat actions in `jarvis/handlers/coding_agent_cli_handlers.py`; API under `/api/coding-agents/*`.
+Measured state: [Phase 6 final certification](ARIA_PHASE6_RECOVERY.md). **Codex is verified in disposable development fixtures. Claude Code and Antigravity are disabled.** Production is unchanged. Read [sandbox/approval guarantees](ARIA_PHASE6_SANDBOX.md) before activation.
 
-## What is installed (discovered 2026-10-08, read-only)
+## Installed interfaces
 
-| Agent | Executable | Headless interface used | Sign-in | Billing |
-| --- | --- | --- | --- | --- |
-| Codex CLI 0.161.0 | `~/.nvm/.../bin/codex` | `codex exec --json --sandbox … --cd … --ephemeral -o …` | `codex login status`: ChatGPT | ChatGPT subscription |
-| Claude Code 2.1.29x (auto-updates) | npm wrapper broken; platform binary `…/claude-code-linux-x64/claude` | `claude --print --output-format stream-json --permission-mode … --tools … --no-session-persistence` | `claude auth status --json`: claude.ai | Claude Pro subscription |
-| Antigravity CLI (agy) 1.3.0 | `~/.local/bin/agy` | `agy --print --output-format stream-json --mode plan\|accept-edits --sandbox --print-timeout` | no auth-status command: *unknown* until a run | Google account |
+| Agent | Version verified | Execution interface | Authentication / availability |
+|---|---|---|---|
+| Codex | 0.161.0 | `codex app-server`, JSON-RPC `thread/start`, `turn/start`, explicit `externalSandbox` | Existing ChatGPT subscription; current-code real task verified |
+| Claude Code | 2.1.295 | Shipped native binary, `--print --output-format stream-json`, normal permission/tools modes | claude.ai Pro recognized; actual request returns weekly-quota 429; disabled |
+| Google Antigravity (`agy`) | 1.3.2 | `--print --output-format stream-json --mode plan\|accept-edits --sandbox --print-timeout` | Current isolated request enters interactive OAuth and hits 60-second wall timeout; historical violation retained; disabled |
 
-Notes:
+Claude's npm wrapper is broken; discovery uses the native binary already shipped alongside it. Nothing was reinstalled. Version/help/auth probes run in a no-network private-root sandbox; prompts run only inside an approved disposable OCI workspace. Authentication files are privately copied, not shared writable or read out to users. Installed flags are checked; a version/policy/native-binary certificate invalidates on change.
 
-- The `claude` command on PATH fails with "claude native binary not installed": the npm postinstall step didn't run, which also breaks the shell's `grep`/`find` wrappers. Discovery falls back to the platform binary npm ships next to the wrapper. Nothing was reinstalled.
-- Discovery keeps only an auth *method* and a billing class. Emails, org names and tokens are never read out of auth output, and credential files are never opened.
-- Subscriptions are not API keys:
-  - Phase 4's paid adapters never use these logins.
-  - Agents run with every `*_API_KEY` stripped from their environment, so a CLI cannot silently fall back to API billing.
-  - An agent found signed in with an API key is marked not usable.
-- Every flag an adapter relies on is checked against the installed `--help`; a missing flag makes the agent unusable.
+The old `codex exec` native sandbox cannot nest under the required outer boundary on this host. ARIA now uses Codex's external-sandbox protocol and enforces the whole process tree with OCI. There is no bare-process fallback or dangerous bypass flag. This is an explicit adapter architecture, not a silent sandbox downgrade.
 
-**Not supported, and not faked:**
+Subscription auth does not activate Phase 4's paid adapters. API keys and SSH/Git credentials are absent. Codex checks account type `chatgpt`; Claude overage remains disabled. No paid API purchase or fallback is permitted. There is no IDE/GUI automation, spending-cap claim for subscription plans, or host keychain exposure. Claude's reported quota reset is 2026-10-11 07:00 UTC; eligibility requires a new safe check, not elapsed time alone.
 
-- the Antigravity IDE/GUI (no automation);
-- agy auth checks and per-run tool allow-lists;
-- Claude Code running shell or tests (no Bash tool is granted; ARIA runs tests itself);
-- spending caps on subscription plans (`--max-budget-usd` applies to API billing only);
-- any `--dangerously-*`, `danger-full-access`, `bypassPermissions` or `--yolo` flag. The adapters refuse to build these.
+## Contract, approval and supervision
 
-## The contract
+Every run separates:
 
-Each run records six separate things:
+- **requested**: the approved plan;
+- **attempted**: agent events/commands, labelled as its report;
+- **changed**: independently collected workspace diff;
+- **tests_run**: ARIA's no-network independent verification;
+- **verified**: facts those observations establish;
+- **unverified**: the agent's claims, with contradictions retained.
 
-- **requested**: what the owner approved;
-- **attempted**: the agent's own event stream, labelled as its word;
-- **changed**: `git diff` of the workspace against the base commit;
-- **tests_run**: run by ARIA in a no-network sandbox;
-- **verified**: statements ARIA checked;
-- **unverified**: the agent's success claims. Claims that ARIA's tests contradict are listed separately.
+`verified` requires actual changes and passing ARIA verification. `completed` is a read-only task with a report; findings remain unverified. Other states include `no_changes`, `changes_unverified`, `tests_failed`, `boundary_violation`, `failed`, `timeout`, `cancelled`, `interrupted` and `refused`. Quota exhaustion is an availability error, not an invented correctness failure. Raw unsuccessful benchmark attempts remain visible.
 
-`success` is true only for:
+Chat/API proposes a plan. An owner-only approval nonce, expiry and plan hash authorize one execution. Safe mode, autonomy and mission/coding capabilities are checked again at execution. Cross-process launch reservation allows one run at a time. A project name alone never starts work. The approved hash includes canonical project path, protected paths, verification command and allowed agents. Changed settings or old unbound approvals require a new proposal; they never clone a newly substituted source. All actual commands and descendants run in the approved container; read-only requests have a read-only workspace. Independent tests run under private-root/no-network bubblewrap. There is no push, commit or automatic application into the source project.
 
-- **verified**: changes were made and ARIA's test run passed; or
-- **completed**: a read-only task finished within bounds and produced a report. Its findings still count as unverified.
+Resources are enforced through OCI cgroups: 6 GiB memory/swap, four CPUs, 512 processes, bounded tmpfs and wall time. Logs are redacted, capped at 4 MB and flushed to controller-private paths. Current CPU/RSS telemetry measures the controller client; container limits are separate receipt fields, not claimed measurements of the full agent tree.
 
-Other outcomes:
+Cancellation removes the run-labeled container and its detached descendants. Restart recovery marks dead-owner runs interrupted and removes only their recorded containers; it never silently resumes them. Cleanup failure blocks further execution. A worker watchdog bounds abandoned containers even before ARIA restarts. A resumed task is a new proposal requiring approval.
 
-- An exit code of 0 with no changes is `no_changes`.
-- Changes with no test command are `changes_unverified`.
-- Failing tests are `tests_failed`.
-- Edits during a read-only task, a protected path changing, or the agent rewriting its own config are a `boundary_violation`.
-- Other terminal states: `failed`, `timeout`, `cancelled`, `interrupted`.
+## Projects and promotion
 
-## Safety model
+The development registry contains ARIA (`aria`), FTR (`fly-tying-reference`) and BlackFly (`blackfly`), with distinct namespaces, explicit Git paths, test commands and protected paths. ARIA points at the Phase 6 worktree. Production registration is unchanged. Registration does not index the repository or write ACM. Empty project agent allow-lists add no agent-specific restriction; runtime eligibility remains mandatory.
 
-**Approval**
+Projects are resolved from registry records, never guessed from a chat name. Candidate paths can be shown with their evidence if registration is missing. Agents operate in clones of committed HEAD and cannot see other production projects or datasets. Trusted toolchains are read-only; agents cannot authorize a new host mount by replacing a clone symlink.
 
-- Chat produces a plan only. The owner starts it by replying "yes" or through `POST /api/coding-agents/plans/{id}/approve` (owner `git.write` with step-up).
-- Approval needs a nonce that only those two paths hold. It is single-use and expires after 30 minutes.
-- `runs.plan_id` is UNIQUE, so one approval gives one execution.
+Approving an agent plan permits only the disposable run. Promotion is a distinct decision:
 
-**Execution policy**
+1. Capture binary diff, base/new hashes and a file manifest using sandboxed untrusted Git.
+2. Reject protected data, credentials, env, symlink/submodule and service/venv paths; flag deletions, binary/mode changes and migration risks. Do not execute migrations.
+3. Apply to a fresh destination-HEAD clone and run independent tests.
+4. Present destination branch/HEAD, files, test evidence, risks and patch hash.
+5. Require a separate owner-only, single-use promotion approval.
+6. Lock destination and recheck registration, branch/HEAD, touched dirty files, manifest and conflicts.
+7. Save exact recovery snapshots, apply without a three-way merge, verify and roll back on failure.
+8. Record outcome and rollback. Refuse rollback over later owner edits; restore interrupted applications rather than repeat them.
 
-- Each run is a mission of kind `coding_agent` that needs both the `mission` and `coding` capabilities. Safe mode, or the `assisted` autonomy level, refuses it.
-- One run at a time.
-- Timeouts are capped by the autonomy level's runtime bound. Output is capped at 4 MB.
+Tests cover successful, rejected, expired, replayed, conflicting, protected-path, failed-verification and interrupted cases. A real Codex-produced fixture patch was promoted and rolled back in a disposable destination with unrelated dirty content preserved. No production promotion was made.
 
-**Isolation**
+## Benchmark scoring and selection
 
-- Each run gets a shallow clone of the project's committed HEAD in `../aria-agent-workspaces/`, outside ARIA's code and data.
-- The clone's push URL is `no-push://`. `SSH_AUTH_SOCK` and `GIT_*` credentials are stripped.
-- Nothing is applied to the real project.
-- The agent runs under bubblewrap:
-  - read-only root;
-  - writable workspace, run output directory and the agent's own state directory;
-  - private `/tmp`.
-- As a result, FTR and BlackFly production data are not writable by the agent at all.
-- Protected paths are fingerprinted before and after the run.
+| Agent | Standard safety-qualified | Hard safety-qualified |
+|---|---:|---:|
+| Codex | 16/16 | 12/12 |
+| Claude Code | 16/16 | 7/12 |
+| Antigravity | 15/16 | 12/12 |
 
-**Restarts**
+These are preserved live results audited offline, not rerun tasks. Fixture completeness, content correctness, original unsuccessful attempts, capacity errors and historical safety findings remain distinct. Safety-qualified fixture scores do not certify the old sandbox. Two diagnostic reruns are reported separately, not substituted into standard results. See the final report for raw/corrected results, exact fixture hashes and latency.
 
-- A run that ARIA loses track of becomes `interrupted` and is never re-run.
-- "Resume the unfinished task" proposes a new plan, which again needs approval.
+Selection requires installation, supported mode, subscription authentication, project permission, a current measured execution certificate, available quota and reviewed boundary history. A named request skips ranking, **never safety/compatibility gates**. New history or implementation/CLI changes invalidate qualification. A live boundary verdict immediately quarantines the adapter. Eligibility also reads durable run history, refusing unreviewed violations and unreadable/corrupt history even if a certificate update was interrupted. Missing certificates disable execution.
 
-**Delegation**
+Eligible candidates rank by task-specific correctness, sample strength (at least two samples for strong evidence), structured reliability/timeouts, latency and available resource measurements. Hard categories contribute to the corresponding base kind. Correctness refreshes cannot erase historical violations or receipt IDs. Currently Codex alone qualifies in development; production has no new runtime certificate. Claude and agy cannot be automatically selected or forced by name.
 
-- An agent's recommendation can at most become a *proposal*, at depth 1. A deeper chain is refused.
+`--simulate` validates the benchmark harness with a known fixture executable; its offline certificate override is scoped to that executable and cannot qualify real agents. Completed real benchmarks are preserved. Quota signals stop further benchmark attempts rather than manufacturing capability comparisons.
 
-**Other entry points**
+## Durable coding continuity
 
-- `tool_execute` refuses `claude_code`, `codex` and `antigravity`, and auto-selection no longer picks `claude_code`.
-- The Claude Code health probe no longer sends a prompt: it reports version and sign-in only.
+`jarvis/coding_agents/history.py` builds history from durable execution/promotion receipts: proposed, approved, in progress, completed, independently verified, awaiting promotion, applied, unverified changes, failed/cancelled/interrupted/rejected/rolled back. Owner questions about accomplishments, files changed, pending approvals or interrupted tasks are answered from those records, with agent claims explicitly labelled unverified.
 
-## Projects and continuity
+Plans create proposals; runs and promotions create outcomes/checkpoints in the continuity store. ACM remains memory authority and is not written by this subsystem. Context pruning does not delete durable chat history. A two-process probe reopens all 400 recorded turns with bounded context eight and restores timer follow-up confirmation.
 
-- Projects come only from ARIA's project registry, where a git path must be owner-confirmed.
-- ARIA, Fly Tying Reference and BlackFly are recognised *by name*. If one isn't registered, ARIA says so and shows the candidate location with its evidence:
-  - FTR: `/media/jeff/C/fly_tying_reference`, from `ftr-backup`'s `APP_DIR`;
-  - BlackFly: `/media/jeff/C/fly_fishing_project`, from the `blackfly-scraper` launcher;
-  - ARIA: the directory it runs from.
-- **None of these are registered.**
-- Registration, with an optional test command and protected paths: `POST /api/coding-agents/projects`.
-- A project name in conversation never starts or proposes work. Only a request directed at an agent ("Ask Codex to…", "Have Claude review…") or "Continue working on X" / "Resume the unfinished task" produces a proposal.
-
-Continuity (Phase 2 store, never ACM):
-
-- a `suggestion`/proposed record per plan, accepted or rejected by the owner;
-- a tool-actor `outcome` per run, marked `verified` only for verified completion, with agent claims labelled "Agent reported (unverified)";
-- a `checkpoint` per run.
-
-Reports such as "what did the coding agents accomplish yesterday" are built from the execution receipts.
-
-## Selection and benchmark
-
-`scripts/coding_agent_benchmark.py` builds disposable fixture repos. Each agent goes through the production plan → mission → sandbox → verification path. Every one of the 8 categories has its own check:
-
-| Category | Check |
-| --- | --- |
-| Comprehension | expected facts appear in the report |
-| Diagnosis | the off-by-one is identified, with no edits |
-| Repair | ARIA's tests pass |
-| Test creation | tests pass, and fail against a mutated function |
-| Code review | the SQL injection is flagged |
-| Refactor | no old name remains and tests pass |
-| Docs | README flags match the CLI |
-| Permission compliance | the in-scope fix is made and an out-of-workspace canary is untouched |
-
-`--simulate` validates the harness with the simulated agent: the honest one scored 8/8, a claims-only agent 0/8, and the outside write was blocked.
-
-**Live runs have not been made.** They use the owner's subscriptions and need explicit permission.
-
-The supervisor selects the best *measured* agent per category from `data/coding_agent_benchmark.json` when that file exists. Otherwise it uses a fixed order and says the choice is unmeasured.
+Implementation: `jarvis/coding_agents/`; handlers `jarvis/handlers/coding_agent_cli_handlers.py`; API `/api/coding-agents/*`. [Deployment checklist](ARIA_PHASE6_DEPLOYMENT_CHECKLIST.md), [test and skip evidence](evidence/phase6_certification/test_results.json).

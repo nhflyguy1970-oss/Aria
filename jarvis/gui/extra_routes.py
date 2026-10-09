@@ -2045,6 +2045,78 @@ def register_routes(app, assistant):
         except runs.AgentRunError as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, 404)
 
+    @app.get("/api/coding-agents/promotions")
+    def coding_promotions_api(status: str = "", project: str = ""):
+        from jarvis.coding_agents import promotion
+
+        return {"ok": True, "promotions": promotion.list_promotions(status=status, project=project)}
+
+    @app.get("/api/coding-agents/promotions/{promotion_id}")
+    def coding_promotion_api(promotion_id: str):
+        from jarvis.coding_agents import promotion
+
+        p = promotion.get(promotion_id)
+        if not p:
+            return JSONResponse({"ok": False, "error": "no such promotion"}, 404)
+        return {"ok": True, "promotion": p, "summary": promotion.summary_text(p),
+                "patch": open(p["patch_path"], encoding="utf-8", errors="replace").read()[:200_000]}
+
+    @app.post("/api/coding-agents/runs/{run_id}/promote")
+    def coding_promotion_propose_api(run_id: str, allow_unverified: bool = False):
+        """Owner-only: capture, check and verify a run's changes for promotion (applies nothing)."""
+        auth = _owner_may_run_agents()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason") or "not authorized"}, 403)
+        from jarvis.coding_agents import promotion
+
+        try:
+            p = promotion.propose(run_id, allow_unverified=allow_unverified)
+        except promotion.PromotionError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 409)
+        return {"ok": True, "promotion": p, "summary": promotion.summary_text(p)}
+
+    @app.post("/api/coding-agents/promotions/{promotion_id}/approve")
+    def coding_promotion_approve_api(promotion_id: str):
+        """Owner-only (step-up): approve this exact patch and apply it to the working tree."""
+        auth = _owner_may_run_agents()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason") or "not authorized"}, 403)
+        from jarvis.coding_agents import promotion
+
+        try:
+            out = promotion.apply(promotion_id, token=promotion.approval_token(promotion_id), via="owner_api")
+        except promotion.PromotionError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 409)
+        return {"ok": out.get("status") == promotion.APPLIED, "promotion": out}
+
+    @app.post("/api/coding-agents/promotions/{promotion_id}/reject")
+    def coding_promotion_reject_api(promotion_id: str):
+        auth = _owner_may_run_agents()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason") or "not authorized"}, 403)
+        from jarvis.coding_agents import promotion
+
+        promotion.reject(promotion_id, via="owner_api")
+        return {"ok": True}
+
+    @app.post("/api/coding-agents/promotions/{promotion_id}/rollback")
+    def coding_promotion_rollback_api(promotion_id: str):
+        auth = _owner_may_run_agents()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason") or "not authorized"}, 403)
+        from jarvis.coding_agents import promotion
+
+        try:
+            return {"ok": True, "promotion": promotion.rollback(promotion_id)}
+        except promotion.PromotionError as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 409)
+
+    @app.get("/api/coding-agents/awaiting-approval")
+    def coding_awaiting_api():
+        from jarvis.coding_agents import history
+
+        return {"ok": True, "text": history.awaiting_approval()}
+
     @app.post("/api/coding-agents/projects")
     async def coding_agent_register_project_api(request: Request):
         """Owner-only: register a confirmed git repository for agent work."""

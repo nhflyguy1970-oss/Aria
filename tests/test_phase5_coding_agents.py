@@ -13,12 +13,21 @@ import os
 import shutil
 import subprocess
 import sys
+import threading
 import time
 from pathlib import Path
 
 import pytest
 
-from jarvis.coding_agents import adapters, contract, discovery, projects, runs, supervisor, workspace
+from jarvis.coding_agents import (
+    adapters,
+    contract,
+    discovery,
+    projects,
+    runs,
+    supervisor,
+    workspace,
+)
 
 FAKE = Path(__file__).parent / "fixtures" / "fake_coding_agent.py"
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +46,9 @@ def agents(tmp_path, monkeypatch):
     monkeypatch.setenv("PATH", f"{bindir}{os.pathsep}{os.environ.get('PATH', '')}")
     monkeypatch.setenv("JARVIS_AGENT_WORKSPACES", str(tmp_path / "workspaces"))
     monkeypatch.setattr(discovery, "_search_path", lambda: [str(bindir), "/usr/bin", "/bin"])
+    from jarvis.coding_agents import runtime
+
+    monkeypatch.setattr(runtime, "compatibility", lambda *args: {"state": "verified", "backend": "offline_fixture"})
     monkeypatch.setattr(workspace, "agent_state_dirs", lambda agent: [])
     monkeypatch.setattr(runs, "_agent_config_files", lambda agent: [])
     discovery.set_discovery_for_tests(None)
@@ -51,6 +63,12 @@ def agents(tmp_path, monkeypatch):
 
     behave()
     yield type("Agents", (), {"bindir": bindir, "behave": staticmethod(behave), "tmp": tmp_path})
+    # A terminal agent receipt precedes the mission engine's final bookkeeping.
+    # Keep the stores and monkeypatches alive until supervision has also ended.
+    for thread in threading.enumerate():
+        if thread.name.startswith("coding-agent-"):
+            thread.join(timeout=10)
+            assert not thread.is_alive(), f"agent supervisor did not stop: {thread.name}"
     discovery.set_discovery_for_tests(None)
 
 
@@ -301,11 +319,13 @@ def test_changes_without_test_command_stay_unverified(agents, repo):
     assert run["status"] == contract.UNVERIFIED and not run["result"]["success"]
 
 
-def test_read_only_task_that_edits_is_a_violation(agents, repo):
+def test_read_only_task_cannot_edit(agents, repo):
     proj = _register(repo)
     agents.behave(edits={"calc.py": "oops\n"})
     run = _run("codex", proj, "explain calc", mode=discovery.READ_ONLY)
-    assert run["status"] == contract.VIOLATION
+    assert run["status"] == contract.FAILED and not run["result"]["success"]
+    assert not run["result"]["changed"]["files"]
+    assert Path(run["workspace"]).joinpath("calc.py").read_text() == repo.joinpath("calc.py").read_text()
 
 
 def test_read_only_report_is_completed_but_unverified(agents, repo):
@@ -360,12 +380,12 @@ def test_sandbox_blocks_writes_outside_the_workspace(agents, repo):
     target.write_text("original\n")
     proj = _register(repo, protected=[str(target)])
     agents.behave(write_outside=str(target), edits={"calc.py": "def add(a, b):\n    return a + b\n\n"})
-    run = _run("codex", proj, "fix")
+    run = _run("claude_code", proj, "fix")  # runs inside ARIA's bwrap
     assert target.read_text() == "original\n"
     assert any("protected paths unchanged" in v for v in run["result"]["verified"])
 
 
-def test_agent_changing_its_own_config_is_a_violation(agents, repo, monkeypatch):
+def test_agent_cannot_change_the_owners_config(agents, repo, monkeypatch):
     cfg_dir = agents.tmp / "agent-state"
     cfg_dir.mkdir()
     cfg = cfg_dir / "settings.json"
@@ -375,19 +395,21 @@ def test_agent_changing_its_own_config_is_a_violation(agents, repo, monkeypatch)
     proj = _register(repo)
     agents.behave(touch_config=str(cfg), edits={"calc.py": "def add(a, b):\n    return a + b\n\n"})
     run = _run("claude_code", proj, "fix")
-    assert run["status"] == contract.VIOLATION
+    assert cfg.read_text() == "{}"
+    assert run["status"] == contract.VERIFIED
+    assert "outside write blocked" in Path(run["receipt"]["output_logs"]["stderr"]).read_text()
 
 
 def test_agent_env_has_no_secrets_or_push_credentials(agents, repo, monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-should-not-leak")
     monkeypatch.setenv("SSH_AUTH_SOCK", "/tmp/agent.sock")
     proj = _register(repo)
-    plan = runs.create_plan(agent="codex", project=proj["slug"], mode=discovery.READ_ONLY, task="look")
+    plan = runs.create_plan(agent="claude_code", project=proj["slug"], mode=discovery.READ_ONLY, task="look")
     captured = {}
     real_popen = subprocess.Popen
 
     def spy(argv, **kw):
-        if str(argv[0]).endswith("bwrap") and "argv" not in captured:
+        if any(str(a).endswith("bwrap") for a in argv) and "argv" not in captured:
             captured["env"] = kw.get("env") or {}
             captured["argv"] = argv
         return real_popen(argv, **kw)
@@ -395,7 +417,7 @@ def test_agent_env_has_no_secrets_or_push_credentials(agents, repo, monkeypatch)
     monkeypatch.setattr(runs.subprocess, "Popen", spy)
     _run_with_plan(plan)
     assert "OPENAI_API_KEY" not in captured["env"] and "SSH_AUTH_SOCK" not in captured["env"]
-    assert captured["argv"][0].endswith("bwrap")
+    assert any(str(a).endswith("bwrap") for a in captured["argv"])
 
 
 def test_workspace_cannot_push(agents, repo):
@@ -568,3 +590,70 @@ def test_tool_execute_cannot_run_agent_clis_unsupervised():
 
     out = executor.execute_tool("claude_code", {"task": "edit files"})
     assert out["ok"] is False and out["error_kind"] in ("supervision_required", "policy_denied")
+
+
+def test_codex_keeps_both_outer_and_vendor_sandboxes(agents, repo, monkeypatch):
+    """Vendor nesting problems must never remove ARIA's process confinement."""
+    proj = _register(repo)
+    captured = {}
+    real_popen = subprocess.Popen
+
+    def spy(argv, **kw):
+        if "exec" in argv and "--json" in argv and "argv" not in captured:
+            captured["argv"] = argv
+        return real_popen(argv, **kw)
+
+    monkeypatch.setattr(runs.subprocess, "Popen", spy)
+    run = _run("codex", proj, "explain", mode=discovery.READ_ONLY)
+    argv = captured["argv"]
+    assert any(str(a).endswith("bwrap") for a in argv)
+    assert argv[argv.index("--sandbox") + 1] == "read-only"
+    assert "memories.generate_memories=false" in argv
+    assert "private PID/IPC" in run["receipt"]["sandbox"]
+
+
+def test_codex_trust_entry_for_its_workspace_is_benign_but_other_config_changes_are_not(agents, repo, monkeypatch):
+    cfg_dir = agents.tmp / "codex-home"
+    cfg_dir.mkdir()
+    cfg = cfg_dir / "config.toml"
+    cfg.write_text('model = "x"\n')
+    monkeypatch.setattr(runs, "_agent_config_files", lambda agent: [str(cfg)])
+    proj = _register(repo)
+
+    class Touch:
+        """Append to the config the way Codex does, during the run."""
+
+    real = runs.adapters.parse
+
+    def parse_and_touch(agent, out, err, out_dir, extra=None):
+        run_ws = runs.get_run(runs.list_runs(limit=1)[0]["id"])["workspace"]
+        cfg.write_text(cfg.read_text() + f'\n[projects."{run_ws}"]\ntrust_level = "trusted"\n' + (extra or ""))
+        return real(agent, out, err, out_dir)
+
+    monkeypatch.setattr(runs.adapters, "parse", parse_and_touch)
+    run = _run("codex", proj, "explain", mode=discovery.READ_ONLY)
+    assert run["status"] == contract.COMPLETED
+    assert any("trust entry" in n for n in run["receipt"].get("notes", []))
+    monkeypatch.setattr(runs.adapters, "parse",
+                        lambda a, o, e, d: parse_and_touch(a, o, e, d, extra='approval_policy = "never"\n'))
+    assert _run("codex", proj, "explain", mode=discovery.READ_ONLY)["status"] == contract.VIOLATION
+
+
+def test_sandbox_hides_home_and_other_projects_from_agents(agents, repo):
+    """Phase 6: an agent cannot read the owner's files or another project's data."""
+    secret = ROOT / "scratch" / "phase6-private.txt"
+    secret.parent.mkdir(parents=True, exist_ok=True)
+    secret.write_text("private production data\n")
+    proj = _register(repo)
+    agents.behave(read_outside=str(secret))
+    run = _run("claude_code", proj, "look", mode=discovery.READ_ONLY)
+    assert "private production data" not in run["result"]["agent_report"]
+    assert run["result"]["agent_report"].startswith("READFAIL")
+
+
+def test_interpreter_artifacts_are_not_changes(agents, repo):
+    proj = _register(repo)
+    agents.behave(edits={"__pycache__/calc.cpython-312.pyc": "x", "tests/__pycache__/t.pyc": "y"},
+                  message="calc adds numbers")
+    run = _run("antigravity", proj, "explain", mode=discovery.WORKSPACE_WRITE)
+    assert run["status"] == contract.NO_CHANGES and run["result"]["changed"]["files"] == []

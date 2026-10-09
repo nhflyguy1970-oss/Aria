@@ -1,0 +1,1005 @@
+{
+  "initial_files": 89,
+  "head": "22aba4c5a6488f614c304095c8baae1f06eea8c2",
+  "current_entries": [
+    {
+      "path": "docs/ARIA_ACTION_ROUTING.md",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/ARIA_CODING_AGENTS.md",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/NLU_CLASSIFIER_BENCHMARK.md",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/action_routing.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/application/standalone/workstation_impl/phase.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/assistant.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/async_util.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/behaviors/knowledge/_extracted.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/behaviors/vision/engine.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/calendar_ics.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/capabilities.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/chat_cancel.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/coding_agents/adapters.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/coding_agents/discovery.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/coding_agents/projects.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/coding_agents/runs.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/coding_agents/supervisor.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/coding_agents/workspace.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/conversation_pipeline.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/gui/extra_routes.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/gui/server.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/gui/static/chat_send.js",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/gui/static/image_engine.js",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/handlers/__init__.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/handlers/coding_agent_cli_handlers.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/handlers/meta.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/hardware_tune.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/health_product/store.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/inference/execution_policy.py",
+      "git_status": " M",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "jarvis/inference/gateway.py",
+      "git_status": " M",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "jarvis/inference/providers/base.py",
+      "git_status": " M",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "jarvis/model_store.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/models_product/catalog.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/modules/image.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/modules/video.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/morning_briefing.py",
+      "git_status": " M",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "jarvis/nlu/benchmark.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/nlu/mapping.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/ollama_runtime.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/proactive_scheduler.py",
+      "git_status": " M",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "jarvis/router.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/session.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/web_search.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "scripts/ci_check.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "scripts/coding_agent_benchmark.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "scripts/install-dependencies.sh",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "scripts/pull-models.sh",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/conftest.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/fixtures/fake_coding_agent.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/fixtures/routing_corpus.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/fixtures/routing_corpus_heldout.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_phase5_action_routing.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_phase5_coding_agents.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_vision.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_workstation_phase.py",
+      "git_status": " M",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/ARIA_FUTURE_ARCHITECTURE_ROADMAP.md",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/ARIA_PHASE6_DEPLOYMENT_CHECKLIST.md",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/ARIA_PHASE6_RECOVERY.md",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/ARIA_PHASE6_SANDBOX.md",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/adversarial_outcomes.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/antigravity_forensics.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/antigravity_updated.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/changed_files.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/continuity_restart.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/failed_live_verification.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/live_compatibility.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/live_promotion.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/native_safety_tests.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/preservation.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/project_verification.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/protected_data.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/routing_results.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/skip_classification.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/static_checks.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/test_results.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_certification/unrelated_work_preserved.json",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/associated_smoke_audit.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/benchmark_audit.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/benchmark_selection.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/blackfly-private-verifier.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/blackfly-verification.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/canaries.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/changed_files.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/ftr-final-gates.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/ftr-focused.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/ftr-private-full-final.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/ftr-private-verifier.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/ftr-verification.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/native_codex_legacy_probe.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/native_codex_probe.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/preservation_status.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/protected_data_comparison.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/recovery_before_certification.md",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/registered_projects.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/routing_summary.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/static_checks.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "docs/evidence/phase6_recovery/test_results.json",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/coding_agents/history.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/coding_agents/oci.py",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "jarvis/coding_agents/promotion.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "jarvis/coding_agents/rpc_worker.py",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "jarvis/coding_agents/runtime.py",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "jarvis/coding_agents/transport.py",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "jarvis/handlers/planner_followup_handlers.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "scripts/register_projects.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "scripts/render_agent_benchmark.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/fixtures/agy_stream_sample.jsonl",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/fixtures/routing_corpus_heldout2.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_cancellation_lifecycle_audit.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_context_lifetime.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_engineering_vs_memory_routing.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_nlu_benchmark_integrity.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_phase6_benchmark_recovery.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_phase6_oci_isolation.py",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "tests/test_phase6_oci_supervision.py",
+      "git_status": "??",
+      "present_at_takeover": false,
+      "snapshot_preserved": null
+    },
+    {
+      "path": "tests/test_phase6_promotion.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_phase6_recovery_safety.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_phase6_routing_continuity.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_stale_request_lifecycle.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    },
+    {
+      "path": "tests/test_sticky_context_routing.py",
+      "git_status": "??",
+      "present_at_takeover": true,
+      "snapshot_preserved": true
+    }
+  ],
+  "intended_candidate": {
+    "candidate": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/release-candidate",
+    "paths": [
+      "docs/ARIA_ACTION_ROUTING.md",
+      "docs/ARIA_CODING_AGENTS.md",
+      "docs/ARIA_PHASE6_DEPLOYMENT_CHECKLIST.md",
+      "docs/ARIA_PHASE6_RECOVERY.md",
+      "docs/ARIA_PHASE6_SANDBOX.md",
+      "docs/NLU_CLASSIFIER_BENCHMARK.md",
+      "docs/evidence/phase6_certification/adversarial_outcomes.json",
+      "docs/evidence/phase6_certification/antigravity_forensics.json",
+      "docs/evidence/phase6_certification/antigravity_updated.json",
+      "docs/evidence/phase6_certification/changed_files.json",
+      "docs/evidence/phase6_certification/continuity_restart.json",
+      "docs/evidence/phase6_certification/failed_live_verification.json",
+      "docs/evidence/phase6_certification/live_compatibility.json",
+      "docs/evidence/phase6_certification/live_promotion.json",
+      "docs/evidence/phase6_certification/native_safety_tests.json",
+      "docs/evidence/phase6_certification/preservation.json",
+      "docs/evidence/phase6_certification/project_verification.json",
+      "docs/evidence/phase6_certification/protected_data.json",
+      "docs/evidence/phase6_certification/routing_results.json",
+      "docs/evidence/phase6_certification/skip_classification.json",
+      "docs/evidence/phase6_certification/static_checks.json",
+      "docs/evidence/phase6_certification/test_results.json",
+      "docs/evidence/phase6_certification/unrelated_work_preserved.json",
+      "docs/evidence/phase6_recovery/associated_smoke_audit.json",
+      "docs/evidence/phase6_recovery/benchmark_audit.json",
+      "docs/evidence/phase6_recovery/benchmark_selection.json",
+      "docs/evidence/phase6_recovery/blackfly-private-verifier.json",
+      "docs/evidence/phase6_recovery/blackfly-verification.json",
+      "docs/evidence/phase6_recovery/canaries.json",
+      "docs/evidence/phase6_recovery/changed_files.json",
+      "docs/evidence/phase6_recovery/ftr-final-gates.json",
+      "docs/evidence/phase6_recovery/ftr-focused.json",
+      "docs/evidence/phase6_recovery/ftr-private-full-final.json",
+      "docs/evidence/phase6_recovery/ftr-private-verifier.json",
+      "docs/evidence/phase6_recovery/ftr-verification.json",
+      "docs/evidence/phase6_recovery/native_codex_legacy_probe.json",
+      "docs/evidence/phase6_recovery/native_codex_probe.json",
+      "docs/evidence/phase6_recovery/preservation_status.json",
+      "docs/evidence/phase6_recovery/protected_data_comparison.json",
+      "docs/evidence/phase6_recovery/recovery_before_certification.md",
+      "docs/evidence/phase6_recovery/registered_projects.json",
+      "docs/evidence/phase6_recovery/routing_summary.json",
+      "docs/evidence/phase6_recovery/static_checks.json",
+      "docs/evidence/phase6_recovery/test_results.json",
+      "jarvis/action_routing.py",
+      "jarvis/assistant.py",
+      "jarvis/async_util.py",
+      "jarvis/behaviors/knowledge/_extracted.py",
+      "jarvis/chat_cancel.py",
+      "jarvis/coding_agents/adapters.py",
+      "jarvis/coding_agents/discovery.py",
+      "jarvis/coding_agents/history.py",
+      "jarvis/coding_agents/oci.py",
+      "jarvis/coding_agents/projects.py",
+      "jarvis/coding_agents/promotion.py",
+      "jarvis/coding_agents/rpc_worker.py",
+      "jarvis/coding_agents/runs.py",
+      "jarvis/coding_agents/runtime.py",
+      "jarvis/coding_agents/supervisor.py",
+      "jarvis/coding_agents/transport.py",
+      "jarvis/coding_agents/workspace.py",
+      "jarvis/conversation_pipeline.py",
+      "jarvis/gui/extra_routes.py",
+      "jarvis/gui/server.py",
+      "jarvis/gui/static/chat_send.js",
+      "jarvis/handlers/__init__.py",
+      "jarvis/handlers/coding_agent_cli_handlers.py",
+      "jarvis/handlers/meta.py",
+      "jarvis/handlers/planner_followup_handlers.py",
+      "jarvis/health_product/store.py",
+      "jarvis/inference/execution_policy.py",
+      "jarvis/inference/gateway.py",
+      "jarvis/inference/providers/base.py",
+      "jarvis/morning_briefing.py",
+      "jarvis/nlu/benchmark.py",
+      "jarvis/nlu/mapping.py",
+      "jarvis/proactive_scheduler.py",
+      "jarvis/router.py",
+      "jarvis/session.py",
+      "jarvis/web_search.py",
+      "scripts/ci_check.py",
+      "scripts/coding_agent_benchmark.py",
+      "scripts/register_projects.py",
+      "scripts/render_agent_benchmark.py",
+      "tests/conftest.py",
+      "tests/fixtures/agy_stream_sample.jsonl",
+      "tests/fixtures/fake_coding_agent.py",
+      "tests/fixtures/routing_corpus.py",
+      "tests/fixtures/routing_corpus_heldout.py",
+      "tests/fixtures/routing_corpus_heldout2.py",
+      "tests/test_cancellation_lifecycle_audit.py",
+      "tests/test_context_lifetime.py",
+      "tests/test_engineering_vs_memory_routing.py",
+      "tests/test_nlu_benchmark_integrity.py",
+      "tests/test_phase5_action_routing.py",
+      "tests/test_phase5_coding_agents.py",
+      "tests/test_phase6_benchmark_recovery.py",
+      "tests/test_phase6_oci_isolation.py",
+      "tests/test_phase6_oci_supervision.py",
+      "tests/test_phase6_promotion.py",
+      "tests/test_phase6_recovery_safety.py",
+      "tests/test_phase6_routing_continuity.py",
+      "tests/test_stale_request_lifecycle.py",
+      "tests/test_sticky_context_routing.py"
+    ],
+    "excluded_unrelated_files": [
+      "docs/ARIA_FUTURE_ARCHITECTURE_ROADMAP.md",
+      "jarvis/application/standalone/workstation_impl/phase.py",
+      "jarvis/behaviors/vision/engine.py",
+      "jarvis/calendar_ics.py",
+      "jarvis/capabilities.py",
+      "jarvis/gui/static/image_engine.js",
+      "jarvis/hardware_tune.py",
+      "jarvis/model_store.py",
+      "jarvis/models_product/catalog.py",
+      "jarvis/modules/image.py",
+      "jarvis/modules/video.py",
+      "jarvis/ollama_runtime.py",
+      "scripts/install-dependencies.sh",
+      "scripts/pull-models.sh",
+      "tests/test_vision.py",
+      "tests/test_workstation_phase.py"
+    ],
+    "partial_file": "jarvis/assistant.py: cancellation checkpoints included; unrelated vision response repair remains dirty",
+    "head": "22aba4c5a6488f614c304095c8baae1f06eea8c2",
+    "initial_snapshots_verified": 89,
+    "unchanged_excluded_files": [
+      "docs/ARIA_FUTURE_ARCHITECTURE_ROADMAP.md",
+      "jarvis/application/standalone/workstation_impl/phase.py",
+      "jarvis/behaviors/vision/engine.py",
+      "jarvis/calendar_ics.py",
+      "jarvis/capabilities.py",
+      "jarvis/gui/static/image_engine.js",
+      "jarvis/hardware_tune.py",
+      "jarvis/model_store.py",
+      "jarvis/models_product/catalog.py",
+      "jarvis/modules/image.py",
+      "jarvis/modules/video.py",
+      "jarvis/ollama_runtime.py",
+      "scripts/install-dependencies.sh",
+      "scripts/pull-models.sh",
+      "tests/test_vision.py",
+      "tests/test_workstation_phase.py"
+    ],
+    "production_actions": "none",
+    "status": "all mandatory development gates passed"
+  },
+  "commit": "local completion commit after mandatory gates; identity in Git history and final report",
+  "final_decision": "GO for Codex-only Phase 6 release; Claude and Antigravity disabled; deployment separately approved",
+  "inventory_status_time": "pre-commit status snapshot; intended_commit_paths and preserved_uncommitted_paths describe completion disposition",
+  "intended_commit_paths": [
+    "docs/ARIA_ACTION_ROUTING.md",
+    "docs/ARIA_CODING_AGENTS.md",
+    "docs/ARIA_PHASE6_DEPLOYMENT_CHECKLIST.md",
+    "docs/ARIA_PHASE6_RECOVERY.md",
+    "docs/ARIA_PHASE6_SANDBOX.md",
+    "docs/NLU_CLASSIFIER_BENCHMARK.md",
+    "docs/evidence/phase6_certification/adversarial_outcomes.json",
+    "docs/evidence/phase6_certification/antigravity_forensics.json",
+    "docs/evidence/phase6_certification/antigravity_updated.json",
+    "docs/evidence/phase6_certification/changed_files.json",
+    "docs/evidence/phase6_certification/continuity_restart.json",
+    "docs/evidence/phase6_certification/failed_live_verification.json",
+    "docs/evidence/phase6_certification/live_compatibility.json",
+    "docs/evidence/phase6_certification/live_promotion.json",
+    "docs/evidence/phase6_certification/native_safety_tests.json",
+    "docs/evidence/phase6_certification/preservation.json",
+    "docs/evidence/phase6_certification/project_verification.json",
+    "docs/evidence/phase6_certification/protected_data.json",
+    "docs/evidence/phase6_certification/routing_results.json",
+    "docs/evidence/phase6_certification/skip_classification.json",
+    "docs/evidence/phase6_certification/static_checks.json",
+    "docs/evidence/phase6_certification/test_results.json",
+    "docs/evidence/phase6_certification/unrelated_work_preserved.json",
+    "docs/evidence/phase6_recovery/associated_smoke_audit.json",
+    "docs/evidence/phase6_recovery/benchmark_audit.json",
+    "docs/evidence/phase6_recovery/benchmark_selection.json",
+    "docs/evidence/phase6_recovery/blackfly-private-verifier.json",
+    "docs/evidence/phase6_recovery/blackfly-verification.json",
+    "docs/evidence/phase6_recovery/canaries.json",
+    "docs/evidence/phase6_recovery/changed_files.json",
+    "docs/evidence/phase6_recovery/ftr-final-gates.json",
+    "docs/evidence/phase6_recovery/ftr-focused.json",
+    "docs/evidence/phase6_recovery/ftr-private-full-final.json",
+    "docs/evidence/phase6_recovery/ftr-private-verifier.json",
+    "docs/evidence/phase6_recovery/ftr-verification.json",
+    "docs/evidence/phase6_recovery/native_codex_legacy_probe.json",
+    "docs/evidence/phase6_recovery/native_codex_probe.json",
+    "docs/evidence/phase6_recovery/preservation_status.json",
+    "docs/evidence/phase6_recovery/protected_data_comparison.json",
+    "docs/evidence/phase6_recovery/recovery_before_certification.md",
+    "docs/evidence/phase6_recovery/registered_projects.json",
+    "docs/evidence/phase6_recovery/routing_summary.json",
+    "docs/evidence/phase6_recovery/static_checks.json",
+    "docs/evidence/phase6_recovery/test_results.json",
+    "jarvis/action_routing.py",
+    "jarvis/assistant.py",
+    "jarvis/async_util.py",
+    "jarvis/behaviors/knowledge/_extracted.py",
+    "jarvis/chat_cancel.py",
+    "jarvis/coding_agents/adapters.py",
+    "jarvis/coding_agents/discovery.py",
+    "jarvis/coding_agents/history.py",
+    "jarvis/coding_agents/oci.py",
+    "jarvis/coding_agents/projects.py",
+    "jarvis/coding_agents/promotion.py",
+    "jarvis/coding_agents/rpc_worker.py",
+    "jarvis/coding_agents/runs.py",
+    "jarvis/coding_agents/runtime.py",
+    "jarvis/coding_agents/supervisor.py",
+    "jarvis/coding_agents/transport.py",
+    "jarvis/coding_agents/workspace.py",
+    "jarvis/conversation_pipeline.py",
+    "jarvis/gui/extra_routes.py",
+    "jarvis/gui/server.py",
+    "jarvis/gui/static/chat_send.js",
+    "jarvis/handlers/__init__.py",
+    "jarvis/handlers/coding_agent_cli_handlers.py",
+    "jarvis/handlers/meta.py",
+    "jarvis/handlers/planner_followup_handlers.py",
+    "jarvis/health_product/store.py",
+    "jarvis/inference/execution_policy.py",
+    "jarvis/inference/gateway.py",
+    "jarvis/inference/providers/base.py",
+    "jarvis/morning_briefing.py",
+    "jarvis/nlu/benchmark.py",
+    "jarvis/nlu/mapping.py",
+    "jarvis/proactive_scheduler.py",
+    "jarvis/router.py",
+    "jarvis/session.py",
+    "jarvis/web_search.py",
+    "scripts/ci_check.py",
+    "scripts/coding_agent_benchmark.py",
+    "scripts/register_projects.py",
+    "scripts/render_agent_benchmark.py",
+    "tests/conftest.py",
+    "tests/fixtures/agy_stream_sample.jsonl",
+    "tests/fixtures/fake_coding_agent.py",
+    "tests/fixtures/routing_corpus.py",
+    "tests/fixtures/routing_corpus_heldout.py",
+    "tests/fixtures/routing_corpus_heldout2.py",
+    "tests/test_cancellation_lifecycle_audit.py",
+    "tests/test_context_lifetime.py",
+    "tests/test_engineering_vs_memory_routing.py",
+    "tests/test_nlu_benchmark_integrity.py",
+    "tests/test_phase5_action_routing.py",
+    "tests/test_phase5_coding_agents.py",
+    "tests/test_phase6_benchmark_recovery.py",
+    "tests/test_phase6_oci_isolation.py",
+    "tests/test_phase6_oci_supervision.py",
+    "tests/test_phase6_promotion.py",
+    "tests/test_phase6_recovery_safety.py",
+    "tests/test_phase6_routing_continuity.py",
+    "tests/test_stale_request_lifecycle.py",
+    "tests/test_sticky_context_routing.py"
+  ],
+  "preserved_uncommitted_paths": [
+    "docs/ARIA_FUTURE_ARCHITECTURE_ROADMAP.md",
+    "jarvis/application/standalone/workstation_impl/phase.py",
+    "jarvis/behaviors/vision/engine.py",
+    "jarvis/calendar_ics.py",
+    "jarvis/capabilities.py",
+    "jarvis/gui/static/image_engine.js",
+    "jarvis/hardware_tune.py",
+    "jarvis/model_store.py",
+    "jarvis/models_product/catalog.py",
+    "jarvis/modules/image.py",
+    "jarvis/modules/video.py",
+    "jarvis/ollama_runtime.py",
+    "scripts/install-dependencies.sh",
+    "scripts/pull-models.sh",
+    "tests/test_vision.py",
+    "tests/test_workstation_phase.py",
+    "jarvis/assistant.py"
+  ],
+  "partial_commit_note": "jarvis/assistant.py: cancellation checkpoints included; unrelated vision response repair remains dirty"
+}

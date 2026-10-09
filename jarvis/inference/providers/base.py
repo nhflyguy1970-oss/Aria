@@ -25,7 +25,6 @@ from __future__ import annotations
 import json
 import logging
 import random
-import socket
 import threading
 import time
 import urllib.error
@@ -272,7 +271,7 @@ class ProviderAdapter:
         except urllib.error.HTTPError as exc:
             detail = _scrub(_read_error(exc), key)
             raise self._classify_http(exc.code, exc.headers, detail) from None
-        except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError) as exc:
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
             raise boundary.ProviderUnavailable(f"{self.label}: network error ({type(exc).__name__})") from None
 
     def _classify_http(self, status: int, headers: Any, detail: str) -> boundary.InferenceError:

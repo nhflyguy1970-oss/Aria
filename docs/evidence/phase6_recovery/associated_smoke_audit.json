@@ -1,0 +1,64 @@
+[
+  {
+    "file": "smoke_antigravity.json",
+    "run_id": "run_372a9b4a36",
+    "agent": "antigravity",
+    "status": "failed",
+    "reason": "agent exited 0 but produced no report",
+    "problems": [],
+    "sandbox": "bwrap: read-only root; writable workspace, run output dir and agent state dirs",
+    "changes": []
+  },
+  {
+    "file": "smoke_claude_code.json",
+    "run_id": "run_77db10f66b",
+    "agent": "claude_code",
+    "status": "completed",
+    "reason": "read-only task finished within bounds; findings are unverified",
+    "problems": [],
+    "sandbox": "bwrap: read-only root; writable workspace, run output dir and agent state dirs",
+    "changes": []
+  },
+  {
+    "file": "smoke_codex.json",
+    "run_id": "run_c07bb69bd2",
+    "agent": "codex",
+    "status": "verified",
+    "reason": "1 file(s) changed and ARIA's test run passed",
+    "problems": [],
+    "sandbox": "codex --sandbox workspace-write (Codex's Linux sandbox: writes only the workspace and its temp dirs, no network)",
+    "changes": [
+      {
+        "status": "M",
+        "path": "paginate.py"
+      }
+    ]
+  },
+  {
+    "file": "smoke_codex2.json",
+    "run_id": "run_6f9a64e9d9",
+    "agent": "codex",
+    "status": "completed",
+    "reason": "read-only task finished within bounds; findings are unverified",
+    "problems": [],
+    "sandbox": "codex --sandbox read-only (Codex's Linux sandbox: no writes, no network)",
+    "changes": []
+  },
+  {
+    "file": "smoke_codex2.json",
+    "run_id": "run_3ff5e73840",
+    "agent": "codex",
+    "status": "boundary_violation",
+    "reason": "the agent's own permission/config files changed during the run",
+    "problems": [
+      "the agent's own permission/config files changed during the run"
+    ],
+    "sandbox": "codex --sandbox workspace-write (Codex's Linux sandbox: writes only the workspace and its temp dirs, no network)",
+    "changes": [
+      {
+        "status": "M",
+        "path": "paginate.py"
+      }
+    ]
+  }
+]

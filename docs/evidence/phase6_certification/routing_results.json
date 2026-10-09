@@ -1,0 +1,94 @@
+{
+  "routing_corpus": {
+    "summary": {
+      "cases": 100,
+      "correct": 100,
+      "accuracy_pct": 100.0,
+      "args_checked": 17,
+      "args_correct": 17,
+      "false_positive_effects": 0,
+      "clarifications": 12,
+      "by_category": {
+        "ambiguous": "6/6",
+        "confirmed": "6/6",
+        "everyday": "38/38",
+        "multiturn": "6/6",
+        "real": "36/36",
+        "unsupported": "8/8"
+      },
+      "p50_ms": 1.0,
+      "max_ms": 137.3,
+      "model_calls": 0,
+      "tokens": 0,
+      "errors": 0
+    },
+    "audit": {
+      "fallback_stubs": 0,
+      "network_attempts": [],
+      "automatic_benchmarks_disabled": true,
+      "classification": "structure"
+    }
+  },
+  "routing_corpus_heldout": {
+    "summary": {
+      "cases": 66,
+      "correct": 66,
+      "accuracy_pct": 100.0,
+      "args_checked": 13,
+      "args_correct": 13,
+      "false_positive_effects": 0,
+      "clarifications": 9,
+      "by_category": {
+        "ambiguous": "6/6",
+        "multiturn": "6/6",
+        "nearmiss": "12/12",
+        "phrasing": "20/20",
+        "real": "16/16",
+        "unsupported": "6/6"
+      },
+      "p50_ms": 1.0,
+      "max_ms": 26.3,
+      "model_calls": 0,
+      "tokens": 0,
+      "errors": 0
+    },
+    "audit": {
+      "fallback_stubs": 0,
+      "network_attempts": [],
+      "automatic_benchmarks_disabled": true,
+      "classification": "structure"
+    }
+  },
+  "routing_corpus_heldout2": {
+    "summary": {
+      "cases": 60,
+      "correct": 58,
+      "accuracy_pct": 96.7,
+      "args_checked": 10,
+      "args_correct": 10,
+      "false_positive_effects": 0,
+      "clarifications": 8,
+      "by_category": {
+        "ambiguous": "5/5",
+        "artifact": "4/4",
+        "coding": "10/11",
+        "multiturn": "5/5",
+        "nearmiss": "9/10",
+        "phrasing": "15/15",
+        "real": "4/4",
+        "unsupported": "6/6"
+      },
+      "p50_ms": 1.0,
+      "max_ms": 3.5,
+      "model_calls": 0,
+      "tokens": 0,
+      "errors": 0
+    },
+    "audit": {
+      "fallback_stubs": 0,
+      "network_attempts": [],
+      "automatic_benchmarks_disabled": true,
+      "classification": "structure"
+    }
+  }
+}

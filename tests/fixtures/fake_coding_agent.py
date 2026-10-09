@@ -23,7 +23,7 @@ B = json.loads((HERE / "behaviour.json").read_text()) if (HERE / "behaviour.json
 args = sys.argv[1:]
 
 HELP = {
-    "codex": "Usage: codex exec --json --sandbox --cd --ephemeral --output-last-message --color",
+    "codex": "Usage: codex exec --json --sandbox --cd --ephemeral --output-last-message --color -c, --config",
     "claude": "Usage: claude --print --output-format --permission-mode --tools --no-session-persistence --verbose",
     "agy": "Usage of agy: --print --output-format --mode --sandbox --print-timeout",
 }
@@ -60,6 +60,18 @@ for target in filter(None, [B.get("write_outside"), B.get("touch_config")]):
             fh.write("agent was here\n")
     except OSError as exc:
         outside_error = f"{type(exc).__name__}"
+if B.get("read_outside"):
+    try:
+        B["message"] = "READ:" + open(B["read_outside"]).read().strip()
+    except OSError as exc:
+        B["message"] = f"READFAIL:{type(exc).__name__}"
+if B.get("connect_host"):
+    import socket
+    try:
+        with socket.create_connection(tuple(B["connect_host"]), timeout=1):
+            B["message"] = "NETWORK_ESCAPE"
+    except OSError as exc:
+        B["message"] = f"NETFAIL:{type(exc).__name__}"
 if B.get("sleep"):
     time.sleep(float(B["sleep"]))
 msg = B.get("message", "Done. All tests pass.")
@@ -83,8 +95,14 @@ elif NAME == "claude":
             {"type": "tool_use", "name": "Edit", "input": {"file_path": rel}}]}}))
     print(json.dumps({"type": "result", "subtype": "success", "result": msg, "session_id": "fake-session",
                       "num_turns": 2, "total_cost_usd": 0.0}))
-else:
-    print(json.dumps({"type": "result", "result": msg}))
+else:  # agy 1.x stream-json
+    print(json.dumps({"event": "init", "init": {"cwd": os.getcwd(), "permission_mode": "always-proceed"}}))
+    for rel in B.get("edits") or {}:
+        print(json.dumps({"event": "step_update", "step_update": {
+            "conversation_id": "fake-conv", "state": "DONE", "step_type": "tool", "tool_name": "write_to_file",
+            "tool_info": {"name": "write_to_file", "parameters": {"TargetFile": str(Path.cwd() / rel)}}}}))
+    print(json.dumps({"event": "result", "result": {"conversation_id": "fake-conv", "status": "SUCCESS",
+                                                   "response": msg, "usage": {"total_tokens": 10}}}))
 if outside_error:
     print(f"outside write blocked: {outside_error}", file=sys.stderr)
 sys.exit(int(B.get("exit", 0)))

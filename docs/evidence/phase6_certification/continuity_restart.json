@@ -1,0 +1,12 @@
+[
+  {
+    "exit_code": 0,
+    "stdout": "{\"context_messages\": 8, \"durable_turns\": 400}\n",
+    "stderr": ""
+  },
+  {
+    "exit_code": 0,
+    "stdout": "{\"context_messages\": 8, \"durable_turns\": 400, \"restart_requires_confirmation\": true}\n",
+    "stderr": ""
+  }
+]

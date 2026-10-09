@@ -32,6 +32,9 @@ class SessionContext:
     last_action: str = ""
     last_action_params: dict[str, Any] = field(default_factory=dict)
     last_action_at: float = 0.0
+    # Set when restored from storage (not persisted): a follow-up to an action from
+    # before a restart is confirmed rather than executed.
+    last_action_restored: bool = False
 
     def note_file(self, path: str) -> None:
         self.last_file = path
@@ -213,6 +216,9 @@ class SessionContext:
         self.last_action = ""
         self.last_action_params = {}
         self.last_action_at = 0.0
+        # Paths above are cleared; also drop active vision/document module so
+        # clear() cannot leave an implicit artifact context armed (Policy A).
+        self.last_module = "general"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -271,4 +277,5 @@ class SessionContext:
             last_action=data.get("last_action", ""),
             last_action_params=dict(data.get("last_action_params") or {}),
             last_action_at=float(data.get("last_action_at") or 0.0),
+            last_action_restored=bool(data.get("last_action")),
         )

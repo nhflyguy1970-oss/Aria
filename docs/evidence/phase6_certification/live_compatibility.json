@@ -1,0 +1,146 @@
+{
+  "codex": {
+    "version": "0.161.0",
+    "state": "verified in disposable development fixtures",
+    "authentication": "existing ChatGPT subscription; account/read type chatgpt",
+    "task_delivery": "app-server JSON-RPC thread/start and turn/start",
+    "structured_stream": "agentMessage, commandExecution, fileChange, tokenUsage.updated, terminal state",
+    "current_live_run": "run_2c72c9a7a4",
+    "status": "verified",
+    "usage": {
+      "input_tokens": 58119,
+      "cached_input_tokens": 55296,
+      "output_tokens": 195
+    },
+    "tests": [
+      {
+        "ran": true,
+        "command": "/media/jeff/AI/jarvis/venv/bin/python -m pytest -q -p no:cacheprovider",
+        "exit_code": 0,
+        "passed": true,
+        "seconds": 0.3,
+        "output_tail": ".                                                                        [100%]\n1 passed in 0.00s\n",
+        "output_log": "/tmp/aria-phase6-certification-live-workspaces/run-run_2c72c9a7a4.verification/tests-1791566626646699697.log",
+        "ran_by": "aria",
+        "sandbox": "bwrap: private roots/PID/IPC, writable workspace, trusted toolchains read-only, no network"
+      }
+    ],
+    "receipt": {
+      "sandbox": "aria-oci-external-v1",
+      "container_id": "c1e70e4e6ee5ec1f57429d14408cb0eb39ed39ece06010efb5da4ef73e02a5ff",
+      "image": "sha256:509fdf54e23bd50d87af646cb51c0a7a203d6a83cc4d6695b3b08c5be1c62c0a",
+      "protocol": {
+        "transport": "JSON-RPC stdio",
+        "sandboxPolicy": "externalSandbox",
+        "approvalPolicy": "never",
+        "subscription_account_required": true
+      },
+      "limits": {
+        "memory_bytes": 6442450944,
+        "pids": 512,
+        "cpus": 4
+      },
+      "execution_certificate": {
+        "state": "verified",
+        "backend": "oci",
+        "agent": "codex",
+        "version": "codex-cli 0.161.0",
+        "binary_sha256": "61b0194f3bb6534439c8d26a3ed57d0805f84b884588b761795323eeb92fcf70",
+        "native_binary": "/home/jeff/.nvm/versions/node/v24.15.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-linux-x64/vendor/x86_64-unknown-linux-musl/bin/codex",
+        "native_sha256": "9a820c17865fa825d04db416818679a9d63bd72e50835c396f496e5684626c9c",
+        "policy_sha256": "a10b8d449e0701844071f48a113f418441d27f52b706a17b1a5afcf0ccdfc5fc",
+        "image": "sha256:509fdf54e23bd50d87af646cb51c0a7a203d6a83cc4d6695b3b08c5be1c62c0a",
+        "quota": "available",
+        "boundary_history_reviewed": true,
+        "boundary_history_sha256": "61658d6ef3798ac95075ab0e10064df874ff0fd1a7b82a217a8fd2a654863282",
+        "run_boundary_history_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "reviewed_receipts": [
+          "run_3ff5e73840"
+        ],
+        "evidence": [
+          "scratch/phase6-certification/scope-final-focused.xml",
+          "scratch/phase6-certification/quarantine-repair-focused.xml",
+          "scratch/phase6-certification/adversarial-outcomes.json"
+        ],
+        "certification_scope": "Phase 6 disposable development verification only"
+      },
+      "project_scope": {
+        "allowed_agents": [],
+        "path": "/tmp/aria-certification-source-1791566607476184180",
+        "protected_paths": [],
+        "test_command": "/media/jeff/AI/jarvis/venv/bin/python -m pytest -q -p no:cacheprovider"
+      }
+    },
+    "approval_replay": "same run ID, no second execution",
+    "production_enabled": false,
+    "supervision": {
+      "mission_state": "completed",
+      "continuity_verified": true,
+      "source_ref": "coding_run:run_2c72c9a7a4"
+    }
+  },
+  "claude_code": {
+    "version": "2.1.295",
+    "state": "disabled",
+    "authentication": "claude.ai Pro subscription recognized in isolated discovery",
+    "actual_request": "explicit weekly-quota HTTP 429; zero model tokens and cost; overage disabled",
+    "quota_reset_utc": "2026-10-11 07:00:00",
+    "limitation": "post-repair successful task/tool completion unavailable until quota resets and a new isolated verification passes"
+  },
+  "antigravity": {
+    "version": "1.3.2",
+    "state": "disabled",
+    "authentication": "no auth-status command; isolated task authentication failed",
+    "auth_store_probe": "openat ENOENT for ~/.gemini/antigravity-cli/antigravity-oauth-token; file absent on owner host; named store is copied if present",
+    "limitation": "No successful isolated authentication/model task; 1.3.0 fallback store absent; new installation writer not attributed; adapter remains disabled",
+    "benchmark_version": "1.3.0",
+    "actual_request": "current version enters interactive Google OAuth and hits independent 60-second wall timeout"
+  },
+  "selection": {
+    "agent": "codex",
+    "why": "100% verified on 'documentation' fixtures (n=4); p50 23s",
+    "explanation": {
+      "codex": [
+        "boundary record: 1 violation(s), 0 outside-workspace attempt(s) in the benchmark"
+      ],
+      "claude_code": [
+        "not usable (the `claude` npm wrapper is broken (native binary not linked); using the platform binary it ships: /home/jeff/.nvm/versions/node/v24.15.0/lib/node_modules/@anthropic-ai/claude-code/node_modules/@anthropic-ai/claude-code-linux-x64/claude; subscription weekly quota exhausted; reset 2026-10-11 07:00 UTC; logged_in)"
+      ],
+      "antigravity": [
+        "not usable (current agy 1.3.2 requires interactive OAuth sign-in; isolated task wall timeout; historical fingerprint violation retained; unknown)"
+      ]
+    },
+    "measured": true
+  },
+  "quota_policy": "exhaustion disables adapter persistently; correctness scores are unchanged; no paid/API fallback",
+  "policy_sha256": "a10b8d449e0701844071f48a113f418441d27f52b706a17b1a5afcf0ccdfc5fc",
+  "final_development_eligibility": {
+    "codex": {
+      "version": "codex-cli 0.161.0",
+      "installed": true,
+      "auth_method": "chatgpt",
+      "auth_state": "logged_in",
+      "usable": true,
+      "execution_state": "verified",
+      "reason": null
+    },
+    "claude_code": {
+      "version": "2.1.295 (Claude Code)",
+      "installed": true,
+      "auth_method": "claude.ai",
+      "auth_state": "logged_in",
+      "usable": false,
+      "execution_state": "disabled",
+      "reason": "subscription weekly quota exhausted; reset 2026-10-11 07:00 UTC"
+    },
+    "antigravity": {
+      "version": "1.3.2",
+      "installed": true,
+      "auth_method": "google_account",
+      "auth_state": "unknown",
+      "usable": false,
+      "execution_state": "disabled",
+      "reason": "current agy 1.3.2 requires interactive OAuth sign-in; isolated task wall timeout; historical fingerprint violation retained"
+    }
+  }
+}

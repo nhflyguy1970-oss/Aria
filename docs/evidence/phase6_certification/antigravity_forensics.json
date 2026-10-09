@@ -1,0 +1,8 @@
+{
+  "run": "run_cd50d3d064",
+  "finding": "a protected path changed during the run",
+  "historical_before_after_fingerprints_retained": false,
+  "attribution": "unknown; original receipts retain neither path/digest values nor writer traces",
+  "failed_timeline_artifact": "agy-forensic-timeline.json: invalid null-fingerprint matches; must not be used as evidence",
+  "disposition": "violation retained; Antigravity disabled"
+}

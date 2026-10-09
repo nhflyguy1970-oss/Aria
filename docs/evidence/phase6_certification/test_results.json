@@ -1,0 +1,251 @@
+{
+  "full-final": {
+    "tests": 3985,
+    "passed": 3919,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 66,
+    "seconds": 655.276,
+    "junit": "scratch/phase6-certification/full-final.xml",
+    "log": "scratch/phase6-certification/full-final.log",
+    "exit_code": 0,
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q -ra -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=scratch/phase6-certification/full-final.xml"
+  },
+  "mandatory-focused": {
+    "tests": 198,
+    "passed": 198,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 112.676,
+    "junit": "scratch/phase6-certification/mandatory-focused.xml",
+    "log": "scratch/phase6-certification/mandatory-focused.log",
+    "exit_code": 0,
+    "collected_modules": [
+      "tests/test_phase5_coding_agents.py",
+      "tests/test_phase6_benchmark_recovery.py",
+      "tests/test_phase6_oci_isolation.py",
+      "tests/test_phase6_oci_supervision.py",
+      "tests/test_phase6_promotion.py",
+      "tests/test_phase6_recovery_safety.py",
+      "tests/test_phase6_routing_continuity.py"
+    ],
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_phase5_coding_agents.py tests/test_phase6_benchmark_recovery.py tests/test_phase6_oci_isolation.py tests/test_phase6_oci_supervision.py tests/test_phase6_promotion.py tests/test_phase6_recovery_safety.py tests/test_phase6_routing_continuity.py -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=scratch/phase6-certification/mandatory-focused.xml"
+  },
+  "post-repair-focused": {
+    "tests": 113,
+    "passed": 113,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 62.794,
+    "junit": "scratch/phase6-certification/post-repair-focused.xml",
+    "log": "scratch/phase6-certification/post-repair-focused.log",
+    "exit_code": 0,
+    "collected_modules": [
+      "tests/test_phase5_coding_agents.py",
+      "tests/test_phase6_oci_isolation.py",
+      "tests/test_phase6_oci_supervision.py",
+      "tests/test_phase6_recovery_safety.py"
+    ],
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_phase5_coding_agents.py tests/test_phase6_oci_isolation.py tests/test_phase6_oci_supervision.py tests/test_phase6_recovery_safety.py -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=scratch/phase6-certification/post-repair-focused.xml"
+  },
+  "git-evidence-focused": {
+    "tests": 59,
+    "passed": 59,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 58.163,
+    "junit": "scratch/phase6-certification/git-evidence-focused.xml",
+    "log": "scratch/phase6-certification/git-evidence-focused.log",
+    "exit_code": 0,
+    "collected_modules": [
+      "tests/test_phase6_promotion.py",
+      "tests/test_phase6_recovery_safety.py"
+    ],
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_phase6_promotion.py tests/test_phase6_recovery_safety.py -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=scratch/phase6-certification/git-evidence-focused.xml"
+  },
+  "candidate-full": {
+    "tests": 3966,
+    "passed": 3899,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 66,
+    "seconds": 621.106,
+    "junit": "scratch/phase6-certification/candidate-full.xml",
+    "log": "scratch/phase6-certification/candidate-full.log",
+    "exit_code": 1,
+    "command": "same full pytest flags; cwd=scratch/phase6-certification/release-candidate; JUnit/log in parent certification directory"
+  },
+  "notes": [
+    "First candidate excluded vision cancellation checkpoints with unrelated vision changes; one retained cancellation assertion failed. Candidate scope was corrected without altering unrelated vision work. Final candidate result is added after verification.",
+    "Focused gates overlap; their counts must not be summed as unique tests.",
+    "Raw private logs and original failed exploratory attempts are preserved."
+  ],
+  "candidate-focused-repaired": {
+    "tests": 41,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 41,
+    "exit_code": 0,
+    "seconds": 1.905,
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_cancellation_lifecycle_audit.py tests/test_stale_request_lifecycle.py -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/candidate-focused-repaired.xml",
+    "cwd": "scratch/phase6-certification/release-candidate"
+  },
+  "scope-focused": {
+    "tests": 150,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 150,
+    "seconds": 101.829,
+    "exit_code": 0,
+    "junit": "scratch/phase6-certification/scope-focused.xml",
+    "log": "scratch/phase6-certification/scope-focused.log",
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_phase5_coding_agents.py tests/test_phase6_oci_isolation.py tests/test_phase6_oci_supervision.py tests/test_phase6_promotion.py tests/test_phase6_recovery_safety.py -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=scratch/phase6-certification/scope-focused.xml",
+    "cwd": "."
+  },
+  "scope-final-focused": {
+    "tests": 151,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 151,
+    "seconds": 100.327,
+    "exit_code": 0,
+    "junit": "scratch/phase6-certification/scope-final-focused.xml",
+    "log": "scratch/phase6-certification/scope-final-focused.log",
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_phase5_coding_agents.py tests/test_phase6_oci_isolation.py tests/test_phase6_oci_supervision.py tests/test_phase6_promotion.py tests/test_phase6_recovery_safety.py -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=scratch/phase6-certification/scope-final-focused.xml",
+    "cwd": "."
+  },
+  "candidate-full-final": {
+    "tests": 3966,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 66,
+    "passed": 3900,
+    "seconds": 647.289,
+    "exit_code": 0,
+    "junit": "scratch/phase6-certification/candidate-full-final.xml",
+    "log": "scratch/phase6-certification/candidate-full-final.log",
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q -ra -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/candidate-full-final.xml",
+    "cwd": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/release-candidate"
+  },
+  "interrupted_for_final_safety_repair": {
+    "full-certified": {
+      "exit_code": 2,
+      "log": "scratch/phase6-certification/full-certified.log"
+    },
+    "candidate-certified": {
+      "exit_code": 2,
+      "log": "scratch/phase6-certification/candidate-certified.log"
+    },
+    "reason": "Stopped only task-owned pytest processes to include newly identified persistent-quarantine gate; incomplete suites are not counted as completed or passing."
+  },
+  "quarantine-focused": {
+    "tests": 154,
+    "failures": 5,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 149,
+    "seconds": 101.06,
+    "exit_code": 1,
+    "junit": "scratch/phase6-certification/quarantine-focused.xml",
+    "log": "scratch/phase6-certification/quarantine-focused.log",
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_phase5_coding_agents.py tests/test_phase6_oci_isolation.py tests/test_phase6_oci_supervision.py tests/test_phase6_promotion.py tests/test_phase6_recovery_safety.py -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=scratch/phase6-certification/quarantine-focused.xml",
+    "failure_reason": "Repair initially referenced nonexistent contract.BOUNDARY instead of contract.VIOLATION; corrected and all affected tests pass. Original failures are retained."
+  },
+  "quarantine-repair-focused": {
+    "tests": 6,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 6,
+    "seconds": 4.136,
+    "exit_code": 0,
+    "junit": "scratch/phase6-certification/quarantine-repair-focused.xml",
+    "log": "scratch/phase6-certification/quarantine-repair-focused.log",
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_phase6_recovery_safety.py::test_project_scope_rechecked_after_reservation_before_clone tests/test_phase6_recovery_safety.py::test_detected_live_boundary_failure_persistently_quarantines_adapter tests/test_phase6_recovery_safety.py::test_durable_violation_or_unreadable_history_refuses_otherwise_valid_certificate tests/test_phase5_coding_agents.py::test_outcome_goes_to_continuity_labelled_never_acm tests/test_phase5_coding_agents.py::test_verified_outcome_is_marked_verified --junitxml=scratch/phase6-certification/quarantine-repair-focused.xml"
+  },
+  "final-mandatory-focused": {
+    "tests": 215,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 215,
+    "seconds": 114.795,
+    "exit_code": 0,
+    "junit": "scratch/phase6-certification/final-mandatory-focused.xml",
+    "log": "scratch/phase6-certification/final-mandatory-focused.log",
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_phase5_coding_agents.py tests/test_phase6_benchmark_recovery.py tests/test_phase6_oci_isolation.py tests/test_phase6_oci_supervision.py tests/test_phase6_promotion.py tests/test_phase6_recovery_safety.py tests/test_phase6_routing_continuity.py -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=scratch/phase6-certification/final-mandatory-focused.xml"
+  },
+  "full-release": {
+    "tests": 3999,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 66,
+    "passed": 3933,
+    "seconds": 673.58,
+    "exit_code": 0,
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q -ra -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=scratch/phase6-certification/full-release.xml",
+    "cwd": ".",
+    "junit": "scratch/phase6-certification/full-release.xml",
+    "log": "scratch/phase6-certification/full-release.log"
+  },
+  "candidate-release": {
+    "tests": 3980,
+    "failures": 1,
+    "errors": 0,
+    "skipped": 66,
+    "passed": 3913,
+    "seconds": 650.632,
+    "exit_code": 1,
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q -ra -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/candidate-release.xml",
+    "cwd": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/release-candidate",
+    "junit": "scratch/phase6-certification/candidate-release.xml",
+    "log": "scratch/phase6-certification/candidate-release.log",
+    "failure_reason": "Existing host-wide demo_server.py process-count assertion saw 1 -> 0 while both suites ran. This is not an increasing orphan count; candidate is rerun alone without changing the assertion."
+  },
+  "candidate-mcp-focused": {
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 1,
+    "seconds": 4.917,
+    "exit_code": 0,
+    "cwd": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/release-candidate",
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_mcp.py::test_no_orphan_provider_processes --junitxml=/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/candidate-mcp-focused.xml > /media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/candidate-mcp-focused.log 2>&1",
+    "junit": "scratch/phase6-certification/candidate-mcp-focused.xml",
+    "log": "scratch/phase6-certification/candidate-mcp-focused.log"
+  },
+  "candidate-release-alone": {
+    "tests": 3980,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 66,
+    "passed": 3914,
+    "seconds": 631.689,
+    "exit_code": 0,
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q -ra -W error::pytest.PytestUnhandledThreadExceptionWarning --junitxml=/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/candidate-release-alone.xml > /media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/candidate-release-alone.log 2>&1",
+    "cwd": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/release-candidate",
+    "junit": "scratch/phase6-certification/candidate-release-alone.xml",
+    "log": "scratch/phase6-certification/candidate-release-alone.log"
+  },
+  "whitespace-focused": {
+    "passed": 54,
+    "tests": 54,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "exit_code": 0,
+    "seconds": 1.586,
+    "command": "PYTHONDONTWRITEBYTECODE=1 JARVIS_CLOUD_INFERENCE=0 JARVIS_NLU_SKIP_BENCHMARK=1 /media/jeff/AI/jarvis/venv/bin/python -m pytest -q tests/test_sticky_context_routing.py --junitxml=scratch/phase6-certification/whitespace-focused.xml > scratch/phase6-certification/whitespace-focused.log 2>&1",
+    "cwd": "/media/jeff/AI/jarvis-phase6-wt",
+    "junit": "scratch/phase6-certification/whitespace-focused.xml",
+    "log": "scratch/phase6-certification/whitespace-focused.log",
+    "reason": "Final staged-diff check found one preexisting trailing EOF blank line; remove it without AST/line-attribute change. Full implementation and test behavior unchanged."
+  }
+}

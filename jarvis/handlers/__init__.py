@@ -32,6 +32,7 @@ def ensure_handlers_loaded() -> None:
         mcp_handlers,
         mission_handlers,
         model_routing_handlers,
+        planner_followup_handlers,
         research_handlers,
         self_upgrade_handlers,
         skill_handlers,

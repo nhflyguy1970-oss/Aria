@@ -3949,12 +3949,21 @@ async def chat(
                         attachment,
                         branch_id=bid,
                         attachment2=attachment2,
-                        request_id=rid,
+                        # Same key the cancel path uses, so cancelling actually
+                        # reaches the worker (rid may be empty).
+                        request_id=stream_rid,
                         lite_ui=use_lite_ui,
                         intent=pre_intent or None,
                     ),
                     thread_name="jarvis-chat-stream",
                 )
+                # "stop" and /api/chat/cancel must be able to close this stream.
+                try:
+                    from jarvis.chat_cancel import register_active
+
+                    register_active(stream_rid, bridge.close)
+                except Exception:
+                    pass
                 ait = bridge.__aiter__()
                 import time as _time
 
@@ -3962,7 +3971,14 @@ async def chat(
                 stream_t0 = _time.monotonic()
                 got_model_progress = False
                 timed_out = False
+                stream_completed = False
+                stream_cancelled = False
+                saw_done = False
                 first_progress_ms = float(prefs.get("first_progress_ms") or 45000)
+                # A first-token budget only makes sense for actions that emit an
+                # LLM token stream. Charging it against research (web_search) fired
+                # FIRST_PROGRESS_TIMEOUT and restarted a perfectly healthy Ollama.
+                expects_token_stream = pre_action in ("chat", "")
                 try:
                     while True:
                         try:
@@ -3970,7 +3986,11 @@ async def chat(
                         except asyncio.TimeoutError:
                             note_heartbeat(stream_rid)
                             waited_ms = (_time.monotonic() - stream_t0) * 1000.0
-                            if not got_model_progress and waited_ms >= first_progress_ms:
+                            if (
+                                expects_token_stream
+                                and not got_model_progress
+                                and waited_ms >= first_progress_ms
+                            ):
                                 # Do not heartbeat forever — surface a classified timeout so
                                 # clients can recover instead of hanging on a wedged provider.
                                 try:
@@ -4058,8 +4078,47 @@ async def chat(
                                         }
                                 except Exception:
                                     pass
+                        if isinstance(event, dict) and event.get("type") == "done":
+                            saw_done = True
                         yield f"data: {_sse_payload(event)}\n\n"
-                    if not timed_out:
+                    if not timed_out and not saw_done and bridge.closed:
+                        # Cancelled: bridge.close() threw GeneratorExit at the
+                        # branch's yield, so its own "Stopped." never made it out.
+                        # Without an explicit terminal the client sees a dropped
+                        # stream and auto-retries the request the user just stopped.
+                        stream_cancelled = True
+                        complete_request(stream_rid, reason="cancelled")
+                        try:
+                            from jarvis.latency_observability.trace import (
+                                bind_active,
+                                complete_trace,
+                                get_by_request_id,
+                                get_trace,
+                            )
+
+                            tr = get_by_request_id(rid or stream_rid) or get_trace(latency_trace_id)
+                            if tr is not None:
+                                bind_active(trace_id=tr.trace_id)
+                                tr.note_stream(
+                                    duration_ms=round((_time.monotonic() - stream_t0) * 1000.0, 2),
+                                    reason="cancelled",
+                                )
+                                complete_trace(ok=False, error="cancelled")
+                        except Exception:
+                            pass
+                        cancelled_evt = {
+                            "type": "done",
+                            "ok": True,
+                            "cancelled": True,
+                            "code": "CANCELLED",
+                            "message": "Stopped.",
+                            "module": None,
+                        }
+                        if latency_trace_id:
+                            cancelled_evt["trace_id"] = latency_trace_id
+                        yield f"data: {_sse_payload(cancelled_evt)}\n\n"
+                    elif not timed_out:
+                        stream_completed = True
                         complete_request(stream_rid, reason="done")
                         try:
                             from jarvis.latency_observability.trace import (
@@ -4096,6 +4155,26 @@ async def chat(
                     except Exception:
                         pass
                     yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'message': str(e)})}\n\n"
+                finally:
+                    # Abandoning the consumer (timeout, cancel, error, client
+                    # disconnect) must never leave the producer thread — and the
+                    # global request lock — alive.
+                    try:
+                        from jarvis.chat_cancel import cancel as cancel_chat
+                        from jarvis.chat_cancel import finish as finish_cancel
+                        from jarvis.chat_cancel import unregister_active
+
+                        if not stream_completed and not stream_cancelled:
+                            cancel_chat(stream_rid)
+                        await bridge.aclose(timeout=float(prefs.get("stream_close_wait_s") or 5.0))
+                        unregister_active(stream_rid)
+                        # Drop the cancel flag so the id set cannot grow forever.
+                        finish_cancel(stream_rid)
+                    except Exception:
+                        try:
+                            bridge.close()
+                        except Exception:
+                            pass
             finally:
                 if hold_chat_priority:
                     end_chat_priority()
@@ -4113,6 +4192,9 @@ async def chat(
             attachment,
             bid,
             attachment2,
+            # Non-streaming turns must be cancellable too — without a real id
+            # "stop" could not see them and research ran on under the lock.
+            request_id.strip(),
         )
     except Exception as e:
         return JSONResponse(status_code=500, content={"ok": False, "message": str(e)})

@@ -124,6 +124,9 @@
     }
 
     c.chatStopRequested = false;
+    /* Set when the server sends an explicit cancellation terminal for THIS
+       stream. Survives a newer send resetting c.chatStopRequested. */
+    let serverCancelled = false;
     c.providerTimeout = null;
     c.activeStreamText = "";
     c.activeChatRequestId = crypto.randomUUID?.() || `req-${Date.now()}`;
@@ -328,6 +331,15 @@
                 }
                 if (msgs) msgs.scrollTop = msgs.scrollHeight;
               } else if (event.type === "done" || (event.ok && event.image_path)) {
+                /* Server says this turn was deliberately stopped. Treat it as a
+                   clean terminal — never as a dropped stream to auto-retry. */
+                if (event.cancelled === true || event.code === "CANCELLED") {
+                  gotProgress = true;
+                  gotDone = true;
+                  streamFinished = true;
+                  serverCancelled = true;
+                  break;
+                }
                 if (!event.ok && (event.code === "FIRST_PROGRESS_TIMEOUT" || event.code === "STREAM_IDLE_TIMEOUT")) {
                   const terr = providerTimeoutError(event.code === "STREAM_IDLE_TIMEOUT" ? "idle" : "first");
                   if (event.message) terr.message = event.message;
@@ -388,7 +400,7 @@
           try { await reader.cancel(); } catch (_) {}
         }
 
-        if (c.chatStopRequested) {
+        if (c.chatStopRequested || serverCancelled) {
           typing.remove();
           const partial = (c.activeStreamText || "").trim();
           window.addMessage?.(

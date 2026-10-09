@@ -379,9 +379,15 @@ def enrich_results_with_pages(query: str, results: list[dict], *, limit: int = 3
         classify_source_tier = None  # type: ignore
     if not need or not results:
         return results
+    from jarvis.chat_cancel import current_cancelled
+
     out: list[dict] = []
     fetched = 0
     for r in results:
+        # Page fetches are the slowest part of research — stop between them.
+        if current_cancelled():
+            out.extend(dict(x) for x in results[len(out) :])
+            return out
         item = dict(r)
         url = str(item.get("url") or "")
         tier = 3
@@ -423,10 +429,18 @@ def synthesize_answer(query: str, results: list[dict]) -> str:
             "primary source URL."
         )
     from jarvis import llm
+    from jarvis.chat_cancel import current_request_id
 
     try:
+        # Pass the active request id so "stop" / first-progress cancel actually
+        # ends research synthesis instead of running on under the request lock.
         answer = "".join(
-            llm.ask_stream(llm.web_research_model(), msgs, role="web_research")
+            llm.ask_stream(
+                llm.web_research_model(),
+                msgs,
+                role="web_research",
+                cancel_key=current_request_id(),
+            )
         ).strip()
     except Exception as exc:
         log.warning("Web search synthesis failed: %s", exc)

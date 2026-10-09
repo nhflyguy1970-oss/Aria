@@ -120,7 +120,7 @@ CASES = [
     ("uns-07", "unsupported", "renew my fishing license", {"chat", CLARIFY, "capabilities", "web_search"}, None),
     ("uns-08", "unsupported", "unlock the front door", {"chat", CLARIFY, "capabilities", "ha_control"}, None),
     # ---------------------------------------------------------------- multi-turn (last turn scored)
-    ("mt-01", "multiturn", ("set a timer for 10 minutes", "actually make it 15"), {"planner_set_timer", CLARIFY}, None),
+    ("mt-01", "multiturn", ("set a timer for 10 minutes", "actually make it 15"), {"planner_set_timer", "planner_update_timer", CLARIFY}, None),  # Phase 6: updating the existing timer/alarm is the requested behaviour
     ("mt-02", "multiturn", ("generate an image of a brook trout", "now make it snowy"), {"edit_image", "generate_image", CLARIFY}, None),
     ("mt-03", "multiturn", ("What do you know about me?", "Show me the evidence."), {"memory_about_user", "correction_recall", "evidence_provenance"}, None),
     ("mt-04", "multiturn", ("add a task to order hackle", "and another one to clean my reels"), {"planner_add_task"}, {"text": "reels"}),

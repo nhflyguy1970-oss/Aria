@@ -1,0 +1,106 @@
+{
+  "focused": {
+    "passed": 246,
+    "failed": 0,
+    "skipped": 0,
+    "seconds": 79.15
+  },
+  "full_before_transport_guard": {
+    "passed": 3877,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 66,
+    "seconds": 656.47,
+    "warnings": 15,
+    "exit_code": 0
+  },
+  "skip_reasons": {
+    "decompiled test pending rewrite": 52,
+    "import dependency pending rewrite": 9,
+    "Playwright/Chromium not installed": 3,
+    "Playwright/Chromium unavailable": 1,
+    "owner export not present on this machine": 1
+  },
+  "focused_safety_receipts_transport": {
+    "passed": 302,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 82.06,
+    "warnings": 0,
+    "log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/focused-gates.log",
+    "junit": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/focused-gates.xml"
+  },
+  "focused_after_supervisor_cleanup": {
+    "passed": 273,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 83.16,
+    "warnings": 0,
+    "log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/focused-cleanup.log",
+    "junit": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/focused-cleanup.xml"
+  },
+  "focused_after_selection_history_fix": {
+    "passed": 275,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 83.26,
+    "warnings": 0,
+    "log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/focused-export-final.log",
+    "junit": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/focused-export-final.xml"
+  },
+  "focused_verifier_before_toolchain_chain_fix": {
+    "passed": 277,
+    "failed": 1,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 83.44,
+    "warnings": 0,
+    "log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/focused-verifier-final.log",
+    "junit": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/focused-verifier-final.xml"
+  },
+  "focused_after_verifier_boundary_fix": {
+    "passed": 278,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 82.42,
+    "warnings": 0,
+    "log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/focused-verifier-final-fixed.log",
+    "junit": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/focused-verifier-final-fixed.xml"
+  },
+  "full_before_supervisor_cleanup": {
+    "passed": 3879,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 66,
+    "seconds": 614.88,
+    "warnings": 3,
+    "log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/full-offline-final.log",
+    "junit": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/full-offline-final.xml"
+  },
+  "interrupted_full_cleanup_run": {
+    "exit_code": 143,
+    "completed": false,
+    "reason": "Stopped to repair selection export dropping historical boundary evidence; replaced by final full run"
+  },
+  "interrupted_full_export_run": {
+    "exit_code": 143,
+    "completed": false,
+    "reason": "Stopped to repair verifier host-read boundary; replaced by final full run"
+  },
+  "final_full": {
+    "passed": 3884,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 66,
+    "seconds": 605.68,
+    "warnings": 2,
+    "log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/full-private-verifier-final.log",
+    "junit": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/full-private-verifier-final.xml",
+    "exit_code": 0,
+    "thread_exceptions_treated_as_errors": true
+  }
+}

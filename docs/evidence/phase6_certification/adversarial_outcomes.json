@@ -1,0 +1,39 @@
+{
+  "read": "FileNotFoundError",
+  "write": "PermissionError",
+  "unlink": "FileNotFoundError",
+  "rename": "OSError",
+  "hardlink": "FileNotFoundError",
+  "symlink_write": "PermissionError",
+  "git_metadata_write": "OSError",
+  "subprocess_write": 1,
+  "hidden_paths": {
+    "/media/jeff/AI/jarvis": false,
+    "/media/jeff/C/fly_tying_reference": false,
+    "/media/jeff/C/fly_fishing_project": false,
+    "/home/jeff/.ssh": false,
+    "/home/jeff/.bash_history": false,
+    "/home/jeff/.claude.json": false,
+    "/var/run/docker.sock": false,
+    "/run/user/1000/bus": false,
+    "/proc/2164824/root": false
+  },
+  "process": {
+    "CapEff": "0000000000000000",
+    "NoNewPrivs": "1",
+    "Seccomp": "2"
+  },
+  "mount_exit": 32,
+  "unshare_exit": 1,
+  "network": {
+    "host_loopback": "ConnectionRefusedError",
+    "external": "OSError",
+    "docker_gateway": "OSError"
+  },
+  "read_only": {
+    "write": "OSError"
+  },
+  "outside_canary": "KEEP\n",
+  "execution": "real installed Codex app-server command/exec under OCI; no model request or credential",
+  "passed": true
+}

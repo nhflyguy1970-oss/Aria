@@ -1,0 +1,50 @@
+{
+  "scoped_recovery_ruff": {
+    "exit_code": 0
+  },
+  "maintained_ci_ruff": {
+    "exit_code": 1,
+    "errors": 5
+  },
+  "maintained_ci_format": {
+    "exit_code": 1,
+    "files_requiring_formatting": 20
+  },
+  "baseline_issue_paths": [
+    "aria_core/acm_bridge.py",
+    "jarvis/automation/pipelines/storage.py",
+    "jarvis/daemon.py",
+    "jarvis/gpu.py",
+    "jarvis/inference/boundary.py",
+    "jarvis/inference/cloud_policy.py",
+    "jarvis/inference/execution_policy.py",
+    "jarvis/inference/gateway.py",
+    "jarvis/inference/policy.py",
+    "jarvis/inference/provider_routing.py",
+    "jarvis/inference/providers/__init__.py",
+    "jarvis/inference/providers/anthropic_messages.py",
+    "jarvis/inference/providers/base.py",
+    "jarvis/inference/providers/gemini.py",
+    "jarvis/inference/providers/openai_responses.py",
+    "jarvis/inference/quality_benchmark.py",
+    "jarvis/morning_briefing.py",
+    "jarvis/proactive_scheduler.py",
+    "jarvis/runtime_routing.py",
+    "jarvis/tools/executor.py",
+    "jarvis/tools/runner.py"
+  ],
+  "paths_differing_from_interrupted_baseline": [],
+  "acm_supremacy": {
+    "exit_code": 0
+  },
+  "broader_promotion_test_ruff": {
+    "exit_code": 1,
+    "errors": 20,
+    "source_unchanged_from_interrupted_work": true
+  },
+  "action_catalog": {
+    "exit_code": 0,
+    "listed_actions": 466,
+    "unregistered": []
+  }
+}

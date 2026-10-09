@@ -54,9 +54,19 @@ _LOCAL_CORPUS = re.compile(
     re.I,
 )
 _USER_MEMORY = re.compile(
-    r"\bsearch\s+(?:my\s+)?memory\b|\brecall\b|\bwhat\s+do\s+you\s+remember\b|"
+    r"\bsearch\s+(?:my\s+)?memory\b|\bwhat\s+do\s+you\s+remember\b|"
     r"\bwhat\s+do\s+you\s+know\s+about\s+me\b|"
-    r"\b(?:please\s+)?(?:remember|don'?t\s+forget|note\s+that|keep\s+in\s+mind)\b|"
+    # "recall" is also an ordinary English verb ("recall which thread holds it"),
+    # so it only signals memory with memory/personal framing.
+    r"\b(?:do|did|can|could|will)\s+you\s+recall\b|\bwhat\s+do\s+you\s+recall\b|"
+    r"\brecall\s+(?:my|our|what\s+i|that\s+i|anything|everything|only)\b|"
+    r"\btotal\s+recall\b|"
+    # Same for remember / note that: an incidental "Note that the tests must
+    # pass" is not a memory write. Start-anchored imperatives are covered by
+    # _MEMORY_WRITE, which callers check first.
+    r"\b(?:please\s+)?(?:remember|don'?t\s+forget|keep\s+in\s+mind)\s+"
+    r"(?:that\s+)?(?:i|i'?m|my|me|we|our|us|you|to\b)|"
+    r"\bnote\s+that\s+(?:i|i'?m|my|we|our)\b|"
     r"\b(?:please\s+)?(?:forget|delete\s+memory|remove\s+memory)\b|"
     r"\b(?:please\s+)?(?:update|change|correct|fix)\s+my\b|"
     # Memory explanation / lineage (must not fall through to Mission Control)
@@ -65,8 +75,12 @@ _USER_MEMORY = re.compile(
     r"\bwhy\b.+\bactive\b|"
     r"\bwhat\s+replaced\b|"
     r"\b(?:retired|superseded|replaced)\b|"
-    # Evidence / lineage introspection (must not fall through to memory_search)
-    r"\bevidence\b|"
+    # Evidence / lineage introspection (must not fall through to memory_search).
+    # Framed like _MEMORY_EVIDENCE — a bare "runtime evidence" in an engineering
+    # report request is not a memory question.
+    r"\b(?:show|tell|give|list)\s+(?:me\s+)?(?:the\s+)?(?:my\s+)?(?:memory\s+)?evidence\b|"
+    r"\bwhat(?:'s|\s+is)\s+(?:the\s+)?evidence\b|\bwhat\s+evidence\b|"
+    r"\bsupporting\s+evidence\b|\bevidence\s+for\b|\bmemory\s+evidence\b|"
     r"\bhistory\s+behind\s+this\s+memory\b|"
     r"\bwhy\s+this\s+memory\s+changed\b|"
     r"\b(?:yesterday|today|this\s+morning|last\s+week|last\s+tuesday|last\s+friday)\s+i\s+"
@@ -84,6 +98,63 @@ _CONVERSATION_LANGUAGE_QUERY = re.compile(
     r"(?:speaking|talking)\b",
     re.I,
 )
+
+# Explicit engineering / debugging work. Such a request must not be demoted to a
+# personal-memory lookup just because it also contains a word like "evidence" or
+# "recall" — that answered "Investigate the stale active-request lifecycle…" with
+# the memory onboarding message.
+_ENGINEERING_TASK = re.compile(
+    r"\b(?:investigate|debug|diagnose|troubleshoot|trace|refactor|inspect|"
+    r"reproduce|profile|benchmark|instrument|patch|implement|"
+    r"analyz\w*|analys\w*|"
+    r"stack\s+trace|traceback|root\s+cause|regression|"
+    r"fix(?:es|ed|ing)?|test(?:s|ed|ing)?|log(?:s|ging)?|"
+    r"lock|deadlock|thread|stream|timeout|exception|crash)\b",
+    re.I,
+)
+
+# Unambiguous memory framing — always outranks the engineering guard above so
+# real memory commands keep working ("fix my email address", "search my memory").
+_EXPLICIT_MEMORY_ASK = re.compile(
+    r"\bsearch\s+(?:my\s+)?memory\b|"
+    r"\bwhat\s+do\s+you\s+(?:remember|recall)\b|"
+    r"\bwhat\s+do\s+you\s+know\s+about\s+me\b|"
+    r"\b(?:my|our)\s+memor(?:y|ies)\b|\bmemory\s+(?:store|entry|entries|marker)\b|"
+    r"\bin\s+memory\b|\bfrom\s+memory\b|"
+    r"\b(?:remember|don'?t\s+forget|keep\s+in\s+mind|note\s+that)\s+(?:that\s+)?(?:i|i'?m|my|we|our)\b|"
+    r"\b(?:update|change|correct|fix)\s+my\b|"
+    r"\bforget\s+(?:that\s+)?(?:i|my|we|our)\b|"
+    r"\babout\s+me\b|\bwho\s+am\s+i\b|"
+    r"\bmemory\s+evidence\b|\bevidence\s+for\s+my\b|"
+    r"\b(?:favorite|favourite)\b",
+    re.I,
+)
+
+
+# Real storage imperatives. Deliberately excludes the weak cues "note that" /
+# "keep in mind", which open ordinary engineering sentences ("Note that the tests
+# must still pass") as often as they open a memory write.
+_MEMORY_STORE_IMPERATIVE = re.compile(
+    r"^(?:(?:hey\s+)?(?:aria|jarvis)[,:\s]+)?(?:please\s+)?"
+    r"(?:remember|don'?t\s+forget)\b|"
+    r"^(?:(?:could|can|would)\s+you\s+(?:please\s+)?)?"
+    r"(?:remember|don'?t\s+forget)\s+that\b|"
+    r"^(?:please\s+)?(?:store|save)\s+this\b",
+    re.I,
+)
+
+
+def memory_cue_is_incidental(prompt: str) -> bool:
+    """True when a memory-ish word appears inside an engineering/debugging ask.
+
+    Guards the _USER_MEMORY intent checks so incidental vocabulary cannot beat an
+    explicit engineering instruction. Explicit memory framing always wins.
+    """
+    text = prompt or ""
+    if _MEMORY_STORE_IMPERATIVE.search(text) or _EXPLICIT_MEMORY_ASK.search(text):
+        return False
+    return bool(_ENGINEERING_TASK.search(text))
+
 
 # Imperative write — anchored at utterance start (or polite "remember that…").
 # Mid-sentence "remember" in questions is recall, not storage (BUG-025).
@@ -472,10 +543,10 @@ def resolve_memory_route(prompt: str) -> dict[str, Any] | None:
             "thinking": "memory recall fact",
         }
 
-    if _MEMORY_LIST.search(lower):
+    if _MEMORY_LIST.search(lower) and not memory_cue_is_incidental(message):
         return {"action": "recall", "params": {}, "thinking": "memory list"}
 
-    if _USER_MEMORY.search(message):
+    if _USER_MEMORY.search(message) and not memory_cue_is_incidental(message):
         # Fallback for other memory-ish phrasing matched by structure.
         return {"action": "memory_search", "params": {"query": message}, "thinking": "memory"}
 
@@ -534,7 +605,11 @@ def infer_intent_from_structure(result: NLUResult) -> str | None:
         lower,
     ):
         return "planning"
-    if _USER_MEMORY.search(prompt):
+    # Start-anchored storage imperatives ("Please remember ARIA-FINAL-…") stay
+    # memory even though _USER_MEMORY now requires personal framing.
+    if _MEMORY_WRITE.search(prompt) and not memory_cue_is_incidental(prompt):
+        return "memory"
+    if _USER_MEMORY.search(prompt) and not memory_cue_is_incidental(prompt):
         return "memory"
     if _EXPLICIT_WEB.search(prompt):
         return "web_search"
@@ -673,7 +748,11 @@ def apply_intent_guards(result: NLUResult) -> str:
         intent = structural
     syntax = result.syntax
 
-    if _USER_MEMORY.search(prompt):
+    # Start-anchored storage imperatives ("Please remember ARIA-FINAL-…") stay
+    # memory even though _USER_MEMORY now requires personal framing.
+    if _MEMORY_WRITE.search(prompt) and not memory_cue_is_incidental(prompt):
+        return "memory"
+    if _USER_MEMORY.search(prompt) and not memory_cue_is_incidental(prompt):
         return "memory"
     if _EXPLICIT_WEB.search(prompt):
         return "web_search"

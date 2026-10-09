@@ -96,3 +96,56 @@ Remaining held-out failures:
 ## Permissions
 
 Routing only picks an action; nothing runs at routing time. Phase 1 policy and per-action guards apply at execution whichever stage produced the intent. Tests cover a rule-routed mission action under safe mode, and `coding_agent_execute` reached by any route without the owner's approval token.
+
+---
+
+# Phase 6
+
+## Fixed
+
+| Request | Phase 5 | Phase 6 |
+|---|---|---|
+| "Do deep research overnight on bushcraft" | `web_search` | `research_create` (mission-backed research job) |
+| "Start my truck" (and booking, paying, messaging, social posting, merchant orders) | `web_search` / chat that could pretend | chat with a fixed, honest "no integration is connected" reply; policy override can no longer rewrite it |
+| "Describe this image" / "Summarize this document" with nothing attached | chat | asks which image/document; uses the session's last image/document when there is one |
+| "Promote an actionable Journal note into a Planner task" | `planner_today` | asks which note (planner-review rule narrowed) |
+| "What is a to-do list app called…" | `planner_today` | chat (the old natural-intent rule now skips conceptual questions) |
+| "Cancel it" with nothing running | "Stopped." | names the real cancellables (timers, alarms, agent runs, missions) as choices, or says nothing is running; a reply in flight is still stopped |
+| "the image of the river in my head is vivid" | **`generate_image`** | chat ("image of" must be a request) |
+| "what's your favourite dubbing?" | `memory_search` | chat (preference rule requires *my*) |
+
+## Timer and alarm follow-ups
+
+- "set a timer for 10 minutes" … "actually make it 15" → `planner_update_timer` changes **that** timer (now 15 minutes from now) and says no second timer was started. Alarms work the same way (`planner_update_alarm`).
+- The timer is identified by the label the previous turn created. If it has finished, ARIA says so and creates nothing. If several timers match, it asks which.
+- After a restart, a follow-up that would change something asks for confirmation first. `last_action_restored` is set on session restore and is never persisted.
+
+## Results
+
+All deterministic, 0 model calls, p50 about 1 ms:
+
+| Corpus | Phase 5 (production) | Phase 6 |
+|---|---|---|
+| Original (100) | 99 | **100** |
+| First held-out (66; contains the seven failures to fix) | 59 | **66** |
+| New held-out (60; labelled before scoring), frozen first run | 45 | 55 |
+| New held-out, after fixing the misses it found | 45 | **58** |
+| Side-effecting misroutes (all three) | 7 | **0** |
+
+Three Phase 5 labels were widened: "actually make it 15" / "make it 8" / "actually make it 6:30" now also accept `planner_update_*`, which is the behaviour Phase 6 was asked for.
+
+Remaining corpus disagreements:
+- Two first-person statements ("I ordered waders from Orvis last week", "I like how BlackFly handles retries") go to the memory layer, by Phase 2's ACM teaching policy.
+
+
+## Recovery verification — 2026-10-09
+
+The final worktree independently measured 100/100, 66/66 and 58/60 with all 40 checked arguments correct, zero side-effecting misroutes, zero model calls, zero fallback calls and zero errors. Automatic classifier benchmarking and network access were disabled for this check. See [Phase 6 recovery assessment](ARIA_PHASE6_RECOVERY.md) for evidence, fixture-label changes, remaining misses, test totals and deployment blockers.
+
+## Final certification repairs
+
+Imperative requests to investigate, diagnose, debug, trace or inspect software failures now use the engineering investigation route even without a named file. The handler asks for missing file/context rather than inventing a target. Six phrasing variants verify the general rule. Timer/alarm/planner/project/research/cancellation behavior remains covered by regressions.
+
+Final scores are **100/100, 66/66, 58/60**, arguments **40/40**, false side effects **zero**, model/fallback calls **zero**. The two remaining first-person purchase/preference statements retain ACM teaching-policy routing; original chat labels are not silently changed. No model classifier benchmark was rerun or claimed improved. [Final deterministic measurements](evidence/phase6_certification/routing_results.json).
+
+A real two-process restart probe writes 400 turns with model context capped at eight, reopens every archived turn in a new process, and checks restored timer follow-up requires confirmation. Pruning and durable storage are separate. See [final certification](ARIA_PHASE6_RECOVERY.md) for exact tests and readiness.

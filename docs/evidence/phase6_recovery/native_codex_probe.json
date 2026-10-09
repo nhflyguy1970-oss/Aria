@@ -1,0 +1,21 @@
+{
+  "exit_code": 1,
+  "stdout": "",
+  "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/aria-phase6-resume/vendor-probe/codex-home\"))\nbwrap: No permissions to create new namespace, likely because the kernel does not allow non-privileged user namespaces. See <https://deb.li/bubblewrap> or <file:///usr/share/doc/bubblewrap/README.Debian.gz>.\n",
+  "argv": [
+    "/home/jeff/.nvm/versions/node/v24.15.0/bin/codex",
+    "sandbox",
+    "-P",
+    ":read-only",
+    "-C",
+    "/tmp/aria-phase6-resume/vendor-probe",
+    "--",
+    "/usr/bin/true"
+  ],
+  "probe": "native Codex read-only command sandbox under outer bwrap; true only; private CODEX_HOME; no model request",
+  "native_without_outer_control": {
+    "exit_code": 0,
+    "stdout": "",
+    "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/aria-phase6-resume/vendor-probe/codex-home\"))\n"
+  }
+}

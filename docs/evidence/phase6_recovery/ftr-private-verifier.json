@@ -1,0 +1,22 @@
+{
+  "ran": true,
+  "command": "/media/jeff/C/fly_tying_reference/venv/bin/python -m pytest -q -ra -p no:cacheprovider tests/test_confirmed_backup_location.py tests/test_backup_pipeline.py",
+  "exit_code": 0,
+  "passed": true,
+  "seconds": 19.2,
+  "output_tail": "..............................                                           [100%]\n============================= slowest 10 durations =============================\n2.59s call     tests/test_backup_pipeline.py::test_retention_never_prunes_below_the_floor\n2.59s call     tests/test_backup_pipeline.py::test_retention_keeps_only_the_newest_snapshots\n1.31s call     tests/test_backup_pipeline.py::test_orphaned_staging_directory_is_swept_and_never_current\n1.07s call     tests/test_backup_pipeline.py::test_status_reports_a_stale_cloud_backup\n0.72s call     tests/test_backup_pipeline.py::test_verification_rejects_a_corrupted_archive\n0.68s call     tests/test_backup_pipeline.py::test_explicit_mount_override_is_used\n0.68s call     tests/test_backup_pipeline.py::test_restored_application_keeps_its_tracked_overlays\n0.66s call     tests/test_backup_pipeline.py::test_documented_cloud_extraction_and_database_only_recovery\n0.66s call     tests/test_backup_pipeline.py::test_snapshot_restores_to_a_working_copy\n0.66s call     tests/test_backup_pipeline.py::test_book_files_stay_on_f_and_never_reach_the_cloud\n30 passed in 18.91s\n",
+  "output_log": "/tmp/aria-phase6-resume/project-clones/run-ftr-private-verifier-fixed.verification/tests-1791551628011028109.log",
+  "ran_by": "aria",
+  "sandbox": "bwrap: private roots/PID/IPC, writable workspace, trusted toolchains read-only, no network",
+  "workspace": {
+    "workspace": "/tmp/aria-phase6-resume/project-clones/run-ftr-private-verifier-fixed",
+    "base_commit": "e630851000168cf5d2ff7213cf154453e3730010",
+    "source": "/media/jeff/C/fly_tying_reference",
+    "source_uncommitted_changes": true,
+    "verification_toolchains": [
+      "/media/jeff/C/fly_tying_reference/venv",
+      "/home/jeff/.nvm/versions/node/v24.15.0/bin/node"
+    ]
+  },
+  "durable_output_log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/ftr-private-verifier-fixed-full-output.log"
+}

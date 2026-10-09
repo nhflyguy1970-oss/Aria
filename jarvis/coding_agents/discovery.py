@@ -19,6 +19,7 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import threading
 import time
 from dataclasses import asdict, dataclass, field
@@ -33,7 +34,7 @@ WORKSPACE_WRITE = "workspace_write"
 # installed version's --help, so an upgrade that drops one is detected.
 REQUIRED_FLAGS: dict[str, dict[str, list[str]]] = {
     "codex": {
-        "exec": ["--json", "--sandbox", "--cd", "--ephemeral", "--output-last-message"],
+        "exec": ["--json", "--sandbox", "--cd", "--ephemeral", "--output-last-message", "--config"],
     },
     "claude_code": {
         "": ["--print", "--output-format", "--permission-mode", "--tools", "--no-session-persistence"],
@@ -65,6 +66,7 @@ class AgentStatus:
     unsupported: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     missing_flags: list[str] = field(default_factory=list)
+    execution: dict[str, Any] = field(default_factory=dict)
 
     @property
     def usable(self) -> bool:
@@ -73,6 +75,7 @@ class AgentStatus:
             and not self.missing_flags
             and self.auth.get("state") in ("logged_in", "unknown")
             and not self.auth.get("paid_api")
+            and self.execution.get("state") == "verified"
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -98,19 +101,61 @@ def _which(names: tuple[str, ...]) -> str:
 
 
 def _run(argv: list[str], timeout: int = 20) -> tuple[int, str]:
+    from jarvis.coding_agents import workspace
+    from jarvis.coding_agents.runs import _install_dirs
     from jarvis.security.owner.env_boundary import build_subprocess_env
 
     env = build_subprocess_env(extra={"PATH": os.pathsep.join(_search_path()), "NO_COLOR": "1"})
+    env.pop("SSH_AUTH_SOCK", None)
     try:
-        proc = subprocess.run(
-            argv, capture_output=True, text=True, timeout=timeout, env=env, cwd=str(Path.home()),
-            stdin=subprocess.DEVNULL,
-        )
-        return proc.returncode, (proc.stdout or "") + (proc.stderr or "")
-    except subprocess.TimeoutExpired:
-        return 124, "timed out"
-    except OSError as exc:
-        return 127, f"{type(exc).__name__}: {exc}"
+        # Even help/auth probes are untrusted programs. They never see owner
+        # histories, original credentials, production roots or host sockets.
+        with tempfile.TemporaryDirectory(prefix="aria-agent-discovery-") as raw:
+            root = Path(raw)
+            ws = root / "workspace"
+            ws.mkdir()
+            name = Path(argv[0]).name
+            agent = "codex" if name == "codex" else "claude_code" if "claude" in name else "antigravity"
+            bindings = workspace.private_agent_state(agent, root, workspace.agent_state_dirs(agent))
+            command = workspace.sandbox_argv(argv, str(ws), writable=[str(root)],
+                readable=_install_dirs(argv[0]), network=False, read_only=True, state_bindings=bindings)
+            proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                env=env, cwd=ws, stdin=subprocess.DEVNULL, start_new_session=True)
+            chunks = {"stdout": [], "stderr": []}
+            count = {"bytes": 0}
+            lock = threading.Lock()
+            def pump(stream, kind):
+                while chunk := stream.read(8192):
+                    with lock:
+                        count["bytes"] += len(chunk)
+                        if count["bytes"] <= 1_000_000:
+                            chunks[kind].append(chunk)
+            readers = [threading.Thread(target=pump, args=(stream, kind), daemon=True)
+                       for stream, kind in ((proc.stdout, "stdout"), (proc.stderr, "stderr"))]
+            for reader in readers:
+                reader.start()
+            deadline = time.monotonic() + timeout
+            refused = ""
+            while proc.poll() is None:
+                if time.monotonic() >= deadline or count["bytes"] > 1_000_000:
+                    from jarvis.coding_agents.runs import _kill
+                    refused = "timed out" if time.monotonic() >= deadline else "discovery output limit exceeded"
+                    _kill(proc)
+                    break
+                time.sleep(.01)
+            proc.wait()
+            for reader in readers:
+                reader.join(timeout=2)
+            if refused:
+                return 124, refused
+            from jarvis.coding_agents.runs import _private_tokens
+            output = "".join(chunks["stdout"]) + "".join(chunks["stderr"])
+            for secret in _private_tokens(bindings):
+                output = output.replace(secret, "<redacted>")
+            return proc.returncode, redact(output)
+
+    except (OSError, workspace.WorkspaceError) as exc:
+        return 127, f"isolated discovery refused: {type(exc).__name__}: {exc}"
 
 
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
@@ -202,6 +247,15 @@ def _auth(agent: str, path: str) -> dict[str, Any]:
         # agy 1.x has no auth-status command; a sign-in can only be confirmed by
         # running a task. Say so instead of guessing from credential files.
         state_dir = Path.home() / ".gemini" / "antigravity-cli"
+        proof = _last_successful_run("antigravity")
+        if proof:
+            return {
+                "state": "logged_in",
+                "method": "google_account",
+                "billing": "google_account",
+                "paid_api": False,
+                "evidence": f"no auth-status command; a run completed successfully at {proof}",
+            }
         return {
             "state": "unknown",
             "method": "google_account",
@@ -211,6 +265,27 @@ def _auth(agent: str, path: str) -> dict[str, Any]:
             + ("CLI state directory present" if state_dir.is_dir() else "no CLI state directory"),
         }
     return {"state": "unknown"}
+
+
+def _last_successful_run(agent: str, max_age_s: float = 30 * 86400) -> str:
+    """When this agent last finished a run with a reply — proof it can sign in."""
+    try:
+        import sqlite3
+
+        from jarvis.config import DATA_DIR
+
+        db = DATA_DIR / "coding_agents.db"
+        if not db.is_file():
+            return ""
+        with sqlite3.connect(str(db), timeout=5) as conn:
+            row = conn.execute(
+                "SELECT finished_at FROM runs WHERE agent=? AND status IN ('completed','verified','changes_unverified',"
+                "'no_changes','tests_failed') AND finished_at>? ORDER BY finished_at DESC LIMIT 1",
+                (agent, time.time() - max_age_s),
+            ).fetchone()
+        return time.strftime("%Y-%m-%d %H:%M", time.localtime(row[0])) if row else ""
+    except Exception:
+        return ""
 
 
 def _capabilities(agent: str) -> tuple[list[str], dict[str, Any], list[str]]:
@@ -228,8 +303,10 @@ def _capabilities(agent: str) -> tuple[list[str], dict[str, Any], list[str]]:
                 "reports_commands": True,
                 "reports_file_changes": True,
                 "token_usage": True,
+                "runs_commands": True,
             },
-            ["interactive approvals in headless mode", "per-run spending cap (subscription)"],
+            ["interactive approvals in headless mode", "per-run spending cap (subscription)",
+             "nested vendor sandbox compatibility (ARIA always keeps its outer bwrap; no unsafe fallback)"],
         )
     if agent == "claude_code":
         return (
@@ -239,6 +316,7 @@ def _capabilities(agent: str) -> tuple[list[str], dict[str, Any], list[str]]:
                 "structured_output": "stream-json events + final result",
                 "read_only": "--permission-mode plan --tools Read,Glob,Grep",
                 "workspace_write": "--permission-mode acceptEdits --tools Read,Glob,Grep,Edit,Write (no shell)",
+                "runs_commands": False,
                 "working_directory": "process cwd",
                 "session_persistence": "off (--no-session-persistence)",
                 "reports_commands": True,
@@ -261,12 +339,14 @@ def _capabilities(agent: str) -> tuple[list[str], dict[str, Any], list[str]]:
                 "workspace_write": "--mode accept-edits --sandbox",
                 "working_directory": "process cwd",
                 "time_limit": "--print-timeout",
-                "reports_commands": "unverified",
-                "reports_file_changes": "unverified",
+                "reports_commands": True,
+                "reports_file_changes": True,
+                "runs_commands": False,
             },
             [
-                "auth-status check (no such command)",
-                "tool allow-listing per run",
+                "auth-status check (no such command; sign-in is inferred from a completed run)",
+                "tool allow-listing per run (agy reports permission_mode 'always-proceed' from its own settings)",
+                "shell commands under ARIA's sandbox (agy's own command sandbox cannot nest inside bwrap)",
                 "the Antigravity IDE/GUI (not automated)",
             ],
         )
@@ -300,6 +380,11 @@ def discover(*, refresh: bool = False) -> dict[str, AgentStatus]:
         status.missing_flags = _missing_flags(agent, path)
         status.auth = _auth(agent, path)
         status.modes, status.capabilities, status.unsupported = _capabilities(agent)
+        from jarvis.coding_agents import runtime
+
+        status.execution = runtime.compatibility(agent, path, version)
+        if status.execution.get("state") != "verified":
+            status.notes.append(status.execution.get("reason", "execution compatibility unverified"))
         if status.auth.get("paid_api"):
             status.notes.append("authenticated with a paid API key — ARIA will not use it without a cloud authorization")
         out[agent] = status

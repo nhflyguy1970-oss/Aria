@@ -1,0 +1,20 @@
+{
+  "ran": true,
+  "command": "/media/jeff/C/fly_tying_reference/venv/bin/python -m pytest -q -ra -p no:cacheprovider tests/test_confirmed_backup_location.py tests/test_backup_pipeline.py",
+  "exit_code": 0,
+  "passed": true,
+  "seconds": 19.5,
+  "output_tail": "..............................                                           [100%]\n============================= slowest 10 durations =============================\n2.63s call     tests/test_backup_pipeline.py::test_retention_never_prunes_below_the_floor\n2.62s call     tests/test_backup_pipeline.py::test_retention_keeps_only_the_newest_snapshots\n1.32s call     tests/test_backup_pipeline.py::test_orphaned_staging_directory_is_swept_and_never_current\n1.09s call     tests/test_backup_pipeline.py::test_status_reports_a_stale_cloud_backup\n0.72s call     tests/test_backup_pipeline.py::test_verification_rejects_a_corrupted_archive\n0.70s call     tests/test_backup_pipeline.py::test_explicit_mount_override_is_used\n0.69s call     tests/test_backup_pipeline.py::test_snapshot_restores_to_a_working_copy\n0.68s call     tests/test_backup_pipeline.py::test_restored_application_keeps_its_tracked_overlays\n0.68s call     tests/test_backup_pipeline.py::test_image_cache_is_kept_on_f_but_not_uploaded\n0.67s call     tests/test_backup_pipeline.py::test_restored_repo_keeps_its_commit\n30 passed in 19.17s\n",
+  "output_log": "/tmp/aria-phase6-resume/project-clones/run-ftr-final-gates.verification/tests-1791549731067048071.log",
+  "ran_by": "aria",
+  "sandbox": "bwrap: read-only root, writable workspace, no network",
+  "workspace": {
+    "workspace": "/tmp/aria-phase6-resume/project-clones/run-ftr-final-gates",
+    "base_commit": "e630851000168cf5d2ff7213cf154453e3730010",
+    "source": "/media/jeff/C/fly_tying_reference",
+    "source_uncommitted_changes": true,
+    "verification_toolchains": [
+      "/media/jeff/C/fly_tying_reference/venv"
+    ]
+  }
+}

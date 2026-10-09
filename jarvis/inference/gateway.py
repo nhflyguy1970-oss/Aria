@@ -7,9 +7,9 @@ import logging
 import os
 import time
 import urllib.error
-from dataclasses import dataclass
 import urllib.request
 from collections.abc import Iterator
+from dataclasses import dataclass
 from typing import Any
 
 from jarvis.inference import boundary

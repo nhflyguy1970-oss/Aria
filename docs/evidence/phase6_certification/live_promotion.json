@@ -1,0 +1,35 @@
+{
+  "promotion_id": "prm_036e8d879f",
+  "run_id": "run_93042ea70b",
+  "status": "applied",
+  "rollback_status": "reverted",
+  "destination_scope": "disposable fixture repository only",
+  "separate_owner_approval": true,
+  "unapproved_application_refused": true,
+  "unrelated_dirty_content_preserved": true,
+  "result": {
+    "steps": [
+      {
+        "preflight": "ok"
+      },
+      {
+        "recovery_point": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/live-pipeline-1791557727631431905/state/coding_agents/promotions/prm_036e8d879f/recovery"
+      },
+      {
+        "files_match_manifest": true
+      }
+    ],
+    "tests_after_apply": {
+      "ran": true,
+      "command": "/media/jeff/AI/jarvis/venv/bin/python -m pytest -q -p no:cacheprovider",
+      "exit_code": 0,
+      "passed": true,
+      "output_tail": ".                                                                        [100%]\n1 passed in 0.00s\n",
+      "output_log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/live-pipeline-1791557727631431905/state/coding_agents/verification/tests-1791558052827539614.log",
+      "sandbox": "bwrap: private roots/PID/IPC, project/toolchains read-only, no network"
+    },
+    "verified": true,
+    "reason": "applied to the working tree; tests passed in place",
+    "rollback": "Say \"roll back promotion prm_036e8d879f\" (or POST /api/coding-agents/promotions/prm_036e8d879f/rollback). ARIA restores the exact pre-promotion copies from /media/jeff/AI/jarvis-phase6-wt/scratch/phase6-certification/live-pipeline-1791557727631431905/state/coding_agents/promotions/prm_036e8d879f/recovery \u2014 only if those files are still exactly as promoted; later edits are never overwritten. Manual: copy files/<path> back over the project, and delete files the snapshot marks as not existing."
+  }
+}

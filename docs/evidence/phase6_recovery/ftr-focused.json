@@ -1,0 +1,11 @@
+{
+  "ran": true,
+  "command": "/media/jeff/C/fly_tying_reference/venv/bin/python -m pytest -q -ra -p no:cacheprovider tests/test_confirmed_backup_location.py tests/test_backup_pipeline.py",
+  "exit_code": 0,
+  "passed": true,
+  "seconds": 19.4,
+  "output_tail": "..............................                                           [100%]\n============================= slowest 10 durations =============================\n2.63s call     tests/test_backup_pipeline.py::test_retention_keeps_only_the_newest_snapshots\n2.60s call     tests/test_backup_pipeline.py::test_retention_never_prunes_below_the_floor\n1.31s call     tests/test_backup_pipeline.py::test_orphaned_staging_directory_is_swept_and_never_current\n1.10s call     tests/test_backup_pipeline.py::test_status_reports_a_stale_cloud_backup\n0.72s call     tests/test_backup_pipeline.py::test_verification_rejects_a_corrupted_archive\n0.72s call     tests/test_backup_pipeline.py::test_explicit_mount_override_is_used\n0.69s call     tests/test_backup_pipeline.py::test_restored_application_keeps_its_tracked_overlays\n0.67s call     tests/test_backup_pipeline.py::test_book_files_stay_on_f_and_never_reach_the_cloud\n0.67s call     tests/test_backup_pipeline.py::test_documented_cloud_extraction_and_database_only_recovery\n0.66s call     tests/test_backup_pipeline.py::test_image_cache_is_kept_on_f_but_not_uploaded\n30 passed in 19.11s\n",
+  "output_log": "/tmp/aria-phase6-resume/project-clones/run-ftr-recovery.verification/tests-1791548415640016031.log",
+  "ran_by": "aria",
+  "sandbox": "bwrap: read-only root, writable workspace, no network"
+}

@@ -221,9 +221,9 @@ def _maybe_integrity_scan(now: datetime) -> None:
         return
     _last_integrity_scan_ts = now_ts
     try:
+        from jarvis.integrity_product.repair_module import ProductionIntegrityModule
         from jarvis.integrity_product.scanner import run_scan
         from jarvis.repair_product.engine import prepare_issue
-        from jarvis.integrity_product.repair_module import ProductionIntegrityModule
 
         scan = run_scan(force=True, trigger=trigger)
         count = int((scan.get("counts") or {}).get("total") or 0)

@@ -61,7 +61,18 @@ def session_interrupt(assistant, params: dict, message: str) -> dict:
             assistant.session.pending_clarification = None
     except Exception:
         pass
-    return ok((params or {}).get("reply") or "Stopped.", module=None, type="info")
+    # "Stopped." used to be cosmetic: the in-flight request kept running and kept
+    # the global request lock, so the next turn was refused. Cancel the other
+    # in-flight requests and close their streams (never this one).
+    stopped: list[str] = []
+    try:
+        from jarvis.chat_cancel import cancel_active, current_request_id
+
+        stopped = cancel_active(exclude=current_request_id())
+    except Exception:
+        stopped = []
+    reply = (params or {}).get("reply") or "Stopped."
+    return ok(reply, module=None, type="info", stopped_requests=stopped)
 
 
 @register_action(

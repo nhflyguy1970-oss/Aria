@@ -81,8 +81,8 @@ CASES = [
     ("h-uns-05", "unsupported", "start my truck", _CHATTY | {"ha_control"}, None),
     ("h-uns-06", "unsupported", "order more 6X tippet from Orvis", _CHATTY, None),
     # ---------------------------------------------------------------- multi-turn
-    ("h-mt-01", "multiturn", ("set a timer for 5 minutes", "make it 8"), {"planner_set_timer", CLARIFY}, {"duration": "8"}),
-    ("h-mt-02", "multiturn", ("set an alarm for 6am", "actually make it 6:30"), {"planner_set_alarm", CLARIFY}, {"time": "6:30"}),
+    ("h-mt-01", "multiturn", ("set a timer for 5 minutes", "make it 8"), {"planner_set_timer", "planner_update_timer", CLARIFY}, {"duration": "8"}),  # Phase 6: updating the existing timer/alarm is the requested behaviour
+    ("h-mt-02", "multiturn", ("set an alarm for 6am", "actually make it 6:30"), {"planner_set_alarm", "planner_update_alarm", CLARIFY}, {"time": "6:30"}),  # Phase 6: updating the existing timer/alarm is the requested behaviour
     ("h-mt-03", "multiturn", ("add a task to buy leader material", "one more: wax the line"), {"planner_add_task"}, {"text": "wax the line"}),
     ("h-mt-04", "multiturn", ("is it going to rain tomorrow", "what about saturday?"), {"weather_forecast"}, None),
     ("h-mt-05", "multiturn", ("set a timer for 5 minutes", "what's the capital of Vermont?"), {"chat"}, None),

@@ -1,0 +1,29 @@
+{
+  "/media/jeff/AI/jarvis": {
+    "head_unchanged": true,
+    "git_status_unchanged": true,
+    "tracked_files_checked": 2562,
+    "content_changes": []
+  },
+  "/media/jeff/C/fly_tying_reference": {
+    "head_unchanged": true,
+    "git_status_unchanged": true,
+    "tracked_files_checked": 238,
+    "content_changes": []
+  },
+  "/media/jeff/C/fly_fishing_project": {
+    "head_unchanged": true,
+    "git_status_unchanged": true,
+    "tracked_files_checked": 302,
+    "content_changes": []
+  },
+  "benchmark_evidence": {
+    "checked": 75,
+    "changed": []
+  },
+  "original_canaries": {
+    "checked": 36,
+    "changed": []
+  },
+  "initial_snapshot_preserved": true
+}

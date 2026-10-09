@@ -1,0 +1,31 @@
+{
+  "ran": true,
+  "command": "FLY_OUTPUT_DIR=\"$PWD/output\" XDG_CACHE_HOME=/tmp/blackfly-cache /media/jeff/C/fly_fishing_project/venv/bin/python -m unittest discover -v -s tests -t .",
+  "exit_code": 0,
+  "passed": true,
+  "seconds": 48.9,
+  "output_tail": "hallenge) ... ok\ntest_cooldown_does_not_create_subtitle_absence (tests.test_youtube_pipeline_repair.PipelineTests.test_cooldown_does_not_create_subtitle_absence) ... ok\ntest_deferral_retry_resumes_after_restart (tests.test_youtube_pipeline_repair.PipelineTests.test_deferral_retry_resumes_after_restart) ... ok\ntest_direct_http_is_controlled_and_buffers_under_lease (tests.test_youtube_pipeline_repair.PipelineTests.test_direct_http_is_controlled_and_buffers_under_lease) ... ok\ntest_enabled_verified_session_is_used_on_first_attempt (tests.test_youtube_pipeline_repair.PipelineTests.test_enabled_verified_session_is_used_on_first_attempt) ... ok\ntest_explicit_reconnect_recovers_auth_jobs_not_challenge (tests.test_youtube_pipeline_repair.PipelineTests.test_explicit_reconnect_recovers_auth_jobs_not_challenge) ... ok\ntest_full_authorization_header_is_redacted (tests.test_youtube_pipeline_repair.PipelineTests.test_full_authorization_header_is_redacted) ... ok\ntest_rate_deadline_cannot_be_cleared_by_security_review (tests.test_youtube_pipeline_repair.PipelineTests.test_rate_deadline_cannot_be_cleared_by_security_review) ... ok\ntest_replay_canonical_duplicates_and_cached_positive_speech (tests.test_youtube_pipeline_repair.PipelineTests.test_replay_canonical_duplicates_and_cached_positive_speech) ... ok\ntest_title_rejects_before_speech_or_frames (tests.test_youtube_pipeline_repair.PipelineTests.test_title_rejects_before_speech_or_frames) ... ok\ntest_a_403_does_not_cycle_player_clients (tests.test_ytdlp_js_runtime.AudioForbiddenRetryTests.test_a_403_does_not_cycle_player_clients) ... yt_dlp_download_audio failed: AUTH_REQUIRED: CalledProcessError: ERROR: unable to download video data: HTTP Error 403: Forbidden\nok\ntest_other_failures_are_not_retried (tests.test_ytdlp_js_runtime.AudioForbiddenRetryTests.test_other_failures_are_not_retried) ... yt_dlp_download_audio failed: DEFINITIVE_ABSENCE: CalledProcessError: ERROR: Video unavailable\nok\ntest_one_shared_word_is_not_enough (tests.test_ytdlp_js_runtime.EmbeddingPageTitleTests.test_one_shared_word_is_not_enough) ... ok\ntest_the_page_title_names_its_own_fly (tests.test_ytdlp_js_runtime.EmbeddingPageTitleTests.test_the_page_title_names_its_own_fly) ... ok\ntest_an_explicit_path_is_used_as_given (tests.test_ytdlp_js_runtime.JsRuntimeTests.test_an_explicit_path_is_used_as_given) ... ok\ntest_only_an_unsupported_node_gives_none (tests.test_ytdlp_js_runtime.JsRuntimeTests.test_only_an_unsupported_node_gives_none) ... yt-dlp needs node >= 20 to solve YouTube challenges and none was found (checked PATH, nvm, volta, fnm); YouTube downloads will fail with 403\nok\ntest_the_newest_supported_node_is_chosen_over_the_first_on_path (tests.test_ytdlp_js_runtime.JsRuntimeTests.test_the_newest_supported_node_is_chosen_over_the_first_on_path) ... yt-dlp JS runtime: node:/home/u/.nvm/versions/node/v24/bin/node (v24.15.0)\nok\n\n----------------------------------------------------------------------\nRan 1800 tests in 47.874s\n\nOK (skipped=10)\n",
+  "output_log": "/tmp/aria-phase6-resume/project-clones/run-blackfly-private-verifier-fixed.verification/tests-1791551657226965578.log",
+  "ran_by": "aria",
+  "sandbox": "bwrap: private roots/PID/IPC, writable workspace, trusted toolchains read-only, no network",
+  "workspace": {
+    "workspace": "/tmp/aria-phase6-resume/project-clones/run-blackfly-private-verifier-fixed",
+    "base_commit": "c7108fce243c071791ebff02b47c25283280c4b8",
+    "source": "/media/jeff/C/fly_fishing_project",
+    "source_uncommitted_changes": true,
+    "verification_toolchains": [
+      "/media/jeff/C/fly_fishing_project/venv",
+      "/media/jeff/C/fly_fishing_project/.venv",
+      "/home/jeff/.nvm/versions/node/v24.15.0/bin/node"
+    ]
+  },
+  "counts": {
+    "methods_run": 1800,
+    "passed": 1797,
+    "method_skips": 3,
+    "class_fixture_skips": 7,
+    "failed": 0
+  },
+  "durable_output_log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/blackfly-private-verifier-fixed-full-output.log",
+  "scope": "1800 methods run: 1797 passed, 3 skipped; 7 additional GUI class-fixture skips"
+}

@@ -1,0 +1,358 @@
+[
+  {
+    "slug": "aria",
+    "title": "ARIA",
+    "path": "/media/jeff/AI/jarvis-phase6-wt",
+    "purpose": "Local-first AI assistant, memory, routing, tools, agents, and orchestration.",
+    "test_command": "/media/jeff/AI/jarvis/venv/bin/python -m pytest -q -p no:cacheprovider",
+    "test_verification": {
+      "passed": true,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 66,
+      "seconds": 605.68,
+      "warnings": 2,
+      "log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/full-private-verifier-final.log",
+      "junit": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/full-private-verifier-final.xml",
+      "ran": true,
+      "exit_code": 0,
+      "scope": "Current dirty Phase 6 development worktree; live agent gates remain blocked"
+    },
+    "protected_paths": [
+      "data/",
+      "backups/",
+      ".env",
+      "data/jarvis.env",
+      "scratch/",
+      "/media/jeff/AI/aria-backups",
+      "/media/jeff/AI/jarvis-data-backups"
+    ],
+    "allowed_agents": [],
+    "inventory": {
+      "git": {
+        "head": "22aba4c5a6488f614c304095c8baae1f06eea8c2",
+        "branch": "aria/phase6-certification",
+        "uncommitted_entries": 68,
+        "tracked_files": 2562,
+        "remote": "https://github.com/nhflyguy1970-oss/Aria.git"
+      },
+      "source_roots": [
+        "aria_acm",
+        "aria_core",
+        "docs",
+        "jarvis",
+        "main.py",
+        "scripts",
+        "tests"
+      ],
+      "databases": [
+        "scratch/aria-data/mcp.db",
+        "scratch/phase5-protected/production.db"
+      ],
+      "databases_total": 2,
+      "config": [
+        "pyproject.toml",
+        "pytest.ini",
+        "requirements.txt"
+      ],
+      "credential_files": [],
+      "services": [
+        "jarvis.service (user unit, :8765)",
+        "ollama :11434 (ARIA's models)"
+      ],
+      "backups": [
+        "backups/",
+        "/media/jeff/AI/aria-backups",
+        "/media/jeff/AI/jarvis-data-backups"
+      ],
+      "production_data": [
+        "data/",
+        "backups/",
+        "scratch/"
+      ]
+    },
+    "known_as": "aria",
+    "memory_namespace": "aria",
+    "source": "project registry"
+  },
+  {
+    "slug": "blackfly",
+    "title": "BlackFly",
+    "path": "/media/jeff/C/fly_fishing_project",
+    "purpose": "Fly-fishing recipe discovery, scraping, and data processing.",
+    "test_command": "/media/jeff/C/fly_fishing_project/venv/bin/python -m unittest discover -s tests -t .",
+    "test_verification": {
+      "ran": true,
+      "command": "FLY_OUTPUT_DIR=\"$PWD/output\" XDG_CACHE_HOME=/tmp/blackfly-cache /media/jeff/C/fly_fishing_project/venv/bin/python -m unittest discover -v -s tests -t .",
+      "exit_code": 0,
+      "passed": true,
+      "seconds": 48.9,
+      "output_tail": "hallenge) ... ok\ntest_cooldown_does_not_create_subtitle_absence (tests.test_youtube_pipeline_repair.PipelineTests.test_cooldown_does_not_create_subtitle_absence) ... ok\ntest_deferral_retry_resumes_after_restart (tests.test_youtube_pipeline_repair.PipelineTests.test_deferral_retry_resumes_after_restart) ... ok\ntest_direct_http_is_controlled_and_buffers_under_lease (tests.test_youtube_pipeline_repair.PipelineTests.test_direct_http_is_controlled_and_buffers_under_lease) ... ok\ntest_enabled_verified_session_is_used_on_first_attempt (tests.test_youtube_pipeline_repair.PipelineTests.test_enabled_verified_session_is_used_on_first_attempt) ... ok\ntest_explicit_reconnect_recovers_auth_jobs_not_challenge (tests.test_youtube_pipeline_repair.PipelineTests.test_explicit_reconnect_recovers_auth_jobs_not_challenge) ... ok\ntest_full_authorization_header_is_redacted (tests.test_youtube_pipeline_repair.PipelineTests.test_full_authorization_header_is_redacted) ... ok\ntest_rate_deadline_cannot_be_cleared_by_security_review (tests.test_youtube_pipeline_repair.PipelineTests.test_rate_deadline_cannot_be_cleared_by_security_review) ... ok\ntest_replay_canonical_duplicates_and_cached_positive_speech (tests.test_youtube_pipeline_repair.PipelineTests.test_replay_canonical_duplicates_and_cached_positive_speech) ... ok\ntest_title_rejects_before_speech_or_frames (tests.test_youtube_pipeline_repair.PipelineTests.test_title_rejects_before_speech_or_frames) ... ok\ntest_a_403_does_not_cycle_player_clients (tests.test_ytdlp_js_runtime.AudioForbiddenRetryTests.test_a_403_does_not_cycle_player_clients) ... yt_dlp_download_audio failed: AUTH_REQUIRED: CalledProcessError: ERROR: unable to download video data: HTTP Error 403: Forbidden\nok\ntest_other_failures_are_not_retried (tests.test_ytdlp_js_runtime.AudioForbiddenRetryTests.test_other_failures_are_not_retried) ... yt_dlp_download_audio failed: DEFINITIVE_ABSENCE: CalledProcessError: ERROR: Video unavailable\nok\ntest_one_shared_word_is_not_enough (tests.test_ytdlp_js_runtime.EmbeddingPageTitleTests.test_one_shared_word_is_not_enough) ... ok\ntest_the_page_title_names_its_own_fly (tests.test_ytdlp_js_runtime.EmbeddingPageTitleTests.test_the_page_title_names_its_own_fly) ... ok\ntest_an_explicit_path_is_used_as_given (tests.test_ytdlp_js_runtime.JsRuntimeTests.test_an_explicit_path_is_used_as_given) ... ok\ntest_only_an_unsupported_node_gives_none (tests.test_ytdlp_js_runtime.JsRuntimeTests.test_only_an_unsupported_node_gives_none) ... yt-dlp needs node >= 20 to solve YouTube challenges and none was found (checked PATH, nvm, volta, fnm); YouTube downloads will fail with 403\nok\ntest_the_newest_supported_node_is_chosen_over_the_first_on_path (tests.test_ytdlp_js_runtime.JsRuntimeTests.test_the_newest_supported_node_is_chosen_over_the_first_on_path) ... yt-dlp JS runtime: node:/home/u/.nvm/versions/node/v24/bin/node (v24.15.0)\nok\n\n----------------------------------------------------------------------\nRan 1800 tests in 47.874s\n\nOK (skipped=10)\n",
+      "output_log": "/tmp/aria-phase6-resume/project-clones/run-blackfly-private-verifier-fixed.verification/tests-1791551657226965578.log",
+      "ran_by": "aria",
+      "sandbox": "bwrap: private roots/PID/IPC, writable workspace, trusted toolchains read-only, no network",
+      "workspace": {
+        "workspace": "/tmp/aria-phase6-resume/project-clones/run-blackfly-private-verifier-fixed",
+        "base_commit": "c7108fce243c071791ebff02b47c25283280c4b8",
+        "source": "/media/jeff/C/fly_fishing_project",
+        "source_uncommitted_changes": true,
+        "verification_toolchains": [
+          "/media/jeff/C/fly_fishing_project/venv",
+          "/media/jeff/C/fly_fishing_project/.venv",
+          "/home/jeff/.nvm/versions/node/v24.15.0/bin/node"
+        ]
+      },
+      "counts": {
+        "methods_run": 1800,
+        "passed": 1797,
+        "method_skips": 3,
+        "class_fixture_skips": 7,
+        "failed": 0
+      },
+      "durable_output_log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/blackfly-private-verifier-fixed-full-output.log",
+      "scope": "1800 methods run: 1797 passed, 3 skipped; 7 additional GUI class-fixture skips"
+    },
+    "protected_paths": [
+      "output/",
+      "backups/",
+      "blackfly.env",
+      ".env",
+      "config/",
+      "bench_out/",
+      ".aider.tags.cache.v4/",
+      "flyfish-stack.service"
+    ],
+    "allowed_agents": [],
+    "inventory": {
+      "git": {
+        "head": "c7108fce243c071791ebff02b47c25283280c4b8",
+        "branch": "master",
+        "uncommitted_entries": 6,
+        "tracked_files": 302,
+        "remote": "https://github.com/nhflyguy1970-oss/blackfly-fly-tying.git"
+      },
+      "source_roots": [
+        "blackfly_adaptive.py",
+        "blackfly_ai.py",
+        "blackfly_book_cache.py",
+        "blackfly_book_dressings.py",
+        "blackfly_book_names.py",
+        "blackfly_circuit_breaker.py",
+        "blackfly_cli.py",
+        "blackfly_completeness.py",
+        "blackfly_content_index.py",
+        "blackfly_corpus_sync.py",
+        "blackfly_crawl_brain.py",
+        "blackfly_crawl_filters.py",
+        "blackfly_db.py",
+        "blackfly_dedup.py",
+        "blackfly_dedup_apply.py",
+        "blackfly_dedup_audit.py",
+        "blackfly_deferred.py",
+        "blackfly_discovery_store.py",
+        "blackfly_embedding_contract.py",
+        "blackfly_entomology.py",
+        "blackfly_env.py",
+        "blackfly_export.py",
+        "blackfly_extra_sources.py",
+        "blackfly_fetch.py",
+        "blackfly_fly_videos.py",
+        "blackfly_gold.py",
+        "blackfly_gpu.py",
+        "blackfly_gpu_exclusive.py",
+        "blackfly_grounding.py",
+        "blackfly_gui.py",
+        "blackfly_gutenberg.py",
+        "blackfly_hashes.py",
+        "blackfly_healing.py",
+        "blackfly_http.py",
+        "blackfly_image_intelligence.py",
+        "blackfly_image_memory.py",
+        "blackfly_image_receipts.py",
+        "blackfly_image_vision.py",
+        "blackfly_images.py",
+        "blackfly_inference_runtime.py"
+      ],
+      "databases": [
+        ".aider.tags.cache.v4/cache.db",
+        "bench_out/after/book_cache.sqlite3",
+        "bench_out/after/fetch_cache_full.sqlite3",
+        "bench_out/before/fetch_cache_full.sqlite3",
+        "output/book_cache.sqlite3",
+        "output/discovery.sqlite3",
+        "output/fetch_cache.sqlite3",
+        "output/fetch_cache_full.sqlite3",
+        "output/fetch_cache_video.sqlite3",
+        "output/image_intelligence.sqlite3",
+        "output/scratch/cleanup_validation.sqlite3",
+        "output/youtube_access/state.sqlite3",
+        "tests/output/fetch_cache_video.sqlite3"
+      ],
+      "databases_total": 13,
+      "config": [
+        "requirements.txt",
+        "config/",
+        ".env.example"
+      ],
+      "credential_files": [
+        "blackfly.env"
+      ],
+      "services": [
+        "flyfish-stack.service (inactive at registration)",
+        "ffp-backup.timer"
+      ],
+      "backups": [
+        "backups/",
+        "ffp-backup.timer"
+      ],
+      "production_data": [
+        "output/",
+        "backups/",
+        "config/",
+        "bench_out/",
+        ".aider.tags.cache.v4/"
+      ]
+    },
+    "known_as": "blackfly",
+    "memory_namespace": "blackfly",
+    "source": "project registry"
+  },
+  {
+    "slug": "fly-tying-reference",
+    "title": "Fly Tying Reference",
+    "path": "/media/jeff/C/fly_tying_reference",
+    "purpose": "Offline fly-tying and fly-fishing reference application.",
+    "test_command": "/media/jeff/C/fly_tying_reference/venv/bin/python -m pytest -q -p no:cacheprovider",
+    "test_verification": {
+      "ran": true,
+      "command": "/media/jeff/C/fly_tying_reference/venv/bin/python -m pytest -q -ra -p no:cacheprovider --junitxml=phase6-private-verification.xml",
+      "exit_code": 0,
+      "passed": true,
+      "seconds": 52.3,
+      "output_tail": "y:40: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_polish.py:40: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:207: no video index present\nSKIPPED [1] tests/test_review_fixes.py:226: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:267: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:424: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:436: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:447: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:586: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:596: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:726: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:743: no book-sourced records in this library\nSKIPPED [1] tests/test_review_fixes.py:1107: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1361: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [4] tests/test_review_fixes.py:1413: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [2] tests/test_review_fixes.py:1428: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [3] tests/test_review_fixes.py:1440: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1453: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1466: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1480: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1840: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:1849: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1871: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1894: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1993: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smart_desk.py:8: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smart_desk.py:137: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:128: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:146: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:159: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:177: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:194: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:206: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\n1069 passed, 97 skipped in 51.85s\n",
+      "output_log": "/tmp/aria-phase6-resume/project-clones/run-ftr-private-full-final.verification/tests-1791551915708416386.log",
+      "ran_by": "aria",
+      "sandbox": "bwrap: private roots/PID/IPC, writable workspace, trusted toolchains read-only, no network",
+      "workspace": {
+        "workspace": "/tmp/aria-phase6-resume/project-clones/run-ftr-private-full-final",
+        "base_commit": "e630851000168cf5d2ff7213cf154453e3730010",
+        "source": "/media/jeff/C/fly_tying_reference",
+        "source_uncommitted_changes": true,
+        "verification_toolchains": [
+          "/media/jeff/C/fly_tying_reference/venv",
+          "/home/jeff/.nvm/versions/node/v24.15.0/bin/node"
+        ]
+      },
+      "counts": {
+        "passed": 1069,
+        "failed": 0,
+        "skipped": 97
+      },
+      "skip_reasons": {
+        "BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)": 86,
+        "install-on-laptop.sh is generated (make-laptop-installer.sh) and not tracked": 1,
+        "library not available": 1,
+        "no Adams patterns in dataset": 1,
+        "no video index present": 1,
+        "needs a populated library": 6,
+        "no book-sourced records in this library": 1
+      },
+      "durable_output_log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/ftr-private-full-final-full-output.log",
+      "scope": "Final restricted full clone: 1069 passed, 0 failed, 97 skipped; 30 repaired backup cases also pass; populated production datasets are hidden"
+    },
+    "protected_paths": [
+      "data/",
+      "reference_data/",
+      "ftr-dual-gpu.conf",
+      "fly-tying-reference-server.service",
+      "ftr-ai-text.service",
+      "ftr-ai-vision.service"
+    ],
+    "allowed_agents": [],
+    "inventory": {
+      "git": {
+        "head": "e630851000168cf5d2ff7213cf154453e3730010",
+        "branch": "master",
+        "uncommitted_entries": 1,
+        "tracked_files": 238,
+        "remote": "github.com:nhflyguy1970-oss/fly-tying-reference.git"
+      },
+      "source_roots": [
+        "advisories.py",
+        "aliases.py",
+        "angler_knowledge.py",
+        "api_util.py",
+        "app.py",
+        "assistant_retrieval.py",
+        "barcode_title.py",
+        "bench.py",
+        "book_index.py",
+        "book_sources.py",
+        "books.py",
+        "box_builder.py",
+        "camera_permission.py",
+        "conditions.py",
+        "config.py",
+        "context_intel.py",
+        "curation.py",
+        "data_loader.py",
+        "database.py",
+        "design_lab.py",
+        "desktop.py",
+        "entomology.py",
+        "evidence_verification.py",
+        "field_observe.py",
+        "field_pack.py",
+        "field_sync.py",
+        "fishing.py",
+        "fishing_chain.py",
+        "fishing_exposure.py",
+        "fly_taxonomy.py",
+        "hatch.py",
+        "hatch_overlay.py",
+        "hatch_smart.py",
+        "hooks.py",
+        "image_intel.py",
+        "insect_id.py",
+        "knowledge.py",
+        "knowledge_exchange.py",
+        "library_integrity.py",
+        "library_memo.py"
+      ],
+      "databases": [
+        "data/materials.db",
+        "data/books/index.sqlite3",
+        "data/repair_backups/20261001T112524Z/materials.db",
+        "data/snapshots/materials-before-testdata-cleanup-2026-09-26.db",
+        "data/snapshots/materials_2026-09-14T173720.db",
+        "data/snapshots/materials_73803a8dfffe41a0b77b4eac8a284254.db",
+        "data/snapshots/materials_95ec21dc03964e8585eccc563511f4a4.db"
+      ],
+      "databases_total": 7,
+      "config": [
+        "pyproject.toml",
+        "requirements.txt",
+        "ftr-dual-gpu.conf"
+      ],
+      "credential_files": [],
+      "services": [
+        "fly-tying-reference-server.service",
+        "ftr-ai-text.service (:11435, CUDA)",
+        "ftr-ai-vision.service (:11436, Vulkan RX 7600)",
+        "ftr-backup.timer / ftr-backup.path"
+      ],
+      "backups": [
+        "data/snapshots/",
+        "data/repair_backups/",
+        "ftr-backup \u2192 /mnt/wwn-0x5000c500e7af8167-part1 \u2192 cloud"
+      ],
+      "production_data": [
+        "data/",
+        "reference_data/"
+      ]
+    },
+    "known_as": "fly-tying-reference",
+    "memory_namespace": "fly-tying-reference",
+    "source": "project registry"
+  }
+]

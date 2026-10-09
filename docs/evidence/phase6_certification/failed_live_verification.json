@@ -1,0 +1,8 @@
+{
+  "private_run_directory": "scratch/phase6-certification/live-pipeline-1791566191795936730",
+  "classification": "invalid end-to-end compatibility attempt",
+  "task_output": "verified diff and independent fixture test passed",
+  "supervisor": "failed from the incorrect quarantine status constant; continuity bookkeeping absent",
+  "old_harness_result": "printed LIVE_PIPELINE_OK because it checked only the verified run receipt",
+  "disposition": "not accepted as live compatibility evidence; final harness checks mission completion and verified continuity record; successful final run run_2c72c9a7a4"
+}

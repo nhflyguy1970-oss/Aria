@@ -1,0 +1,37 @@
+{
+  "aria": {
+    "checked_before": 16649,
+    "checked_after": 16649,
+    "changed": [
+      "automation_product/rules.json",
+      "automation_product/run_history.json",
+      "continuity.db-shm",
+      "continuity.db-wal",
+      "mission_control/activity_correlation.json",
+      "mission_control/series/cpu.json",
+      "mission_control/series/gpu.json",
+      "mission_control/series/latency.json",
+      "mission_control/series/queue.json",
+      "mission_control/series/ram.json",
+      "mission_control/series/vram.json",
+      "missions.db-shm",
+      "missions.db-wal"
+    ],
+    "added": [],
+    "deleted": []
+  },
+  "ftr": {
+    "checked_before": 4409,
+    "checked_after": 4409,
+    "changed": [],
+    "added": [],
+    "deleted": []
+  },
+  "blackfly": {
+    "checked_before": 50051,
+    "checked_after": 50051,
+    "changed": [],
+    "added": [],
+    "deleted": []
+  }
+}

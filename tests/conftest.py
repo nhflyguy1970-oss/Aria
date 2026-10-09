@@ -102,6 +102,10 @@ def _reset_test_data_tree() -> None:
 
 
 os.environ["JARVIS_DATA_DIR"] = str(_TEST_DATA_ROOT)
+# Background classifier threads outlive individual test monkeypatches and can
+# reach another test's inference mock. Benchmark tests invoke the runner
+# explicitly; ordinary unit tests must never schedule live inference.
+os.environ["JARVIS_NLU_SKIP_BENCHMARK"] = "1"
 
 # The AI-Platform package put on sys.path above resolves its own storage roots
 # from these, independently of JARVIS_DATA_DIR — aiplatform.workstation.paths
@@ -300,6 +304,11 @@ def _no_live_inference(monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureR
         return real_urlopen(url, *args, **kwargs)
 
     monkeypatch.setattr(urllib.request, "urlopen", guarded)
+    if not allow_network:
+        # DDGS uses its own native HTTP transport, bypassing urllib entirely.
+        # Keep real research orchestration but require an explicit fake search
+        # transport in unit tests rather than silently querying the Internet.
+        monkeypatch.setattr("jarvis.web_search._ddgs_package_search", lambda *a, **k: [])
 
 
 @pytest.fixture(autouse=True)
@@ -350,6 +359,7 @@ def assistant(data_dir: Path, mock_ollama, mock_proposals, mock_router_llm):
 def chat_app(assistant, data_dir, monkeypatch):
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
+
     from jarvis.gui import extra_routes
 
     monkeypatch.setattr("jarvis.gui.extra_routes.DATA_DIR", data_dir)

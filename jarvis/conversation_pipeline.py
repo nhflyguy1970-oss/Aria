@@ -132,7 +132,11 @@ def dispatch_action(
         )
     if has_action(action):
         # Chat LLM can take a minute — never hold the request lock through it.
-        if action == "chat" and hasattr(assistant, "yield_request_lock"):
+        # The same is true of every other dispatched action: non-streaming
+        # web_search held the lock for its whole research, so "stop" and every
+        # later turn were refused. Routing above stays inside the lock; the
+        # long dispatch does not. Mirrors _dispatched_events on the stream path.
+        if hasattr(assistant, "yield_request_lock"):
             assistant.yield_request_lock()
         return call_action(assistant, action, params, message)
     # Fallback local chat handler
@@ -167,6 +171,23 @@ def decorate_result(
         result["type"] = "info"
     if result.get("module"):
         assistant.session.note_module(result["module"])
+    elif (
+        result.get("ok")
+        and getattr(assistant.session, "last_module", "") in ("vision", "document")
+    ):
+        # Policy A — active implicit artifact context: chat and runtime_* (and
+        # other successful turns) historically omitted result["module"], so
+        # note_module never ran and last_module stayed "vision"/"document".
+        # Deactivate that active context without clearing last_image /
+        # last_document_path (explicit path-only refs still work). Do not
+        # touch other modules (e.g. briefing) when the result has no module.
+        from jarvis.handlers.registry import get_spec
+
+        spec = get_spec(action)
+        fallback = (spec.module if spec and spec.module else None) or "general"
+        if fallback in ("vision", "document"):
+            fallback = "general"
+        assistant.session.note_module(fallback)
     # Preserve active conversational subject for bare follow-ups ("fix it").
     try:
         if message and getattr(assistant.session, "note_subject", None):

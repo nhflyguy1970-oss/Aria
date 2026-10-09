@@ -1,0 +1,103 @@
+{
+  "tests": [
+    {
+      "test": "tests.test_phase6_oci_isolation::test_real_codex_rejects_outside_operations[read]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_real_codex_rejects_outside_operations[write]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_real_codex_rejects_outside_operations[unlink]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_real_codex_rejects_outside_operations[rename]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_real_codex_rejects_outside_operations[symlink]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_real_codex_rejects_outside_operations[hardlink]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_readonly_workspace_enforced_for_real_native_process",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_host_process_credentials_projects_and_sockets_absent",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_no_privilege_or_network_escape",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_remove_kills_detached_native_command_tree",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_connect_broker_blocks_unapproved_authority_with_durable_evidence[GET https://chatgpt.com HTTP/1.1\\r\\n\\r\\n]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_connect_broker_blocks_unapproved_authority_with_durable_evidence[CONNECT localhost:443 HTTP/1.1\\r\\n\\r\\n]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_connect_broker_blocks_unapproved_authority_with_durable_evidence[CONNECT 127.0.0.1:443 HTTP/1.1\\r\\n\\r\\n]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_connect_broker_blocks_unapproved_authority_with_durable_evidence[CONNECT chatgpt.com:80 HTTP/1.1\\r\\n\\r\\n]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_connect_broker_blocks_unapproved_authority_with_durable_evidence[CONNECT chatgpt.com.attacker.com:443 HTTP/1.1\\r\\n\\r\\n]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_connect_broker_blocks_unapproved_authority_with_durable_evidence[CONNECT api.openai.com:443 HTTP/1.1\\r\\n\\r\\n]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_broker_rejects_private_dns_before_connect",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_certificate_missing_stale_or_fake_backend_never_qualifies",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_tls_sni_is_checked_independently_of_connect_authority[chatgpt.com-True]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_tls_sni_is_checked_independently_of_connect_authority[attacker.example-False]",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_isolation::test_isolated_watchdog_survives_host_client_disconnection",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_supervision::test_supervisor_cancels_real_native_tree_and_keeps_receipt",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_supervision::test_supervisor_timeout_kills_native_container",
+      "passed": true
+    },
+    {
+      "test": "tests.test_phase6_oci_supervision::test_restart_removes_only_recorded_dead_owner_container",
+      "passed": true
+    }
+  ],
+  "boundary_mechanism": "local pinned OCI + default seccomp + explicit docker-default AppArmor + no capabilities + no-new-privileges + private namespaces + exact approved binds; UDS TLS CONNECT broker with public IP and exact SNI enforcement",
+  "no_model_native_probes": true,
+  "full_gate": "scratch/phase6-certification/full-release.xml"
+}

@@ -1,0 +1,41 @@
+{
+  "cases": [
+    {
+      "argv": [
+        "/home/jeff/.nvm/versions/node/v24.15.0/bin/codex",
+        "sandbox",
+        "-P",
+        ":read-only",
+        "--enable",
+        "use_legacy_landlock",
+        "-C",
+        "/tmp/aria-phase6-resume/vendor-probe",
+        "--",
+        "/usr/bin/true"
+      ],
+      "exit_code": 101,
+      "stdout": "",
+      "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/aria-phase6-resume/vendor-probe/codex-home\"))\n\nthread 'main' (27) panicked at linux-sandbox/src/linux_run_main.rs:417:9:\nfilesystem-restricted execution requires bubblewrap to isolate app-server sockets\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+    },
+    {
+      "argv": [
+        "/home/jeff/.nvm/versions/node/v24.15.0/bin/codex",
+        "sandbox",
+        "-P",
+        ":read-only",
+        "--enable",
+        "use_legacy_landlock",
+        "-C",
+        "/tmp/aria-phase6-resume/vendor-probe",
+        "--",
+        "/usr/bin/touch",
+        "/tmp/aria-phase6-resume/vendor-probe/legacy-readonly-write"
+      ],
+      "exit_code": 101,
+      "stdout": "",
+      "stderr": "WARNING: proceeding, even though we could not create PATH aliases: Refusing to create helper binaries under temporary dir \"/tmp\" (codex_home: AbsolutePathBuf(\"/tmp/aria-phase6-resume/vendor-probe/codex-home\"))\n\nthread 'main' (27) panicked at linux-sandbox/src/linux_run_main.rs:417:9:\nfilesystem-restricted execution requires bubblewrap to isolate app-server sockets\nnote: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n"
+    }
+  ],
+  "write_created": false,
+  "model_requests": 0
+}

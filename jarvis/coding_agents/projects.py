@@ -50,9 +50,14 @@ def _record(meta: dict[str, Any]) -> dict[str, Any] | None:
         "slug": meta.get("slug"),
         "title": meta.get("title") or meta.get("slug"),
         "path": str(Path(path).expanduser()),
+        "purpose": meta.get("description") or "",
         "test_command": str(settings.get("test_command") or ""),
+        "test_verification": settings.get("test_verification") or {},
         "protected_paths": list(settings.get("protected_paths") or []),
+        "allowed_agents": list(settings.get("allowed_agents") or []),
+        "inventory": settings.get("inventory") or {},
         "known_as": known_key(f"{meta.get('slug')} {meta.get('title')}"),
+        "memory_namespace": meta.get("memory_namespace") or meta.get("slug"),
         "source": "project registry",
     }
 
@@ -121,10 +126,29 @@ def candidate(key: str) -> dict[str, Any]:
     return {"path": "", "evidence": "no local evidence found"}
 
 
-def register(path: str, *, title: str, test_command: str = "", protected_paths: list[str] | None = None) -> dict[str, Any]:
-    """Owner action: add a confirmed project (git repo) to the registry."""
+def register(path: str, *, title: str, test_command: str = "", protected_paths: list[str] | None = None,
+             purpose: str = "", inventory: dict[str, Any] | None = None, test_verification: dict | None = None,
+             allowed_agents: list[str] | None = None) -> dict[str, Any]:
+    """Owner action: add a confirmed git repository to the registry.
+
+    Uses ``create_project`` rather than ``import_git_repo``: registration must not
+    start a background knowledge sync of the repository — indexing a project is a
+    separate, explicit decision.
+    """
+    from jarvis.git_util import is_repo
+
+    repo = Path(path).expanduser().resolve()
+    if not repo.is_dir() or not is_repo(repo):
+        raise ValueError(f"Not a git repository: {repo}")
     reg = _registry()
-    meta = reg.import_git_repo(path, title=title)
-    settings = {"test_command": test_command, "protected_paths": list(protected_paths or [])}
-    reg.update_project(meta["slug"], agent_settings=settings)
+    existing = [p for p in reg.list_projects() if str(Path(str(p.get("git_path") or "")).expanduser()) == str(repo)]
+    meta = existing[0] if existing else reg.create_project(title, description=purpose, git_path=str(repo))
+    settings = {
+        "test_command": test_command,
+        "protected_paths": list(protected_paths or []),
+        "allowed_agents": list(allowed_agents or []),
+        "inventory": dict(inventory or {}),
+        "test_verification": dict(test_verification or {}),
+    }
+    reg.update_project(meta["slug"], agent_settings=settings, description=purpose or None)
     return get(meta["slug"]) or {}

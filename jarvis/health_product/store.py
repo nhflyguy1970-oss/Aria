@@ -608,6 +608,11 @@ def _migrate(conn: sqlite3.Connection) -> None:
 
 
 def connect() -> sqlite3.Connection:
+    # Opening this connection creates schema and runs migrations, including
+    # when provenance requests columns before the mutation's own guard.
+    from jarvis.health_product.trust import assert_writable
+
+    assert_writable()
     ensure_dirs()
     conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
     conn.row_factory = sqlite3.Row

@@ -173,7 +173,9 @@ def test_last_action_survives_session_restore():
     r("set a timer for 10 minutes", s)
     restored = SessionContext.from_dict(json.loads(json.dumps(s.to_dict())))
     assert restored.last_action == "planner_set_timer"
-    assert r("actually make it 15", restored)["params"]["duration"] == "15 minutes"
+    ask = r("actually make it 15", restored)  # Phase 6: confirmed after a restart, never just run
+    assert ask["needs_clarification"]
+    assert r("yes", restored)["params"]["duration"] == "15 minutes"
 
 
 def test_repeat_of_side_effect_needs_confirmation_then_runs_once():

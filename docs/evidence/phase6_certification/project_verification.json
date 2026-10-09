@@ -1,0 +1,96 @@
+{
+  "ftr": {
+    "result": {
+      "ran": true,
+      "command": "FTR_BLACKFLY_OUTPUT=/tmp/aria-phase6-certification-projects/run-cert_ftr_1791557020916219878/blackfly-fixture FTR_BLACKFLY_PROJECT=/tmp/aria-phase6-certification-projects/run-cert_ftr_1791557020916219878 /media/jeff/C/fly_tying_reference/venv/bin/python -m pytest -q -ra -p no:cacheprovider --junitxml=certification-project.xml",
+      "exit_code": 0,
+      "passed": true,
+      "seconds": 655.0,
+      "output_log": "/tmp/aria-phase6-certification-projects/run-cert_ftr_1791557020916219878.verification/tests-1791557677234070154.log",
+      "ran_by": "aria",
+      "sandbox": "bwrap: private roots/PID/IPC, writable workspace, trusted toolchains read-only, no network"
+    },
+    "workspace": {
+      "workspace": "/tmp/aria-phase6-certification-projects/run-cert_ftr_1791557020916219878",
+      "base_commit": "e630851000168cf5d2ff7213cf154453e3730010",
+      "source": "/media/jeff/C/fly_tying_reference",
+      "source_uncommitted_changes": true,
+      "verification_toolchains": [
+        "/media/jeff/C/fly_tying_reference/venv",
+        "/home/jeff/.nvm/versions/node/v24.15.0/bin/node"
+      ]
+    },
+    "fixtures": [
+      {
+        "file": "dataset.jsonl",
+        "sha256": "cc30c451fb948e5ad7f0957f181384f98a51639546d9c31bec9ce75e493c9c6c",
+        "bytes": 135870577
+      },
+      {
+        "file": "gold_recipes.jsonl",
+        "sha256": "db6d940988d198bea5126d783abb041e696c8b1072c6980d7d2e6a0284d4554a",
+        "bytes": 72495964
+      },
+      {
+        "file": "fly_video_index.jsonl",
+        "sha256": "705923e2c93c00ea1028315c966fba2c6398ba6b7142b509d9bf4ce60ca60494",
+        "bytes": 25122945
+      },
+      {
+        "file": "quarantined_records.json",
+        "sha256": "45144cb320072f15ddd8f12b8305d99f60f7e7f3ac33ef6ff93b988375ddb64e",
+        "bytes": 1254597
+      },
+      {
+        "file": "image_backfill.jsonl",
+        "sha256": "08b8eba743537e67cf44b230244602a96fff4a2a3fec63b74c42cb37f39e34fd",
+        "bytes": 5175232
+      }
+    ],
+    "command": "FTR_BLACKFLY_OUTPUT=/tmp/aria-phase6-certification-projects/run-cert_ftr_1791557020916219878/blackfly-fixture FTR_BLACKFLY_PROJECT=/tmp/aria-phase6-certification-projects/run-cert_ftr_1791557020916219878 /media/jeff/C/fly_tying_reference/venv/bin/python -m pytest -q -ra -p no:cacheprovider --junitxml=certification-project.xml",
+    "seconds": 655.0372625080054,
+    "counts": {
+      "passed": 1164,
+      "failed": 0,
+      "skipped": 2
+    }
+  },
+  "blackfly": {
+    "result": {
+      "ran": true,
+      "command": "FLY_OUTPUT_DIR=/tmp/aria-phase6-certification-projects/run-cert_blackfly_1791557031837122397/output XDG_CACHE_HOME=/tmp/aria-blackfly-cache xvfb-run -a -s \"-screen 0 1280x1024x24 -nolisten tcp -extension GLX\" /media/jeff/C/fly_fishing_project/venv/bin/python -m unittest discover -v -s tests -t .",
+      "exit_code": 0,
+      "passed": true,
+      "seconds": 68.0,
+      "output_log": "/tmp/aria-phase6-certification-projects/run-cert_blackfly_1791557031837122397.verification/tests-1791557597010401421.log",
+      "ran_by": "aria",
+      "sandbox": "bwrap: private roots/PID/IPC, writable workspace, trusted toolchains read-only, no network"
+    },
+    "workspace": {
+      "workspace": "/tmp/aria-phase6-certification-projects/run-cert_blackfly_1791557031837122397",
+      "base_commit": "c7108fce243c071791ebff02b47c25283280c4b8",
+      "source": "/media/jeff/C/fly_fishing_project",
+      "source_uncommitted_changes": true,
+      "verification_toolchains": [
+        "/media/jeff/C/fly_fishing_project/venv",
+        "/media/jeff/C/fly_fishing_project/.venv",
+        "/home/jeff/.nvm/versions/node/v24.15.0/bin/node"
+      ]
+    },
+    "fixtures": [
+      {
+        "file": "dataset.jsonl",
+        "sha256": "cc30c451fb948e5ad7f0957f181384f98a51639546d9c31bec9ce75e493c9c6c",
+        "bytes": 135870577
+      }
+    ],
+    "command": "FLY_OUTPUT_DIR=/tmp/aria-phase6-certification-projects/run-cert_blackfly_1791557031837122397/output XDG_CACHE_HOME=/tmp/aria-blackfly-cache xvfb-run -a -s \"-screen 0 1280x1024x24 -nolisten tcp -extension GLX\" /media/jeff/C/fly_fishing_project/venv/bin/python -m unittest discover -v -s tests -t .",
+    "counts": {
+      "methods_run": 1848,
+      "passed": 1846,
+      "failed": 0,
+      "method_skips": 2,
+      "class_fixture_skips": 0
+    }
+  }
+}

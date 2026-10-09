@@ -273,7 +273,7 @@ def build_briefing(
                     bits.append(f"BP {chk.get('bp_systolic')}/{chk.get('bp_diastolic')}")
                 if chk.get("blood_sugar") is not None:
                     bits.append(f"sugar {chk.get('blood_sugar')}")
-                lines.extend(["", f"**Health:** check-in on file" + (f" — {', '.join(bits)}" if bits else "") + "."])
+                lines.extend(["", "**Health:** check-in on file" + (f" — {', '.join(bits)}" if bits else "") + "."])
             else:
                 lines.extend(["", "**Health:** no daily check-in yet — open Health when ready."])
             if meds:

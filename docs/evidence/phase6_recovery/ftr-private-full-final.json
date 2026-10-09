@@ -1,0 +1,37 @@
+{
+  "ran": true,
+  "command": "/media/jeff/C/fly_tying_reference/venv/bin/python -m pytest -q -ra -p no:cacheprovider --junitxml=phase6-private-verification.xml",
+  "exit_code": 0,
+  "passed": true,
+  "seconds": 52.3,
+  "output_tail": "y:40: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_polish.py:40: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:207: no video index present\nSKIPPED [1] tests/test_review_fixes.py:226: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:267: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:424: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:436: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:447: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:586: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:596: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:726: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:743: no book-sourced records in this library\nSKIPPED [1] tests/test_review_fixes.py:1107: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1361: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [4] tests/test_review_fixes.py:1413: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [2] tests/test_review_fixes.py:1428: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [3] tests/test_review_fixes.py:1440: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1453: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1466: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1480: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1840: needs a populated library\nSKIPPED [1] tests/test_review_fixes.py:1849: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1871: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1894: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_review_fixes.py:1993: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smart_desk.py:8: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smart_desk.py:137: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:128: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:146: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:159: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:177: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:194: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\nSKIPPED [1] tests/test_smoke.py:206: BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)\n1069 passed, 97 skipped in 51.85s\n",
+  "output_log": "/tmp/aria-phase6-resume/project-clones/run-ftr-private-full-final.verification/tests-1791551915708416386.log",
+  "ran_by": "aria",
+  "sandbox": "bwrap: private roots/PID/IPC, writable workspace, trusted toolchains read-only, no network",
+  "workspace": {
+    "workspace": "/tmp/aria-phase6-resume/project-clones/run-ftr-private-full-final",
+    "base_commit": "e630851000168cf5d2ff7213cf154453e3730010",
+    "source": "/media/jeff/C/fly_tying_reference",
+    "source_uncommitted_changes": true,
+    "verification_toolchains": [
+      "/media/jeff/C/fly_tying_reference/venv",
+      "/home/jeff/.nvm/versions/node/v24.15.0/bin/node"
+    ]
+  },
+  "counts": {
+    "passed": 1069,
+    "failed": 0,
+    "skipped": 97
+  },
+  "skip_reasons": {
+    "BlackFly dataset not present (set FTR_BLACKFLY_OUTPUT)": 86,
+    "install-on-laptop.sh is generated (make-laptop-installer.sh) and not tracked": 1,
+    "library not available": 1,
+    "no Adams patterns in dataset": 1,
+    "no video index present": 1,
+    "needs a populated library": 6,
+    "no book-sourced records in this library": 1
+  },
+  "durable_output_log": "/media/jeff/AI/jarvis-phase6-wt/scratch/phase6-recovery/ftr-private-full-final-full-output.log",
+  "scope": "Final restricted full clone: 1069 passed, 0 failed, 97 skipped; 30 repaired backup cases also pass; populated production datasets are hidden"
+}

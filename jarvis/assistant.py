@@ -166,7 +166,7 @@ class JarvisAssistant:
                 self.last_apply_backup = self.last_apply_backups[-1].get("backup")
                 self.last_apply_path = self.last_apply_backups[-1].get("path")
         self._request_lock = threading.Lock()
-        self._holding_request_lock = False
+        self._lock_state = threading.local()
         UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         from jarvis.cheatsheets import seed_cheatsheets
 
@@ -476,6 +476,7 @@ class JarvisAssistant:
         attachment: dict | None = None,
         branch_id: str | None = None,
         attachment2: dict | None = None,
+        request_id: str = "",
     ) -> dict:
         from jarvis.env_loader import load_jarvis_env
         from jarvis.request_activity import begin, end
@@ -488,6 +489,14 @@ class JarvisAssistant:
             record_event("user_request", component="chat", detail=(message or "")[:120])
         except Exception:
             pass
+        # Same cancellation lifecycle as the stream path. Without this the
+        # non-streaming turn was invisible to "stop": current_request_id() was
+        # "", every web_search checkpoint was inert, synthesize_answer got an
+        # empty cancel key, and the research ran to completion under the lock.
+        from jarvis import chat_cancel as _chat_cancel
+
+        _cancel_key = (request_id or "").strip() or f"sync-{uuid.uuid4().hex}"
+        _cancel_token = _chat_cancel.bind_current(_cancel_key)
         try:
             # Match stream: never wait forever on a wedged prior request.
             lock_wait_s = float(os.getenv("JARVIS_REQUEST_LOCK_TIMEOUT_S", "3"))
@@ -498,14 +507,32 @@ class JarvisAssistant:
                     module=None,
                 )
             self._holding_request_lock = True
+            _chat_cancel.register_active(_cancel_key)
             try:
                 return self._process_unlocked(message, attachment, branch_id, attachment2)
             finally:
                 if self._holding_request_lock:
                     self._holding_request_lock = False
                     self._request_lock.release()
+                _chat_cancel.unregister_active(_cancel_key)
+                _chat_cancel.finish(_cancel_key)
         finally:
+            _chat_cancel.reset_current(_cancel_token)
             end()
+
+    @property
+    def _holding_request_lock(self) -> bool:
+        """Whether *this thread* holds the request lock.
+
+        A shared bool let thread A's cleanup release a lock owned by thread B —
+        threading.Lock tracks no owner, so the release succeeded silently and two
+        turns ran unguarded. Ownership is per-thread.
+        """
+        return bool(getattr(self._lock_state, "holding", False))
+
+    @_holding_request_lock.setter
+    def _holding_request_lock(self, value: bool) -> None:
+        self._lock_state.holding = bool(value)
 
     def yield_request_lock(self) -> None:
         """Release the chat request lock during long work (LLM, etc.).
@@ -701,6 +728,13 @@ class JarvisAssistant:
             return
         self._holding_request_lock = True
         self._stream_lite_ui = lite_ui
+        # Bind the request id for this worker thread so dispatched actions
+        # (web_search and friends) can honour "stop" / first-progress cancel.
+        from jarvis import chat_cancel as _chat_cancel
+
+        _cancel_key = (request_id or "").strip()
+        _cancel_token = _chat_cancel.bind_current(_cancel_key)
+        _chat_cancel.register_active(_cancel_key)
         try:
             # Bind / create latency trace in this worker thread (ContextVar-safe).
             try:
@@ -752,6 +786,9 @@ class JarvisAssistant:
                     self._request_lock.release()
                 except RuntimeError:
                     pass
+            _chat_cancel.unregister_active(_cancel_key)
+            _chat_cancel.finish(_cancel_key)
+            _chat_cancel.reset_current(_cancel_token)
             end()
 
     def _process_stream_unlocked(
@@ -903,6 +940,10 @@ class JarvisAssistant:
             prefer_queue: bool = True,
             done_lite_ui: bool = lite_ui,
         ) -> Iterator[dict]:
+            # Long dispatched work (web_search research, learn_about, …) must not
+            # hold the global request lock for its whole duration — that is what
+            # made every later turn fail with "Another request is still finishing".
+            self.yield_request_lock()
             if status:
                 yield {"type": "status", "message": status}
             result = dispatch_action(self, action, params, message, prefer_queue=prefer_queue)
@@ -912,6 +953,11 @@ class JarvisAssistant:
             if lite_ui:
                 yield _done(self._enqueue_coding(params, message), done_lite_ui=True)
                 return
+            # Multi-step agent work (LLM steps + file writes) must not hold the
+            # global request lock — it blocked every unrelated turn with
+            # "Another request is still finishing". Same principle as the
+            # coding_propose queue note below.
+            self.yield_request_lock()
             events = self._engineering_stream(
                 "coding_agent_stream",
                 params,
@@ -962,6 +1008,7 @@ class JarvisAssistant:
             if lite_ui:
                 yield from _dispatched_events(status="Queuing coding create…", done_lite_ui=True)
                 return
+            self.yield_request_lock()
             events = self._engineering_stream("coding_create_stream", params, message)
             for event in _decorated_events(events):
                 yield event
@@ -984,6 +1031,7 @@ class JarvisAssistant:
                 if lite_ui:
                     yield _done(self._enqueue_coding(agent_params, message), done_lite_ui=True)
                     return
+                self.yield_request_lock()
                 events = self._engineering_stream(
                     "coding_agent_stream",
                     agent_params,
@@ -1080,13 +1128,26 @@ class JarvisAssistant:
                 )
                 return
 
+            # Search + LLM expansion is long I/O — do not hold the request lock.
+            self.yield_request_lock()
+            from jarvis.chat_cancel import current_cancelled
+
+            if current_cancelled():
+                yield _done(_ok("Stopped.", module="briefing", type="stopped", stopped=True))
+                return
             yield {"type": "status", "message": f"Researching: {headline.get('title', 'story')}…"}
             search_terms = headline.get("title", "")
             if headline.get("source"):
                 search_terms += f" {headline['source']}"
             results = web_search.search(search_terms, limit=6)
+            if current_cancelled():
+                yield _done(_ok("Stopped.", module="briefing", type="stopped", stopped=True))
+                return
             full: list[str] = []
             for chunk in expand_headline_detail_stream(headline, user_query=query, results=results):
+                if current_cancelled():
+                    yield _done(_ok("Stopped.", module="briefing", type="stopped", stopped=True))
+                    return
                 full.append(chunk)
                 yield {"type": "token", "content": chunk}
             answer = "".join(full).strip()
@@ -1132,8 +1193,19 @@ class JarvisAssistant:
                 query = expand_followup_query(query, session)
             except Exception:
                 extract_research_entities = None  # type: ignore
+            # Research is long I/O — never hold the global request lock through it,
+            # and stop between phases when the request is cancelled.
+            self.yield_request_lock()
+            from jarvis.chat_cancel import current_cancelled
+
+            if current_cancelled():
+                yield _done(_ok("Stopped.", module="general", type="stopped", stopped=True))
+                return
             yield {"type": "status", "message": "Searching the web…"}
             results = web_search.search(query)
+            if current_cancelled():
+                yield _done(_ok("Stopped.", module="general", type="stopped", stopped=True))
+                return
             if not results:
                 yield _done(
                     _err(
@@ -1147,9 +1219,15 @@ class JarvisAssistant:
                 results = web_search.enrich_results_with_pages(query, results)
             except Exception:
                 pass
+            if current_cancelled():
+                yield _done(_ok("Stopped.", module="general", type="stopped", stopped=True))
+                return
             yield {"type": "status", "message": f"Summarizing {len(results)} results…"}
             # Gated synthesis (authority filter + postcheck) — do not stream raw unverified tokens.
             answer = web_search.synthesize_answer(query, results)
+            if current_cancelled():
+                yield _done(_ok("Stopped.", module="general", type="stopped", stopped=True))
+                return
             if answer:
                 yield {"type": "token", "content": answer}
             try:
@@ -1212,6 +1290,14 @@ class JarvisAssistant:
                 task = vision_task_for_question(question)
                 question = build_vision_prompt(question, task)
 
+            # Vision model load + token stream is long work — releasing the lock
+            # here is what stops describe_image from blocking unrelated chat.
+            self.yield_request_lock()
+            from jarvis.chat_cancel import current_cancelled
+
+            if current_cancelled():
+                yield _done(_ok("Stopped.", module="vision", type="stopped", stopped=True))
+                return
             yield {
                 "type": "status",
                 "message": f"Analyzing image ({llm.vision_model_for_task(task)})…",
@@ -1219,6 +1305,9 @@ class JarvisAssistant:
 
             full = []
             for token in self.vision.analyze_stream(question, path, task=task):
+                if current_cancelled():
+                    yield _done(_ok("Stopped.", module="vision", type="stopped", stopped=True))
+                    return
                 if token.startswith("ERROR:"):
                     yield _done(_err(token))
                     return

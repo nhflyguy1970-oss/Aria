@@ -1,0 +1,66 @@
+{
+  "docs/ARIA_FUTURE_ARCHITECTURE_ROADMAP.md": {
+    "unchanged_since_takeover": true,
+    "sha256": "9f46c6bcd9f06b859885646d4efd2ffa24c929dcdefc537c92e658cb4d70035d"
+  },
+  "jarvis/application/standalone/workstation_impl/phase.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "9bc07580a62c976d20958c7d85fb165d0438b8ddcfccf096cd23b5f5ad1ba7b1"
+  },
+  "jarvis/behaviors/vision/engine.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "d4ef4dc46c129367174c6f9c6c6239af9373f71445ec0e5bb0be12461d220fbe"
+  },
+  "jarvis/calendar_ics.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "65c6284dd3d5e8ef18d831eda01f635483a4fdc3fcf77354815cd2e3508a78af"
+  },
+  "jarvis/capabilities.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "e982e078e4d3e5a3c35d0820110c4613f686edb0e83c98b12740d1bf0628805f"
+  },
+  "jarvis/gui/static/image_engine.js": {
+    "unchanged_since_takeover": true,
+    "sha256": "5e93c282fc54d6c3ca5186bd26928f886766ea3aa808ad6d474c46da8de15aaf"
+  },
+  "jarvis/hardware_tune.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "4ba65fecd9fc325f928769bbcc21aee3dd9eff6048cc5aba137e1bd3c99d56ea"
+  },
+  "jarvis/model_store.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "cd21f24ce70cb94acc5ae4a71a85417d77a89c91411f7e65c7c62dfe536f6d3d"
+  },
+  "jarvis/models_product/catalog.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "3f3cc8c682870ab8fa90a7841491c36ffba73c12717178bf5cd5683a35adeb00"
+  },
+  "jarvis/modules/image.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "4502e5efdbd320f72735aa01616b52f54b7a008a7045370d8703817c47fbca3a"
+  },
+  "jarvis/modules/video.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "c21d5d9b9e38ca28194d5e6314064e7f2a6235f5e5c98fa1e9f6bebcbc930501"
+  },
+  "jarvis/ollama_runtime.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "e2b4240a02e4b490ae6d2ffd9fb18c7f41ce18d3476644a4f16f591ab5c95671"
+  },
+  "scripts/install-dependencies.sh": {
+    "unchanged_since_takeover": true,
+    "sha256": "f7fced1bfc4b0d71c2f86e9017a6c6100017637fd54a6838cce4b0242558bc02"
+  },
+  "scripts/pull-models.sh": {
+    "unchanged_since_takeover": true,
+    "sha256": "18e3ccdc2f605beb277cf87363180d13329ff2a60fa6074c2b84187124caa540"
+  },
+  "tests/test_vision.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "4cc9779cf14155361b38bad757198de7332dd5eb3ddf1f209a80d47559d8508a"
+  },
+  "tests/test_workstation_phase.py": {
+    "unchanged_since_takeover": true,
+    "sha256": "793c136a1b377d8c67655e2230585d02124b2566e9e2faa2ca4843d8fcd2d099"
+  }
+}

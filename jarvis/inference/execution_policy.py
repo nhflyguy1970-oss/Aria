@@ -295,7 +295,6 @@ def apply_policy_to_route(
     workload = _role_to_workload(role)
     policy = load_policy()
     wl = (policy or {}).get("workloads", {}).get(workload) if policy else None
-    requested = (model or "").strip()
 
     # Operator-saved role models beat benchmark winners. Toy-prompt benchmarks
     # (e.g. deepseek-coder latency) must not override Settings → Coding model

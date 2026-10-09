@@ -127,13 +127,26 @@ def _score_json(raw: str) -> tuple[bool, str | None]:
     return bool(intent), intent
 
 
+def _classifier_system_prompt() -> str:
+    """The exact system prompt the live classifier uses.
+
+    Benchmarking a different prompt measures nothing about production accuracy.
+    """
+    from jarvis.nlu.semantic import _system_prompt
+
+    return _system_prompt()
+
+
 def _bench_model_device(model: str, device: str) -> dict[str, Any]:
     from jarvis import llm
 
     opts = ollama_options_for_device(device)
-    system = (
-        'Reply JSON only: {"intent":"runtime","action":"status","subject":"gpu","confidence":0.9}'
-    )
+    # Benchmark the prompt production actually uses. The old prompt was a bare
+    # literal example — {"intent":"runtime",...} — with no task and no intent
+    # vocabulary, so models either echoed it or invented labels ("definition",
+    # "informational"). That scored every candidate at 0.0 or 1/6 = 16.7% and
+    # pinned placement to the structural fallback permanently.
+    system = _classifier_system_prompt()
     latencies: list[float] = []
     json_ok = 0
     accuracy_hits = 0

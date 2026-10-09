@@ -51,35 +51,91 @@ def measured() -> dict[str, Any]:
         return {}
 
 
-def select_agent(kind: str, mode: str, *, named: str = "") -> dict[str, Any]:
+MIN_SAMPLES = 2
+
+
+def _agent_scores(agent: str, kind: str, data: dict[str, Any]) -> dict[str, Any]:
+    cat = ((data.get("by_category") or {}).get(kind) or {}).get(agent)
+    summ = (data.get("summary") or {}).get(agent) or {}
+    return {"category": cat, "summary": summ}
+
+
+def select_agent(kind: str, mode: str, *, named: str = "", project: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Pick an agent and say why, criterion by criterion.
+
+    1 capabilities (mode) · 2 sign-in/availability · 3 measured correctness on this
+    kind of task · 4 permission compatibility (boundary record) · 5 project
+    requirements (allowed agents) · 6 time/resources · 7 reliability.
+    An owner override (``named``) skips ranking but none of the checks.
+    """
     statuses = discovery.discover()
-    if named:
-        st = statuses.get(named)
-        if not st or not st.installed:
-            return {"error": f"{discovery.LABELS.get(named, named)} is not installed."}
+    data = measured()
+    allowed = list(((project or {}).get("agent_settings") or {}).get("allowed_agents") or []) or \
+        list((project or {}).get("allowed_agents") or [])
+    reasons: dict[str, list[str]] = {}
+    eligible = []
+    for agent, st in statuses.items():
+        from jarvis.coding_agents import runtime
+        st.execution = runtime.compatibility(agent, st.path, st.version)
+        why = reasons.setdefault(agent, [])
+        if not st.installed:
+            why.append("not installed")
+            continue
         if not st.usable:
-            why = "; ".join(st.notes + (["missing flags: " + ", ".join(st.missing_flags)] if st.missing_flags else [])
-                            + ([f"signed out ({st.auth.get('evidence')})"] if st.auth.get("state") == "logged_out" else []))
-            return {"error": f"{st.label} can't be used: {why or 'not ready'}."}
+            why.append("not usable (" + "; ".join(st.notes + st.missing_flags + [st.auth.get("state", "")]) + ")")
+            continue
         if mode not in st.modes:
-            return {"error": f"{st.label} does not support {mode.replace('_', '-')} work."}
-        return {"agent": named, "why": "named in the request"}
-    scores = (measured().get("by_category") or {}).get(kind) or {}
-    usable = [a for a, st in statuses.items() if st.usable and mode in st.modes]
-    if not usable:
-        return {"error": "No coding agent is installed, signed in and able to do this."}
-    ranked = sorted(
-        (a for a in usable if a in scores),
-        key=lambda a: (-float(scores[a].get("verified_pct") or 0), float(scores[a].get("p50_s") or 1e9)),
-    )
-    if ranked:
-        best = ranked[0]
-        s = scores[best]
-        return {"agent": best, "why": f"best measured on '{kind}' fixtures ({s.get('verified_pct')}% verified, "
-                                      f"p50 {s.get('p50_s')}s; n={s.get('n')})"}
-    order = ["codex", "claude_code", "antigravity"]
-    best = next(a for a in order if a in usable)
-    return {"agent": best, "why": f"no benchmark result for '{kind}' yet — default order, unmeasured"}
+            why.append(f"cannot do {mode.replace('_', '-')} work")
+            continue
+        if allowed and agent not in allowed:
+            why.append("not allowed for this project")
+            continue
+        summ = _agent_scores(agent, kind, data)["summary"]
+        if summ.get("violations") or summ.get("outside_attempts"):
+            why.append(f"boundary record: {summ.get('violations', 0)} violation(s), "
+                       f"{summ.get('outside_attempts', 0)} outside-workspace attempt(s) in the benchmark")
+            # Named requests cannot bypass an unresolved safety finding.
+            if not st.execution.get("boundary_history_reviewed"):
+                continue
+        eligible.append(agent)
+    if named:
+        if named not in statuses:
+            return {"error": f"Unknown agent {named!r}."}
+        if named not in eligible:
+            return {"error": f"{discovery.LABELS.get(named, named)} can't take this: {'; '.join(reasons[named])}."}
+        sc = _agent_scores(named, kind, data)["category"]
+        measured_note = (f"measured {sc['verified_pct']}% on '{kind}' (n={sc['n']})" if sc
+                         else f"unmeasured on '{kind}'")
+        return {"agent": named, "why": f"your choice (override); {measured_note}", "explanation": reasons,
+                "measured": bool(sc)}
+    if not eligible:
+        return {"error": "No coding agent is installed, signed in, permitted and able to do this: "
+                         + "; ".join(f"{a}: {', '.join(r)}" for a, r in reasons.items())}
+    ranked = []
+    for agent in eligible:
+        sc = _agent_scores(agent, kind, data)
+        cat, summ = sc["category"], sc["summary"]
+        runs_n = max(1, int(summ.get("runs") or 0))
+        reliability = (int(summ.get("execution_ok", summ.get("structured_ok")) or 0)
+                       - int(summ.get("timeouts") or 0)) / runs_n if summ else 0.0
+        enough = bool(cat) and int(cat.get("n") or 0) >= MIN_SAMPLES
+        ranked.append((agent, enough, float(cat["verified_pct"]) if cat else -1.0, reliability,
+                       float(cat["p50_s"]) if cat else 1e9, float(summ.get("cpu_s_total") or 0), cat))
+    ranked.sort(key=lambda r: (not r[1], -r[2], -r[3], r[4], r[5]))
+    best = ranked[0]
+    agent, enough, pct, rel, p50, cpu, cat = best
+    if not cat:
+        return {"agent": agent, "why": f"no benchmark result for '{kind}' — unmeasured; chose the first eligible agent",
+                "explanation": reasons, "measured": False}
+    ties = [r for r in ranked[1:] if r[1] == enough and r[2] == pct]
+    why = (f"{pct:.0f}% verified on '{kind}' fixtures (n={cat['n']}"
+           + ("" if enough else f", fewer than {MIN_SAMPLES} samples — weak evidence") + ")"
+           + (f"; tied on correctness with {', '.join(discovery.LABELS[t[0]] for t in ties)}, chosen for "
+              f"{'reliability' if rel > max(t[3] for t in ties) else 'speed'} (p50 {p50:.0f}s)" if ties else
+              f"; p50 {p50:.0f}s"))
+    for other in ranked[1:]:
+        reasons[other[0]].append(f"ranked below: {other[2]:.0f}% on '{kind}'" if other[6] else "unmeasured on this task")
+    return {"agent": agent, "why": why, "explanation": reasons, "measured": enough}
 
 
 def propose(message: str, *, agent_hint: str = "", task: str = "", session=None, project_hint: str = "") -> dict[str, Any]:
@@ -99,7 +155,7 @@ def propose(message: str, *, agent_hint: str = "", task: str = "", session=None,
     if "project" not in where:
         return {"question": "Which project should the agent work on? I don't have an active project for this conversation."}
     proj = where["project"]
-    choice = select_agent(kind, mode, named=named)
+    choice = select_agent(kind, mode, named=named, project=proj)
     if "error" in choice:
         return {"error": choice["error"]}
     agent = choice["agent"]

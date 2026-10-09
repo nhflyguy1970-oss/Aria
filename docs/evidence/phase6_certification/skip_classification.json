@@ -1,0 +1,497 @@
+{
+  "aria": [
+    {
+      "test": "tests.test_animatediff::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_audio_api::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_audio_job_cancel::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_audio_vst::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_brain_memory::test_stub",
+      "reason": "import dependency pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_branding::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_briefing_news::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_browser_e2e::test_real_navigate_and_screenshot",
+      "reason": "Playwright/Chromium not installed",
+      "classification": "environment-dependent",
+      "phase6_deployment_blocking": false,
+      "rationale": "Optional browser automation or owner journal export fixture; Phase 6 execution/approval paths have direct integration coverage."
+    },
+    {
+      "test": "tests.test_browser_e2e::test_extract_after_navigate",
+      "reason": "Playwright/Chromium not installed",
+      "classification": "environment-dependent",
+      "phase6_deployment_blocking": false,
+      "rationale": "Optional browser automation or owner journal export fixture; Phase 6 execution/approval paths have direct integration coverage."
+    },
+    {
+      "test": "tests.test_browser_e2e::test_modes_not_clobbered_by_state",
+      "reason": "Playwright/Chromium not installed",
+      "classification": "environment-dependent",
+      "phase6_deployment_blocking": false,
+      "rationale": "Optional browser automation or owner journal export fixture; Phase 6 execution/approval paths have direct integration coverage."
+    },
+    {
+      "test": "tests.test_cheatsheets::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_comfyui::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_comfyui_edit::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_comfyui_inpaint::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_comfyui_settings::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_computer_use::test_real_browser_navigate_extract_click",
+      "reason": "Playwright/Chromium unavailable",
+      "classification": "environment-dependent",
+      "phase6_deployment_blocking": false,
+      "rationale": "Optional browser automation or owner journal export fixture; Phase 6 execution/approval paths have direct integration coverage."
+    },
+    {
+      "test": "tests.test_daemon_watchdog::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_document_pipeline::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_documents_rag::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_engineering_3d::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_env_loader::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_gemini_live_bridge::test_stub",
+      "reason": "import dependency pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_git_util::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_hardware_tune::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_http_logging::test_stub",
+      "reason": "import dependency pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_instruction_follow::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_journal_crypto::test_owner_aug08_shape_accepted_as_envelope",
+      "reason": "owner export not present on this machine",
+      "classification": "environment-dependent",
+      "phase6_deployment_blocking": false,
+      "rationale": "Optional browser automation or owner journal export fixture; Phase 6 execution/approval paths have direct integration coverage."
+    },
+    {
+      "test": "tests.test_knowledge::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_lan::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_live_data_guard::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_mcp_server::test_stub",
+      "reason": "import dependency pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_media_jobs::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_media_jobs_recovery::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_meme_ops::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_memory::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_memory_context_stale::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_memory_polish::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_meshy_client::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_metrics::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_morning_briefing::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_movie_jarvis::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_movie_tiers::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_native_window::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_network_guard::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_phase1_platform::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_phase2::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_phase3::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_profile_name::test_stub",
+      "reason": "import dependency pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_profile_questionnaire::test_stub",
+      "reason": "import dependency pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_profiles::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_prompt_history::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_prompt_refresh::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_rate_limit::test_stub",
+      "reason": "import dependency pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_relationship_memory::test_stub",
+      "reason": "import dependency pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_resource_router::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_response_stream::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_song_safe::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_trust_memory::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_uncensored_auth::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_upgrade_wizard::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_upgrades_extras::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_vram_guard::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_watchdog::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_web_search_live::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_whisper_language::test_decompile_stub",
+      "reason": "decompiled test pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    },
+    {
+      "test": "tests.test_workflow_learning::test_stub",
+      "reason": "import dependency pending rewrite",
+      "classification": "intentional and acceptable",
+      "phase6_deployment_blocking": false,
+      "rationale": "Preexisting deferred legacy module; maintained Phase 6 paths are exercised."
+    }
+  ],
+  "ftr": [
+    {
+      "reason": "generated install-on-laptop.sh is not tracked",
+      "classification": "intentional and acceptable"
+    },
+    {
+      "reason": "no duplicate groups pending in copied fixture",
+      "classification": "intentional and acceptable"
+    }
+  ],
+  "blackfly": [
+    {
+      "reason": "owner Flatpak browser cookie path hidden",
+      "classification": "environment-dependent"
+    },
+    {
+      "reason": "external cuDNN without cuBLAS fixture unavailable",
+      "classification": "environment-dependent"
+    }
+  ],
+  "closed_fixture_gaps": {
+    "ftr": 95,
+    "blackfly": {
+      "dataset": 1,
+      "GUI_methods": 48,
+      "class_fixture_skips_remaining": 0
+    }
+  },
+  "requires_isolated_fixture_remaining": 0,
+  "phase6_deployment_blocking_skips": 0,
+  "limits": "No live browser automation, owner journal decryption export, live scraping, or GPU/library download certification is implied."
+}

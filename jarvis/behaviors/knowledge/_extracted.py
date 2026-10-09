@@ -248,8 +248,19 @@ class KnowledgeOperations:
         query = params.get("query") or re.sub(r"^(search (the )?web for|web search)[:\s]+", "", message, flags=re.I).strip()
         if not query:
             return _err("What should I search for?")
+        from jarvis.chat_cancel import current_cancelled
+
+        def _stopped() -> dict:
+            return _ok("Stopped.", module="general", type="stopped", stopped=True)
+
         query = expand_followup_query(query, getattr(ctx, "session", None))
+        # Cancellation checkpoints bound each research phase, so a stopped or
+        # timed-out request stops here instead of running on under the lock.
+        if current_cancelled():
+            return _stopped()
         results = web_search.search(query)
+        if current_cancelled():
+            return _stopped()
         if not results:
             return _err(
                 f"No web results for that query ({web_search.backend_name()}). "
@@ -260,7 +271,11 @@ class KnowledgeOperations:
             results = web_search.enrich_results_with_pages(query, results)
         except Exception:
             pass
+        if current_cancelled():
+            return _stopped()
         answer = web_search.synthesize_answer(query, results)
+        if current_cancelled():
+            return _stopped()
         try:
             from jarvis.orchestration_policy import consequential_web_answer_ok
 

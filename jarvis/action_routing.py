@@ -350,10 +350,77 @@ def _rule_coding(text: str, lower: str, _session) -> dict | None:
 
 
 def _rule_planner_review(text: str, lower: str, _session) -> dict | None:
+    if re.search(r"\bjournal\b", lower) and re.search(r"\b(?:promote|convert|turn|move|copy|make)\b", lower) and \
+            re.search(r"\b(?:planner|task)\b", lower):
+        return clarification(
+            "Which Journal note should become a Planner task for today? Give me its text, or ask me to show "
+            "your open Journal items first.",
+            "rule:journal_to_planner_needs_note", "action_rules",
+        )
     if re.search(r"\bplanner\b", lower) and re.search(
-        r"\b(?:today|focus|prioriti[sz]e|reprioriti[sz]e|tasks|organi[sz]e)\b", lower
-    ) and not re.match(r"^(?:add|put|create|delete|remove)\b", lower):
+        r"\b(?:focus|prioriti[sz]e|reprioriti[sz]e|organi[sz]e|what(?:'s| is)?\s+(?:on|in)|show|review)\b", lower
+    ) and not re.match(r"^(?:add|put|create|delete|remove|promote|convert|move)\b", lower):
         return _intent("planner_today", {}, "rule:planner_review", "action_rules")
+    return None
+
+
+def _rule_research(text: str, lower: str, _session) -> dict | None:
+    m = re.match(
+        r"^(?:do|run|start|kick\s+off|launch)\s+(?:some\s+|a\s+)?(?:deep|thorough|in-?depth|exhaustive|overnight|long)\s+"
+        r"research(?:\s+job)?\s+(?:overnight\s+|tonight\s+)?(?:on|into|about|regarding)\s+(?P<t>.+?)[.!]*$",
+        text, re.I,
+    ) or re.match(r"^research\s+(?P<t>.+?)\s+(?:overnight|tonight|in\s+depth|in\s+the\s+background)[.!]*$", text, re.I)
+    if m:
+        return _intent("research_create", {"objective": m.group("t").strip()}, "rule:deep_research", "action_rules")
+    return None
+
+
+# External actions ARIA has no integration for. Answer honestly instead of letting
+# chat pretend, or web search look up the request text.
+_PEOPLE = r"(?:mom|mother|dad|father|wife|husband|brother|sister|son|daughter|boss|friend|grandma|grandpa|uncle|aunt|cousin|neighbou?r)"
+_MERCHANTS = r"(?:amazon|orvis|ebay|walmart|target|cabela'?s|bass\s+pro|etsy|[a-z0-9-]+\.(?:com|net|org))"
+_UNSUPPORTED = [
+    (r"^(?:start|unlock|lock|warm\s+up|remote[-\s]?start|honk)\s+(?:up\s+)?(?:my|the)\s+"
+     r"(?:truck|car|vehicle|jeep|ranger|suv|van|engine)\b", "control a vehicle"),
+    (r"^(?:book|reserve)\s+(?:me\s+)?(?:a\s+|an\s+)?(?:flight|hotel|table|room|rental|campsite|ticket)", "make bookings"),
+    (r"^pay\s+(?:my\s+|the\s+)?(?:\w+\s+){0,2}(?:bill|rent|invoice|balance|mortgage)\b|"
+     r"^(?:transfer|wire|venmo|send)\s+\$?\d", "move money or pay bills"),
+    (rf"^(?:email|e-mail|text|message|sms|dm|call|phone|ring)\s+(?:my\s+)?{_PEOPLE}\b|"
+     r"^(?:email|e-mail|text|message|sms)\s+(?:my\s+)?\w+\s+(?:that|saying|to\s+say)\b", "send messages or place calls"),
+    (r"^(?:post|tweet|share)\s+(?:this|that|it)?\s*(?:on|to)\s+(?:facebook|twitter|x|instagram|reddit|linkedin)",
+     "post to social media"),
+    (rf"^(?:order|buy|purchase)\s+.+\b(?:from|on)\s+{_MERCHANTS}\b|^order\s+(?:me\s+)?(?:a\s+|an\s+|some\s+)?"
+     r"(?:large\s+|small\s+|medium\s+)?(?:\w+\s+)?(?:pizza|takeout|delivery|food)\b", "place orders or buy things"),
+]
+
+
+def _rule_unsupported(text: str, lower: str, _session) -> dict | None:
+    for pattern, what in _UNSUPPORTED:
+        if re.match(pattern, lower):
+            reply = (f"I can't {what} — no integration for that is connected to ARIA, so I won't pretend to. "
+                     "I can add it to your Planner tasks or draft the text for you.")
+            intent = _intent("chat", {"policy_fixed_reply": reply, "unsupported_capability": what},
+                             "rule:unsupported_capability", "action_rules")
+            return intent
+    return None
+
+
+def _rule_needs_artifact(text: str, lower: str, session) -> dict | None:
+    """'Describe this image' / 'summarize this document' with nothing to act on."""
+    if re.match(r"^(?:describe|caption|analy[sz]e|what(?:'s| is)\s+in)\s+(?:this|the|that)\s+(?:image|picture|photo|screenshot)\b",
+                lower):
+        image = getattr(session, "last_image", "") if session is not None else ""
+        if image:
+            return _intent("describe_image", {"path": image}, "rule:describe_last_image", "action_rules")
+        return clarification("Which image? Attach it, or generate or open one first.", "rule:image_needs_artifact",
+                             "action_rules")
+    if re.match(r"^(?:summari[sz]e|summary\s+of|tl;?dr)\s+(?:this|the|that)\s+(?:document|doc|pdf|file|paper|report)\b",
+                lower):
+        doc = getattr(session, "last_document_path", "") if session is not None else ""
+        if doc:
+            return _intent("document_summarize", {"path": doc}, "rule:summarize_last_document", "action_rules")
+        return clarification("Which document? Attach it or name the file, and I'll summarize it.",
+                             "rule:document_needs_artifact", "action_rules")
     return None
 
 
@@ -368,6 +435,40 @@ def _rule_coding_agents(text: str, lower: str, _session) -> dict | None:
 
         return _intent("coding_agent_plan", {"agent": resolve_agent_name(m.group("agent")), "task": m.group("task")},
                        "rule:coding_agent_request", "action_rules")
+    if re.search(r"\b(?:which|what)\s+(?:changes|plans|promotions|work)\s+(?:are|is)\s+(?:awaiting|waiting\s+(?:on|for))\s+"
+                 r"(?:my|your|the\s+owner'?s)?\s*(?:approval|review|decision)\b|\bpending\s+approvals?\b|"
+                 r"\bwhat(?:'s|\s+is)\s+(?:waiting|awaiting|pending)\s+(?:for\s+|on\s+)?my\s+(?:approval|review|decision)\b",
+                 lower):
+        return _intent("coding_approvals_pending", {}, "rule:coding_awaiting_approval", "action_rules")
+    if m := re.match(r"^(?:promote|apply|deploy)\s+(?:the\s+changes\s+(?:from|of)\s+)?(?:run\s+)?(?P<id>run_[0-9a-f]{6,})\b",
+                     lower):
+        return _intent("coding_promotion_propose", {"run_id": m.group("id")}, "rule:promotion_request", "action_rules")
+    if m := re.match(r"^(?:roll\s*back|revert|undo)\s+(?:the\s+)?promotion(?:\s+(?P<id>prm_[0-9a-f]{6,}))?\b", lower):
+        return _intent("coding_promotion_rollback", {"promotion_id": m.group("id") or ""}, "rule:promotion_rollback",
+                       "action_rules")
+    if m := re.search(rf"\bwhat\s+(?:changes\s+)?did\s+{_AGENT_NAMES}\s+(?:actually\s+)?(?:change|make|do|modify)\b",
+                      lower):
+        from jarvis.coding_agents.discovery import resolve_agent_name
+
+        return _intent("coding_agent_changes", {"agent": resolve_agent_name(m.group("agent"))},
+                       "rule:agent_changes", "action_rules")
+    if m := re.search(rf"\bwhat\s+did\s+{_AGENT_NAMES}\s+(?:test|run|check|verify)\b", lower):
+        from jarvis.coding_agents.discovery import resolve_agent_name
+
+        return _intent("coding_agent_tests", {"agent": resolve_agent_name(m.group("agent"))}, "rule:agent_tests",
+                       "action_rules")
+    if m := re.search(r"\bwhich\s+(?:coding\s+)?agents?\s+worked\s+on\b", lower):
+        return _intent("coding_agent_changes", {"agent": ""}, "rule:which_agent_worked", "action_rules")
+    if m := re.match(r"^what\s+(?:were|was|are|have)\s+(?:we|i)\s+(?:been\s+)?(?:doing|working\s+on)\s+(?:with|on|in)\s+"
+                     r"(?:the\s+)?(?P<p>.+?)\??$", text, re.I):
+        from jarvis.coding_agents.projects import known_key
+
+        if known_key(m.group("p")):
+            return _intent("coding_project_activity", {"project": m.group("p")}, "rule:project_activity",
+                           "action_rules")
+    if re.match(r"^(?:continue|resume)\s+(?:the\s+)?(?:last\s+)?(?:unfinished|interrupted|previous)\s+coding\s+"
+                r"(?:task|run|job|work)\b", lower):
+        return _intent("coding_agent_resume", {}, "rule:coding_agent_resume", "action_rules")
     if re.search(r"\bwhat\s+(?:did|have)\s+(?:the\s+)?(?:coding\s+)?agents?\s+(?:do|done|accomplish(?:ed)?|"
                  r"finish(?:ed)?|get\s+done|achieve[d]?)\b", lower):
         return _intent("coding_agent_runs", {"when": text}, "rule:coding_agent_history", "action_rules")
@@ -391,8 +492,26 @@ def _rule_coding_agents(text: str, lower: str, _session) -> dict | None:
     return None
 
 
+def _rule_engineering_investigation(text: str, lower: str, session) -> dict | None:
+    """Technical investigation requests remain read-only and ask for a file.
+
+    Requiring both an imperative and a software failure target avoids turning
+    general research, personal experiences or praise into coding work.
+    """
+    if (re.match(r"^(?:please\s+)?(?:investigate|diagnose|debug|trace|inspect|analy[sz]e)\b", lower)
+        and re.search(r"\b(?:deadlock|traceback|stack\s+trace|race\s+condition|request[-\s](?:lock|lifecycle)|"
+                      r"active[-\s]request|thread\s+(?:pool|lock)|stream\s+timeout|parser\s+(?:crash|error))\b", lower)):
+        return _intent("coding_diagnose", {"path": getattr(session, "last_file", "") or "", "task": text},
+                       "rule:engineering_investigation", "action_rules")
+    return None
+
+
 RULES = (
+    _rule_unsupported,
+    _rule_research,
+    _rule_needs_artifact,
     _rule_coding_agents,
+    _rule_engineering_investigation,
     _rule_mission,
     _rule_timer,
     _rule_alarm,
@@ -424,7 +543,7 @@ def apply_rules(message: str, session=None) -> dict | None:
 _DAY = r"(?:today|tonight|tomorrow|(?:this\s+)?weekend|(?:mon|tues|wednes|thurs|fri|satur|sun)day)"
 
 
-def resolve_follow_up(message: str, session) -> dict | None:
+def _resolve_follow_up(message: str, session) -> dict | None:
     last = getattr(session, "last_action", "") or ""
     at = float(getattr(session, "last_action_at", 0.0) or 0.0)
     if not last or time.time() - at > FOLLOW_UP_TTL_S:
@@ -438,23 +557,27 @@ def resolve_follow_up(message: str, session) -> dict | None:
         r"^(?:actually[, ]+|no[, ]+|wait[, ]+|oh[, ]+)*(?:make|change|set)\s+(?:it|that)\s+(?:to\s+|for\s+)?(?P<v>.+)$",
         lower,
     )
-    if last == "planner_set_timer" and change:
+    if last in ("planner_set_timer", "planner_update_timer") and change:
         v = change.group("v")
         duration = extract_duration(v)
         if not duration and (n := re.fullmatch(r"(\d+)", v.strip())):
             unit = (str(prev.get("duration") or "minutes").split() + ["minutes"])[1]
             duration = f"{n.group(1)} {unit}"
         if duration:
-            params = {**{k: v for k, v in prev.items() if k == "label"}, "duration": duration}
-            return _intent("planner_set_timer", params, "follow_up:timer_change", "follow_up",
-                           note="sets a new timer; the earlier one keeps running", **receipt)
-    if last == "planner_set_alarm" and change:
+            # Update *that* timer; the handler explains instead of duplicating.
+            previous = prev.get("label") or prev.get("duration") or ""
+            return _intent("planner_update_timer", {"duration": duration, "previous_label": previous,
+                                                    **({"timer_id": prev["timer_id"]} if prev.get("timer_id") else {})},
+                           "follow_up:timer_change", "follow_up", **receipt)
+    if last in ("planner_set_alarm", "planner_update_alarm") and change:
         t = extract_clock_time(change.group("v")) or (
             change.group("v").strip() if re.fullmatch(r"\d{1,2}(?::\d{2})?", change.group("v").strip()) else None
         )
         if t:
-            return _intent("planner_set_alarm", {"time": t}, "follow_up:alarm_change", "follow_up",
-                           note="sets a new alarm; the earlier one stays set", **receipt)
+            previous = prev.get("label") or (f"Alarm {prev['time']}" if prev.get("time") else "")
+            return _intent("planner_update_alarm", {"time": t, "previous_label": previous,
+                                                    **({"alarm_id": prev["alarm_id"]} if prev.get("alarm_id") else {})},
+                           "follow_up:alarm_change", "follow_up", **receipt)
     if last == "planner_add_task" and (
         m := re.match(r"^(?:and\s+)?(?:also\s+)?(?:add\s+)?(?:another(?:\s+one)?|one\s+more)(?:\s+task)?\s*(?:to|:|-)?\s+(?P<t>.+)$", lower)
     ):
@@ -489,6 +612,81 @@ def resolve_follow_up(message: str, session) -> dict | None:
             **receipt,
         )
     return None
+
+
+def resolve_follow_up(message: str, session) -> dict | None:
+    """Follow-ups; after a restart, a side-effecting one is confirmed, never just run."""
+    hit = _resolve_follow_up(message, session)
+    if not hit or hit.get("needs_clarification") or not getattr(session, "last_action_restored", False):
+        return hit
+    from jarvis.handlers.registry import is_info_action
+
+    if is_info_action(hit["action"]):
+        return hit
+    return clarification(
+        f"Your previous request (`{session.last_action}`) was before ARIA restarted. Still apply this to it?",
+        "follow_up:confirm_after_restart", "follow_up",
+        choices=[{"label": "Yes", "intent": hit}, {"label": "No", "intent": None}],
+        ctype="action_choice", previous_action=session.last_action,
+    )
+
+
+# ---------------------------------------------------------------- "cancel it"
+
+_CANCEL_REF = re.compile(r"^(?:please\s+)?(?:cancel|stop|abort|kill|end)\s+(?:it|that|this|that\s+one|this\s+one)$", re.I)
+
+
+def cancel_reference(message: str, session) -> dict | None:
+    """'Cancel it' with no reply in flight: name what could be cancelled, or say nothing is running.
+
+    Returns None when another request is streaming — the reflex layer stops it.
+    """
+    if not _CANCEL_REF.match(clean(message).rstrip("?").strip()):
+        return None
+    try:
+        from jarvis.chat_cancel import active_ids, current_request_id
+
+        if [r for r in active_ids() if r != current_request_id()]:
+            return None
+    except Exception:
+        pass
+    choices: list[dict] = []
+    try:
+        from jarvis import planner_store
+
+        for t in planner_store.active_timers()[:3]:
+            choices.append({"label": f"timer {t['label'] or ''} ({t['remaining_seconds'] // 60}m left)".replace("  ", " "),
+                            "intent": {"action": "planner_cancel_timer", "params": {"timer_id": t["id"]}}})
+        for a in planner_store.list_alarms()[:3]:
+            choices.append({"label": f"alarm {a['label']} ({a['fire_at'][11:16]})",
+                            "intent": {"action": "planner_cancel_alarm", "params": {"alarm_id": a["id"]}}})
+    except Exception:
+        pass
+    try:
+        from jarvis.coding_agents import runs as agent_runs
+
+        for r in agent_runs.list_runs(limit=5):
+            if r["status"] in (agent_runs.PENDING, agent_runs.RUNNING):
+                choices.append({"label": f"coding-agent run {r['id']} ({r['agent']})",
+                                "intent": {"action": "coding_agent_cancel", "params": {"run_id": r["id"]}}})
+    except Exception:
+        pass
+    try:
+        from jarvis.missions import store as mission_store
+
+        for m in mission_store.list_missions(limit=10):
+            if m.get("state") in ("running", "queued", "paused"):
+                choices.append({"label": f"mission {m['id']} — {str(m.get('objective') or '')[:40]}",
+                                "intent": {"action": "mission_cancel", "params": {"mission_id": m["id"]}}})
+    except Exception:
+        pass
+    if not choices:
+        return clarification("Nothing is running right now that I can cancel — no reply in progress, timers, "
+                             "alarms, agent runs or missions. What did you want to cancel?",
+                             "cancel_nothing_active", "action_clarify", ctype="deictic")
+    return clarification("Nothing is mid-reply. Which of these do you want to cancel?", "cancel_which",
+                         "action_clarify", choices=choices[:6] + [{"label": "Nothing", "intent": None}],
+                         ctype="action_choice")
 
 
 # ---------------------------------------------------------------- deictic clarification
@@ -649,6 +847,7 @@ _NEVER_SHORTLIST = {
     "ha_set_token", "mcp_set_trust", "branch_delete", "skill_delete", "memory_prune", "git_sync_all",
     "workstation_down", "workstation_restart", "dev_task_commit", "git_commit", "git_pr", "git_sync",
     "coding_agent_execute", "coding_agent_run_step", "coding_agent_cancel",
+    "coding_promotion_apply", "coding_promotion_rollback", "planner_cancel_timer", "planner_cancel_alarm",
 }
 
 _INDEX: _Index | None = None
@@ -798,6 +997,7 @@ def note_routed(session, intent: dict) -> None:
     """Remember the action this turn routed to, for follow-ups next turn."""
     if session is None or intent.get("needs_clarification") or intent.get("action") in ("clarify", "nlu_clarify"):
         return
+    session.last_action_restored = False
     session.last_action = str(intent.get("action") or "chat")
     session.last_action_params = {
         k: v for k, v in (intent.get("params") or {}).items() if isinstance(v, (str, int, float, bool))

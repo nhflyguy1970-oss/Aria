@@ -223,3 +223,130 @@ def coding_agent_run_step(assistant, params: dict, message: str) -> dict:
     from jarvis.coding_agents import runs
 
     return runs.execute_step(str(params.get("run_id") or ""))
+
+
+# ---------------------------------------------------------------- Phase 6: promotion & history
+
+
+@register_action("coding_promotion_propose", module="coding",
+                 description="Review an agent run's changes for promotion into the real project (does not apply)",
+                 info=True)
+def coding_promotion_propose(assistant, params: dict, message: str) -> dict:
+    from jarvis.coding_agents import promotion, runs
+
+    run_id = str(params.get("run_id") or "")
+    if not run_id:
+        verified = [r for r in runs.list_runs(limit=20) if r["status"] == "verified"]
+        if len(verified) != 1:
+            return err("Which run? " + (", ".join(r["id"] for r in verified[:5]) or "No verified runs to promote."),
+                       module="coding")
+        run_id = verified[0]["id"]
+    try:
+        p = promotion.propose(run_id, allow_unverified=bool(params.get("allow_unverified")))
+    except promotion.PromotionError as exc:
+        return err(f"Can't promote: {exc}", module="coding")
+    text = promotion.summary_text(p)
+    if p["status"] != promotion.PROPOSED:
+        return err(text, module="coding", error_kind="promotion_blocked", promotion=p)
+    token = promotion.approval_token(p["id"])
+    _set_choice(assistant, "Apply these changes to the project?", [
+        {"label": "Yes", "intent": {"action": "coding_promotion_apply",
+                                    "params": {"promotion_id": p["id"], "approval_token": token}}},
+        {"label": "No", "intent": {"action": "coding_promotion_reject", "params": {"promotion_id": p["id"]}}},
+    ], message)
+    return ok(text + "\n\nApply these exact changes? Reply **yes** or **no**. (Approving the agent's plan earlier "
+              "did not approve this.)", module="coding", type="clarification", promotion=p, choices=["Yes", "No"])
+
+
+@register_action("coding_promotion_apply", module="coding",
+                 description="Apply an owner-approved promotion to the project's working tree")
+def coding_promotion_apply(assistant, params: dict, message: str) -> dict:
+    from jarvis.coding_agents import promotion
+
+    pid = str(params.get("promotion_id") or "")
+    p = promotion.get(pid) if pid else None
+    if not p:
+        return err("There's no such promotion.", module="coding")
+    token = str(params.get("approval_token") or "")
+    if p["status"] == promotion.PROPOSED and not token:
+        return err("That promotion hasn't been approved.", module="coding", error_kind="approval_required")
+    try:
+        out = promotion.apply(pid, token=token, via="chat_confirmation")
+    except promotion.PromotionError as exc:
+        return err(f"Not applied: {exc}", module="coding", error_kind="policy_denied")
+    res = out.get("result") or {}
+    if out["status"] != promotion.APPLIED:
+        return err(f"Promotion {pid}: {out['status']} — {res.get('reason')}", module="coding", promotion=out)
+    return ok(f"Applied promotion **{pid}** to {out['destination']} (working tree only — not committed or pushed). "
+              f"{res.get('reason')}.\n\nRollback: {res.get('rollback')}", module="coding", promotion=out)
+
+
+@register_action("coding_promotion_reject", module="coding", description="Reject a proposed promotion", info=True)
+def coding_promotion_reject(assistant, params: dict, message: str) -> dict:
+    from jarvis.coding_agents import promotion
+
+    if pid := str(params.get("promotion_id") or ""):
+        promotion.reject(pid)
+    return ok("Okay — nothing was applied.", module="coding")
+
+
+@register_action("coding_promotion_rollback", module="coding", description="Roll back an applied promotion")
+def coding_promotion_rollback(assistant, params: dict, message: str) -> dict:
+    from jarvis.coding_agents import promotion
+
+    pid = str(params.get("promotion_id") or "")
+    if not pid:
+        applied = promotion.list_promotions(status=promotion.APPLIED, limit=5)
+        if len(applied) != 1:
+            return err("Which promotion? " + (", ".join(p["id"] for p in applied) or "None is applied."), module="coding")
+        pid = applied[0]["id"]
+    try:
+        out = promotion.rollback(pid)
+    except promotion.PromotionError as exc:
+        return err(f"Not rolled back: {exc}", module="coding")
+    return ok(f"Rolled back promotion {pid}: restored {', '.join(out['result'].get('restored') or [])}.",
+              module="coding")
+
+
+@register_action("coding_approvals_pending", module="coding",
+                 description="Coding plans, promotions and verified changes awaiting the owner", info=True)
+def coding_approvals_pending(assistant, params: dict, message: str) -> dict:
+    from jarvis.coding_agents import history
+
+    return ok(history.awaiting_approval(), module="coding")
+
+
+@register_action("coding_project_activity", module="coding",
+                 description="What we were doing on a project — from receipts and records", info=True)
+def coding_project_activity(assistant, params: dict, message: str) -> dict:
+    from jarvis.coding_agents import history, projects
+
+    where = projects.resolve(str(params.get("project") or message), session=getattr(assistant, "session", None))
+    if "unregistered" in where:
+        return err(f"{projects.TITLES[where['unregistered']]} isn't registered as a project.", module="coding")
+    if "project" not in where:
+        return err("Which project?", module="coding")
+    p = where["project"]
+    return ok(history.project_activity(p["slug"], p["title"]), module="coding")
+
+
+@register_action("coding_agent_changes", module="coding",
+                 description="What an agent actually changed (git), separate from what it claimed", info=True)
+def coding_agent_changes(assistant, params: dict, message: str) -> dict:
+    from jarvis.coding_agents import discovery, history, projects
+
+    agent = str(params.get("agent") or discovery.resolve_agent_name(message))
+    where = projects.resolve(message) if projects.known_key(message) else {}
+    slug = (where.get("project") or {}).get("slug", "")
+    return ok(history.agent_work(agent, project=slug, text=message), module="coding")
+
+
+@register_action("coding_agent_tests", module="coding",
+                 description="What an agent tested before reporting success, and what ARIA verified", info=True)
+def coding_agent_tests(assistant, params: dict, message: str) -> dict:
+    from jarvis.coding_agents import discovery, history
+
+    agent = str(params.get("agent") or discovery.resolve_agent_name(message))
+    if not agent:
+        return err("Which agent — Codex, Claude Code or Antigravity?", module="coding")
+    return ok(history.agent_tests(agent), module="coding")
