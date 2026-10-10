@@ -6,6 +6,17 @@ import os
 from pathlib import Path
 
 
+def _diarization_disabled_reason() -> str:
+    from jarvis.integration.policy import refusal
+
+    reason = refusal("tool")
+    if reason:
+        return reason
+    if os.getenv("JARVIS_DIARIZATION_ENABLED", "0").strip().lower() not in ("1", "true", "yes", "on"):
+        return "Speaker diarization is disabled (JARVIS_DIARIZATION_ENABLED=0)."
+    return ""
+
+
 def pyannote_available() -> bool:
     try:
         import pyannote.audio  # noqa: F401
@@ -41,8 +52,12 @@ def hf_token_configured() -> bool:
 
 
 def diarize_status() -> dict:
+    if reason := _diarization_disabled_reason():
+        return {"enabled": False, "engine": "disabled", "pyannote": None, "hf_token": None,
+                "hint": reason, "model": os.getenv("JARVIS_DIARIZE_MODEL", "pyannote/speaker-diarization-3.1")}
     token = hf_token_configured()
     return {
+        "enabled": True,
         "pyannote": pyannote_available(),
         "hf_token": token,
         "engine": "pyannote" if pyannote_available() and token else "whisper-gaps",
@@ -53,6 +68,8 @@ def diarize_status() -> dict:
 
 def diarize(path: str | Path, *, num_speakers: int | None = None) -> dict:
     """Return labeled segments [{speaker, start, end, text?}]."""
+    if reason := _diarization_disabled_reason():
+        return {"ok": False, "blocked": True, "error": reason}
     path = Path(path)
     if not path.exists():
         return {"ok": False, "error": f"File not found: {path}"}

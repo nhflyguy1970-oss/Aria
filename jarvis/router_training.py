@@ -17,6 +17,17 @@ FG_OUT = DATA_DIR / "functiongemma_training.jsonl"
 MODELFILE = DATA_DIR / "router.Modelfile"
 
 
+def _training_disabled_reason() -> str:
+    from jarvis.integration.policy import refusal
+
+    reason = refusal("tool")
+    if reason:
+        return reason
+    if os.getenv("JARVIS_TRAINING_ENABLED", "0").strip().lower() not in ("1", "true", "yes", "on"):
+        return "Router training is disabled (JARVIS_TRAINING_ENABLED=0)."
+    return ""
+
+
 def export_training_jsonl() -> Path:
     from jarvis.handlers import ensure_handlers_loaded
     from jarvis.handlers.registry import all_actions
@@ -340,6 +351,8 @@ def export_functiongemma_jsonl(*, core_only: bool = True) -> Path:
 
 def train_functiongemma_router(*, output_dir: str | None = None) -> dict:
     """Export FG dataset and fine-tune when unsloth/transformers training is available."""
+    if reason := _training_disabled_reason():
+        return {"ok": False, "blocked": True, "error": reason}
     path = export_functiongemma_jsonl()
     if not path.is_file() or path.stat().st_size == 0:
         return {"ok": False, "error": "No FunctionGemma training rows exported"}
@@ -471,6 +484,8 @@ def train_functiongemma_router(*, output_dir: str | None = None) -> dict:
 
 def train_router_model(*, name: str = "jarvis-router") -> dict:
     """Build Ollama Modelfile from exported JSONL and run `ollama create`."""
+    if reason := _training_disabled_reason():
+        return {"ok": False, "blocked": True, "error": reason}
     from jarvis.local_router import router_model
 
     path = export_training_jsonl()
