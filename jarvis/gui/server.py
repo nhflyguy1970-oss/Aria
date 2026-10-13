@@ -3824,6 +3824,15 @@ async def chat(
                     "learn_remember",
                 ):
                     return True
+                # Info actions (greeting, status, lists) answer from records, not the
+                # model; "Hello, Aria." waited ~50 s on a cold chat-model load (2026-10-12).
+                try:
+                    from jarvis.handlers.registry import is_info_action
+
+                    if is_info_action(a):
+                        return True
+                except Exception:
+                    pass
                 try:
                     from jarvis.media_jobs import QUEUED_ACTIONS
 

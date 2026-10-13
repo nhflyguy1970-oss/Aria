@@ -94,6 +94,9 @@ class BranchManager:
             self._conversations[bid] = conv
         return self._conversations[bid]
 
+    def is_loaded(self, branch_id: str) -> bool:
+        return branch_id in self._conversations
+
     def update_system_prompt(self, branch_id: str | None, system_prompt: str) -> None:
         bid = branch_id or self.active_id or "main"
         conv = self.get_conversation(bid, system_prompt)

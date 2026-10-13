@@ -237,7 +237,9 @@ def decorate_result(
         mode = params.get("mode") or action.replace("coding_", "")
         assistant.session.note_coding_mode(mode)
     log_action(action, result.get("module", ""), message[:120], result.get("ok", True))
-    if result.get("ok") and action not in (
+    # Info actions answer from records; "Tool X worked" adds nothing to learn, and its
+    # near-duplicate check is a full ACM search (6-8 s per status/recall reply, 2026-10-12).
+    if result.get("ok") and not is_info_action(action) and action not in (
         "chat",
         "capabilities",
         "greeting",

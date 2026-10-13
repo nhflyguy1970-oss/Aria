@@ -211,6 +211,16 @@ class JarvisAssistant:
 
     def switch_branch(self, branch_id: str) -> bool:
         self.branches.save_session(self.branches.active_id, self.session)
+        # The Living Room sends its branch with every message. Re-switching to the
+        # branch already in use rebuilt the system prompt from ACM (~6.7 s per
+        # message, 2026-10-12) only for get_conversation() to discard it: a loaded
+        # branch keeps its conversation. Nothing to reload, so nothing to rebuild.
+        if (
+            branch_id == self.branches.active_id
+            and self.branches.is_loaded(branch_id)
+            and self.conversation is self.branches.get_conversation(branch_id, "")
+        ):
+            return True
         if not self.branches.switch(branch_id):
             return False
         self.session = self.branches.load_session(branch_id)
