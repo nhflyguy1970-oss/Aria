@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import time
 from collections.abc import Iterator
@@ -32,6 +33,63 @@ _USER_SAFE_BACKEND = (
     "I couldn't complete that reply just now. Please try again in a moment — "
     "if it keeps failing, check that the local model service is running."
 )
+
+# Owner-facing text per failure category (jarvis.inference.boundary.classify_failure).
+# Says what went wrong and what helps, without backend text or model internals.
+_CATEGORY_MESSAGES = {
+    "out_of_memory": (
+        "I couldn't load the chat model: the graphics card doesn't have enough free memory "
+        "right now (an image job or another model may be holding it). Try again in a moment, "
+        "or free GPU memory first."
+    ),
+    "model_load_failed": "The chat model failed to start. Please try again in a moment.",
+    "model_missing": (
+        "The configured chat model isn't installed. Choose an installed model in "
+        "Settings → Models, or download it."
+    ),
+    "connection_refused": (
+        "I couldn't reach the local model service — it may be restarting. "
+        "Try again in a few seconds."
+    ),
+    "service_unavailable": "The local model service returned an error. Please try again in a moment.",
+    "timeout": (
+        "The model took too long to answer. Please try again; if it keeps happening, "
+        "the system may be busy with another job."
+    ),
+    "context_overflow": (
+        "This conversation is longer than the model can read at once. "
+        "Start a new chat or shorten the message."
+    ),
+    "invalid_response": "The model's reply came back unreadable. Please try again.",
+    "stream_interrupted": (
+        "The reply was cut off partway through, so the partial answer above is incomplete "
+        "and wasn't saved. Please try again."
+    ),
+}
+
+logger = logging.getLogger("jarvis.conversation")
+
+
+def _log_chat_failure(stage: str, exc: BaseException, *, request_id: str, model: str, usage: dict) -> str:
+    """One structured line per failed chat; returns the category. Never logs message content."""
+    from jarvis.inference.boundary import classify_failure
+
+    category = classify_failure(exc)
+    receipt = usage.get("receipt") if isinstance(usage.get("receipt"), dict) else {}
+    attempts = receipt.get("attempts") or []
+    logger.warning(
+        "chat failed request_id=%s stage=%s category=%s model=%s attempts=%s fallback=%s "
+        "receipt=%s error=%s",
+        request_id or "-",
+        stage,
+        category,
+        model or "-",
+        len(attempts),
+        bool(receipt.get("fallback_used")),
+        receipt.get("id") or "-",
+        f"{type(exc).__name__}: {str(exc)[:300]}",
+    )
+    return category
 
 
 def _sanitize_user_error(exc: BaseException | str) -> str:
@@ -132,12 +190,22 @@ class ConversationEngine:
             memory_behavior = get_memory_behavior()
             if memory_behavior is not None:
                 t0 = _time.perf_counter()
-                mem_parts, mem_citations = memory_behavior.prepare_context(
-                    self._a,
-                    message,
-                    general=general,
-                    skip_project_context=skip_project_context,
-                )
+                try:
+                    mem_parts, mem_citations = memory_behavior.prepare_context(
+                        self._a,
+                        message,
+                        general=general,
+                        skip_project_context=skip_project_context,
+                    )
+                except Exception as exc:  # noqa: BLE001 - answer without memory, and say so
+                    logger.warning("memory retrieval failed; answering without it: %s: %s",
+                                   type(exc).__name__, str(exc)[:200])
+                    mem_parts = [
+                        "Long-term memory: UNAVAILABLE — retrieval failed this turn. "
+                        "Do not claim to remember or not remember anything specific."
+                    ]
+                    mem_citations = []
+                    warnings.append("Memory was unavailable for this reply.")
                 parts.extend(mem_parts)
                 citations.extend(mem_citations)
                 _note("memory", t0, mem_parts, used=True)
@@ -362,9 +430,13 @@ class ConversationEngine:
             pass
         return prefix, warnings, citations
 
-    def messages_for_llm(self, messages: list[dict], context_prefix: str) -> list[dict]:
+    def messages_for_llm(self, messages: list[dict], context_prefix: str, *, selected_model: str = "") -> list[dict]:
         if not context_prefix or not messages or messages[-1].get("role") != "user":
             return messages
+        from jarvis.inference.boundary import is_cloud_model
+        if is_cloud_model(selected_model):
+            # Retrieved context is not the current turn: enforce its disclosure class.
+            return [{"role": "system", "content": context_prefix}, *messages]
         out = list(messages)
         raw = out[-1]["content"]
         out[-1] = {"role": "user", "content": f"{context_prefix}\n\nUser: {raw}"}
@@ -499,13 +571,49 @@ class ConversationEngine:
         return text
 
     def _requested_model(self, params: dict) -> str:
-        return str(params.get("model") or getattr(self._a.session, "chat_model", "") or "").strip()
+        return str(getattr(self._a.session, "chat_model", "") or params.get("model") or "").strip()
+
+    def _model_override_selected(self, params: dict) -> bool:
+        from jarvis.inference.boundary import is_cloud_model
+
+        return bool(getattr(self._a.session, "chat_model", "") or is_cloud_model(self._requested_model(params)))
 
     def _needs_local_runtime(self, params: dict) -> bool:
         """Only a request that will run locally depends on Ollama being up."""
         from jarvis.inference.boundary import needs_local_runtime
 
-        return needs_local_runtime(self._requested_model(params))
+        requested = self._requested_model(params)
+        if self._model_override_selected(params):
+            from jarvis.inference.boundary import is_cloud_model
+            if is_cloud_model(requested):
+                return False  # Authorization errors must not become local-health errors.
+        return needs_local_runtime(requested)
+
+    def _inference_error(self, params: dict, exc: BaseException) -> str:
+        from jarvis.inference import boundary
+        requested = self._requested_model(params)
+        if self._model_override_selected(params) and boundary.is_cloud_model(requested):
+            if isinstance(exc, boundary.StreamInterrupted):
+                return str(exc)
+            provider = boundary.provider_of(requested)
+            label = {"google": "Gemini", "openai": "OpenAI", "anthropic": "Anthropic"}.get(provider, provider)
+            reason = "could not complete this request"
+            if isinstance(exc, boundary.CloudNotPermitted):
+                reason = "is not authorized under the current provider, privacy or spending settings"
+            elif isinstance(exc, boundary.ProviderUnavailable):
+                reason = "is unavailable; check its credentials, quota and selected model"
+            return f"Selected {label} provider {reason}. No local fallback was used."
+        from jarvis.gpu_scheduler import GpuUnavailable, WorkloadCutoff
+
+        cause: BaseException | None = exc
+        while cause is not None:  # GPU admission reasons are owner-facing, not backend detail
+            if isinstance(cause, WorkloadCutoff):
+                return f"I stopped that reply to protect the system: {cause.reason}. Try again once it cools."
+            if isinstance(cause, GpuUnavailable):
+                return f"That reply couldn't start yet: {cause.reason}."
+            cause = cause.__cause__ or cause.__context__
+        message = _CATEGORY_MESSAGES.get(boundary.classify_failure(exc))
+        return message or _sanitize_user_error(exc)
 
     def execute(self, params: dict, message: str) -> dict:
         from jarvis.branding import assistant_name
@@ -568,14 +676,17 @@ class ConversationEngine:
         )
         usage: dict = {}
         try:
-            msgs = self.messages_for_llm(self._a.conversation.messages, context_prefix)
+            msgs = self.messages_for_llm(self._a.conversation.messages, context_prefix, selected_model=model)
             t0 = time.perf_counter()
-            answer, usage = llm.ask_with_usage(model, msgs, role=chat_role)
+            answer, usage = llm.ask_with_usage(
+                model, msgs, role=chat_role, explicit_model=self._model_override_selected(params)
+            )
             inference_ms = int((time.perf_counter() - t0) * 1000)
         except Exception as exc:
             self._a.conversation.pop_last_user()
             _record_backend_failure(str(exc))
-            return _err(_sanitize_user_error(exc), module=None)
+            category = _log_chat_failure("provider", exc, request_id="", model=model, usage=usage)
+            return _err(self._inference_error(params, exc), module=None, error_category=category)
         if not answer.strip():
             self._a.conversation.pop_last_user()
             detail = f"Model `{model}` returned empty"
@@ -596,7 +707,12 @@ class ConversationEngine:
             from jarvis.learning_notice import append_retrieval_to_message
 
             display = append_retrieval_to_message(answer, retrieval_hint)
-        extra: dict = {"inference_ms": inference_ms, "model": model, **usage}
+        extra: dict = {
+            "inference_ms": inference_ms,
+            **usage,
+            "model": usage.get("execution_model") or model,
+            "requested_model": model,
+        }
         if context_warnings:
             extra["warnings"] = context_warnings
         if memory_citations:
@@ -678,7 +794,7 @@ class ConversationEngine:
             context_prefix = f"{hint}\n\n{context_prefix}" if context_prefix else hint
         pending = self._a.conversation.messages + [{"role": "user", "content": user_message}]
         _pb_t0 = time.perf_counter()
-        msgs = self.messages_for_llm(pending, context_prefix)
+        msgs = self.messages_for_llm(pending, context_prefix, selected_model=self._requested_model(params))
         try:
             from jarvis.latency_observability.trace import active_trace
 
@@ -744,7 +860,8 @@ class ConversationEngine:
 
             with chat_priority_section():
                 for chunk in llm.ask_stream(
-                    chat_model, msgs, cancel_key=request_id, usage=usage, role=chat_role
+                    chat_model, msgs, cancel_key=request_id, usage=usage, role=chat_role,
+                    explicit_model=self._model_override_selected(params),
                 ):
                     if request_id and is_cancelled(request_id):
                         stopped = True
@@ -775,7 +892,18 @@ class ConversationEngine:
 
             if saved_user:
                 self._a.conversation.pop_last_user()
-            failed = {"type": "done", "ok": False, "message": str(exc)}
+            category = _log_chat_failure(
+                "provider_stream", exc, request_id=request_id, model=chat_model, usage=usage
+            )
+            failed = {
+                "type": "done",
+                "ok": False,
+                "message": self._inference_error(params, exc),
+                "error_category": category,
+                "request_id": request_id,
+                "retryable": category not in ("context_overflow", "model_missing", "not_permitted",
+                                              "capability_mismatch", "cancelled"),
+            }
             if isinstance(exc, StreamInterrupted):
                 # The partial text already shown is incomplete; never saved as an answer.
                 failed["interrupted"] = True
@@ -830,10 +958,22 @@ class ConversationEngine:
             "ok": True,
             "message": answer,
             "uncensored": is_uncensored(),
-            "model": chat_model,
             "inference_ms": inference_ms,
             **usage,
+            # The model that actually answered (a local fallback may differ from the request).
+            "model": usage.get("execution_model") or chat_model,
+            "requested_model": chat_model,
         }
+        receipt = usage.get("receipt") if isinstance(usage.get("receipt"), dict) else {}
+        if receipt.get("fallback_used"):
+            if done_payload["model"] != chat_model:
+                done_payload["fallback"] = {
+                    "from": chat_model,
+                    "to": done_payload["model"],
+                    "reason": receipt.get("failure_category") or "",
+                }
+            else:
+                done_payload["retried"] = receipt.get("failure_category") or True
         if context_warnings:
             done_payload["warnings"] = context_warnings
         if stream_citations:

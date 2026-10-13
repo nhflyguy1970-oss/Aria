@@ -91,6 +91,68 @@ class InferenceCancelled(InferenceError):
     """The caller cancelled. Never a reason to try another model."""
 
 
+# Ordered: the first category whose marker appears in the exception chain wins.
+_FAILURE_MARKERS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("out_of_memory", ("out of memory", "cudamalloc", "failed to allocate",
+                       "requires more system memory", "insufficient memory")),
+    ("context_overflow", ("context length", "context window", "maximum context",
+                          "too many tokens", "exceeds the context")),
+    ("model_missing", ("try pulling it first", "model not found", "no such model")),
+    ("auth_failed", ("unauthorized", "invalid api key", "authentication")),
+    ("rate_limited", ("rate limit", "too many requests", "quota")),
+    ("connection_refused", ("connection refused", "errno 111", "failed to connect",
+                            "connecterror", "connection reset")),
+    ("timeout", ("timed out", "timeout")),
+    ("model_load_failed", ("llama-server", "failed to load", "load failed", "llama runner")),
+    ("invalid_response", ("jsondecodeerror", "invalid json", "unexpected response")),
+)
+
+# The same local model may succeed moments later: Ollama restarting, or a load
+# that raced an eviction or another GPU tenant.
+RETRYABLE_LOCAL = frozenset({"connection_refused", "service_unavailable", "model_load_failed", "out_of_memory"})
+# Another installed local model can answer instead.
+SUBSTITUTABLE_LOCAL = frozenset({"model_missing", "out_of_memory", "model_load_failed",
+                                 "service_unavailable", "timeout"})
+
+
+def classify_failure(exc: BaseException) -> str:
+    """A stable category for a failed model call, from the whole exception chain."""
+    if isinstance(exc, InferenceCancelled):
+        return "cancelled"
+    if isinstance(exc, CloudNotPermitted):
+        return "not_permitted"
+    if isinstance(exc, CapabilityMismatch):
+        return "capability_mismatch"
+    if isinstance(exc, StreamInterrupted):
+        return "stream_interrupted"
+    parts: list[str] = []
+    status: int | None = None
+    seen: set[int] = set()
+    cur: BaseException | None = exc
+    while cur is not None and id(cur) not in seen:
+        seen.add(id(cur))
+        if type(cur).__name__ in ("GpuUnavailable", "WorkloadCutoff"):
+            return "gpu_busy"
+        code = getattr(cur, "status_code", None)
+        if isinstance(code, int) and status is None:
+            status = code
+        parts.append(f"{type(cur).__name__}: {cur}")
+        cur = cur.__cause__ or cur.__context__
+    text = " | ".join(parts).lower()
+    for category, markers in _FAILURE_MARKERS:
+        if any(marker in text for marker in markers):
+            return category
+    if status == 404:
+        return "model_missing"
+    if status in (401, 403):
+        return "auth_failed"
+    if status == 429:
+        return "rate_limited"
+    if (status and status >= 500) or "status code: 5" in text:
+        return "service_unavailable"
+    return "internal_error"
+
+
 # ------------------------------------------------------------------ targets
 
 
@@ -226,6 +288,34 @@ def local_fallback(role: str, *, exclude: str = "") -> str:
     )
 
 
+def local_substitute(role: str, *, failed: str) -> str:
+    """Another installed local model to answer when ``failed`` cannot ('' = none).
+
+    Candidates are the owner's own role settings — the role, then chat, then
+    fast chat — so a substitute is always a model they configured. In uncensored
+    mode a sensitive role is never substituted: the configured fallbacks are
+    censored models, and switching silently would change what ARIA is.
+    """
+    from jarvis.model_store import UNCENSORED_SENSITIVE_ROLES, model_for
+
+    try:
+        from jarvis.config import is_uncensored
+
+        if is_uncensored() and role in UNCENSORED_SENSITIVE_ROLES:
+            return ""
+    except Exception:  # noqa: BLE001
+        pass
+    installed = installed_local_models()
+    for candidate_role in (role, "conversation", "general", "fast_chat"):
+        try:
+            candidate = (model_for(candidate_role) or "").strip()
+        except Exception:  # noqa: BLE001
+            candidate = ""
+        if candidate and candidate != failed and not is_cloud_model(candidate) and _installed(candidate, installed):
+            return candidate
+    return ""
+
+
 # ------------------------------------------------------------------ capabilities
 
 _CAPS: dict[str, tuple[float, frozenset[str] | None]] = {}
@@ -359,6 +449,7 @@ class Receipt:
     policy: list[str] = field(default_factory=list)
     attempts: list[Attempt] = field(default_factory=list)
     status: str = "started"
+    failure_category: str = ""
 
     def attempt(self, model: str) -> Attempt:
         att = Attempt(

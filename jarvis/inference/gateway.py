@@ -55,13 +55,37 @@ def _ollama_chat_with_usage(model: str, messages: list[dict], **kwargs) -> tuple
     if keep_alive is None:
         keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "30m").strip() or "30m"
 
-    response = chat(
-        model=model,
-        messages=_with_system(messages),
-        keep_alive=keep_alive,
-        **normalized,
-    )
-    return response["message"]["content"], usage_from_response(response)
+    from jarvis import gpu_scheduler
+
+    with gpu_scheduler.admit_ollama(model, options) as job:
+        options.update(job.options)
+        call = _ollama_client_chat(job)
+        # Always stream internally: closing the stream is what stops Ollama when the
+        # thermal / host-RAM cutoff fires mid-generation.
+        parts: list[str] = []
+        usage: dict[str, Any] = {}
+        stream = call(model=model, messages=_with_system(messages), stream=True, keep_alive=keep_alive, **normalized)
+        try:
+            for chunk in stream:
+                job.check()
+                usage.update(usage_from_response(chunk))
+                parts.append((chunk.get("message") or {}).get("content") or "")
+        finally:
+            close = getattr(stream, "close", None)
+            if close:
+                close()
+        return "".join(parts), usage
+
+
+def _ollama_client_chat(job):
+    """The chat callable for an admitted job: ARIA's default Ollama, or the RX 7600 helper."""
+    if not job.host:
+        from ollama import chat
+
+        return chat
+    from ollama import Client
+
+    return Client(host=job.host).chat
 
 
 def _ollama_stream(
@@ -87,18 +111,28 @@ def _ollama_stream(
     if keep_alive is None:
         keep_alive = os.getenv("OLLAMA_KEEP_ALIVE", "30m").strip() or "30m"
 
-    stream = chat(
-        model=model,
-        messages=_with_system(messages),
-        stream=True,
-        keep_alive=keep_alive,
-        **normalized,
-    )
-    for chunk in stream:
-        if usage is not None:
-            usage.update(usage_from_response(chunk))
-        if chunk.get("message", {}).get("content"):
-            yield chunk["message"]["content"]
+    from jarvis import gpu_scheduler
+
+    with gpu_scheduler.admit_ollama(model, options) as job:
+        options.update(job.options)
+        stream = _ollama_client_chat(job)(
+            model=model,
+            messages=_with_system(messages),
+            stream=True,
+            keep_alive=keep_alive,
+            **normalized,
+        )
+        try:
+            for chunk in stream:
+                job.check()  # thermal / host-RAM cutoff stops the generation
+                if usage is not None:
+                    usage.update(usage_from_response(chunk))
+                if chunk.get("message", {}).get("content"):
+                    yield chunk["message"]["content"]
+        finally:
+            close = getattr(stream, "close", None)
+            if close:
+                close()
 
 
 def _cloud_guard(model: str) -> None:
@@ -192,7 +226,11 @@ def _prepare(model: str, role: str, kwargs: dict[str, Any]) -> tuple[dict, str, 
     from jarvis.inference.execution_policy import apply_policy_to_route
     from jarvis.nlu.placement import ollama_options_for_device
 
+    explicit_model = bool(kwargs.pop("explicit_model", False))
     overlay = apply_policy_to_route(model=model, role=role)
+    if explicit_model or boundary.is_cloud_model(model):
+        # A selected provider/model must survive the second policy overlay.
+        overlay = {**overlay, "model": model, "source": "explicit", "reason": "explicit model selection"}
     chosen_model = str(overlay.get("model") or model)
     hardware = str(overlay.get("hardware") or "cpu")
     options = dict(kwargs.get("options") or {})
@@ -201,6 +239,18 @@ def _prepare(model: str, role: str, kwargs: dict[str, Any]) -> tuple[dict, str, 
     kwargs["options"] = options
     lock = overlay.get("source") in ("benchmark", "user_config", "env", "explicit")
     return overlay, chosen_model, hardware, lock
+
+
+def _require_selected_model(chosen, requested: str, explicit: bool, receipt) -> None:
+    if explicit and chosen.model != requested:
+        reason = chosen.reason
+        if reason == "cloud_gateway_unavailable_local_fallback":
+            reason = "provider credentials are locked/missing, or its gateway is unavailable"
+        receipt.policy.append(f"selected model refused: {reason}; no substitution")
+        receipt.close("failed")
+        raise boundary.CloudNotPermitted(
+            f"Selected model `{requested}` could not be used: {reason}. No fallback was run."
+        )
 
 
 def _note_overlay(receipt, requested: str, chosen_model: str, overlay: dict, route) -> None:
@@ -219,7 +269,24 @@ def _note_overlay(receipt, requested: str, chosen_model: str, overlay: dict, rou
 UTILITY_OUTPUT_CAPS = {"router": 256, "tool_calling": 256, "summarization": 512, "learning": 512}
 
 
+# Everyday chat roles. Measured 2026-10-12 on the RTX 3060 (same prompt, cooled
+# start): gemma4:12b's default thinking pass spent 73% of its tokens thinking —
+# 4.2 kJ and 25 s per reply vs 1.5 kJ with think=false — and on longer replies
+# the first visible token took 36-43 s (45 s first-progress budget) while the
+# card climbed to the 82 C cutoff. Reasoning/specialist roles keep thinking.
+# JARVIS_CHAT_THINKING=1 restores it; a caller's explicit ``think`` always wins.
+CHAT_ROLES = frozenset({"conversation", "general", "fast_chat"})
+
+
 def _utility_defaults(role: str, chosen: InferenceRoute, kwargs: dict) -> None:
+    if (
+        role in CHAT_ROLES
+        and chosen.backend == "ollama"
+        and os.getenv("JARVIS_CHAT_THINKING", "0").strip() != "1"
+    ):
+        caps = boundary.model_capabilities(chosen.model)
+        if caps and "thinking" in caps:
+            kwargs.setdefault("think", False)
     cap = UTILITY_OUTPUT_CAPS.get(role)
     if cap is None or chosen.backend != "ollama":
         return
@@ -229,6 +296,58 @@ def _utility_defaults(role: str, chosen: InferenceRoute, kwargs: dict) -> None:
     caps = boundary.model_capabilities(chosen.model)
     if caps and "thinking" in caps:
         kwargs.setdefault("think", False)
+
+
+LOCAL_RETRY_DELAY_S = 2.0  # lets a racing eviction / VRAM release settle
+LOCAL_RECONNECT_DELAY_S = 5.0  # an Ollama restart takes a few seconds to listen again
+
+
+def _local_recovery_routes(
+    chosen: InferenceRoute,
+    exc: BaseException,
+    *,
+    role: str,
+    explicit_model: bool,
+    receipt: boundary.Receipt,
+    kwargs: dict,
+    messages: list[dict],
+    cancel_check=None,
+) -> Iterator[InferenceRoute]:
+    """Bounded recovery after a *local* attempt failed before any output.
+
+    At most one retry of the same model (transient faults only), then at most
+    one other installed local model from the owner's role settings. Never a
+    cloud model, never a substitute for an explicitly selected model, and every
+    step is written to the receipt. ``JARVIS_LOCAL_RECOVERY=0`` turns it off.
+    """
+    if chosen.backend != "ollama" or os.getenv("JARVIS_LOCAL_RECOVERY", "1").strip() == "0":
+        return
+    category = boundary.classify_failure(exc)
+    receipt.failure_category = category
+    if category in boundary.RETRYABLE_LOCAL:
+        receipt.policy.append(f"{chosen.model} failed before answering ({category}); retrying once")
+        logger.warning("Local model %s failed before answering (%s); retrying once", chosen.model, category)
+        delay = LOCAL_RECONNECT_DELAY_S if category == "connection_refused" else LOCAL_RETRY_DELAY_S
+        deadline = time.monotonic() + delay
+        while time.monotonic() < deadline:
+            if cancel_check is not None and cancel_check():
+                raise boundary.InferenceCancelled("cancelled before retry")
+            time.sleep(0.25)
+        yield InferenceRoute(backend="ollama", model=chosen.model, reason=f"local_retry:{category}", local=True)
+    if explicit_model or category not in boundary.SUBSTITUTABLE_LOCAL:
+        return
+    substitute = boundary.local_substitute(role, failed=chosen.model)
+    if not substitute:
+        receipt.policy.append("no other installed local model is configured; no fallback")
+        return
+    try:
+        boundary.check_capabilities(substitute, boundary.requirements_from_kwargs(kwargs, messages))
+    except boundary.CapabilityMismatch:
+        receipt.policy.append(f"local fallback {substitute} lacks a required capability; not used")
+        return
+    receipt.policy.append(f"{chosen.model} unavailable ({category}); local fallback to {substitute}")
+    logger.warning("Local model %s unavailable (%s); falling back to %s", chosen.model, category, substitute)
+    yield InferenceRoute(backend="ollama", model=substitute, reason=f"local_fallback:{category}", local=True)
 
 
 def _authorize(
@@ -279,7 +398,8 @@ def _max_output(kwargs: dict) -> int:
 
 
 def _admit_cloud(
-    chosen: InferenceRoute, role: str, receipt: boundary.Receipt, messages: list[dict], kwargs: dict
+    chosen: InferenceRoute, role: str, receipt: boundary.Receipt, messages: list[dict], kwargs: dict,
+    *, explicit_model: bool = False,
 ) -> tuple[InferenceRoute, _CloudCall | None]:
     """Owner authorization, pricing, budget and disclosure — before any send.
 
@@ -306,6 +426,9 @@ def _admit_cloud(
         disclosure = cloud_policy.prepare_messages(messages, reservation.context_classes)
     except cloud_policy.PolicyRefused as exc:
         receipt.policy.append(f"cloud refused: {exc}")
+        if explicit_model:
+            receipt.close("failed")
+            raise
         return (
             InferenceRoute(
                 backend="ollama",
@@ -497,10 +620,11 @@ def chat_with_usage(
     """One completed answer, from the model the policy allows, with a receipt.
 
     A cloud attempt that fails before answering may be replaced by the
-    installed local model for the role; the receipt lists both attempts. A
-    policy refusal, a capability mismatch or a local failure is raised, never
-    papered over.
+    installed local model for the role; a local attempt gets the bounded
+    recovery in ``_local_recovery_routes``. The receipt lists every attempt.
+    A policy refusal or a capability mismatch is raised, never papered over.
     """
+    explicit_model = bool(kwargs.get("explicit_model", False))
     overlay, chosen_model, hardware, lock = _prepare(model, role, kwargs)
     receipt = boundary.Receipt(
         role=role,
@@ -510,15 +634,36 @@ def chat_with_usage(
     )
     _note_overlay(receipt, model, chosen_model, overlay, route)
     chosen = route or select_route(chosen_model, role=role, messages=messages, lock_model=lock)
+    _require_selected_model(chosen, model, explicit_model, receipt)
     chosen = _authorize(chosen, role, receipt)
+    _require_selected_model(chosen, model, explicit_model, receipt)
     boundary.check_capabilities(chosen.model, boundary.requirements_from_kwargs(kwargs, messages))
-    chosen, cloud = _admit_cloud(chosen, role, receipt, messages, kwargs)
+    chosen, cloud = _admit_cloud(chosen, role, receipt, messages, kwargs, explicit_model=explicit_model)
     _utility_defaults(role, chosen, kwargs)
     _trace(chosen, hardware, overlay, stream=False)
     try:
         text, usage = _run_sync(chosen, messages, kwargs, receipt, cloud)
     except boundary.ProviderUnavailable as exc:
-        if not (chosen.backend in ("litellm", "native") and exc.fallback_eligible):
+        if chosen.backend == "ollama":
+            last: boundary.ProviderUnavailable = exc
+            for step in _local_recovery_routes(
+                chosen, exc, role=role, explicit_model=explicit_model,
+                receipt=receipt, kwargs=kwargs, messages=messages,
+            ):
+                chosen = step
+                try:
+                    text, usage = _run_sync(chosen, messages, kwargs, receipt)
+                    break
+                except boundary.ProviderUnavailable as again:
+                    last = again
+            else:
+                receipt.failure_category = receipt.failure_category or boundary.classify_failure(last)
+                receipt.close("failed")
+                raise last
+            receipt.close("completed")
+            _usage_fields(usage, chosen, hardware, overlay, receipt)
+            return text, usage
+        if explicit_model or not (chosen.backend in ("litellm", "native") and exc.fallback_eligible):
             receipt.close("failed")
             raise
         logger.warning("Cloud attempt failed (%s); trying installed local model", exc)
@@ -552,7 +697,13 @@ def _ollama_tools(model: str, messages: list[dict], tools: list[dict], **kwargs)
 
     from jarvis.llm import usage_from_response
 
-    response = chat(model=model, messages=messages, tools=tools, **kwargs)
+    from jarvis import gpu_scheduler
+
+    options = dict(kwargs.get("options") or {})
+    with gpu_scheduler.admit_ollama(model, options) as job:
+        if job.options:
+            kwargs["options"] = {**options, **job.options}
+        response = (_ollama_client_chat(job) if job.host else chat)(model=model, messages=messages, tools=tools, **kwargs)
     message = response.get("message") or {}
     calls = []
     for call in message.get("tool_calls") or []:
@@ -867,6 +1018,7 @@ def stream_chat(
     model is appended to a partial first answer.
     """
     usage = kwargs.pop("usage", None)
+    explicit_model = bool(kwargs.get("explicit_model", False))
     overlay, chosen_model, hardware, lock = _prepare(model, role, kwargs)
     receipt = boundary.Receipt(
         role=role,
@@ -876,9 +1028,11 @@ def stream_chat(
     )
     _note_overlay(receipt, model, chosen_model, overlay, route)
     chosen = route or select_route(chosen_model, role=role, messages=messages, lock_model=lock)
+    _require_selected_model(chosen, model, explicit_model, receipt)
     chosen = _authorize(chosen, role, receipt)
+    _require_selected_model(chosen, model, explicit_model, receipt)
     boundary.check_capabilities(chosen.model, boundary.requirements_from_kwargs(kwargs, messages))
-    chosen, cloud = _admit_cloud(chosen, role, receipt, messages, kwargs)
+    chosen, cloud = _admit_cloud(chosen, role, receipt, messages, kwargs, explicit_model=explicit_model)
     _utility_defaults(role, chosen, kwargs)
     _trace(chosen, hardware, overlay, stream=True)
     if usage is not None:
@@ -888,7 +1042,25 @@ def stream_chat(
         try:
             yield from _attempt_stream(chosen, messages, kwargs, receipt, usage, cancel_check, cloud)
         except boundary.ProviderUnavailable as exc:
-            if chosen.backend not in ("litellm", "native"):
+            if chosen.backend == "ollama":
+                last: boundary.ProviderUnavailable = exc
+                for step in _local_recovery_routes(
+                    chosen, exc, role=role, explicit_model=explicit_model, receipt=receipt,
+                    kwargs=kwargs, messages=messages, cancel_check=cancel_check,
+                ):
+                    chosen = step
+                    try:
+                        yield from _attempt_stream(chosen, messages, kwargs, receipt, usage, cancel_check)
+                        break
+                    except boundary.ProviderUnavailable as again:
+                        last = again
+                else:
+                    receipt.failure_category = receipt.failure_category or boundary.classify_failure(last)
+                    raise last
+                final = receipt.final
+                status = final.status if final else "failed"
+                return
+            if explicit_model or chosen.backend not in ("litellm", "native"):
                 raise
             logger.warning("Cloud stream failed before output (%s); local fallback", exc)
             receipt.policy.append("cloud stream failed before output; local fallback")

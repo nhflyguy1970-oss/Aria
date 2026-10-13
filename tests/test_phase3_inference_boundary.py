@@ -274,7 +274,7 @@ def test_cloud_target_does_not_depend_on_local_ollama_health(monkeypatch, assist
     from jarvis.behaviors.conversation import ConversationEngine
 
     engine = ConversationEngine(assistant)
-    assert engine._needs_local_runtime({"model": CLOUD}) is True  # disabled → runs locally
+    assert engine._needs_local_runtime({"model": CLOUD}) is False  # refusal surfaces without local work
     assert engine._needs_local_runtime({"model": LOCAL}) is True
     enable_cloud(monkeypatch)
     assert engine._needs_local_runtime({"model": CLOUD}) is False
@@ -408,6 +408,21 @@ def test_tests_cannot_reach_live_inference():
 
 
 def test_receipt_explains_when_policy_replaced_the_requested_model(monkeypatch):
+    # A local request replaced by the execution policy says so in its receipt.
+    monkeypatch.setattr(
+        "jarvis.inference.execution_policy.apply_policy_to_route",
+        lambda *, model, role="general": {"model": LOCAL, "hardware": "cpu", "source": "user_config"},
+    )
+    with patch.object(gateway, "_ollama_chat_with_usage", return_value=("ok", {})):
+        _t, usage = gateway.chat_with_usage("llama3.2:3b", MSG)
+    receipt = usage["receipt"]
+    assert receipt["requested_model"] == "llama3.2:3b" and receipt["executed_model"] == LOCAL
+    assert any("user_config" in p and LOCAL in p for p in receipt["policy"])
+
+
+def test_policy_overlay_never_silently_replaces_a_cloud_target(monkeypatch):
+    # A cloud target is decided by cloud policy (here: disabled), not swapped by the
+    # execution-policy overlay; the receipt records the refusal and the local fallback.
     monkeypatch.setattr(
         "jarvis.inference.execution_policy.apply_policy_to_route",
         lambda *, model, role="general": {"model": LOCAL, "hardware": "cpu", "source": "user_config"},
@@ -415,5 +430,6 @@ def test_receipt_explains_when_policy_replaced_the_requested_model(monkeypatch):
     with patch.object(gateway, "_ollama_chat_with_usage", return_value=("ok", {})):
         _t, usage = gateway.chat_with_usage(CLOUD, MSG)
     receipt = usage["receipt"]
-    assert receipt["requested_model"] == CLOUD and receipt["executed_model"] == LOCAL
-    assert any("user_config" in p and LOCAL in p for p in receipt["policy"])
+    assert receipt["requested_model"] == CLOUD and receipt["executed_model"] != CLOUD
+    assert not any("user_config" in p for p in receipt["policy"])
+    assert any(p.startswith("cloud_refused") for p in receipt["policy"])
