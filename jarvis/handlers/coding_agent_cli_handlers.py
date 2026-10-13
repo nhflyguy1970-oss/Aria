@@ -59,9 +59,26 @@ def coding_agent_plan(assistant, params: dict, message: str) -> dict:
         return err(out["error"], module="coding", error_kind="agent_unavailable")
     if "question" in out:
         return ok(out["question"], module="coding", type="clarification")
+    from jarvis.coding_agents import permissions, runs
+    try:
+        permissions.validate_proposal(out["permissions"], params)
+    except permissions.ProposalConflict as exc:
+        runs.reject(out["plan"]["id"], via="permission_proposal_conflict")
+        return err(str(exc), module="coding", error_kind="permission_proposal_conflict",
+                   permissions=out["permissions"])
     _set_choice(assistant, "Start this coding-agent run?", out["choices"], message)
     return ok(out["text"] + "\n\nReply **yes** to start or **no** to drop it.", module="coding",
-              type="clarification", plan=out["plan"], choices=["Yes", "No"])
+              type="clarification", plan=out["plan"], permissions=out["permissions"], choices=["Yes", "No"])
+
+
+def _owner_step_up() -> dict:
+    """Same owner authority as the UI approve route: git.write needs a fresh step-up."""
+    from jarvis.security.owner.provider_credentials import bound_owner_service
+
+    try:
+        return bound_owner_service().authorize("git.write", room="coding")
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "reason": f"owner security unavailable: {type(exc).__name__}"}
 
 
 @register_action("coding_agent_execute", module="coding",
@@ -74,16 +91,34 @@ def coding_agent_execute(assistant, params: dict, message: str) -> dict:
     if not plan:
         return err("There's no such coding-agent plan.", module="coding")
     token = str(params.get("approval_token") or "")
+    from jarvis.coding_agents import permissions
+    try:
+        receipt = permissions.for_plan(plan_id, approval_token=token)
+        permissions.validate_proposal(receipt, params)
+    except permissions.ProposalConflict as exc:
+        return err(str(exc), module="coding", error_kind="permission_proposal_conflict")
     if plan["status"] == runs.PROPOSED and not token:
         return err("That plan hasn't been approved. I only start agent runs you confirm.", module="coding",
                    error_kind="approval_required")
+    existing = runs.run_for_plan(plan_id)
+    if existing:
+        return ok("This plan already has a run; no new execution was started.", module="coding",
+                  run=existing, reused=True, permissions=receipt)
+    if not receipt["may_start"]:
+        return err("Current authorization does not permit this coding plan to start.", module="coding",
+                   error_kind="policy_denied", permissions=receipt)
+    auth = _owner_step_up()
+    if not auth.get("ok"):
+        return err(f"Not started: {auth.get('reason') or 'owner step-up required'}. Step up in ARIA, then reply "
+                   "**yes** again — the plan stays proposed.", module="coding", error_kind="step_up_required",
+                   permissions=receipt)
     try:
         run = runs.start(plan_id, token=token, via="chat_confirmation", assistant=assistant)
     except runs.AgentRunError as exc:
         return err(f"Not started: {exc}", module="coding", error_kind="policy_denied")
     return ok(f"Started **{run['id']}** ({plan['agent']} on {plan['project']}). It works in a sandboxed disposable "
               f"copy; I'll verify the result myself. Ask \"how is the coding agent doing?\" for progress.",
-              module="coding", run=run)
+              module="coding", run=run, permissions=receipt)
 
 
 @register_action("coding_agent_reject", module="coding", description="Drop a proposed coding-agent plan", info=True)
@@ -166,23 +201,33 @@ def coding_agent_progress(assistant, params: dict, message: str) -> dict:
 @register_action("coding_agent_resume", module="coding",
                  description="Find unfinished coding-agent work and propose continuing it", info=True)
 def coding_agent_resume(assistant, params: dict, message: str) -> dict:
-    from jarvis.coding_agents import projects, supervisor
+    from jarvis.coding_agents import projects, runs, supervisor
 
     where = projects.resolve(str(params.get("project") or message), session=getattr(assistant, "session", None))
     if "unregistered" in where:
         return err(f"{projects.TITLES[where['unregistered']]} isn't registered as a project in ARIA; "
                    "I won't guess its location.", module="coding")
     slug = (where.get("project") or {}).get("slug", "")
-    todo = supervisor.resume_candidates(slug)
+    explicit_run = runs.get_run(str(params.get('run_id') or '')) if params.get('run_id') else None
+    if params.get('run_id') and not explicit_run:
+        return err('There is no such coding-agent run.', module='coding')
+    if explicit_run and slug and explicit_run['project'] != slug:
+        return err('That run belongs to a different project.', module='coding')
+    todo = [explicit_run] if explicit_run else supervisor.resume_candidates(slug)
     if not todo:
         scope = f" for {where['project']['title']}" if slug else ""
         return ok(f"I have no unfinished coding-agent work on record{scope}. (Source: execution receipts.)",
                   module="coding")
     last = todo[0]
     res = last.get("result") or {}
-    task = f"Continue this unfinished task: {last['task']}\nPrevious attempt ended: {last['status']} — {res.get('reason', '')}"
-    out = supervisor.propose(task, agent_hint=last["agent"], task=task, project_hint=last["project"],
-                             session=getattr(assistant, "session", None))
+    task = str(params.get('task') or f"Continue this unfinished task: {last['task']}\nPrevious attempt ended: {last['status']} — {res.get('reason', '')}")
+    if (last.get('receipt') or {}).get('private_state'):
+        out = supervisor.propose_continuation(last, task=task)
+    else:
+        # Legacy ephemeral runs cannot be represented as durable sessions.
+        task = 'New isolated attempt (no stored session exists). ' + task
+        out = supervisor.propose(task, agent_hint=last['agent'], task=task, project_hint=last['project'],
+                                 session=getattr(assistant, 'session', None))
     if "error" in out or "question" in out:
         return err(out.get("error") or out.get("question"), module="coding")
     _set_choice(assistant, "Start this coding-agent run?", out["choices"], message)

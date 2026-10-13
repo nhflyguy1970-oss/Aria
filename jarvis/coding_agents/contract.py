@@ -46,6 +46,7 @@ def verdict(
     tests: dict[str, Any] | None,
     protected_before: dict[str, Any] | None,
     protected_after: dict[str, Any] | None,
+    protected_report: dict[str, Any] | None = None,
     config_before: dict[str, Any] | None,
     config_after: dict[str, Any] | None,
     agent_claims: list[str],
@@ -57,7 +58,16 @@ def verdict(
     verified: list[str] = []
     problems: list[str] = []
 
-    if protected_before is not None and protected_after is not None:
+    if protected_report is not None:
+        if protected_report["violations"]:
+            shown = ", ".join(protected_report["violations"][:5])
+            more = len(protected_report["violations"]) - 5
+            problems.append(f"a protected path changed during the run: {shown}" + (f" (+{more} more)" if more > 0 else ""))
+        else:
+            aria = len(protected_report["runtime_writes"]) + len(protected_report["controller_writes"])
+            verified.append(f"protected paths unchanged ({protected_report['checked_files']} files checked"
+                            + (f"; {aria} ARIA runtime writes attributed)" if aria else ")"))
+    elif protected_before is not None and protected_after is not None:
         if protected_before != protected_after:
             problems.append("a protected path changed during the run")
         else:

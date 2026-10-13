@@ -291,3 +291,23 @@ def test_isolated_watchdog_survives_host_client_disconnection(boundary):
         assert not detail["State"]["Running"] and detail["State"]["ExitCode"] == 124
     finally:
         oci.remove(cid, "cert_watchdog")
+
+
+def test_worker_code_lives_read_only_at_a_neutral_path(boundary):
+    """Phase 8: the worker is mounted at /opt/aria-worker, not at its production-tree path."""
+    from jarvis.coding_agents import boundary as protected, oci
+
+    result = boundary.run(
+        "import os,json\n"
+        "w='/opt/aria-worker'\n"
+        "try:\n"
+        "    open(w+'/probe','w'); ro=False\n"
+        "except OSError:\n"
+        "    ro=True\n"
+        "print(json.dumps({'worker': os.path.isfile(w+'/rpc_worker.py'), 'transport': os.path.isfile(w+'/transport.py'),"
+        " 'read_only': ro, 'prod_tree': os.path.exists('/media/jeff/AI'), 'cwd_worker': os.getcwd().startswith(w)}))"
+    )
+    assert result == {"worker": True, "transport": True, "read_only": True, "prod_tree": False, "cwd_worker": False}
+    assert oci.WORKER_DIR == "/opt/aria-worker"
+    assert protected.exposed([str(Path(oci.__file__).parent), oci.WORKER_DIR],
+                             ["/media/jeff/AI/jarvis/data", "/media/jeff/AI/jarvis/.env"]) == []

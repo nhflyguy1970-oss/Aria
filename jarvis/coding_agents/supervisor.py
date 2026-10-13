@@ -141,7 +141,10 @@ def select_agent(kind: str, mode: str, *, named: str = "", project: dict[str, An
 def propose(message: str, *, agent_hint: str = "", task: str = "", session=None, project_hint: str = "") -> dict[str, Any]:
     """Steps 1–5. Returns {"plan", "text", "choices"} or {"question"} / {"error"}."""
     task = (task or message or "").strip()
-    named = agent_hint or discovery.resolve_agent_name(message)
+    owner_named = discovery.resolve_agent_name(message)
+    if owner_named and agent_hint and agent_hint != owner_named:
+        return {"error": "Agent proposal conflicts with the explicit owner selection."}
+    named = owner_named or agent_hint
     kind, mode = classify(task)
     where = projects.resolve(project_hint or message, session=session)
     if "ambiguous" in where:
@@ -177,12 +180,48 @@ def propose(message: str, *, agent_hint: str = "", task: str = "", session=None,
         "Start it?",
     ]
     token = runs.approval_token(plan["id"])
+    from jarvis.coding_agents import permissions
     return {
         "plan": plan,
+        "permissions": permissions.for_plan(plan["id"]),
         "text": "\n".join(lines),
         "choices": [
             {"label": "Yes", "intent": {"action": "coding_agent_execute",
                                         "params": {"plan_id": plan["id"], "approval_token": token}}},
+            {"label": "No", "intent": {"action": "coding_agent_reject", "params": {"plan_id": plan["id"]}}},
+        ],
+    }
+
+
+def propose_continuation(run: dict, *, task: str) -> dict[str, Any]:
+    """Present a private-session continuation through the existing Yes/No path."""
+    choice = select_agent("comprehension", run["mode"], named=run["agent"], project=projects.get(run["project"]))
+    if "error" in choice:
+        return choice
+    try:
+        plan = runs.create_resume_plan(run["id"], task=task)
+    except runs.AgentRunError as exc:
+        return {"error": str(exc)}
+    scope = json.loads(plan["project_scope"])
+    text = (
+        f"**Continue Codex session** — previous run `{run['id']}` ({run['status']})\n"
+        f"- Project: {run['project']} · Mode: {run['mode'].replace('_', '-')}\n"
+        f"- Workspace: `{scope['resume']['workspace']}` (existing isolated copy)\n"
+        f"- Task: {task[:300]}\n"
+        f"- Limit: {round(plan['timeout_s'] / 60)} min; independent verification remains required.\n"
+        "- A new approval covers this continuation only. Nothing is merged or pushed."
+    )
+    return {
+        "plan": plan,
+        "text": text,
+        "choices": [
+            {
+                "label": "Yes",
+                "intent": {
+                    "action": "coding_agent_execute",
+                    "params": {"plan_id": plan["id"], "approval_token": runs.approval_token(plan["id"])},
+                },
+            },
             {"label": "No", "intent": {"action": "coding_agent_reject", "params": {"plan_id": plan["id"]}}},
         ],
     }

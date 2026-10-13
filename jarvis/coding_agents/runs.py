@@ -34,7 +34,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from jarvis.coding_agents import adapters, contract, discovery, workspace
+from jarvis.coding_agents import adapters, boundary, contract, discovery, workspace
 from jarvis.config import DATA_DIR
 
 DB_PATH = DATA_DIR / "coding_agents.db"
@@ -93,28 +93,38 @@ def _conn() -> sqlite3.Connection:
             if "project_scope" not in {r[1] for r in conn.execute("PRAGMA table_info(plans)")}:
                 conn.close()
                 raise
+    if "resume_run" not in {r[1] for r in conn.execute("PRAGMA table_info(plans)")}:
+        try:conn.execute("ALTER TABLE plans ADD COLUMN resume_run TEXT DEFAULT ''")
+        except sqlite3.OperationalError:
+            if "resume_run" not in {r[1] for r in conn.execute("PRAGMA table_info(plans)")}:
+                conn.close();raise
     return conn
 
 
 # ---------------------------------------------------------------- plans
 
 
-def _project_scope(project: str) -> str:
+def _project_scope(project: str, resume_run: str = "") -> str:
     from jarvis.coding_agents import projects
 
     record = projects.get(project)
     if not record:
         raise AgentRunError(f"project {project!r} is not registered")
-    return json.dumps({
+    scope = {
         "path": str(Path(record["path"]).expanduser().resolve()),
         "test_command": record.get("test_command") or "",
         "protected_paths": record.get("protected_paths") or [],
         "allowed_agents": record.get("allowed_agents") or [],
-    }, sort_keys=True)
+    }
+    if resume_run:
+        from jarvis.coding_agents.sessions import resume_scope
+        try:scope['resume'] = resume_scope(get_run(resume_run) or {})
+        except workspace.WorkspaceError as exc:raise AgentRunError(str(exc)) from exc
+    return json.dumps(scope, sort_keys=True)
 
 
 def _check_project_scope(plan) -> None:
-    if not plan["project_scope"] or plan["project_scope"] != _project_scope(plan["project"]):
+    if not plan["project_scope"] or plan["project_scope"] != _project_scope(plan["project"], dict(plan).get("resume_run") or ""):
         raise AgentRunError("project scope changed or was not reviewed; propose the plan again")
 
 
@@ -123,7 +133,7 @@ def _hash(agent: str, project: str, mode: str, task: str, timeout_s: int, projec
 
 
 def create_plan(*, agent: str, project: str, mode: str, task: str, timeout_s: int = DEFAULT_TIMEOUT_S,
-                source: str = "chat", rationale: str = "", parent_run: str = "") -> dict[str, Any]:
+                source: str = "chat", rationale: str = "", parent_run: str = "", resume_run: str = "") -> dict[str, Any]:
     from jarvis.integration import policy
 
     if mode not in (discovery.READ_ONLY, discovery.WORKSPACE_WRITE):
@@ -131,6 +141,7 @@ def create_plan(*, agent: str, project: str, mode: str, task: str, timeout_s: in
     ceiling = int(policy.bounds_for().get("max_runtime_s") or DEFAULT_TIMEOUT_S)
     timeout_s = max(30, min(int(timeout_s or DEFAULT_TIMEOUT_S), ceiling))
     task = task.strip()[:4000]
+    if not task:raise AgentRunError("a coding task is required")
     depth = 0
     if parent_run:
         parent = get_run(parent_run)
@@ -139,19 +150,39 @@ def create_plan(*, agent: str, project: str, mode: str, task: str, timeout_s: in
         if depth > MAX_DELEGATION_DEPTH:
             raise AgentRunError("delegation depth limit reached: an agent's recommendation cannot start another chain")
     pid = "plan_" + uuid.uuid4().hex[:10]
-    project_scope = _project_scope(project)
+    project_scope = _project_scope(project, resume_run)
+    if resume_run:
+        previous = get_run(resume_run)
+        if agent != 'codex' or previous['agent'] != agent or previous['project'] != project or previous['mode'] != mode:
+            raise AgentRunError('continuation cannot change the agent, project or permission mode')
     row = {
         "id": pid, "created_at": time.time(), "agent": agent, "project": project, "mode": mode,
         "task": task.strip()[:4000], "timeout_s": timeout_s,
         "project_scope": project_scope,
         "plan_hash": _hash(agent, project, mode, task, timeout_s, project_scope),
         "status": PROPOSED, "nonce": secrets.token_urlsafe(16), "approved_at": None, "approved_via": "",
-        "expires_at": None, "parent_run": parent_run, "depth": depth, "source": source, "rationale": rationale[:500],
+        "expires_at": None, "parent_run": parent_run, "depth": depth, "source": source, "rationale": rationale[:500], "resume_run": resume_run,
     }
     with _lock, _conn() as conn:
         conn.execute(f"INSERT INTO plans ({','.join(row)}) VALUES ({','.join('?' * len(row))})", tuple(row.values()))
     _continuity_plan(row)
     return public_plan(row)
+
+
+def create_resume_plan(run_id: str, *, task: str, timeout_s: int = DEFAULT_TIMEOUT_S) -> dict:
+    previous = get_run(run_id)
+    if not previous:
+        raise AgentRunError("no such run")
+    return create_plan(
+        agent=previous["agent"],
+        project=previous["project"],
+        mode=previous["mode"],
+        task=task,
+        timeout_s=timeout_s,
+        resume_run=run_id,
+        source="owner_continuation",
+        rationale="Continue the recorded private Codex session and workspace; fresh owner approval required.",
+    )
 
 
 def get_plan(plan_id: str, *, with_nonce: bool = False) -> dict[str, Any] | None:
@@ -203,7 +234,7 @@ def reject(plan_id: str, *, via: str = "chat") -> None:
     _continuity_update(f"coding_plan:{plan_id}", "rejected")
 
 
-def _consume(plan_id: str) -> dict[str, Any]:
+def _consume(plan_id: str, *, run_id: str = "") -> dict[str, Any]:
     now = time.time()
     with _lock, _conn() as conn:
         plan = conn.execute("SELECT * FROM plans WHERE id=?", (plan_id,)).fetchone()
@@ -221,6 +252,16 @@ def _consume(plan_id: str) -> dict[str, Any]:
                 conn.execute("UPDATE plans SET status=? WHERE id=?", (EXPIRED, plan_id))
                 raise AgentRunError("approval expired; propose the plan again")
             raise AgentRunError(f"plan is not approved (status: {r['status'] if r else 'missing'})")
+        if run_id:
+            # Approval consumption and durable launch intent are one commit.
+            # A crash cannot strand a consumed approval without its run record.
+            from jarvis.coding_agents.sessions import process_identity
+            conn.execute(
+                "INSERT INTO runs (id, plan_id, agent, project, mode, task, status, owner_pid, started_at, receipt) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (run_id, plan_id, plan["agent"], plan["project"], plan["mode"], plan["task"], PENDING,
+                 os.getpid(), now, json.dumps({"owner_identity": process_identity(os.getpid())})),
+            )
     return get_plan(plan_id) or {}
 
 
@@ -297,7 +338,11 @@ def recover_interrupted() -> list[str]:
     for r in rows:
         if r["id"] in _owned:
             continue  # supervised by a live thread in this process
-        if not _alive(r["owner_pid"]):
+        from jarvis.coding_agents.sessions import process_identity
+        prior = get_run(r['id']) or {}
+        identity = (prior.get('receipt') or {}).get('owner_identity')
+        owner_alive = (process_identity(r['owner_pid']) == identity) if identity else _alive(r['owner_pid'])
+        if not owner_alive:
             prior = get_run(r["id"]) or {}
             cid = (prior.get("receipt") or {}).get("container_id")
             if cid:
@@ -307,7 +352,13 @@ def recover_interrupted() -> list[str]:
                 except Exception as exc:
                     _event(r["id"], "error", f"interrupted container cleanup failed: {exc}")
                     continue  # fail closed: retain the concurrency reservation
-            _update(r["id"], status=contract.INTERRUPTED, finished_at=time.time(),
+            receipt = prior.get('receipt') or {}
+            if prior.get('workspace'):
+                try:receipt['workspace_snapshot'] = workspace.snapshot(prior['workspace'])
+                except workspace.WorkspaceError as exc:
+                    _event(r['id'], 'error', f'restart workspace inspection failed: {exc}')
+                    continue
+            _update(r["id"], receipt=receipt, status=contract.INTERRUPTED, finished_at=time.time(),
                     result={"status": contract.INTERRUPTED, "success": False,
                             "reason": "ARIA stopped while this run was in progress; it was not re-run",
                             "verified": [], "unverified": []})
@@ -392,20 +443,20 @@ def _reserve_run(plan_id: str, engine) -> dict[str, Any]:
             active = conn.execute("SELECT COUNT(*) FROM runs WHERE status IN (?,?)", (PENDING, RUNNING)).fetchone()[0]
         if active >= MAX_CONCURRENT:
             raise AgentRunError("another coding-agent run is in progress; wait for it or cancel it")
-        plan = _consume(plan_id)
         run_id = "run_" + uuid.uuid4().hex[:10]
-        mission_id = engine.create_mission(
-            f"[{plan['agent']}] {plan['task'][:120]}",
-            steps=[{"name": "coding agent run", "action": "coding_agent_run_step", "params": {"run_id": run_id}}],
-            kind="coding_agent",
-        )
-        with _conn() as conn:
-            conn.execute(
-                "INSERT INTO runs (id, plan_id, mission_id, agent, project, mode, task, status, owner_pid, started_at) "
-                "VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (run_id, plan_id, mission_id, plan["agent"], plan["project"], plan["mode"], plan["task"], PENDING,
-                 os.getpid(), time.time()),
+        plan = _consume(plan_id, run_id=run_id)
+        try:
+            mission_id = engine.create_mission(
+                f"[{plan['agent']}] {plan['task'][:120]}",
+                steps=[{"name": "coding agent run", "action": "coding_agent_run_step", "params": {"run_id": run_id}}],
+                kind="coding_agent",
             )
+        except Exception as exc:
+            _finish(run_id, {'status': contract.FAILED, 'success': False,
+                'reason': 'mission reservation failed: ' + str(exc), 'verified': [], 'unverified': []},
+                receipt=(get_run(run_id) or {}).get('receipt') or {})
+            raise AgentRunError('mission reservation failed; approval is consumed and the failure is recorded') from exc
+        _update(run_id, mission_id=mission_id)
         _event(run_id, "queued", f"mission {mission_id}")
         _owned.add(run_id)
         return {"run_id": run_id, "mission_id": mission_id}
@@ -415,7 +466,15 @@ def cancel(run_id: str) -> dict[str, Any]:
     run = get_run(run_id)
     if not run:
         raise AgentRunError("no such run")
-    _update(run_id, cancel_requested=1)
+    if run['status'] in contract.TERMINAL:
+        return run
+    with _conn() as conn:
+        changed = conn.execute(
+            "UPDATE runs SET cancel_requested=1 WHERE id=? AND status IN (?,?)",
+            (run_id, PENDING, RUNNING),
+        ).rowcount
+    if not changed:
+        return get_run(run_id) or {}
     _event(run_id, "cancel", "owner requested cancellation")
     if run.get("mission_id"):
         try:
@@ -476,7 +535,7 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
 
     run_id = run["id"]
     plan = get_plan(run["plan_id"]) or {}
-    receipt: dict[str, Any] = {"plan_id": run["plan_id"], "plan_hash": plan.get("plan_hash"),
+    receipt: dict[str, Any] = {**(run.get("receipt") or {}), "plan_id": run["plan_id"], "plan_hash": plan.get("plan_hash"),
                                "approved_via": plan.get("approved_via"), "mission_id": run.get("mission_id")}
     _update(run_id, receipt=receipt)
 
@@ -484,6 +543,9 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
         return _finish(run_id, {"status": contract.REFUSED, "success": False, "reason": reason,
                                 "verified": [], "unverified": []}, receipt=receipt)
 
+    if run.get('cancel_requested'):
+        return _finish(run_id, {'status': contract.CANCELLED, 'success': False,
+            'reason': 'cancelled before launch', 'verified': [], 'unverified': []}, receipt=receipt)
     for cap in ("mission", "coding"):
         if reason := policy.refusal(cap):
             return refuse(reason)
@@ -512,7 +574,9 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
     _update(run_id, receipt=receipt)
 
     try:
-        ws = workspace.prepare(approved_scope["path"], run_id)
+        resumed = approved_scope.get('resume')
+        ws = ({'workspace': resumed['workspace'], 'base_commit': resumed['base_commit'],
+               'source_uncommitted_changes': True} if resumed else workspace.prepare(approved_scope["path"], run_id))
     except (workspace.WorkspaceError, subprocess.TimeoutExpired) as exc:
         return refuse(f"workspace: {exc}")
     out_dir = Path(ws["workspace"]).parent / f"run-{run_id}.out"
@@ -525,9 +589,14 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
                                workspace=ws["workspace"], out_dir=str(out_dir), timeout_s=plan.get("timeout_s") or DEFAULT_TIMEOUT_S)
     state_dirs = workspace.agent_state_dirs(run["agent"])
     config_files = [p for p in _agent_config_files(run["agent"]) if Path(p).is_file()]
-    state_bindings = workspace.private_agent_state(run["agent"], out_dir, state_dirs)
+    state_bindings = workspace.private_agent_state(run["agent"], out_dir, state_dirs,
+        resume_state=(approved_scope.get('resume') or {}).get('private_state'))
+    receipt['private_state'] = state_bindings
+    if plan.get('resume_run'):receipt['resume_run'] = plan['resume_run']
     control_dir = out_dir.parent / f"{run_id}.control"
     control_dir.mkdir(mode=0o700)
+    protected = [str(p if p.is_absolute() else Path(proj["path"]) / p)
+                 for p in (Path(raw).expanduser() for raw in proj.get("protected_paths") or [])]
     broker = None
     cid = ""
     try:
@@ -537,7 +606,8 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
             request = {"agent": run["agent"], "binary": status.path, "argv": argv,
                        "cwd": ws["workspace"], "out_dir": str(out_dir),
                        "prompt": adapters.prompt_for(run["task"], run["mode"]),
-                       "timeout_s": int(plan.get("timeout_s") or DEFAULT_TIMEOUT_S)}
+                       "timeout_s": int(plan.get("timeout_s") or DEFAULT_TIMEOUT_S),
+                       "resume_thread_id": (approved_scope.get('resume') or {}).get('thread_id')}
             cid = oci.create(run_id=run_id, image=status.execution["image"], ws=ws["workspace"],
                 out_dir=str(out_dir), request=request, installations=_install_dirs(status.path),
                 bindings=state_bindings, socket_path=broker.path,
@@ -558,6 +628,12 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
             receipt["limits"] = limits or "none (systemd user scope unavailable)"
         else:
             raise workspace.WorkspaceError("no certified execution backend")
+        mounted = (oci.mount_paths(cid) if cid else
+                   [ws["workspace"], str(out_dir), *(path for pair in state_bindings for path in pair)])
+        exposure = boundary.exposed(mounted, protected)
+        if exposure:
+            raise workspace.WorkspaceError("protected path mounted into the sandbox: " + "; ".join(exposure))
+        receipt["protected_mounts"] = "none (checked against the sandbox's actual mounts)"
     except Exception as exc:
         if cid:
             _stop_container(run_id)
@@ -570,9 +646,14 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
     if cid and run["agent"] == "codex":
         receipt["protocol"] = {"transport": "JSON-RPC stdio", "sandboxPolicy": "externalSandbox",
                                "approvalPolicy": "never", "subscription_account_required": True}
-    protected = [str(p if p.is_absolute() else Path(proj["path"]) / p)
-                 for p in (Path(raw).expanduser() for raw in proj.get("protected_paths") or [])]
-    before_protected = workspace.fingerprint(protected) if protected else None
+    try:
+        before_snapshot = boundary.snapshot(protected, data_dir=DATA_DIR, run_id=run_id) if protected else None
+    except boundary.BoundaryError as exc:
+        _stop_container(run_id)
+        if broker:
+            broker.close()
+        return refuse(str(exc))
+    before_protected = boundary.summary(before_snapshot) if before_snapshot else None
     receipt["protected_before"] = before_protected
     _update(run_id, receipt=receipt)
     before_config = {p: _read(p) for p in config_files} if config_files else None
@@ -584,6 +665,11 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
     env.pop("SSH_AUTH_SOCK", None)
     timeout_s = int(plan.get("timeout_s") or DEFAULT_TIMEOUT_S)
     started = time.time()
+    if (get_run(run_id) or {}).get('cancel_requested'):
+        _stop_container(run_id)
+        if broker:broker.close()
+        return _finish(run_id, {'status': contract.CANCELLED, 'success': False,
+            'reason': 'cancelled before launch', 'verified': [], 'unverified': []}, receipt=receipt)
     _update(run_id, status=RUNNING, started_at=started)
     _event(run_id, "started", f"{run['agent']} in {ws['workspace']}")
     try:
@@ -628,6 +714,11 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
                 if retain and progress and line.startswith("{"):
                     try:
                         ev = json.loads(line)
+                        if ev.get('type') == 'thread.started' and ev.get('thread_id'):
+                            receipt['session_id'] = str(ev['thread_id'])
+                            _update(run_id, receipt=receipt)
+                        if ev.get('type') == 'approval.denied':
+                            _event(run_id, 'approval_denied', clean(str(ev.get('method') or 'unsupported request')))
                         _event(run_id, "progress", clean(str(ev.get("type") or "") + " " + str((ev.get("item") or {}).get("type") or "")))
                     except json.JSONDecodeError:
                         pass
@@ -662,14 +753,16 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
     _stop_container(run_id)
     if broker:
         broker.close()
-    stdout, stderr = discovery.redact("".join(out_chunks)), discovery.redact("".join(err_chunks))
+    # Subscription refresh may introduce credentials after launch. Sanitize all
+    # retained logs again before they become durable verification artifacts.
+    secrets_to_hide.update(_private_tokens(state_bindings))
+    stdout, stderr = clean("".join(out_chunks)), clean("".join(err_chunks))
     for name, content in (("stdout.jsonl", stdout), ("stderr.log", stderr)):
         path = control_dir / name
         path.write_text(content)
         path.chmod(0o600)
     receipt["output_logs"] = {"stdout": str(control_dir / "stdout.jsonl"), "stderr": str(control_dir / "stderr.log")}
     _update(run_id, receipt=receipt)
-    secrets_to_hide.update(_private_tokens(state_bindings))
     report = adapters.parse(run["agent"], stdout, stderr, str(out_dir))
     report.final_message = clean(report.final_message)
     report.errors = [clean(error) for error in report.errors]
@@ -684,21 +777,56 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
         report.errors.append(f"output exceeded {MAX_OUTPUT_BYTES} bytes; the agent was stopped")
     changes = workspace.collect_changes(ws["workspace"], ws["base_commit"])
     tests = None
+    before_verification = workspace.snapshot(ws['workspace'])
     if run["mode"] == discovery.WORKSPACE_WRITE and changes["files"] and not (timed_out or cancelled):
         _event(run_id, "progress", "ARIA running tests")
-        tests = workspace.run_tests(ws["workspace"], str(proj.get("test_command") or ""))
-    receipt["protected_after"] = workspace.fingerprint(protected) if protected else None
+        tests = workspace.run_tests(ws["workspace"], str(proj.get("test_command") or ""),
+            timeout=max(0, timeout_s - (time.time() - started)),
+            cancel_check=lambda: bool((get_run(run_id) or {}).get('cancel_requested')))
+        cancelled = cancelled or bool(tests.get('cancelled'))
+        timed_out = timed_out or bool(tests.get('timed_out'))
+    cancelled = cancelled or bool((get_run(run_id) or {}).get('cancel_requested'))
+    after_verification = workspace.snapshot(ws['workspace'])
+    if tests:
+        tests['workspace_snapshot'] = before_verification
+        if before_verification != after_verification:
+            tests.update(passed=False, error='verification changed code; the tested artifact is not the current workspace')
+    receipt['workspace_snapshot'] = after_verification
+    receipt['session_id'] = report.session_id or receipt.get('session_id', '')
+    if cancelled or timed_out:
+        error_kind = 'cancelled' if cancelled else 'timeout'
+        receipt['error_class'] = error_kind
+    from jarvis.coding_agents import artifacts
+    receipt['artifacts'] = artifacts.capture(control_dir / 'artifacts', patch=changes['patch'],
+        tests=tests, logs=receipt['output_logs'])
+    protected_report = None
+    if before_snapshot:
+        try:
+            after_snapshot = boundary.snapshot(protected, data_dir=DATA_DIR, run_id=run_id)
+            protected_report = boundary.compare(before_snapshot, after_snapshot, data_dir=DATA_DIR)
+            receipt["protected_after"] = boundary.summary(after_snapshot)
+        except boundary.BoundaryError as exc:
+            protected_report = {"violations": [f"protected inventory failed: {exc}"], "runtime_writes": [],
+                                "controller_writes": [], "checked_files": 0}
+            receipt["protected_after"] = None
+        receipt["protected_changes"] = {**protected_report,
+                                        "runtime_writes": protected_report["runtime_writes"][:200]}
+    else:
+        receipt["protected_after"] = None
     judged = contract.verdict(
         mode=run["mode"], exit_code=exit_code, timed_out=timed_out, cancelled=cancelled,
         changes=changes, tests=tests,
         protected_before=before_protected,
         protected_after=receipt["protected_after"],
+        protected_report=protected_report,
         config_before=_config_view(before_config, ws["workspace"], receipt) if before_config else None,
         config_after=_config_view({p: _read(p) for p in config_files}, ws["workspace"], receipt,
                                   before=before_config) if before_config else None,
         agent_claims=adapters.claims(report.final_message), report_errors=report.errors,
         final_message=report.final_message,
     )
+    if run['agent'] == 'codex' and report.terminal_status != 'completed' and judged['status'] not in (contract.CANCELLED, contract.TIMEOUT, contract.VIOLATION):
+        judged.update(status=contract.FAILED, success=False, reason='Codex did not emit a successful terminal event')
     if over_limit and judged["status"] not in (contract.CANCELLED,):
         judged.update(status=contract.FAILED, success=False, reason="output limit exceeded")
     result = {
@@ -713,6 +841,7 @@ def _execute(run: dict[str, Any]) -> dict[str, Any]:
         "usage": report.usage,
         "error_class": error_kind,
         "session_id": report.session_id,
+        "artifacts": receipt["artifacts"],
         "seconds": round(time.time() - started, 1),
         "resources": {**meter.summary(), "scope": "controller client only; OCI caps independently enforced"} if cid else meter.summary(),
         "exit_code": exit_code,
@@ -836,11 +965,30 @@ def _agent_config_files(agent: str) -> list[str]:
 
 
 def _finish(run_id: str, result: dict[str, Any], *, receipt: dict[str, Any], exit_code: int | None = None) -> dict[str, Any]:
-    _update(run_id, status=result["status"], finished_at=time.time(), exit_code=exit_code, result=result, receipt=receipt)
+    # Serialize completion with owner cancellation. A cancellation accepted
+    # before this commit must never be reported as a verified completion.
+    with _conn() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        current = conn.execute("SELECT status,cancel_requested FROM runs WHERE id=?", (run_id,)).fetchone()
+        if current and current["cancel_requested"] and result["status"] not in (contract.VIOLATION, contract.REFUSED):
+            result = {
+                **result,
+                "status": contract.CANCELLED,
+                "success": False,
+                "verified_completion": False,
+                "reason": "owner cancelled before completion",
+                "error_class": "cancelled",
+            }
+            receipt = {**receipt, "error_class": "cancelled"}
+        conn.execute(
+            "UPDATE runs SET status=?,finished_at=?,exit_code=?,result=?,receipt=? WHERE id=?",
+            (result["status"], time.time(), exit_code, json.dumps(result, default=str), json.dumps(receipt, default=str), run_id),
+        )
     _event(run_id, "finished", f"{result['status']}: {result.get('reason', '')}")
     run = get_run(run_id) or {}
     if result["status"] == contract.VIOLATION:
         from jarvis.coding_agents import runtime
+
         runtime.unavailable(run["agent"], f"boundary violation in durable run {run_id}; requires review")
         discovery.set_discovery_for_tests(None)
     _continuity_outcome(run, result)

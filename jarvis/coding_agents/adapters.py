@@ -32,6 +32,7 @@ Task:
 class AgentReport:
     final_message: str = ""
     session_id: str = ""
+    terminal_status: str = ""
     commands: list[dict[str, Any]] = field(default_factory=list)
     files_reported: list[str] = field(default_factory=list)
     usage: dict[str, Any] = field(default_factory=dict)
@@ -141,7 +142,11 @@ def _parse_codex(rep: AgentReport, stdout: str) -> None:
             rep.final_message = str(item.get("text") or rep.final_message)
         elif kind in ("turn.completed", "usage.updated"):
             rep.usage = ev.get("usage") or rep.usage
+            if kind == 'turn.completed':
+                rep.terminal_status = 'completed'
         elif kind in ("error", "turn.failed"):
+            if kind == 'turn.failed':
+                rep.terminal_status = 'failed'
             rep.errors.append(str(ev.get("message") or ev.get("error") or ev)[:400])
 
 

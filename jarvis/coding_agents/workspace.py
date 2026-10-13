@@ -131,11 +131,14 @@ def collect_changes(ws: str, base: str) -> dict[str, Any]:
     """What actually changed, according to git — committed or not."""
     w = Path(ws)
     def git(args):
-        return _git(args, w, untrusted=True)
+        result = _git(args, w, untrusted=True)
+        if result.returncode:
+            raise WorkspaceError('git evidence collection failed: ' + ' '.join(args[:2]))
+        return result
     git(["add", "-A"])
     names = git(["diff", "--cached", "--name-status", base]).stdout.strip().splitlines()
     stat = git(["diff", "--cached", "--stat", base]).stdout.strip()
-    diff = git(["diff", "--cached", base]).stdout
+    diff = git(["diff", "--binary", "--cached", base]).stdout
     commits = git(["rev-list", "--count", f"{base}..HEAD"]).stdout.strip()
     files = []
     for line in names:
@@ -145,34 +148,13 @@ def collect_changes(ws: str, base: str) -> dict[str, Any]:
     return {
         "files": files,
         "stat": stat[-2000:],
+        "patch": diff,
         "diff_excerpt": diff[:DIFF_EXCERPT_CHARS],
         "diff_truncated": len(diff) > DIFF_EXCERPT_CHARS,
         "diff_sha256": hashlib.sha256(diff.encode()).hexdigest() if diff else "",
         "agent_commits": int(commits or 0),
         "push_url": git(["remote", "get-url", "--push", "origin"]).stdout.strip(),
     }
-
-
-def fingerprint(paths: list[str], *, max_files: int = 5000) -> dict[str, Any]:
-    """Size + mtime (+ hash for small files) of protected paths, to prove they were not touched."""
-    out: dict[str, Any] = {}
-    for raw in paths:
-        p = Path(raw).expanduser()
-        if not p.exists():
-            out[raw] = None
-            continue
-        entries = [p] if p.is_file() else sorted(x for x in p.rglob("*") if x.is_file())[:max_files]
-        h = hashlib.sha256()
-        for f in entries:
-            try:
-                st = f.stat()
-            except OSError:
-                continue
-            h.update(f"{f}|{st.st_size}|{st.st_mtime_ns}".encode())
-            if st.st_size <= 1_000_000:
-                h.update(f.read_bytes())
-        out[raw] = {"files": len(entries), "digest": h.hexdigest()}
-    return out
 
 
 def bwrap_available() -> bool:
@@ -276,41 +258,123 @@ def verification_readables(ws: str, command: str, *, in_place: bool = False) -> 
     return sorted({str(Path(p)) for p in sources if Path(p).is_dir() or Path(p).is_file()})
 
 
-def run_tests(ws: str, command: str, *, timeout: int = 600) -> dict[str, Any]:
-    """Run the project's owner-configured test command, sandboxed, no network."""
+def _terminate(proc) -> None:
+    import signal
+
+    try:
+        os.killpg(proc.pid, signal.SIGTERM)
+        proc.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait(timeout=5)
+    except ProcessLookupError:
+        pass
+
+
+def run_tests(ws: str, command: str, *, timeout: float = 600, cancel_check=None) -> dict[str, Any]:
+    """Bounded, cancellable independent verification inside the existing sandbox."""
+    import threading
     from jarvis.security.owner.env_boundary import build_subprocess_env
 
     if not command.strip():
         return {"ran": False, "reason": "no test command configured for this project"}
-    # Agent-written tests are untrusted too. Hide other projects and home data;
-    # expose only trusted interpreter installations as read-only toolchains.
+    if cancel_check and cancel_check():
+        return {"ran": False, "passed": False, "cancelled": True, "reason": "cancelled before verification"}
     toolchains = verification_readables(ws, command)
     argv = sandbox_argv(["sh", "-c", command], ws, network=False, readable=toolchains)
-    started = time.time()
+    started = time.monotonic()
+    log_dir = Path(ws).parent / f"{Path(ws).name}.verification"
+    log_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+    log_path = log_dir / f"tests-{time.time_ns()}.log"
+    cap = 4_000_000
+    size = 0
+    tail = ""
+    overflow = threading.Event()
+    proc = subprocess.Popen(
+        argv,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        env=build_subprocess_env(),
+        cwd=ws,
+        stdin=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+
+    def pump():
+        nonlocal size, tail
+        with log_path.open("w") as log:
+            log_path.chmod(0o600)
+            while chunk := proc.stdout.read(8192):
+                size += len(chunk.encode())
+                if size > cap:
+                    overflow.set()
+                    continue
+                log.write(chunk)
+                log.flush()
+                tail = (tail + chunk)[-TEST_OUTPUT_CHARS:]
+
+    thread = threading.Thread(target=pump, daemon=True)
+    thread.start()
+    cancelled = timed_out = False
     try:
-        proc = subprocess.run(
-            argv, capture_output=True, text=True, timeout=timeout, env=build_subprocess_env(), cwd=ws,
-            stdin=subprocess.DEVNULL,
-        )
-        out = (proc.stdout or "") + (proc.stderr or "")
-        log_dir = Path(ws).parent / f"{Path(ws).name}.verification"
-        log_dir.mkdir(parents=True, exist_ok=True)
-        log_path = log_dir / f"tests-{time.time_ns()}.log"
-        log_path.write_text(out)
-        return {
-            "ran": True,
-            "command": command,
-            "exit_code": proc.returncode,
-            "passed": proc.returncode == 0,
-            "seconds": round(time.time() - started, 1),
-            "output_tail": out[-TEST_OUTPUT_CHARS:],
-            "output_log": str(log_path),
-            "ran_by": "aria",
-            "sandbox": "bwrap: private roots/PID/IPC, writable workspace, trusted toolchains read-only, no network",
-        }
-    except subprocess.TimeoutExpired:
-        return {"ran": True, "command": command, "exit_code": None, "passed": False,
-                "error": f"timed out after {timeout}s", "ran_by": "aria"}
+        while proc.poll() is None:
+            cancelled = bool(cancel_check and cancel_check())
+            timed_out = time.monotonic() - started >= max(0, timeout)
+            if cancelled or timed_out or overflow.is_set():
+                _terminate(proc)
+                break
+            time.sleep(0.05)
+        proc.wait()
+        thread.join(timeout=5)
+        if thread.is_alive():
+            raise WorkspaceError("verification output did not close")
+    finally:
+        if proc.poll() is None:
+            _terminate(proc)
+        proc.stdout.close()
+    cancelled = cancelled or bool(cancel_check and cancel_check())
+    return {
+        "ran": True,
+        "command": command,
+        "exit_code": proc.returncode,
+        "passed": proc.returncode == 0 and not (cancelled or timed_out or overflow.is_set()),
+        "cancelled": cancelled,
+        "timed_out": timed_out,
+        "output_limit_exceeded": overflow.is_set(),
+        "seconds": round(time.monotonic() - started, 1),
+        "output_tail": tail,
+        "output_log": str(log_path),
+        "ran_by": "aria",
+        "sandbox": "bwrap: private roots/PID/IPC, writable workspace, trusted toolchains read-only, no network",
+    }
+
+
+def snapshot(ws: str) -> str:
+    """Bind verification and continuation to actual code bytes, including untracked files."""
+    root = Path(ws)
+    proc = _git(["ls-files", "-z", "--cached", "--others", "--exclude-standard"], root, untrusted=True)
+    if proc.returncode:
+        raise WorkspaceError("workspace inventory failed")
+    digest = hashlib.sha256()
+    for name in sorted(set(filter(None, proc.stdout.split("\0")))):
+        path = root / name
+        if not _inside(path.parent, root):
+            raise WorkspaceError("workspace inventory escaped its root")
+        if path.is_symlink():
+            entry = [name, "link", os.readlink(path)]
+        elif path.is_file():
+            content = hashlib.sha256()
+            with path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    content.update(chunk)
+            entry = [name, "file", path.stat().st_mode & 0o777, content.hexdigest()]
+        elif not path.exists():
+            entry = [name, "missing"]
+        else:
+            raise WorkspaceError("unsupported workspace inventory path")
+        digest.update(json.dumps(entry).encode() + b"\n")
+    return digest.hexdigest()
 
 
 def agent_state_dirs(agent: str) -> list[str]:
@@ -324,7 +388,7 @@ def agent_state_dirs(agent: str) -> list[str]:
     return [str(d) for d in dirs if d.exists()]
 
 
-def private_agent_state(agent: str, out_dir: Path, state_dirs: list[str]) -> list[tuple[str, str]]:
+def private_agent_state(agent: str, out_dir: Path, state_dirs: list[str], *, resume_state: list[dict] | None = None) -> list[tuple[str, str]]:
     """A run may use sign-in material, never the owner's shared session/history store.
 
     Only named sign-in files are copied into private writable state; permission
@@ -336,6 +400,21 @@ def private_agent_state(agent: str, out_dir: Path, state_dirs: list[str]) -> lis
         "claude_code": (".credentials.json",),
         "antigravity": ("oauth_creds.json", "google_accounts.json", "antigravity-cli/auth.json", "antigravity-cli/antigravity-oauth-token"),
     }.get(agent, ())
+    if resume_state:
+        from jarvis.coding_agents.sessions import tree_hash
+        bindings = []
+        for index, record in enumerate(resume_state):
+            source = Path(record['source'])
+            if tree_hash(source) != record['sha256']:raise WorkspaceError('private session changed after approval')
+            private = out_dir / 'state' / str(index)
+            private.mkdir(parents=True, mode=0o700)
+            for path in source.iterdir():
+                if path.name in ('auth.json', 'sessions', 'archived_sessions') or path.name.startswith('state_') and '.sqlite' in path.name:
+                    dest = private / path.name
+                    if path.is_dir():shutil.copytree(path, dest)
+                    elif path.is_file():shutil.copy2(path, dest)
+            bindings.append((str(private), record['target']))
+        return bindings
     bindings = []
     for index, raw in enumerate(state_dirs):
         source = Path(raw)

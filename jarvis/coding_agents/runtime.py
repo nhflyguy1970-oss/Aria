@@ -29,6 +29,11 @@ def policy_hash() -> str:
                 "adapters.py",
                 "workspace.py",
                 "supervisor.py",
+                "permissions.py",
+                "sessions.py",
+                "artifacts.py",
+                "boundary.py",
+                "contract.py",
             )
         )
     ).hexdigest()

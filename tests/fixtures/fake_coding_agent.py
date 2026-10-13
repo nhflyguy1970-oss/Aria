@@ -74,6 +74,8 @@ if B.get("connect_host"):
         B["message"] = f"NETFAIL:{type(exc).__name__}"
 if B.get("sleep"):
     time.sleep(float(B["sleep"]))
+if B.get("refresh_auth_file"):
+    Path(B["refresh_auth_file"]).write_text(json.dumps({"access_token": B["refreshed_token"]}))
 msg = B.get("message", "Done. All tests pass.")
 if NAME == "codex":
     out = None

@@ -9,6 +9,7 @@ import subprocess
 from pathlib import Path
 
 SCHEME = "aria-oci-external-v1"
+WORKER_DIR = "/opt/aria-worker"  # neutral, read-only home of the worker code inside the container
 LABEL = "aria.phase6.run"
 DOCKER = ["docker", "--host", "unix:///var/run/docker.sock"]
 
@@ -91,7 +92,7 @@ def create(
     for path in ("/usr", "/lib", "/lib64", *installations):
         if Path(path).exists():
             mount(path, path, True)
-    mount(code, code, True)
+    mount(code, WORKER_DIR, True)
     mount(ws, ws, read_only)
     if (Path(ws) / ".git").is_dir():
         mount(Path(ws) / ".git", Path(ws) / ".git", True)
@@ -109,7 +110,7 @@ def create(
         "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
     }.items():
         args.extend(["--env", f"{key}={value}"])
-    args += ["--entrypoint", "/usr/bin/python3", image, str(code / "rpc_worker.py"), str(req)]
+    args += ["--entrypoint", "/usr/bin/python3", image, f"{WORKER_DIR}/rpc_worker.py", str(req)]
     cid = docker(*args).stdout.strip()
     try:
         detail = json.loads(docker("inspect", cid).stdout)[0]
@@ -135,6 +136,14 @@ def create(
     except Exception:
         remove(cid, run_id)
         raise
+
+
+def mount_paths(cid: str) -> list[str]:
+    """Host sources and container targets of every mount the daemon actually made."""
+    if not re.fullmatch(r"[0-9a-f]{64}", cid):
+        raise ValueError("invalid container identity")
+    detail = json.loads(docker("inspect", cid).stdout)[0]
+    return [path for m in detail.get("Mounts") or [] for path in (m.get("Source"), m.get("Destination")) if path]
 
 
 def remove(cid: str, run_id: str) -> None:

@@ -534,7 +534,7 @@ class _Assistant:
         self.session = session
 
 
-def test_chat_flow_plan_yes_runs_once_with_evidence(agents, repo):
+def test_chat_flow_plan_yes_runs_once_with_evidence(agents, repo, monkeypatch):
     from jarvis.handlers import ensure_handlers_loaded
     from jarvis.handlers.registry import call_action
     from jarvis.router import route
@@ -551,6 +551,12 @@ def test_chat_flow_plan_yes_runs_once_with_evidence(agents, repo):
     assert out["ok"] and "Plan" in out["message"] and runs.list_runs() == []  # proposed only
     yes = route("yes", session)
     assert yes["action"] == "coding_agent_execute" and yes["params"]["approval_token"]
+    from jarvis.handlers import coding_agent_cli_handlers as cli
+
+    monkeypatch.setattr(cli, "_owner_step_up", lambda: {"ok": False, "reason": "Step-up authentication required"})
+    refused = call_action(a, "coding_agent_execute", yes["params"], "yes")  # provisioned owner, no step-up
+    assert not refused["ok"] and refused.get("error_kind") == "step_up_required" and runs.list_runs() == []
+    monkeypatch.setattr(cli, "_owner_step_up", lambda: {"ok": True})
     started = call_action(a, "coding_agent_execute", yes["params"], "yes")
     assert started["ok"]
     for _ in range(100):

@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import threading
+from collections import deque
 from pathlib import Path
 
 from transport import bridge
@@ -55,6 +56,7 @@ def main():
         text=True,
     )
     sequence = 0
+    notifications = deque()
 
     def send(method, params=None, identity=None):
         message = {"method": method}
@@ -71,22 +73,40 @@ def main():
             raise RuntimeError("app-server exited before a terminal response")
         return json.loads(line)
 
+    def deny_request(message):
+        method = message["method"]
+        emit({"type": "approval.denied", "method": method, "reason": "additional authority requires a separately approved ARIA plan"})
+        answer = {"id": message["id"]}
+        if method in ("item/commandExecution/requestApproval", "item/fileChange/requestApproval"):
+            answer["result"] = {"decision": "decline"}
+        else:
+            answer["error"] = {"code": -32601, "message": "unsupported request outside the approved ARIA scope"}
+        process.stdin.write(json.dumps(answer) + "\n")
+        process.stdin.flush()
+
     def call(method, params):
         nonlocal sequence
         sequence += 1
         send(method, params, sequence)
         while True:
             message = incoming()
+            if message.get("method") and "id" in message:
+                deny_request(message)
+                continue
             if message.get("id") == sequence:
                 if "error" in message:
                     raise RuntimeError(str(message["error"]))
                 return message["result"]
+            if message.get("method"):
+                if len(notifications) >= 10000:
+                    raise RuntimeError("app-server notification buffer exceeded its limit")
+                notifications.append(message)
 
     try:
         call(
             "initialize",
             {
-                "clientInfo": {"name": "aria-phase6", "version": "1"},
+                "clientInfo": {"name": "aria", "title": "ARIA", "version": "7"},
                 "capabilities": {"experimentalApi": True},
             },
         )
@@ -107,18 +127,14 @@ def main():
             return result["exitCode"]
         account = call("account/read", {"refreshToken": False}).get("account") or {}
         if account.get("type") != "chatgpt":
-            raise RuntimeError(
-                "subscription authentication is not confirmed; refusing a model request"
-            )
-        thread = call(
-            "thread/start",
-            {
-                "cwd": request["cwd"],
-                "ephemeral": True,
-                "approvalPolicy": "never",
-                "sandbox": "read-only",
-            },
-        )["thread"]["id"]
+            raise RuntimeError("subscription authentication is not confirmed; refusing a model request")
+        thread_params = {"cwd": request["cwd"], "approvalPolicy": "never", "sandbox": "read-only"}
+        resume_id = request.get("resume_thread_id")
+        if resume_id:
+            thread_params["threadId"] = resume_id
+        else:
+            thread_params["ephemeral"] = False
+        thread = call("thread/resume" if resume_id else "thread/start", thread_params)["thread"]["id"]
         emit({"type": "thread.started", "thread_id": thread})
         call(
             "turn/start",
@@ -132,22 +148,17 @@ def main():
         )
         final = ""
         while True:
-            message = incoming()
+            message = notifications.popleft() if notifications else incoming()
             method, params = message.get("method", ""), message.get("params") or {}
             if "id" in message and method:
-                # No server request grants authority beyond the approved task.
-                process.stdin.write(
-                    json.dumps({"id": message["id"], "result": {"decision": "decline"}}) + "\n"
-                )
-                process.stdin.flush()
+                deny_request(message)
+                continue
             if method == "item/completed":
                 item = params.get("item") or {}
                 kind = item.get("type")
                 if kind == "agentMessage":
                     final = item.get("text", "")
-                    emit(
-                        {"type": "item.completed", "item": {"type": "agent_message", "text": final}}
-                    )
+                    emit({"type": "item.completed", "item": {"type": "agent_message", "text": final}})
                 elif kind == "commandExecution":
                     emit(
                         {
@@ -170,11 +181,7 @@ def main():
             elif method == "item/agentMessage/delta":
                 emit({"type": "item.delta", "delta": params.get("delta", "")})
             elif method == "thread/tokenUsage/updated":
-                usage = (
-                    (params.get("tokenUsage") or {}).get("total")
-                    or (params.get("tokenUsage") or {}).get("last")
-                    or {}
-                )
+                usage = (params.get("tokenUsage") or {}).get("total") or (params.get("tokenUsage") or {}).get("last") or {}
                 emit(
                     {
                         "type": "usage.updated",
@@ -206,8 +213,14 @@ def main():
                 emit({"type": "turn.completed"})
                 return 0
     finally:
-        process.kill()
-        process.wait(timeout=5)
+        # Let Codex flush its private rollout before tearing down the sandbox.
+        try:
+            process.stdin.close()
+            process.wait(timeout=5)
+        except (BrokenPipeError, OSError, subprocess.TimeoutExpired):
+            process.kill()
+            process.wait(timeout=5)
+        timer.cancel()
         server.shutdown()
 
 
