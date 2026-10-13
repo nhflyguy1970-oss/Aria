@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -113,8 +114,12 @@ def run_electron_blocking(
         env = _shell_env(url)
         env["JARVIS_ELECTRON_QUIT_ON_CLOSE"] = "1"
         proc = subprocess.Popen([str(binary), str(ELECTRON_DIR)], env=env)
-        code = proc.wait()
-        return code if code is not None else 0
+        previous = signal.signal(signal.SIGTERM, lambda signum, frame: proc.terminate())
+        try:
+            code = proc.wait()
+            return code if code is not None else 0
+        finally:
+            signal.signal(signal.SIGTERM, previous)
     finally:
         LOCK.release()
 

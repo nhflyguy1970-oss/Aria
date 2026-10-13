@@ -116,7 +116,7 @@ def _maybe_git_sync(now: datetime) -> None:
     try:
         from jarvis.knowledge.git_sync import sync_all
 
-        result = sync_all(force=False)
+        result = sync_all(force=False, cancel_check=_stop.is_set)
         logger.info("Scheduled git sync: %s repo(s), ok=%s", result.get("repos"), result.get("ok"))
     except Exception as exc:
         logger.debug("Scheduled git sync failed: %s", exc)
@@ -246,15 +246,18 @@ def _loop() -> None:
     while not _stop.wait(60):
         try:
             now = datetime.now()
-            _maybe_briefing(now)
-            _maybe_task_nudge(now)
-            _maybe_git_sync(now)
-            _maybe_auto_recover(now)
-            _maybe_health_reminders(now)
-            _maybe_integrity_scan(now)
+            for task in (_maybe_briefing, _maybe_task_nudge, _maybe_git_sync,
+                         _maybe_auto_recover, _maybe_health_reminders, _maybe_integrity_scan):
+                if _stop.is_set():
+                    return
+                task(now)
+            if _stop.is_set():
+                return
             from jarvis.automation.ops import maybe_nightly_maintenance
 
             maybe_nightly_maintenance(now)
+            if _stop.is_set():
+                return
             try:
                 from jarvis.flytying.nightly import run_scheduled as flytying_nightly
 
@@ -270,6 +273,8 @@ def _loop() -> None:
                 flytying_nightly(now, memory=memory)
             except Exception as exc:
                 logger.debug("Fly tying nightly skipped: %s", exc)
+            if _stop.is_set():
+                return
             try:
                 from jarvis.sunlight_scene import tick_sunlight
 

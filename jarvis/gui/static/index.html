@@ -139,6 +139,8 @@
           </svg>
           <span class="restart-server-label">Restart Server</span>
         </button>
+        <button type="button" id="quitAriaBtn" class="restart-server-btn" title="Stop ARIA completely">Quit ARIA Completely</button>
+        <p id="quitAriaStatus" class="muted small" aria-live="polite"></p>
         <div id="restartServerProgress" class="restart-server-progress hidden" aria-hidden="true">
           <span class="restart-server-spinner" aria-hidden="true"></span>
         </div>
@@ -1320,6 +1322,7 @@
                 <option value="flux">Flux Schnell (best prompts)</option>
                 <option value="quality">SDXL 1.0 (quality)</option>
                 <option value="fast">SDXL Turbo (fast)</option>
+                <option value="zimage">Z-Image Turbo (fast, INT8)</option>
               </select>
             </label>
             <label class="image-engine-field">

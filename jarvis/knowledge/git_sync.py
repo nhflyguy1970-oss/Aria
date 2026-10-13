@@ -167,8 +167,10 @@ def index_path_for_repo(repo: Path) -> Path:
     return REPOS_INDEX_ROOT / _repo_id(repo) / "code_index.json"
 
 
-def sync_repository(repo: Path, *, force: bool = False, label: str = "") -> GitRepoState:
+def sync_repository(repo: Path, *, force: bool = False, label: str = "", cancel_check=None) -> GitRepoState:
     """Sync one repository — metadata, change detection, incremental index."""
+    if cancel_check is not None and cancel_check():
+        raise InterruptedError("Repository sync cancelled for ARIA shutdown")
     repo = repo.resolve()
     rid = _repo_id(repo)
     state_data = _load_state()
@@ -225,14 +227,19 @@ def sync_repository(repo: Path, *, force: bool = False, label: str = "") -> GitR
                 repo,
                 index_path=index_path_for_repo(repo),
                 changed_files=changed if changed and not force else None,
+                cancel_check=cancel_check,
             )
             indexing_status = "indexed"
+        except InterruptedError:
+            raise
         except Exception as exc:
             errors.append(str(exc)[:200])
             indexing_status = "error"
     else:
         indexing_status = "indexed"
 
+    if cancel_check is not None and cancel_check():
+        raise InterruptedError("Repository sync cancelled for ARIA shutdown")
     now = _utc_now()
     st = GitRepoState(
         id=rid,
@@ -295,16 +302,24 @@ def _register_in_knowledge_registry(st: GitRepoState) -> None:
         logger.debug("Knowledge registry update for git repo: %s", exc)
 
 
-def sync_all(*, force: bool = False) -> dict[str, Any]:
+def sync_all(*, force: bool = False, cancel_check=None) -> dict[str, Any]:
+    if cancel_check is not None and cancel_check():
+        return {"ok": False, "cancelled": True, "repos": 0, "results": []}
     repos = discover_repositories()
     results: list[dict[str, Any]] = []
     for repo in repos:
+        if cancel_check is not None and cancel_check():
+            return {"ok": False, "cancelled": True, "repos": len(results), "results": results}
         try:
-            st = sync_repository(repo, force=force)
+            st = sync_repository(repo, force=force, cancel_check=cancel_check)
             results.append({"ok": st.health != "error", "repo": st.label, "state": st.to_dict()})
+        except InterruptedError:
+            return {"ok": False, "cancelled": True, "repos": len(results), "results": results}
         except Exception as exc:
             results.append({"ok": False, "repo": str(repo), "error": str(exc)[:200]})
 
+    if cancel_check is not None and cancel_check():
+        return {"ok": False, "cancelled": True, "repos": len(results), "results": results}
     try:
         from jarvis.knowledge.registry import sync_registry
 

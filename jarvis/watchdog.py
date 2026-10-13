@@ -83,6 +83,10 @@ class ServerWatchdog:
             return False
 
     def _restart_server(self) -> None:
+        from jarvis.shutdown import quit_requested
+
+        if self._stop.is_set() or quit_requested():
+            return
         self._restart_count += 1
         fail_count = self._consecutive_failures
         self._consecutive_failures = 0

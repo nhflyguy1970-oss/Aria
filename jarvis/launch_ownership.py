@@ -74,6 +74,10 @@ def systemd_is_enabled() -> bool:
 
 
 def systemd_start() -> bool:
+    from jarvis.shutdown import quit_requested
+
+    if quit_requested():
+        return False
     try:
         result = _systemctl("start", UNIT)
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -95,6 +99,10 @@ def systemd_stop() -> bool:
 
 
 def systemd_restart() -> bool:
+    from jarvis.shutdown import quit_requested
+
+    if quit_requested():
+        return False
     try:
         result = _systemctl("restart", UNIT)
     except (OSError, subprocess.TimeoutExpired) as exc:

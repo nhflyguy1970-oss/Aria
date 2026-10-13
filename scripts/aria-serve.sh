@@ -33,4 +33,5 @@ PY="${JARVIS_ROOT}/venv/bin/python"
 if [[ ! -x "$PY" ]]; then
   PY="$(command -v python3)"
 fi
+"$PY" -m jarvis.shutdown clear
 exec "$PY" "${JARVIS_ROOT}/main.py" serve

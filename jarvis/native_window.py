@@ -211,7 +211,13 @@ def run_window_blocking(
     except Exception:
         pass
 
-    webview.start(debug=os.getenv("JARVIS_NATIVE_DEBUG", "0") in ("1", "true", "yes"))
+    previous = signal.signal(signal.SIGTERM, lambda signum, frame: window.destroy())
+    try:
+        webview.start(debug=os.getenv("JARVIS_NATIVE_DEBUG", "0") in ("1", "true", "yes"))
+    finally:
+        signal.signal(signal.SIGTERM, previous)
+        _clear_pid()
+        _release_instance_lock()
     return 0
 
 

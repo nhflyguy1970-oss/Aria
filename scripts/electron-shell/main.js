@@ -19,6 +19,7 @@ const START = (() => {
 })();
 
 let mainWindow = null;
+process.on("SIGTERM", () => app.quit());
 
 function createWindow() {
   mainWindow = new BrowserWindow({

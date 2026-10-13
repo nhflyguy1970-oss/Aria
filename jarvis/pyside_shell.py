@@ -441,7 +441,18 @@ def run_window_blocking(url: str, *, wait_for_ready: bool = True) -> int:
         window.raise_()
         window.activateWindow()
         logger.info("ARIA window shown (%s)", os.environ.get("JARVIS_SHELL", "pyside"))
-        code = app.exec()
+        # A short Qt timer lets Python deliver SIGTERM while Qt owns the loop.
+        from PySide6.QtCore import QTimer
+
+        signal_timer = QTimer()
+        signal_timer.timeout.connect(lambda: None)
+        signal_timer.start(100)
+        previous = signal.signal(signal.SIGTERM, lambda signum, frame: app.quit())
+        try:
+            code = app.exec()
+        finally:
+            signal.signal(signal.SIGTERM, previous)
+            signal_timer.stop()
         logger.info("PySide event loop exited (code=%s)", code)
         _clear_main_window()
         return int(code)

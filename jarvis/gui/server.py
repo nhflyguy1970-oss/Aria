@@ -222,6 +222,13 @@ async def lifespan(app: FastAPI):
             )
     except Exception:
         _shutdown_log.exception("Shutdown: media activity check FAILED")
+    try:
+        from jarvis.shutdown import close_acm
+
+        close_acm()
+        _shutdown_log.info("Shutdown: ACM database connection closed")
+    except Exception:
+        _shutdown_log.exception("Shutdown: ACM close FAILED")
 
 
 from jarvis.branding import assistant_name
@@ -248,6 +255,10 @@ app.add_middleware(APIKeyMiddleware)
 app.add_middleware(RateLimitMiddleware)
 app.add_middleware(NetworkGuardMiddleware)
 app.add_middleware(ProductionIsolationMiddleware)
+
+# Observe only /api/live; this outer layer preserves all existing safety checks.
+from jarvis.health_timing import HealthTimingMiddleware
+app.add_middleware(HealthTimingMiddleware)
 
 from jarvis.gui.extra_routes import register_routes
 
@@ -334,10 +345,16 @@ def _live_payload() -> dict:
     from jarvis.branding import branding_dict
     from jarvis.ollama_health import check_ollama
     from jarvis.product_registration import registration_status
+    from jarvis.health_timing import mark_worker, stage
 
-    ollama = check_ollama(soft_probe=False)
+    mark_worker()
+    with stage("ollama_metadata"):
+        ollama = check_ollama(soft_probe=False, metadata_timeout=2.0)
     state = ollama.get("health_state") or "unavailable"
-    reg = registration_status()
+    with stage("registration"):
+        reg = registration_status()
+    with stage("api_key_metadata"):
+        key_required = api_key_enabled()
     return {
         "ok": reg["ok"],
         "version": APP_VERSION,
@@ -345,7 +362,7 @@ def _live_payload() -> dict:
         "ready": state == "healthy" and reg["ok"],
         "ollama_health": state,
         "uncensored": is_uncensored(),
-        "api_key_required": api_key_enabled(),
+        "api_key_required": key_required,
         "api_key_localhost_exempt": localhost_key_exempt(),
         "auth_lan_requires_key": True,
         "product_registration_ok": reg["ok"],
@@ -361,8 +378,12 @@ def ping():
 
 
 @app.get("/api/live")
-def live():
-    return _live_payload()
+async def live():
+    from starlette.concurrency import run_in_threadpool
+    from jarvis.health_timing import mark_queued
+
+    mark_queued()
+    return await run_in_threadpool(_live_payload)
 
 
 def _build_health_payload() -> dict:
@@ -3849,7 +3870,14 @@ async def chat(
                     pass
                 return False
 
-            needs_chat_model = not _skips_chat_model(pre_action)
+            from jarvis.inference.boundary import is_cloud_model
+            from jarvis.conversation_pipeline import normalize_action_params
+
+            _, pre_params = normalize_action_params(pre_intent)
+            selected = str(assistant.session.chat_model or pre_params.get("model") or "").strip()
+            if assistant.session.chat_model or is_cloud_model(selected):
+                model_hint = selected
+            needs_chat_model = not _skips_chat_model(pre_action) and not is_cloud_model(model_hint)
             hold_chat_priority = False
             if needs_chat_model:
                 # Hold runner priority for ensure + stream so background embeds cannot

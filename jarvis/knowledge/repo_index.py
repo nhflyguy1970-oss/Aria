@@ -32,8 +32,14 @@ def build_repo_index(
     *,
     index_path: Path,
     changed_files: list[str] | None = None,
+    cancel_check=None,
 ) -> int:
     """Build or incrementally update a repository code index."""
+    def check_cancel():
+        if cancel_check is not None and cancel_check():
+            raise InterruptedError("Repository indexing cancelled for ARIA shutdown")
+
+    check_cancel()
     root = root.resolve()
     if changed_files:
         chunks = _load_chunks(index_path)
@@ -41,6 +47,7 @@ def build_repo_index(
         # paid a full model load+unload (_embed_keep_alive() == 0).
         with llm.embed_session():
             for rel in changed_files:
+                check_cancel()
                 chunks = [c for c in chunks if c.get("source") != rel]
                 path = root / rel
                 if not _should_index(path, root):
@@ -54,9 +61,11 @@ def build_repo_index(
                 # full embed-model load+unload (~2-3s) instead of ~3ms.
                 with llm.embed_session():
                     for c in new_chunks:
+                        check_cancel()
                         c["embedding"] = llm.embed_text(c["text"][:2000])
                         c["repo"] = str(root)
                 chunks.extend(new_chunks)
+        check_cancel()
         _save_chunks(index_path, chunks)
         return len(chunks)
 
@@ -65,6 +74,7 @@ def build_repo_index(
     # paid a full model load+unload (_embed_keep_alive() == 0).
     with llm.embed_session():
         for p in root.rglob("*"):
+            check_cancel()
             if not _should_index(p, root):
                 continue
             try:
@@ -73,10 +83,12 @@ def build_repo_index(
                 continue
             rel = str(p.relative_to(root))
             for c in _chunks(text, rel):
+                check_cancel()
                 c["embedding"] = llm.embed_text(c["text"][:2000])
                 c["repo"] = str(root)
                 chunks.append(c)
 
+    check_cancel()
     _save_chunks(index_path, chunks)
     return len(chunks)
 

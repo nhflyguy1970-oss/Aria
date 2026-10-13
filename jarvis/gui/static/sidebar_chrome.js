@@ -228,7 +228,26 @@
     }
   }
 
+  async function quitAriaCompletely() {
+    if (!confirm("Quit ARIA completely? Start ARIA again when you want to return.")) return;
+    const status = $("quitAriaStatus");
+    const btn = $("quitAriaBtn");
+    btn.disabled = true;
+    status.textContent = "Closing ARIA…";
+    try {
+      const res = await fetch("/api/jarvis/quit-completely", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.message || data.reason || "Quit failed");
+      status.textContent = "Quit requested. ARIA is closing.";
+      // A dropped connection alone is not proof of successful full shutdown.
+    } catch (err) {
+      status.textContent = `${err.message}. You can also run scripts/jarvis-ctl.sh quit in a terminal.`;
+      btn.disabled = false;
+    }
+  }
+
   function initServerRestart() {
+    $("quitAriaBtn")?.addEventListener("click", quitAriaCompletely);
     $("restartServerBtn")?.addEventListener("click", restartJarvisServer);
     $("upgradeRestartBtn")?.addEventListener("click", restartJarvisServer);
   }
