@@ -36,6 +36,27 @@ class OpenAIResponses(ProviderAdapter):
     def headers(self, key: str) -> dict[str, str]:
         return {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
+    @property
+    def subscription(self) -> bool:
+        from jarvis.inference.chatgpt_oauth import enabled
+        return enabled()
+
+    @property
+    def billing(self) -> str:
+        return "chatgpt_subscription" if self.subscription else "api"
+
+    def credential(self) -> str:
+        if self.subscription:
+            from jarvis.inference.chatgpt_oauth import access_token
+            return access_token()  # Never fall back to the API key.
+        return super().credential()
+
+    def credential_status(self) -> dict[str, Any]:
+        if self.subscription:
+            from jarvis.inference.chatgpt_oauth import status
+            return status()
+        return super().credential_status()
+
     # ---- request ------------------------------------------------------
 
     def _input(self, messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -91,6 +112,13 @@ class OpenAIResponses(ProviderAdapter):
                 }
                 for t in request.tools
             ]
+        if self.subscription:
+            body.pop("max_output_tokens", None)
+            body.pop("temperature", None)
+            body["stream"] = True
+            if request.tools:
+                body["tools"] = [{"type": "namespace", "name": "aria", "description": "ARIA local tools",
+                                  "tools": body["tools"]}]
         return body
 
     # ---- response -----------------------------------------------------
@@ -128,6 +156,19 @@ class OpenAIResponses(ProviderAdapter):
         return "".join(texts), calls
 
     def chat(self, request: Request) -> Result:
+        if self.subscription:
+            # Plan usage requires SSE even for callers asking for one result.
+            texts, calls, usage, finish, model = [], [], Usage(), "", request.model
+            for event in self.stream(request):
+                if event.type == "text":
+                    texts.append(event.text)
+                elif event.type == "tool_call" and event.tool_call:
+                    calls.append(event.tool_call)
+                elif event.type == "usage" and event.usage:
+                    usage = event.usage
+                elif event.type == "done":
+                    finish, model = event.finish, event.model or model
+            return Result(text="".join(texts), tool_calls=calls, usage=usage, finish=finish, model=model)
         def call():
             resp = self._send(
                 "POST", "/responses", body=self._body(request, stream=False),
@@ -190,6 +231,9 @@ class OpenAIResponses(ProviderAdapter):
     def discover(self) -> list[ModelInfo]:
         resp = self._with_retries(lambda: self._send("GET", "/models", timeout=20, purpose="discovery"))
         data = json.loads(resp.read().decode("utf-8"))
+        if self.subscription:
+            return [ModelInfo(id=m["slug"], provider=self.provider, display_name=m.get("display_name", ""))
+                    for m in data.get("models") or [] if m.get("slug") and m.get("visibility") == "list"]
         # The models endpoint lists ids only; capabilities stay unknown rather
         # than guessed from names.
         return [ModelInfo(id=m["id"], provider=self.provider) for m in data.get("data") or [] if m.get("id")]

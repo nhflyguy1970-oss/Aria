@@ -5,10 +5,9 @@ ARIA model ids name the provider: ``openai/<model>``, ``anthropic/<model>``,
 is built in; what an account can use comes from ``discover()``, cached in
 ``data/cloud_models.json`` together with the capabilities the provider reports.
 
-All three adapters bill the provider's *API* account. A ChatGPT, Claude or
-Google subscription does not authorize API inference, and these adapters never
-use a CLI's cached subscription login; subscription-backed coding CLIs are a
-separate integration (Phase 5) with their own billing mode.
+API authentication bills the provider API account. OpenAI also supports an
+explicit ARIA-specific ChatGPT OAuth mode. These adapters never use a CLI's
+cached subscription login; coding CLIs have their own billing mode.
 """
 
 from __future__ import annotations
@@ -132,7 +131,7 @@ def status() -> dict[str, Any]:
         disc = cache.get(provider) or {}
         out[provider] = {
             "label": adapter.label,
-            "billing": BILLING[provider],
+            "billing": adapter.billing,
             "credentials": adapter.credential_status(),
             "discovered_models": len(disc.get("models") or []),
             "discovered_at": disc.get("at"),

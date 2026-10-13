@@ -8,6 +8,9 @@ chunk carries none is an interruption.
 from __future__ import annotations
 
 import json
+import hashlib
+import hmac
+import os
 import urllib.parse
 from collections.abc import Iterator
 from typing import Any
@@ -18,6 +21,7 @@ from jarvis.inference.providers.base import (
     Event,
     ModelInfo,
     ProviderAdapter,
+    ProviderAuthError,
     Request,
     Result,
     ToolCall,
@@ -27,6 +31,10 @@ from jarvis.inference.providers.base import (
     tool_args,
 )
 from jarvis.inference.providers.openai_responses import _close
+
+# Official standard text Free Tier pricing checked 2026-10-10. No aliases/add-ons.
+FREE_TEXT_MODELS = frozenset({"gemini-3.8-flash", "gemini-3.5-flash-lite", "gemini-3.1-flash-lite"})
+
 
 _FINISH = {
     "STOP": "stop",
@@ -44,6 +52,46 @@ class GeminiAPI(ProviderAdapter):
     label = "Gemini"
     credential_field = "gemini_api_key"
     base_url = "https://generativelanguage.googleapis.com/v1beta"
+
+    @property
+    def free_only(self) -> bool:
+        return os.getenv("JARVIS_GEMINI_FREE_TIER_ONLY", "0").strip().lower() in ("1", "true", "yes", "on")
+
+    @property
+    def billing(self) -> str:
+        return "gemini_free_tier" if self.free_only else "api"
+
+    def credential(self) -> str:
+        key = super().credential()
+        if self.free_only:
+            from jarvis.config import DATA_DIR
+            try:
+                proof = json.loads((DATA_DIR / "gemini_free_tier.json").read_text())
+                valid = (proof.get("tier") == "Free" and bool(proof.get("project_id")) and proof.get("owner_confirmed") is True
+                         and hmac.compare_digest(proof.get("key_sha256", ""), hashlib.sha256(key.encode()).hexdigest()))
+            except Exception:
+                valid = False
+            if not valid:
+                raise ProviderAuthError("Gemini: Free tier key/project confirmation is missing or the credential changed")
+        return key
+
+    def _send(self, method: str, path: str, **kwargs):
+        if self.free_only and kwargs.get("purpose", "inference") == "inference":
+            if kwargs.get("model") not in FREE_TEXT_MODELS:
+                raise ProviderAuthError("Gemini: model is outside the verified Free tier text allowlist")
+            body = kwargs.get("body") or {}
+            if (set(body) - {"contents", "systemInstruction", "generationConfig", "tools"}
+                or set(body.get("generationConfig") or {}) - {"maxOutputTokens", "temperature"}) or any(
+                set(tool) - {"functionDeclarations"} for tool in body.get("tools", [])
+            ):
+                raise ProviderAuthError("Gemini: paid add-ons are disabled in Free tier mode")
+        return super()._send(method, path, **kwargs)
+
+    def _classify_http(self, status: int, headers: Any, detail: str) -> boundary.InferenceError:
+        if status == 404:
+            # Missing/retired models cannot succeed on retry; use the local fallback.
+            return ProviderAuthError("Gemini: model or endpoint unavailable (404)")
+        return super()._classify_http(status, headers, detail)
 
     def headers(self, key: str) -> dict[str, str]:
         return {"x-goog-api-key": key, "Content-Type": "application/json"}
@@ -217,4 +265,4 @@ class GeminiAPI(ProviderAdapter):
             token = data.get("nextPageToken") or ""
             if not token:
                 break
-        return found
+        return [m for m in found if m.id in FREE_TEXT_MODELS] if self.free_only else found

@@ -177,7 +177,26 @@ def load_budget() -> dict[str, Any]:
     return {**defaults, **(data if isinstance(data, dict) else {})}
 
 
+def _included_model(aria_model: str) -> bool:
+    from jarvis.inference.providers import adapter_for, split_model
+    from jarvis.inference.providers.gemini import FREE_TEXT_MODELS
+    provider, model = split_model(aria_model)
+    adapter = adapter_for(provider)
+    return bool(adapter) and (
+        provider == "google" and adapter.billing == "gemini_free_tier" and model in FREE_TEXT_MODELS
+        or provider == "openai" and adapter.billing == "chatgpt_subscription"
+    )
+
+
+def _included_provider(provider: str) -> bool:
+    from jarvis.inference.providers import adapter_for
+    adapter = adapter_for(provider)
+    return bool(adapter) and adapter.billing in ("gemini_free_tier", "chatgpt_subscription")
+
+
 def estimate_cost(aria_model: str, input_tokens: int, output_tokens: int) -> float | None:
+    if _included_model(aria_model):
+        return 0.0
     price = (load_budget().get("prices") or {}).get(aria_model)
     if not isinstance(price, dict):
         return None
@@ -221,8 +240,8 @@ def create_authorization(
     bad = [c for c in classes if c not in GRANTABLE]
     if bad:
         raise ValueError(f"not grantable: {bad} (health and credentials are never shared)")
-    if max_cost_usd <= 0:
-        raise ValueError("max_cost_usd must be positive")
+    if max_cost_usd < 0 or max_cost_usd == 0 and not _included_provider(provider):
+        raise ValueError("zero-cost grants require an explicitly configured free/subscription provider")
     _init()
     aid = "auth_" + uuid.uuid4().hex[:12]
     now = time.time()
@@ -249,7 +268,7 @@ def _auth_row(row: sqlite3.Row) -> dict[str, Any]:
     d["roles"] = json.loads(d["roles"])
     d["context_classes"] = json.loads(d["context_classes"])
     d["remaining_usd"] = round(d["max_cost_usd"] - d["spent_usd"], 6)
-    d["active"] = not d["revoked"] and d["expires_at"] > time.time() and d["remaining_usd"] > 0
+    d["active"] = not d["revoked"] and d["expires_at"] > time.time() and (d["remaining_usd"] > 0 or d["max_cost_usd"] == 0 and _included_provider(d["provider"]))
     return d
 
 
@@ -350,13 +369,15 @@ def record_usage(
     else:
         cost = estimate_cost(reservation.model, int(input_tokens or 0), int(output_tokens or 0))
         cost = reservation.worst_case_usd if cost is None else cost
+    from jarvis.inference.providers import adapter_for
+    billing = adapter_for(reservation.provider).billing
     _init()
     with _conn() as conn:
         conn.execute(
             """INSERT INTO usage (ts, month, provider, model, role, authorization_id, receipt_id,
-                   status, input_tokens, output_tokens, estimated_usd) VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                   status, input_tokens, output_tokens, estimated_usd, billing) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
             (time.time(), _month(), reservation.provider, reservation.model, reservation.role,
-             reservation.authorization_id, receipt_id, status, input_tokens, output_tokens, cost),
+             reservation.authorization_id, receipt_id, status, input_tokens, output_tokens, cost, billing),
         )
         conn.execute(
             "UPDATE authorizations SET spent_usd = spent_usd + ? WHERE id=?",
@@ -408,6 +429,8 @@ def _vault_secrets() -> list[str]:
             continue
         if res is not None and res.value and len(res.value) >= 8:
             found.append(res.value)
+    from jarvis.inference.chatgpt_oauth import sensitive_values
+    found.extend(sensitive_values())
     return found
 
 

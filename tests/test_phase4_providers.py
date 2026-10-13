@@ -675,3 +675,19 @@ def test_provider_errors_never_echo_the_key_into_errors_or_logs(fake, caplog):
     assert KEYS["openai_api_key"] not in str(info.value)
     assert KEYS["openai_api_key"] not in caplog.text
     assert all(KEYS["openai_api_key"] not in json.dumps(r) for r in boundary.recent_receipts())
+
+
+@pytest.mark.parametrize("status", [401, 403, 404, 429, 503])
+@pytest.mark.parametrize("stream", [False, True])
+def test_gemini_free_candidate_failures_fall_back_without_cloud_substitution(fake, status, stream):
+    allow("google", price=(0.0, 0.0))
+    for _ in range(3 if status in (429, 503) else 1):
+        fake.add(http_error(status, retry_after="0" if status == 429 else None))
+    if stream:
+        with patch.object(gateway, "_ollama_stream", return_value=iter(["local"])):
+            assert list(gateway.stream_chat(GEMINI, MSG)) == ["local"]
+    else:
+        with local_answer():
+            assert gateway.chat_with_usage(GEMINI, MSG)[0] == "local answer"
+    assert all("generativelanguage.googleapis.com" in r["url"] for r in fake.requests if "url" in r)
+    assert cloud_policy.monthly_spend() == 0.0
