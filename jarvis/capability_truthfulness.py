@@ -180,13 +180,34 @@ _HYPOTHETICAL = re.compile(
 )
 
 
+# Words reported from the conversation record are history, not a delivery made in
+# this reply. Recall ("What were we just discussing?") lists past turns as
+# "- I: Here's your image of …"; treating that line as a fresh claim replaced a
+# correct recall with a did-not-generate notice (2026-10-12). Only explicit
+# attribution counts: a transcript line, a blockquote, or text in quotation
+# marks. "As I said, here's your image" is still a claim.
+_TRANSCRIPT_LINE = re.compile(
+    r"^\s*(?:[-*•]\s*)?(?:\*\*|_)?(?:i|you|aria|user|assistant|me)(?:\*\*|_)?\s*:\s.*$",
+    re.I | re.M,
+)
+_BLOCKQUOTE_LINE = re.compile(r"^\s*>.*$", re.M)
+_QUOTED_SPAN = re.compile(r'"[^"\n]{3,}"|“[^”\n]{3,}”')
+
+
+def _without_reported_history(text: str) -> str:
+    text = _TRANSCRIPT_LINE.sub("", text)
+    text = _BLOCKQUOTE_LINE.sub("", text)
+    return _QUOTED_SPAN.sub('""', text)
+
+
 def _sentences(text: str) -> list[str]:
     return [s for s in re.split(r"(?<=[.!?\n])\s+", text) if s.strip()]
 
 
 def _claim_is_asserted(text: str, pattern: re.Pattern[str]) -> bool:
-    """True when the claim appears as a plain assertion, not a question or a maybe."""
-    for sentence in _sentences(text):
+    """True when the claim appears as a plain assertion, not a question, a maybe,
+    or a quotation of an earlier turn."""
+    for sentence in _sentences(_without_reported_history(text)):
         if not pattern.search(sentence):
             continue
         if sentence.rstrip().endswith("?"):
