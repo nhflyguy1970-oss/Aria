@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import Request
+from fastapi import File, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, Response
 
 
@@ -89,6 +89,20 @@ def register_routes(app, assistant) -> None:
 
         body = await request.json()
         return restore(str(body.get("trash_id") or body.get("id") or ""))
+
+    @app.post("/api/gallery/upload")
+    async def gallery_upload(files: list[UploadFile] = File(...)):
+        from jarvis.gallery_product.upload import save_upload
+
+        saved, errors = [], []
+        for f in files:
+            out = save_upload(f.filename or "image", await f.read())
+            (saved if out.get("ok") else errors).append(
+                {"name": out.get("name") or f.filename, "message": out.get("message", "")})
+        if not saved:
+            return JSONResponse(status_code=400, content={"ok": False, "errors": errors,
+                                                          "message": errors[0]["message"] if errors else "No files"})
+        return {"ok": True, "saved": saved, "errors": errors}
 
     @app.post("/api/gallery/purge")
     async def gallery_purge(request: Request):

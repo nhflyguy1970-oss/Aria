@@ -10,6 +10,7 @@ from pathlib import Path
 
 from jarvis.comfyui import DEFAULT_NEGATIVE, _find_checkpoint, _sampler_settings, run_workflow, upload_image
 from jarvis.config import DATA_DIR, PROJECT_ROOT
+from jarvis.image_safety import with_minor_negative
 
 DEFAULT_INPAINT_WORKFLOW = PROJECT_ROOT / "data" / "comfyui_workflows" / "inpaint_sdxl.json"
 
@@ -82,7 +83,7 @@ def build_inpaint_workflow(
         denoise = float(os.getenv("JARVIS_COMFYUI_INPAINT_DENOISE", "0.85"))
     if grow_mask_by is None:
         grow_mask_by = int(os.getenv("JARVIS_COMFYUI_INPAINT_GROW_MASK", "6"))
-    negative = negative_prompt.strip() or DEFAULT_NEGATIVE
+    negative = with_minor_negative(negative_prompt.strip() or DEFAULT_NEGATIVE)
     seed = int(time.time()) % (2**32)
 
     return {
@@ -162,7 +163,7 @@ def _patch_custom_workflow(
         if class_type == "CLIPTextEncode" and title == "Positive":
             node["inputs"]["text"] = prompt
         if class_type == "CLIPTextEncode" and title == "Negative":
-            node["inputs"]["text"] = negative_prompt.strip() or DEFAULT_NEGATIVE
+            node["inputs"]["text"] = with_minor_negative(negative_prompt.strip() or DEFAULT_NEGATIVE)
         if class_type == "KSampler" and denoise is not None:
             node["inputs"]["denoise"] = denoise
         if class_type == "VAEEncodeForInpaint" and grow_mask_by is not None:
@@ -197,6 +198,11 @@ def inpaint(
 
     if not prompt.strip():
         return "ERROR: Inpaint needs a prompt describing what to generate in the masked area"
+    from jarvis.image_safety import edit_refusal_for
+
+    refused = edit_refusal_for(image_path, prompt)
+    if refused:
+        return refused
 
     if not skip_vram_prep:
         from jarvis.vram_guard import prepare_for_comfyui
@@ -228,4 +234,6 @@ def inpaint(
         negative_prompt=negative_prompt,
         denoise=denoise,
     )
-    return run_workflow(wf, filename_prefix="jarvis_inpaint")
+    from jarvis.image_safety import inherit_provenance
+
+    return inherit_provenance(image_path, run_workflow(wf, filename_prefix="jarvis_inpaint"))

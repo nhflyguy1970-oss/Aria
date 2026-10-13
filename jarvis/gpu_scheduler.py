@@ -56,6 +56,7 @@ COOL_WAIT_S = _env_int("JARVIS_GPU_COOL_WAIT_S", 120)
 HELPER_WAIT_S = 30
 MONITOR_INTERVAL_S = 2.0
 VRAM_SETTLE_S = 90  # covers a cold start-up warm-up load already in flight
+RAM_SETTLE_S = 20  # unloaded Ollama models return their host memory within seconds
 RELEASE_SETTLE_S = 20
 STALE_S = 300  # a shared slot with no progress for 5 min is an abandoned stream; reclaim it
 
@@ -446,10 +447,6 @@ class _Scheduler:
     def _acquire_heavy(self, job: Job, profile: dict) -> None:
         deadline = time.monotonic() + HEAVY_WAIT_S
         need_ram = HOST_RESERVE_MIB + int(profile.get("ram_mib") or 0)
-        avail = host_available_mib()
-        if avail < need_ram:
-            raise GpuUnavailable(f"not enough free host RAM for {job.label} ({avail} MiB available, "
-                                 f"{need_ram} MiB needed incl. 12 GiB desktop reserve)")
         with self._cv:
             self._reap_stale()
             if self._heavy or self._shared:
@@ -487,6 +484,14 @@ class _Scheduler:
                     raise GpuUnavailable(f"RTX 3060 has {info.get('free_mib', '?')} MiB free; {job.label} needs "
                                          f"{need} MiB incl. 2 GiB reserve")
                 time.sleep(2)
+            # Checked only after ARIA's own Ollama models were unloaded above: the prompt-expansion
+            # model is still resident when an image job arrives, and its memory comes back on unload.
+            ram_deadline = time.monotonic() + RAM_SETTLE_S
+            while (avail := host_available_mib()) < need_ram:
+                if time.monotonic() > ram_deadline:
+                    raise GpuUnavailable(f"not enough free host RAM for {job.label} ({avail} MiB available, "
+                                         f"{need_ram} MiB needed incl. 12 GiB desktop reserve)")
+                time.sleep(1)
         except BaseException:
             self._release(job)
             raise
@@ -575,10 +580,15 @@ class _Scheduler:
                 self._event("helper_end", job=label)
 
     @contextmanager
-    def admit_image(self, label: str = "image", *, vram_mib: int | None = None) -> Iterator[Job]:
-        """Exclusive RTX 3060 slot for a ComfyUI job; ComfyUI memory is freed afterwards."""
+    def admit_image(self, label: str = "image", *, vram_mib: int | None = None,
+                    ram_mib: int | None = None) -> Iterator[Job]:
+        """Exclusive RTX 3060 slot for a ComfyUI job; ComfyUI memory is freed afterwards.
+
+        ``ram_mib`` sizes the host-RAM need to the models the workflow loads; the
+        IMAGE_PROFILE default (sized for Flux) applies when it is unknown."""
         job = Job("image", label)
-        profile = {**IMAGE_PROFILE, **({"vram_mib": int(vram_mib)} if vram_mib else {})}
+        profile = {**IMAGE_PROFILE, **({"vram_mib": int(vram_mib)} if vram_mib else {}),
+                   **({"ram_mib": int(ram_mib)} if ram_mib else {})}
         try:
             self._wait_cool("cuda", strict=True, start_max=IMAGE_START_MAX_C)
             self._acquire_heavy(job, profile)

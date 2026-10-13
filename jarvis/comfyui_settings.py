@@ -11,12 +11,14 @@ from jarvis.config import DATA_DIR
 SETTINGS_FILE = DATA_DIR / "comfyui_settings.json"
 VALID_MODES = ("auto", "gpu", "cpu")
 VALID_CHECKPOINTS = ("flux", "quality", "fast", "zimage")
+# First installed entry is the uncensored default. Lustify won the 2026-10-13 comparison
+# (graphic photoreal NSFW, ~26 s/image on the RTX 3060); RealVis is a general model.
 UNCENSORED_CHECKPOINTS = (
+    "lustifySDXLNSFWSFW_v10.safetensors",
     "RealVisXL_V5.0_fp16.safetensors",
     "Realistic_Vision_V6.0_NV_B1_fp16.safetensors",
     "ponyDiffusionV6XL_v6StartWithThisOne.safetensors",
     "Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
-    "lustifySDXLNSFWSFW_v10.safetensors",
     "leosamsHelloworldXL_helloworldXL60.safetensors",
     "DreamShaperXL_Turbo_v2.safetensors",
     "epicrealism_naturalSinRC1VAE.safetensors",
@@ -26,7 +28,7 @@ UNCENSORED_CHECKPOINT_LABELS = {
     "Realistic_Vision_V6.0_NV_B1_fp16.safetensors": "Realistic Vision V6 (photoreal SD 1.5)",
     "ponyDiffusionV6XL_v6StartWithThisOne.safetensors": "Pony Diffusion V6 XL (anime/illustration)",
     "Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors": "Juggernaut XL v9 (photoreal SDXL)",
-    "lustifySDXLNSFWSFW_v10.safetensors": "Lustify SDXL v10 (photoreal SDXL)",
+    "lustifySDXLNSFWSFW_v10.safetensors": "Lustify SDXL v10 (photoreal NSFW SDXL)",
     "leosamsHelloworldXL_helloworldXL60.safetensors": "HelloWorld XL 6.0 (SDXL)",
     "DreamShaperXL_Turbo_v2.safetensors": "DreamShaper XL Turbo v2 (fast SDXL)",
     "epicrealism_naturalSinRC1VAE.safetensors": "epiCRealism (photoreal SD 1.5)",

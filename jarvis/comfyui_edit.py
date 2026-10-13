@@ -14,6 +14,7 @@ from jarvis.comfyui import (
     upload_image,
 )
 from jarvis.comfyui_inpaint import _prepare_image
+from jarvis.image_safety import with_minor_negative
 
 
 def _edit_denoise() -> float:
@@ -33,7 +34,7 @@ def build_edit_workflow(
     steps, cfg, sampler_name, scheduler = _sampler_settings(ckpt)
     if denoise is None:
         denoise = _edit_denoise()
-    negative = negative_prompt.strip() or DEFAULT_NEGATIVE
+    negative = with_minor_negative(negative_prompt.strip() or DEFAULT_NEGATIVE)
     seed = secrets.randbelow(2**32)
 
     return {
@@ -145,6 +146,11 @@ def edit_image(
 
     if not prompt.strip():
         return "ERROR: Edit needs a prompt describing what to change"
+    from jarvis.image_safety import edit_refusal_for, inherit_provenance
+
+    refused = edit_refusal_for(image_path, prompt)
+    if refused:
+        return refused
 
     if not skip_vram_prep:
         from jarvis.vram_guard import prepare_for_comfyui
@@ -165,14 +171,19 @@ def edit_image(
     except Exception as e:
         return f"ERROR: ComfyUI upload failed: {e}"
 
-    if klein_installed() and denoise is None:
+    from jarvis.config import is_uncensored
+
+    # Klein follows edit instructions well but was never trained on explicit content; in
+    # uncensored mode the active NSFW checkpoint (Lustify) does whole-image edits as img2img.
+    if klein_installed() and denoise is None and not is_uncensored():
         width, height = _klein_dims(src)
         wf = build_klein_edit_workflow(image_name, prompt.strip(), width, height)
-        return run_workflow(wf, filename_prefix="jarvis_edit_klein", timeout_sec=420)
+        return inherit_provenance(image_path, run_workflow(wf, filename_prefix="jarvis_edit_klein",
+                                                           timeout_sec=420))
     wf = build_edit_workflow(
         image_name=image_name,
         prompt=prompt.strip(),
         negative_prompt=negative_prompt,
         denoise=denoise,
     )
-    return run_workflow(wf, filename_prefix="jarvis_edit", timeout_sec=420)
+    return inherit_provenance(image_path, run_workflow(wf, filename_prefix="jarvis_edit", timeout_sec=420))

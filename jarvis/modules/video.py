@@ -112,6 +112,12 @@ class VideoEngine:
         from jarvis.cache_state import invalidate_video_gallery
 
         prompt = (prompt or "").strip()
+        from jarvis.image_safety import refusal_for
+
+        # Check what the user asked for, before prompt enhancement can reword it.
+        refused = refusal_for(prompt, enhanced_prompt or "")
+        if refused:
+            return refused
         self.last_prompt = prompt
         self.last_seed = seed
         if not prompt and not enhanced_prompt:

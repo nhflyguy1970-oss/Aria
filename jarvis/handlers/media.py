@@ -76,9 +76,12 @@ class MediaHandler:
             )
             if result.startswith("ERROR:"):
                 from jarvis.image_generation.fallback import recovery_options
+                from jarvis.image_safety import REFUSALS
 
+                if result in REFUSALS:  # a safety refusal, not a failure: no retry options
+                    return err(result, module="image", refused=True)
                 rec = recovery_options(result)
-                return err(result, module="image", **{k: v for k, v in rec.items() if k != "ok"})
+                return err(result, module="image", **{k: v for k, v in rec.items() if k not in ("ok", "message")})
             paths.append(result)
             last_seed = getattr(self.a.image, "last_seed", seed)
 
@@ -237,10 +240,13 @@ class MediaHandler:
             motion_strength=norm.get("motion_strength"),
         )
         if result.startswith("ERROR:"):
+            from jarvis.image_safety import REFUSALS
             from jarvis.video_generation.fallback import recovery_options
 
+            if result in REFUSALS:  # a safety refusal, not a failure: no retry options
+                return err(result, module="video", refused=True)
             rec = recovery_options(result)
-            return err(result, module="video", **{k: v for k, v in rec.items() if k != "ok"})
+            return err(result, module="video", **{k: v for k, v in rec.items() if k not in ("ok", "message")})
 
         name = Path(result).name
         enhanced = self.a.video.last_enhanced_prompt
@@ -383,10 +389,13 @@ class MediaHandler:
             kwargs["height"] = int(height)
         result = storyboard_ken_burns(resolved, **kwargs)
         if result.startswith("ERROR:"):
+            from jarvis.image_safety import REFUSALS
             from jarvis.video_generation.fallback import recovery_options
 
+            if result in REFUSALS:  # a safety refusal, not a failure: no retry options
+                return err(result, module="video", refused=True)
             rec = recovery_options(result)
-            return err(result, module="video", **{k: v for k, v in rec.items() if k != "ok"})
+            return err(result, module="video", **{k: v for k, v in rec.items() if k not in ("ok", "message")})
         invalidate_video_gallery()
         name = Path(result).name
         try:
@@ -479,7 +488,9 @@ class MediaHandler:
 
         result = upscale_local(path, scale=scale)
         if result.startswith("ERROR:"):
-            return err(result, module="image")
+            from jarvis.image_safety import REFUSALS
+
+            return err(result, module="image", **({"refused": True} if result in REFUSALS else {}))
         invalidate_gallery()
         name = Path(result).name
         return ok(
@@ -531,7 +542,9 @@ class MediaHandler:
             denoise=denoise,
         )
         if result.startswith("ERROR:"):
-            return err(result, module="image")
+            from jarvis.image_safety import REFUSALS
+
+            return err(result, module="image", **({"refused": True} if result in REFUSALS else {}))
         invalidate_gallery()
         self.a.session.note_image(result)
         name = Path(result).name
@@ -563,7 +576,9 @@ class MediaHandler:
 
         result = edit_fn(path, prompt, denoise=denoise)
         if result.startswith("ERROR:"):
-            return err(result, module="image")
+            from jarvis.image_safety import REFUSALS
+
+            return err(result, module="image", **({"refused": True} if result in REFUSALS else {}))
         from jarvis.cache_state import invalidate_gallery
 
         invalidate_gallery()

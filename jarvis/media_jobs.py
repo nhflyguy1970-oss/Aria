@@ -96,6 +96,25 @@ def _set_active_job(job_id: str | None) -> None:
     _tls.job_id = job_id
 
 
+def current_job_id() -> str | None:
+    """The media job the calling worker thread is running (None outside a job)."""
+    return getattr(_tls, "job_id", None)
+
+
+def report_progress(pct: float, message: str | None = None, *, job_id: str | None = None) -> None:
+    """Advance a running job's progress bar (5–99%; never backwards, never past done)."""
+    jid = job_id or current_job_id()
+    if not jid:
+        return
+    with _lock:
+        job = _jobs.get(jid)
+        if not job or job.get("done"):
+            return
+        job["pct"] = max(int(job.get("pct") or 0), max(5, min(99, int(pct))))
+        if message:
+            job["message"] = message
+
+
 def job_cancelled(job_id: str | None = None) -> bool:
     """True if the given job (or current worker job) was cancelled."""
     jid = job_id or getattr(_tls, "job_id", None)

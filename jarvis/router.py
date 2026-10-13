@@ -109,6 +109,19 @@ _RECENT_IMAGE_REF = re.compile(
     rf"(?:(?:last|previous|latest|most recent|recent|generated|current|same)\s+)?{_IMAGE_NOUN}\b(?P<rest>.*)$",
     re.I | re.S,
 )
+# An attached image plus an instruction like "make the sky orange" is an edit, not a
+# vision question. Analysis wording keeps the attachment on the vision path.
+_ATTACH_EDIT = re.compile(
+    r"^(?:please\s+)?(?:can you\s+|could you\s+|would you\s+)?(?:edit|change|modify|adjust|alter|retouch|"
+    r"recolou?r|colou?rize|fix|make|turn|tweak|remove|erase|add|replace|swap|put|give|convert|transform|"
+    r"restyle|brighten|darken|blur|sharpen)\b",
+    re.I,
+)
+_ATTACH_NOT_EDIT = re.compile(
+    r"\b(?:describe|explain|caption|alt.?text|ocr|transcribe|read|extract|identify|summari[sz]e|"
+    r"html|css|code|json|table|note|notes|memory|calendar|journal|document|what|which|who|why|how)\b",
+    re.I,
+)
 _IMAGE_PRONOUN_EDIT = re.compile(
     r"^(?:please\s+)?(?P<verb>change|make|turn|recolou?r|edit|adjust)\s+(?:its|it)\b(?P<rest>.*)$", re.I | re.S
 )
@@ -3350,7 +3363,21 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
     return intent
 
 
+def _attachment_edit(message: str, attachment: dict | None) -> dict | None:
+    """An attached image plus an edit instruction — decided before any other rule, since
+    phrases like "make the sky orange" otherwise read as smart-home colour commands."""
+    if not attachment or attachment.get("kind") != "image" or not attachment.get("path"):
+        return None
+    text = (message or "").strip()
+    if not _ATTACH_EDIT.match(text) or _ATTACH_NOT_EDIT.search(text):
+        return None
+    return {"action": "edit_image", "params": {"path": attachment["path"], "prompt": text},
+            "thinking": "edit attached image", "route_reason": "image_edit_attachment"}
+
+
 def _route(message: str, session: SessionContext, attachment: dict | None = None) -> dict:
+    if intent := _attachment_edit(message, attachment):
+        return _finalize_intent(intent, message, session)
     pending = session.pending_clarification or {}
     if pending.get("type") == "image_edit_instruction":
         # Reply to "What should I change in <image>?" — the answer is the instruction for that image.

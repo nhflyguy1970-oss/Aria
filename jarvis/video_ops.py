@@ -353,7 +353,10 @@ def storyboard_ken_burns(
         return "ERROR: ffmpeg not installed"
     ensure_dirs()
     clips: list[Path] = []
+    from jarvis.media_jobs import report_progress
+
     for i, src in enumerate(paths):
+        report_progress(5 + 85 * i / len(paths), f"Animating slide {i + 1}/{len(paths)}…")
         clip = image_to_motion_video(
             src,
             duration=sec_per_slide,

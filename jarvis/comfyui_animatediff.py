@@ -10,6 +10,7 @@ from pathlib import Path
 from jarvis import comfyui
 from jarvis.comfyui import COMFY_ROOT, COMFY_URL, DEFAULT_NEGATIVE
 from jarvis.comfyui_settings import CKPT_DIR
+from jarvis.image_safety import with_minor_negative
 
 log = logging.getLogger("jarvis")
 
@@ -213,7 +214,7 @@ def _animatediff_workflow(
     scheduler = os.getenv("JARVIS_ANIMATEDIFF_SCHEDULER", "normal")
     use_seed = int(seed) if seed is not None else int(time.time()) % (2**32)
     _animatediff_workflow.last_seed = use_seed  # type: ignore[attr-defined]
-    negative = negative_prompt.strip() or DEFAULT_NEGATIVE
+    negative = with_minor_negative(negative_prompt.strip() or DEFAULT_NEGATIVE)
     frames = max(8, min(int(frames), int(os.getenv("JARVIS_ANIMATEDIFF_MAX_FRAMES", "128"))))
 
     apply_inputs: dict = {
@@ -295,6 +296,11 @@ def generate(
     Run AnimateDiff workflow.
     Returns (video_path, "") on success or (ERROR:..., "") on failure.
     """
+    from jarvis.image_safety import refusal_for
+
+    refused = refusal_for(prompt)
+    if refused:
+        return refused, ""
     from jarvis.vram_guard import prepare_for_comfyui
 
     prepare_for_comfyui()

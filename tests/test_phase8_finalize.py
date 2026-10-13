@@ -75,6 +75,7 @@ def gpu(monkeypatch):
     monkeypatch.setattr(gs, "SHARED_WAIT_S", 1)
     monkeypatch.setattr(gs, "HEAVY_WAIT_S", 1)
     monkeypatch.setattr(gs, "COOL_WAIT_S", 1)
+    monkeypatch.setattr(gs, "RAM_SETTLE_S", 0.3)
     return state
 
 
@@ -157,6 +158,27 @@ def test_thermal_cutoff_refuses_admission_and_stops_running_jobs(gpu):
             job.check()
     gpu["cuda_temp"] = 77  # below resume threshold: hold released
     with gs.admit_ollama("gemma4:12b"):
+        pass
+
+
+def test_image_admission_counts_ram_after_unloading_the_prompt_model(gpu, monkeypatch):
+    # 2026-10-13: the prompt-expansion LLM was still loaded when the image job arrived, so the
+    # RAM check (then done before unloading) refused a job that would have fit a moment later.
+    resident = {"models": [{"name": "huihui_ai/gemma-4-abliterated:12b"}]}
+    gpu["ram"] = 23776
+
+    def get_json(url, timeout=2.0):
+        return resident if url.endswith("/api/ps") else {"models": []}
+
+    def post_json(url, body, timeout=30.0):
+        if body.get("keep_alive") == 0:
+            resident["models"] = []
+            gpu["ram"] = 38000
+        return {}
+
+    monkeypatch.setattr(gs, "_get_json", get_json)
+    monkeypatch.setattr(gs, "_post_json", post_json)
+    with gs.admit_image(label="jarvis"):
         pass
 
 

@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import secrets
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -15,6 +16,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from jarvis.config import DATA_DIR
+from jarvis.image_safety import with_minor_negative
 
 COMFY_URL = os.getenv("JARVIS_COMFYUI_URL", "http://127.0.0.1:8188").rstrip("/")
 _TARGET: contextvars.ContextVar[str] = contextvars.ContextVar("comfy_target", default="")
@@ -114,6 +116,10 @@ def _sampler_settings(ckpt: str) -> tuple[int, float, str, str]:
     is_turbo = "turbo" in ckpt.lower()
     if is_turbo:
         return 4, 1.0, "euler", "normal"
+    if "lustify" in ckpt.lower():
+        # Tested 2026-10-13: CFG 7.5 overcooks Lustify; 5.5 with SDE sampling looks natural.
+        return (int(os.getenv("JARVIS_COMFYUI_STEPS", "30")), float(os.getenv("JARVIS_COMFYUI_CFG", "5.5")),
+                os.getenv("JARVIS_COMFYUI_SAMPLER", "dpmpp_2m_sde"), os.getenv("JARVIS_COMFYUI_SCHEDULER", "karras"))
     steps = int(os.getenv("JARVIS_COMFYUI_STEPS", "30"))
     cfg = float(os.getenv("JARVIS_COMFYUI_CFG", "7.5"))
     sampler = os.getenv("JARVIS_COMFYUI_SAMPLER", "dpmpp_2m")
@@ -192,7 +198,7 @@ def _workflow(
         patched = _patch_workflow_generation(
             wf,
             prompt=prompt,
-            negative_prompt=negative_prompt or DEFAULT_NEGATIVE,
+            negative_prompt=with_minor_negative(negative_prompt or DEFAULT_NEGATIVE),
             width=width,
             height=height,
             seed=seed,
@@ -216,7 +222,7 @@ def _workflow(
     if _is_flux_checkpoint(ckpt):
         negative = negative_prompt.strip()
     else:
-        negative = negative_prompt.strip() or DEFAULT_NEGATIVE
+        negative = with_minor_negative(negative_prompt.strip() or DEFAULT_NEGATIVE)
 
     return {
         "3": {
@@ -346,6 +352,92 @@ def _download_output(url: str, out_path: Path, timeout: float | None = None) -> 
         out_path.write_bytes(resp.read())
 
 
+def _report(pct: float, message: str, job_id: str | None) -> None:
+    try:
+        from jarvis.media_jobs import report_progress
+
+        report_progress(pct, message, job_id=job_id)
+    except Exception:
+        pass
+
+
+def _listen_progress(client_id: str, job_id: str | None, stop: threading.Event) -> None:
+    """Relay ComfyUI's per-step websocket events for this client to the media job's progress bar.
+
+    Sampling maps to 12–95%; model loading and decode/save sit either side. Best effort: no
+    websocket (or an older ComfyUI) just leaves the coarse stage messages in place."""
+    try:
+        import websocket  # websocket-client
+    except ImportError:
+        return
+    ws_url = _base().replace("http://", "ws://", 1).replace("https://", "wss://", 1)
+    try:
+        ws = websocket.create_connection(f"{ws_url}/ws?clientId={client_id}", timeout=5)
+    except Exception:
+        return
+    ws.settimeout(1.0)
+    try:
+        while not stop.is_set():
+            try:
+                raw = ws.recv()
+            except websocket.WebSocketTimeoutException:
+                continue
+            except Exception:
+                return
+            if not isinstance(raw, str):
+                continue  # binary latent previews
+            try:
+                msg = json.loads(raw)
+            except ValueError:
+                continue
+            data = msg.get("data") or {}
+            if msg.get("type") == "progress" and data.get("max"):
+                value, total = int(data.get("value") or 0), int(data["max"])
+                if value >= total:
+                    _report(95, "Decoding and saving…", job_id)
+                else:
+                    _report(12 + 83 * value / total, f"Generating — step {value}/{total}", job_id)
+            elif msg.get("type") == "execution_start":
+                _report(10, "Loading model…", job_id)
+    finally:
+        try:
+            ws.close()
+        except Exception:
+            pass
+
+
+_MODEL_INPUTS = {
+    "ckpt_name": ("checkpoints",), "unet_name": ("diffusion_models", "unet"),
+    "clip_name": ("text_encoders", "clip"), "clip_name1": ("text_encoders", "clip"),
+    "clip_name2": ("text_encoders", "clip"), "vae_name": ("vae",), "lora_name": ("loras",),
+    "model_name": ("animatediff_models", "upscale_models"),
+}
+RAM_OVERHEAD_MIB = 2048  # latents, decode buffers and Python/torch working set beside the weights
+
+
+def workflow_ram_mib(workflow: dict) -> int | None:
+    """Host RAM a workflow needs: its model files plus working memory, capped at the Flux-sized
+    default. None when no model file can be found (the scheduler then uses its default)."""
+    from jarvis.gpu_scheduler import IMAGE_PROFILE
+
+    seen: set[Path] = set()
+    for node in (workflow or {}).values():
+        inputs = node.get("inputs", {}) if isinstance(node, dict) else {}
+        for key, subdirs in _MODEL_INPUTS.items():
+            name = inputs.get(key)
+            if not isinstance(name, str) or not name:
+                continue
+            for sub in subdirs:
+                path = COMFY_ROOT / "models" / sub / name
+                if path.is_file():
+                    seen.add(path)
+                    break
+    if not seen:
+        return None
+    weights_mib = sum(p.stat().st_size for p in seen) // 1048576
+    return min(weights_mib + RAM_OVERHEAD_MIB, int(IMAGE_PROFILE["ram_mib"]))
+
+
 def run_workflow(
     workflow: dict,
     filename_prefix: str = "jarvis",
@@ -358,8 +450,10 @@ def run_workflow(
     from jarvis import gpu_scheduler
 
     base_cancel = cancel_check or _cancel_check_default
+    _report(6, "Waiting for the GPU…", None)
     try:
-        with gpu_scheduler.admit_image(label=filename_prefix, vram_mib=vram_mib) as job:
+        with gpu_scheduler.admit_image(label=filename_prefix, vram_mib=vram_mib,
+                                       ram_mib=workflow_ram_mib(workflow)) as job:
             result = _run_workflow(workflow, filename_prefix, timeout_sec=timeout_sec,
                                    cancel_check=lambda: job.cut_off or base_cancel())
             if job.cut_off:
@@ -379,6 +473,32 @@ def _run_workflow(
     """Queue a ComfyUI workflow and return the saved output path or ERROR: string."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     client_id = str(uuid.uuid4())
+    try:
+        from jarvis.media_jobs import current_job_id
+
+        job_id = current_job_id()
+    except Exception:
+        job_id = None
+    _report(8, "Starting ComfyUI job…", job_id)
+    stop_progress = threading.Event()
+    if job_id:  # connect before queueing so the first steps are not missed
+        threading.Thread(target=_listen_progress, args=(client_id, job_id, stop_progress),
+                         name="comfy-progress", daemon=True).start()
+    try:
+        return _run_workflow_queued(workflow, filename_prefix, client_id,
+                                    timeout_sec=timeout_sec, cancel_check=cancel_check)
+    finally:
+        stop_progress.set()
+
+
+def _run_workflow_queued(
+    workflow: dict,
+    filename_prefix: str,
+    client_id: str,
+    *,
+    timeout_sec: int,
+    cancel_check,
+) -> str:
     payload = json.dumps({"prompt": workflow, "client_id": client_id}).encode()
     req = urllib.request.Request(
         f"{_base()}/prompt",
@@ -500,7 +620,11 @@ def _generate_once(
     workflow: str | None = None,
 ) -> str:
     from jarvis import zimage
+    from jarvis.image_safety import refusal_for
 
+    refused = refusal_for(prompt)
+    if refused:
+        return refused
     if checkpoint in ("zimage", zimage.CHECKPOINT) or (not checkpoint and _selected_zimage()):
         # Z-Image Turbo runs on its own on-demand worker (Phase 8 qualified INT8 runtime).
         return zimage.generate(prompt, width, height, seed=seed)

@@ -352,6 +352,12 @@ class ImageEngine:
         workflow: str | None = None,
     ) -> str:
         """Generate image via ComfyUI (primary on Linux). Honors operator params end-to-end."""
+        from jarvis.image_safety import refusal_for
+
+        # Check what the user asked for, before prompt enhancement can reword it.
+        refused = refusal_for(prompt, enhanced_prompt or "")
+        if refused:
+            return refused
         prompt = normalize_image_prompt(prompt)
         self.last_prompt = prompt
         self.last_enhanced_prompt = prompt
@@ -376,6 +382,9 @@ class ImageEngine:
             self.last_enhanced_prompt = pos_prompt
             self.last_negative_prompt = neg_prompt
         elif use_enhance:
+            from jarvis.media_jobs import report_progress
+
+            report_progress(5, "Rewriting prompt…")
             prepared = self.prepare_prompt(prompt)
             pos_prompt = prepared["positive"]
             if not (negative_prompt or "").strip():
@@ -415,7 +424,14 @@ class ImageEngine:
             self.last_seed = seed
         if not result.startswith("ERROR:") and Path(result).suffix.lower() in IMAGE_EXTENSIONS:
             src = Path(result)
-            if dest and src.resolve() != dest.resolve():
+            in_gallery = src.resolve().parent == IMAGE_DIR.resolve()
+            # ComfyUI already saved into the gallery; copying it to image_<ts>.png showed every
+            # image twice. Only an explicit output name relocates it (moved, not duplicated).
+            if output and src.resolve() != dest.resolve():
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                (shutil.move if in_gallery else shutil.copy2)(src, dest)
+                result = str(dest)
+            elif not in_gallery:
                 dest.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(src, dest)
                 result = str(dest)
