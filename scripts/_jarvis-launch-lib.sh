@@ -19,7 +19,21 @@ jarvis_notify() {
 }
 
 jarvis_log() {
-  echo "$@" >>"$LOG_FILE"
+  echo "$@" >>"${LOG_FILE:-${JARVIS_ROOT}/data/logs/jarvis.log}"
+}
+
+# stdout/stderr of a background ARIA process. Never jarvis.log itself: Python's
+# RotatingFileHandler renames that file, and a shell redirect follows the rename
+# down to jarvis.log.3 and then into a deleted inode (2026-10-12), losing every
+# traceback. This file is append-only for the process lifetime; trim at launch.
+jarvis_stdio_log() {
+  local dir="${JARVIS_ROOT}/data/logs" path
+  path="${dir}/$1-stdio.log"
+  mkdir -p "$dir"
+  if [[ -f "$path" ]] && (( $(stat -c %s "$path" 2>/dev/null || echo 0) > 5242880 )); then
+    mv -f "$path" "${path}.1"
+  fi
+  echo "$path"
 }
 
 jarvis_python() {
@@ -149,7 +163,7 @@ jarvis_start_tray_background() {
     return 0
   fi
   export JARVIS_NO_BROWSER=1
-  "$(jarvis_python)" "$JARVIS_ROOT/main.py" tray >>"$LOG_FILE" 2>&1 &
+  "$(jarvis_python)" "$JARVIS_ROOT/main.py" tray >>"$(jarvis_stdio_log tray)" 2>&1 &
   TRAY_PID=$!
   jarvis_log "Tray PID: $TRAY_PID"
   return 0
@@ -158,7 +172,7 @@ jarvis_start_tray_background() {
 jarvis_start_serve_background() {
   export JARVIS_NO_BROWSER=1
   export JARVIS_SERVICES_MANAGED=1
-  "$(jarvis_python)" "$JARVIS_ROOT/main.py" serve >>"$LOG_FILE" 2>&1 &
+  "$(jarvis_python)" "$JARVIS_ROOT/main.py" serve >>"$(jarvis_stdio_log serve)" 2>&1 &
   SERVE_PID=$!
   jarvis_log "Serve PID: $SERVE_PID"
 }

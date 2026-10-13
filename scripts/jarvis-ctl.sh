@@ -22,6 +22,7 @@ Lifecycle:
   configure   Create jarvis.env and initialize platform paths
   start       Start Aria desktop (tray + server + window)
   stop        Stop tray + server
+  restart-tray Restart only the tray process (picks up new code)
   restart     Restart Aria server (or: workstation restart <component>)
   update      git pull + pip sync + restart if running
   backup      Backup jarvis data and platform state
@@ -85,6 +86,32 @@ case "$cmd" in
     ;;
   restart)
     exec "$JARVIS_ROOT/scripts/restart-jarvis-server.sh"
+    ;;
+  restart-tray)
+    # Tray only (scheduler, mission worker, wake word). The systemd server and window stay up.
+    jarvis_activate_env
+    tray_pattern="${JARVIS_ROOT}/main.py tray"
+    if pgrep -f "$tray_pattern" >/dev/null 2>&1; then
+      pkill -TERM -f "$tray_pattern" || true
+      for _ in $(seq 1 60); do
+        pgrep -f "$tray_pattern" >/dev/null 2>&1 || break
+        sleep 1
+      done
+      if pgrep -f "$tray_pattern" >/dev/null 2>&1; then
+        echo "Tray did not stop within 60 s; not starting a second tray." >&2
+        exit 1
+      fi
+    fi
+    if ! jarvis_tray_available; then
+      echo "Tray could not start (no display or pystray)." >&2
+      exit 1
+    fi
+    export JARVIS_NO_BROWSER=1
+    # Own user scope, so closing the terminal that ran this command cannot take the tray with it.
+    systemd-run --user --scope --quiet --collect --unit="aria-tray-$(date +%s)" \
+      setsid "$(jarvis_python)" "$JARVIS_ROOT/main.py" tray >>"$(jarvis_stdio_log tray)" 2>&1 < /dev/null &
+    sleep 2
+    echo "Tray restarted (PID $(pgrep -f "$tray_pattern" | head -1)); stdout/stderr -> data/logs/tray-stdio.log"
     ;;
   stop)
     exec "$JARVIS_ROOT/scripts/stop-jarvis.sh"

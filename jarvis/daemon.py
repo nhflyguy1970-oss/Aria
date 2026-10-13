@@ -43,7 +43,15 @@ def _setup_file_logging() -> None:
         LOG_DIR / "jarvis.log", maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
     )
     fh.setFormatter(logging.Formatter("%(asctime)s %(name)s %(message)s"))
-    logging.getLogger().addHandler(fh)
+    root = logging.getLogger()
+    root.addHandler(fh)
+    # Launchers send stdout/stderr to data/logs/tray-stdio.log; basicConfig's stderr
+    # handler would copy every jarvis.log line there. Keep it for a terminal only,
+    # so the stdio file holds what logging cannot: tracebacks and native output.
+    if not sys.stderr.isatty():
+        for handler in list(root.handlers):
+            if type(handler) is logging.StreamHandler and handler.stream is sys.stderr:
+                root.removeHandler(handler)
 
 
 def _notify(title: str, body: str) -> None:

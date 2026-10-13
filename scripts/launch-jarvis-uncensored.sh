@@ -43,7 +43,7 @@ jarvis_stop_stale
 export JARVIS_UNCENSORED=1
 export JARVIS_GUI_MODE="${JARVIS_GUI_MODE:-app}"
 export JARVIS_APP_WINDOW="${JARVIS_APP_WINDOW:-1}"
-"$(jarvis_python)" "$JARVIS_ROOT/main.py" tray-uncensored >>"$LOG_FILE" 2>&1 &
+"$(jarvis_python)" "$JARVIS_ROOT/main.py" tray-uncensored >>"$(jarvis_stdio_log tray)" 2>&1 &
 TRAY_PID=$!
 jarvis_log "Tray PID: $TRAY_PID"
 
