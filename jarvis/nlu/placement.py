@@ -161,13 +161,16 @@ def save_placement(config: dict[str, Any]) -> None:
 
 
 def ollama_options_for_device(device: str) -> dict[str, Any]:
-    """Hardware routing options for Ollama (GPU layers). Sampling belongs to the caller."""
+    """Hardware routing options for Ollama (GPU layers). Sampling belongs to the caller.
+
+    GPU placement sends no ``num_gpu``: the Ollama service is CUDA-only, and its
+    own fit offloads as many layers as free VRAM allows. Forcing ``num_gpu=99``
+    failed twice over (2026-10-12): it differs from the warm-up/probe runner, so
+    every chat reloaded the model; and with ComfyUI holding ~4 GB the forced
+    full offload hit cudaMalloc OOM instead of the 33/49-layer fit that loads.
+    """
     dev = (device or "cpu").lower()
     opts: dict[str, Any] = {}
     if dev == "cpu":
         opts["num_gpu"] = 0
-    elif dev.startswith("nvidia"):
-        opts["num_gpu"] = 99
-    elif dev.startswith("amd") or dev.startswith("rocm"):
-        opts["num_gpu"] = 99
     return opts
