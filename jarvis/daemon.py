@@ -33,6 +33,30 @@ _watchdog = None
 _services_watchdog = None
 _restart_lock = threading.Lock()
 _restart_in_progress = False
+_tray_lock_handle = None
+
+
+def _acquire_tray_lock() -> bool:
+    """One tray per user: login autostart and the desktop launcher may both try."""
+    global _tray_lock_handle
+    import fcntl
+
+    from jarvis.config import DATA_DIR
+
+    path = DATA_DIR / "tray.lock"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = path.open("a+")
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        handle.close()
+        return False
+    handle.seek(0)
+    handle.truncate()
+    handle.write(f"{os.getpid()}\n")
+    handle.flush()
+    _tray_lock_handle = handle  # held for the process lifetime; the kernel releases it on exit
+    return True
 
 
 def _setup_file_logging() -> None:
@@ -77,6 +101,10 @@ def ensure_ollama() -> bool:
 def start_server(open_browser: bool = False) -> subprocess.Popen:
     global _server_proc, _serve_log_handle
     load_jarvis_env()
+    from jarvis.shutdown import quit_requested
+
+    if quit_requested():
+        raise RuntimeError("ARIA has intentionally quit; use explicit startup")
     from jarvis.platform_cutover import apply_cutover_state_on_startup
 
     apply_cutover_state_on_startup()
@@ -142,6 +170,10 @@ def stop_server() -> None:
 
 def restart_server() -> subprocess.Popen | None:
     global _watchdog, _restart_in_progress
+    from jarvis.shutdown import quit_requested
+
+    if quit_requested():
+        return None
     from jarvis.launch_ownership import canonical_owns_server, systemd_restart
 
     if canonical_owns_server():
@@ -258,6 +290,9 @@ def run_tray(uncensored: bool = False) -> None:
     from jarvis.watchdog import ServerWatchdog
 
     _setup_file_logging()
+    if not _acquire_tray_lock():
+        logger.info("Another ARIA tray is already running — exiting")
+        return
     load_jarvis_env()
     from jarvis.platform_cutover import apply_cutover_state_on_startup
 
@@ -377,6 +412,9 @@ def run_tray(uncensored: bool = False) -> None:
             "Platform Connected · Mission Control Connected · Runtime Synced (%s)",
             runtime_report.get("connection_mode"),
         )
+    from jarvis.shutdown import clear_quit
+
+    clear_quit()
     _install_restart_signal_handler()
     if uncensored:
         os.environ["JARVIS_UNCENSORED"] = "1"
@@ -485,34 +523,41 @@ def run_tray(uncensored: bool = False) -> None:
             except Exception as e:
                 logger.warning("Wake word start failed: %s", e)
 
-        def on_quit():
-            try:
-                from jarvis.proactive_scheduler import stop as stop_scheduler
+        def on_quit(*, complete=True):
+            from jarvis.shutdown import close_acm, mark_quit, request_quit
 
-                stop_scheduler()
-            except Exception:
-                pass
-            try:
-                from jarvis.missions import worker as mission_worker
-
-                mission_worker.stop()
-            except Exception:
-                pass
-            try:
-                from jarvis.audio_wakeword import stop_listener
-
-                stop_listener()
-            except Exception:
-                pass
-            _watchdog.stop()
+            mark_quit()
+            if _watchdog:
+                _watchdog.stop()
             if _services_watchdog:
                 _services_watchdog.stop()
-            from jarvis.launch_ownership import canonical_owns_server
+            from jarvis.proactive_scheduler import stop as stop_scheduler
+            from jarvis.missions import worker as mission_worker
+            from jarvis.audio_wakeword import stop_listener
 
-            if canonical_owns_server():
-                logger.info("Tray quit — leaving systemd-owned server running")
-            else:
-                stop_server()
+            stop_scheduler()
+            if not mission_worker.stop():
+                raise RuntimeError("Mission worker did not stop; quit remains held")
+            stop_listener()
+            from jarvis import audio_wakeword, proactive_scheduler, services
+
+            threads = [getattr(proactive_scheduler, "_thread", None),
+                       getattr(audio_wakeword, "_listener_thread", None),
+                       getattr(_watchdog, "_thread", None),
+                       getattr(_services_watchdog, "_thread", None)]
+            for thread in threads:
+                if thread and thread.is_alive():
+                    thread.join(timeout=30)
+                    if thread.is_alive():
+                        raise RuntimeError(f"ARIA background thread {thread.name} did not stop")
+            # Stop only a child owned by this tray; retain shared Ollama/HA services.
+            comfy = getattr(services, "_comfy_proc", None)
+            if comfy and comfy.poll() is None:
+                comfy.terminate()
+                comfy.wait(timeout=30)
+            close_acm()
+            if complete:
+                request_quit()
 
         from jarvis.config import is_uncensored
         from jarvis.proactive_scheduler import start as start_scheduler
@@ -533,6 +578,9 @@ def run_tray(uncensored: bool = False) -> None:
                 on_restart=lambda: restart_server(),
                 on_quit=on_quit,
                 uncensored=uncensored and is_uncensored(),
+                # Stop ARIA from the tray: the watchdog would otherwise restart the server.
+                on_stop=lambda: _watchdog and _watchdog.stop(),
+                on_start=lambda: _watchdog and _watchdog.start(),
             )
         except Exception as exc:
             logger.warning("Tray unavailable (%s) — server keeps running without tray icon", exc)

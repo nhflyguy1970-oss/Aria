@@ -21,7 +21,7 @@ Lifecycle:
   install     Fresh-machine install (--minimal|--developer|--full|--gpu|--headless)
   configure   Create jarvis.env and initialize platform paths
   start       Start Aria desktop (tray + server + window)
-  stop        Stop tray + server
+  quit        Quit ARIA Completely (also: stop)
   restart-tray Restart only the tray process (picks up new code)
   restart     Restart Aria server (or: workstation restart <component>)
   update      git pull + pip sync + restart if running
@@ -51,7 +51,16 @@ cmd="${1:-}"
 shift || true
 
 case "$cmd" in
-  install|configure|start|stop|update|backup|verify|doctor|inventory|optimize|hardware)
+  quit|stop)
+    cd "$JARVIS_ROOT"
+    exec "$JARVIS_ROOT/venv/bin/python" -m jarvis.shutdown quit
+    ;;
+  start)
+    cd "$JARVIS_ROOT"
+    "$JARVIS_ROOT/venv/bin/python" -m jarvis.shutdown clear
+    exec "$JARVIS_ROOT/scripts/workstation.sh" start "$@"
+    ;;
+  install|configure|update|backup|verify|doctor|inventory|optimize|hardware)
     exec "$JARVIS_ROOT/scripts/workstation.sh" "$cmd" "$@"
     ;;
   restore)
@@ -89,6 +98,11 @@ case "$cmd" in
     ;;
   restart-tray)
     # Tray only (scheduler, mission worker, wake word). The systemd server and window stay up.
+    if [[ -f "${HOME}/.config/systemd/user/aria-tray.service" ]]; then
+      systemctl --user restart aria-tray.service
+      echo "Tray restarted (aria-tray.service); logs: journalctl --user -u aria-tray"
+      exit 0
+    fi
     jarvis_activate_env
     tray_pattern="${JARVIS_ROOT}/main.py tray"
     if pgrep -f "$tray_pattern" >/dev/null 2>&1; then

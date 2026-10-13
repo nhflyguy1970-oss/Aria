@@ -118,6 +118,11 @@ jarvis_systemd_unit() {
   [[ -f "${HOME}/.config/systemd/user/jarvis.service" ]]
 }
 
+# Login-autostart tray (scripts/install-tray-autostart.sh). Not for tray-uncensored.
+jarvis_tray_unit() {
+  [[ -f "${HOME}/.config/systemd/user/aria-tray.service" ]]
+}
+
 jarvis_start_canonical_server() {
   if ! jarvis_systemd_unit; then
     return 1
@@ -161,6 +166,11 @@ jarvis_start_tray_background() {
   if pgrep -f "${JARVIS_ROOT}/main.py tray" >/dev/null 2>&1; then
     jarvis_log "Tray already running — not starting a second tray"
     return 0
+  fi
+  if jarvis_tray_unit; then
+    jarvis_log "Starting systemd --user aria-tray.service"
+    systemctl --user start aria-tray.service
+    return $?
   fi
   export JARVIS_NO_BROWSER=1
   "$(jarvis_python)" "$JARVIS_ROOT/main.py" tray >>"$(jarvis_stdio_log tray)" 2>&1 &
@@ -249,6 +259,9 @@ jarvis_wait_for_server() {
 jarvis_stop_stale() {
   if jarvis_systemd_unit; then
     systemctl --user stop jarvis.service 2>/dev/null || true
+  fi
+  if jarvis_tray_unit; then
+    systemctl --user stop aria-tray.service 2>/dev/null || true
   fi
   pkill -f "${JARVIS_ROOT}/main.py tray" 2>/dev/null || true
   pkill -f "${JARVIS_ROOT}/main.py serve" 2>/dev/null || true

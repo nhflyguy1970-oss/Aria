@@ -71,6 +71,18 @@ def start_aria_server(*, timeout: float = 90) -> bool:
     if _jarvis_port_open() and not api_responsive():
         stop_aria_server()
 
+    # The canonical server is the systemd unit. A tray may already be running
+    # (login autostart) with the server stopped from its menu, and a second tray
+    # would exit on the single-instance lock.
+    from jarvis.launch_ownership import systemd_start, systemd_unit_installed
+
+    if systemd_unit_installed() and systemd_start():
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            if api_responsive():
+                return True
+            time.sleep(0.5)
+
     from jarvis.security.owner.env_boundary import copy_process_env
 
     env = copy_process_env()
