@@ -1,0 +1,37 @@
+# ARIA Z-Image Turbo INT8 worker (Phase 8). Started on demand by jarvis/zimage.py and
+# stopped after each job, so it holds no idle VRAM. It runs the stock ~/ComfyUI install
+# with the Phase 8 qualified read-only core overlay (ComfyUI v0.27.0 + INT8
+# quantize_input fix) and the pinned comfy_kitchen 0.2.15 wheel bind-mounted in a
+# bubblewrap sandbox: the installed ComfyUI is never modified. GPU admission, thermal
+# cutoff and FTR yield are enforced by jarvis/gpu_scheduler.py around every job.
+[Unit]
+Description=ARIA Z-Image Turbo INT8 worker (on demand, Phase 8)
+
+[Service]
+Type=simple
+Environment=PYTHONPATH=%h/.local/share/aria-zimage/runtime/sitepkgs
+Environment=HOME=%h/.local/share/aria-zimage/base/home
+Environment=XDG_CACHE_HOME=%h/.local/share/aria-zimage/base/cache
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=HF_HUB_OFFLINE=1
+Environment=TRANSFORMERS_OFFLINE=1
+Environment=HF_HUB_DISABLE_TELEMETRY=1
+Environment=DO_NOT_TRACK=1
+Environment=CUDA_VISIBLE_DEVICES=0
+Environment=OMP_NUM_THREADS=4
+Environment=MKL_NUM_THREADS=4
+ExecStart=/usr/bin/bwrap --die-with-parent --new-session --unshare-user --unshare-pid --unshare-ipc --unshare-uts \
+  --ro-bind / / \
+  --ro-bind %h/.local/share/aria-zimage/runtime/core/comfy /media/jeff/AI/ComfyUI/comfy \
+  --bind %h/.local/share/aria-zimage/base %h/.local/share/aria-zimage/base \
+  --dev-bind /dev /dev --proc /proc --tmpfs /tmp --chdir /media/jeff/AI/ComfyUI \
+  /media/jeff/AI/ComfyUI/venv/bin/python /media/jeff/AI/ComfyUI/main.py --listen 127.0.0.1 --port 8189 \
+  --base-directory %h/.local/share/aria-zimage/base \
+  --user-directory %h/.local/share/aria-zimage/base/user \
+  --database-url sqlite:///%h/.local/share/aria-zimage/base/user/zimage.db \
+  --disable-all-custom-nodes --disable-api-nodes --disable-auto-launch \
+  --disable-dynamic-vram --lowvram --reserve-vram 2.5 \
+  --front-end-root %h/.local/share/aria-zimage/base/frontend --cache-none
+Nice=10
+TimeoutStopSec=30
+Restart=no

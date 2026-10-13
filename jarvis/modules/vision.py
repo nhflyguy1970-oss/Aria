@@ -169,22 +169,36 @@ class VisionEngine:
         stream: bool = False,
         task: str = "describe",
     ):
-        from ollama import chat
+        from jarvis import gpu_scheduler
+        from jarvis.inference.gateway import _ollama_client_chat
 
         model = llm.vision_model_for_task(task)
         if stream:
-            return chat(
+            return self._vision_stream(model, messages)
+        parts = []
+        for chunk in self._vision_stream(model, messages):
+            parts.append((chunk.get("message") or {}).get("content") or "")
+        return "".join(parts)
+
+    def _vision_stream(self, model: str, messages: list[dict]):
+        from jarvis import gpu_scheduler
+        from jarvis.inference.gateway import _ollama_client_chat
+
+        with gpu_scheduler.admit_ollama(model, label=f"vision:{model}") as job:
+            stream = _ollama_client_chat(job)(
                 model=model,
                 messages=messages,
                 stream=True,
                 options={"keep_alive": VISION_KEEP_ALIVE},
             )
-        response = chat(
-            model=model,
-            messages=messages,
-            options={"keep_alive": VISION_KEEP_ALIVE},
-        )
-        return response["message"]["content"]
+            try:
+                for chunk in stream:
+                    job.check()
+                    yield chunk
+            finally:
+                close = getattr(stream, "close", None)
+                if close:
+                    close()
 
     def analyze_stream(self, question: str, image_path: str | None = None, *, task: str = "describe"):
         """Yield text tokens from Ollama vision model."""

@@ -259,7 +259,8 @@ def resolve_conversation_model(
     """Brain-routed conversational model and registry role."""
     from jarvis.brain_routing import select_chat_model
 
-    params = params or {}
+    if params is None:
+        params = {}
     brain_model = select_chat_model(
         message,
         params,
@@ -269,6 +270,10 @@ def resolve_conversation_model(
     )
     from jarvis.brain_routing import reasoning_model
 
+    explicit = (session_chat_model or params.get("model") or "").strip()
+    if not explicit and params.get("_specialist_note", "").startswith("hard coding/planning"):
+        _record_capability_trace(action, message, "specialist", brain_model)
+        return brain_model, "specialist"
     role = "reasoning"
     mode = (params.get("thinking_mode") or "").strip().lower()
     if brain_model == reasoning_model() or mode == "deep" or params.get("knowledge_mode"):
@@ -278,12 +283,8 @@ def resolve_conversation_model(
     elif not _needs_reasoning_role(message, action=action):
         role = "conversation"
     # Preserve explicit session/UI model through policy (BUG-018).
-    explicit = (params.get("model") or session_chat_model or "").strip()
-    model = apply_gateway_model(
-        brain_model,
-        role,
-        user_model_override=explicit if explicit == brain_model else "",
-    )
+    explicit = (session_chat_model or params.get("model") or "").strip()
+    model = explicit or apply_gateway_model(brain_model, role)
     _record_capability_trace(action, message, role, model)
     return model, role
 
@@ -333,6 +334,15 @@ def resolve_model_for_action(
         )
         return model, conv_role, capability
 
+    if role in ("coding", "planning"):
+        from jarvis.brain_routing import specialist_model
+
+        special, note = specialist_model(message)
+        if note:
+            params["_specialist_note"] = note
+        if special:
+            _record_capability_trace(action, message, "specialist", special, capability=capability)
+            return special, "specialist", capability
     model = apply_gateway_model(configured_model_for_role(role), role)
     _record_capability_trace(action, message, role, model, capability=capability)
     return model, role, capability

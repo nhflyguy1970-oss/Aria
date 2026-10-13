@@ -256,3 +256,4 @@ def test_vision_prefix_alone_is_not_visual() -> None:
     """Removing only the 240-char clause is not enough; prefixes must not suffice."""
     assert _action("What color is the sky?", vision_session()) != "analyze_image"
     assert _action("Can you see why the server failed?", vision_session()) != "analyze_image"
+

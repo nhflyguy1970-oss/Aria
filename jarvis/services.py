@@ -136,6 +136,8 @@ def _comfy_extra_args() -> list[str]:
         if gpu_preference() in ("nvidia", "both", "auto") and nvidia_available():
             idx = (os.getenv("JARVIS_CUDA_DEVICE") or "0").strip()
             args.extend(["--cuda-device", idx])
+            # Phase 8 qualified FLUX profile: offload and keep 2.5 GiB of the RTX 3060 free.
+            args.extend(["--lowvram", "--reserve-vram", "2.5", "--disable-dynamic-vram"])
     except Exception:
         pass
     return args
@@ -361,6 +363,10 @@ def set_comfyui_checkpoint(checkpoint: str) -> dict:
     if checkpoint == "quality" and not result["installed"].get("quality"):
         result["ok"] = False
         result["message"] = "SDXL 1.0 not installed — run: ./scripts/install-sdxl-base.sh"
+        return result
+    if checkpoint == "zimage" and not result["installed"].get("zimage"):
+        result["ok"] = False
+        result["message"] = "Z-Image Turbo runtime or model files are not installed"
         return result
     if checkpoint == "flux" and not result["installed"].get("flux"):
         result["ok"] = False

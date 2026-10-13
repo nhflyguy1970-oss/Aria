@@ -427,10 +427,18 @@ def _rule_needs_artifact(text: str, lower: str, session) -> dict | None:
 _AGENT_NAMES = r"(?P<agent>codex|claude(?:\s+code)?|antigravity|agy)"
 
 
+_AGENT_REQUEST = re.compile(rf"^(?:ask|have|get|tell|let|use|run)\s+{_AGENT_NAMES}\s+(?:to\s+|on\s+|for\s+)?(?P<task>.+)$",
+                            re.I | re.S)
+
+
+def is_coding_agent_request(text: str) -> bool:
+    """Work addressed to a coding agent; file names inside it are the agent's task, not a local read."""
+    return bool(_AGENT_REQUEST.match((text or "").strip()))
+
+
 def _rule_coding_agents(text: str, lower: str, _session) -> dict | None:
     """Requests *to* or *about* the coding agents. A bare project name never matches."""
-    if m := re.match(rf"^(?:ask|have|get|tell|let|use|run)\s+{_AGENT_NAMES}\s+(?:to\s+|on\s+|for\s+)?(?P<task>.+)$",
-                     text, re.I):
+    if m := _AGENT_REQUEST.match(text):
         from jarvis.coding_agents.discovery import resolve_agent_name
 
         return _intent("coding_agent_plan", {"agent": resolve_agent_name(m.group("agent")), "task": m.group("task")},

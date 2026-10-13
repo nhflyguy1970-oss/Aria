@@ -70,7 +70,7 @@ _TAGS_CACHE: dict[str, object] = {"at": 0.0, "host": "", "models": [], "err": No
 _TAGS_TTL_S = float(os.getenv("JARVIS_OLLAMA_TAGS_TTL", "15"))
 
 
-def _list_via_http(host: str) -> tuple[list[str], str | None]:
+def _list_via_http(host: str, *, timeout: float = 5) -> tuple[list[str], str | None]:
     now = time.time()
     if (
         _TAGS_CACHE.get("host") == host
@@ -79,7 +79,7 @@ def _list_via_http(host: str) -> tuple[list[str], str | None]:
     ):
         return list(_TAGS_CACHE.get("models") or []), _TAGS_CACHE.get("err")  # type: ignore[return-value]
     try:
-        with urllib.request.urlopen(f"{host}/api/tags", timeout=5) as resp:
+        with urllib.request.urlopen(f"{host}/api/tags", timeout=timeout) as resp:
             data = json.loads(resp.read().decode())
             models = [m.get("name", "") for m in data.get("models", []) if m.get("name")]
             _TAGS_CACHE.update({"at": now, "host": host, "models": models, "err": None})
@@ -124,6 +124,12 @@ def _soft_generate_probe(host: str, model: str, *, timeout: float) -> dict:
     ``-c 65536``, which reloads/evicts the chat runner and is a measured cause of
     alternating FIRST_PROGRESS_TIMEOUT.
     """
+    from jarvis import gpu_scheduler
+
+    if deferred := gpu_scheduler.defer_direct_load(model):
+        # Daemon liveness is still checked via tags; only the model load is postponed.
+        return {"ok": True, "deferred": True, "detail": f"generate probe deferred: {deferred}", "model": model,
+                "elapsed_s": 0.0}
     options: dict = {"num_predict": max(1, _PROBE_NUM_PREDICT)}
     try:
         from jarvis.ollama_runtime import default_options
@@ -330,7 +336,8 @@ def note_inference_failure(detail: str = "", model: str = "") -> None:
         _probe_cache["elapsed_s"] = None
 
 
-def check_ollama(*, soft_probe: bool = True, force_probe: bool = False) -> dict:
+def check_ollama(*, soft_probe: bool = True, force_probe: bool = False,
+                 metadata_timeout: float | None = None) -> dict:
     """Check Ollama reachability, installed models, and (optionally) generate liveness.
 
     health_state:
@@ -349,8 +356,18 @@ def check_ollama(*, soft_probe: bool = True, force_probe: bool = False) -> dict:
         "probe": None,
     }
 
+    # Liveness callers need one metadata budget across HTTP fallback hosts.
+    # Preserve ordinary discovery/CLI behavior when no budget is requested.
+    deadline = None if metadata_timeout is None else time.monotonic() + metadata_timeout
     for host in _hosts_to_try():
-        models, err = _list_via_http(host)
+        if deadline is None:
+            models, err = _list_via_http(host)
+        else:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                result["error"] = "Ollama metadata deadline exceeded"
+                return result
+            models, err = _list_via_http(host, timeout=min(5, remaining))
         if models:
             result["running"] = True
             result["host"] = host
@@ -359,6 +376,8 @@ def check_ollama(*, soft_probe: bool = True, force_probe: bool = False) -> dict:
             break
         result["error"] = err
     else:
+        if deadline is not None:
+            return result  # Never run the 15s CLI fallback in a bounded live poll.
         cli_models = _list_via_cli()
         if cli_models:
             result["running"] = True

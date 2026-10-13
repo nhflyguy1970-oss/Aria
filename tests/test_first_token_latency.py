@@ -54,7 +54,7 @@ def test_conversation_stream_uses_tags_only_health(monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(
         ConversationEngine,
         "messages_for_llm",
-        lambda self, pending, prefix: [{"role": "user", "content": "hi"}],
+        lambda self, pending, prefix, **kwargs: [{"role": "user", "content": "hi"}],
     )
     monkeypatch.setattr(
         "jarvis.ollama_runtime.ensure_chat_model_ready",

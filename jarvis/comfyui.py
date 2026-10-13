@@ -1,5 +1,6 @@
 """ComfyUI API integration for local image generation."""
 
+import contextvars
 import copy
 import json
 import logging
@@ -10,11 +11,27 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
 
 from jarvis.config import DATA_DIR
 
 COMFY_URL = os.getenv("JARVIS_COMFYUI_URL", "http://127.0.0.1:8188").rstrip("/")
+_TARGET: contextvars.ContextVar[str] = contextvars.ContextVar("comfy_target", default="")
+
+
+def _base() -> str:
+    """ComfyUI instance for the current job (the Z-Image worker sets its own)."""
+    return _TARGET.get() or COMFY_URL
+
+
+@contextmanager
+def target(url: str):
+    token = _TARGET.set(url.rstrip("/"))
+    try:
+        yield
+    finally:
+        _TARGET.reset(token)
 OUTPUT_DIR = DATA_DIR / "generated"
 logger = logging.getLogger(__name__)
 COMFY_ROOT = Path(os.getenv("JARVIS_COMFYUI_ROOT", Path.home() / "ComfyUI"))
@@ -308,7 +325,7 @@ def _comfy_http_error_detail(exc: urllib.error.HTTPError) -> str:
 def interrupt_running() -> None:
     """Ask ComfyUI to stop the current prompt (best-effort)."""
     try:
-        req = urllib.request.Request(f"{COMFY_URL}/interrupt", data=b"", method="POST")
+        req = urllib.request.Request(f"{_base()}/interrupt", data=b"", method="POST")
         urllib.request.urlopen(req, timeout=5)
     except Exception:
         pass
@@ -335,13 +352,36 @@ def run_workflow(
     *,
     timeout_sec: int = 300,
     cancel_check=None,
+    vram_mib: int | None = None,
+) -> str:
+    """Queue a ComfyUI workflow in the exclusive RTX 3060 slot; output path or ERROR: string."""
+    from jarvis import gpu_scheduler
+
+    base_cancel = cancel_check or _cancel_check_default
+    try:
+        with gpu_scheduler.admit_image(label=filename_prefix, vram_mib=vram_mib) as job:
+            result = _run_workflow(workflow, filename_prefix, timeout_sec=timeout_sec,
+                                   cancel_check=lambda: job.cut_off or base_cancel())
+            if job.cut_off:
+                return f"ERROR: Image job stopped to protect the system: {job.cutoff_reason}"
+            return result
+    except gpu_scheduler.GpuUnavailable as exc:
+        return f"ERROR: Image job not started: {exc.reason}"
+
+
+def _run_workflow(
+    workflow: dict,
+    filename_prefix: str = "jarvis",
+    *,
+    timeout_sec: int = 300,
+    cancel_check=None,
 ) -> str:
     """Queue a ComfyUI workflow and return the saved output path or ERROR: string."""
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     client_id = str(uuid.uuid4())
     payload = json.dumps({"prompt": workflow, "client_id": client_id}).encode()
     req = urllib.request.Request(
-        f"{COMFY_URL}/prompt",
+        f"{_base()}/prompt",
         data=payload,
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -379,7 +419,7 @@ def run_workflow(
         time.sleep(delay)
         delay = min(delay * 1.15, 5.0)
         try:
-            with urllib.request.urlopen(f"{COMFY_URL}/history/{prompt_id}", timeout=10) as resp:
+            with urllib.request.urlopen(f"{_base()}/history/{prompt_id}", timeout=10) as resp:
                 history = json.loads(resp.read().decode())
             poll_failures = 0
         except Exception as exc:
@@ -433,9 +473,16 @@ def _save_workflow_outputs(outputs: dict, filename_prefix: str) -> str | None:
                 if filename_prefix and not out_name.startswith(f"{filename_prefix}_"):
                     out_name = f"{filename_prefix}_{out_name}"
                 out_path = OUTPUT_DIR / out_name
-                _download_output(f"{COMFY_URL}/view?{params}", out_path)
+                _download_output(f"{_base()}/view?{params}", out_path)
                 return str(out_path)
     return None
+
+
+def _selected_zimage() -> bool:
+    from jarvis.comfyui_settings import resolve_checkpoint_name
+    from jarvis.zimage import CHECKPOINT
+
+    return resolve_checkpoint_name() == CHECKPOINT
 
 
 def _generate_once(
@@ -452,6 +499,11 @@ def _generate_once(
     scheduler: str | None = None,
     workflow: str | None = None,
 ) -> str:
+    from jarvis import zimage
+
+    if checkpoint in ("zimage", zimage.CHECKPOINT) or (not checkpoint and _selected_zimage()):
+        # Z-Image Turbo runs on its own on-demand worker (Phase 8 qualified INT8 runtime).
+        return zimage.generate(prompt, width, height, seed=seed)
     from jarvis.vram_guard import prepare_for_comfyui
 
     prepare_for_comfyui()

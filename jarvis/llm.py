@@ -188,8 +188,26 @@ def ask_stream(
 
 
 def generate_text(model: str, prompt: str, **kwargs) -> str:
-    response = generate(model=model, prompt=prompt, **kwargs)
-    return response["response"]
+    from jarvis import gpu_scheduler
+
+    with gpu_scheduler.admit_ollama(model, kwargs.get("options")) as job:
+        if job.host:
+            from ollama import Client
+
+            call = Client(host=job.host).generate
+        else:
+            call = generate
+        parts = []
+        stream = call(model=model, prompt=prompt, stream=True, **kwargs)
+        try:
+            for chunk in stream:
+                job.check()  # cutoff stops generation by closing the stream
+                parts.append(chunk.get("response") or "")
+        finally:
+            close = getattr(stream, "close", None)
+            if close:
+                close()
+    return "".join(parts)
 
 
 def embed_available() -> bool:

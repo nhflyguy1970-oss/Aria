@@ -127,6 +127,34 @@ class VisionActionEngine:
         return ok(answer, module="vision", **extra)
 
     @classmethod
+    def analyze_from_stream(
+        cls,
+        ctx: VisionContext,
+        answer: str,
+        *,
+        image_path: str | None = None,
+        action: str = "analyze_image",
+        warnings: list | None = None,
+    ) -> dict:
+        """Commit an already-streamed single-image answer as a vision result.
+
+        The chat stream yields tokens itself, so it cannot go back through
+        _via_product without re-running the model. This is the single-image
+        sibling of compare_from_result: same envelope, no second result format.
+        Restores the commit step lost when Vision was extracted — assistant.py
+        still called a self._vision_ok() that no longer existed, so every
+        streamed vision turn raised AttributeError after emitting its tokens.
+        """
+        if str(answer).startswith("ERROR:"):
+            return err(answer)
+        extra: dict = {"action": action, "pipeline": "vision_engine"}
+        if image_path:
+            extra["image_path"] = image_path
+        if warnings:
+            extra["warnings"] = list(warnings)
+        return ok(answer, module="vision", **extra)
+
+    @classmethod
     def compare_images(cls, ctx: VisionContext, params: dict, message: str) -> dict:
         path1 = params.get("path1", "")
         path2 = params.get("path2", "")

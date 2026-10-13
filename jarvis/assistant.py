@@ -652,7 +652,7 @@ class JarvisAssistant:
             choices = intent.get("choices", [])
             question = intent.get("clarification_question", "Which one?")
             lines = "\n".join(f"{i + 1}. {c}" for i, c in enumerate(choices))
-            body = f"{question}\n\n{lines}\n\nReply with a number or name." if choices else f"{question}\n\nReply with a number or name."
+            body = f"{question}\n\n{lines}\n\nReply with a number or name." if choices else question
             result = _ok(
                 body,
                 module="general",
@@ -1072,7 +1072,7 @@ class JarvisAssistant:
             choices = intent.get("choices", [])
             question = intent.get("clarification_question", "Which one?")
             lines = "\n".join(f"{i + 1}. {c}" for i, c in enumerate(choices))
-            body = f"{question}\n\n{lines}\n\nReply with a number or name." if choices else f"{question}\n\nReply with a number or name."
+            body = f"{question}\n\n{lines}\n\nReply with a number or name." if choices else question
             result = _ok(
                 body,
                 module="general",
@@ -1324,7 +1324,18 @@ class JarvisAssistant:
                 full.append(token)
                 yield {"type": "token", "content": token}
             answer = "".join(full)
-            result = self._vision_ok(answer, image_path=path)
+            # Commit through the Vision engine, same as the compare stream does.
+            # self._vision_ok was lost in the Vision extraction, so this raised
+            # AttributeError after every streamed vision answer.
+            from jarvis.behaviors.vision.context import VisionContext
+            from jarvis.behaviors.vision.engine import VisionActionEngine
+
+            result = VisionActionEngine.analyze_from_stream(
+                VisionContext.from_orchestrator(self),
+                answer,
+                image_path=path,
+                action=action,
+            )
             yield _done(result)
             return
 

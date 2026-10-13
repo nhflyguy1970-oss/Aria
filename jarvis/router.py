@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from pathlib import Path
 
 from jarvis import llm
 from jarvis.session import SessionContext
@@ -100,6 +101,87 @@ _EDIT_OTHER_ARTIFACT = re.compile(
 )
 
 
+_IMAGE_NOUN = r"(?:image|picture|photo|pic|render|artwork)"
+_IMAGE_FILE = re.compile(r"(?<![^\s'\"`])([^\s'\"`]+\.(?:png|jpe?g|webp|bmp|gif))(?=$|[\s'\"`,.;:!?])", re.I)
+_EDIT_VERBS = r"(?:edit|change|modify|adjust|alter|retouch|recolou?r|fix|make|turn|tweak)"
+_RECENT_IMAGE_REF = re.compile(
+    rf"^(?:please\s+)?(?:can you\s+|could you\s+)?(?P<verb>{_EDIT_VERBS})\s+(?:the|this|that|my|your)\s+"
+    rf"(?:(?:last|previous|latest|most recent|recent|generated|current|same)\s+)?{_IMAGE_NOUN}\b(?P<rest>.*)$",
+    re.I | re.S,
+)
+_IMAGE_PRONOUN_EDIT = re.compile(
+    r"^(?:please\s+)?(?P<verb>change|make|turn|recolou?r|edit|adjust)\s+(?:its|it)\b(?P<rest>.*)$", re.I | re.S
+)
+_NEW_REQUEST_REPLY = re.compile(
+    r"^(?:(?:open|read|find|search|show|list|write|create|generate|draw|tell|remind|schedule|play|ask|use|run|"
+    r"what|who|how|why|when|where|which|is|are|can|could|would|do|does)\b|"
+    r"(?:edit|update|fix|change|modify|rewrite)\s+(?:my|the|this|that)\s+(?!image|picture|photo|pic\b)"
+    r"(?:resume|document|doc|file|email|letter|note|notes|essay|code|script|report|plan|list|calendar|journal)\b)",
+    re.I,
+)
+_IMAGE_ACTIONS = {"generate_image", "edit_image", "inpaint_image", "upscale_image", "analyze_image"}
+
+
+def _edit_instruction(verb: str, rest: str) -> str:
+    rest = re.sub(r"^\s*(?:[:\-–,]|to\b|so that\b|and\b|by\b)\s*", "", rest.strip(), flags=re.I).strip()
+    if not rest:
+        return ""
+    if verb.lower() in ("edit", "modify", "retouch", "fix", "tweak", "adjust", "alter"):
+        return rest
+    return f"{verb.lower()} it {rest}"  # "make the previous image brighter" -> "make it brighter"
+
+
+def _image_clarify(question: str, reason: str, *, path: str = "") -> dict:
+    """Ask, never guess. A path-bound question takes the reply as the edit instruction;
+    otherwise the reply is routed as a new request (action_choice with no choices)."""
+    from jarvis.action_routing import clarification
+
+    ctype = "image_edit_instruction" if path else "action_choice"
+    intent = {**clarification(question, f"rule:{reason}", "image_edit", ctype=ctype), "route_reason": reason}
+    if path:
+        intent["image_path"] = path
+    return intent
+
+
+def _recent_image_edit_resolve(message: str, session: SessionContext) -> dict | None:
+    """Edits addressed to the recent image (or an explicit image path) — before file search."""
+    text = (message or "").strip()
+    if not text or _EDIT_OTHER_ARTIFACT.search(text):
+        return None
+    if (m := _IMAGE_FILE.search(text)) and re.match(rf"^(?:please\s+)?{_EDIT_VERBS}\b", text, re.I):
+        path = str(Path(m.group(1)).expanduser())
+        rest = re.sub(r"[`'\"]", " ", text[: m.start()] + " " + text[m.end():]).strip()
+        verb = rest.split()[0] if rest else "edit"
+        instruction = _edit_instruction(verb, " ".join(rest.split()[1:]))
+        if not instruction:
+            return _image_clarify(f"What should I change in `{Path(path).name}`?", "image_edit_needs_instruction",
+                                  path=path)
+        return {"action": "edit_image", "params": {"path": path, "prompt": instruction},
+                "thinking": "image edit (explicit path)", "route_reason": "image_edit_explicit_path"}
+    m = _RECENT_IMAGE_REF.match(text)
+    pronoun = None if m else _IMAGE_PRONOUN_EDIT.match(text)
+    if pronoun:
+        recent_context = session.last_action in _IMAGE_ACTIONS or session.last_module == "image"
+        if not (session.last_image and recent_context and Path(session.last_image).is_file()):
+            return None  # "change its ..." without an image in play is not an image edit
+        m = pronoun
+    if not m:
+        return None
+    if pronoun:  # "change its wings to red" is already a complete instruction
+        return {"action": "edit_image", "params": {"path": session.last_image, "prompt": text},
+                "thinking": "image edit (recent image)", "route_reason": "image_edit_recent_image"}
+    path = session.last_image
+    if not path:
+        return _image_clarify("Which image? Generate one or pick one from the Gallery first, or give me its file path.",
+                              "image_edit_no_recent_image")
+    instruction = _edit_instruction(m.group("verb"), m.group("rest"))
+    if not instruction:
+        return _image_clarify(f"What should I change in `{Path(path).name}`? For example: "
+                              "\"make the wings red\".", "image_edit_needs_instruction", path=path)
+    return {"action": "edit_image", "params": {"path": path, "prompt": instruction},
+            "thinking": "image edit (recent image)", "route_reason": "image_edit_recent_image"}
+
+
 def _image_edit_route(message: str, lower: str, session: SessionContext) -> dict | None:
     """Whole-image img2img edit when the user has a recent image in context."""
     path = session.last_image
@@ -122,7 +204,7 @@ def _image_edit_route(message: str, lower: str, session: SessionContext) -> dict
         return None
     m = re.search(
         r"\b(?:edit|change|modify|adjust|alter|transform|make)\s+"
-        r"(?:the\s+)?(?:image|picture|photo|it|this|that)?\s*[:\-]?\s*(.+)$",
+        r"(?:the\s+)?(?:image|picture|photo|it|this|that)\b\s*[:\-]?\s*(.+)$",
         message.strip(),
         re.I,
     )
@@ -919,6 +1001,8 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
         }
         if intent.get("choice_intents"):
             session.pending_clarification["choice_intents"] = intent["choice_intents"]
+        if intent.get("image_path"):
+            session.pending_clarification["image_path"] = intent["image_path"]
 
     try:
         from jarvis.capability_routing import capability_for_action_and_message, role_for_capability
@@ -1078,6 +1162,10 @@ def _local_fs_route(message: str) -> dict | None:
     lower = (message or "").lower().strip()
     if not lower:
         return None
+    from jarvis.action_routing import is_coding_agent_request
+
+    if is_coding_agent_request(message):
+        return None  # "Ask Codex to read X" is a coding-agent task
 
     from pathlib import Path as _P
 
@@ -2179,6 +2267,8 @@ def _quick_route(
     follow = _follow_up_route(message, session)
     if follow:
         return follow
+    if not attachment and (img_edit := _recent_image_edit_resolve(message, session)):
+        return img_edit
 
     # Runtime keyword fallback — only when NLU did not run.
     from jarvis.routing_inspector import is_routing_command
@@ -2864,11 +2954,13 @@ def _quick_route(
     if fs_hit := _local_fs_route(message):
         return fs_hit
 
-    if m := re.search(
+    from jarvis.action_routing import is_coding_agent_request
+
+    if not is_coding_agent_request(message) and (m := re.search(
         r"\b(?:read|load)\s+(?:file\s+)?[`'\"]?([^\s`'\"]+\.\w+)",
         message,
         re.I,
-    ):
+    )):
         return {"action": "coding_read", "params": {"path": m.group(1)}}
 
     if re.search(r"\bindex (?:this )?(?:project|folder|directory|codebase)\b", lower):
@@ -3259,6 +3351,18 @@ def route(message: str, session: SessionContext, attachment: dict | None = None)
 
 
 def _route(message: str, session: SessionContext, attachment: dict | None = None) -> dict:
+    pending = session.pending_clarification or {}
+    if pending.get("type") == "image_edit_instruction":
+        # Reply to "What should I change in <image>?" — the answer is the instruction for that image.
+        session.pending_clarification = None
+        reply = (message or "").strip()
+        if re.fullmatch(r"(?i)(?:no|nope|cancel|stop|never ?mind|forget it)[.!]?", reply):
+            return _finalize_intent({"action": "chat", "params": {}, "thinking": "image edit dropped"}, message, session)
+        new_request = bool(_NEW_REQUEST_REPLY.match(reply)) or bool(_EDIT_OTHER_ARTIFACT.search(reply))
+        if not attachment and not new_request and not _recent_image_edit_resolve(reply, session) and reply:
+            return _finalize_intent({"action": "edit_image", "params": {"path": pending["image_path"], "prompt": reply},
+                                     "thinking": "image edit instruction", "route_reason": "image_edit_instruction"},
+                                    message, session)
     if session.pending_clarification and session.pending_clarification.get("type") in (
         "action_choice",
         "deictic",
@@ -3510,6 +3614,8 @@ def _route(message: str, session: SessionContext, attachment: dict | None = None
     # Workstation + natural Jeff intents before Memory Authority —
     # "What did I download today?" / invoices must not become episodic ACM unknown.
     if not attachment:
+        if img_edit := _recent_image_edit_resolve(message, session):
+            return _finalize_intent(normalize_route_intent({**img_edit, "router": "image_edit"}), message, session)
         if fs_hit := _local_fs_route(message):
             return _finalize_intent(
                 normalize_route_intent(

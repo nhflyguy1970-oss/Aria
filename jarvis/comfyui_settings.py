@@ -10,7 +10,7 @@ from jarvis.config import DATA_DIR
 
 SETTINGS_FILE = DATA_DIR / "comfyui_settings.json"
 VALID_MODES = ("auto", "gpu", "cpu")
-VALID_CHECKPOINTS = ("flux", "quality", "fast")
+VALID_CHECKPOINTS = ("flux", "quality", "fast", "zimage")
 UNCENSORED_CHECKPOINTS = (
     "RealVisXL_V5.0_fp16.safetensors",
     "Realistic_Vision_V6.0_NV_B1_fp16.safetensors",
@@ -56,6 +56,8 @@ def load_settings() -> dict:
             data["checkpoint_file"] = Path(custom.strip()).name
         if raw.get("uncensored_auto_applied"):
             data["uncensored_auto_applied"] = True
+        if raw.get("standard_checkpoint") in VALID_CHECKPOINTS:
+            data["standard_checkpoint"] = raw["standard_checkpoint"]
         wf = raw.get("workflow_file")
         if isinstance(wf, str) and wf.strip():
             data["workflow_file"] = wf.strip()
@@ -108,6 +110,7 @@ def apply_uncensored_defaults() -> dict:
         return data
     if data.get("checkpoint_file") and not data.get("uncensored_auto_applied"):
         return data
+    data["standard_checkpoint"] = data.get("checkpoint", "quality")  # restored when leaving uncensored
     data["checkpoint_file"] = ckpt
     data["checkpoint"] = "quality"
     data["uncensored_auto_applied"] = True
@@ -122,6 +125,9 @@ def clear_uncensored_auto_checkpoint() -> dict:
     auto_ckpt = data.get("checkpoint_file", "")
     if auto_ckpt in UNCENSORED_CHECKPOINTS:
         data.pop("checkpoint_file", None)
+    previous = data.pop("standard_checkpoint", None)
+    if previous in VALID_CHECKPOINTS:
+        data["checkpoint"] = previous
     return _save(data)
 
 
@@ -260,7 +266,14 @@ def list_installed_checkpoints() -> dict[str, str | None]:
         "flux": _glob_ckpt("*flux*schnell*fp8*") or _glob_ckpt("*flux*schnell*"),
         "quality": _glob_ckpt("sd_xl_base_1.0.safetensors") or _glob_ckpt("*base*.safetensors"),
         "fast": _glob_ckpt("*turbo*.safetensors"),
+        "zimage": _zimage_name(),
     }
+
+
+def _zimage_name() -> str | None:
+    from jarvis import zimage
+
+    return zimage.CHECKPOINT if zimage.installed() else None
 
 
 def resolve_checkpoint_name() -> str:
@@ -281,6 +294,9 @@ def resolve_checkpoint_name() -> str:
     if choice == "fast":
         return installed["fast"] or installed["quality"] or "sd_xl_turbo_1.0_fp16.safetensors"
 
+    if choice == "zimage":
+        return installed["zimage"] or installed["flux"] or installed["quality"] or "flux1-schnell-fp8.safetensors"
+
     if choice == "flux":
         return installed["flux"] or installed["quality"] or installed["fast"] or "flux1-schnell-fp8.safetensors"
 
@@ -290,6 +306,8 @@ def resolve_checkpoint_name() -> str:
 def checkpoint_label() -> str:
     name = resolve_checkpoint_name()
     lower = name.lower()
+    if lower.startswith("z_image"):
+        return "Z-Image Turbo"
     if "flux" in lower and "schnell" in lower:
         return "Flux Schnell"
     if "flux" in lower:

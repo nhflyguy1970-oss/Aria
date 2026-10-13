@@ -106,7 +106,7 @@ def _uncensored_prompt_model() -> str:
         return env
     from jarvis.model_store import get_models
 
-    return get_models().get("general", "dolphin-mistral:latest")
+    return get_models().get("general", "huihui_ai/gemma-4-abliterated:12b")
 
 
 def normalize_image_prompt(prompt: str) -> str:
@@ -150,7 +150,7 @@ def _active_model_family() -> str:
         ckpt = resolve_checkpoint_name().lower()
     except Exception:
         ckpt = ""
-    if "flux" in ckpt:
+    if "flux" in ckpt or ckpt.startswith("z_image"):  # natural-language prompts, no negative
         return "flux"
     if "turbo" in ckpt:
         return "sdxl_turbo"
