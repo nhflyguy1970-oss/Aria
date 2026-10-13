@@ -304,12 +304,36 @@ def collect_runtime_databases() -> dict[str, Any]:
     return collect_runtime_services()
 
 
+_UTILITY_ROLES = frozenset({"router", "summarization", "learning", "tool_calling", "embed", "embedding"})
+
+
+def last_answer_receipt() -> dict[str, Any] | None:
+    """What actually answered the most recent completed chat reply (gateway receipt)."""
+    try:
+        from jarvis.inference.boundary import recent_receipts
+
+        for receipt in reversed(recent_receipts(50)):
+            if receipt.get("status") == "completed" and receipt.get("role") not in _UTILITY_ROLES:
+                return {
+                    "model": receipt.get("executed_model"),
+                    "provider": receipt.get("executed_provider"),
+                    "locality": receipt.get("executed_locality"),
+                    "requested_model": receipt.get("requested_model"),
+                    "fallback_used": receipt.get("fallback_used"),
+                    "receipt_id": receipt.get("id"),
+                }
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
 def collect_runtime_models() -> dict[str, Any]:
     mc = _mc_snapshot(required=True)
     inf = mc.get("inference") or {}
     ov = mc.get("overview") or {}
     return {
         "ok": True,
+        "last_answer": last_answer_receipt(),
         "source": "mission_control",
         "active": inf.get("active_models") or {"current": ov.get("current_model")},
         "current_model": ov.get("current_model") or inf.get("current_model"),

@@ -44,7 +44,10 @@ _CONTINUITY_RE = re.compile(
     r"where\s+(?:did|were|had)\s+(?:we|i)\s+(?:leave|left|stop|stopped|get|got)(?:\s+off|\s+to)?|"
     r"where\s+were\s+we\b|"
     r"pick\s+up\s+where|"
-    r"what\s+(?:were|was)\s+(?:we|i)\s+(?:talking|discussing|chatting|working)\s*(?:about|on)?|"
+    r"what\s+(?:were|was)\s+(?:we|i)\s+(?:just\s+|recently\s+|earlier\s+)?"
+    r"(?:talking|discussing|chatting|working)\s*(?:about|on)?|"
+    # Asking what to do next is answered from where the work left off.
+    r"what\s+should\s+we\s+(?:work\s+on|tackle|focus\s+on|do\s+next)\s*(?:next|now|today)?\s*\??$|"
     r"what\s+did\s+(?:we|i)\s+(?:talk|discuss|chat)\s+about|"
     r"what\s+did\s+(?:we|i)\s+(?:decide|agree|settle|choose|conclude|land\s+on)|"
     r"did\s+(?:we|i)\s+(?:decide|agree|settle)|"
@@ -71,7 +74,8 @@ _QUERY_STOP = frozenset(
     yesterday today week tonight morning afternoon evening continue continuing resume carry
     get back project projects idea ideas plan plans decision decisions discussion
     conversation session thing things about what was again catch remind pick up had
-    were land landed suggestion suggestions spoke whatever something""".split()
+    were land landed suggestion suggestions spoke whatever something just recently should
+    focus tackle next now""".split()
 )
 
 _SECRET_RE = re.compile(
@@ -95,6 +99,11 @@ _CONTINUE_RE = re.compile(
 )
 
 
+# "What should we work on?" wants a suggestion grounded in where the work left
+# off: the model answers, with the retrieved history as context.
+_PLAN_RE = re.compile(r"\bwhat\s+should\s+we\s+(?:work\s+on|tackle|focus\s+on|do\s+next)\b", re.I)
+
+
 def is_recall_question(text: str) -> bool:
     """A question about the past, answered from the record.
 
@@ -102,7 +111,11 @@ def is_recall_question(text: str) -> bool:
     asks ARIA to carry on working, so it goes to the conversation with the
     retrieved context rather than to a recall answer.
     """
-    return is_continuity_query(text) and not _CONTINUE_RE.search(text or "")
+    return (
+        is_continuity_query(text)
+        and not _CONTINUE_RE.search(text or "")
+        and not _PLAN_RE.search(text or "")
+    )
 
 
 def redact(text: str) -> str:

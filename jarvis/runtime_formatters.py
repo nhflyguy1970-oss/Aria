@@ -357,6 +357,15 @@ def format_inference(payload: dict[str, Any]) -> str:
     ctx = payload.get("context_length") or inf.get("context_length") or inf.get("num_ctx")
 
     lines = ["Current Inference", ""]
+    last = payload.get("last_answer") if isinstance(payload.get("last_answer"), dict) else None
+    if last and last.get("model"):
+        where = ", ".join(x for x in (last.get("locality"), last.get("provider")) if x)
+        note = f"Last reply was answered by `{last['model']}`" + (f" ({where})" if where else "")
+        if last.get("fallback_used") and last.get("requested_model") not in (None, last["model"]):
+            note += f" — a fallback; `{last['requested_model']}` was requested"
+        lines.append(note + f". Receipt `{last.get('receipt_id')}`.")
+        lines.append("This status reply itself comes from live runtime data, not a language model.")
+        lines.append("")
     if model:
         lines.append(f"Model: `{model}`")
     else:
