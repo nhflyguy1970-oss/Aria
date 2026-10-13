@@ -83,6 +83,14 @@ async def lifespan(app: FastAPI):
     recover_stale_jobs()
     recover_stale_coding_jobs()
     try:
+        # A ComfyUI started by a previous ARIA process keeps its models in RAM forever
+        # unless someone watches it for idleness.
+        from jarvis.services import adopt_running_comfyui
+
+        threading.Thread(target=adopt_running_comfyui, daemon=True, name="comfyui-adopt").start()
+    except Exception:
+        pass
+    try:
         # Re-queue resumable media work once the assistant proxy is live.
         threading.Thread(
             target=lambda: resume_interrupted_jobs(assistant),

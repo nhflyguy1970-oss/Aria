@@ -106,6 +106,16 @@ os.environ["JARVIS_DATA_DIR"] = str(_TEST_DATA_ROOT)
 # reach another test's inference mock. Benchmark tests invoke the runner
 # explicitly; ordinary unit tests must never schedule live inference.
 os.environ["JARVIS_NLU_SKIP_BENCHMARK"] = "1"
+# The ComfyUI idle-stop watcher (started from the app lifespan) must never adopt or stop
+# the owner's real ComfyUI from inside a test process; its tests enable it explicitly.
+os.environ["JARVIS_COMFYUI_IDLE_STOP_MIN"] = "0"
+# Modules that did `from jarvis.env_loader import load_jarvis_env` keep the real function
+# even while _no_api_key_in_tests stubs the module attribute, so a stray call (e.g.
+# services.get_status) loaded the owner's live data/jarvis.env and leaked its cloud settings
+# into later tests. Point the loader at a test path for the whole session instead.
+import jarvis.env_loader as _env_loader  # noqa: E402
+
+_env_loader.ENV_FILE = _TEST_DATA_ROOT / "jarvis.env"
 
 # The AI-Platform package put on sys.path above resolves its own storage roots
 # from these, independently of JARVIS_DATA_DIR — aiplatform.workstation.paths

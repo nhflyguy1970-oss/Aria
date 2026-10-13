@@ -140,7 +140,25 @@ def _comfy_extra_args() -> list[str]:
             args.extend(["--lowvram", "--reserve-vram", "2.5", "--disable-dynamic-vram"])
     except Exception:
         pass
+    # ComfyUI keeps every model it has loaded in system RAM (and later swap): 19 GB after
+    # one afternoon (2026-10-13). RAM-pressure caching drops cached models whenever free
+    # RAM falls below this many GB, which covers ARIA's largest image admission (24 GiB).
+    cache_gb = os.getenv("JARVIS_COMFYUI_CACHE_RAM_GB", "24").strip()
+    if cache_gb and cache_gb != "0":
+        args.extend(["--cache-ram", cache_gb])
     return args
+
+
+def _comfy_main_py() -> str | None:
+    """Path of the ComfyUI main.py ARIA launches — a plain lookup with no GPU probing, safe
+    from background threads (the full _comfy_cmd() also builds GPU launch flags)."""
+    custom = os.getenv("JARVIS_COMFYUI_CMD", "").strip()
+    if custom:
+        return next((part for part in custom.split() if part.endswith("main.py")), None)
+    for main_py in (PROJECT_ROOT / "tools" / "ComfyUI" / "main.py", Path.home() / "ComfyUI" / "main.py"):
+        if main_py.exists():
+            return str(main_py)
+    return None
 
 
 def _comfy_cmd() -> tuple[list[str], Path] | None:
@@ -211,6 +229,8 @@ def ensure_comfyui(timeout: float = 120, *, block: bool = False, on_demand: bool
     global _comfy_proc
     if _comfy_healthy():
         _log("ComfyUI: already running")
+        if not (_comfy_proc and _comfy_proc.poll() is None):
+            adopt_running_comfyui()
         return True
     if not on_demand and not _should_autostart_comfy():
         return False
@@ -241,6 +261,7 @@ def ensure_comfyui(timeout: float = 120, *, block: bool = False, on_demand: bool
                 start_new_session=True,
             )
             _log("ComfyUI: starting in background…")
+            _start_idle_watch(_comfy_proc.pid, _comfy_proc)
         except Exception as e:
             _log(f"ComfyUI: failed to start — {e}")
             return False
@@ -268,6 +289,138 @@ def ensure_comfyui_background() -> None:
 def stop_comfyui() -> None:
     """Stop the Jarvis-managed ComfyUI process."""
     _stop_comfyui()
+
+
+COMFY_IDLE_STOP_S = int(os.getenv("JARVIS_COMFYUI_IDLE_STOP_MIN", "15")) * 60  # 0 disables
+COMFY_IDLE_POLL_S = 60
+
+
+def _comfy_last_activity(started: float) -> float | None:
+    """Epoch seconds of ComfyUI's latest activity, or None while it is busy.
+
+    Busy = a queued/running prompt (from ARIA or ComfyUI's own web page) or an admitted ARIA
+    RTX job. Otherwise the newest prompt-history timestamp, never earlier than start-up."""
+    import json
+
+    base = os.getenv("JARVIS_COMFYUI_URL", f"http://127.0.0.1:{os.getenv('JARVIS_COMFYUI_PORT', '8188')}")
+    try:
+        with urllib.request.urlopen(f"{base}/queue", timeout=5) as resp:
+            q = json.loads(resp.read().decode())
+        if q.get("queue_running") or q.get("queue_pending"):
+            return None
+        with urllib.request.urlopen(f"{base}/history?max_items=5", timeout=5) as resp:
+            hist = json.loads(resp.read().decode())
+    except Exception:
+        return None  # unreachable or mid-start: never stop on uncertainty
+    try:
+        from jarvis.gpu_scheduler import status as gpu_status
+
+        if gpu_status().get("heavy_active"):
+            return None
+    except Exception:
+        pass
+    last = started
+    for entry in hist.values():
+        for msg in (entry.get("status") or {}).get("messages") or []:
+            ts = (msg[1] or {}).get("timestamp") if len(msg) > 1 and isinstance(msg[1], dict) else None
+            if ts:
+                last = max(last, ts / 1000.0)
+    return last
+
+
+_watched_comfy_pids: set[int] = set()
+
+
+def _pid_alive(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    try:  # a zombie child still answers kill(0)
+        return Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1][0] != "Z"
+    except (OSError, IndexError):
+        return True
+
+
+def _aria_comfy_pid() -> int | None:
+    """PID of a running ComfyUI that ARIA launched (its main.py plus ARIA's --fp32-text-enc),
+    found even after an ARIA restart lost the Popen handle. A ComfyUI started by hand is not."""
+    main = _comfy_main_py()
+    if not main:
+        return None
+    for proc_dir in Path("/proc").iterdir():
+        if not proc_dir.name.isdigit():
+            continue
+        try:
+            args = (proc_dir / "cmdline").read_bytes().split(b"\0")
+        except OSError:
+            continue
+        argv = [a.decode(errors="replace") for a in args if a]
+        if main in argv and "--fp32-text-enc" in argv and "--listen" in argv:
+            return int(proc_dir.name)
+    return None
+
+
+def _terminate_pid(pid: int) -> None:
+    import signal
+
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except OSError:
+        return
+    deadline = time.time() + 10
+    while time.time() < deadline and _pid_alive(pid):
+        time.sleep(0.5)
+    if _pid_alive(pid):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError:
+            pass
+
+
+def _watch_comfy_idle(pid: int, started: float, proc: subprocess.Popen | None = None) -> None:
+    """Stop an ARIA-launched ComfyUI once idle COMFY_IDLE_STOP_S; the next image job starts it
+    again on demand. Never touches a ComfyUI ARIA did not launch."""
+    try:
+        while COMFY_IDLE_STOP_S > 0:
+            time.sleep(COMFY_IDLE_POLL_S)
+            if not _pid_alive(pid) or (proc is not None and _comfy_proc is not proc):
+                return
+            last = _comfy_last_activity(started)
+            if last is None:
+                continue
+            idle = time.time() - last
+            if idle < COMFY_IDLE_STOP_S:
+                continue
+            with _lock:
+                if not _pid_alive(pid) or _comfy_last_activity(started) is None:
+                    continue
+                _log(f"ComfyUI: idle {int(idle // 60)} min — stopping to return its RAM "
+                     "(restarts on the next image job)")
+                if proc is not None and _comfy_proc is proc:
+                    _stop_comfyui()
+                else:
+                    _terminate_pid(pid)
+            return
+    finally:
+        _watched_comfy_pids.discard(pid)
+
+
+def _start_idle_watch(pid: int, proc: subprocess.Popen | None = None) -> None:
+    if COMFY_IDLE_STOP_S <= 0 or pid in _watched_comfy_pids:
+        return
+    _watched_comfy_pids.add(pid)
+    _log(f"ComfyUI: pid {pid} will stop after {COMFY_IDLE_STOP_S // 60} min idle")
+    threading.Thread(target=_watch_comfy_idle, args=(pid, time.time(), proc),
+                     name="comfyui-idle-stop", daemon=True).start()
+
+
+def adopt_running_comfyui() -> int | None:
+    """Watch an ARIA-launched ComfyUI left running by a previous ARIA process."""
+    pid = _aria_comfy_pid()
+    if pid and not (_comfy_proc and _comfy_proc.pid == pid):
+        _start_idle_watch(pid)
+    return pid
 
 
 def _stop_comfyui() -> None:
