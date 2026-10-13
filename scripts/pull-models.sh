@@ -13,21 +13,21 @@ if ! command -v ollama &>/dev/null; then
 fi
 
 if [[ "$UNCENSORED" == "1" ]]; then
-  echo "Mode: UNCENSORED (Jeff's RX 7600 + 62GB RAM)"
+  echo "Mode: UNCENSORED (Jeff's RTX 3060 12GB + 62GB RAM)"
   MODELS=(
-    "dolphin3:latest"
+    "huihui_ai/gemma-4-abliterated:12b"
     "qwen2.5-coder:14b"
-    "llava:13b"
+    "deepseek-r1:14b"
     "moondream"
     "nomic-embed-text"
   )
 else
-  echo "Mode: STANDARD (Jeff's RX 7600 + 62GB RAM)"
+  echo "Mode: STANDARD (Jeff's RTX 3060 12GB + 62GB RAM)"
   MODELS=(
-    "qwen2.5:14b"
+    "gemma4:12b"
     "qwen2.5-coder:14b"
     "deepseek-r1:14b"
-    "llava:13b"
+    "qwen2.5vl:7b"
     "moondream"
     "nomic-embed-text"
   )

@@ -85,7 +85,7 @@ function updateImageEngineStatus(settings) {
     if (settings.uncensored_mode) {
       const rec = settings.uncensored_recommended_label || settings.uncensored_recommended_checkpoint;
       const install = settings.install_scripts?.nsfw || "./scripts/install-nsfw-checkpoints.sh";
-      let banner = `<strong>Uncensored mode</strong> — prompt expansion uses <code>${window.escapeHtml(settings.prompt_model || "dolphin3:latest")}</code>`;
+      let banner = `<strong>Uncensored mode</strong> — prompt expansion uses <code>${window.escapeHtml(settings.prompt_model || "huihui_ai/gemma-4-abliterated:12b")}</code>`;
       if (rec) {
         banner += `. Recommended checkpoint: <strong>${window.escapeHtml(rec)}</strong>`;
       } else {

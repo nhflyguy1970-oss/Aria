@@ -26,6 +26,7 @@ CANONICAL_ROLES = (
     "browser_vision",
     "image",
     "embedding",
+    "specialist",
 )
 
 # Legacy GUI/API names kept in sync with canonical roles.
@@ -57,12 +58,13 @@ ROLE_LABELS = {
     "browser_vision": "Browser vision",
     "image": "Image generation",
     "embedding": "Embeddings",
+    "specialist": "Hard coding / planning specialist",
     "general": "Chat (legacy)",
     "coder": "Code (legacy)",
     "embed": "Embeddings (legacy)",
 }
 
-# Optimized for: Ryzen 5600X, RX 7600 8GB VRAM, 62GB RAM, CPU/GPU hybrid via Ollama
+# Optimized for: Ryzen 5 5600X, NVIDIA RTX 3060 12GB VRAM, 62GB RAM, CPU/GPU hybrid via Ollama
 # Quality preset uses 7B models so one Ollama model fits GPU VRAM alongside ComfyUI unload.
 def _with_legacy_aliases(preset: dict[str, str]) -> dict[str, str]:
     out = dict(preset)
@@ -74,21 +76,21 @@ def _with_legacy_aliases(preset: dict[str, str]) -> dict[str, str]:
 
 OPTIMIZED_STANDARD = _with_legacy_aliases(
     {
-        "conversation": "qwen2.5:7b",
-        "reasoning": "deepseek-r1:7b",
-        "planning": "qwen2.5:7b",
-        "coding": "deepseek-coder:latest",
-        "review": "deepseek-r1:7b",
+        "conversation": "gemma4:12b",
+        "reasoning": "deepseek-r1:14b",
+        "planning": "gemma4:12b",
+        "coding": "qwen2.5-coder:14b",
+        "review": "deepseek-r1:14b",
         "fast_chat": "qwen3:1.7b",
         "router": "qwen2.5-coder:1.5b-base",
         "tool_calling": "qwen2.5-coder:1.5b-base",
         "summarization": "qwen2.5-coder:1.5b-base",
-        "document": "qwen2.5:7b",
-        "web_research": "qwen2.5:7b",
-        "reflection": "qwen2.5:7b",
+        "document": "gemma4:12b",
+        "web_research": "gemma4:12b",
+        "reflection": "gemma4:12b",
         "learning": "qwen2.5-coder:1.5b-base",
-        "vision": "moondream:latest",
-        "browser_vision": "moondream:latest",
+        "vision": "qwen2.5vl:7b",
+        "browser_vision": "qwen2.5vl:7b",
         "image": "comfyui",
         "embedding": "nomic-embed-text",
     }
@@ -96,30 +98,30 @@ OPTIMIZED_STANDARD = _with_legacy_aliases(
 
 OPTIMIZED_UNCENSORED = _with_legacy_aliases(
     {
-        "conversation": "dolphin-mistral:latest",
-        "reasoning": "deepseek-r1:7b",
-        "planning": "dolphin-mistral:latest",
-        "coding": "deepseek-coder:latest",
-        "review": "deepseek-r1:7b",
+        "conversation": "huihui_ai/gemma-4-abliterated:12b",
+        "reasoning": "deepseek-r1:14b",
+        "planning": "huihui_ai/gemma-4-abliterated:12b",
+        "coding": "qwen2.5-coder:14b",
+        "review": "huihui_ai/gemma-4-abliterated:12b",
         "fast_chat": "qwen3:1.7b",
         "router": "qwen2.5-coder:1.5b-base",
         "tool_calling": "qwen2.5-coder:1.5b-base",
         "summarization": "qwen2.5-coder:1.5b-base",
-        "document": "dolphin-mistral:latest",
-        "web_research": "dolphin-mistral:latest",
-        "reflection": "dolphin-mistral:latest",
+        "document": "huihui_ai/gemma-4-abliterated:12b",
+        "web_research": "huihui_ai/gemma-4-abliterated:12b",
+        "reflection": "huihui_ai/gemma-4-abliterated:12b",
         "learning": "qwen2.5-coder:1.5b-base",
-        "vision": "moondream:latest",
-        "browser_vision": "moondream:latest",
+        "vision": "huihui_ai/gemma-4-abliterated:12b",
+        "browser_vision": "huihui_ai/gemma-4-abliterated:12b",
         "image": "comfyui",
         "embedding": "nomic-embed-text",
     }
 )
 
-# Fast presets — 7B/light models for speed on RX 7600
+# Fast presets — 7B/9B models for speed on the RTX 3060 (12GB)
 FAST_STANDARD = _with_legacy_aliases(
     {
-        "conversation": "qwen2.5:7b",
+        "conversation": "qwen3.5:9b",
         "reasoning": "deepseek-r1:7b",
         "planning": "qwen2.5:7b",
         "coding": "qwen2.5-coder:7b",
@@ -128,12 +130,12 @@ FAST_STANDARD = _with_legacy_aliases(
         "router": "qwen2.5-coder:1.5b-base",
         "tool_calling": "qwen2.5-coder:1.5b-base",
         "summarization": "qwen2.5-coder:1.5b-base",
-        "document": "qwen2.5:7b",
-        "web_research": "qwen2.5:7b",
-        "reflection": "qwen2.5:7b",
+        "document": "qwen3.5:9b",
+        "web_research": "qwen3.5:9b",
+        "reflection": "qwen3.5:9b",
         "learning": "qwen2.5-coder:1.5b-base",
-        "vision": "moondream:latest",
-        "browser_vision": "moondream:latest",
+        "vision": "qwen2.5vl:7b",
+        "browser_vision": "qwen2.5vl:7b",
         "image": "comfyui",
         "embedding": "nomic-embed-text",
     }
@@ -141,21 +143,21 @@ FAST_STANDARD = _with_legacy_aliases(
 
 FAST_UNCENSORED = _with_legacy_aliases(
     {
-        "conversation": "dolphin-mistral:latest",
+        "conversation": "huihui_ai/gemma-4-abliterated:12b",
         "reasoning": "deepseek-r1:7b",
-        "planning": "dolphin-mistral:latest",
+        "planning": "huihui_ai/gemma-4-abliterated:12b",
         "coding": "qwen2.5-coder:7b",
-        "review": "dolphin-mistral:latest",
+        "review": "huihui_ai/gemma-4-abliterated:12b",
         "fast_chat": "qwen3:1.7b",
         "router": "qwen2.5-coder:1.5b-base",
         "tool_calling": "qwen2.5-coder:1.5b-base",
         "summarization": "qwen2.5-coder:1.5b-base",
-        "document": "dolphin-mistral:latest",
-        "web_research": "dolphin-mistral:latest",
-        "reflection": "dolphin-mistral:latest",
+        "document": "huihui_ai/gemma-4-abliterated:12b",
+        "web_research": "huihui_ai/gemma-4-abliterated:12b",
+        "reflection": "huihui_ai/gemma-4-abliterated:12b",
         "learning": "qwen2.5-coder:1.5b-base",
-        "vision": "moondream:latest",
-        "browser_vision": "moondream:latest",
+        "vision": "huihui_ai/gemma-4-abliterated:12b",
+        "browser_vision": "huihui_ai/gemma-4-abliterated:12b",
         "image": "comfyui",
         "embedding": "nomic-embed-text",
     }
@@ -169,36 +171,36 @@ PRESETS = {
 # Fallback priority if optimized model not installed
 FALLBACK_PRIORITY = {
     "conversation": [
-        "qwen2.5:14b", "qwen2.5:7b", "llama3.1:8b", "gemma3:12b", "dolphin3:latest",
-        "dolphin-mistral:latest", "mistral-nemo:latest", "qwen3:14b",
+        "huihui_ai/gemma-4-abliterated:12b", "gemma4:12b", "qwen3:14b", "qwen2.5:14b", "gemma3:12b", "qwen2.5:7b",
     ],
     "reasoning": [
-        "deepseek-r1:14b", "deepseek-r1:7b", "deepseek-r1:1.5b", "qwen2.5:14b", "qwen2.5:7b",
+        "deepseek-r1:14b", "deepseek-r1:7b", "qwen2.5:14b", "qwen2.5:7b",
     ],
     "planning": [
-        "qwen2.5:14b", "qwen2.5:7b", "deepseek-r1:7b",
+        "gemma4:12b", "qwen3:14b", "qwen2.5:14b", "qwen2.5:7b",
     ],
     "coding": [
-        "deepseek-coder:latest", "deepseek-coder-v2:16b", "deepseek-coder-v2:latest",
-        "qwen2.5-coder:14b", "coder-stable:latest", "devstral:latest", "qwen2.5-coder:7b",
+        "qwen2.5-coder:14b", "qwen2.5-coder:7b", "qwen2.5-coder:1.5b-base",
     ],
     "review": [
-        "deepseek-r1:14b", "deepseek-r1:7b", "qwen2.5:14b", "gemma3:12b", "dolphin3:latest",
+        "deepseek-r1:14b", "deepseek-r1:7b", "qwen2.5:14b", "gemma3:12b",
     ],
     "fast_chat": ["qwen3:1.7b", "qwen2.5:3b", "qwen2.5:7b"],
     "router": ["qwen2.5-coder:1.5b-base", "qwen3:1.7b"],
     "tool_calling": ["qwen2.5-coder:1.5b-base", "qwen3:1.7b"],
     "summarization": ["qwen2.5-coder:1.5b-base", "qwen3:1.7b", "qwen2.5:7b"],
-    "document": ["qwen2.5:14b", "qwen2.5:7b"],
-    "web_research": ["qwen2.5:14b", "qwen2.5:7b"],
-    "reflection": ["qwen2.5:14b", "qwen2.5:7b", "deepseek-r1:7b"],
+    "document": [
+        "gemma4:12b", "qwen3:14b", "qwen2.5:14b", "qwen2.5:7b",
+    ],
+    "web_research": [
+        "gemma4:12b", "qwen3:14b", "qwen2.5:14b", "qwen2.5:7b",
+    ],
+    "reflection": [
+        "gemma4:12b", "qwen3:14b", "qwen2.5:14b", "qwen2.5:7b",
+    ],
     "learning": ["qwen2.5-coder:1.5b-base", "qwen3:1.7b"],
-    "vision": [
-        "llava:13b", "moondream:latest", "moondream", "llama3.2-vision:11b",
-    ],
-    "browser_vision": [
-        "moondream:latest", "moondream", "llava:13b", "llama3.2-vision:11b",
-    ],
+    "vision": ["qwen2.5vl:7b", "llama3.2-vision:11b", "moondream:latest", "moondream"],
+    "browser_vision": ["qwen2.5vl:7b", "llama3.2-vision:11b", "moondream:latest", "moondream"],
     "image": [
         "comfyui",
     ],
@@ -206,11 +208,10 @@ FALLBACK_PRIORITY = {
         "nomic-embed-text:latest", "nomic-embed-text",
     ],
     "general": [
-        "qwen2.5:14b", "qwen2.5:7b", "llama3.1:8b", "gemma3:12b", "dolphin3:latest",
-        "dolphin-mistral:latest", "mistral-nemo:latest", "qwen3:14b",
+        "gemma4:12b", "qwen3:14b", "qwen2.5:14b", "gemma3:12b", "qwen2.5:7b",
     ],
     "coder": [
-        "deepseek-coder:latest", "qwen2.5-coder:14b", "qwen2.5-coder:7b",
+        "qwen2.5-coder:14b", "qwen2.5-coder:7b", "qwen2.5-coder:1.5b-base",
     ],
     "embed": [
         "nomic-embed-text:latest", "nomic-embed-text",
@@ -267,13 +268,48 @@ def _match_installed(preferred: str, installed: list[str]) -> str | None:
             return name
     return None
 
+# Roles whose output must stay uncensored when uncensored mode is active.
+# FALLBACK_PRIORITY is role-based, so without this an unavailable abliterated
+# model silently fell through to gemma4:12b -- a censored model -- and
+# uncensored mode quietly stopped being uncensored.
+UNCENSORED_SENSITIVE_ROLES = frozenset({
+    "conversation", "planning", "document", "web_research", "reflection",
+    "review", "vision", "browser_vision", "general",
+})
 
-def _pick_for_role(role: str, defaults: dict, installed: list[str]) -> str:
+# Uncensored-capable candidates, best first. Entries that are not installed are
+# skipped by _match_installed, so listing not-yet-pulled models is harmless and
+# makes the chain survive a future model swap.
+UNCENSORED_FALLBACK = (
+    "huihui_ai/gemma-4-abliterated:12b",
+    "huihui_ai/gemma-4-abliterated",
+    "huihui_ai/Qwen3.6-abliterated",
+    "orcarouter/Qwen3.8-Flash-Next-Uncensored",
+    "dolphin3:latest",
+    "dolphin-mistral:latest",
+    "llama2-uncensored:latest",
+)
+
+
+def _pick_for_role(
+    role: str, defaults: dict, installed: list[str], *, uncensored: bool = False
+) -> str:
     canonical = canonical_role(role)
     preferred = defaults.get(canonical, defaults.get(role, ""))
     match = _match_installed(preferred, installed)
     if match:
         return match
+
+    if uncensored and canonical in UNCENSORED_SENSITIVE_ROLES:
+        # Only ever substitute another uncensored model here. If none is
+        # installed, return the configured name so the failure surfaces as a
+        # missing model rather than as a censored answer in uncensored mode.
+        for candidate in UNCENSORED_FALLBACK:
+            match = _match_installed(candidate, installed)
+            if match:
+                return match
+        return preferred or UNCENSORED_FALLBACK[0]
+
     for candidate in FALLBACK_PRIORITY.get(canonical, FALLBACK_PRIORITY.get(role, [])):
         match = _match_installed(candidate, installed)
         if match:
@@ -289,7 +325,12 @@ def build_optimized_defaults(installed: list[str] | None = None) -> dict:
             {role: _pick_for_role(role, OPTIMIZED_STANDARD, installed) for role in roles}
         ),
         "uncensored": _sync_legacy_keys(
-            {role: _pick_for_role(role, OPTIMIZED_UNCENSORED, installed) for role in roles}
+            {
+                role: _pick_for_role(
+                    role, OPTIMIZED_UNCENSORED, installed, uncensored=True
+                )
+                for role in roles
+            }
         ),
     }
 
@@ -439,7 +480,7 @@ def get_all_settings() -> dict:
         "optimized": optimized,
         "customized": data.get("customized", False),
         "hardware": {
-            "gpu": "AMD RX 7600 (8GB VRAM)",
+            "gpu": "NVIDIA RTX 3060 (12GB VRAM)",
             "ram": "62GB",
             "cpu": "Ryzen 5 5600X",
             "note": "14B models use GPU + RAM offload. Use 7B variants for faster replies.",

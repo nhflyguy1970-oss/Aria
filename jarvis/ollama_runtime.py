@@ -228,6 +228,12 @@ def _http_generate(
         "model": model,
         "prompt": prompt,
         "stream": False,
+        # Reasoning models (gemma4, qwen3) spend the whole num_predict budget on
+        # internal thinking and return an empty "response", which made every
+        # health probe report "empty response" for a model that works fine.
+        # Probes only need proof the model loads and emits tokens, so skip the
+        # reasoning pass. Ignored by non-reasoning models.
+        "think": False,
         "keep_alive": _default_keep_alive() if keep_alive is None else keep_alive,
         "options": options or default_options(num_predict=_PROBE_NUM_PREDICT),
     }
@@ -380,6 +386,10 @@ def run_inference_probe(
     name = model or probe_model_name()
     if timeout is None:
         timeout = float(os.getenv("JARVIS_OLLAMA_PROBE_TIMEOUT", "120"))
+    from jarvis import gpu_scheduler
+
+    if deferred := gpu_scheduler.defer_direct_load(name):
+        return {"ok": False, "deferred": True, "detail": f"probe deferred: {deferred}", "model": name}
     try:
         payload, elapsed = _http_generate(name, prompt, timeout=timeout)
         text = (payload.get("response") or "").strip()
@@ -492,6 +502,11 @@ def ensure_chat_model_ready(
     name = (model or probe_model_name()).strip()
     if not name:
         return {"ok": False, "action": "noop", "detail": "no model"}
+    from jarvis import gpu_scheduler
+
+    if deferred := gpu_scheduler.defer_direct_load(name):
+        # GPU admission places this request; warming it here would bypass the exclusive slot.
+        return {"ok": True, "action": "deferred", "model": name, "detail": deferred}
     if timeout is None:
         timeout = float(os.getenv("JARVIS_OLLAMA_WARMUP_TIMEOUT", "180"))
     t0 = time.perf_counter()

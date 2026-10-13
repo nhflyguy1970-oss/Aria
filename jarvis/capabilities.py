@@ -44,7 +44,7 @@ def capabilities_message() -> str:
         '  _Try:_ drop files in `data/documents/` · follow-up questions without re-attaching',
         "",
         "**Web search** — SearXNG (local) or DuckDuckGo fallback.",
-        '  _Try:_ "Search the web for ROCm RX 7600 setup"',
+        '  _Try:_ "Search the web for CUDA RTX 3060 setup"',
         "",
         "**Learn** — research a topic and save a brief for future chats.",
         '  _Try:_ "Learn about: edge AI accelerators" · "Remember key points"',
@@ -129,19 +129,19 @@ def models_guide() -> str:
 
     if uncensored:
         lines += [
-            "**Optimized uncensored picks for your RX 7600 + 62GB RAM:**",
-            "- Chat: `dolphin3:latest` (installed, fast, uncensored)",
+            "**Optimized uncensored picks for your RTX 3060 12GB + 62GB RAM:**",
+            "- Chat: `huihui_ai/gemma-4-abliterated:12b` (installed, uncensored, multimodal)",
             "- Code: `qwen2.5-coder:14b` (installed, best quality)",
-            "- Vision: `moondream:latest` (recommended on 8GB) or `llava:13b` for max quality",
+            "- Vision: `qwen2.5vl:7b` (installed) or `llama3.2-vision:11b` for max quality",
             "- Memory: `nomic-embed-text` (installed)",
         ]
     else:
         lines += [
-            "**Optimized standard picks for your RX 7600 + 62GB RAM:**",
-            "- Chat: `qwen2.5:14b` (installed)",
+            "**Optimized standard picks for your RTX 3060 12GB + 62GB RAM:**",
+            "- Chat: `gemma4:12b` (installed)",
             "- Code: `qwen2.5-coder:14b` (installed)",
             "- Review: `deepseek-r1:14b` (installed)",
-            "- Vision: `moondream:latest` (recommended on 8GB) or `llava:13b` for max quality",
+            "- Vision: `qwen2.5vl:7b` (installed) or `llama3.2-vision:11b` for max quality",
             "- Fast alternative: `qwen2.5:7b` for chat if 14b feels slow",
             "- Memory: `nomic-embed-text` (installed)",
         ]

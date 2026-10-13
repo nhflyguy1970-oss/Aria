@@ -119,15 +119,15 @@ _CATALOG_META: dict[str, dict[str, Any]] = {
         "recommended_uses": ["Embeddings", "Memory / RAG"],
         "tags": ["embedding", "low-vram"],
     },
-    "dolphin-mistral:latest": {
-        "friendly_name": "Dolphin Mistral",
-        "capabilities": ["chat", "uncensored"],
-        "estimated_vram_gb": 5.0,
+    "huihui_ai/gemma-4-abliterated:12b": {
+        "friendly_name": "Gemma 4 Abliterated 12B",
+        "capabilities": ["chat", "uncensored", "vision"],
+        "estimated_vram_gb": 8.0,
         "recommended_ram_gb": 16,
-        "context_window": 32768,
-        "license": "Apache-2.0",
-        "recommended_uses": ["Uncensored profile chat"],
-        "tags": ["uncensored", "chat"],
+        "context_window": 131072,
+        "license": "Gemma",
+        "recommended_uses": ["Uncensored profile chat", "Uncensored vision"],
+        "tags": ["uncensored", "chat", "vision", "multimodal"],
     },
     "comfyui": {
         "friendly_name": "ComfyUI (image)",

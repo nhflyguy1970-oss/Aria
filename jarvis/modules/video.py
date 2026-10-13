@@ -50,7 +50,7 @@ class VideoEngine:
             from jarvis.model_store import get_models
 
             if is_uncensored():
-                return get_models().get("general", "dolphin-mistral:latest")
+                return get_models().get("general", "huihui_ai/gemma-4-abliterated:12b")
         except Exception:
             pass
         return "qwen2.5:7b"

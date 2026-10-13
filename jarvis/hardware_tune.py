@@ -14,7 +14,7 @@ OLLAMA_8GB_PULL = (
     "qwen2.5-coder:7b",
     "moondream:latest",
     "nomic-embed-text:latest",
-    "dolphin-mistral:latest",
+    "huihui_ai/gemma-4-abliterated:12b",
 )
 
 ENV_8GB_DEFAULTS: dict[str, str] = {

@@ -196,7 +196,7 @@ pull_ollama_models() {
   "$JARVIS_ROOT/scripts/pull-models.sh"
   log "Pulling fast-preset extras..."
   ollama pull qwen2.5:7b || true
-  ollama pull dolphin-mistral:latest || true
+  ollama pull huihui_ai/gemma-4-abliterated:12b || true
 }
 
 install_desktop() {
