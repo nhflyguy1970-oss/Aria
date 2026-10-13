@@ -56,7 +56,16 @@ class ActionStepRunner:
         if not action:
             raise RetryableError(f"Step has no action: {step!r}")
         params = dict(step.get("params") or {})
+        if context.get("operation_id"):
+            params["_operation_id"] = context["operation_id"]
+            params["_idempotency_key"] = context["operation_id"]
+            params["_mission_id"] = context["mission_id"]
         result = call_action(self.assistant, action, params, step.get("name") or action)
+        if context.get("agent_task") and action == "specialists_run" and isinstance(result, dict):
+            nested = result.get("result") or {}
+            if nested.get("status") != "succeeded":
+                return {"ok": False, "error_kind": "specialist_incomplete",
+                        "message": f"Specialist team ended {nested.get('status') or 'unknown'}; review its run record"}
         return result if isinstance(result, dict) else {"result": result}
 
 
@@ -112,9 +121,11 @@ def authorize(mission: dict[str, Any]) -> None:
 
 
 def create_mission(
-    objective: str, steps: list[dict[str, Any]] | None = None, *, kind: str = "generic"
+    objective: str, steps: list[dict[str, Any]] | None = None, *, kind: str = "generic",
+    start_paused: bool = False,
 ) -> str:
-    return store.create(objective, steps=steps, kind=kind)
+    return store.create(objective, steps=steps, kind=kind,
+                        initial_state=store.PAUSED if start_paused else store.PENDING)
 
 
 def _resume_point(mission_id: str) -> tuple[int, dict[str, Any]]:
@@ -124,6 +135,17 @@ def _resume_point(mission_id: str) -> tuple[int, dict[str, Any]]:
         return 0, {}
     payload = checkpoint.get("payload") or {}
     return int(checkpoint["step_index"]), dict(payload.get("context") or {})
+
+
+def _complete(mission_id: str, result: dict[str, Any]) -> dict[str, Any]:
+    mission = store.record_result(mission_id, result)
+    if mission["kind"] == "agent_task":
+        from jarvis.missions import tasks
+        try:
+            tasks.save_artifact(mission)
+        except (OSError, ValueError, RuntimeError) as exc:
+            store.record_event(mission_id, "artifact:error", f"{type(exc).__name__}: {exc}")
+    return mission
 
 
 def run(
@@ -149,6 +171,12 @@ def run(
         raise store.MissionStateError(f"No such mission: {mission_id}")
     if mission["state"] in store.TERMINAL_STATES:
         return mission
+    if mission["state"] == store.RUNNING:
+        return mission  # another driver already owns execution
+    if mission.get("error_kind") == "uncertain_effect":
+        return mission  # owner reconciliation, never an implicit retry
+    if mission.get("pause_requested"):
+        return mission
     authorize(mission)
 
     if runner is None:
@@ -163,13 +191,17 @@ def run(
     steps = mission["steps"]
     start_index, context = _resume_point(mission_id)
     if start_index >= len(steps):
-        return store.record_result(mission_id, {"context": context, "steps_run": 0})
+        return _complete(mission_id, {"context": context, "steps_run": 0})
 
     mission = store.transition(mission_id, store.RUNNING, detail=f"from step {start_index}")
 
     executed = 0
     try:
         for index in range(start_index, len(steps)):
+            authorize(store.get(mission_id) or mission)
+            if store.pause_requested(mission_id):
+                store.transition(mission_id, store.PAUSED, detail="paused at step boundary")
+                return store.get(mission_id)  # type: ignore[return-value]
             if max_steps is not None and executed >= max_steps:
                 # Bounded execution: stop cleanly, remain resumable.
                 store.transition(mission_id, store.PAUSED, detail="step budget exhausted")
@@ -185,9 +217,32 @@ def run(
             if store.cancel_requested(mission_id):
                 raise MissionCancelled()
 
+            if mission["kind"] == "agent_task":
+                from jarvis.missions import tasks
+                try:
+                    tasks.authorize_step(store.get(mission_id) or mission, index)
+                except tasks.TaskApprovalError as exc:
+                    return store.hold_approval(mission_id, str(exc))
+                store.clear_error(mission_id, kind="awaiting_approval")
+
             step = steps[index]
-            store.record_event(mission_id, "step:start", f"{index}:{step.get('name') or ''}")
-            output = runner(step, context)
+            prior = store.operation(mission_id, index)
+            if prior and prior["state"] == "started":
+                return store.hold_uncertain(mission_id, prior["operation_id"])
+            if prior and prior["state"] == "finished":
+                output = prior["result"]
+                store.record_event(mission_id, "step:reconciled", prior["operation_id"])
+            else:
+                claim = store.begin_operation(mission_id, index)
+                if claim["state"] != "started" or not claim["claimed"]:
+                    raise RuntimeError(f"operation {claim['operation_id']} cannot be dispatched")
+                store.record_event(mission_id, "step:start", f"{index}:{step.get('name') or ''}")
+                step_context = dict(context)
+                step_context["operation_id"] = claim["operation_id"]
+                step_context["mission_id"] = mission_id
+                step_context["agent_task"] = mission["kind"] == "agent_task"
+                output = runner(step, step_context)
+                store.finish_operation(mission_id, index, output)
             _raise_if_step_failed(step, index, output)
             if isinstance(output, dict):
                 context.update(output)
@@ -198,6 +253,11 @@ def run(
                 index + 1,
                 {"context": context, "last_step": step.get("name") or step.get("action") or ""},
             )
+            if store.cancel_requested(mission_id):
+                raise MissionCancelled()
+            if store.pause_requested(mission_id):
+                store.transition(mission_id, store.PAUSED, detail="paused after completed step")
+                return store.get(mission_id)  # type: ignore[return-value]
     except MissionCancelled:
         return store.transition(mission_id, store.CANCELLED, detail="cancelled mid-execution")
     except PolicyError as exc:
@@ -208,6 +268,9 @@ def run(
         store.transition(mission_id, store.PAUSED, detail=f"policy: {exc}")
         raise
     except RetryableError as exc:
+        uncertain = store.uncertain_operation(mission_id)
+        if uncertain:
+            return store.hold_uncertain(mission_id, uncertain["operation_id"])
         return store.record_failure(mission_id, str(exc), kind=store.RETRYABLE)
     except StepFailed as exc:
         return store.record_failure(mission_id, str(exc), kind=store.TERMINAL)
@@ -215,11 +278,11 @@ def run(
         log.exception("Mission %s failed", mission_id)
         return store.record_failure(mission_id, f"{type(exc).__name__}: {exc}", kind=store.TERMINAL)
 
-    return store.record_result(mission_id, {"context": context, "steps_run": executed})
+    return _complete(mission_id, {"context": context, "steps_run": executed})
 
 
 def pause(mission_id: str) -> dict[str, Any]:
-    return store.transition(mission_id, store.PAUSED, detail="paused by request")
+    return store.request_pause(mission_id)
 
 
 def resume(
@@ -231,6 +294,10 @@ def resume(
     should_continue: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
     """Resume a paused or interrupted mission from its latest checkpoint."""
+    mission = store.get(mission_id)
+    if mission and mission.get("error_kind") == "uncertain_effect":
+        return mission
+    store.clear_pause(mission_id)
     return run(
         mission_id,
         runner,

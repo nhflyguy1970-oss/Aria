@@ -7,9 +7,13 @@ import time
 from enum import StrEnum
 from typing import Any
 
-from jarvis.env_loader import PROJECT_ROOT
+from jarvis.config import DATA_DIR
 
-_PHASE_FILE = PROJECT_ROOT / "data" / "automation" / "workstation_phase.json"
+# DATA_DIR is PROJECT_ROOT/"data" unless JARVIS_DATA_DIR overrides it, so the
+# production location is unchanged while an isolated root (tests) is honoured.
+# Previously this was pinned to PROJECT_ROOT and ignored JARVIS_DATA_DIR, which
+# let tests write into the live repository.
+_PHASE_FILE = DATA_DIR / "automation" / "workstation_phase.json"
 
 _TRANSITIONAL = frozenset(
     {

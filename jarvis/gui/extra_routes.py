@@ -2000,6 +2000,107 @@ def register_routes(app, assistant):
         except Exception as exc:  # noqa: BLE001
             return {"ok": False, "reason": f"owner security unavailable: {type(exc).__name__}"}
 
+    # Phase 9 tasks reuse the durable mission ledger and the certified owner
+    # authorization service. Mutations are checked again in missions.tasks.
+    def _task_read_auth() -> dict:
+        from jarvis.security.owner.provider_credentials import bound_owner_service
+        try:
+            return bound_owner_service().authorize("automation.read", room="automation")
+        except Exception as exc:  # noqa: BLE001
+            return {"ok": False, "reason": f"owner security unavailable: {type(exc).__name__}"}
+
+    @app.get("/api/agent-tasks")
+    def agent_tasks_api(project: str = "", query: str = "", limit: int = 100):
+        auth = _task_read_auth()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason")}, 403)
+        from jarvis.missions import tasks
+        return {"ok": True, "tasks": tasks.list_tasks(project=project, query=query, limit=limit)}
+
+    @app.get("/api/agent-tasks/{mission_id}")
+    def agent_task_api(mission_id: str):
+        auth = _task_read_auth()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason")}, 403)
+        from jarvis.missions import store, tasks
+        task = tasks.status(mission_id)
+        if not task:
+            return JSONResponse({"ok": False, "error": "no such task"}, 404)
+        return {"ok": True, "task": task, "events": store.history(mission_id)[-100:]}
+
+    @app.get("/api/agent-tasks/{mission_id}/artifact")
+    def agent_task_artifact_api(mission_id: str):
+        auth = _task_read_auth()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason")}, 403)
+        from jarvis.missions import tasks
+        if not tasks.status(mission_id):
+            return JSONResponse({"ok": False, "error": "no such task"}, 404)
+        try:
+            path = tasks.artifact_path(mission_id)
+        except (OSError, ValueError, RuntimeError) as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 409)
+        if not path:
+            return JSONResponse({"ok": False, "error": "artifact unavailable"}, 404)
+        return FileResponse(path, media_type="application/json", filename=f"task-{mission_id}.json")
+
+    @app.post("/api/agent-tasks")
+    async def agent_task_create_api(request: Request):
+        auth = _task_read_auth()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason")}, 403)
+        from jarvis.missions import tasks
+        body = await request.json()
+        try:
+            task = tasks.create(str(body.get("objective") or ""), body.get("steps"),
+                                project=str(body.get("project") or "general"),
+                                session_ref=str(body.get("session_ref") or ""),
+                                scheduled_at=float(body["scheduled_at"]) if body.get("scheduled_at") is not None else None)
+        except (ValueError, TypeError) as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 400)
+        return {"ok": True, "task": task, "requires_owner_approval": True}
+
+    @app.post("/api/agent-tasks/{mission_id}/{action}")
+    async def agent_task_control_api(mission_id: str, action: str, request: Request):
+        from jarvis.missions import store, tasks
+        try:
+            if action == "approve":
+                task = tasks.approve(mission_id)
+            elif action == "deny":
+                task = tasks.deny(mission_id)
+            elif action == "pause":
+                task = tasks.pause(mission_id)
+            elif action == "resume":
+                task = tasks.resume(mission_id)
+            elif action == "cancel":
+                task = tasks.cancel(mission_id)
+            elif action == "redirect":
+                body = await request.json()
+                task = tasks.redirect(mission_id, objective=str(body.get("objective") or ""),
+                                      steps=body.get("steps") or [])
+            elif action == "reconcile":
+                tasks._auth("automation.modify")
+                body = await request.json()
+                store.reconcile_operation(mission_id, int(body.get("step_index")),
+                                          outcome=str(body.get("outcome") or ""),
+                                          evidence=str(body.get("evidence") or ""),
+                                          result=body.get("result"))
+                from jarvis.missions import worker
+                worker.wake()
+                task = tasks.status(mission_id)
+            else:
+                return JSONResponse({"ok": False, "error": "unknown task control"}, 404)
+        except (tasks.TaskApprovalError, store.MissionStateError, ValueError, TypeError) as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 409)
+        return {"ok": True, "task": task}
+
+    @app.get("/api/gpu-scheduler/status")
+    def gpu_scheduler_status_api():
+        """Read-only: Phase 8 GPU admission state, thermal holds, reserves and FTR yield."""
+        from jarvis import gpu_scheduler
+
+        return {"ok": True, **gpu_scheduler.status()}
+
     @app.get("/api/coding-agents/status")
     def coding_agents_status_api(refresh: bool = False):
         """Read-only: installed agents, sign-in method/billing class (no identities), modes."""
@@ -2035,6 +2136,39 @@ def register_routes(app, assistant):
         except runs.AgentRunError as exc:
             return JSONResponse({"ok": False, "error": str(exc)}, 409)
         return {"ok": True, "run": run}
+
+    @app.post("/api/coding-agents/runs/{run_id}/resume-plan")
+    async def coding_agent_resume_plan_api(run_id: str, request: Request):
+        """Continuation proposal only; the existing owner approval starts execution."""
+        auth = _owner_may_run_agents()
+        if not auth.get("ok"):
+            return JSONResponse({"ok": False, "error": auth.get("reason") or "not authorized"}, 403)
+        from jarvis.coding_agents import runs
+
+        body = await request.json()
+        try:
+            plan = runs.create_resume_plan(
+                run_id, task=str(body.get("task") or ""), timeout_s=int(body.get("timeout_s") or runs.DEFAULT_TIMEOUT_S)
+            )
+        except (runs.AgentRunError, ValueError) as exc:
+            return JSONResponse({"ok": False, "error": str(exc)}, 409)
+        return {"ok": True, "plan": plan, "requires_owner_approval": True}
+
+    @app.get("/api/coding-agents/runs/{run_id}/artifacts")
+    def coding_agent_artifacts_api(run_id: str):
+        from jarvis.coding_agents import artifacts, runs
+
+        run = runs.get_run(run_id)
+        if not run:
+            return JSONResponse({"ok": False, "error": "no such run"}, 404)
+        record = (run.get("receipt") or {}).get("artifacts")
+        if not record:
+            return {"ok": True, "available": False, "verified": False}
+        try:
+            artifacts.verify(record)
+        except (OSError, ValueError, RuntimeError) as exc:
+            return JSONResponse({"ok": False, "verified": False, "error": str(exc)}, 409)
+        return {"ok": True, "available": True, "verified": True, "artifacts": record}
 
     @app.post("/api/coding-agents/runs/{run_id}/cancel")
     def coding_agent_cancel_api(run_id: str):
@@ -2878,6 +3012,21 @@ def register_routes(app, assistant):
         result = service_restart(name)
         status = 200 if result.get("ok") else 400
         return JSONResponse(status_code=status, content=result)
+
+    @app.post("/api/jarvis/quit-completely")
+    def jarvis_quit_completely(request: Request):
+        from jarvis.shutdown import authorize_quit, request_quit
+
+        gate = authorize_quit(
+            request.client.host if request.client else "",
+            request.headers.get("origin", ""), str(request.base_url).rstrip("/"),
+        )
+        if not gate.get("ok"):
+            return JSONResponse(status_code=403, content=gate)
+        try:
+            return request_quit()
+        except Exception:
+            return JSONResponse(status_code=503, content={"ok": False, "message": "Quit failed; use scripts/jarvis-ctl.sh quit"})
 
     @app.post("/api/jarvis/restart-server")
     def jarvis_restart_server(request: Request):

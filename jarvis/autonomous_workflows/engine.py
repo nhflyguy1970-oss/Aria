@@ -427,7 +427,9 @@ def _run_step(
         store.record_event(workflow_id, "reference_error", str(exc), step_id=step.step_id)
         return {"step_id": step.step_id, "status": STEP_FAILED, "error": str(exc)}
 
-    store.set_step(workflow_id, step.step_id, state=STEP_RUNNING, started_at=time.time())
+    operation_id = f"workflow:{workflow_id}:step:{step.step_id}"
+    store.set_step(workflow_id, step.step_id, state=STEP_RUNNING, started_at=time.time(),
+                   provenance={"operation_id": operation_id})
     store.update(workflow_id, current_step=step.step_id)
 
     attempts = 0
@@ -448,6 +450,8 @@ def _run_step(
         store.bump_usage(workflow_id, "actions")
         if step.agent_id:
             store.record_agent(workflow_id, step.agent_id)
+        params["_operation_id"] = operation_id
+        params["_idempotency_key"] = operation_id
         outcome = dispatch.dispatch(
             step,
             params,
@@ -460,7 +464,10 @@ def _run_step(
         if outcome["status"] in (dispatch.DENIED, dispatch.CANCELLED):
             # A refusal or a cancellation is a decision. Retrying would override it.
             break
-        if not outcome.get("retryable"):
+        from jarvis.handlers.registry import is_info_action
+        # A retryable error is not proof that a mutating external action did
+        # nothing. Only trusted read-only action metadata permits a retry.
+        if not outcome.get("retryable") or not is_info_action(step.action):
             break
 
     state = {
@@ -652,22 +659,48 @@ def cancel(workflow_id: str) -> dict[str, Any]:
 
 
 def recover() -> list[str]:
-    """Find workflows a dead process left running and make them resumable."""
+    """Hold in-flight external actions for reconciliation after a crash."""
     recovered: list[str] = []
     for workflow_id in store.interrupted():
         states = store.step_states(workflow_id)
         for step_id, state in states.items():
             if state == STEP_RUNNING:
-                # A step that was in flight has no trustworthy result.
+                # Dispatch may have reached an external service. Retrying it
+                # would duplicate an effect if the reply was lost.
                 store.set_step(
                     workflow_id,
                     step_id,
-                    state=STEP_PENDING,
-                    reason="interrupted by process restart; will be retried",
+                    state=STEP_BLOCKED,
+                    reason="interrupted with unknown external outcome; owner reconciliation required",
                 )
-        store.record_event(workflow_id, "recovered", "resumable after interruption")
+        if any(state == STEP_RUNNING for state in states.values()):
+            store.set_state(workflow_id, PAUSED, detail="unknown external outcome; owner reconciliation required")
+        store.record_event(workflow_id, "recovered", "unsafe in-flight steps held for reconciliation")
         recovered.append(workflow_id)
     return recovered
+
+
+def reconcile_step(workflow_id: str, step_id: str, *, outcome: str,
+                   evidence: str, output: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Owner-verified outcome for a crash-interrupted workflow action."""
+    workflow = store.get(workflow_id)
+    if not workflow or workflow["state"] != PAUSED or not evidence.strip():
+        raise WorkflowError("paused workflow and external evidence required")
+    step = next((s for s in workflow["steps"] if s["step_id"] == step_id), None)
+    if not step or step["state"] != STEP_BLOCKED or "unknown external outcome" not in (step.get("reason") or ""):
+        raise WorkflowError("no uncertain step to reconcile")
+    if outcome == "completed":
+        if not isinstance(output, dict):
+            raise WorkflowError("completed operation needs observed output")
+        store.set_step(workflow_id, step_id, state=STEP_SUCCEEDED, output=output,
+                       reason="owner reconciled completed effect", finished_at=time.time())
+    elif outcome == "not_executed":
+        store.set_step(workflow_id, step_id, state=STEP_PENDING, output=None,
+                       reason="owner verified no external effect")
+    else:
+        raise WorkflowError("outcome must be completed or not_executed")
+    store.record_event(workflow_id, "reconciled", f"{outcome}: {evidence[:500]}", step_id=step_id)
+    return store.get(workflow_id)  # type: ignore[return-value]
 
 
 def status(workflow_id: str) -> dict[str, Any] | None:

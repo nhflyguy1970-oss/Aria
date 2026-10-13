@@ -573,11 +573,15 @@ def test_q_recovery_does_not_repeat_completed_work(data_dir: Path):
     assert wid in recovered
     states = wf_store.step_states(wid)
     assert states["a"] == wf.STEP_SUCCEEDED, "completed work was undone"
-    assert states["b"] == wf.STEP_PENDING, "an interrupted step must be retried"
+    assert states["b"] == wf.STEP_BLOCKED, "an interrupted effect must await reconciliation"
 
-    assert wf.run(wid)["state"] == wf.COMPLETED
+    assert wf.run(wid)["state"] == wf.PAUSED
+    wf.reconcile_step(wid, "b", outcome="completed", evidence="fixture ledger confirmed result",
+                      output={"ok": True})
+    assert wf.resume(wid)["state"] == wf.COMPLETED
     stored = {s["step_id"]: s for s in wf.get(wid)["steps"]}
     assert stored["a"]["attempts"] == 1, "a completed step was run twice"
+    assert stored["b"]["attempts"] == 0, "an uncertain effect was dispatched again"
 
 
 def test_p_crash_recovery_across_a_real_process(data_dir: Path):
@@ -613,7 +617,10 @@ def test_p_crash_recovery_across_a_real_process(data_dir: Path):
     assert wf_store.step_states(workflow_id)["a"] == wf.STEP_SUCCEEDED
 
     assert workflow_id in wf.recover()
-    final = wf.run(workflow_id)
+    assert wf.run(workflow_id)["state"] == wf.PAUSED
+    wf.reconcile_step(workflow_id, "b", outcome="not_executed",
+                      evidence="fixture process died before dispatch")
+    final = wf.resume(workflow_id)
     assert final["state"] == wf.COMPLETED
     stored = {s["step_id"]: s for s in wf.get(workflow_id)["steps"]}
     assert stored["a"]["attempts"] == 1, "recovery repeated completed work"

@@ -653,8 +653,10 @@ def test_recovery_makes_interrupted_work_resumable(data_dir: Path):
     assert wid in outcome["recovered"]["workflows"]
     states = wf_store.step_states(wid)
     assert states["a"] == wf.STEP_SUCCEEDED, "completed work was undone"
-    assert states["b"] == wf.STEP_PENDING
-    assert wf.run(wid)["state"] == wf.COMPLETED
+    assert states["b"] == wf.STEP_BLOCKED, "an interrupted effect must await reconciliation"
+    assert wf.run(wid)["state"] == wf.PAUSED
+    wf.reconcile_step(wid, "b", outcome="not_executed", evidence="fixture: dispatch never reached")
+    assert wf.resume(wid)["state"] == wf.COMPLETED
 
 
 def test_on_demand_recovery_reports_instead_of_mutating(data_dir: Path):
@@ -687,7 +689,7 @@ def test_on_demand_recovery_refuses_to_apply_without_force(data_dir: Path):
 
     forced = recovery.recover_on_demand(apply=True, force=True)
     assert forced["applied"] is True and forced["forced"] is True
-    assert wf_store.step_states(wid)["b"] == wf.STEP_PENDING
+    assert wf_store.step_states(wid)["b"] == wf.STEP_BLOCKED
 
 
 def test_recovery_does_not_cause_an_in_flight_step_to_run_twice(data_dir: Path):
@@ -986,7 +988,10 @@ def test_restart_continuity(data_dir: Path):
 
     outcome = recovery.recover_on_startup()
     assert workflow_id in outcome["recovered"]["workflows"]
-    assert wf.run(workflow_id)["state"] == wf.COMPLETED
+    assert wf.run(workflow_id)["state"] == wf.PAUSED
+    wf.reconcile_step(workflow_id, "b", outcome="not_executed",
+                      evidence="fixture process died before dispatch")
+    assert wf.resume(workflow_id)["state"] == wf.COMPLETED
     assert wf.get(workflow_id)["usage"]["actions"] == 2, "recovery repeated completed work"
 
 

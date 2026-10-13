@@ -33,6 +33,19 @@ def specialists_propose(assistant, params: dict, message: str) -> dict:
 def specialists_run(assistant, params: dict, message: str) -> dict:
     from jarvis.specialists.engine import run_team
 
+    mission_id = str(params.get("_mission_id") or "")
+    cancel_check = None
+    on_progress = None
+    if mission_id:
+        from jarvis.missions import store as mission_store
+
+        mission = mission_store.get(mission_id)
+        if mission and mission["kind"] == "agent_task":
+            cancel_check = lambda: mission_store.cancel_requested(mission_id)
+            on_progress = lambda payload: mission_store.record_event(
+                mission_id, "progress", str(payload.get("message") or payload.get("status") or "")[:200]
+            )
+
     goal = str(params.get("goal") or "").strip()
     confirm = bool(params.get("confirm"))
     if not confirm:
@@ -49,6 +62,8 @@ def specialists_run(assistant, params: dict, message: str) -> dict:
         critic_loop=bool(params.get("critic_loop")),
         trigger="chat",
         emit_bridges=True,
+        cancel_check=cancel_check,
+        on_progress=on_progress,
     )
     summary = result.get("synthesis") or result.get("summary") or result.get("status")
     return ok(

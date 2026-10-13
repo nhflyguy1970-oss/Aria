@@ -154,8 +154,13 @@ def test_retryable_failure_leaves_mission_resumable(data_dir: Path):
     mission_id = missions.create_mission("flaky", steps=_steps(2))
     final = missions.run(mission_id, flaky)
     assert final["state"] == store.PAUSED
-    assert final["error_kind"] == store.RETRYABLE
+    assert final["error_kind"] == "uncertain_effect"
 
+    final = missions.resume(mission_id, flaky)
+    assert final["state"] == store.PAUSED
+    assert attempts == [0], "retry happened before effect reconciliation"
+    store.reconcile_operation(mission_id, 0, outcome="not_executed",
+                              evidence="fixture raised before it contacted a service")
     final = missions.resume(mission_id, flaky)
     assert final["state"] == store.COMPLETED
 
@@ -333,8 +338,14 @@ def test_interrupted_mission_is_recoverable_after_process_death(data_dir: Path, 
     checkpoint = store.latest_checkpoint(mission_id)
     assert checkpoint["step_index"] == 2, "checkpoint from the killed process was not durable"
 
-    # Resuming continues from the checkpoint without redoing steps 0 and 1.
+    # A crash during step 2 has an unknown external outcome. Recovery must
+    # pause until a verifier confirms that the fixture exited before effects.
     calls: list[int] = []
+    final = missions.resume(mission_id, _counting_runner(calls))
+    assert final["state"] == store.PAUSED
+    assert final["error_kind"] == "uncertain_effect" and calls == []
+    store.reconcile_operation(mission_id, 2, outcome="not_executed",
+                              evidence="fixture calls os._exit before performing its action")
     final = missions.resume(mission_id, _counting_runner(calls))
     assert calls == [2, 3, 4], f"resumed from the wrong point: {calls}"
     assert final["state"] == store.COMPLETED

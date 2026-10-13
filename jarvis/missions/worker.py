@@ -66,10 +66,19 @@ def _recover_interrupted() -> list[str]:
     """Missions left RUNNING by a dead process become runnable again."""
     recovered = store.recover_interrupted()
     for mission_id in recovered:
-        store.make_runnable(mission_id, detail="resumed after interruption")
+        current = store.get(mission_id) or {}
+        if current.get("error_kind") != "uncertain_effect" and not current.get("pause_requested"):
+            store.make_runnable(mission_id, detail="resumed after safe interruption")
+    recovered += store.resume_safe_recovered()
     if recovered:
         logger.info("Recovered %d interrupted mission(s)", len(recovered))
     return recovered
+
+
+def allowed_kinds() -> tuple[str, ...] | None:
+    """JARVIS_MISSION_WORKER_KINDS=agent_task limits background execution to owner-approved tasks."""
+    raw = os.getenv("JARVIS_MISSION_WORKER_KINDS", "").strip()
+    return tuple(k.strip() for k in raw.split(",") if k.strip()) or None
 
 
 def tick(runner=None, *, assistant: Any = None, slice_steps: int = DEFAULT_SLICE) -> str | None:
@@ -88,7 +97,7 @@ def tick(runner=None, *, assistant: Any = None, slice_steps: int = DEFAULT_SLICE
         # policy allows it. Checked per tick, not only when the thread starts.
         _state["last_error"] = refused
         return None
-    mission = store.next_pending()
+    mission = store.next_pending(allowed_kinds())
     if not mission:
         return None
 
@@ -109,7 +118,9 @@ def tick(runner=None, *, assistant: Any = None, slice_steps: int = DEFAULT_SLICE
         state = result["state"]
 
         if state == store.PAUSED:
-            if result.get("error_kind") == store.RETRYABLE:
+            if result.get("pause_requested") or result.get("error_kind") in ("uncertain_effect", "awaiting_approval"):
+                pass  # owner action is required; never requeue automatically
+            elif result.get("error_kind") == store.RETRYABLE:
                 store.schedule_retry(mission_id)
             elif _stop.is_set():
                 # Stopped mid-slice by shutdown: requeue so it resumes later.

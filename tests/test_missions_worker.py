@@ -277,7 +277,7 @@ def test_terminal_failure_stays_terminal_and_is_not_retried(data_dir: Path):
     assert missions.get(mission_id)["error_kind"] == store.TERMINAL
 
 
-def test_retryable_failure_backs_off_instead_of_spinning(data_dir: Path):
+def test_retryable_failure_with_unknown_effect_waits_for_reconciliation(data_dir: Path):
     attempts: list[float] = []
 
     def flaky(step: dict, context: dict) -> dict:
@@ -289,12 +289,13 @@ def test_retryable_failure_backs_off_instead_of_spinning(data_dir: Path):
     assert _wait_for(lambda: len(attempts) >= 1)
     time.sleep(0.5)
 
-    # Backoff starts at 2s, so a half-second window cannot produce a hot loop.
-    assert len(attempts) <= 2, f"retryable failure spun: {len(attempts)} attempts"
+    # A runner exception after dispatch is not proof that no effect occurred.
+    assert len(attempts) == 1, f"uncertain external action was retried: {len(attempts)}"
     mission = missions.get(mission_id)
     assert mission["state"] == store.PAUSED
-    assert mission["attempts"] >= 1
-    assert mission["next_attempt_at"] is not None
+    assert mission["error_kind"] == "uncertain_effect"
+    assert mission["attempts"] == 0
+    assert mission["next_attempt_at"] is None
 
 
 def test_retry_budget_is_exhausted_into_terminal_failure(data_dir: Path):
@@ -444,10 +445,16 @@ def test_worker_recovers_mission_after_real_process_death(data_dir: Path, tmp_pa
     checkpoint = store.latest_checkpoint(mission_id)
     assert checkpoint["step_index"] == 3, "checkpoints from the dead worker were not durable"
 
-    # A fresh worker recovers it at startup and finishes it — without a user
-    # ever calling mission_run.
+    # A fresh worker recovers it at startup but cannot guess whether step 3
+    # reached an external system. The fixture proves it exited before effect.
     calls: list[tuple[str, int]] = []
     worker.start(_runner(calls), poll_s=0.05)
+    assert _wait_for(lambda: missions.get(mission_id)["state"] == store.PAUSED)
+    assert missions.get(mission_id)["error_kind"] == "uncertain_effect"
+    assert calls == [], "worker repeated an uncertain action"
+    store.reconcile_operation(mission_id, 3, outcome="not_executed",
+                              evidence="fixture exits before its side effect")
+    worker.wake()
     assert _wait_for(lambda: missions.get(mission_id)["state"] == store.COMPLETED, timeout=20), (
         f"worker did not recover the mission: {missions.status(mission_id)}"
     )
@@ -463,3 +470,20 @@ def test_worker_startup_recovery_reports_recovered_ids(data_dir: Path):
     worker.start(_runner([]), poll_s=0.05)
     assert _wait_for(lambda: missions.get(mission_id)["state"] == store.COMPLETED)
     assert mission_id in worker.status()["recovered"]
+
+
+def test_worker_kind_allow_list_leaves_other_missions_queued(monkeypatch):
+    """Phase 9: JARVIS_MISSION_WORKER_KINDS=agent_task never claims legacy missions."""
+    from jarvis.missions import store as mission_store
+    from jarvis.missions import worker as mission_worker
+
+    from jarvis.missions import engine
+
+    legacy = engine.create_mission("legacy probe", [{"name": "s", "action": "noop", "params": {}}], kind="skill")
+    monkeypatch.setenv("JARVIS_MISSION_WORKER_KINDS", "agent_task")
+    assert mission_worker.allowed_kinds() == ("agent_task",)
+    assert mission_store.next_pending(mission_worker.allowed_kinds()) is None
+    assert mission_worker.tick(lambda step, ctx: {"ok": True}) is None
+    assert mission_store.get(legacy)["state"] == mission_store.PENDING
+    monkeypatch.delenv("JARVIS_MISSION_WORKER_KINDS")
+    assert mission_store.next_pending(mission_worker.allowed_kinds())["id"] == legacy

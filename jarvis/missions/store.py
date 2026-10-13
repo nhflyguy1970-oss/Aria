@@ -40,7 +40,7 @@ RETRYABLE = "retryable"
 TERMINAL = "terminal"
 
 _ALLOWED: dict[str, tuple[str, ...]] = {
-    PENDING: (RUNNING, CANCELLED, FAILED),
+    PENDING: (RUNNING, PAUSED, CANCELLED, FAILED),  # a queued mission may be paused before it starts
     RUNNING: (PAUSED, COMPLETED, FAILED, CANCELLED),
     PAUSED: (PENDING, RUNNING, CANCELLED, FAILED),
     COMPLETED: (),
@@ -96,6 +96,21 @@ def _init_db_once() -> None:
                 conn.execute("ALTER TABLE missions ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0")
             if "next_attempt_at" not in existing:
                 conn.execute("ALTER TABLE missions ADD COLUMN next_attempt_at REAL")
+            if "pause_requested" not in existing:
+                conn.execute("ALTER TABLE missions ADD COLUMN pause_requested INTEGER NOT NULL DEFAULT 0")
+            conn.execute("""CREATE TABLE IF NOT EXISTS mission_operations (
+                operation_id TEXT PRIMARY KEY, mission_id TEXT NOT NULL,
+                step_index INTEGER NOT NULL, state TEXT NOT NULL, result TEXT,
+                started_at REAL NOT NULL, finished_at REAL,
+                UNIQUE(mission_id, step_index))""")
+            conn.execute("""CREATE TABLE IF NOT EXISTS agent_task_plans (
+                mission_id TEXT PRIMARY KEY, project TEXT NOT NULL, session_ref TEXT NOT NULL,
+                plan_hash TEXT NOT NULL, approval_state TEXT NOT NULL,
+                approval_expires_at REAL NOT NULL, approved_at REAL,
+                scheduled_at REAL, created_at REAL NOT NULL, updated_at REAL NOT NULL)""")
+            columns = {r["name"] for r in conn.execute("PRAGMA table_info(agent_task_plans)")}
+            if "scheduled_at" not in columns:
+                conn.execute("ALTER TABLE agent_task_plans ADD COLUMN scheduled_at REAL")
             return
         # WAL lets a status reader run while the worker writes. Setting it takes
         # an exclusive lock, so it happens only at creation, never per connection —
@@ -118,6 +133,7 @@ def _init_db_once() -> None:
                 error TEXT,
                 error_kind TEXT,
                 cancel_requested INTEGER NOT NULL DEFAULT 0,
+                pause_requested INTEGER NOT NULL DEFAULT 0,
                 created_at REAL NOT NULL,
                 updated_at REAL NOT NULL,
                 started_at REAL,
@@ -143,6 +159,16 @@ def _init_db_once() -> None:
             CREATE INDEX IF NOT EXISTS idx_ckpt_mission ON checkpoints(mission_id, seq);
             CREATE INDEX IF NOT EXISTS idx_evt_mission ON mission_events(mission_id, id);
             CREATE INDEX IF NOT EXISTS idx_missions_queue ON missions(state, created_at);
+            CREATE TABLE IF NOT EXISTS mission_operations (
+                operation_id TEXT PRIMARY KEY, mission_id TEXT NOT NULL,
+                step_index INTEGER NOT NULL, state TEXT NOT NULL, result TEXT,
+                started_at REAL NOT NULL, finished_at REAL,
+                UNIQUE(mission_id, step_index));
+            CREATE TABLE IF NOT EXISTS agent_task_plans (
+                mission_id TEXT PRIMARY KEY, project TEXT NOT NULL, session_ref TEXT NOT NULL,
+                plan_hash TEXT NOT NULL, approval_state TEXT NOT NULL,
+                approval_expires_at REAL NOT NULL, approved_at REAL,
+                scheduled_at REAL, created_at REAL NOT NULL, updated_at REAL NOT NULL);
             """
         )
 
@@ -152,6 +178,7 @@ def _row_to_mission(row: sqlite3.Row) -> dict[str, Any]:
     data["steps"] = json.loads(data.get("steps") or "[]")
     data["result"] = json.loads(data["result"]) if data.get("result") else None
     data["cancel_requested"] = bool(data.get("cancel_requested"))
+    data["pause_requested"] = bool(data.get("pause_requested"))
     return data
 
 
@@ -166,10 +193,13 @@ def record_event(mission_id: str, kind: str, detail: str = "") -> None:
 
 
 def create(
-    objective: str, *, steps: list[dict[str, Any]] | None = None, kind: str = "generic"
+    objective: str, *, steps: list[dict[str, Any]] | None = None, kind: str = "generic",
+    initial_state: str = PENDING,
 ) -> str:
     """Create a durable mission and return its id."""
     _init_db()
+    if initial_state not in (PENDING, PAUSED):
+        raise MissionStateError("new missions must be pending or paused")
     mission_id = uuid.uuid4().hex[:12]
     steps = steps or []
     now = time.time()
@@ -179,7 +209,7 @@ def create(
                (id, objective, kind, state, steps, total_steps, completed_steps,
                 cancel_requested, created_at, updated_at)
                VALUES (?,?,?,?,?,?,0,0,?,?)""",
-            (mission_id, objective[:2000], kind, PENDING, json.dumps(steps), len(steps), now, now),
+            (mission_id, objective[:2000], kind, initial_state, json.dumps(steps), len(steps), now, now),
         )
     record_event(mission_id, "created", objective[:200])
     return mission_id
@@ -242,7 +272,10 @@ def transition(mission_id: str, new_state: str, *, detail: str = "") -> dict[str
         fields["finished_at"] = now
     sets = ", ".join(f"{k}=?" for k in fields)
     with _conn() as conn:
-        conn.execute(f"UPDATE missions SET {sets} WHERE id=?", (*fields.values(), mission_id))
+        changed = conn.execute(f"UPDATE missions SET {sets} WHERE id=? AND state=?",
+                               (*fields.values(), mission_id, current)).rowcount
+        if changed != 1:
+            raise MissionStateError("mission state changed concurrently")
     record_event(mission_id, f"state:{new_state}", detail)
     return get(mission_id)  # type: ignore[return-value]
 
@@ -302,6 +335,96 @@ def checkpoints(mission_id: str) -> list[dict[str, Any]]:
     return out
 
 
+def operation_id(mission_id: str, step_index: int) -> str:
+    return f"mission:{mission_id}:step:{step_index}"
+
+
+def operation(mission_id: str, step_index: int) -> dict[str, Any] | None:
+    _init_db()
+    with _conn() as conn:
+        row = conn.execute("SELECT * FROM mission_operations WHERE mission_id=? AND step_index=?",
+                           (mission_id, step_index)).fetchone()
+    if not row:
+        return None
+    data = dict(row)
+    data["result"] = json.loads(data["result"]) if data["result"] else None
+    return data
+
+
+def begin_operation(mission_id: str, step_index: int) -> dict[str, Any]:
+    """Persist intent before dispatch; an existing claim must never be dispatched again."""
+    _init_db()
+    with _conn() as conn:
+        created = conn.execute("""INSERT OR IGNORE INTO mission_operations
+            (operation_id,mission_id,step_index,state,started_at) VALUES (?,?,?,?,?)""",
+            (operation_id(mission_id, step_index), mission_id, step_index, "started", time.time())).rowcount
+        retried = conn.execute("""UPDATE mission_operations SET state='started', started_at=?, finished_at=NULL
+            WHERE mission_id=? AND step_index=? AND state='retry_allowed'""",
+            (time.time(), mission_id, step_index)).rowcount
+    row = operation(mission_id, step_index)  # type: ignore[assignment]
+    row["claimed"] = bool(created or retried)
+    return row
+
+
+def finish_operation(mission_id: str, step_index: int, result: dict[str, Any]) -> None:
+    _init_db()
+    with _conn() as conn:
+        conn.execute("""UPDATE mission_operations SET state='finished', result=?, finished_at=?
+            WHERE mission_id=? AND step_index=? AND state='started'""",
+            (json.dumps(result), time.time(), mission_id, step_index))
+
+
+def uncertain_operation(mission_id: str) -> dict[str, Any] | None:
+    _init_db()
+    with _conn() as conn:
+        row = conn.execute("""SELECT * FROM mission_operations WHERE mission_id=?
+            AND state='started' ORDER BY step_index LIMIT 1""", (mission_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def hold_uncertain(mission_id: str, operation_id_value: str) -> dict[str, Any]:
+    reason = f"Operation {operation_id_value} has an unknown outcome; owner reconciliation required"
+    with _conn() as conn:
+        conn.execute("UPDATE missions SET error=?, error_kind=?, next_attempt_at=NULL WHERE id=?",
+                     (reason, "uncertain_effect", mission_id))
+    record_event(mission_id, "operation:uncertain", reason)
+    return transition(mission_id, PAUSED, detail=reason)
+
+
+def hold_approval(mission_id: str, reason: str) -> dict[str, Any]:
+    with _conn() as conn:
+        conn.execute("UPDATE missions SET error=?,error_kind=?,next_attempt_at=NULL WHERE id=?",
+                     (reason[:4000], "awaiting_approval", mission_id))
+    record_event(mission_id, "approval:required", reason)
+    return transition(mission_id, PAUSED, detail=reason)
+
+
+def reconcile_operation(mission_id: str, step_index: int, *, outcome: str,
+                        evidence: str, result: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Owner-reviewed outcome; no automatic inference from a missing response."""
+    if outcome not in ("completed", "not_executed") or not evidence.strip():
+        raise MissionStateError("reconciliation needs a verified outcome and evidence")
+    mission = get(mission_id)
+    prior = operation(mission_id, step_index)
+    if not mission or mission["state"] != PAUSED or not prior or prior["state"] != "started":
+        raise MissionStateError("no paused, uncertain operation to reconcile")
+    if outcome == "completed" and not isinstance(result, dict):
+        raise MissionStateError("completed operation needs its observed result")
+    with _conn() as conn:
+        changed = conn.execute(
+            """UPDATE mission_operations SET state=?, result=?, finished_at=?
+               WHERE operation_id=? AND state='started'""",
+            ("finished" if outcome == "completed" else "retry_allowed",
+             json.dumps(result) if outcome == "completed" else None,
+             time.time(), prior["operation_id"]),
+        ).rowcount
+        if changed != 1:
+            raise MissionStateError("operation was already reconciled")
+        conn.execute("UPDATE missions SET error=NULL,error_kind=NULL,next_attempt_at=NULL WHERE id=?", (mission_id,))
+    record_event(mission_id, "operation:reconciled", f"{outcome}: {evidence[:500]}")
+    return make_runnable(mission_id, detail="owner reconciled external outcome")
+
+
 def history(mission_id: str) -> list[dict[str, Any]]:
     _init_db()
     with _conn() as conn:
@@ -341,6 +464,39 @@ def cancel_requested(mission_id: str) -> bool:
     return bool(row["cancel_requested"]) if row else False
 
 
+def request_pause(mission_id: str) -> dict[str, Any]:
+    mission = get(mission_id)
+    if not mission or mission["state"] in TERMINAL_STATES:
+        raise MissionStateError("no live mission to pause")
+    with _conn() as conn:
+        conn.execute("UPDATE missions SET pause_requested=1,updated_at=? WHERE id=?",
+                     (time.time(), mission_id))
+    record_event(mission_id, "pause_requested", "owner requested pause")
+    if mission["state"] == PENDING:
+        return transition(mission_id, PAUSED, detail="paused before execution")
+    return get(mission_id)  # type: ignore[return-value]
+
+
+def clear_pause(mission_id: str) -> None:
+    with _conn() as conn:
+        conn.execute("UPDATE missions SET pause_requested=0,updated_at=? WHERE id=?",
+                     (time.time(), mission_id))
+
+
+def clear_error(mission_id: str, *, kind: str = "") -> None:
+    with _conn() as conn:
+        if kind:
+            conn.execute("UPDATE missions SET error=NULL,error_kind=NULL WHERE id=? AND error_kind=?",
+                         (mission_id, kind))
+        else:
+            conn.execute("UPDATE missions SET error=NULL,error_kind=NULL WHERE id=?", (mission_id,))
+
+
+def pause_requested(mission_id: str) -> bool:
+    row = get(mission_id)
+    return bool(row and row["pause_requested"])
+
+
 def record_failure(mission_id: str, error: str, *, kind: str = TERMINAL) -> dict[str, Any]:
     """Persist failure detail, then move to failed (terminal) or paused (retryable)."""
     with _conn() as conn:
@@ -377,9 +533,28 @@ def recover_interrupted() -> list[str]:
     for mission in interrupted_missions():
         mission_id = mission["id"]
         record_event(mission_id, "recovered", "process died while running")
-        transition(mission_id, PAUSED, detail="interrupted; recovered for resume")
+        uncertain = uncertain_operation(mission_id)
+        if uncertain:
+            hold_uncertain(mission_id, uncertain["operation_id"])
+        elif mission.get("pause_requested"):
+            transition(mission_id, PAUSED, detail="owner pause preserved after restart")
+        else:
+            transition(mission_id, PAUSED, detail="interrupted at a safe step boundary")
         recovered.append(mission_id)
     return recovered
+
+
+def resume_safe_recovered() -> list[str]:
+    """Only startup-recovered boundary pauses may be queued by the worker."""
+    resumed = []
+    for mission in list_missions(state=PAUSED, limit=1000):
+        if mission.get("error_kind") == "uncertain_effect" or mission.get("pause_requested"):
+            continue
+        events = history(mission["id"])
+        if events and events[-1]["kind"] == "state:paused" and events[-1]["detail"] == "interrupted at a safe step boundary":
+            make_runnable(mission["id"], detail="safe restart boundary")
+            resumed.append(mission["id"])
+    return resumed
 
 
 # --------------------------------------------------------------------------
@@ -401,15 +576,24 @@ def backoff_seconds(attempts: int) -> float:
     return min(BACKOFF_BASE_S * (2 ** max(0, attempts - 1)), BACKOFF_CAP_S)
 
 
-def next_pending() -> dict[str, Any] | None:
-    """Oldest runnable mission, or None. Durable: survives any restart."""
+def next_pending(kinds: tuple[str, ...] | None = None) -> dict[str, Any] | None:
+    """Oldest runnable mission, or None. Durable: survives any restart.
+
+    ``kinds`` limits what a background worker may claim; other missions stay queued
+    untouched for an explicit run.
+    """
     _init_db()
+    kind_filter = f" AND kind IN ({','.join('?' * len(kinds))})" if kinds else ""
     with _conn() as conn:
         row = conn.execute(
-            """SELECT * FROM missions
-               WHERE state=? AND cancel_requested=0
+            f"""SELECT * FROM missions
+               WHERE state=? AND cancel_requested=0 AND pause_requested=0{kind_filter}
+                 AND (kind!='agent_task' OR EXISTS (
+                   SELECT 1 FROM agent_task_plans p WHERE p.mission_id=missions.id
+                     AND p.approval_state='approved'
+                     AND (p.scheduled_at IS NULL OR p.scheduled_at <= ?)))
                ORDER BY created_at ASC LIMIT 1""",
-            (PENDING,),
+            (PENDING, *(kinds or ()), time.time()),
         ).fetchone()
     return _row_to_mission(row) if row else None
 
