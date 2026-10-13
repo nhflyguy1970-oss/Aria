@@ -55,6 +55,7 @@
     const eta = data.eta_sec != null ? ` · ~${data.eta_sec}s` : "";
     const q = data.queue_position != null ? ` · queue #${data.queue_position}` : "";
     setGenStatus(`${label}${pct}${eta}${q}`);
+    window.renderMediaProgress?.($("galleryJobStatus"), data);
     if (!data.done) {
       await new Promise((r) => setTimeout(r, 1200));
       return pollGalleryJob(jobId);
@@ -698,6 +699,26 @@
       loadGallery({ append: true });
     });
     $("galleryRefreshBtn")?.addEventListener("click", () => loadGallery({ reset: true }));
+    $("galleryUploadInput")?.addEventListener("change", async (e) => {
+      const input = e.target;
+      const files = Array.from(input.files || []);
+      if (!files.length) return;
+      const form = new FormData();
+      files.forEach((f) => form.append("files", f, f.name));
+      setGenStatus(`Uploading ${files.length} image${files.length > 1 ? "s" : ""}…`);
+      try {
+        const res = await fetch("/api/gallery/upload", { method: "POST", body: form });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) throw new Error(data.message || `Upload failed (${res.status})`);
+        const skipped = (data.errors || []).length ? ` · ${data.errors.length} skipped` : "";
+        setGenStatus(`Uploaded ${data.saved.length} — use ✎ on an image to edit it${skipped}`, "ok");
+        await loadGallery({ reset: true });
+      } catch (err) {
+        setGenStatus(String(err?.message || err), "err");
+      } finally {
+        input.value = "";
+      }
+    });
     $("galleryOpenMakerBtn")?.addEventListener("click", () => window.switchToView?.("maker"));
     $("galleryOpenFlytyingBtn")?.addEventListener("click", () => window.switchToView?.("flytying"));
     $("galleryOpenVideoBtn")?.addEventListener("click", () => window.switchToView?.("video"));

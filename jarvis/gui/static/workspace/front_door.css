@@ -550,3 +550,45 @@ details.fd-wing {
     left: 0.75rem;
   }
 }
+
+/* Mode badge — always visible, top-right, beside nothing else fixed there. */
+.aria-mode-badge {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem;
+  border: 1px solid rgba(243, 235, 224, 0.16);
+  border-radius: 999px;
+  background: color-mix(in srgb, #1a1410 88%, transparent);
+  color: #e8dccb;
+  font: 500 0.82rem/1 "DM Sans", "IBM Plex Sans", system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+}
+.aria-mode-badge:hover,
+.aria-mode-badge:focus-visible {
+  border-color: rgba(212, 165, 116, 0.55);
+  outline: none;
+}
+.aria-mode-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #7fbf8e;
+  box-shadow: 0 0 0 3px rgba(127, 191, 142, 0.18);
+}
+.aria-mode-badge--uncensored {
+  border-color: rgba(214, 112, 190, 0.6);
+  background: color-mix(in srgb, #2a1226 90%, transparent);
+  color: #f3d3ec;
+}
+.aria-mode-badge--uncensored .aria-mode-dot {
+  background: #e07ac8;
+  box-shadow: 0 0 0 3px rgba(224, 122, 200, 0.22);
+}
+body.front-door-open .aria-mode-badge { z-index: 1001; }

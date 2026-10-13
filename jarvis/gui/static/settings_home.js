@@ -36,8 +36,11 @@
       return;
     }
     if (open.action === "uncensored") {
-      document.getElementById("uncensoredToggle")?.focus();
-      window.showAriaToast?.("Uncensored mode is in the Mode sidebar", "info");
+      // The legacy Mode sidebar is hidden in the Living Workspace: toggle directly
+      // (turning on still asks for the master password; Ctrl+K → "uncensored" does the same).
+      if (!window.AriaActions?.system?.uncensored?.()) {
+        window.showAriaToast?.("Press Ctrl+K and type “uncensored” to toggle uncensored mode", "info");
+      }
       return;
     }
     const view = open.view || "settings";

@@ -1,3 +1,24 @@
+/** Shared progress bar for image/video jobs (Gallery, Video studio, chat). */
+window.renderMediaProgress = function renderMediaProgress(anchor, data) {
+  if (!anchor) return;
+  let bar = anchor.nextElementSibling;
+  if (!bar || !bar.classList?.contains("media-job-progress")) {
+    bar = document.createElement("div");
+    bar.className = "media-job-progress";
+    bar.setAttribute("role", "progressbar");
+    bar.setAttribute("aria-valuemin", "0");
+    bar.setAttribute("aria-valuemax", "100");
+    bar.innerHTML = '<div class="media-job-progress-fill"></div>';
+    anchor.insertAdjacentElement("afterend", bar);
+  }
+  const done = !data || data.done;
+  const pct = Math.max(0, Math.min(100, Number(data?.pct) || 0));
+  bar.classList.toggle("hidden", done);
+  bar.setAttribute("aria-valuenow", String(pct));
+  const fill = bar.firstElementChild;
+  if (fill) fill.style.width = `${pct}%`;
+};
+
 /** Media job tracking, resume, and polling — extracted from app.js. */
 (function () {
   const activeMediaJobs = new Set();
@@ -187,6 +208,7 @@
             body.appendChild(note);
           }
           note.textContent = data.message || "Working…";
+          window.renderMediaProgress?.(note, data);
         }
         if (data.done) {
           finishJob();

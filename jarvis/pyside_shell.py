@@ -318,7 +318,8 @@ def _build_fluent_window(url: str) -> Any:
             btn_reload = TransparentToolButton(FluentIcon.SYNC, page)
             btn_reload.clicked.connect(self.view.reload)
             btn_home = TransparentToolButton(FluentIcon.HOME, page)
-            btn_home.clicked.connect(lambda: self.view.load(QUrl(self._home)))
+            btn_home.clicked.connect(lambda: _go_home(self.view, self._home, QUrl))
+            btn_home.setToolTip("Home — back to Chat")
 
             nav.addWidget(btn_back)
             nav.addWidget(btn_fwd)
@@ -335,6 +336,26 @@ def _build_fluent_window(url: str) -> Any:
     win = AriaFluentWindow()
     _register_main_window(win)
     return win
+
+
+_GO_HOME_JS = """(() => {
+  const cat = window.AriaFrontDoorCatalog;
+  if (!cat || typeof cat.goRoom !== "function") return false;
+  try { window.AriaFrontDoor?.close?.(); } catch (_) {}
+  cat.goRoom("chat");
+  return true;
+})()"""
+
+
+def _go_home(view: Any, home_url: str, qurl: Any) -> None:
+    """Toolbar Home: the rooms live inside one page that reopens the last room, so reloading
+    the start URL looked like nothing happened. Ask the page to go to Chat; reload only if
+    ARIA's page is not there (blank, error page or still loading)."""
+    def done(ok: Any) -> None:
+        if ok is not True:
+            view.load(qurl(home_url))
+
+    view.page().runJavaScript(_GO_HOME_JS, 0, resultCallback=done)
 
 
 def _build_window(url: str) -> Any:
@@ -372,7 +393,7 @@ def _build_window(url: str) -> Any:
                 ("Back", self.view.back),
                 ("Forward", self.view.forward),
                 ("Reload", self.view.reload),
-                ("Home", lambda: self.view.load(QUrl(self._home))),
+                ("Home", lambda: _go_home(self.view, self._home, QUrl)),
             ):
                 act = QAction(label, self)
                 act.triggered.connect(slot)

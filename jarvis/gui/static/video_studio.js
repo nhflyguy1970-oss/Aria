@@ -619,6 +619,7 @@ async function pollVideoMediaJob(jobId) {
   const label = data.message || (data.done ? "Done" : "Working…");
   const pct = data.pct != null ? ` (${data.pct}%)` : "";
   setVideoJobStatus(`${label}${pct}`);
+  window.renderMediaProgress?.(document.getElementById("videoJobStatus"), data);
   const sb = document.getElementById("storyboardStatus");
   if (sb && document.activeElement?.id?.includes("storyboard")) sb.textContent = `${label}${pct}`;
   if (!data.done) {
