@@ -71,6 +71,26 @@
     return err;
   }
 
+  /* A chat turn the server classified (error_category) gets the recovery card:
+     the reason, a request reference for the logs, and Retry with the same text.
+     The server never saved the failed turn, so Retry cannot duplicate it. */
+  function showClassifiedFailure(event, text) {
+    if (!event?.error_category || typeof window.showProviderRecovery !== "function") return false;
+    window.showProviderRecovery(event.message || "That reply didn't complete.", {
+      retryText: event.retryable === false ? "" : text,
+      reason: event.error_category,
+      requestId: event.request_id || "",
+      recovery: {
+        classified: {
+          title: "That reply didn't complete",
+          explanation: event.message,
+          class: event.error_category,
+        },
+      },
+    });
+    return true;
+  }
+
   async function sendMessage(text, forceNoStream = false, options = {}) {
     const a = attach();
     const c = chat();
@@ -368,7 +388,9 @@
                 typing.classList.remove("typing-msg");
                 if (!event.ok && !full && !event.image_path) {
                   typing.remove();
-                  window.showError?.(event.message || "Request failed.");
+                  if (!showClassifiedFailure(event, text)) {
+                    window.showError?.(event.message || "Request failed.");
+                  }
                   break;
                 }
                 const streamed = Boolean(full);
@@ -440,7 +462,9 @@
         const data = await parseJsonResponse(res);
         typing.remove();
         if (!res.ok || data.ok === false) {
-          window.showError?.(data.message || "Something went wrong.");
+          if (!showClassifiedFailure(data, text)) {
+            window.showError?.(data.message || "Something went wrong.");
+          }
           return;
         }
         window.handleDone?.(data, data.message);

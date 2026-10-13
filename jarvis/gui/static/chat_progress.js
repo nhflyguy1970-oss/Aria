@@ -73,6 +73,7 @@
       model ? `Model: ${model}` : null,
       alive == null ? null : `Status: ${alive ? "Provider reachable" : "Provider unreachable"}`,
       `Class: ${classified.class || reason}`,
+      opts.requestId ? `Reference: ${opts.requestId}` : null,
     ].filter(Boolean).forEach((line) => {
       const li = document.createElement("li");
       li.textContent = line;
@@ -93,6 +94,24 @@
       });
       wrap.appendChild(stepList);
     }
+    /* Retry re-sends the failed turn under the bubble already on screen: the
+       user's message is not drawn again, this card is replaced by the new reply,
+       and repeated clicks or a busy chat cannot start a second turn. */
+    let row = null;
+    let retried = false;
+    const retry = () => {
+      if (!retryText) return false;
+      if (retried) return false;
+      if (window.jarvisChat?.chatRequestActive) {
+        window.showAriaToast?.("Wait for the current reply to finish, or press Stop", "warn", 3500);
+        return false;
+      }
+      retried = true;
+      actions.querySelectorAll?.("button").forEach((b) => { b.disabled = true; });
+      row?.remove?.();
+      window.sendMessage?.(retryText, false, { skipUserBubble: true });
+      return true;
+    };
     const actions = document.createElement("div");
     actions.className = "chat-recovery-actions";
     const mkBtn = (label, onClick, primary) => {
@@ -104,8 +123,8 @@
       return b;
     };
     actions.appendChild(mkBtn("Retry", () => {
-      if (retryText) window.sendMessage?.(retryText);
-      else document.getElementById("messageInput")?.focus();
+      if (!retryText) document.getElementById("messageInput")?.focus();
+      else retry();
     }, true));
     actions.appendChild(mkBtn("Restart Provider", async () => {
       try {
@@ -116,7 +135,7 @@
         });
         const data = await res.json();
         window.showAriaToast?.(data.message || (data.ok ? "Provider restarted" : "Restart failed"), data.ok ? "ok" : "err", 4000);
-        if (data.ok && retryText) window.sendMessage?.(retryText);
+        if (data.ok) retry();
       } catch (e) {
         window.showAriaToast?.(e.message || "Restart failed", "err", 4000);
       }
@@ -141,7 +160,7 @@
     wrap.appendChild(actions);
     const msgs = document.getElementById("messages");
     if (msgs) {
-      const row = document.createElement("div");
+      row = document.createElement("div");
       row.className = "message assistant";
       const bubble = document.createElement("div");
       bubble.className = "bubble";

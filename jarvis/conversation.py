@@ -25,6 +25,12 @@ class Conversation:
         self._prune()
 
     def add_user(self, content: str) -> None:
+        # A resend of a turn that never got a reply (Retry after a dropped or
+        # timed-out stream) continues that turn; two identical consecutive user
+        # turns would only duplicate history and the model's context.
+        last = self.messages[-1] if self.messages else None
+        if last and last.get("role") == "user" and last.get("content") == content:
+            return
         self.messages.append({"role": "user", "content": content})
         self._archive("user", content)
         self._prune()
