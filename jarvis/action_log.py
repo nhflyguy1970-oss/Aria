@@ -23,8 +23,8 @@ def _save(entries: list) -> None:
     LOG_FILE.write_text(json.dumps(entries[-MAX_ENTRIES:], indent=2), encoding="utf-8")
 
 
-def log_action(action: str, module: str = "", detail: str = "", ok: bool = True) -> None:
-    log_event("action", action=action, module=module, detail=detail[:500], ok=ok)
+def log_action(action: str, module: str = "", detail: str = "", ok: bool = True, **extra) -> None:
+    log_event("action", action=action, module=module, detail=detail[:500], ok=ok, **extra)
 
 
 def log_event(event: str, **fields) -> None:

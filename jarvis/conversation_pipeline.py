@@ -236,7 +236,15 @@ def decorate_result(
     ):
         mode = params.get("mode") or action.replace("coding_", "")
         assistant.session.note_coding_mode(mode)
-    log_action(action, result.get("module", ""), message[:120], result.get("ok", True))
+    prompt = (intent.get("params") or {}).get("prompt") if isinstance(intent.get("params"), dict) else None
+    log_action(
+        action,
+        result.get("module", ""),
+        message[:500],
+        result.get("ok", True),
+        route_reason=intent.get("route_reason"),
+        prompt=str(prompt)[:2000] if prompt else None,
+    )
     # Info actions answer from records; "Tool X worked" adds nothing to learn, and its
     # near-duplicate check is a full ACM search (6-8 s per status/recall reply, 2026-10-12).
     if result.get("ok") and not is_info_action(action) and action not in (

@@ -432,6 +432,27 @@ def _worker_loop() -> None:
                             )
                         ):
                             missing = missing or "no output path"
+                        stale = None
+                        if not missing and kind in ("generate_image", "edit_image", "inpaint_image"):
+                            # A generation must produce a file during THIS job; an older gallery
+                            # file is never presented as the new result.
+                            started_at = float(job.get("started") or 0)
+                            for key in ("image_path", "output_path"):
+                                p = result.get(key)
+                                try:
+                                    if p and started_at and Path(str(p)).stat().st_mtime < started_at - 5:
+                                        stale = Path(str(p)).name
+                                        break
+                                except OSError:
+                                    pass
+                        if stale:
+                            result = {
+                                "ok": False,
+                                "message": (f"The image returned ({stale}) existed before this request, so it was "
+                                            "not shown as a new result. Please try again."),
+                                "module": result.get("module") or "image",
+                            }
+                            job["result"] = result
                         if missing:
                             result = {
                                 "ok": False,

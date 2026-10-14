@@ -74,20 +74,34 @@ def code_path_from_message(message: str) -> str:
 
 
 def _image_generation_route(message: str, lower: str | None = None) -> dict | None:
+    """A request for a NEW image → generate_image with the user's whole description.
+
+    The old extractor kept only the rest of one lower-cased line after the last
+    "create … image" phrase, so a multi-paragraph prompt ending "Create the image, not a
+    written description." reached ComfyUI as ", not a written description." (2026-10-13)."""
+    from jarvis.image_request import is_image_generation_request
     from jarvis.modules.image import normalize_image_prompt
 
-    text = (lower if lower is not None else message.lower()).strip()
-    m = re.search(
-        r"\b(?:generate|create|draw|make|paint)\s+(?:an?\s+)?"
-        r"(?:[\w-]+\s+){0,4}"
-        r"(?:image|picture|photo|pic|illustration|artwork|wallpaper|portrait)s?\b"
-        r"(?:\s+(?:of|showing|with|depicting))?\s*(.*)",
-        text,
-    )
-    if not m:
+    if not is_image_generation_request(message):
         return None
-    prompt = normalize_image_prompt((m.group(1) or "").strip() or message.strip())
+    prompt = normalize_image_prompt(message) or message.strip()
+    if not _image_subject_given(prompt):
+        # "Generate an image using ComfyUI" says nothing about the picture: ask, never invent.
+        from jarvis.action_routing import clarification
+
+        return clarification("What should the image show?", "rule:image_needs_subject", "image_generate",
+                             ctype="image_generate_subject")
     return {"action": "generate_image", "params": {"prompt": prompt}}
+
+
+def _image_subject_given(prompt: str) -> bool:
+    from jarvis.image_request import find_image_request
+
+    rest = prompt
+    if m := find_image_request(rest):
+        rest = rest[: m.start()] + rest[m.end():]
+    rest = re.sub(r"\b(?:please|now|for\s+me|an?|the|of|with|using|in|it)\b", " ", rest, flags=re.I)
+    return len(re.findall(r"[A-Za-z]{3,}", rest)) >= 1
 
 
 # A request to make some *other* artifact is not an image edit, even when an image
@@ -999,9 +1013,28 @@ def _maybe_inpaint_route(message: str, lower: str, session: SessionContext) -> d
     return None
 
 
+_WEB_ACTIONS = {"web_search", "research_run", "research_create", "briefing_news_detail", "browser_search", "deep_research"}
+
+
+def _respect_negated_web(intent: dict, message: str) -> dict:
+    """"Do not search the web" is an instruction, never a request to search."""
+    from jarvis.image_request import negates_web_search
+
+    if str(intent.get("action") or "") not in _WEB_ACTIONS or not negates_web_search(message):
+        return intent
+    img = _image_generation_route(message)
+    if img:
+        return {**img, "thinking": "image generation (web search declined by user)",
+                "route_reason": "negated_web_image_request", "route_handler": "Gallery"}
+    return {"action": "chat", "params": {}, "thinking": "user declined web search",
+            "route_reason": "negated_web_search"}
+
+
 def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dict:
     """Last-line guards before executing the routed action."""
     from jarvis.runtime_routing_trace import log_route_decision
+
+    intent = _respect_negated_web(intent, message)
 
     if intent.get("needs_clarification") or intent.get("action") == "clarify":
         ctype = intent.get("clarification_type") or "generic"
@@ -3379,6 +3412,18 @@ def _route(message: str, session: SessionContext, attachment: dict | None = None
     if intent := _attachment_edit(message, attachment):
         return _finalize_intent(intent, message, session)
     pending = session.pending_clarification or {}
+    if pending.get("type") == "image_generate_subject":
+        # Reply to "What should the image show?" — the answer is the picture to make.
+        session.pending_clarification = None
+        reply = (message or "").strip()
+        if re.fullmatch(r"(?i)(?:no|nope|cancel|stop|never ?mind|forget it)[.!]?", reply):
+            return _finalize_intent({"action": "chat", "params": {}, "thinking": "image request dropped"}, message, session)
+        if reply and not attachment and not _NEW_REQUEST_REPLY.match(reply):
+            from jarvis.modules.image import normalize_image_prompt
+
+            return _finalize_intent({"action": "generate_image", "params": {"prompt": normalize_image_prompt(reply) or reply},
+                                     "thinking": "image subject", "route_reason": "image_generate_subject",
+                                     "route_handler": "Gallery"}, message, session)
     if pending.get("type") == "image_edit_instruction":
         # Reply to "What should I change in <image>?" — the answer is the instruction for that image.
         session.pending_clarification = None
@@ -3500,6 +3545,14 @@ def _route(message: str, session: SessionContext, attachment: dict | None = None
             return _finalize_intent(explain, message, session)
     except Exception:
         pass
+
+    # An explicit "create/generate … image" request beats context-driven guesses that
+    # come later: "display it" → last file (served pyproject.toml), briefing-headline word
+    # overlap (served NH/VT news), NLU web_search on "DO NOT SEARCH THE WEB" (2026-10-13).
+    if not attachment and (img := _image_generation_route(message)):
+        img = normalize_route_intent({**img, "thinking": "image generation", "route_reason": "explicit_image_request",
+                                      "route_handler": "Gallery", "route_confidence": 1.0})
+        return _finalize_intent(img, message, session)
 
     follow = _follow_up_route(message, session)
     if follow:

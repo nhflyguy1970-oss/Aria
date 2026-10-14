@@ -111,14 +111,16 @@ def _uncensored_prompt_model() -> str:
 
 def normalize_image_prompt(prompt: str) -> str:
     """Strip chat boilerplate so ComfyUI gets the subject the user meant."""
-    p = (prompt or "").strip()
+    from jarvis.image_request import clean_image_prompt
+
+    p = clean_image_prompt(prompt or "")
     if not p:
-        return p
+        return (prompt or "").strip()
     p = re.sub(r"^(?:generate\s+image|create\s+image)\s*[:\-]\s*", "", p, flags=re.I)
     p = re.sub(r"^[:\-\s]+", "", p)
     p = re.sub(
         r"^(please\s+)?(create|generate|make|draw|paint)\s+(?:an?\s+)?"
-        r"(?:[\w-]+\s+){0,4}(?:image|picture|photo|pic|illustration|artwork|wallpaper|portrait)s?\s+"
+        r"(?:[\w-]+,?\s+){0,4}(?:image|picture|photo|pic|illustration|artwork|wallpaper|portrait)s?[.:,]?\s+"
         r"(?:of\s+)?",
         "",
         p,
@@ -178,6 +180,10 @@ def _scene_dimensions(user: str) -> tuple[int, int]:
     h = int(os.getenv("JARVIS_IMAGE_HEIGHT", "0"))
     if w > 0 and h > 0:
         return w, h
+    from jarvis.image_request import requested_dimensions
+
+    if (asked := requested_dimensions(user)) and _active_model_family() != "sd15":
+        return asked  # "16:9 widescreen" → 1344×768 (was 1216×832 from the "wide" keyword)
 
     family = _active_model_family()
     if family == "sd15":

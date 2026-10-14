@@ -823,9 +823,17 @@ def briefing_news_intent(message: str, session) -> dict[str, Any] | None:
     if not headlines:
         return None
 
+    from jarvis.image_request import is_image_generation_request
+
+    if is_image_generation_request(message):
+        return None  # "Create an image of Mary in a misty valley" is not the Valley News obituary
     last_module = getattr(session, "last_module", "") or ""
     wants_detail = looks_like_headline_followup(message, last_module=last_module)
     matched = match_headline(message, headlines)
+    # Word overlap alone (two shared words) hijacked long, unrelated requests into news
+    # research (2026-10-13); without an explicit follow-up cue it must be a short message.
+    if matched and not wants_detail and len(_meaningful_words(message.lower())) > 12:
+        matched = None
     if not matched and not wants_detail:
         return None
 
