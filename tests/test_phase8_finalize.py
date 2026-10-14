@@ -222,8 +222,14 @@ def test_specialist_is_selective_and_falls_back_visibly(gpu, monkeypatch):
     assert brain_routing.select_chat_model(hard, params) == BIG and "specialist" in params["_specialist_note"]
     assert brain_routing.select_chat_model(hard, {"model": "gemma4:12b"}) == "gemma4:12b"  # explicit wins
     assert brain_routing.select_chat_model(hard, {"knowledge_mode": True}) == BIG  # KnowledgeEngine route too
+    # A short factual question now uses the conversation model (2026-10-14: same answers as the
+    # reasoning model in the chat-latency benchmark, 0.9 s vs 14 s); a complex one keeps reasoning.
+    from jarvis.model_store import model_for
+
     assert brain_routing.select_chat_model("who invented the dry fly?", {"knowledge_mode": True}) \
-        == brain_routing.reasoning_model()
+        == model_for("conversation")
+    assert brain_routing.select_chat_model("compare the history of the dry fly and the nymph in detail",
+                                           {"knowledge_mode": True}) == brain_routing.reasoning_model()
 
 
 def test_comfyui_refusal_is_a_clear_error_and_never_queues(gpu, monkeypatch):

@@ -18,6 +18,12 @@ def prepare_for_comfyui() -> dict:
         return {"ok": True, "skipped": True}
     unloaded = unload_ollama_models()
     release_torch_memory()
+    try:  # the image job restores these afterwards (gpu_scheduler rewarm)
+        from jarvis.gpu_scheduler import note_evicted
+
+        note_evicted(unloaded)
+    except Exception:  # noqa: BLE001
+        pass
     return {"ok": True, "unloaded_ollama": unloaded, "released_torch": True}
 
 

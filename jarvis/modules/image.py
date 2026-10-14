@@ -146,7 +146,9 @@ HELPER_CTX = 4096  # the RX 7600 helper lane's qualified context
 def _helper_prompt_model() -> str:
     """Small Regular-mode prompt model for the RX 7600 helper ("" = off). Uncensored rewrites
     keep the abliterated 12B on the RTX: it is too large for the helper lane."""
-    env = os.getenv("JARVIS_IMAGE_PROMPT_MODEL_HELPER", "qwen3.5:4b").strip()
+    # Same model as the RX 7600 chat lane (jarvis.chat_lanes): a chat sent during an image
+    # then finds it already loaded instead of swapping models on the one-model helper.
+    env = os.getenv("JARVIS_IMAGE_PROMPT_MODEL_HELPER", "qwen3:4b-instruct-2507-q4_K_M").strip()
     return "" if env.lower() in ("", "0", "off", "false", "no") else env
 
 

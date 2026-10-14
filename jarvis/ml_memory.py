@@ -35,6 +35,8 @@ def release_torch_memory() -> None:
 def unload_ollama_models(timeout: float = 8.0) -> list[str]:
     """Ask Ollama to drop loaded models so PyTorch can use the GPU."""
     host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip("/")
+    if not host.startswith("http"):
+        host = "http://" + host.replace("0.0.0.0", "127.0.0.1")
     unloaded: list[str] = []
     try:
         with urllib.request.urlopen(f"{host}/api/ps", timeout=timeout) as resp:
@@ -43,9 +45,14 @@ def unload_ollama_models(timeout: float = 8.0) -> list[str]:
             name = entry.get("name") or entry.get("model")
             if not name:
                 continue
-            body = json.dumps({"model": name, "prompt": ".", "stream": False, "keep_alive": 0}).encode()
+            # keep_alive 0 with no prompt only unloads. The old prompt "." ran an 8 s generation on
+            # the chat model before every image job and then failed (HTTP 500), so the unload was
+            # never reported; embedding models reject /api/generate (HTTP 400). (2026-10-14)
+            embed = "embed" in name.lower()
+            payload = {"model": name, "input": "", "keep_alive": 0} if embed else {"model": name, "keep_alive": 0}
+            body = json.dumps(payload).encode()
             req = urllib.request.Request(
-                f"{host}/api/generate",
+                f"{host}/api/embed" if embed else f"{host}/api/generate",
                 data=body,
                 headers={"Content-Type": "application/json"},
                 method="POST",

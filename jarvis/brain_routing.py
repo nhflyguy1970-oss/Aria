@@ -30,6 +30,33 @@ def needs_deep_thinking(message: str | None, *, action: str = "chat") -> bool:
     return False
 
 
+# Asks that keep the reasoning model even when short.
+_COMPLEX_RE = re.compile(
+    r"\b(prove|proof|derive|calculate|calculation|math|equation|integral|solve|debug|fix|implement|refactor|code|"
+    r"algorithm|optimi[sz]e|design|architect|compare|comparison|trade-?offs?|pros\s+and\s+cons|versus|vs\.?|"
+    r"analy[sz]e|analysis|step[- ]by[- ]step|in depth|in detail|detailed|thorough(?:ly)?|deep dive|"
+    r"specs?|specifications?|cores?|threads?|clock|tdp|benchmark|ghz|ryzen|intel|amd|nvidia|"
+    r"think (?:hard|carefully)|reason(?:ing)? through)\b",
+    re.I,
+)
+
+
+def is_simple_question(message: str | None) -> bool:
+    """A short, single, everyday question ("why is the sky blue?", "what is a trout?").
+
+    Measured 2026-10-14 on eight such questions: gemma4:12b gave the same correct answers as
+    deepseek-r1:14b with a 0.9 s median against 14 s (deepseek thinks first), without the
+    ~10 GB model swap or the RTX reaching 83 C. JARVIS_SIMPLE_QUESTIONS_ON_CONVERSATION=0
+    restores reasoning-model routing for them."""
+    if os.getenv("JARVIS_SIMPLE_QUESTIONS_ON_CONVERSATION", "1").strip().lower() in ("0", "false", "no", "off"):
+        return False
+    text = (message or "").strip()
+    words = len(text.split())
+    if not 0 < words <= 30 or text.count("?") > 1 or "\n" in text or "```" in text:
+        return False
+    return not (_COMPLEX_RE.search(text) or _CODE_OR_PLAN_RE.search(text))
+
+
 _CODE_OR_PLAN_RE = re.compile(
     r"\b(code|coding|debug(?:ging)?|bug|traceback|stack ?trace|exception|refactor|implement|function|"
     r"class|algorithm|compile|unit tests?|regex|sql|python|javascript|typescript|rust|bash|script|"
@@ -108,6 +135,10 @@ def select_chat_model(
             params["_specialist_note"] = note
         if special:
             return special
+    if mode != "deep" and action == "chat" and is_simple_question(message):
+        from jarvis.model_store import model_for
+
+        return model_for("conversation")
     if params.get("knowledge_mode"):
         return reasoning_model()
     if mode == "deep" or needs_deep_thinking(message, action=action):

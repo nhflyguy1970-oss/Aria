@@ -59,6 +59,7 @@ MONITOR_INTERVAL_S = 2.0
 VRAM_SETTLE_S = 90  # covers a cold start-up warm-up load already in flight
 RAM_SETTLE_S = 20  # unloaded Ollama models return their host memory within seconds
 RELEASE_SETTLE_S = 20
+REWARM_DELAY_S = _env_int("JARVIS_REWARM_AFTER_IMAGE_S", 8)  # 0 = never restore evicted models
 STALE_S = 300  # a shared slot with no progress for 5 min is an abandoned stream; reclaim it
 
 DEFAULT_OLLAMA = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434")
@@ -235,6 +236,15 @@ def model_size(model: str) -> int:
     return int(sizes.get(model) or sizes.get(f"{model}:latest") or 0)
 
 
+def _media_queued() -> bool:
+    try:
+        from jarvis.media_jobs import busy_state
+
+        return bool(busy_state().get("pending"))  # the job that just finished may still be wrapping up
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def helper_resident() -> dict[str, int]:
     """Models the helper Ollama has loaded → VRAM MiB each."""
     def resident():
@@ -288,6 +298,8 @@ class Job:
     started: float = field(default_factory=time.time)
     touched: float = field(default_factory=time.monotonic)
     cutoff_reason: str = ""
+    # ARIA models this job unloaded from the RTX; an image job restores them afterwards.
+    evicted: list[str] = field(default_factory=list)
     _cut: threading.Event = field(default_factory=threading.Event)
 
     def cut(self, reason: str) -> None:
@@ -307,6 +319,7 @@ class Job:
 
 class _Scheduler:
     def __init__(self) -> None:
+        self._pending_evicted: list[str] = []
         self._cv = threading.Condition()
         self._shared = 0
         self._heavy: Job | None = None
@@ -422,7 +435,10 @@ class _Scheduler:
         for entry in ps.get("models") or []:
             name = entry.get("name") or entry.get("model")
             if name and name != keep:
-                _post_json(f"{DEFAULT_OLLAMA}/api/generate", {"model": name, "keep_alive": 0}, timeout=30)
+                if "embed" in name.lower():  # embedding models reject /api/generate (HTTP 400)
+                    _post_json(f"{DEFAULT_OLLAMA}/api/embed", {"model": name, "input": "", "keep_alive": 0}, timeout=30)
+                else:
+                    _post_json(f"{DEFAULT_OLLAMA}/api/generate", {"model": name, "keep_alive": 0}, timeout=30)
                 dropped.append(name)
         if dropped:
             deadline = time.monotonic() + 20
@@ -511,7 +527,9 @@ class _Scheduler:
             settle = time.monotonic() + VRAM_SETTLE_S
             while True:
                 # Repeat: a warm-up that was mid-load when we were admitted only appears once loaded.
-                self._unload_aria_residents(keep=job.model)
+                for name in self._unload_aria_residents(keep=job.model):
+                    if name not in job.evicted:
+                        job.evicted.append(name)
                 self._free_idle_comfy(job.label, acquiring=job)
                 _cache.pop("cuda", None)
                 info = cuda()
@@ -534,21 +552,29 @@ class _Scheduler:
             raise
 
     def _acquire_helper(self, job: Job, size: int) -> bool:
-        if not helper_ready() or ftr_busy(FTR_AMD):
+        def refuse(reason: str) -> bool:
+            self._event("helper_refused", job=job.label, reason=reason)
             return False
+
+        if not helper_ready():
+            return refuse("helper Ollama not responding")
+        if busy := ftr_busy(FTR_AMD):
+            return refuse(f"FTR runtime active on the RX 7600: {busy}")
         info = amd()
         need = int(size * 1.4 / 1048576) + AMD_RESERVE_MIB
         loaded = job.model in helper_resident() or f"{job.model}:latest" in helper_resident()
         if not info.get("ok") or info["temp_c"] >= CUTOFF_C:
-            return False
+            return refuse(f"RX 7600 at {info.get('temp_c')} C" if info.get("ok") else "RX 7600 unreadable")
         if not loaded and info["free_mib"] + helper_resident_mib() < need:
-            return False  # an already-loaded model needs no new VRAM (count checks, 2026-10-14)
+            # an already-loaded model needs no new VRAM (count checks, 2026-10-14)
+            return refuse(f"RX 7600 has {info['free_mib']} MiB free + {helper_resident_mib()} MiB evictable; "
+                          f"{job.model} needs {need} MiB incl. 2 GiB desktop reserve")
         deadline = time.monotonic() + HELPER_WAIT_S
         with self._cv:
             while self._helper_busy:
                 left = deadline - time.monotonic()
                 if left <= 0:
-                    return False
+                    return refuse(f"helper busy for {HELPER_WAIT_S} s")
                 self._cv.wait(min(left, 1.0))
             self._helper_busy = True
             self._active.add(job)
@@ -674,6 +700,11 @@ class _Scheduler:
                 time.sleep(1)
             self._release(job)
             self._event("image_end", job=label, cutoff=job.cutoff_reason)
+            with self._cv:
+                before = [m for m in self._pending_evicted if m not in job.evicted]
+                self._pending_evicted.clear()
+            if job.evicted or before:
+                self._schedule_rewarm(before + list(job.evicted))
 
     def heavy_feasible(self, model: str) -> tuple[bool, str]:
         """Cheap pre-check used before escalating to a heavy specialist (no waiting)."""
@@ -695,6 +726,38 @@ class _Scheduler:
             if self._heavy or self._waiting >= MAX_WAITING:
                 return False, "RTX 3060 exclusive slot busy"
         return True, ""
+
+    def note_evicted(self, models: list[str]) -> None:
+        """Models unloaded for an upcoming image job outside admission (vram_guard)."""
+        with self._cv:
+            for m in models or []:
+                if m and m not in self._pending_evicted:
+                    self._pending_evicted.append(m)
+
+    def _schedule_rewarm(self, models: list[str]) -> None:
+        """Reload the ARIA models an image job evicted, once the RTX is free again.
+
+        Without this the next chat after an image paid a full cold load (102 s live,
+        2026-10-14). Waits REWARM_DELAY_S so a follow-up image request can claim the RTX
+        first, and gives up as soon as another exclusive job or media job is queued."""
+        if REWARM_DELAY_S <= 0:
+            return
+
+        def run() -> None:
+            time.sleep(REWARM_DELAY_S)
+            from jarvis import ollama_runtime
+
+            for name in models:
+                if self.defer_direct_load(name) or _media_queued():
+                    self._event("rewarm_skipped", model=name)
+                    return
+                if "embed" in name.lower():
+                    ok = _post_json(f"{DEFAULT_OLLAMA}/api/embed", {"model": name, "input": "warm"}, timeout=120) is not None
+                else:
+                    ok = bool(ollama_runtime.warmup_chat_model(model=name).get("ok"))
+                self._event("rewarm", model=name, ok=ok)
+
+        threading.Thread(target=run, name="gpu-rewarm", daemon=True).start()
 
     def defer_direct_load(self, model: str) -> str:
         """Reason a warm-up/probe must not load ``model`` directly right now ('' = allowed)."""
@@ -732,12 +795,14 @@ admit_image = SCHEDULER.admit_image
 heavy_feasible = SCHEDULER.heavy_feasible
 defer_direct_load = SCHEDULER.defer_direct_load
 status = SCHEDULER.status
+note_evicted = SCHEDULER.note_evicted
 
 
 def reset_for_tests() -> None:
-    global SCHEDULER, admit_ollama, admit_image, heavy_feasible, defer_direct_load, status
+    global SCHEDULER, admit_ollama, admit_image, heavy_feasible, defer_direct_load, status, note_evicted
     SCHEDULER = _Scheduler()
     admit_ollama, admit_image = SCHEDULER.admit_ollama, SCHEDULER.admit_image
     heavy_feasible, status = SCHEDULER.heavy_feasible, SCHEDULER.status
     defer_direct_load = SCHEDULER.defer_direct_load
+    note_evicted = SCHEDULER.note_evicted
     _cache.clear()

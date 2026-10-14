@@ -675,12 +675,26 @@ class ConversationEngine:
             action="chat",
         )
         usage: dict = {}
+        from jarvis.chat_lanes import lane_for
+
+        lane = lane_for(model, explicit=self._model_override_selected(params), role=chat_role)
         try:
             msgs = self.messages_for_llm(self._a.conversation.messages, context_prefix, selected_model=model)
             t0 = time.perf_counter()
-            answer, usage = llm.ask_with_usage(
-                model, msgs, role=chat_role, explicit_model=self._model_override_selected(params)
-            )
+            answer = ""
+            if lane is not None:
+                try:
+                    with lane.scope():
+                        answer, usage = llm.ask_with_usage(lane.model, lane.fit(msgs), role=chat_role, **lane.kwargs)
+                    model = lane.model
+                    answer = f"{answer.rstrip()}\n\n{lane.note}" if answer.strip() else answer
+                except Exception as exc:  # noqa: BLE001 — helper unavailable: wait for the RTX as before
+                    logger.info("RX 7600 chat lane unavailable (%s); using %s", exc, model)
+                    answer = ""
+            if not answer.strip():
+                answer, usage = llm.ask_with_usage(
+                    model, msgs, role=chat_role, explicit_model=self._model_override_selected(params)
+                )
             inference_ms = int((time.perf_counter() - t0) * 1000)
         except Exception as exc:
             self._a.conversation.pop_last_user()
@@ -855,11 +869,34 @@ class ConversationEngine:
                 tr.start_stage("provider_stream", model=chat_model)
         except Exception:
             pass
+        from jarvis.chat_lanes import lane_for
+
+        lane = lane_for(chat_model, explicit=self._model_override_selected(params), role=chat_role)
+        stream = None
+        if lane is not None:
+            # Admission happens on the first chunk: hold the RX 7600 preference only for that.
+            try:
+                helper_stream = llm.ask_stream(lane.model, lane.fit(msgs), cancel_key=request_id, usage=usage,
+                                               role=chat_role, **lane.kwargs)
+                with lane.scope():
+                    first = next(helper_stream, None)
+                if first is not None:
+                    chat_model = lane.model
+
+                    def _with_note(first=first, rest=helper_stream):
+                        yield first
+                        yield from rest
+                        yield f"\n\n{lane.note}"
+
+                    stream = _with_note()
+            except Exception as exc:  # noqa: BLE001 — helper unavailable: wait for the RTX as before
+                logger.info("RX 7600 chat lane unavailable (%s); using %s", exc, chat_model)
+                usage.clear()
         try:
             from jarvis.ollama_runtime import chat_priority_section
 
             with chat_priority_section():
-                for chunk in llm.ask_stream(
+                for chunk in stream or llm.ask_stream(
                     chat_model, msgs, cancel_key=request_id, usage=usage, role=chat_role,
                     explicit_model=self._model_override_selected(params),
                 ):

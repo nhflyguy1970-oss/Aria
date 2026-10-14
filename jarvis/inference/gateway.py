@@ -60,6 +60,7 @@ def _ollama_chat_with_usage(model: str, messages: list[dict], **kwargs) -> tuple
     with gpu_scheduler.admit_ollama(model, options) as job:
         options.update(job.options)
         call = _ollama_client_chat(job)
+        placed = _placement(job)
         # Always stream internally: closing the stream is what stops Ollama when the
         # thermal / host-RAM cutoff fires mid-generation.
         parts: list[str] = []
@@ -74,7 +75,14 @@ def _ollama_chat_with_usage(model: str, messages: list[dict], **kwargs) -> tuple
             close = getattr(stream, "close", None)
             if close:
                 close()
+        usage.update(placed)
         return "".join(parts), usage
+
+
+def _placement(job) -> dict:
+    """Where the scheduler actually ran the request. The policy overlay's hardware is the
+    plan ("nvidia"), but a helper-lane job runs on the RX 7600 (reported as nvidia, 2026-10-14)."""
+    return {"_placed_hardware": "amd", "execution_device": "RX 7600 (Vulkan helper)"} if job.host else {}
 
 
 def _ollama_client_chat(job):
@@ -115,6 +123,8 @@ def _ollama_stream(
 
     with gpu_scheduler.admit_ollama(model, options) as job:
         options.update(job.options)
+        if usage is not None:
+            usage.update(_placement(job))
         stream = _ollama_client_chat(job)(
             model=model,
             messages=_with_system(messages),
@@ -548,7 +558,7 @@ def _usage_fields(
     usage["backend"] = chosen.backend if chosen.backend in ("litellm", "native") else "ollama"
     usage["route_reason"] = chosen.reason
     usage["execution_model"] = final.model if final else chosen.model
-    usage["execution_hardware"] = hardware
+    usage["execution_hardware"] = usage.pop("_placed_hardware", None) or hardware
     usage["execution_provider"] = final.provider if final else usage["backend"]
     usage["execution_locality"] = final.locality if final else boundary.LOCAL
     usage["execution_source"] = overlay.get("source")

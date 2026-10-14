@@ -144,6 +144,14 @@ _NOT_VISUAL = re.compile(
     r"lights?\s+(?:on|off)|volume|sandwich|coffee|dinner|lunch|breakfast)s?\b",
     re.IGNORECASE,
 )
+# "another <thing>" where the thing is not a picture: names, jokes, ideas, examples …
+_OTHER_THING = re.compile(
+    r"\b(?:one\s+more|another|again|a\s+new|a\s+different)\b(?:\s+[\w'-]+){0,4}?\s+"
+    r"(?:names?|ideas?|jokes?|questions?|examples?|suggestions?|tips?|facts?|words?|reasons?|options?|ways?|"
+    r"titles?|quotes?|poems?|stor(?:y|ies)|recipes?|songs?|sentences?|paragraphs?|answers?|"
+    r"puns?|riddles?|recommendations?|places?|books?|movies?|flies|fly|patterns?)\b",
+    re.IGNORECASE,
+)
 _SCENE_REF = re.compile(r"\b(?:that|the\s+same|this|the\s+previous|the\s+last)\s+(?:scene|image|picture|photo|shot|one|idea)\b", re.I)
 
 
@@ -154,6 +162,8 @@ def followup_change(text: str) -> tuple[str, str] | None:
     t = (text or "").strip()
     if not t or len(t) > 1200 or _NOT_VISUAL.search(t):
         return None
+    if _OTHER_THING.search(t):
+        return None  # "one more fly fishing blog name?" asks for another name, not another image
     if m := _REGEN.match(t):
         if (re.search(r"\b(?:image|picture|photo)\s*$", m.group(0).strip(" ,:;.!-"), re.I)
                 and re.match(r"\s*(?:of|showing|depicting|with)\b", t[m.end():], re.I) and not _SCENE_REF.search(t)):

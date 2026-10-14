@@ -399,7 +399,7 @@ def test_regular_prompt_rewrite_runs_on_the_helper_lane(monkeypatch):
     monkeypatch.setattr("jarvis.config.is_uncensored", lambda: False)
     seen = _capture_rewrite(monkeypatch)
     image_mod.ImageEngine().prepare_prompt("a cat on a sofa", family="flux")
-    assert seen[0]["model"] == "qwen3.5:4b" and seen[0]["scope"]
+    assert seen[0]["model"] == "qwen3:4b-instruct-2507-q4_K_M" and seen[0]["scope"]
     assert seen[0]["options"]["num_ctx"] == 4096 and seen[0]["think"] is False
     assert seen[0]["explicit_model"] is True  # the role policy must not swap in the RTX chat model
 
@@ -647,13 +647,13 @@ def test_a_failing_helper_falls_back_to_the_rtx_prompt_model(monkeypatch):
 
     def flaky(model, system, user, **kw):
         calls.append(model)
-        if model == "qwen3.5:4b":
+        if model == "qwen3:4b-instruct-2507-q4_K_M":
             raise RuntimeError("helper connection reset")
         return "rewritten"
 
     monkeypatch.setattr(image_mod.llm, "ask_with_system", flaky)
     assert image_mod._rewrite_llm("s", "u", num_predict=320, temperature=0.2) == "rewritten"
-    assert calls == ["qwen3.5:4b", image_mod._prompt_model()]
+    assert calls == ["qwen3:4b-instruct-2507-q4_K_M", image_mod._prompt_model()]
 
 
 @pytest.mark.parametrize("env,renders", [(None, 2), ("0", 1), ("1", 2), ("2", 3), ("99", 3), ("-5", 1), ("abc", 2)])

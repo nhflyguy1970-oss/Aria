@@ -274,13 +274,16 @@ def resolve_conversation_model(
     if not explicit and params.get("_specialist_note", "").startswith("hard coding/planning"):
         _record_capability_trace(action, message, "specialist", brain_model)
         return brain_model, "specialist"
+    from jarvis.brain_routing import is_simple_question
+
     role = "reasoning"
     mode = (params.get("thinking_mode") or "").strip().lower()
-    if brain_model == reasoning_model() or mode == "deep" or params.get("knowledge_mode"):
+    simple = mode != "deep" and action == "chat" and is_simple_question(message)
+    if brain_model == reasoning_model() or mode == "deep" or (params.get("knowledge_mode") and not simple):
         role = "reasoning"
     elif mode == "fast" or voice:
         role = "fast_chat"
-    elif not _needs_reasoning_role(message, action=action):
+    elif simple or not _needs_reasoning_role(message, action=action):
         role = "conversation"
     # Preserve explicit session/UI model through policy (BUG-018).
     explicit = (session_chat_model or params.get("model") or "").strip()

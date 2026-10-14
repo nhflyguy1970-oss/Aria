@@ -1,3 +1,4 @@
+import contextvars
 import json
 import logging
 import os
@@ -134,7 +135,10 @@ def _iter_blocking_cancellable(
         finally:
             out.put(sentinel)
 
-    threading.Thread(target=_reader, name="aria-provider-stream", daemon=True).start()
+    # The reader runs the provider call (and its GPU admission): give it the caller's
+    # context so request-scoped settings such as gpu_scheduler.prefer_helper apply.
+    ctx = contextvars.copy_context()
+    threading.Thread(target=ctx.run, args=(_reader,), name="aria-provider-stream", daemon=True).start()
     while True:
         if cancel_key and is_cancelled(cancel_key):
             break
