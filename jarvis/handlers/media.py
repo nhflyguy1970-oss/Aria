@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -14,6 +15,26 @@ if TYPE_CHECKING:
 
 
 from jarvis.media_jobs import raise_if_cancelled
+
+
+def _mark_edit_output(result: str, source: str, prompt: str) -> None:
+    """Record an edit/inpaint like a generation, so the Gallery and chat hide it in Regular
+    mode when it was made in Uncensored mode or derived from an image that was."""
+    try:
+        from jarvis.comfyui_settings import checkpoint_label
+        from jarvis.config import is_uncensored
+        from jarvis.gallery_product.metadata import mark_generation
+        from jarvis.gallery_product.visibility import image_was_uncensored
+
+        mark_generation(
+            Path(result).name,
+            prompt=prompt,
+            checkpoint=checkpoint_label(),
+            uncensored=is_uncensored() or image_was_uncensored(Path(str(source)).name),
+            engine="comfyui-edit",
+        )
+    except Exception:
+        logging.getLogger(__name__).debug("edit provenance not recorded", exc_info=True)
 
 
 class MediaHandler:
@@ -545,6 +566,7 @@ class MediaHandler:
             from jarvis.image_safety import REFUSALS
 
             return err(result, module="image", **({"refused": True} if result in REFUSALS else {}))
+        _mark_edit_output(result, path, prompt)
         invalidate_gallery()
         self.a.session.note_image(result)
         name = Path(result).name
@@ -581,6 +603,7 @@ class MediaHandler:
             return err(result, module="image", **({"refused": True} if result in REFUSALS else {}))
         from jarvis.cache_state import invalidate_gallery
 
+        _mark_edit_output(result, path, prompt)
         invalidate_gallery()
         self.a.session.note_image(result)
         name = Path(result).name

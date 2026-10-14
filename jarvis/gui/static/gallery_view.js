@@ -699,6 +699,8 @@
       loadGallery({ append: true });
     });
     $("galleryRefreshBtn")?.addEventListener("click", () => loadGallery({ reset: true }));
+    // Regular/Uncensored switch: re-list so restricted flags, captions and thumbnails follow the mode.
+    window.addEventListener("aria:mode-changed", () => loadGallery({ reset: true }).catch?.(() => {}));
     $("galleryUploadInput")?.addEventListener("change", async (e) => {
       const input = e.target;
       const files = Array.from(input.files || []);

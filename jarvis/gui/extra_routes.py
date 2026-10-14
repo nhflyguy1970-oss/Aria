@@ -2390,6 +2390,19 @@ def register_routes(app, assistant):
 
     @app.get("/api/gallery/{name}")
     def gallery_file(name: str, max: int = 0, reveal: bool = False):
+        out = _gallery_file(name, max=max, reveal=reveal)
+        try:
+            from jarvis.gallery_product.visibility import image_was_uncensored
+
+            # Images made in uncensored mode render differently per mode; a cached copy must
+            # never outlive a switch back to regular mode (it stayed visible in chat).
+            if image_was_uncensored(Path(name).name):
+                out.headers["Cache-Control"] = "no-store"
+        except Exception:
+            pass
+        return out
+
+    def _gallery_file(name: str, max: int = 0, reveal: bool = False):
         from jarvis.gallery_product.visibility import is_restricted_for_viewer
 
         generated = (DATA_DIR / "generated").resolve()
@@ -2485,6 +2498,17 @@ def register_routes(app, assistant):
 
     @app.get("/api/video-gallery/{name}")
     def video_gallery_file(name: str):
+        out = _video_gallery_file(name)
+        try:
+            from jarvis.video_generation.metadata import get_meta as video_meta
+
+            if video_meta(Path(name).name).get("uncensored"):
+                out.headers["Cache-Control"] = "no-store"  # see gallery_file
+        except Exception:
+            pass
+        return out
+
+    def _video_gallery_file(name: str):
         from jarvis.video_ops import VIDEO_OUTPUT_DIR, VIDEO_UPLOAD_DIR, ensure_webm
 
         safe = Path(name).name

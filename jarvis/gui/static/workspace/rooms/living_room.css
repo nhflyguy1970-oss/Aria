@@ -201,6 +201,26 @@ body.living-workspace.living-room .lr-top {
   to { opacity: 1; transform: translateY(0); }
 }
 
+.lr-newchat-btn {
+  margin-left: auto;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--lr-line-strong, rgba(243, 235, 224, 0.2));
+  background: rgba(53, 42, 35, 0.45);
+  color: var(--lr-ink, #e8dccb);
+  font: 500 0.8rem/1 "DM Sans", "IBM Plex Sans", system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition: background 0.2s, border-color 0.2s;
+}
+.lr-newchat-btn:hover,
+.lr-newchat-btn:focus-visible {
+  background: rgba(53, 42, 35, 0.85);
+  border-color: rgba(212, 165, 116, 0.55);
+  outline: none;
+}
+
 .lr-overflow-btn {
   width: 36px;
   height: 36px;

@@ -38,6 +38,7 @@
         '  <div class="lr-brand house-presence__brand" id="livingRoomBrand">Aria <span class="house-presence__place">· Living room</span></div>',
         '  <div class="lr-status house-presence__status" id="livingRoomStatus">Listening quietly</div>',
         "</div>",
+        '<button type="button" class="lr-newchat-btn" id="livingRoomNewChatBtn" title="Start a new conversation — clears the screen; the old one stays in your history">+ New chat</button>',
         '<button type="button" class="lr-overflow-btn" id="livingRoomOverflowBtn" aria-label="More" aria-expanded="false" title="More">',
         '  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
         "</button>",
@@ -102,6 +103,12 @@
       if (!_active) return;
       if (panel.contains(e.target) || btn.contains(e.target)) return;
       setOverflow(false);
+    });
+
+    document.getElementById("livingRoomNewChatBtn")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (window.AriaChatOS?.newChat) window.AriaChatOS.newChat();
+      else document.getElementById("chatNewBtn")?.click();
     });
 
     panel.addEventListener("click", (e) => {

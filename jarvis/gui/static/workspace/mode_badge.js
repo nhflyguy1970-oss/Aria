@@ -17,6 +17,35 @@
     btn.setAttribute("aria-pressed", on ? "true" : "false");
   }
 
+  const MEDIA_RE = /\/api\/(gallery|video-gallery|video\/gallery)\//;
+
+  function withView(url, on) {
+    try {
+      const u = new URL(url, window.location.href);
+      u.searchParams.set("view", on ? "u" : "r");
+      return u.pathname + u.search + u.hash;
+    } catch (_) {
+      return url;
+    }
+  }
+
+  /** Re-request every gallery image/video on screen (chat, Gallery, lightbox) so images made in
+   *  uncensored mode turn into the "Restricted" placeholder the moment Regular mode is chosen. */
+  function refreshMedia(on) {
+    document.querySelectorAll("img[src], video[src], source[src]").forEach((el) => {
+      const src = el.getAttribute("src") || "";
+      if (!MEDIA_RE.test(src)) return;
+      el.setAttribute("src", withView(src, on));
+      if (el.tagName === "SOURCE") el.parentElement?.load?.();
+      else if (el.tagName === "VIDEO") el.load?.();
+    });
+    document.querySelectorAll("[data-full-src]").forEach((el) => {
+      const src = el.getAttribute("data-full-src") || "";
+      if (MEDIA_RE.test(src)) el.setAttribute("data-full-src", withView(src, on));
+    });
+    window.dispatchEvent(new CustomEvent("aria:mode-changed", { detail: { uncensored: on } }));
+  }
+
   function mount() {
     if (document.getElementById("ariaModeBadge")) return;
     const btn = document.createElement("button");
@@ -30,7 +59,15 @@
       else window.AriaActions?.system?.uncensored?.();
     });
     // Follows every way the mode changes (badge, Ctrl+K, Settings, restore on load).
-    new MutationObserver(() => render(btn)).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    let last = isOn();
+    new MutationObserver(() => {
+      render(btn);
+      const on = isOn();
+      if (on !== last) {
+        last = on;
+        refreshMedia(on);
+      }
+    }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
