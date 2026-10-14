@@ -50,6 +50,13 @@ class MediaHandler:
         if message and not raw.get("prompt"):
             raw["prompt"] = message
         norm = normalize_params(raw, message=message)
+        if raw.get("base_prompt") and raw.get("change"):
+            # Follow-up ("again but at night"): rebuild the previous description with the change.
+            from jarvis.media_jobs import report_progress
+            from jarvis.modules.image import merge_followup_prompt
+
+            report_progress(3, "Applying your change to the previous description…")
+            norm["prompt"] = merge_followup_prompt(str(raw["base_prompt"]), str(raw["change"]))
         prompt = normalize_image_prompt(norm.get("prompt") or "")
         if not prompt:
             return err("Prompt required", module="image")
@@ -115,7 +122,7 @@ class MediaHandler:
             enhanced=self.a.image.last_enhanced_prompt or "",
             negative=self.a.image.last_negative_prompt or "",
             image_path=result,
-            checkpoint=checkpoint_label(),
+            checkpoint=getattr(self.a.image, "last_model_label", "") or checkpoint_label(),
         )
 
         name = Path(result).name
@@ -139,7 +146,7 @@ class MediaHandler:
                     prompt=prompt,
                     enhanced=enhanced or "",
                     negative=negative_out or "",
-                    checkpoint=checkpoint_label(),
+                    checkpoint=getattr(self.a.image, "last_model_label", "") or checkpoint_label(),
                     uncensored=is_uncensored(),
                     project=project,
                     seed=seed_str,
@@ -172,13 +179,38 @@ class MediaHandler:
         except Exception:
             pass
 
-        self.a.session.note_image(result)
+        self.a.session.note_image(result, prompt=prompt)
+        model_label = getattr(self.a.image, "last_model_label", "") or checkpoint_label()
+        tier = getattr(self.a.image, "last_tier", None) or {}
+        try:
+            from jarvis.action_log import log_event
+
+            log_event("image_generated", image=name, model=model_label, tier=tier.get("tier"),
+                      count_check=getattr(self.a.image, "last_count_check", None) or None,
+                      reasons=tier.get("reasons"), fallback=tier.get("fallback"), prompt=prompt[:20000],
+                      sent_prompt=(enhanced or "")[:20000])
+        except Exception:
+            pass
 
         msg = f"Here's your image — **{prompt[:80]}**"
         if len(paths) > 1:
             msg = f"Generated {len(paths)} images — **{prompt[:80]}**"
+        if tier.get("tier") == "quality":
+            msg += (f"\n\n**Model:** {model_label} — chosen for "
+                    f"{', '.join(tier.get('reasons') or ['a complex scene'])}.")
+        elif tier.get("fallback"):
+            msg += (f"\n\n**Model:** {model_label}. The high-quality model failed "
+                    f"({tier['fallback'][:160]}), so the fast model made this one.")
+        try:
+            from jarvis.image_verify import summary as count_summary
+
+            counted = count_summary(getattr(self.a.image, "last_count_check", None) or {})
+        except Exception:
+            counted = ""
+        if counted:
+            msg += f"\n\n**{counted}.**"
         if enhanced:
-            msg += f"\n\n**Prompt sent to {checkpoint_label()}:**\n{enhanced}"
+            msg += f"\n\n**Prompt sent to {model_label}:**\n{enhanced}"
         if negative_out and negative_out != BASE_NEGATIVE:
             msg += f"\n\n**Avoiding:** {negative_out[:300]}"
         if seed_str:

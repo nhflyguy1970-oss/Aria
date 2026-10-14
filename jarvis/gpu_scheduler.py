@@ -21,6 +21,7 @@ Queues are bounded (fail fast when full) and every wait has a deadline.
 
 from __future__ import annotations
 
+import contextvars
 import json
 import logging
 import os
@@ -234,11 +235,47 @@ def model_size(model: str) -> int:
     return int(sizes.get(model) or sizes.get(f"{model}:latest") or 0)
 
 
+def helper_resident() -> dict[str, int]:
+    """Models the helper Ollama has loaded → VRAM MiB each."""
+    def resident():
+        data = _get_json(f"{HELPER_URL}/api/ps", timeout=1.0) or {}
+        return {str(m.get("name")): int(m.get("size_vram") or 0) // 1048576 for m in data.get("models") or []}
+    return _cached("helper_ps", 2.0, resident)
+
+
+def helper_resident_mib() -> int:
+    """VRAM held by models the helper Ollama has loaded. It runs one model at a time
+    (OLLAMA_MAX_LOADED_MODELS=1), so a new request evicts them: that memory is available."""
+    return sum(helper_resident().values())
+
+
 def helper_ready() -> bool:
     return _cached("helper", 5.0, lambda: _get_json(f"{HELPER_URL}/api/version", timeout=1.0) is not None)
 
 
 # ---------------------------------------------------------------- lanes and jobs
+
+_PREFER_HELPER: contextvars.ContextVar[str] = contextvars.ContextVar("prefer_helper", default="")
+
+
+_HELPER_REQUIRED: contextvars.ContextVar[bool] = contextvars.ContextVar("helper_required", default=False)
+
+
+@contextmanager
+def prefer_helper(reason: str, *, required: bool = False) -> Iterator[None]:
+    """Place small-model Ollama calls in this scope on the RX 7600 helper even while the
+    RTX is idle — e.g. image prompt preparation right before an RTX image job, so that job
+    does not first have to evict the prompt model. Falls back to the RTX like any request
+    when the helper is down, busy, hot or short of VRAM — unless ``required``: then the
+    request is refused at once (GpuUnavailable) instead of queueing for the RTX, e.g. a count
+    check that runs while ARIA's own image job holds the RTX (it waited 150 s, 2026-10-14)."""
+    token = _PREFER_HELPER.set(reason or "preferred")
+    req = _HELPER_REQUIRED.set(required)
+    try:
+        yield
+    finally:
+        _HELPER_REQUIRED.reset(req)
+        _PREFER_HELPER.reset(token)
 
 
 @dataclass(eq=False)  # identity: jobs live in a set
@@ -501,8 +538,11 @@ class _Scheduler:
             return False
         info = amd()
         need = int(size * 1.4 / 1048576) + AMD_RESERVE_MIB
-        if not info.get("ok") or info["temp_c"] >= CUTOFF_C or info["free_mib"] < need:
+        loaded = job.model in helper_resident() or f"{job.model}:latest" in helper_resident()
+        if not info.get("ok") or info["temp_c"] >= CUTOFF_C:
             return False
+        if not loaded and info["free_mib"] + helper_resident_mib() < need:
+            return False  # an already-loaded model needs no new VRAM (count checks, 2026-10-14)
         deadline = time.monotonic() + HELPER_WAIT_S
         with self._cv:
             while self._helper_busy:
@@ -559,12 +599,16 @@ class _Scheduler:
             job = Job("shared", label, model=model)
             with self._cv:
                 busy = bool(self._heavy or self._heavy_waiting)
-            if small and busy:
+            preferred = _PREFER_HELPER.get()
+            if small and (busy or preferred):
                 helper = Job("helper", label, model=model, host=HELPER_URL,
                              options={"num_ctx": min(int(options.get("num_ctx") or HELPER_MAX_CTX), HELPER_MAX_CTX)})
                 if self._acquire_helper(helper, size):
                     job = helper
-                    self._event("helper_placement", job=label, reason="RTX 3060 exclusive job active")
+                    self._event("helper_placement", job=label,
+                                reason="RTX 3060 exclusive job active" if busy else preferred)
+            if job.kind == "shared" and _HELPER_REQUIRED.get():
+                raise GpuUnavailable("the RX 7600 helper lane is unavailable (down, busy, hot or full)")
             if job.kind == "shared":
                 self._wait_cool("cuda")
                 self._acquire_shared(job)

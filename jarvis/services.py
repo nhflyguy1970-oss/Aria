@@ -98,6 +98,12 @@ def _comfy_env() -> dict:
     from jarvis.security.owner.env_boundary import copy_process_env
 
     env = copy_process_env()
+    # Tensors of 1-32 MB (most Qwen-Image layers) came from glibc's heap, which ComfyUI's
+    # /free could not hand back: 6.0 GB RSS + swap stayed after one Qwen job. Allocating
+    # them with mmap returns them on free (1.8 GB; idle is 1.1 GB) — measured 2026-10-14.
+    threshold = os.getenv("JARVIS_COMFYUI_MMAP_THRESHOLD", "1048576").strip()
+    if threshold and threshold != "0":
+        env.setdefault("MALLOC_MMAP_THRESHOLD_", threshold)
     try:
         from jarvis.gpu_routing import gpu_env_for_subprocess, gpu_preference, nvidia_available
 
@@ -130,6 +136,10 @@ def _comfy_extra_args() -> list[str]:
     if effective_cpu_mode():
         return ["--cpu"]
     args = ["--fp32-text-enc"]
+    # ARIA's own nodes (GPU text-encoder loader for Qwen-Image); the ComfyUI install is untouched.
+    nodes_cfg = PROJECT_ROOT / "comfy_nodes" / "extra_paths.yaml"
+    if nodes_cfg.is_file():
+        args.extend(["--extra-model-paths-config", str(nodes_cfg)])
     try:
         from jarvis.gpu_routing import gpu_preference, nvidia_available
 
@@ -413,6 +423,53 @@ def _start_idle_watch(pid: int, proc: subprocess.Popen | None = None) -> None:
     _log(f"ComfyUI: pid {pid} will stop after {COMFY_IDLE_STOP_S // 60} min idle")
     threading.Thread(target=_watch_comfy_idle, args=(pid, time.time(), proc),
                      name="comfyui-idle-stop", daemon=True).start()
+
+
+RETAIN_MAX_MIB = int(os.getenv("JARVIS_COMFYUI_RETAIN_MAX_MIB", "6144"))
+
+
+def _retained_mib(pid: int) -> int:
+    """RSS + swap of a process, MiB (0 when unreadable)."""
+    try:
+        fields = dict(line.split(":", 1) for line in Path(f"/proc/{pid}/status").read_text().splitlines() if ":" in line)
+        return sum(int(fields.get(k, "0 kB").split()[0]) for k in ("VmRSS", "VmSwap")) // 1024
+    except (OSError, ValueError):
+        return 0
+
+
+def release_comfyui(reason: str, *, settle_s: float = 15.0) -> bool:
+    """After a large job: stop the ARIA-launched ComfyUI if it still holds more than
+    RETAIN_MAX_MIB of host memory once its /free has landed, and nothing else needs it.
+
+    Qwen-Image left 6.0 GB (one job) to 25.6 GB (many jobs without /free) behind before the
+    MALLOC_MMAP_THRESHOLD_ fix in _comfy_env; with it /free returns ComfyUI to ~1.8 GB, so this
+    normally keeps ComfyUI running. Skipped while ComfyUI has a prompt, an RTX job is admitted
+    or another media job is queued; a stopped ComfyUI restarts on the next image (~10 s)."""
+    try:
+        from jarvis.media_jobs import busy_state
+
+        if busy_state().get("pending"):
+            return False
+    except Exception:  # noqa: BLE001
+        pass
+    proc = _comfy_proc if _comfy_proc is not None and _comfy_proc.poll() is None else None
+    pid = proc.pid if proc else _aria_comfy_pid()
+    if not pid:
+        return False
+    deadline = time.monotonic() + settle_s
+    while (held := _retained_mib(pid)) > RETAIN_MAX_MIB and time.monotonic() < deadline:
+        time.sleep(1)
+    if held <= RETAIN_MAX_MIB:
+        return False
+    with _lock:
+        if _comfy_last_activity(time.time()) is None:
+            return False
+        _log(f"ComfyUI: holds {held} MiB after {reason} — stopping to return it (restarts on the next image job)")
+        if proc is not None:
+            _stop_comfyui()
+        else:
+            _terminate_pid(pid)
+        return True
 
 
 def adopt_running_comfyui() -> int | None:

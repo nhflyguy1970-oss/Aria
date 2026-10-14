@@ -7,7 +7,13 @@ User-visible behavior must remain unchanged.
 from __future__ import annotations
 
 import re
+import time
 from typing import Any, Callable
+
+# The action log keeps whole requests and prompts (the old 120-160 character cut made the
+# 2026-10-13 witches incident impossible to reconstruct); these only bound runaway pastes.
+LOG_MESSAGE_CHARS = 8000
+LOG_PROMPT_CHARS = 20000
 
 
 def normalize_action_params(intent: dict[str, Any]) -> tuple[str, dict[str, Any]]:
@@ -237,13 +243,17 @@ def decorate_result(
         mode = params.get("mode") or action.replace("coding_", "")
         assistant.session.note_coding_mode(mode)
     prompt = (intent.get("params") or {}).get("prompt") if isinstance(intent.get("params"), dict) else None
+    if action == "generate_image" and prompt and result.get("ok", True):
+        # Follow-ups ("again but at night") rebuild from this full description.
+        assistant.session.last_image_prompt = str(prompt)
+        assistant.session.last_image_at = time.time()
     log_action(
         action,
         result.get("module", ""),
-        message[:500],
+        message[:LOG_MESSAGE_CHARS],
         result.get("ok", True),
         route_reason=intent.get("route_reason"),
-        prompt=str(prompt)[:2000] if prompt else None,
+        prompt=str(prompt)[:LOG_PROMPT_CHARS] if prompt else None,
     )
     # Info actions answer from records; "Tool X worked" adds nothing to learn, and its
     # near-duplicate check is a full ACM search (6-8 s per status/recall reply, 2026-10-12).

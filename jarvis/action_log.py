@@ -24,7 +24,7 @@ def _save(entries: list) -> None:
 
 
 def log_action(action: str, module: str = "", detail: str = "", ok: bool = True, **extra) -> None:
-    log_event("action", action=action, module=module, detail=detail[:500], ok=ok, **extra)
+    log_event("action", action=action, module=module, detail=detail[:8000], ok=ok, **extra)
 
 
 def log_event(event: str, **fields) -> None:

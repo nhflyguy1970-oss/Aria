@@ -109,6 +109,10 @@ os.environ["JARVIS_NLU_SKIP_BENCHMARK"] = "1"
 # The ComfyUI idle-stop watcher (started from the app lifespan) must never adopt or stop
 # the owner's real ComfyUI from inside a test process; its tests enable it explicitly.
 os.environ["JARVIS_COMFYUI_IDLE_STOP_MIN"] = "0"
+# Qwen-Image's model files exist on the owner's machine, so automatic quality routing could
+# send a test image job to the real ComfyUI (and stop it afterwards to free RAM). Tests use
+# the fast tier unless they opt in (tests/test_image_quality_and_context.py).
+os.environ["JARVIS_IMAGE_QUALITY_ROUTING"] = "fast"
 # Modules that did `from jarvis.env_loader import load_jarvis_env` keep the real function
 # even while _no_api_key_in_tests stubs the module attribute, so a stray call (e.g.
 # services.get_status) loaded the owner's live data/jarvis.env and leaked its cloud settings

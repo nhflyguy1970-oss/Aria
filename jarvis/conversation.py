@@ -1,4 +1,10 @@
-from jarvis.config import MAX_CONTEXT_CHARS, MAX_MESSAGES
+from jarvis.config import CONTEXT_TOKEN_BUDGET, MAX_CONTEXT_CHARS, MAX_MESSAGES
+
+
+def estimate_tokens(text: str) -> int:
+    """Conservative token estimate for Llama/Qwen/Gemma tokenizers (~3.5 chars per token
+    for English, plus per-message framing). No tokenizer download or model call."""
+    return len(text or "") * 2 // 7 + 4
 
 
 class Conversation:
@@ -85,10 +91,12 @@ class Conversation:
                 break
 
         total = sum(len(m["content"]) for m in self.messages)
-        while total > MAX_CONTEXT_CHARS and len(self.messages) > 2:
-            for i, msg in enumerate(self.messages):
+        tokens = sum(estimate_tokens(m["content"]) for m in self.messages)
+        while (total > MAX_CONTEXT_CHARS or tokens > CONTEXT_TOKEN_BUDGET) and len(self.messages) > 2:
+            for i, msg in enumerate(self.messages[:-1]):  # the newest turn always stays whole
                 if msg["role"] in ("user", "assistant"):
                     total -= len(msg["content"])
+                    tokens -= estimate_tokens(msg["content"])
                     del self.messages[i]
                     break
             else:

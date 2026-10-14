@@ -1,0 +1,4 @@
+# Passed to ARIA's ComfyUI with --extra-model-paths-config (jarvis/services.py).
+# Adds ARIA's own nodes without touching the ComfyUI install.
+aria:
+  custom_nodes: .

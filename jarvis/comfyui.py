@@ -445,15 +445,18 @@ def run_workflow(
     timeout_sec: int = 300,
     cancel_check=None,
     vram_mib: int | None = None,
+    ram_mib: int | None = None,
 ) -> str:
-    """Queue a ComfyUI workflow in the exclusive RTX 3060 slot; output path or ERROR: string."""
+    """Queue a ComfyUI workflow in the exclusive RTX 3060 slot; output path or ERROR: string.
+
+    ``ram_mib`` overrides the file-size estimate for models that stream weights from host RAM."""
     from jarvis import gpu_scheduler
 
     base_cancel = cancel_check or _cancel_check_default
     _report(6, "Waiting for the GPU…", None)
     try:
         with gpu_scheduler.admit_image(label=filename_prefix, vram_mib=vram_mib,
-                                       ram_mib=workflow_ram_mib(workflow)) as job:
+                                       ram_mib=ram_mib or workflow_ram_mib(workflow)) as job:
             result = _run_workflow(workflow, filename_prefix, timeout_sec=timeout_sec,
                                    cancel_check=lambda: job.cut_off or base_cancel())
             if job.cut_off:
@@ -461,6 +464,30 @@ def run_workflow(
             return result
     except gpu_scheduler.GpuUnavailable as exc:
         return f"ERROR: Image job not started: {exc.reason}"
+
+
+@contextmanager
+def image_session(label: str, *, vram_mib: int | None = None, ram_mib: int | None = None,
+                  timeout_sec: int = 300, cancel_check=None):
+    """One exclusive RTX admission for several workflows in a row (e.g. a render and its retry):
+    the models stay loaded between them, where separate ``run_workflow`` calls free ComfyUI
+    after each. Yields ``run(workflow) -> path | "ERROR: ..."``; raises GpuUnavailable when
+    the slot cannot be admitted."""
+    from jarvis import gpu_scheduler
+
+    base_cancel = cancel_check or _cancel_check_default
+    _report(6, "Waiting for the GPU…", None)
+    with gpu_scheduler.admit_image(label=label, vram_mib=vram_mib, ram_mib=ram_mib) as job:
+        def run(workflow: dict, filename_prefix: str = label) -> str:
+            if job.cut_off:
+                return f"ERROR: Image job stopped to protect the system: {job.cutoff_reason}"
+            result = _run_workflow(workflow, filename_prefix, timeout_sec=timeout_sec,
+                                   cancel_check=lambda: job.cut_off or base_cancel())
+            if job.cut_off:
+                return f"ERROR: Image job stopped to protect the system: {job.cutoff_reason}"
+            return result
+
+        yield run
 
 
 def _run_workflow(

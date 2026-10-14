@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -8,6 +9,9 @@ class SessionContext:
 
     last_file: str = ""
     last_image: str = ""
+    # The full description behind last_image, so "again but at night" can rebuild it.
+    last_image_prompt: str = ""
+    last_image_at: float = 0.0
     last_audio: str = ""
     last_data_path: str = ""
     last_document_path: str = ""
@@ -42,8 +46,11 @@ class SessionContext:
             self.recent_files.insert(0, path)
             self.recent_files = self.recent_files[:10]
 
-    def note_image(self, path: str) -> None:
+    def note_image(self, path: str, prompt: str | None = None) -> None:
         self.last_image = path
+        if prompt is not None:
+            self.last_image_prompt = prompt
+            self.last_image_at = time.time()
 
     def note_audio(self, path: str) -> None:
         self.last_audio = path
@@ -197,6 +204,8 @@ class SessionContext:
     def clear(self) -> None:
         self.last_file = ""
         self.last_image = ""
+        self.last_image_prompt = ""
+        self.last_image_at = 0.0
         self.last_audio = ""
         self.last_data_path = ""
         self.last_document_path = ""
@@ -224,6 +233,8 @@ class SessionContext:
         return {
             "last_file": self.last_file,
             "last_image": self.last_image,
+            "last_image_prompt": self.last_image_prompt,
+            "last_image_at": self.last_image_at,
             "last_audio": self.last_audio,
             "last_data_path": self.last_data_path,
             "last_document_path": self.last_document_path,
@@ -255,6 +266,8 @@ class SessionContext:
         return cls(
             last_file=data.get("last_file", ""),
             last_image=data.get("last_image", ""),
+            last_image_prompt=data.get("last_image_prompt", ""),
+            last_image_at=float(data.get("last_image_at") or 0.0),
             last_audio=data.get("last_audio", ""),
             last_data_path=data.get("last_data_path", ""),
             last_document_path=data.get("last_document_path", ""),

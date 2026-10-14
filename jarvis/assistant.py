@@ -2245,6 +2245,13 @@ class JarvisAssistant:
         job_id = submit_assistant_action(self, action, params, message)
         label = ACTION_LABELS.get(action, action)
         hint = ETA_HINTS.get(action, "")
+        if action == "generate_image":
+            try:
+                from jarvis.image_quality import queued_hint
+
+                hint = queued_hint(params) or hint
+            except Exception:
+                pass
         msg = f"**{label}** queued in the background."
         if check.get("queue_position", 1) > 1:
             msg += f" Queue position: **{check['queue_position']}**."

@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import time
 from pathlib import Path
 
 from jarvis import llm
@@ -92,6 +93,43 @@ def _image_generation_route(message: str, lower: str | None = None) -> dict | No
         return clarification("What should the image show?", "rule:image_needs_subject", "image_generate",
                              ctype="image_generate_subject")
     return {"action": "generate_image", "params": {"prompt": prompt}}
+
+
+IMAGE_FOLLOWUP_WINDOW_S = 20 * 60
+
+
+def _image_in_play(session: SessionContext) -> bool:
+    """An image was just made: the previous turn was an image action, or a chat turn shortly after one."""
+    if not session.last_image_prompt:
+        return False
+    if session.last_action in ("generate_image", "edit_image", "inpaint_image"):
+        return True
+    recent = time.time() - (session.last_image_at or 0) < IMAGE_FOLLOWUP_WINDOW_S
+    return recent and session.last_action in ("chat", "")
+
+
+def _image_followup_route(message: str, session: SessionContext) -> dict | None:
+    """"Again but at night" / "one more with seven witches" → regenerate the last description
+    with the change; "now add a dragon" → edit the last image."""
+    from jarvis.image_request import followup_change, merge_followup_fallback
+
+    if not _image_in_play(session):
+        return None
+    found = followup_change(message)
+    if not found:
+        return None
+    kind, change = found
+    if kind == "edit":
+        if _recent_image_edit_resolve(message, session):
+            return None  # the existing recent-image edit rules own this phrasing
+        if session.last_image and Path(session.last_image).is_file():
+            return {"action": "edit_image", "params": {"path": session.last_image, "prompt": message.strip()},
+                    "thinking": "image follow-up edit", "route_reason": "image_followup_edit"}
+        change = message.strip()
+    base = session.last_image_prompt
+    return {"action": "generate_image",
+            "params": {"prompt": merge_followup_fallback(base, change), "base_prompt": base, "change": change},
+            "thinking": "image follow-up", "route_reason": "image_followup_regenerate"}
 
 
 def _image_subject_given(prompt: str) -> bool:
@@ -1117,7 +1155,8 @@ def _finalize_intent(intent: dict, message: str, session: SessionContext) -> dic
         fixed = (intent.get("params") or {}).get("policy_fixed_reply")
         override = None if fixed else route_override_for_policy(message, str(action or "chat"))
         if override:
-            intent = {**intent, **override}
+            # "Without using any tools …" still wins over the research policy (2026-10-14).
+            intent = _respect_negated_web({**intent, **override}, message)
             action = intent.get("action")
     except Exception:
         pass
@@ -3545,6 +3584,10 @@ def _route(message: str, session: SessionContext, attachment: dict | None = None
             return _finalize_intent(explain, message, session)
     except Exception:
         pass
+
+    if not attachment and (fu := _image_followup_route(message, session)):
+        return _finalize_intent(normalize_route_intent({**fu, "route_handler": "Gallery", "route_confidence": 0.9}),
+                                message, session)
 
     # An explicit "create/generate … image" request beats context-driven guesses that
     # come later: "display it" → last file (served pyproject.toml), briefing-headline word

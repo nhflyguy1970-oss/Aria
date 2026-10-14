@@ -101,6 +101,14 @@ _ENV_OVERRIDE = {
 
 MAX_CONTEXT_CHARS = int(os.getenv("JARVIS_MAX_CONTEXT_CHARS", "80000"))
 MAX_MESSAGES = int(os.getenv("JARVIS_MAX_MESSAGES", "40"))
+# History must fit the model's window (JARVIS_OLLAMA_NUM_CTX, 8192 qualified in Phase 8) after
+# room for the reply and per-turn memory context. Past it, Ollama silently drops the oldest
+# turns, so ARIA trims by tokens itself and always keeps the newest message whole.
+CONTEXT_RESERVE_TOKENS = int(os.getenv("JARVIS_CONTEXT_RESERVE_TOKENS", "2560"))
+CONTEXT_TOKEN_BUDGET = int(os.getenv(
+    "JARVIS_CONTEXT_TOKENS",
+    str(max(2048, int(os.getenv("JARVIS_OLLAMA_NUM_CTX", "8192") or 8192) - CONTEXT_RESERVE_TOKENS)),
+))
 
 
 def _base_system_prompt(uncensored: bool) -> str:
