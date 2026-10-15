@@ -74,7 +74,6 @@ def _owner(facet: str) -> str:
         "gallery": "Gallery",
         "chat": "Chat / Branches",
         "home_assistant": "Smart Home",
-        "flytying": "Fly Tying",
         "automation": "Automation",
         "learned": "Knowledge registry",
         "settings": "Settings",

@@ -33,7 +33,6 @@ def test_lightweight_chat_skips_heavy_sources(message: str) -> None:
     assert not needs.documents
     assert not needs.web_search
     assert not needs.project_extras
-    assert not needs.flytying
     assert not needs.relationships
 
 

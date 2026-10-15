@@ -132,6 +132,23 @@ _env_loader.ENV_FILE = _TEST_DATA_ROOT / "jarvis.env"
 # here too, for the same reason and at the same point: before first import.
 os.environ["DATA_ROOT"] = str(_TEST_DATA_ROOT / "platform_data")
 os.environ["APPLICATIONS_ROOT"] = str(_TEST_DATA_ROOT / "platform_applications")
+# Its other storage paths derive from AI_ROOT, not DATA_ROOT, so the line above
+# never covered them: platform memory resolved to the live
+# /media/jeff/AI/Data/memory/memories.json during tests. Confine every one.
+_PLATFORM_STORAGE_ENV = {
+    "MEMORY_STORAGE_PATH": "platform_data/memory/memories.json",
+    "HISTORY_STORAGE_PATH": "platform_data/history/executions.db",
+    "KNOWLEDGE_ROOT": "platform_data/knowledge",
+    "EMBEDDING_INDEX_LOCATION": "platform_data/index",
+    "DATASETS_ROOT": "platform_data/datasets",
+    "ARTIFACTS_ROOT": "platform_data/artifacts",
+    "BACKUPS_ROOT": "platform_backups",
+    "EXPORTS_ROOT": "platform_exports",
+    "APPLICATIONS_MIGRATION_STATE_PATH": "platform_data/migrations",
+    "APPLICATIONS_ATTACHMENT_STATE_PATH": "platform_data/attachments",
+}
+for _env_name, _rel in _PLATFORM_STORAGE_ENV.items():
+    os.environ[_env_name] = str(_TEST_DATA_ROOT / _rel)
 
 _ensure_test_data_tree()
 
@@ -256,14 +273,43 @@ def _assert_storage_bindings_confined() -> None:
         )
 
 
+# Production locations no test may modify. The live data root is the one that
+# leaked (document parse cache, notification and activity logs); the others are
+# the owner's platform data, applications, agent workspaces, backups and exports,
+# and the standalone fly apps ARIA's coding agents know about. Paths that do not
+# exist cost nothing.
+_PROTECTED_ROOTS = (
+    _PROJECT_ROOT / "data",
+    Path("/media/jeff/AI/Data"),
+    Path("/media/jeff/AI/aria-agent-workspaces"),
+    Path("/media/jeff/AI/aria-backups"),
+    Path("/media/jeff/AI/applications"),
+    Path("/media/jeff/AI/backups"),
+    Path("/media/jeff/AI/exports"),
+    Path("/media/jeff/C/fly_tying_reference"),
+    Path("/media/jeff/C/fly_fishing_project"),
+)
+
+
 @pytest.fixture(autouse=True)
 def _live_data_guard():
-    from jarvis.live_data_guard import disable_test_guard, enable_test_guard
+    from jarvis.live_data_guard import (
+        disable_test_guard,
+        enable_test_guard,
+        install_write_barrier,
+        take_write_violations,
+    )
 
     _assert_storage_bindings_confined()
+    install_write_barrier(list(_PROTECTED_ROOTS))
+    take_write_violations()
     enable_test_guard()
     yield
     disable_test_guard()
+    # Fail even when the code under test swallowed the PermissionError.
+    refused = take_write_violations()
+    if refused:
+        pytest.fail("Test tried to modify production data:\n  " + "\n  ".join(refused), pytrace=False)
 
 
 @pytest.fixture(autouse=True)

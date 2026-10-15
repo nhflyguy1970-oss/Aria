@@ -137,24 +137,6 @@ body.living-workspace.house-room .mc-toolbar:focus-within {
   opacity: 0.9;
 }
 
-/* ========== FLY TYING — riverside cabin (native Room owns paint; legacy panel skins retired) ========== */
-body.living-workspace.house-flytying {
-  --house-ink: #f0e6d8;
-  --house-ink-soft: #c9b8a0;
-  --house-ink-mute: #8a7660;
-  --house-accent: #c4a06a;
-  --house-sage: #5f7a5a;
-  --house-display: "Libre Baskerville", Georgia, serif;
-  --house-body: "Source Serif 4", Georgia, serif;
-  --bg: #120e0a;
-  --bg-panel: #2a2118;
-  --bg-elevated: #35291f;
-  --text: var(--house-ink);
-  --text-muted: var(--house-ink-mute);
-  --accent: var(--house-accent);
-  --border: rgba(196, 160, 106, 0.18);
-}
-
 /* ========== HEALTH — wellness clinic (native Room owns paint) ========== */
 body.living-workspace.house-health {
   --house-ink: #eef4f2;

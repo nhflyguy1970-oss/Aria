@@ -613,9 +613,9 @@ def route_override_for_policy(message: str, action: str) -> dict[str, Any] | Non
     except Exception:
         pass
 
-    # Personal memory questions should hit Memory Authority, not fly/runtime/chat invention.
+    # Personal memory questions should hit Memory Authority, not runtime/chat invention.
     if policy.memory_required and (
-        act in ("chat", "fly_search", "fly_ask", "reference_search")
+        act in ("chat", "reference_search")
         or str(act).startswith("runtime_")
     ):
         return {

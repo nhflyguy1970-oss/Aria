@@ -448,3 +448,26 @@ M1 promotion is complete. Aria's vendored copy at `aria_acm/` matches certified 
 - Gates: `tests/test_aria_acm_m1_episodic.py` (M1EP-01..04)  
 - Live Aria NLU routing for episodic cues may be a follow-on integration check; cognitive authority is ACM
 
+
+## A024 — Retire ARIA's built-in fly-tying reference (2026-10-15)
+
+**Status:** Accepted (owner request)
+**Related:** standalone Fly Tying Reference (`/media/jeff/C/fly_tying_reference`) · BlackFly (`/media/jeff/C/fly_fishing_project`)
+
+### Decision
+
+ARIA no longer carries its own fly-tying reference. The standalone Fly Tying Reference app owns recipes, materials, videos, hatches and the fly-tying assistant; ARIA does not integrate with it. Removed: `jarvis/flytying`, `jarvis/flytying_product`, `jarvis/extensions/flytying` (all `/api/flytying/*` routes and the `fly_*` chat actions), the Fly Tying room and view, the nightly fly-tying job, fly-tying chat-context injection, the search corpus, the layout preset, and the Mission Control panel.
+
+### Kept on purpose
+
+- Coding agents still recognise and work on Fly Tying Reference and BlackFly as projects (`jarvis/coding_agents/projects.py`, `scripts/register_projects.py`).
+- GPU scheduling still yields to FTR's Ollama instances (`jarvis/gpu_scheduler.py`, `scripts/benchmark_local_models.py`).
+- ACM keeps what Jeff has said about fly tying and BlackFly; the "fly preference recall" memory route stays.
+- The daily research topic `personal_flytying` (`jarvis/knowledge_research_daily.py`) is news research, not a reference, and stays.
+
+### Consequences
+
+- Fly-tying questions are answered by ordinary chat.
+- Ctrl+Alt+7 (the old Fly Tying layout) does nothing; Home stays on Ctrl+Alt+8.
+- The generated recipe mirror in `data/documents/flytying/` and its 1,024 index chunks were removed; ARIA-side data was backed up first to `/media/jeff/AI/aria-backups/2026-10-15-flytying-removal/`.
+- Gate: `tests/test_flytying_removed.py`.

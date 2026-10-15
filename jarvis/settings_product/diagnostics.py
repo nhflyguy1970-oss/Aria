@@ -34,7 +34,6 @@ def product_store_matrix() -> list[dict[str, Any]]:
         ("video", DATA_DIR / "video_settings.json"),
         ("comfyui", DATA_DIR / "comfyui_settings.json"),
         ("app", DATA_DIR / "app_settings.json"),
-        ("flytying", DATA_DIR / "flytying_product" / "settings.json"),
         ("home_assistant", DATA_DIR / "home_assistant_product" / "settings.json"),
     ]
     out = []

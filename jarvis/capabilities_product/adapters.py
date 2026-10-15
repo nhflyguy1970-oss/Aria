@@ -18,7 +18,6 @@ def _host_category(name: str, module_label: str = "") -> str:
         "planner": "Planner",
         "journal": "Memory",
         "memory": "Memory",
-        "flytying": "Fly Tying",
         "projects": "Utilities",
         "security": "Security",
     }

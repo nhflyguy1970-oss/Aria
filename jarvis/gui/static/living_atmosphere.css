@@ -137,33 +137,6 @@ body[data-atmosphere="off"] #mainContent::after {
   }
 }
 
-@keyframes waterShimmer {
-  0%,
-  100% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-}
-
-@keyframes featherDrift {
-  0% {
-    transform: translate3d(0, 0, 0) rotate(0deg);
-    opacity: 0;
-  }
-  8% {
-    opacity: 0.18;
-  }
-  92% {
-    opacity: 0.12;
-  }
-  100% {
-    transform: translate3d(-40vw, 28vh, 0) rotate(-18deg);
-    opacity: 0;
-  }
-}
-
 @keyframes galleryFadeIn {
   from {
     opacity: 0.55;
@@ -215,48 +188,6 @@ body[data-room="health"] #healthView [data-health-today],
 body[data-room="health"] #healthView .health-card:first-of-type {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--room-accent) 22%, transparent);
   transition: box-shadow 0.5s ease, background 0.5s ease;
-}
-
-/* Fly tying — water + rare feather */
-body[data-room="flytying"]:not([data-atmosphere="off"]) #flytyingView {
-  background-size: 200% 200%, auto;
-  animation: waterShimmer 90s ease-in-out infinite;
-  background-image:
-    linear-gradient(
-      120deg,
-      transparent 40%,
-      rgba(90, 130, 120, 0.04) 50%,
-      transparent 60%
-    ),
-    linear-gradient(180deg, transparent 55%, rgba(40, 28, 16, 0.12)),
-    radial-gradient(ellipse 50% 28% at 82% 12%, rgba(90, 130, 100, 0.09), transparent);
-}
-
-body[data-room="flytying"]:not([data-atmosphere="off"]) #flytyingView::after {
-  content: "";
-  position: fixed;
-  width: 10px;
-  height: 28px;
-  right: 12%;
-  top: 18%;
-  border-radius: 50% 50% 40% 40%;
-  background: color-mix(in srgb, var(--room-accent) 35%, transparent);
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0;
-  animation: featherDrift 120s linear infinite;
-  animation-delay: 18s;
-}
-
-body[data-room="flytying"] #flytyingView .recipe-card,
-body[data-room="flytying"] #flytyingView article {
-  background-image: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 11px,
-    rgba(120, 80, 40, 0.015) 11px,
-    rgba(120, 80, 40, 0.015) 12px
-  );
 }
 
 /* Documents — paper grain */
@@ -406,8 +337,6 @@ dialog[open],
 
 @media (prefers-reduced-motion: reduce) {
   body[data-room="mission"]:not([data-atmosphere="off"]) #mainContent::before,
-  body[data-room="flytying"]:not([data-atmosphere="off"]) #flytyingView,
-  body[data-room="flytying"] #flytyingView::after,
   body[data-room="gallery"] #galleryView .gallery-thumb,
   body[data-room="gallery"] #galleryView .media-thumb,
   body[data-room="gallery"] #galleryView img.thumb,
@@ -436,11 +365,6 @@ dialog[open],
   .nav-item:active {
     transform: none;
   }
-}
-
-body[data-atmosphere="off"] #flytyingView::after,
-body[data-atmosphere="off"][data-room="flytying"] #flytyingView {
-  animation: none !important;
 }
 
 body[data-atmosphere="off"] .mc-card:hover,

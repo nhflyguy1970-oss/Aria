@@ -198,12 +198,6 @@ def _attach_product_panels(snap: dict[str, Any]) -> None:
     except Exception:
         panels["vision"] = {"product": "Vision", "state": "unknown"}
     try:
-        from jarvis.flytying_product.mission_bridge import flytying_mission_panel
-
-        panels["flytying"] = flytying_mission_panel()
-    except Exception:
-        panels["flytying"] = {"product": "Fly Tying", "state": "unknown"}
-    try:
         from jarvis.health_product.mission_bridge import health_mission_panel
 
         panels["health"] = health_mission_panel()

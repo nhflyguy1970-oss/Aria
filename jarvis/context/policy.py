@@ -94,7 +94,6 @@ class ContextNeeds:
     documents: bool
     web_search: bool
     project_extras: bool
-    flytying: bool
     health: bool
     relationships: bool
     local_clock: bool
@@ -174,7 +173,6 @@ def context_needs(message: str) -> ContextNeeds:
             documents=False,
             web_search=False,
             project_extras=False,
-            flytying=False,
             health=False,
             relationships=False,
             local_clock=clock,
@@ -191,7 +189,6 @@ def context_needs(message: str) -> ContextNeeds:
             documents=False,
             web_search=False,
             project_extras=False,
-            flytying=False,
             health=False,
             relationships=False,
             local_clock=False,
@@ -207,7 +204,6 @@ def context_needs(message: str) -> ContextNeeds:
             documents=False,
             web_search=False,
             project_extras=False,
-            flytying=False,
             health=False,
             relationships=False,
             local_clock=False,
@@ -223,18 +219,10 @@ def context_needs(message: str) -> ContextNeeds:
             documents=True,
             web_search=False,
             project_extras=False,
-            flytying=False,
             health=False,
             relationships=False,
             local_clock=False,
         )
-
-    try:
-        from jarvis.flytying.knowledge import is_flytying_chat
-
-        fly = is_flytying_chat(text)
-    except Exception:
-        fly = False
 
     try:
         from jarvis.health_product.context import is_health_chat
@@ -267,7 +255,6 @@ def context_needs(message: str) -> ContextNeeds:
         documents=docs,
         web_search=web,
         project_extras=needs_project_extras(text),
-        flytying=fly,
         health=health,
         relationships=needs_relationships(text),
         local_clock=False,

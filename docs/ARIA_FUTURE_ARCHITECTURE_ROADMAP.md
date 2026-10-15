@@ -127,7 +127,7 @@ Inspected from repository + live process identity (systemd `jarvis.service` → 
 | Planner / Calendar | **COMPLETE** | sqlite planner |
 | Projects | **COMPLETE** | `project_registry.py`; namespaces per slug |
 | Documents + RAG | **COMPLETE** (path wrinkle) | Real parse/RAG/Q&A; learn → Memory **candidates** only. `document_pipeline.DOCUMENTS_DIR` is not always `DATA_DIR`-aware |
-| Fly Tying | **COMPLETE** as domain product | Dual API (legacy + product); Blackfly library; nightly hatch **is** on proactive_scheduler (tray path) |
+| Fly Tying | **REMOVED** 2026-10-15 | Built-in reference retired; the standalone Fly Tying Reference app (`/media/jeff/C/fly_tying_reference`) owns it. See DECISION_LOG A024 |
 | Gallery | **COMPLETE** | Real generate enqueue + library + soft-delete |
 | Video | **PARTIAL** | Real media queue; no-op if Comfy/AnimateDiff down |
 | Audio / voice | **COMPLETE** | Local STT/TTS/wake; first-run may download Piper/Whisper |
@@ -792,7 +792,7 @@ Rooms still work as rooms. One Master Password. ACM still the brain. Integrity s
 | Reasoning | `jarvis/intelligence/reasoning.py` | Planner seed |
 | Workflow DAG | `jarvis/intelligence/workflow_engine.py` | Multi-step procedures |
 | Automation engine | `jarvis/automation/engine.py` (not the deprecated intelligence re-export) | MONITOR/cron on **systemd serve** |
-| Proactive scheduler | `jarvis/proactive_scheduler.py` | Briefing/integrity/health/flytying — **only if attached to serve** |
+| Proactive scheduler | `jarvis/proactive_scheduler.py` | Briefing/integrity/health — **only if attached to serve** |
 | Checkpointed specialist jobs | `jarvis/jobs/checkpointed.py` | Must become actually resumable |
 | ACM provenance | `aria_acm/acm/provenance/` | Truth layer (extend, don’t replace) |
 | ACM teaching | `aria_acm/acm/authority/teaching.py` | User-stated knowledge |
@@ -822,7 +822,7 @@ Rooms still work as rooms. One Master Password. ACM still the brain. Integrity s
 
 ### Do not rewrite
 
-Living Workspace rooms, Owner Vault, ACM authority **and ACM provenance module**, Health PHR, Journal product, Fly Tying product, Production Integrity (never auto-delete), Guided Repair approval law, pytest tmp isolation (extend it), systemd launch path, chat ASK path, `orchestration_policy`, coding propose→apply, Connections review-then-approve ingest, Documents-learn-as-candidates.
+Living Workspace rooms, Owner Vault, ACM authority **and ACM provenance module**, Health PHR, Journal product, Production Integrity (never auto-delete), Guided Repair approval law, pytest tmp isolation (extend it), systemd launch path, chat ASK path, `orchestration_policy`, coding propose→apply, Connections review-then-approve ingest, Documents-learn-as-candidates.
 
 ### Impossible / incomplete to assess without further residency
 

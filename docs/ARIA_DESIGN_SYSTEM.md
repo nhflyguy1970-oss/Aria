@@ -135,7 +135,7 @@ Healthy / degraded / unavailable map to `--status-*`. Status bar segments are bu
 
 | Layer | Convention |
 |---|---|
-| View ids | lowercase (`chat`, `workstation`, `flytying`) |
+| View ids | lowercase (`chat`, `workstation`, `health`) |
 | User labels | Title Case product names (`Mission Control`, `Activity Center`) |
 | Prefs | camelCase in `aria_ui_prefs_v1` |
 | Globals | `Aria*` for UI modules; `jarvis*` legacy chat helpers |
@@ -153,7 +153,6 @@ Aria is **one home**; each product is a **room**. Shared shell (nav, buttons, ty
 | `chat` / `home` | chat, dashboard, settings | Warm welcome |
 | `mission` | workstation | Aerospace glass / precision |
 | `health` | health | Calm clinic |
-| `flytying` | flytying | Bench by the stream |
 | `coding` | coding, models, projects, maker | Engineering studio |
 | `documents` | documents, memory | Private library |
 | `search` | search | Spotlight / effortless |

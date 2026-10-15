@@ -14,7 +14,7 @@ BOUNDARIES = {
         "Capabilities is Aria's unified management system for everything that extends Aria. "
         "It owns registry, discovery, enable/disable, status, permissions, health, trust, "
         "versioning, diagnostics, and third-party capability management. First-class products "
-        "(Voice, Vision, Browser, Fly Tying, Smart Home, Planner, Calendar, Gallery, Coding, "
+        "(Voice, Vision, Browser, Smart Home, Planner, Calendar, Gallery, Coding, "
         "Models, Automation, Mission Control, Knowledge Graph) remain product owners. "
         "Capabilities extends them and never duplicates them. Internally multiple extension "
         "layers remain; the operator sees one Capabilities surface."
@@ -38,7 +38,6 @@ BOUNDARIES = {
         "voice",
         "vision",
         "browser",
-        "fly_tying",
         "smart_home",
         "planner",
         "calendar",
@@ -70,7 +69,6 @@ CATEGORIES = (
     "Calendar",
     "Automation",
     "Smart Home",
-    "Fly Tying",
     "Gallery",
     "Media",
     "System",

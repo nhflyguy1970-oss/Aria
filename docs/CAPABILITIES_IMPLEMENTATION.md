@@ -9,7 +9,7 @@
 
 ## Executive summary
 
-Capabilities is Aria’s **unified management system** for everything that extends Aria. It does **not** replace Voice, Vision, Browser, Fly Tying, Smart Home, Planner, Calendar, Gallery, Coding, Models, Automation, Mission Control, or Knowledge Graph — those remain first-class products. Capabilities **extends** them.
+Capabilities is Aria’s **unified management system** for everything that extends Aria. It does **not** replace Voice, Vision, Browser, Smart Home, Planner, Calendar, Gallery, Coding, Models, Automation, Mission Control, or Knowledge Graph — those remain first-class products. Capabilities **extends** them.
 
 Internally, multiple extension layers remain:
 

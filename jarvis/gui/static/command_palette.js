@@ -236,11 +236,6 @@
       prefill("gallerySearchInput", qPreserve || hit.title || "");
       return;
     }
-    if (type === "flytying" || open.view === "flytying") {
-      window.switchToView?.("flytying");
-      prefill("flySearchInput", qPreserve || hit.title || "");
-      return;
-    }
     if (type === "automation" || open.view === "automation") {
       window.switchToView?.("automation");
       return;

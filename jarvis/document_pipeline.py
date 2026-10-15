@@ -14,6 +14,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from jarvis.config import DATA_DIR
+from jarvis.live_data_guard import assert_live_write_allowed
+
 log = logging.getLogger("jarvis")
 
 DOCUMENT_EXTENSIONS = {
@@ -36,7 +39,10 @@ DOCUMENT_EXTENSIONS = {
 }
 TEXT_EXTENSIONS = {".txt", ".md", ".markdown"}
 HTML_EXTENSIONS = {".html", ".htm"}
-DOCUMENTS_DIR = Path(__file__).resolve().parent.parent / "data" / "documents"
+# From DATA_DIR (default PROJECT_ROOT / "data", so production is unchanged). Built from
+# __file__ it ignored JARVIS_DATA_DIR, and tests parsing temp documents wrote their
+# parse cache into the live data/documents/.cache.
+DOCUMENTS_DIR = DATA_DIR / "documents"
 CACHE_DIR = DOCUMENTS_DIR / ".cache"
 
 _MAX_CONTEXT_CHARS = int(os.getenv("JARVIS_DOC_CONTEXT_CHARS", "14000"))
@@ -153,9 +159,10 @@ def _read_cache(path: Path) -> ParsedDocument | None:
 
 
 def _write_cache(doc: ParsedDocument) -> None:
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     path = Path(doc.path)
     cache_file = CACHE_DIR / f"{_cache_key(path)}.json"
+    assert_live_write_allowed(cache_file)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
     payload = {
         "path": str(path.resolve()),
         "title": doc.title,

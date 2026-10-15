@@ -1632,7 +1632,7 @@ def _natural_intent_route(message: str) -> dict | None:
             "route_confidence": 1.0,
         }
 
-    # Image / video generation must beat fly cues ("woolly bugger image").
+    # Image / video generation ("woolly bugger image" is an image request).
     if re.search(
         r"\b("
         r"(?:generate|create|make|draw|render)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|photo|illustration)|"
@@ -1660,69 +1660,6 @@ def _natural_intent_route(message: str) -> dict | None:
             "route_handler": "Gallery",
             "route_confidence": 1.0,
         }
-
-    # Fly patterns — only when the user is actually asking the fly library.
-    # Do not steal "remember… fly-tying project…" or "remind me what fly project…".
-    if re.search(
-        r"\b(?:remember|don'?t forget|note that|keep in mind|remind me)\b",
-        lower,
-    ):
-        pass  # memory verbs win later / earlier — never fly_search
-    else:
-        fly_domain = bool(
-            re.search(
-                r"\b(fly[- ]?tying|woolly|wooly\s+bugger|nymph|streamer|emerger|"
-                r"dry\s+fly|cdc|marabou|hackle)\b|"
-                r"\b(?:fly)\s+(?:pattern|recipe|patterns|recipes)\b|"
-                r"\b(?:pattern|recipe)\s+(?:for|of)\s+(?:a\s+)?(?:fly|nymph|streamer|bugger)\b",
-                lower,
-            )
-        )
-        fly_ask_cue = bool(
-            re.search(
-                r"\b(what should i tie|need (?:a |an )?.{0,40}\b(?:fly|bugger|nymph|streamer)\b|"
-                r"tie (?:me )?(?:a |an )?|how (?:do|to) i tie|recommend .{0,30}fly)\b",
-                lower,
-            )
-        )
-        fly_search_cue = bool(
-            re.search(
-                r"\b(?:find|search)\b.+\b(?:fly|pattern|recipe|nymph|streamer|bugger)\b|"
-                r"\b(?:fly|pattern|recipe).+\b(?:mentioning|with|using)\b",
-                lower,
-            )
-        )
-        if fly_ask_cue or (fly_domain and fly_search_cue):
-            if fly_ask_cue or re.search(
-                r"\b(what should i tie|need |recommend|how (?:do|to) i tie)\b", lower
-            ):
-                return {
-                    "action": "fly_ask",
-                    "params": {"question": message},
-                    "thinking": "fly ask",
-                    "route_reason": "natural_fly_ask",
-                    "route_handler": "FlyTying",
-                    "route_confidence": 1.0,
-                }
-            q = message
-            m = re.search(r"(?:mentioning|with|using|about|for)\s+(.+)$", message, re.I)
-            if m:
-                q = m.group(1).strip().rstrip(".?!")
-            elif m2 := re.search(r"\b(?:find|search)\b(?:\s+every)?\s+(.+)", message, re.I):
-                q = re.sub(
-                    r"\b(fly[- ]?tying\s+)?(recipe|pattern|recipes|patterns)\b",
-                    "",
-                    m2.group(1),
-                    flags=re.I,
-                ).strip()
-            return {
-                "action": "fly_search",
-                "params": {"query": q or message},
-                "thinking": "fly pattern search",
-                "route_reason": "natural_fly_search",
-                "route_handler": "FlyTying",
-                "route_confidence": 1.0,
-            }
 
     if re.search(r"\b(next meeting|what'?s on my (calendar|schedule)|when is my next)\b", lower):
         return {
@@ -3829,8 +3766,8 @@ def _route(message: str, session: SessionContext, attachment: dict | None = None
                 session,
             )
 
-        # Memory verbs before natural intent — "remember… fly-tying…" must not
-        # become fly_search, and "remind me what…" must hit Memory Authority.
+        # Memory verbs before natural intent — "remember…" must not become a
+        # search, and "remind me what…" must hit Memory Authority.
         try:
             from jarvis.nlu.mapping import resolve_memory_route
 

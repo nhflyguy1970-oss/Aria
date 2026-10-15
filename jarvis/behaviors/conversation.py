@@ -329,27 +329,6 @@ class ConversationEngine:
                 "injected": False,
             }
 
-        if needs.flytying:
-            t0 = _time.perf_counter()
-            try:
-                from jarvis.flytying.knowledge import flytying_context_for_chat
-
-                fly_ctx = flytying_context_for_chat(
-                    getattr(self._a, "memory", None), message, limit=5
-                )
-                if fly_ctx:
-                    parts.append("Fly tying library context:\n" + fly_ctx)
-                _note("flytying", t0, fly_ctx or "", used=True)
-            except Exception:
-                _note("flytying", t0, "", used=True)
-        else:
-            inventory["sources"]["flytying"] = {
-                "elapsed_ms": 0,
-                "characters": 0,
-                "required": False,
-                "injected": False,
-            }
-
         if getattr(needs, "health", False):
             t0 = _time.perf_counter()
             try:

@@ -22,8 +22,6 @@
       "settingsModal",
       "shortcutsModal",
       "cropModal",
-      "flytyingScanModal",
-      "flytyingNameBarcodeModal",
       "whatsNewModal",
       "dashCustomizeModal",
       "activityCenterModal",
@@ -68,14 +66,6 @@
       }
       if (el.id === "commandPaletteModal") {
         window.closeAriaCommandPalette?.();
-        return;
-      }
-      if (el.id === "flytyingScanModal") {
-        window.stopFlytyingCameraScan?.();
-        return;
-      }
-      if (el.id === "flytyingNameBarcodeModal") {
-        window.closeFlytyingNameBarcodeModal?.();
         return;
       }
       if (el.id === "whatsNewModal") {

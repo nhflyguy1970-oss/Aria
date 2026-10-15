@@ -67,22 +67,6 @@ _BUILTINS: list[dict[str, Any]] = [
         ),
     },
     {
-        "id": "flytying",
-        "label": "Fly Tying",
-        "kind": "starter",
-        "description": "Fly Tying + Gallery + Chat + Maker + Journal.",
-        "aliases": ["fly", "tying"],
-        "snapshot": make_snapshot(
-            {
-                "view": "flytying",
-                "favorites": ["flytying", "gallery", "chat", "maker", "journal"],
-                "role": "maker",
-            },
-            label="Fly Tying",
-            kind="starter",
-        ),
-    },
-    {
         "id": "maker",
         "label": "Maker",
         "kind": "starter",

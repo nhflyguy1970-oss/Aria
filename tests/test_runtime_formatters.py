@@ -29,7 +29,7 @@ SAMPLE_DBS = [
 ]
 SAMPLE_APPS = [
     {"id": "aria", "label": "Aria", "running": True, "healthy": True},
-    {"id": "flytying", "label": "FlyTying AI", "running": False, "stopped": True},
+    {"id": "housefly", "label": "HouseFly", "running": False, "stopped": True},
     {"id": "uncensored", "label": "Aria Uncensored", "running": False, "stopped": True},
 ]
 
@@ -46,7 +46,7 @@ def test_services_formatter_is_concise_list():
 def test_applications_formatter_splits_running_stopped():
     text = format_applications({"applications": SAMPLE_APPS})
     assert "Running" in text and "✓ Aria" in text
-    assert "Stopped" in text and "• FlyTying AI" in text
+    assert "Stopped" in text and "• HouseFly" in text
 
 
 def test_jobs_idle():

@@ -4,7 +4,7 @@
 **Rule:** Aria must never become less capable.
 **Profiles:** standard · uncensored (same intelligence)
 
-**Count:** 98 capabilities
+**Count:** 96 capabilities
 
 | id | layer | risk | protected | owner |
 |----|-------|------|-----------|-------|
@@ -22,7 +22,6 @@
 | `voice-stt-tts` | Capability | High | True | `jarvis/stt.py` |
 | `audio-studio` | Capability | Medium | True | `jarvis/song_studio.py` |
 | `vision-media` | Capability | High | True | `jarvis/vision_media.py` + `jarvis/modules/vision.py` (Ollama VLM — not ComfyUI) |
-| `fly-tying` | Capability | Medium | True | `jarvis/flytying` |
 | `home-smarthome` | Capability | High | True | `jarvis/home_assistant.py` |
 | `web-research` | Capability | Medium | True | `jarvis/web_search.py` |
 | `journal-briefing` | Capability | High | True | `jarvis/morning_briefing.py` |
@@ -46,7 +45,6 @@
 | `mc-server` | Interface | Critical | True | `aiplatform/mission_control/server.py` |
 | `external-interfaces` | Interface | Low | True | `jarvis/interfaces` |
 | `app-aria-primary` | Application | Critical | True | `jarvis/application/host.py` |
-| `app-flytying` | Application | Medium | True | `jarvis/extensions/flytying` |
 | `app-home` | Application | High | True | `jarvis/extensions/smarthome` |
 | `app-coding` | Application | Critical | True | `jarvis/coding_agent.py` |
 | `app-research` | Application | Medium | True | `jarvis/knowledge` |

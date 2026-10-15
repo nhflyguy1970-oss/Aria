@@ -59,15 +59,10 @@
     ],
     gallery: [
       { id: "ctx-gal", text: "Generate an image.", action: "prompt", prompt: "Generate an image of " },
-      { id: "ctx-gal-fly", text: "Browse Fly Tying patterns for inspiration.", action: "view", view: "flytying" },
     ],
     maker: [
       { id: "ctx-mk", text: "Iterate on my CAD design.", action: "prompt" },
       { id: "ctx-mk-proj", text: "Open Projects for related work.", action: "view", view: "projects" },
-    ],
-    flytying: [
-      { id: "ctx-fly", text: "Recommend a pattern for today's hatch.", action: "prompt" },
-      { id: "ctx-fly-gal", text: "Open Gallery for pattern photos.", action: "view", view: "gallery" },
     ],
     workstation: [
       { id: "ctx-mc", text: "Show me anything unhealthy in Mission Control.", action: "prompt" },

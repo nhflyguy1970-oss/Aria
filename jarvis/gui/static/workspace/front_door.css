@@ -336,7 +336,6 @@ body:not(.front-door-open) #ariaStage {
 
 /* Soft room atmospheres on doors */
 .fd-door--health .fd-door-glow { background: radial-gradient(ellipse at center, rgba(122, 158, 142, 0.22), transparent 65%); }
-.fd-door--flytying .fd-door-glow { background: radial-gradient(ellipse at center, rgba(74, 122, 140, 0.22), transparent 65%); }
 .fd-door--mission .fd-door-glow { background: radial-gradient(ellipse at center, rgba(90, 155, 184, 0.2), transparent 65%); }
 .fd-door--coding .fd-door-glow { background: radial-gradient(ellipse at center, rgba(106, 158, 196, 0.2), transparent 65%); }
 .fd-door--gallery .fd-door-glow { background: radial-gradient(ellipse at center, rgba(154, 123, 154, 0.2), transparent 65%); }

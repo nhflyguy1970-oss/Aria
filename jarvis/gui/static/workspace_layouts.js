@@ -339,7 +339,7 @@
 
     // Offline fallback presets if API cold
     if (!(_catalog?.builtins || []).length) {
-      ["coding", "writing", "research", "planning", "media", "maker", "flytying", "home"]
+      ["coding", "writing", "research", "planning", "media", "maker", "home"]
         .filter((id) => !q || id.includes(q))
         .forEach((id) => {
           host.appendChild(addChip(id, id, "starter", () => applyLayout(id)));

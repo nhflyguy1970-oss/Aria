@@ -23,7 +23,6 @@
       ["coding", "Coding", "propose apply undo verify lsp git proposals ctrl+shift+c"],
       ["planner", "Planner", "tasks todo"],
       ["calendar", "Calendar", "schedule"],
-      ["flytying", "Fly tying", "flies patterns"],
       ["projects", "Projects", "repos"],
       ["maker", "Maker lab", "cad stl print"],
       ["browser", "Browser", "playwright web agent ctrl+shift+b"],
@@ -158,7 +157,6 @@
       mk("search:health", "Search Health", "Search", "phr meds labs vitals", () => A().health.search(), { mode: "search" }),
       mk("search:memory", "Search memory", "Search", "recall find filter", () => A().memory.search(), { mode: "search" }),
       mk("search:documents", "Search documents", "Search", "library files pdf", () => A().documents.search(), { mode: "search" }),
-      mk("search:flytying", "Search fly patterns", "Search", "tying recipes", () => A().flytying.search(), { mode: "search" }),
       mk("search:gallery-prompt", "Focus gallery prompt", "Search", "comfy image generate", () => A().gallery.focusPrompt(), { mode: "search" }),
       mk("search:mc-routing", "Search Mission Control routing", "Search", "intent handler prompts", () => A().mission.routingSearch(), { mode: "search" }),
     ]);
@@ -198,7 +196,6 @@
       mk("act:audio-studio", "Open Audio studio", "Actions", "music podcast genre song whisper", () => A().audio.open()),
       mk("act:meme-studio", "Open Meme Studio", "Actions", "captions funny", () => A().meme.open()),
       mk("act:maker", "Open Maker lab", "Actions", "cad stl print", () => A().maker.open()),
-      mk("act:fly-tying", "Open Fly tying", "Actions", "flies patterns", () => A().flytying.open()),
       mk("act:open-projects", "Open Projects", "Actions", "repos workspace coding", () => A().projects.open()),
       mk("act:browser-url", "Focus browser URL", "Actions", "playwright navigate web", () => A().browser.focusUrl()),
       mk("act:browser-task", "Focus browser agent task", "Actions", "playwright goal run", () => A().browser.focusTask()),
@@ -562,10 +559,6 @@
         mkCtx("ics", "Focus ICS settings", "subscribe", () => A().calendar.focusIcs()),
         mkCtx("planner", "Open Planner", "tasks", () => A().planner.open()),
         mkCtx("journal", "Open Journal", "notes", () => A().journal.open()),
-      ],
-      flytying: [
-        mkCtx("search", "Search fly patterns", "recipe", () => A().flytying.search()),
-        mkCtx("seasonal", "Seasonal patterns", "hatch", () => A().flytying.seasonal()),
       ],
       maker: [
         mkCtx("open", "Open Maker lab", "cad stl", () => A().maker.open()),

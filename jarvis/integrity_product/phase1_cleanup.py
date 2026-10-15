@@ -114,44 +114,6 @@ def _clean_dashboard_cache() -> dict[str, Any]:
     return {"ok": True, "removed": False}
 
 
-def _clean_flytying_history() -> dict[str, Any]:
-    path = DATA_DIR / "flytying_product" / "history.jsonl"
-    if not path.is_file():
-        return {"ok": True, "removed": 0}
-    kept = []
-    removed = 0
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        if looks_like_dev_label(line):
-            removed += 1
-            continue
-        kept.append(line)
-    if removed:
-        path.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
-    sessions = DATA_DIR / "flytying_product" / "sessions.json"
-    sess_removed = 0
-    if sessions.is_file():
-        try:
-            data = json.loads(sessions.read_text(encoding="utf-8"))
-        except Exception:
-            data = None
-        if isinstance(data, dict):
-            items = data.get("sessions") or data.get("items")
-            if isinstance(items, list):
-                new_items = []
-                for s in items:
-                    blob = json.dumps(s, default=str)
-                    if looks_like_dev_label(blob) or '"recipe_id": "demo"' in blob or "Demo Adams" in blob:
-                        sess_removed += 1
-                        continue
-                    new_items.append(s)
-                key = "sessions" if "sessions" in data else "items"
-                data[key] = new_items
-                sessions.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    return {"ok": True, "history_removed": removed, "sessions_removed": sess_removed}
-
-
 def _clean_files_via_scan() -> dict[str, Any]:
     from jarvis.integrity_product.remediate import apply_safe_remediations
     from jarvis.integrity_product.scanner import run_scan
@@ -297,7 +259,6 @@ def run_phase1_cleanup() -> dict[str, Any]:
     _preserve("documents", "hf qEEvzFck… filename in documents/imports", "possible secret — Jeff review")
     _preserve("coding", "Write a long essay about rivers…", "ambiguous stop-button test")
     _preserve("gallery", "image_20260807_095030.png and image_20260807_112111.png", "retag only — images plausibly owner; metadata tag is test")
-    _preserve("flytying", "prototype-anchor-nymph-924c6f3e7e8a.md", "ambiguous recipe filename; do not auto-delete")
     _preserve("planner", "9e3ace063d pick up wool yarn for fly tying", "ambiguous — plausible owner task")
 
     actions = {
@@ -308,7 +269,6 @@ def run_phase1_cleanup() -> dict[str, Any]:
         "knowledge": _clean_knowledge_registry(),
         "search": _clean_search(),
         "dashboard_cache": _clean_dashboard_cache(),
-        "flytying": _clean_flytying_history(),
         "gallery_retag": _retag_gallery(),
         "search_sessions": _clean_search_sessions(),
         "document_imports": _clean_document_imports(),

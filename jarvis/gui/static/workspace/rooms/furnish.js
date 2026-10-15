@@ -9,7 +9,6 @@
   /** room id → legacy view id (without View suffix) */
   const ROOM_VIEW = {
     chat: "chat",
-    flytying: "flytying",
     health: "health",
     mission: "workstation",
     documents: "documents",
@@ -44,7 +43,6 @@
   };
 
   const ROOM_CLASS = {
-    flytying: "house-flytying",
     health: "house-health",
     mission: "house-mission",
     documents: "house-documents",
@@ -119,7 +117,7 @@
         '<div class="house-presence__brand">Aria <span class="house-presence__place"></span></div>' +
         '<div class="house-presence__status">Listening quietly</div>';
       const header = panel.querySelector(
-        ":scope > header, :scope > .mc-toolbar, :scope > .planner-header, :scope > .docs-shell-header, :scope > .search-header, :scope > .flytying-header"
+        ":scope > header, :scope > .mc-toolbar, :scope > .planner-header, :scope > .docs-shell-header, :scope > .search-header"
       );
       if (header) header.insertAdjacentElement("beforebegin", strip);
       else panel.insertBefore(strip, panel.children[1] || null);
@@ -152,12 +150,6 @@
     if (view === "coding" && window.initCodingHome) window.initCodingHome();
     if (view === "planner" && window.initPlanner) window.initPlanner();
     if (view === "calendar" && window.initCalendar) window.initCalendar();
-    if (view === "flytying" && window.initFlytying) {
-      const p = window.initFlytying();
-      if (p && typeof p.then === "function") {
-        p.catch((err) => console.warn("[AriaFurnish] flytying init:", err));
-      }
-    }
     if (view === "capabilities" && window.initCapabilities) window.initCapabilities();
     if (view === "integrations" && window.initIntegrationsHome) window.initIntegrationsHome();
     if (view === "search" && window.initSearchHome) window.initSearchHome();

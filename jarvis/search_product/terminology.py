@@ -78,7 +78,6 @@ FACETS = (
     "gallery",
     "chat",
     "home_assistant",
-    "flytying",
     "automation",
     "learned",
     "settings",

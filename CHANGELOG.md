@@ -1,5 +1,29 @@
 # Changelog — Aria / Jarvis
 
+## [TEST-ISOLATION] — 2026-10-15
+
+Tests could write production data. The document parse cache, platform
+notifications and the workstation activity log built their paths from
+PROJECT_ROOT instead of DATA_DIR, so test runs added parse-cache entries for
+temp documents to `data/documents/.cache` and test events to
+`data/logs/*.jsonl`; AI-Platform storage paths (platform memory, history,
+knowledge, index, backups, exports) derive from AI_ROOT and were never
+confined. All now follow the isolated test root. `jarvis.live_data_guard` gains
+an audit-hook write barrier, installed by `tests/conftest.py`, that refuses
+and fails any test writing under the live data root, platform data,
+applications, backups, exports, agent workspaces, or the FTR/BlackFly
+projects. Gate: `tests/test_live_data_barrier.py`. Existing test-written
+entries were left in place pending owner approval.
+
+## [FLYTYING-REMOVAL] — 2026-10-15
+
+Retire ARIA's built-in fly-tying reference; the standalone Fly Tying Reference
+app owns it. Removes the fly-tying packages, `/api/flytying/*`, `fly_*` chat
+routing, the Fly Tying room, nightly job, search corpus, layout preset and
+Mission Control panel. Shared heading style renamed `flytying-col-subtitle` →
+`section-subtitle`. Decision: `DECISION_LOG.md` A024. Gate:
+`tests/test_flytying_removed.py`.
+
 ## [ZERO-TRUST-CERTIFICATION] — 2026-07-23
 
 Independent zero-trust audit: close PRIMARY import/update/delete/prune/clear

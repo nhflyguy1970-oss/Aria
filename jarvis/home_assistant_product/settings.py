@@ -36,7 +36,7 @@ def load_settings() -> dict[str, Any]:
                 data.update({k: v for k, v in raw.items() if v is not None})
         except (json.JSONDecodeError, OSError):
             pass
-    # Legacy key from flytying-style naming
+    # Legacy "inventory_first" key
     if "inventory_first" in data and "control_first" not in data:
         data["control_first"] = not bool(data.get("inventory_first"))
     data.pop("inventory_first", None)

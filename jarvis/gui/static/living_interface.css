@@ -60,16 +60,6 @@ body[data-room="health"] {
   --accent-dim: #458078;
 }
 
-body[data-room="flytying"] {
-  --room-accent: #b87333;
-  --room-accent-glow: rgba(184, 115, 51, 0.16);
-  --room-atmosphere-a: rgba(90, 60, 35, 0.2);
-  --room-atmosphere-b: rgba(70, 110, 90, 0.1);
-  --accent: var(--room-accent);
-  --accent-glow: var(--room-accent-glow);
-  --accent-dim: #8f5a28;
-}
-
 body[data-room="coding"] {
   --room-accent: #7a9eb8;
   --room-accent-glow: rgba(122, 158, 184, 0.14);
@@ -209,12 +199,6 @@ body.light-theme[data-room="health"] {
   --room-atmosphere-b: rgba(90, 158, 142, 0.1);
 }
 
-body.light-theme[data-room="flytying"] {
-  --bg-deep: #f3eee6;
-  --room-atmosphere-a: rgba(184, 115, 51, 0.1);
-  --room-atmosphere-b: rgba(90, 120, 90, 0.07);
-}
-
 body.light-theme[data-room="documents"] {
   --bg-deep: #f6f1e8;
   --room-atmosphere-a: rgba(166, 139, 91, 0.12);
@@ -341,28 +325,6 @@ body[data-room="health"] #healthView [class*="health"] .card {
   background: color-mix(in srgb, var(--bg-elevated) 90%, var(--room-accent));
 }
 
-/* Fly tying — bench & stream */
-body[data-room="flytying"] #flytyingView {
-  background-image:
-    linear-gradient(180deg, transparent 55%, rgba(40, 28, 16, 0.12)),
-    radial-gradient(ellipse 50% 28% at 82% 12%, rgba(90, 130, 100, 0.09), transparent);
-}
-
-body[data-room="flytying"] #flytyingView .recipe-card,
-body[data-room="flytying"] #flytyingView .fly-card,
-body[data-room="flytying"] #flytyingView article,
-body[data-room="flytying"] #flytyingView .sidebar-section {
-  border-color: color-mix(in srgb, #b87333 32%, var(--border));
-  box-shadow: inset 0 1px 0 rgba(255, 220, 180, 0.045);
-}
-
-body[data-room="flytying"] #flytyingView .recipe-body,
-body[data-room="flytying"] #flytyingView pre,
-body[data-room="flytying"] #flytyingView .markdown-body {
-  font-family: var(--font);
-  line-height: 1.55;
-}
-
 /* Coding — studio focus */
 body[data-room="coding"] #codingView {
   background-image: linear-gradient(180deg, rgba(40, 50, 65, 0.18), transparent 38%);
@@ -483,12 +445,6 @@ body[data-room="integrity"] .view-tab.active {
 
 body[data-room="health"] .empty-state {
   border-style: solid;
-}
-
-body[data-room="flytying"] .empty-state {
-  background:
-    linear-gradient(160deg, rgba(184, 115, 51, 0.11), transparent 50%),
-    var(--bg-elevated);
 }
 
 body[data-room="documents"] .empty-state {

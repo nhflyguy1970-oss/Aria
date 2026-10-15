@@ -22,7 +22,6 @@
   <link rel="stylesheet" href="/static/workspace/rooms/living_room.css?v=3.8.1-newchat" />
   <link rel="stylesheet" href="/static/workspace/rooms/house.css?v=6.4.7-bujo-more-z" />
   <link rel="stylesheet" href="/static/workspace/rooms/native_rooms.css?v=5.1.2-oc" />
-  <link rel="stylesheet" href="/static/workspace/rooms/flytying_room.css?v=5.0.0" />
   <link rel="stylesheet" href="/static/workspace/rooms/health_room.css?v=5.0.0" />
   <link rel="stylesheet" href="/static/workspace/rooms/mission_room.css?v=5.0.0" />
   <link rel="stylesheet" href="/static/workspace/front_door.css?v=6.1.4-mode-badge" />
@@ -230,7 +229,6 @@
         </button>
         <div class="sidebar-section-body ws-menu">
           <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="maker">Maker lab</button>
-          <button type="button" class="ghost-btn ws-menu-btn" data-view-jump="flytying">Fly tying</button>
         </div>
       </div>
 
@@ -558,7 +556,6 @@
         <button type="button" class="view-tab" data-view="coding">Coding</button>
         <button type="button" class="view-tab" data-view="planner">Planner</button>
         <button type="button" class="view-tab" data-view="calendar">Calendar</button>
-        <button type="button" class="view-tab" data-view="flytying">Fly tying</button>
         <button type="button" class="view-tab" data-view="projects">Projects</button>
         <button type="button" class="view-tab" data-view="maker">Maker</button>
         <button type="button" class="view-tab" data-view="browser">Browser</button>
@@ -1204,7 +1201,6 @@
             <button type="button" id="galleryOpenJobsBtn" class="ghost-btn small">Job Center</button>
             <button type="button" id="galleryOpenModelsBtn" class="ghost-btn small">Models</button>
             <button type="button" id="galleryOpenMakerBtn" class="ghost-btn small" title="Open Maker lab">Maker</button>
-            <button type="button" id="galleryOpenFlytyingBtn" class="ghost-btn small" title="Open Fly tying">Fly tying</button>
             <button type="button" id="galleryOpenVideoBtn" class="ghost-btn small" title="Open Video Studio">Video</button>
             <button type="button" id="galleryOpenMemeBtn" class="ghost-btn small" title="Open Meme Studio">Meme</button>
             <span class="muted tiny" title="Keyboard shortcut">Ctrl+Shift+G</span>
@@ -2051,215 +2047,6 @@
         </div>
       </div>
 
-      <div id="flytyingView" class="view-panel hidden flytying-workspace">
-        <header class="flytying-header">
-          <div>
-            <h2>Fly tying</h2>
-            <p id="flytyingStatus" class="muted">Loading…</p>
-            <p id="flytyingPatternOfDay" class="flytying-potd muted small"></p>
-          </div>
-          <div class="flytying-header-actions">
-            <label class="flytying-model-label">Model
-              <select id="flytyingModelSelect" class="personality-select" title="Fly tying model (7b = recipes, 14b = design)"></select>
-            </label>
-            <button type="button" id="flytyingHealthBtn" class="ghost-btn small" title="Guided library setup &amp; health">Setup</button>
-            <button type="button" id="flytyingRebuildBtn" class="ghost-btn small hidden" title="Rebuild gold index">Rebuild</button>
-            <button type="button" id="flytyingRefreshBtn" class="ghost-btn small">Refresh</button>
-            <button type="button" id="flytyingOpenGalleryBtn" class="ghost-btn small" title="Open Gallery">Gallery</button>
-          </div>
-        </header>
-        <p id="flytyingHatchBanner" class="flytying-hatch-banner muted small"></p>
-        <p id="flytyingDataWarn" class="flytying-data-warn hidden" role="alert"></p>
-        <section id="flytyingHomePanel" class="flytying-home-panel" aria-label="Fly Tying Home">
-          <div id="flytyingRecoveryCard" class="flytying-recovery-card hidden" role="status"></div>
-          <div class="flytying-home-grid">
-            <div class="flytying-home-card">
-              <h3 class="flytying-col-subtitle">Inventory first</h3>
-              <p id="flytyingHomeInvStatus" class="muted small">—</p>
-              <div class="sidebar-btn-row">
-                <button type="button" id="flytyingHomeSuggestBtn" class="apply-btn small">Suggest a fly</button>
-                <button type="button" id="flytyingHomeFocusInvBtn" class="ghost-btn small">Open inventory</button>
-                <button type="button" id="flytyingStartSessionBtn" class="ghost-btn small">Start session</button>
-              </div>
-              <ul id="flytyingHomeLowStock" class="flytying-home-list muted small"></ul>
-            </div>
-            <div class="flytying-home-card">
-              <h3 class="flytying-col-subtitle">Today</h3>
-              <p id="flytyingHomePotd" class="small"></p>
-              <p id="flytyingHomeSession" class="muted small"></p>
-              <p id="flytyingHomeHatch" class="muted small"></p>
-            </div>
-            <div class="flytying-home-card">
-              <h3 class="flytying-col-subtitle">Profiles &amp; voice</h3>
-              <label>Profile
-                <select id="flytyingProfileSelect" class="personality-select" aria-label="Fly Tying profile"></select>
-              </label>
-              <button type="button" id="flytyingProfileActivateBtn" class="ghost-btn small">Apply profile</button>
-              <div class="sidebar-btn-row">
-                <button type="button" id="flytyingVoiceNextBtn" class="ghost-btn small" title="Voice: next step">Next step</button>
-                <button type="button" id="flytyingVoiceRepeatBtn" class="ghost-btn small" title="Voice: repeat step">Repeat</button>
-              </div>
-            </div>
-          </div>
-        </section>
-        <div class="flytying-layout">
-          <aside class="flytying-col flytying-col-recipes">
-            <h3 class="flytying-col-title">Patterns</h3>
-            <div class="planner-add-row flytying-search-row">
-              <input type="search" id="flytyingSearchInput" placeholder="Search patterns…" autocomplete="off" />
-              <button type="button" id="flytyingSearchBtn" class="ghost-btn small" aria-label="Search fly patterns">Go</button>
-              <button type="button" id="flytyingClearFiltersBtn" class="ghost-btn small" title="Clear search and type filter">Clear</button>
-            </div>
-            <p id="flytyingSearchHint" class="muted small flytying-search-hint" aria-live="polite"></p>
-            <select id="flytyingTypeFilter" class="personality-select flytying-type-filter" title="Fly type">
-              <option value="">All types</option>
-              <option value="dry">Dry</option>
-              <option value="nymph">Nymph</option>
-              <option value="emerger">Emerger</option>
-              <option value="streamer">Streamer</option>
-              <option value="terrestrial">Terrestrial</option>
-              <option value="wet">Wet</option>
-            </select>
-            <div class="flytying-filter-row">
-              <label class="flytying-filter-check"><input type="checkbox" id="flytyingFavoritesOnly" /> Favorites</label>
-              <label class="flytying-filter-mini">Min Q <input type="number" id="flytyingMinQuality" min="0" max="100" step="5" placeholder="0" /></label>
-              <button type="button" id="flytyingSeasonalBtn" class="ghost-btn small">Seasonal</button>
-            </div>
-            <ul id="flytyingQueueList" class="flytying-queue-list"></ul>
-            <ul id="flytyingRecipeList" class="flytying-recipe-list"></ul>
-            <section id="flytyingVideosPanel" class="flytying-videos-panel">
-              <div class="flytying-videos-head">
-                <h4 class="flytying-col-subtitle">Tying videos</h4>
-                <button type="button" id="flytyingVideosToggle" class="ghost-btn small flytying-videos-toggle" aria-expanded="true">Hide</button>
-              </div>
-              <div id="flytyingVideosBody" class="flytying-videos-body">
-              <div class="flytying-add-video">
-                <input type="url" id="flytyingCustomVideoUrl" placeholder="Paste YouTube, Vimeo, or Fly Fish Food URL…" />
-                <button type="button" id="flytyingAddVideoBtn" class="ghost-btn small" aria-label="Add video">Add video</button>
-              </div>
-              <input type="search" id="flytyingVideoSearch" class="flytying-video-search" placeholder="Filter videos…" />
-              <ul id="flytyingVideoList" class="flytying-video-list"></ul>
-              </div>
-            </section>
-          </aside>
-          <main class="flytying-col flytying-col-detail">
-            <div class="flytying-detail-toolbar">
-              <h3 class="flytying-col-title">Recipe &amp; video</h3>
-              <div class="flytying-detail-actions">
-                <button type="button" id="flytyingCompareBtn" class="ghost-btn small" disabled>Compare</button>
-                <button type="button" id="flytyingExportBtn" class="ghost-btn small" disabled>Export</button>
-                <button type="button" id="flytyingPrintBtn" class="ghost-btn small" disabled>Print</button>
-              </div>
-            </div>
-            <div id="flytyingComparePanel" class="flytying-compare-panel hidden"></div>
-            <div class="flytying-workflow-grid">
-              <section class="flytying-workflow-panel flytying-video-workflow" aria-labelledby="flytyingVideoHeading">
-                <div class="flytying-workflow-head">
-                  <h4 id="flytyingVideoHeading">Video</h4>
-                  <p class="muted small">Selected tying tutorial</p>
-                </div>
-                <div id="flytyingVideoPlayer" class="flytying-video-player hidden" aria-label="Pattern video"></div>
-              </section>
-              <section class="flytying-workflow-panel flytying-recipe-workflow" aria-labelledby="flytyingRecipeHeading">
-                <div class="flytying-workflow-head">
-                  <h4 id="flytyingRecipeHeading">Recipe</h4>
-                  <p class="muted small">Pattern information, materials, and written instructions</p>
-                </div>
-                <div id="flytyingStepPanel" class="flytying-step-panel hidden"></div>
-                <div id="flytyingRecipeDetail" class="flytying-recipe-detail">
-                  <p class="muted">Select a pattern from the list.</p>
-                </div>
-              </section>
-            </div>
-          </main>
-          <aside class="flytying-col flytying-col-chat">
-            <h3 class="flytying-col-title">Fly tying chat</h3>
-            <div id="flytyingChatMessages" class="flytying-chat-messages"></div>
-            <p id="flytyingChatStatus" class="muted small flytying-chat-status" aria-live="polite"></p>
-            <div class="flytying-materials-box">
-              <label class="nav-label" for="flytyingMaterialsSummary">Materials on hand</label>
-              <textarea id="flytyingMaterialsSummary" rows="2" placeholder="e.g. olive 14 dry hook, grizzly hackle, Uni 8/0 olive thread — or use the inventory table below"></textarea>
-              <label class="flytying-materials-explain"><input type="checkbox" id="flytyingMaterialsExplain" /> Ask ARIA to explain matches (slower)</label>
-              <div class="flytying-materials-actions">
-                <button type="button" id="flytyingMaterialsBtn" class="apply-btn small">Suggest a fly</button>
-                <button type="button" id="flytyingSaveMaterialsBtn" class="ghost-btn small">Save list</button>
-              </div>
-              <details class="flytying-inv-details" id="flytyingInvDetails" open>                <summary class="nav-label">Inventory table — what, color, size, brand</summary>
-                <div class="flytying-inv-db-wrap">
-                  <table class="flytying-inv-table" aria-label="Materials inventory">
-                    <thead>
-                      <tr class="flytying-inv-head">
-                        <th><button type="button" class="flytying-sort-btn" data-col="what">What</button></th>
-                        <th><button type="button" class="flytying-sort-btn" data-col="color">Color</button></th>
-                        <th><button type="button" class="flytying-sort-btn" data-col="size">Size</button></th>
-                        <th><button type="button" class="flytying-sort-btn" data-col="brand">Brand</button></th>
-                        <th>Notes</th>
-                        <th class="flytying-inv-actions-col"></th>
-                      </tr>
-                      <tr class="flytying-inv-entry-row">
-                        <td><input type="text" id="flytyingInvWhat" name="material_what" placeholder="What (hook, thread…)" aria-label="Material what" autocomplete="off" /></td>
-                        <td><input type="text" id="flytyingInvColor" placeholder="olive" aria-label="Material color" autocomplete="off" /></td>
-                        <td><input type="text" id="flytyingInvSize" placeholder="14, 8/0" aria-label="Material size" autocomplete="off" /></td>
-                        <td><input type="text" id="flytyingInvBrand" placeholder="Uni" aria-label="Material brand" autocomplete="off" /></td>
-                        <td><input type="text" id="flytyingInvNotes" placeholder="optional" aria-label="Material notes" autocomplete="off" /></td>
-                        <td><button type="button" id="flytyingManualAddBtn" class="apply-btn tiny" aria-label="Add material">Add material</button></td>
-                      </tr>
-                    </thead>
-                    <tbody id="flytyingInventoryBody"></tbody>
-                    <tfoot>
-                      <tr><td colspan="6" id="flytyingInventoryCount" class="flytying-inv-foot muted small"></td></tr>
-                    </tfoot>
-                  </table>
-                </div>
-                <label class="muted small flytying-bulk-label" for="flytyingBulkInput">Quick import — one per line</label>
-                <textarea id="flytyingBulkInput" rows="2" placeholder="size 14 dry hook&#10;olive dubbing"></textarea>
-                <button type="button" id="flytyingBulkAddBtn" class="ghost-btn small">Import lines</button>
-                <details class="flytying-scan-details">
-                  <summary class="muted small">Barcode scan (optional)</summary>
-                  <div class="flytying-scan-row">
-                    <input type="text" id="flytyingScanInput" class="flytying-scan-input" placeholder="Scan or type barcode…" autocomplete="off" />
-                    <button type="button" id="flytyingCameraScanBtn" class="ghost-btn small">Camera</button>
-                    <button type="button" id="flytyingScanPhotoBtn" class="ghost-btn small">Photo</button>
-                    <input type="file" id="flytyingScanPhotoFile" accept="image/*" class="hidden" />
-                    <button type="button" id="flytyingLabelBtn" class="ghost-btn small">Print label</button>
-                  </div>
-                </details>
-              </details>
-            </div>
-            <form id="flytyingChatForm" class="flytying-chat-form">
-              <textarea id="flytyingChatInput" rows="2" placeholder="Ask about a pattern, hatch, or design a new fly…" required></textarea>
-              <div class="flytying-chat-actions">
-                <button type="submit" class="apply-btn small">Send</button>
-                <button type="button" id="flytyingCancelChatBtn" class="ghost-btn small hidden">Stop</button>
-                <button type="button" id="flytyingClearChatBtn" class="ghost-btn small">Clear chat</button>
-              </div>
-            </form>
-            <div id="flytyingScanModal" class="flytying-scan-modal hidden" role="dialog" aria-modal="true" aria-labelledby="flytyingScanModalTitle">
-              <div class="flytying-scan-modal-inner">
-                <h4 id="flytyingScanModalTitle">Scan barcode</h4>
-                <video id="flytyingScanVideo" playsinline muted class="flytying-scan-video"></video>
-                <p id="flytyingScanModalStatus" class="muted small" aria-live="polite">Starting camera…</p>
-                <div class="flytying-scan-modal-actions">
-                  <button type="button" id="flytyingScanModalClose" class="ghost-btn small">Close</button>
-                </div>
-              </div>
-            </div>
-            <div id="flytyingNameBarcodeModal" class="flytying-scan-modal hidden" role="dialog" aria-modal="true" aria-labelledby="flytyingNameBarcodeTitle">
-              <div class="flytying-scan-modal-inner">
-                <h4 id="flytyingNameBarcodeTitle">Name this barcode</h4>
-                <p id="flytyingNameBarcodeCode" class="muted small"></p>
-                <input type="text" id="flytyingNameBarcodeName" placeholder="Material name (e.g. Uni 8/0 olive)" />
-                <input type="text" id="flytyingNameBarcodeBrand" placeholder="Brand (optional)" />
-                <div class="flytying-scan-modal-actions">
-                  <button type="button" id="flytyingNameBarcodeSave" class="apply-btn small">Add to inventory</button>
-                  <button type="button" id="flytyingNameBarcodeCancel" class="ghost-btn small">Cancel</button>
-                </div>
-              </div>
-            </div>
-          </aside>
-        </div>
-      </div>
-
       <div id="projectsView" class="view-panel hidden">
         <div class="proj-shell">
           <header class="proj-shell-header">
@@ -2520,15 +2307,15 @@
             <p id="smarthomeHomeHealth" class="muted small">—</p>
             <div class="smarthome-home-grid">
               <div class="smarthome-home-card">
-                <h3 class="flytying-col-subtitle">Favorites</h3>
+                <h3 class="section-subtitle">Favorites</h3>
                 <ul id="smarthomeFavoritesList" class="smarthome-home-list muted small" role="list"></ul>
               </div>
               <div class="smarthome-home-card">
-                <h3 class="flytying-col-subtitle">Scenes</h3>
+                <h3 class="section-subtitle">Scenes</h3>
                 <div id="smarthomeSceneChips" class="ha-quick-actions" aria-label="Scene chips"></div>
               </div>
               <div class="smarthome-home-card">
-                <h3 class="flytying-col-subtitle">Rooms</h3>
+                <h3 class="section-subtitle">Rooms</h3>
                 <ul id="smarthomeRoomsList" class="smarthome-home-list muted small" role="list"></ul>
               </div>
             </div>
@@ -2648,15 +2435,15 @@
               <p class="muted">Select a result for preview, confidence, and open-in-context.</p>
             </aside>
             <aside class="search-side-rail">
-              <h3 class="flytying-col-subtitle">Recent</h3>
+              <h3 class="section-subtitle">Recent</h3>
               <ul id="searchHistoryList" class="search-hist-list"></ul>
               <button type="button" id="searchClearHistoryBtn" class="ghost-btn tiny">Clear history</button>
-              <h3 class="flytying-col-subtitle">Saved</h3>
+              <h3 class="section-subtitle">Saved</h3>
               <ul id="searchSavedList" class="search-hist-list"></ul>
-              <h3 class="flytying-col-subtitle">Privacy opt-in</h3>
+              <h3 class="section-subtitle">Privacy opt-in</h3>
               <label class="toggle-row small"><span>Gallery</span><input type="checkbox" id="searchOptInGallery" /></label>
               <label class="toggle-row small"><span>Home Assistant</span><input type="checkbox" id="searchOptInHa" /></label>
-              <h3 class="flytying-col-subtitle">Tips</h3>
+              <h3 class="section-subtitle">Tips</h3>
               <ul id="searchTipsList" class="muted small"></ul>
             </aside>
           </div>
@@ -2694,7 +2481,7 @@
               <p class="muted">Select a preference to preview owner, category, and open the deep link.</p>
             </aside>
             <aside class="settings-side-rail">
-              <h3 class="flytying-col-subtitle">Appearance</h3>
+              <h3 class="section-subtitle">Appearance</h3>
               <label class="settings-field">Theme
                 <select id="settingsThemeSelect" class="personality-select" aria-label="Theme">
                   <option value="dark">Professional Dark</option>
@@ -2720,21 +2507,21 @@
               <label class="toggle-row small"><span>Quick dock</span><input type="checkbox" id="settingsDockToggle" checked /></label>
               <label class="toggle-row small"><span>Status bar</span><input type="checkbox" id="settingsStatusToggle" checked /></label>
               <label class="toggle-row small"><span>Mini chat</span><input type="checkbox" id="settingsMiniChatToggle" checked /></label>
-              <h3 class="flytying-col-subtitle">Atmosphere</h3>
+              <h3 class="section-subtitle">Atmosphere</h3>
               <label class="toggle-row small"><span>Room atmosphere</span><input type="checkbox" id="settingsAtmosphereToggle" checked /></label>
               <label class="toggle-row small"><span>Weather light</span><input type="checkbox" id="settingsWeatherAtmToggle" checked /></label>
               <label class="toggle-row small"><span>Season tint</span><input type="checkbox" id="settingsSeasonAtmToggle" checked /></label>
               <label class="toggle-row small"><span>Soft UI sounds</span><input type="checkbox" id="settingsAmbientSoundToggle" /></label>
               <button type="button" id="settingsResetAppearanceBtn" class="ghost-btn tiny">Reset appearance</button>
-              <h3 class="flytying-col-subtitle">Profiles</h3>
+              <h3 class="section-subtitle">Profiles</h3>
               <select id="settingsProfileSelect" class="personality-select" aria-label="Preference profile"></select>
               <div class="settings-detail-actions">
                 <button type="button" id="settingsActivateProfileBtn" class="ghost-btn tiny">Activate</button>
                 <button type="button" id="settingsSaveProfileBtn" class="ghost-btn tiny">Save profile</button>
               </div>
-              <h3 class="flytying-col-subtitle">Recent changes</h3>
+              <h3 class="section-subtitle">Recent changes</h3>
               <ul id="settingsRecentList" class="settings-hist-list"></ul>
-              <h3 class="flytying-col-subtitle">Tips</h3>
+              <h3 class="section-subtitle">Tips</h3>
               <ul id="settingsTipsList" class="muted small"></ul>
             </aside>
           </div>
@@ -2773,7 +2560,7 @@
           </aside>
         </div>
         <section aria-label="Recent integration activity">
-          <h3 class="flytying-col-subtitle">Recent activity</h3>
+          <h3 class="section-subtitle">Recent activity</h3>
           <ul id="integrationsUsageList" class="integrations-usage-list muted small"></ul>
         </section>
         <details class="integrations-experimental">
@@ -2836,7 +2623,7 @@
           </aside>
         </div>
         <section class="capabilities-activity" aria-label="Recent capability activity">
-          <h3 class="flytying-col-subtitle">Recent activity</h3>
+          <h3 class="section-subtitle">Recent activity</h3>
           <ul id="capabilitiesActivity" class="capabilities-activity-list muted small"></ul>
         </section>
         <details class="capabilities-experimental">
@@ -3584,8 +3371,6 @@
   <script src="/static/models_home.js?v=1.0.1"></script>
   <script src="/static/coding_home.js?v=1.0.2-residency"></script>
   <script src="/static/calendar.js?v=5.17.5-search-memory"></script>
-  <script src="/static/flytying.js?v=5.17.4-bug014"></script>
-  <script src="/static/flytying_home.js?v=1.0.2-bug014"></script>
 
   <script src="/static/projects.js?v=5.17.3-tier3b"></script>
   <script src="/static/vendor/three/three.min.js"></script>
@@ -3654,7 +3439,6 @@
   <script src="/static/workspace/rooms/living_room.js?v=6.5.5-newchat"></script>
   <script src="/static/workspace/rooms/living_room_presence.js?v=3.7.2-tier3a"></script>
   <script src="/static/workspace/rooms/living_room_familiarity.js?v=3.7.0"></script>
-  <script src="/static/workspace/rooms/flytying_room.js?v=5.0.2-oc"></script>
   <script src="/static/workspace/rooms/health_room.js?v=5.0.3-oc"></script>
   <script src="/static/workspace/rooms/mission_room.js?v=5.0.3-residency"></script>
   <script src="/static/workspace/rooms/priority2_rooms.js?v=5.1.5-residency"></script>

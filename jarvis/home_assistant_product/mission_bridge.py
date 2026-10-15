@@ -86,6 +86,6 @@ def smarthome_mission_panel() -> dict[str, Any]:
     }
 
 
-# Alias matching flytying/vision naming
+# Alias matching vision naming
 def home_assistant_mission_panel() -> dict[str, Any]:
     return smarthome_mission_panel()

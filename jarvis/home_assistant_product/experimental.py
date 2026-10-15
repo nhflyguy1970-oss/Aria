@@ -13,8 +13,7 @@ def experimental_flags() -> dict[str, bool]:
         "multi_ha": os.getenv("JARVIS_SMARTHOME_EXP_MULTI_HA", "0") == "1",
         "knowledge_graph": os.getenv("JARVIS_SMARTHOME_EXP_KG", "0") == "1",
         "automation_authoring": os.getenv("JARVIS_SMARTHOME_EXP_AUTOMATION", "0") == "1",
-        "bench_lighting": os.getenv("JARVIS_SMARTHOME_EXP_BENCH_LIGHT", "0") == "1"
-        or os.getenv("JARVIS_FLYTYING_EXP_HA_LIGHT", "0") == "1",
+        "bench_lighting": os.getenv("JARVIS_SMARTHOME_EXP_BENCH_LIGHT", "0") == "1",
         "live_updates": os.getenv("JARVIS_SMARTHOME_EXP_LIVE", "0") == "1",
         "vision_camera": os.getenv("JARVIS_SMARTHOME_EXP_VISION_CAM", "0") == "1"
         or os.getenv("JARVIS_VISION_EXP_HA_CAMERA", "0") == "1",
@@ -97,5 +96,5 @@ def bench_lighting_if_enabled(scene: str = "bench", *, entity_id: str = "") -> d
         "scene": scene,
         "entity_id": entity_id,
         "requires_confirmation": True,
-        "note": "Home Assistant owns scenes — Smart Home / Fly Tying only request.",
+        "note": "Home Assistant owns scenes — Smart Home only requests.",
     }

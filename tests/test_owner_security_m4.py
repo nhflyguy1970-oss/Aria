@@ -125,7 +125,7 @@ def test_m4_uncensored_denied_when_locked(m4_svc, tmp_path, monkeypatch):
 def test_m4_capability_rooms_not_superuser(m4_svc):
     health = m4_svc.authorize("health.read", room="health")
     assert health.get("ok") is True
-    wrong = m4_svc.authorize("health.delete", room="flytying")
+    wrong = m4_svc.authorize("health.delete", room="gallery")
     assert wrong.get("ok") is False
     export = m4_svc.authorize("health.export", room="health")
     assert export.get("step_up_required") is True or export.get("ok") is True

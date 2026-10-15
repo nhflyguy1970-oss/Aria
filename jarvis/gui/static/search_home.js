@@ -209,7 +209,6 @@
         "gallerySearchInput",
         "audioSearchInput",
         "plannerSearchInput",
-        "flytyingSearchInput",
       ];
       for (const id of selectors) {
         const el = $(id);

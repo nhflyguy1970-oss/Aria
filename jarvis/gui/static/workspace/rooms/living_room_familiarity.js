@@ -60,7 +60,6 @@
     const r = String(room || view || "").toLowerCase();
     if (a === "coding" || r === "coding" || r === "projects") return "coding";
     if (a === "health" || a === "doctor_visit" || r === "health") return "health";
-    if (a === "flytying" || r === "flytying") return "flytying";
     if (a === "research" || a === "reading" || r === "documents" || r === "search") return "research";
     if (a === "planning" || a === "calendar" || r === "planner" || r === "calendar") return "planning";
     if (a === "image_creation" || r === "gallery") return "gallery";
@@ -147,20 +146,6 @@
         hits: healthMorning,
         matchesToday: () => todBucket() === "morning",
         line: "Morning health check feels like part of the rhythm.",
-      });
-    }
-
-    const flyRainWeekend = distinctDays(
-      v,
-      (x) => x.room === "flytying" && x.weekend && /rain|fog|cloud/i.test(x.weather || "")
-    );
-    if (flyRainWeekend >= Math.max(3, MIN_HITS - 1)) {
-      out.push({
-        id: "fly_rain_weekend",
-        hits: flyRainWeekend,
-        matchesToday: () =>
-          isWeekend() && /rain|fog|cloud/i.test(document.body?.dataset?.weather || ""),
-        line: "A soft day like this usually finds you at the vise.",
       });
     }
 

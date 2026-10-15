@@ -26,8 +26,6 @@
     "settingsModal",
     "shortcutsModal",
     "cropModal",
-    "flytyingScanModal",
-    "flytyingNameBarcodeModal",
     "whatsNewModal",
     "dashCustomizeModal",
     "activityCenterModal",

@@ -286,7 +286,6 @@
 
   /* Seed Priority-1 modules into registry when present */
   function seedKnown() {
-    if (window.AriaFlytyingRoom) register("flytying", () => window.AriaFlytyingRoom);
     if (window.AriaHealthRoom) register("health", () => window.AriaHealthRoom);
     if (window.AriaMissionRoom) register("mission", () => window.AriaMissionRoom);
   }

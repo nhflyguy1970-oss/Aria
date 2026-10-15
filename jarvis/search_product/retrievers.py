@@ -663,37 +663,6 @@ def retrieve_home_assistant(query: str, limit: int) -> list[dict[str, Any]]:
     return _safe(_run, "home_assistant")
 
 
-def retrieve_flytying(query: str, limit: int) -> list[dict[str, Any]]:
-    def _run():
-        from jarvis.flytying.search import unified_search
-
-        data = unified_search(query, limit=limit)
-        hits = data.get("results") or data.get("hits") or []
-        out = []
-        for h in hits:
-            if not isinstance(h, dict):
-                continue
-            title = h.get("name") or h.get("title") or h.get("pattern") or "pattern"
-            rid = h.get("recipe_id") or h.get("id") or ""
-            out.append(
-                make_result(
-                    source="flytying",
-                    source_label="Fly Tying",
-                    title=str(title),
-                    summary=str(h.get("summary") or h.get("fly_type") or h.get("type") or "")[:280],
-                    preview=str(h.get("summary") or h.get("recipe") or "")[:400],
-                    location=str(rid),
-                    score=float(h.get("quality_score") or h.get("score") or 0.75),
-                    strategy=str(data.get("search_mode") or "hybrid"),
-                    open_action={"view": "flytying", "query": query, "id": rid},
-                    icon="flytying",
-                )
-            )
-        return out[:limit]
-
-    return _safe(_run, "flytying")
-
-
 def retrieve_automation(query: str, limit: int) -> list[dict[str, Any]]:
     def _run():
         try:
@@ -1120,7 +1089,6 @@ RETRIEVERS: dict[str, Callable[..., list[dict[str, Any]]]] = {
     "gallery": retrieve_gallery,
     "chat": retrieve_chat,
     "home_assistant": retrieve_home_assistant,
-    "flytying": retrieve_flytying,
     "automation": retrieve_automation,
     "settings": retrieve_settings,
     "dashboard": retrieve_dashboard,

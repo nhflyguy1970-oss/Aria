@@ -24,7 +24,6 @@ _PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("planner", re.compile(r"\b(task|todo|planner|due|deadline)\b", re.I)),
     ("calendar", re.compile(r"\b(calendar|schedule|meeting|appointment|work block)\b", re.I)),
     ("projects", re.compile(r"\bprojects?\b", re.I)),
-    ("flytying", re.compile(r"\b(fly|pattern|hackle|hook|tying|nymph|streamer)\b", re.I)),
     ("journal", re.compile(r"\b(journal|bujo|bullet|daily log|reflection)\b", re.I)),
     # Require automation-specific cues — bare "workflow" matches project titles like "QA Workflow".
     ("automation", re.compile(r"\b(automation|n8n|cron job|triggered workflow|workflow rule|workflow trigger)\b", re.I)),
@@ -85,9 +84,6 @@ _FAST_EVERYTHING: tuple[str, ...] = (
     "dashboard",
     "layouts",
     "learned",
-    # Local recipe index — pattern-name searches (e.g. "Adams") must hit Fly
-    # without requiring the owner to type "fly" / open the Fly facet.
-    "flytying",
 )
 
 

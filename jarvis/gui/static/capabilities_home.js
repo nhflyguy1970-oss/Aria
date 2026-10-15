@@ -114,7 +114,7 @@
             <input type="text" data-setting-key="${esc(key)}" class="audio-path-input" value="${esc(prop.default || "")}" aria-label="${esc(prop.title || key)}" /></label>`;
         })
         .join("");
-      if (settingsForm) settingsForm = `<div class="capabilities-settings"><h4 class="flytying-col-subtitle">Settings</h4>${settingsForm}</div>`;
+      if (settingsForm) settingsForm = `<div class="capabilities-settings"><h4 class="section-subtitle">Settings</h4>${settingsForm}</div>`;
     }
     el.innerHTML = `
       <h3>${esc(item.name)}</h3>
@@ -124,7 +124,7 @@
          · health <strong>${esc(item.health)}</strong> · status <strong>${esc(item.status)}</strong></p>
       <p class="capabilities-risk">${esc(item.risk_summary || "")}</p>
       <p class="muted small">${esc(item.isolation_note || "")}</p>
-      <h4 class="flytying-col-subtitle">Permissions</h4>
+      <h4 class="section-subtitle">Permissions</h4>
       <ul class="capabilities-perm-list">${perms}</ul>
       ${item.error ? `<p class="err">${esc(item.error)}</p>` : ""}
       ${settingsForm}

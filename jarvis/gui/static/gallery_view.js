@@ -722,7 +722,6 @@
       }
     });
     $("galleryOpenMakerBtn")?.addEventListener("click", () => window.switchToView?.("maker"));
-    $("galleryOpenFlytyingBtn")?.addEventListener("click", () => window.switchToView?.("flytying"));
     $("galleryOpenVideoBtn")?.addEventListener("click", () => window.switchToView?.("video"));
     $("galleryOpenMemeBtn")?.addEventListener("click", () => window.switchToView?.("meme"));
     $("galleryOpenJobsBtn")?.addEventListener("click", () => window.jarvisJobs?.openJobCenter?.());

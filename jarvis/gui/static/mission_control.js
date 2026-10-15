@@ -149,7 +149,6 @@ function renderOverview(d) {
   const advisor = ov.operational_advisor || d.operational_advisor || {};
       const voice = d.voice || {};
   const vision = d.vision || {};
-  const flytying = d.flytying || {};
   const smarthome = d.smarthome || {};
   const capabilities = d.capabilities || {};
   const integrations = d.integrations || {};
@@ -180,21 +179,6 @@ function renderOverview(d) {
          <p class="mc-actions">
            <a class="ghost-btn small" href="#vision" data-mc-nav="vision">Open Vision</a>
            <a class="ghost-btn small" href="/api/vision/honesty" target="_blank">Honesty</a>
-         </p>`
-      )
-    : "";
-  const flytyingCard = flytying.product
-    ? mcCard(
-        "Fly Tying",
-        `<p>State: <strong>${mcEsc(flytying.state || "idle")}</strong> · corpus ${mcBadge(!!flytying.corpus_loaded, "ok", "offline")}</p>
-         <p>Patterns: ${flytying.record_count ?? "—"} · RAG ${mcBadge(!!flytying.rag, "ok", "keyword")}</p>
-         <p>Inventory: ${flytying.inventory?.count ?? 0} · low ${flytying.inventory?.low_stock ?? 0} · queue ${flytying.queue?.pending ?? 0}</p>
-         <p>Session: ${flytying.session?.active ? mcEsc(flytying.session?.recipe_name || flytying.session?.id || "active") : "none"}</p>
-         <p>Recovery: ${flytying.recovery?.ready ? "ready" : mcEsc(flytying.recovery?.hint || "setup needed")} (${flytying.recovery?.steps_done ?? 0}/${flytying.recovery?.steps_total ?? 0})</p>
-         <p class="mc-actions">
-           <a class="ghost-btn small" href="#flytying" data-mc-nav="flytying">Open Fly Tying</a>
-           <a class="ghost-btn small" href="/api/flytying/product/recovery" target="_blank">Recovery</a>
-           <a class="ghost-btn small" href="/api/flytying/product/mission" target="_blank">Mission</a>
          </p>`
       )
     : "";
@@ -368,7 +352,6 @@ function renderOverview(d) {
       renderRoutingOverviewCard(d.routing_stats),
       voiceCard,
       visionCard,
-      flytyingCard,
       smarthomeCard,
       capabilitiesCard,
       integrationsCard,

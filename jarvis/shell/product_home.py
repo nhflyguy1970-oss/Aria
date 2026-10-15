@@ -34,7 +34,6 @@ PRODUCT_VIEWS: list[str] = [
     "browser",
     "voice",
     "vision",
-    "flytying",
     "planner",
     "calendar",
     "journal",

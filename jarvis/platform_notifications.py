@@ -8,12 +8,14 @@ import time
 from collections import deque
 from typing import Any
 
-from jarvis.env_loader import PROJECT_ROOT
+from jarvis.config import DATA_DIR
 
 _MAX = 80
 _LOCK = threading.Lock()
 _EVENTS: deque[dict[str, Any]] = deque(maxlen=_MAX)
-_STORE = PROJECT_ROOT / "data" / "logs" / "platform_notifications.jsonl"
+# DATA_DIR defaults to PROJECT_ROOT / "data", so the production location is
+# unchanged; deriving it from DATA_DIR keeps test runs out of the live logs.
+_STORE = DATA_DIR / "logs" / "platform_notifications.jsonl"
 
 
 def notify(

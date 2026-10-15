@@ -338,9 +338,6 @@ def test_command_palette_is_wired():
     assert "act:open-actions" in js
     assert "Config profile:" in js
     assert "Personality:" in js
-    assert "flyEmptyClearFiltersBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
-    assert "document.hidden" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
-    assert 'aria-label="Remove material"' in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert "journalPost(`/api/journal/bullet/${id}/complete`" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "Kasa control failed" in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8")
     assert "EQ: ${preset}" in Path("jarvis/gui/static/audio_advanced.js").read_text(encoding="utf-8")
@@ -487,8 +484,6 @@ def test_command_palette_is_wired():
     assert "docsEmptyChatBtn" in Path("jarvis/gui/static/documents.js").read_text(encoding="utf-8")
     assert "securityEmptyPresenceBtn" in Path("jarvis/gui/static/security_settings.js").read_text(encoding="utf-8")
     assert "makerEmptyHelloBtn" in Path("jarvis/gui/static/maker.js").read_text(encoding="utf-8")
-    assert "flyEmptyScanBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
-    assert "flyEmptyVideoBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert "Coding job polling failed" in Path("jarvis/gui/static/coding_jobs.js").read_text(encoding="utf-8")
     assert "async function pollCodingJob" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "function resolveVideoUrl" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
@@ -575,9 +570,6 @@ def test_command_palette_is_wired():
     assert "async function pollLive" not in Path("jarvis/gui/static/app.js").read_text(encoding="utf-8")
     assert "export async function loadHealth" in Path("jarvis/gui/static/modules/health.mjs").read_text(encoding="utf-8")
     assert "document.hidden || mediaWorkActive()" in Path("jarvis/gui/static/modules/health.mjs").read_text(encoding="utf-8")
-    assert "Could not save fly tying model" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
-    assert "Library:" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
-    assert "alert(" not in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert "alert(" not in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "alert(" not in Path("jarvis/gui/static/smarthome.js").read_text(encoding="utf-8")
     assert "alert(" not in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
@@ -602,7 +594,6 @@ def test_command_palette_is_wired():
     assert "securityOpenPresenceBtn" in html
     assert "aria-labelledby=\"projectPickerTitle\"" in html
     assert "aria-labelledby=\"settingsModalTitle\"" in html
-    assert "flytyingOpenGalleryBtn" in html
     assert "cadOpenGalleryBtn" in html
     assert "Active project:" in Path("jarvis/gui/static/projects.js").read_text(encoding="utf-8")
     assert "Security status unavailable" in Path("jarvis/gui/static/security_settings.js").read_text(encoding="utf-8")
@@ -668,8 +659,6 @@ def test_command_palette_is_wired():
     assert "Record failed" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
     assert "MusicGen failed" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
     assert "Batch failed" in Path("jarvis/gui/static/audio.js").read_text(encoding="utf-8")
-    assert "flytyingScanModal" in Path("jarvis/gui/static/modal_chrome.js").read_text(encoding="utf-8")
-    assert "window.stopFlytyingCameraScan" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert "refreshWorldStateHud" not in Path("jarvis/gui/static/movie_tiers.js").read_text(encoding="utf-8")
     assert "bindBarNavigation" in Path("jarvis/gui/static/world_state_hud.js").read_text(encoding="utf-8")
     assert "openFromBar" in Path("jarvis/gui/static/world_state_hud.js").read_text(encoding="utf-8")
@@ -679,7 +668,6 @@ def test_command_palette_is_wired():
     assert "bujoProjectEmptyChatBtn" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "Gratitude added" in Path("jarvis/gui/static/journal.js").read_text(encoding="utf-8")
     assert "panel.focus" in Path("jarvis/gui/static/view_router.js").read_text(encoding="utf-8")
-    assert "flyEmptySeasonalSearchBtn" in Path("jarvis/gui/static/flytying.js").read_text(encoding="utf-8")
     assert 'modal.dataset.retake === "1"' in Path("jarvis/gui/static/memory_browser.js").read_text(encoding="utf-8")
     assert "Generation cancelled" in Path("jarvis/gui/static/chat_progress.js").read_text(encoding="utf-8")
     assert "preferred_module" in Path("jarvis/gui/static/chat_send.js").read_text(encoding="utf-8")

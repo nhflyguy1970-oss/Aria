@@ -12,7 +12,6 @@
     const blurbs = {
       chat: "Sit down. Talk.",
       health: "How you’re doing today",
-      flytying: "The bench by the water",
       mission: "How the house is breathing",
       coding: "Work in progress",
       projects: "Things you’re building",
@@ -59,7 +58,6 @@
   function titleForRoom(r) {
     const map = {
       chat: "Chat",
-      flytying: "Fly Tying",
       health: "Health",
       mission: "Mission Control",
       coding: "Coding",
@@ -98,7 +96,6 @@
   function synonymsForRoom(r) {
     const extra = {
       chat: ["talk", "converse", "living room", "conversation", "ask aria"],
-      flytying: ["flies", "fly tying", "patterns", "hatch", "tying", "streamside"],
       health: ["doctor", "meds", "vitals", "wellness", "blood pressure", "checkin", "check-in"],
       mission: ["mission control", "systems", "ops", "workstation", "server health", "system health"],
       coding: ["code", "git", "propose", "python", "fix", "engineering"],
@@ -139,7 +136,6 @@
     const map = {
       chat: "◇",
       health: "♡",
-      flytying: "∿",
       mission: "◎",
       coding: "</>",
       projects: "▣",
@@ -552,7 +548,6 @@
     /* Natural language intents */
     const nl = normalize(q);
     const intentRoutes = [
-      { re: /\b(tie flies|fly tying|tying)\b/, id: "room:flytying" },
       { re: /\b(my health|health|doctor|blood pressure)\b/, id: "room:health" },
       { re: /\b(mission control|system health|check server)\b/, id: "room:mission" },
       { re: /\b(restart (aria|jarvis|server)|reboot)\b/, id: "ctrl:restart" },

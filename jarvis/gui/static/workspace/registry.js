@@ -8,7 +8,6 @@
   /** @type {import('./contracts').RoomContract[]} */
   const ROOMS = [
     { id: "chat", kind: "room", metaphor: "Living room", hero: "Conversation", viewId: "chat", chromePolicy: "minimal", voice: "welcoming", tools: [], livingRoom: true },
-    { id: "flytying", kind: "room", metaphor: "Streamside cabin", hero: "The fly", viewId: "flytying", chromePolicy: "minimal", voice: "adventurous", tools: ["browser", "gallery"] },
     { id: "health", kind: "room", metaphor: "Wellness clinic", hero: "Jeff’s today", viewId: "health", chromePolicy: "minimal", voice: "reassuring", tools: ["notifications"] },
     { id: "mission", kind: "room", metaphor: "Aerospace ops", hero: "The system", viewId: "workstation", chromePolicy: "systems", voice: "precise", tools: ["repair", "integrity", "providers", "notifications"] },
     { id: "documents", kind: "room", metaphor: "Private library", hero: "Knowledge", viewId: "documents", chromePolicy: "minimal", voice: "thoughtful", tools: ["ocr", "search", "clipboard"] },
@@ -89,17 +88,6 @@
       chromePolicy: "standard",
       exitBehavior: "chat",
       recipe: "Room: Engineering studio · Git, Projects, Jobs",
-    },
-    {
-      id: "flytying",
-      kind: "activity",
-      title: "Fly tying",
-      intentHints: ["tie flies", "fly tying", "hatch", "pattern"],
-      primaryRoom: "flytying",
-      tools: ["browser", "gallery"],
-      chromePolicy: "minimal",
-      exitBehavior: "chat",
-      recipe: "Room: Streamside cabin · Browser, Gallery",
     },
     {
       id: "doctor_visit",

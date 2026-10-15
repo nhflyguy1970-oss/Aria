@@ -121,18 +121,6 @@ async def lifespan(app: FastAPI):
         pass
     audio_wakeword.configure(chat_processor=assistant.process)
 
-    def _warm_flytying_index() -> None:
-        try:
-            from jarvis.flytying import index as recipe_index
-            from jarvis.flytying.config import blackfly_data_available
-
-            if blackfly_data_available():
-                recipe_index.recipes()
-        except Exception:
-            pass
-
-    threading.Thread(target=_warm_flytying_index, daemon=True, name="flytying-warm").start()
-
     try:
         # Recovery runs before the worker takes anything new, so work a dead
         # process abandoned is resumable rather than competing with fresh work

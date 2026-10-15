@@ -124,7 +124,7 @@
       <p>${esc(p.purpose || "")}</p>
       ${managed}
       <p>Status: <strong>${esc(p.status)}</strong>${p.secret_preview ? ` · ${esc(p.secret_preview)}` : ""}</p>
-      <h4 class="flytying-col-subtitle">This provider unlocks</h4>
+      <h4 class="section-subtitle">This provider unlocks</h4>
       <ul>${unlocks}</ul>
       <p id="integrationsTestResult" class="muted small" aria-live="polite"></p>
       ${keyForm}

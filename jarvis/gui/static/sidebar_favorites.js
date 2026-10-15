@@ -10,7 +10,6 @@
     workstation: "Mission Control",
     planner: "Planner",
     calendar: "Calendar",
-    flytying: "Fly Tying",
     projects: "Projects",
     maker: "Maker",
     browser: "Browser",

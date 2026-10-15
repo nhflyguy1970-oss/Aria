@@ -17,7 +17,7 @@ def get_host_module() -> Any:
 
 def application_ids() -> list[str]:
     """Known application ids (static Phase 2 list + live discovery when possible)."""
-    ids = ["aria", "aria-uncensored", "flytying", "housefly"]
+    ids = ["aria", "aria-uncensored", "housefly"]
     try:
         from aiplatform.applications.host import discover_and_attach
 

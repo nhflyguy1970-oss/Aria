@@ -3,7 +3,7 @@
  */
 (function () {
   const VIEW_PANELS = [
-    "chatView", "dashboardView", "automationView", "workstationView", "modelsView", "codingView", "plannerView", "calendarView", "flytyingView", "projectsView",
+    "chatView", "dashboardView", "automationView", "workstationView", "modelsView", "codingView", "plannerView", "calendarView", "projectsView",
     "makerView", "browserView", "securityView", "presenceView", "homeAutomationView", "auditView", "certificationView", "capabilitiesView", "integrationsView", "searchView", "settingsView", "voiceView", "visionView", "audioView", "journalView",
     "memoryView", "healthView", "galleryView", "videoView", "memeView", "documentsView", "connectionsView", "actionsView",
   ];
@@ -56,7 +56,6 @@
     if (view === "coding" && window.initCodingHome) window.initCodingHome();
     if (view === "planner" && window.initPlanner) window.initPlanner();
     if (view === "calendar" && window.initCalendar) window.initCalendar();
-    if (view === "flytying" && window.initFlytying) window.initFlytying();
     if (view === "capabilities" && window.initCapabilities) window.initCapabilities();
     if (view === "integrations" && window.initIntegrationsHome) window.initIntegrationsHome();
     if (view === "search" && window.initSearchHome) window.initSearchHome();
@@ -97,6 +96,8 @@
     if (v === "mission" || v === "missionRoom" || v === "mission-control") v = "workstation";
     if (v === "home") v = "dashboard";
     if (v === "home_automation" || v === "smarthome") v = "homeAutomation";
+    // Retired view (fly tying moved to the standalone app): old bookmarks and saved last-view land in chat.
+    if (v === "flytying") v = "chat";
     return v;
   }
 

@@ -143,7 +143,6 @@
 
   const ROOM_CLASS = {
     chat: "living-room",
-    flytying: "house-flytying",
     health: "house-health",
     mission: "house-mission",
     documents: "house-documents",
@@ -167,7 +166,6 @@
 
   const NATIVE_FALLBACK = {
     chat: () => window.AriaLivingRoom,
-    flytying: () => window.AriaFlytyingRoom,
     health: () => window.AriaHealthRoom,
     mission: () => window.AriaMissionRoom,
   };

@@ -63,7 +63,6 @@ def intent_coach(query: str = "") -> dict[str, Any]:
         (("research", "browse", "web"), "research"),
         (("plan", "task", "calendar"), "planning"),
         (("image", "gallery", "video"), "media"),
-        (("fly", "hackle"), "flytying"),
         (("home", "brief", "dashboard"), "home"),
         (("ops", "mission", "provider"), "role-operations"),
     ]

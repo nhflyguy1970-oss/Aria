@@ -259,23 +259,6 @@ def _loop() -> None:
             if _stop.is_set():
                 return
             try:
-                from jarvis.flytying.nightly import run_scheduled as flytying_nightly
-
-                memory = None
-                try:
-                    # C6: never construct a second assistant from the daemon scheduler.
-                    from jarvis.assistant_instance import get_assistant_or_none
-
-                    asst = get_assistant_or_none()
-                    memory = getattr(asst, "memory", None) if asst else None
-                except Exception:
-                    memory = None
-                flytying_nightly(now, memory=memory)
-            except Exception as exc:
-                logger.debug("Fly tying nightly skipped: %s", exc)
-            if _stop.is_set():
-                return
-            try:
                 from jarvis.sunlight_scene import tick_sunlight
 
                 tick_sunlight()

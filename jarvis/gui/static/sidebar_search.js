@@ -47,7 +47,7 @@
     const sectionOf = {
       chat: "AI", search: "Workspace", settings: "Workspace", dashboard: "Home", workstation: "Mission Control", planner: "Workspace",
       calendar: "Workspace", journal: "Workspace", memory: "Workspace", projects: "Developer",
-      documents: "Workspace", browser: "AI", flytying: "Maker", maker: "Maker",
+      documents: "Workspace", browser: "AI", maker: "Maker",
       gallery: "Media", video: "Media", meme: "Media", audio: "Media", voice: "Media",
       security: "System", presence: "System", audit: "System", actions: "System",
       capabilities: "System", integrations: "System", connections: "Workspace",

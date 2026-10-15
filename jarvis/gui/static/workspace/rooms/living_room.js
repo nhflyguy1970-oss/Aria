@@ -442,7 +442,7 @@
       if (stageHasLivingRoom(existing)) return;
       _active = false;
     }
-    /* Phase 6.5: never displace a furnished Room (Mission, Fly, Health, …) */
+    /* Phase 6.5: never displace a furnished Room (Mission, Health, …) */
     if (
       document.body?.dataset?.furnished === "1" &&
       document.body.dataset.room &&

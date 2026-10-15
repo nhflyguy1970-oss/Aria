@@ -777,8 +777,6 @@ ALIASES: dict[str, list[str]] = {
     "morning_briefing": ["brief me briefing morning summary news today"],
     "briefing_news_detail": ["latest news headlines"],
     "speak": ["say out loud read aloud tts voice"],
-    "fly_recipe": ["fly pattern recipe tie tying materials hook"],
-    "fly_ask": ["fly tying question"],
 }
 
 _STOP = set(

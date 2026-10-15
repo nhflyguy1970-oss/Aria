@@ -29,7 +29,6 @@ DEFAULT_URL = os.environ.get("JARVIS_URL", "http://127.0.0.1:8765/")
 ROOM_TOUR = [
     "chat",
     "health",
-    "flytying",
     "workstation",
     "planner",
     "gallery",

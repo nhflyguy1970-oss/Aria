@@ -194,23 +194,6 @@
       };
     }
 
-    const fly = t.closest?.("#flytyingRecipeList li, .flytying-recipe-list li, .flytying-queue-list li");
-    if (fly) {
-      const text = fly.textContent?.trim() || "Pattern";
-      return {
-        type: "fly",
-        actions: genericItemActions({
-          label: text.slice(0, 40),
-          copy: text,
-          pinView: "flytying",
-          open: () => window.switchToView?.("flytying"),
-          extra: [
-            { label: "Ask Aria about pattern", run: () => { window.switchToView?.("chat"); setTimeout(() => window.jarvisSendToChat?.(`Explain the fly pattern: ${text}`), 80); } },
-          ],
-        }),
-      };
-    }
-
     const project = t.closest?.("#projectsList li, .projects-list li");
     if (project) {
       const text = project.textContent?.trim() || "Project";

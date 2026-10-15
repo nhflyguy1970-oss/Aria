@@ -8,12 +8,14 @@ import time
 from collections import deque
 from typing import Any
 
-from jarvis.env_loader import PROJECT_ROOT
+from jarvis.config import DATA_DIR
 
 _MAX_EVENTS = 500
 _LOCK = threading.Lock()
 _EVENTS: deque[dict[str, Any]] = deque(maxlen=_MAX_EVENTS)
-_ACTIVITY_FILE = PROJECT_ROOT / "data" / "logs" / "workstation_activity.jsonl"
+# DATA_DIR defaults to PROJECT_ROOT / "data", so the production location is
+# unchanged; deriving it from DATA_DIR keeps test runs out of the live logs.
+_ACTIVITY_FILE = DATA_DIR / "logs" / "workstation_activity.jsonl"
 
 
 def record_event(

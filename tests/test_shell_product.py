@@ -99,7 +99,6 @@ def test_breadcrumbs_map_covers_product_homes():
         "browser",
         "voice",
         "vision",
-        "flytying",
         "planner",
         "calendar",
         "journal",

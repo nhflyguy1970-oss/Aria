@@ -12,8 +12,8 @@ import pytest
 
 
 def test_similar_exists_accepts_the_namespace_callers_pass():
-    """memory_consolidation and the flytying knowledge seed both pass
-    namespace=; the stores did not accept it, so those calls raised TypeError."""
+    """memory_consolidation passes namespace=; the stores did not accept it,
+    so those calls raised TypeError."""
     from jarvis.modules.memory import JsonMemoryStore
     from jarvis.modules.memory_sqlite import SqliteMemoryStore
 
@@ -52,19 +52,6 @@ def test_memory_consolidation_can_call_the_store_it_calls(data_dir, monkeypatch)
     assert store.similar_exists("some consolidated fact", namespace="work") is False
 
 
-def test_barcode_module_provides_what_the_scan_route_imports():
-    """The scan route imported pyzbar_status and unpacked a (codes, error)
-    tuple; the module had neither."""
-    from jarvis.flytying import barcode
-
-    status = barcode.pyzbar_status()
-    assert set(status) == {"available", "reason"}
-
-    codes, reason = barcode.decode_barcodes_from_image(b"not an image")
-    assert codes == []
-    assert reason, "a failed decode must say why"
-
-
 def test_document_path_resolution_has_no_phantom_import():
     from jarvis.behaviors.knowledge import context
 
@@ -79,7 +66,6 @@ def test_document_path_resolution_has_no_phantom_import():
     "module_path,name",
     [
         ("jarvis.tool_permissions", "execute_confirm"),
-        ("jarvis.flytying.barcode", "pyzbar_status"),
     ],
 )
 def test_shared_helpers_exist(module_path, name):

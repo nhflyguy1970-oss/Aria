@@ -5,7 +5,7 @@
     "standard",
     "uncensored"
   ],
-  "capability_count": 98,
+  "capability_count": 96,
   "capabilities": [
     {
       "id": "chat-assistant",
@@ -324,28 +324,6 @@
       "smoke_coverage": "smoke media",
       "owner": "jarvis/comfyui.py",
       "jeff_would_notice": true,
-      "protected": true
-    },
-    {
-      "id": "fly-tying",
-      "layer": "Capability",
-      "name": "Fly tying domain",
-      "regression_risk": "Medium",
-      "user_visible_behavior": "Jeff searches patterns/materials and uses Fly Tying tab.",
-      "expected_inputs": "Pattern query",
-      "expected_outputs": "Pattern results",
-      "external_apis": "extension routes",
-      "cli_behavior": "N/A",
-      "gui_behavior": "Fly Tying tab",
-      "runtime_behavior": "flytying package",
-      "failure_behavior": "Empty index",
-      "recovery_behavior": "Rebuild index",
-      "existing_regression_tests": [
-        "tests/test_flytying_extension.py"
-      ],
-      "smoke_coverage": "optional",
-      "owner": "jarvis/flytying",
-      "jeff_would_notice": false,
       "protected": true
     },
     {
@@ -863,28 +841,6 @@
       "protected": true
     },
     {
-      "id": "app-flytying",
-      "layer": "Application",
-      "name": "Fly tying app",
-      "regression_risk": "Medium",
-      "user_visible_behavior": "Domain franchise for fly tying.",
-      "expected_inputs": "Domain ops",
-      "expected_outputs": "Domain results",
-      "external_apis": "ext",
-      "cli_behavior": "N/A",
-      "gui_behavior": "Fly tab",
-      "runtime_behavior": "flytying",
-      "failure_behavior": "Empty",
-      "recovery_behavior": "Rebuild",
-      "existing_regression_tests": [
-        "tests/test_flytying_extension.py"
-      ],
-      "smoke_coverage": "optional",
-      "owner": "jarvis/extensions/flytying",
-      "jeff_would_notice": false,
-      "protected": true
-    },
-    {
       "id": "app-home",
       "layer": "Application",
       "name": "Home app",
@@ -1009,7 +965,7 @@
       "failure_behavior": "Load fail",
       "recovery_behavior": "Disable ext",
       "existing_regression_tests": [
-        "tests/test_flytying_extension.py"
+        "tests/test_extensions.py"
       ],
       "smoke_coverage": "startup",
       "owner": "jarvis/extensibility",

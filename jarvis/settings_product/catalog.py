@@ -441,7 +441,6 @@ def build_catalog() -> list[dict[str, Any]]:
         ("capabilities", "Capabilities", "capabilities", "plugins extensions trust", ["plugins"]),
         ("integrations", "Integrations", "integrations", "providers unlock matrix", ["providers"]),
         ("smarthome", "Smart Home", "workstation", "home assistant entities rooms", ["ha", "home assistant"]),
-        ("flytying", "Fly Tying", "flytying", "patterns recipes", ["fly"]),
         ("audio", "Audio", "audio", "studio whisper mic sinks", ["mic", "audio studio"]),
         ("gallery", "Gallery / Image", "gallery", "comfy image engine", ["comfy", "image"]),
         ("video", "Video", "video", "video studio motion", ["animatediff"]),

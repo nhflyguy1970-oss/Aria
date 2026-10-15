@@ -620,16 +620,6 @@
       design: () => askAria("Help me design a printable part. Ask for dimensions, material, and constraints."),
     },
 
-    flytying: {
-      open: () => goView("flytying"),
-      search: () => focusAfter("flytying", "flytyingSearchInput"),
-      seasonal: () => {
-        goView("flytying");
-        setTimeout(() => invoke("flytyingSeasonalBtn", "Seasonal patterns"), 80);
-        return true;
-      },
-    },
-
     meme: {
       open: () => goView("meme"),
     },

@@ -24,7 +24,6 @@ ALL_SUBSYSTEMS = (
     "voice",
     "calendar",
     "planner",
-    "flytying",
     "ocr",
 )
 

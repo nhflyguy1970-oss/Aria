@@ -23,7 +23,6 @@ DEPENDENCY_EDGES: dict[str, list[str]] = {
     "docker": ["system"],
     "planner": ["system"],
     "calendar": ["system"],
-    "flytying": ["system"],
     "aria": ["system"],
 }
 

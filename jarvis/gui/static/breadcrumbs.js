@@ -20,7 +20,6 @@
     models: { section: "Developer", sectionKey: "coding", label: "Models" },
     browser: { section: "AI", sectionKey: "capabilities", label: "Browser" },
     automation: { section: "System", sectionKey: "services", label: "Automation" },
-    flytying: { section: "Maker", sectionKey: "maker", label: "Fly Tying" },
     maker: { section: "Maker", sectionKey: "maker", label: "Maker Lab" },
     gallery: { section: "Media", sectionKey: "video", label: "Gallery" },
     video: { section: "Media", sectionKey: "video", label: "Video" },

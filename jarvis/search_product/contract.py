@@ -94,7 +94,6 @@ def _default_view(source: str) -> str:
         "calendar": "calendar",
         "gallery": "gallery",
         "home_assistant": "workstation",
-        "flytying": "flytying",
         "automation": "automation",
         "learned": "documents",
     }.get(source, "search")

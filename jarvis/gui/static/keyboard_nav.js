@@ -122,10 +122,10 @@
         return;
       }
 
-      // Ctrl+Alt+1..8 — apply starter layouts by index
+      // Ctrl+Alt+1..8 — apply starter layouts by index (slot 7 is empty so Home stays on 8)
       if (mod && e.altKey && e.key >= "1" && e.key <= "8") {
         e.preventDefault();
-        const order = ["coding", "writing", "research", "planning", "media", "maker", "flytying", "home"];
+        const order = ["coding", "writing", "research", "planning", "media", "maker", null, "home"];
         const id = order[Number(e.key) - 1];
         if (id) window.applyAriaLayout?.(id, { quiet: true, confirm: false });
         return;

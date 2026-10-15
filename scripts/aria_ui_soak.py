@@ -23,7 +23,6 @@ VIEWS = (
     "workstation",
     "planner",
     "calendar",
-    "flytying",
     "projects",
     "maker",
     "browser",
