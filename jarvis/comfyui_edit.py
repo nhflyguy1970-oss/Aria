@@ -94,8 +94,12 @@ def klein_installed() -> bool:
     return all((COMFY_ROOT / "models" / sub / name).is_file() for sub, name in KLEIN_FILES.items())
 
 
+KLEIN_MAX_PIXELS = 1_050_000  # ~1 MP: a 1344x768 render is edited at its own size (28 s, 2026-10-14)
+
+
 def _klein_dims(path: Path) -> tuple[int, int]:
-    """Source aspect, long side <= 1024, multiples of 16 (Phase 8 qualified sizes)."""
+    """Source aspect, at most ~1 MP, multiples of 16. Was long side <= 1024, which returned
+    every 1344x768 render at 1024x576."""
     try:
         from PIL import Image
 
@@ -103,7 +107,7 @@ def _klein_dims(path: Path) -> tuple[int, int]:
             w, h = im.size
     except Exception:  # noqa: BLE001
         return 1024, 768
-    scale = min(1.0, 1024 / max(w, h))
+    scale = min(1.0, (KLEIN_MAX_PIXELS / (w * h)) ** 0.5)
     return max(256, int(w * scale) // 16 * 16), max(256, int(h * scale) // 16 * 16)
 
 
@@ -165,17 +169,20 @@ def edit_image(
             "~/ComfyUI/venv/bin/python ~/ComfyUI/main.py --listen 127.0.0.1 --port 8188"
         )
 
-    src = _prepare_image(Path(image_path).expanduser().resolve())
+    from jarvis.config import is_uncensored
+
+    original = Path(image_path).expanduser().resolve()
+    # Klein follows edit instructions well but was never trained on explicit content; in
+    # uncensored mode the active NSFW checkpoint (Lustify) does whole-image edits as img2img.
+    use_klein = klein_installed() and denoise is None and not is_uncensored()
+    # Klein sizes its own output (_klein_dims); the SDXL/Flux img2img path needs the 1024 cap.
+    src = original if use_klein else _prepare_image(original)
     try:
         image_name = upload_image(src)
     except Exception as e:
         return f"ERROR: ComfyUI upload failed: {e}"
 
-    from jarvis.config import is_uncensored
-
-    # Klein follows edit instructions well but was never trained on explicit content; in
-    # uncensored mode the active NSFW checkpoint (Lustify) does whole-image edits as img2img.
-    if klein_installed() and denoise is None and not is_uncensored():
+    if use_klein:
         width, height = _klein_dims(src)
         wf = build_klein_edit_workflow(image_name, prompt.strip(), width, height)
         return inherit_provenance(image_path, run_workflow(wf, filename_prefix="jarvis_edit_klein",

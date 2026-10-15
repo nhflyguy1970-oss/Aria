@@ -125,6 +125,9 @@ def _iter_blocking_cancellable(
     errors: list[BaseException] = []
 
     def _reader() -> None:
+        from jarvis import stream_progress
+
+        stream_progress.bind(cancel_key)  # thinking chunks count as progress for this request
         try:
             for item in stream:
                 if cancel_key and is_cancelled(cancel_key):
@@ -133,6 +136,14 @@ def _iter_blocking_cancellable(
         except BaseException as exc:  # noqa: BLE001 — surface to consumer
             errors.append(exc)
         finally:
+            # Close the provider stream here, not at garbage collection: it holds the GPU
+            # admission until its ``finally`` runs.
+            close = getattr(stream, "close", None)
+            if close:
+                try:
+                    close()
+                except Exception:  # noqa: BLE001
+                    pass
             out.put(sentinel)
 
     # The reader runs the provider call (and its GPU admission): give it the caller's

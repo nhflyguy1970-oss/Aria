@@ -115,6 +115,8 @@ os.environ["JARVIS_COMFYUI_IDLE_STOP_MIN"] = "0"
 os.environ["JARVIS_IMAGE_QUALITY_ROUTING"] = "fast"
 # The RX 7600 chat lane would otherwise consult the owner's live helper Ollama; tests opt in.
 os.environ["JARVIS_HELPER_CHAT_MODEL"] = "off"
+# Likewise the helper vision model (count checks, object location for local image edits).
+os.environ["JARVIS_IMAGE_COUNT_MODEL"] = "off"
 # Modules that did `from jarvis.env_loader import load_jarvis_env` keep the real function
 # even while _no_api_key_in_tests stubs the module attribute, so a stray call (e.g.
 # services.get_status) loaded the owner's live data/jarvis.env and leaked its cloud settings

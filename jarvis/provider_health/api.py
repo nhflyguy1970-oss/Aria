@@ -38,8 +38,12 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
 
         return list_models(provider)
 
+    # The recovery, restart and classify steps block on Ollama (a generate probe can wait a
+    # minute behind a running generation). Run them in a worker thread: on the event loop
+    # they froze the whole server until the watchdog restarted it (2026-10-14 16:56).
     @app.post("/api/provider/recover")
     async def provider_recover(request: Request):
+        from jarvis.async_util import run_sync
         from jarvis.provider_health.recovery import recover
 
         try:
@@ -48,7 +52,8 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
             body = {}
         if not isinstance(body, dict):
             body = {}
-        return recover(
+        return await run_sync(
+            recover,
             code=body.get("code") or "",
             message=body.get("message") or "",
             provider=body.get("provider") or "ollama",
@@ -59,6 +64,7 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
 
     @app.post("/api/provider/restart")
     async def provider_restart(request: Request):
+        from jarvis.async_util import run_sync
         from jarvis.provider_health.history import append_event
         from jarvis.provider_health.recovery import restart_provider
 
@@ -73,7 +79,7 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
                 status_code=400,
                 content={"ok": False, "error": "confirmation_required", "message": "Pass confirmed=true to restart"},
             )
-        out = restart_provider(body.get("provider") or "ollama")
+        out = await run_sync(restart_provider, body.get("provider") or "ollama")
         append_event({"kind": "operator_restart", **out})
         return out
 
@@ -95,6 +101,7 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
 
     @app.post("/api/provider/classify")
     async def provider_classify(request: Request):
+        from jarvis.async_util import run_sync
         from jarvis.provider_health.classify import classify_failure
         from jarvis.provider_health.probe import ping_provider
 
@@ -104,7 +111,7 @@ def register_product_routes(app, assistant) -> None:  # noqa: ARG001
             body = {}
         if not isinstance(body, dict):
             body = {}
-        ping = ping_provider(body.get("provider") or "ollama", force_probe=bool(body.get("probe", True)))
+        ping = await run_sync(ping_provider, body.get("provider") or "ollama", force_probe=bool(body.get("probe", True)))
         return classify_failure(
             code=body.get("code") or "",
             message=body.get("message") or "",

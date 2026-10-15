@@ -348,7 +348,7 @@ def test_first_progress_budget_only_for_token_streaming_actions() -> None:
     assert 'expects_token_stream = pre_action in ("chat", "")' in src
 
     # The timeout branch itself must be gated, not merely the flag defined.
-    branch = src.split("waited_ms = (_time.monotonic() - stream_t0)", 1)[1]
+    branch = src.split("waited_ms = (_time.monotonic() - ", 1)[1]
     condition = branch.split("first_progress_ms", 1)[0]
     assert "expects_token_stream" in condition, (
         "first-progress timeout is not gated by expects_token_stream"

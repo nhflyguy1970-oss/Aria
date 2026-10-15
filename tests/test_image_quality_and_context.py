@@ -508,6 +508,7 @@ def test_count_check_never_runs_on_the_rtx(monkeypatch, tmp_path):
 
     from jarvis import gpu_scheduler, image_verify
 
+    monkeypatch.setenv("JARVIS_IMAGE_COUNT_MODEL", "qwen3-vl:4b-instruct-q4_K_M")
     monkeypatch.setattr(gpu_scheduler, "helper_ready", lambda: True)
     monkeypatch.setattr(gpu_scheduler, "model_size", lambda m: 3_300_000_000)
 

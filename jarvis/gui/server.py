@@ -2154,7 +2154,9 @@ async def image_inpaint(
 async def image_edit(
     path: str = Form(...),
     prompt: str = Form(...),
-    denoise: float = Form(0.58),
+    # Unset = ARIA's editor (local object edit, else Klein). A forced 0.58 sent every Gallery
+    # edit through whole-image Flux Schnell img2img, which redraws the entire picture.
+    denoise: float | None = Form(None),
 ):
     src = _resolve_image_path(path)
     if not src:
@@ -2162,15 +2164,10 @@ async def image_edit(
             status_code=400, content={"ok": False, "message": "Image path not allowed or not found"}
         )
 
-    queued = assistant._enqueue_media(
-        "edit_image",
-        {
-            "path": str(src),
-            "prompt": prompt.strip(),
-            "denoise": denoise,
-        },
-        prompt.strip(),
-    )
+    params = {"path": str(src), "prompt": prompt.strip()}
+    if denoise is not None:
+        params["denoise"] = denoise
+    queued = assistant._enqueue_media("edit_image", params, prompt.strip())
     return {"ok": True, "job_id": queued["job_id"], "pending": True, "message": queued["message"]}
 
 
@@ -4030,7 +4027,13 @@ async def chat(
                             event = await asyncio.wait_for(ait.__anext__(), timeout=max(2.0, heartbeat_sec))
                         except asyncio.TimeoutError:
                             note_heartbeat(stream_rid)
-                            waited_ms = (_time.monotonic() - stream_t0) * 1000.0
+                            # A reasoning model's hidden thinking is progress: it restarts the
+                            # first-token clock, so only a provider that sends nothing times out.
+                            from jarvis import stream_progress
+
+                            thought_at = stream_progress.last(stream_rid)
+                            thinking = thought_at > stream_t0 and _time.monotonic() - thought_at < first_progress_ms / 1000.0
+                            waited_ms = (_time.monotonic() - max(stream_t0, thought_at)) * 1000.0
                             if (
                                 expects_token_stream
                                 and not got_model_progress
@@ -4072,7 +4075,8 @@ async def chat(
                                 yield f"data: {_sse_payload({'type': 'done', 'ok': False, 'code': 'FIRST_PROGRESS_TIMEOUT', 'message': msg})}\n\n"
                                 timed_out = True
                                 break
-                            yield f"data: {_sse_payload({'type': 'heartbeat', 'message': 'waiting for provider…'})}\n\n"
+                            beat = "thinking…" if thinking else "waiting for provider…"
+                            yield f"data: {_sse_payload({'type': 'heartbeat', 'message': beat})}\n\n"
                             continue
                         except StopAsyncIteration:
                             break

@@ -345,6 +345,14 @@ class _Scheduler:
             self._shared = max(0, self._shared - 1)
             self._event("reaped_stale", job=job.label, idle_s=round(now - job.touched))
 
+    def _holders(self) -> str:
+        """Caller holds the condition. Who holds the RTX, for the refusal message and log
+        (2026-10-14: an edit waited 3 min for a slot and nothing recorded whose it was)."""
+        now = time.monotonic()
+        rows = [f"{j.kind} {j.label or j.model} idle {round(now - j.touched)}s"
+                for j in self._active if j.kind in ("shared", "heavy", "image")]
+        return "; ".join(rows) or f"shared={self._shared} heavy={bool(self._heavy)}"
+
     def _enter_queue(self) -> None:
         if self._waiting >= MAX_WAITING:
             raise GpuUnavailable(f"GPU queue is full ({MAX_WAITING} waiting); try again shortly")
@@ -510,7 +518,9 @@ class _Scheduler:
                         self._reap_stale()
                         left = deadline - time.monotonic()
                         if left <= 0:
-                            raise GpuUnavailable(f"RTX 3060 stayed busy; {job.label} was not started")
+                            holders = self._holders()
+                            self._event("heavy_timeout", job=job.label, holders=holders)
+                            raise GpuUnavailable(f"RTX 3060 stayed busy ({holders}); {job.label} was not started")
                         self._cv.wait(min(left, 1.0))
                 finally:
                     self._heavy_waiting -= 1

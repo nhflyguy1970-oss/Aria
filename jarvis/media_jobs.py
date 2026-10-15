@@ -419,6 +419,9 @@ def _worker_loop() -> None:
                         }
                         if (
                             kind in media_kinds
+                            # An edit can rightly change nothing ("I count 3 helicopters, not 4 …"):
+                            # that reply has no file and must reach the owner as it is.
+                            and not result.get("no_media_expected")
                             and not any(
                                 result.get(k)
                                 for k in (

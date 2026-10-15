@@ -100,6 +100,8 @@ IMAGE_FOLLOWUP_WINDOW_S = 20 * 60
 
 def _image_in_play(session: SessionContext) -> bool:
     """An image was just made: the previous turn was an image action, or a chat turn shortly after one."""
+    if session.last_action in ("edit_image", "inpaint_image") and session.last_image:
+        return True  # an edited image (also one from the Gallery or an upload) is in play
     if not session.last_image_prompt:
         return False
     if session.last_action in ("generate_image", "edit_image", "inpaint_image"):
@@ -187,7 +189,32 @@ _NEW_REQUEST_REPLY = re.compile(
 _IMAGE_ACTIONS = {"generate_image", "edit_image", "inpaint_image", "upscale_image", "analyze_image"}
 
 
+# "Edit the image you just generated. Keep the jet …": the relative clause names the image,
+# it is not part of the instruction (it reached the edit model as "you just generated.").
+_IMAGE_RELATIVE = re.compile(
+    r"^(?:that|which)?\s*(?:you|we|i|aria)\s+(?:just\s+|have\s+just\s+|had\s+)?"
+    r"(?:generated|made|created|drew|drawn|rendered|produced|did|edited)\b"
+    r"(?:\s+(?:earlier|before|above|now|for\s+me|today))*\s*[.,:;!-]*\s*"
+    r"|^(?:from\s+(?:before|earlier|above)|above|earlier)\b\s*[.,:;!-]*\s*",
+    re.I,
+)
+_REDRAW_YES = re.compile(r"^\W*(?:yes|yeah|yep|yup|ok(?:ay)?|sure|please(?:\s+do)?|go\s+ahead|do\s+it|go\s+for\s+it|"
+                         r"proceed|confirm(?:ed)?|redraw(?:\s+it)?|full\s+redraw|redraw\s+the\s+(?:whole|entire)\s+"
+                         r"(?:image|picture))\b(?:[\s,.!]+(?:please|thanks|thank\s+you|redraw\s+it|go\s+ahead|do\s+it))*"
+                         r"[\s.!]*$", re.I)
+_REDRAW_NO = re.compile(r"^\W*(?:no|nope|cancel|stop|never\s*mind|forget\s+it|don'?t)\b[\s\w,.!']{0,30}$", re.I)
+# A whole-image directive with no leading edit verb: "Keep the existing image composition …
+# Correct only these details: …" went to chat, and the chat model claimed it had edited the
+# image (2026-10-14 16:59). With an image in the session these are edit instructions.
+_EDIT_DIRECTIVE = re.compile(
+    r"^(?:please\s+)?(?:keep|preserve|leave|maintain)\s+(?:the\s+|this\s+|that\s+|my\s+|your\s+)?"
+    r"(?:existing|current|same|original|previous|last)\s+(?:image|picture|photo|scene|composition|layout)\b",
+    re.I,
+)
+
+
 def _edit_instruction(verb: str, rest: str) -> str:
+    rest = _IMAGE_RELATIVE.sub("", rest.strip(), count=1)
     rest = re.sub(r"^\s*(?:[:\-–,]|to\b|so that\b|and\b|by\b)\s*", "", rest.strip(), flags=re.I).strip()
     if not rest:
         return ""
@@ -223,6 +250,21 @@ def _recent_image_edit_resolve(message: str, session: SessionContext) -> dict | 
                                   path=path)
         return {"action": "edit_image", "params": {"path": path, "prompt": instruction},
                 "thinking": "image edit (explicit path)", "route_reason": "image_edit_explicit_path"}
+    if "?" not in text and _image_in_play(session) and session.last_image and Path(session.last_image).is_file():
+        # "Get rid of the helicopter", "take that person out", "paint the boat dark blue": one local
+        # object edit of the image in play (these went to chat or started a new image).
+        from jarvis.image_edit_plan import plan as edit_plan
+        from jarvis.image_request import _NOT_VISUAL
+
+        if not _NOT_VISUAL.search(text) and edit_plan(text) is not None:
+            return {"action": "edit_image", "params": {"path": session.last_image, "prompt": text},
+                    "thinking": "image edit (local object edit)", "route_reason": "image_edit_local_object"}
+    if _EDIT_DIRECTIVE.match(text) and "?" not in text:
+        if session.last_image and Path(session.last_image).is_file():
+            return {"action": "edit_image", "params": {"path": session.last_image, "prompt": text},
+                    "thinking": "image edit (directive)", "route_reason": "image_edit_directive"}
+        return _image_clarify("Which image? Generate one or pick one from the Gallery first, or give me its file path.",
+                              "image_edit_no_recent_image")
     m = _RECENT_IMAGE_REF.match(text)
     pronoun = None if m else _IMAGE_PRONOUN_EDIT.match(text)
     if pronoun:
@@ -3463,6 +3505,20 @@ def _route(message: str, session: SessionContext, attachment: dict | None = None
             return _finalize_intent({"action": "generate_image", "params": {"prompt": normalize_image_prompt(reply) or reply},
                                      "thinking": "image subject", "route_reason": "image_generate_subject",
                                      "route_handler": "Gallery"}, message, session)
+    if pending.get("type") == "image_full_redraw":
+        # Reply to "I can't do this as a local edit … Reply redraw it to go ahead".
+        session.pending_clarification = None
+        reply = (message or "").strip()
+        if _REDRAW_YES.match(reply) and Path(str(pending.get("image_path") or "")).is_file():
+            return _finalize_intent({"action": "edit_image",
+                                     "params": {"path": pending["image_path"], "prompt": pending.get("prompt") or "",
+                                                "full_redraw": True},
+                                     "thinking": "full redraw confirmed", "route_reason": "image_full_redraw_confirmed"},
+                                    message, session)
+        if _REDRAW_NO.match(reply):
+            return _finalize_intent({"action": "chat", "params": {}, "thinking": "full redraw declined"},
+                                    message, session)
+        # Anything else is a new request (often a narrower edit), routed normally below.
     if pending.get("type") == "image_edit_instruction":
         # Reply to "What should I change in <image>?" — the answer is the instruction for that image.
         session.pending_clarification = None

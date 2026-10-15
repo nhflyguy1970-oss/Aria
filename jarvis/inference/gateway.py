@@ -132,6 +132,8 @@ def _ollama_stream(
             keep_alive=keep_alive,
             **normalized,
         )
+        from jarvis import stream_progress
+
         try:
             for chunk in stream:
                 job.check()  # thermal / host-RAM cutoff stops the generation
@@ -139,6 +141,8 @@ def _ollama_stream(
                     usage.update(usage_from_response(chunk))
                 if chunk.get("message", {}).get("content"):
                     yield chunk["message"]["content"]
+                elif chunk.get("message", {}).get("thinking"):
+                    stream_progress.note()  # a reasoning model is working, not wedged
         finally:
             close = getattr(stream, "close", None)
             if close:

@@ -129,6 +129,33 @@ def inpaint_region(
     )
 
 
+def local_edit(image_path: str | Path, prompt: str):
+    """A local object edit (remove/replace one kind of object, every other pixel kept), or None
+    when the instruction is not one — then the caller does a whole-image edit.
+
+    Returns comfyui_local_edit.Outcome; ``handled=False`` also means "use the whole-image edit"."""
+    from jarvis.image_edit_plan import plan as edit_plan
+
+    plan = edit_plan(prompt)
+    if plan is None:
+        return None
+    src = Path(image_path).expanduser().resolve()
+    from jarvis.comfyui_local_edit import Outcome, run
+    from jarvis.image_safety import edit_refusal_for, inherit_provenance
+
+    if not src.is_file():
+        return Outcome(message=f"ERROR: File not found: {src}")
+    if refused := edit_refusal_for(src, prompt):
+        return Outcome(message=refused)
+    outcome = run(src, plan)
+    if outcome.path:
+        inherit_provenance(src, outcome.path)
+        from jarvis.cache_state import invalidate_gallery
+
+        invalidate_gallery()
+    return outcome
+
+
 def edit_image(
     image_path: str | Path,
     prompt: str,

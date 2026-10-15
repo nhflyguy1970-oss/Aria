@@ -62,8 +62,19 @@ _MEDIA_CLAIM = re.compile(
     r"|i(?:'|’)?(?:ve| have)?\s*(?:just\s+)?"
     r"(?:created|generated|made|produced|rendered|drew|drawn|upscaled|enlarged|"
     r"edited|retouched|inpainted)\s+your\s+"
-    r"(?:image|meme|video|picture|photo|gif|animation)\b",
-    re.I,
+    r"(?:image|meme|video|picture|photo|gif|animation)\b"
+    # Completed-edit phrasing: deepseek answered an edit routed to chat with "The image has
+    # been adjusted to meet your specifications" — no edit had run (2026-10-14).
+    r"|\b(?:the|your)\s+(?:edited\s+|updated\s+)?(?:image|picture|photo|render)\s+(?:has\s+been|have\s+been|was|is\s+now)\s+"
+    r"(?:adjusted|edited|updated|modified|changed|corrected|fixed|regenerated|retouched|re-?rendered)\b"
+    r"|i(?:'|’)?(?:ve| have)?\s*(?:just\s+)?(?:adjusted|edited|updated|modified|changed|corrected|fixed|retouched|"
+    r"redrawn|redrew|repainted|re-?rendered|regenerated)\s+(?:the|your)\s+(?:image|picture|photo|render|scene)\b"
+    # ARIA's own result formats, imitated by a chat model from earlier turns (live 2026-10-14:
+    # "Edited image — … Saved as `jarvis_edit_local_00009_.png`", "Prompt sent to Qwen-Image …").
+    r"|^\s*edited\s+image\s+[—-]"
+    r"|\bsaved\s+as\s+`?[\w./-]+\.(?:png|jpe?g|webp)\b"
+    r"|\*\*prompt\s+sent\s+to\s+(?:qwen|flux|klein|z-?image|lustify|comfyui)",
+    re.I | re.M,
 )
 
 _DOCUMENT_CLAIM = re.compile(

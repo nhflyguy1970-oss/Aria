@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -627,27 +628,81 @@ class MediaHandler:
             denoise = None
 
         from jarvis.image_post import edit_image as edit_fn
+        from jarvis.image_post import local_edit
 
-        result = edit_fn(path, prompt, denoise=denoise)
-        if result.startswith("ERROR:"):
+        t0 = time.monotonic()
+        fallback_note = ""
+        outcome = local_edit(path, prompt) if denoise is None and not params.get("full_redraw") else None
+        if outcome is not None and outcome.handled:
             from jarvis.image_safety import REFUSALS
 
-            return err(result, module="image", **({"refused": True} if result in REFUSALS else {}))
+            if outcome.message.startswith("ERROR:") or outcome.message in REFUSALS:
+                return err(outcome.message, module="image",
+                           **({"refused": True} if outcome.message in REFUSALS else {}))
+            if not outcome.path:  # nothing changed: a question or an explanation
+                self._record_edit_reply(prompt, outcome.message)
+                return ok(outcome.message, module="image", no_media_expected=True,
+                          type="image_edit_question" if outcome.question else "text")
+            result, how = outcome.path, outcome.message
+        else:
+            local_why = outcome.message if outcome is not None and outcome.message else ""
+            if denoise is None and not params.get("full_redraw"):
+                from jarvis.image_edit_plan import whole_image_reason
+
+                why = local_why or whole_image_reason(prompt)
+                if why:
+                    # Never swap a requested local edit for a full redraw without asking: a redraw
+                    # repaints every pixel (counts, faces and text can change).
+                    question = (f"I can't do this as a local edit: {why}. A full redraw with FLUX.2 Klein would "
+                                "repaint the whole picture, so other details (faces, text, how many of something) "
+                                "can change too. Reply **redraw it** to go ahead, or ask for one change at a time — "
+                                "remove, replace, recolour or move one object.")
+                    self.a.session.pending_clarification = {
+                        "type": "image_full_redraw", "image_path": str(path), "prompt": prompt,
+                        "question": question, "at": time.time()}
+                    self._record_edit_reply(prompt, question)
+                    return ok(question, module="image", no_media_expected=True, type="image_edit_question")
+            if local_why:
+                fallback_note = f" (whole-image edit: {local_why})"
+            result = edit_fn(path, prompt, denoise=denoise)
+            if result.startswith("ERROR:"):
+                from jarvis.image_safety import REFUSALS
+
+                return err(result, module="image", **({"refused": True} if result in REFUSALS else {}))
+            how = ("Edited the whole image with FLUX.2 Klein" if denoise is None else "Edited the whole image (img2img)") \
+                + fallback_note
         from jarvis.cache_state import invalidate_gallery
 
         _mark_edit_output(result, path, prompt)
         invalidate_gallery()
         self.a.session.note_image(result)
+        # An edit from the Gallery puts its result in play too, so "now move the boat left" in chat
+        # edits it (live 2026-10-14: those follow-ups went to the chat model, which invented results).
+        self.a.session.last_action = "edit_image"
+        self.a.session.last_action_at = self.a.session.last_image_at = time.time()
         name = Path(result).name
-        short = prompt[:80] + ("…" if len(prompt) > 80 else "")
+        took = time.monotonic() - t0
+        short = prompt[:120] + ("…" if len(prompt) > 120 else "")
+        msg = f"Edited image — **{short}**\n\n{how}. Took {took:.0f} s.\n\nSaved as `{name}`"
+        self._record_edit_reply(prompt, msg + f"\n\n![edited](/api/gallery/{name})")
         return ok(
-            f"Edited image — **{short}** (img2img, keeps layout)\n\nSaved as `{name}`",
+            msg,
             module="image",
             type="image_result",
             image_path=result,
             output_path=result,
             image_name=name,
         )
+
+    def _record_edit_reply(self, prompt: str, reply: str) -> None:
+        """Keep the edit in the conversation, like a generation: after a reload or restart the
+        chat still shows it, and the next turn knows the image was changed (edits were missing
+        from history, 2026-10-14)."""
+        try:
+            self.a.conversation.add_assistant(reply)
+            self.a.branches.persist(session=self.a.session)
+        except Exception:  # noqa: BLE001
+            logging.getLogger(__name__).debug("edit reply not recorded", exc_info=True)
 
     def enhance_prompt(self, params: dict, message: str) -> dict:
         prompt = params.get("prompt") or message
