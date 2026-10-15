@@ -29,8 +29,9 @@ class TestGitSync(unittest.TestCase):
         )
         self.assertTrue(st.retrieval_available)
 
+    @patch("jarvis.llm.embed_batch", side_effect=lambda texts: [[0.1, 0.2] for _ in texts])
     @patch("jarvis.llm.embed_text", return_value=[0.1, 0.2])
-    def test_build_and_search_repo_index(self, _embed):
+    def test_build_and_search_repo_index(self, _embed, _batch):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "hello.py").write_text("def lite_llm_router():\n    return True\n", encoding="utf-8")

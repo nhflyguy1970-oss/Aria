@@ -104,6 +104,8 @@ class GitRepoState:
     errors: list[str] = field(default_factory=list)
     open_prs: list[dict[str, str]] = field(default_factory=list)
     project_slug: str = ""
+    # What the index was built from: HEAD plus the state of uncommitted files.
+    index_fingerprint: str = ""
 
     @property
     def retrieval_available(self) -> bool:
@@ -167,6 +169,26 @@ def index_path_for_repo(repo: Path) -> Path:
     return REPOS_INDEX_ROOT / _repo_id(repo) / "code_index.json"
 
 
+def _worktree_fingerprint(repo: Path, head: str) -> str:
+    """HEAD + every uncommitted path with its size and mtime: changes when the working tree does."""
+    try:  # not _run: it strips the output, which would cut the first "-z" entry's status columns
+        proc = subprocess.run(["git", "status", "--porcelain", "-z", "--untracked-files=no"], cwd=str(repo),
+                              capture_output=True, text=True, timeout=60, check=False)
+        entries = sorted(e for e in proc.stdout.split("\0") if e) if proc.returncode == 0 else []
+    except Exception:  # noqa: BLE001
+        entries = []
+    digest = hashlib.sha1(head.encode())
+    for entry in entries:
+        rel = entry[3:]
+        try:
+            st = (repo / rel).stat()
+            stamp = f"{st.st_size}:{st.st_mtime_ns}"
+        except OSError:
+            stamp = "missing"
+        digest.update(f"{entry}|{stamp}\n".encode())
+    return digest.hexdigest()
+
+
 def sync_repository(repo: Path, *, force: bool = False, label: str = "", cancel_check=None) -> GitRepoState:
     """Sync one repository — metadata, change detection, incremental index."""
     if cancel_check is not None and cancel_check():
@@ -174,11 +196,10 @@ def sync_repository(repo: Path, *, force: bool = False, label: str = "", cancel_
     repo = repo.resolve()
     rid = _repo_id(repo)
     state_data = _load_state()
-    prev = (
-        GitRepoState.from_dict(state_data.get("repos", {}).get(rid, {}))
-        if state_data.get("repos")
-        else None
-    )
+    # A repo not yet in the state file has no previous state. from_dict({}) raised TypeError,
+    # so a newly tracked repo never finished its first sync (every sync since July: ok=False).
+    prev_data = (state_data.get("repos") or {}).get(rid)
+    prev = GitRepoState.from_dict(prev_data) if prev_data else None
     prev_head = prev.head if prev else ""
 
     errors: list[str] = []
@@ -208,11 +229,14 @@ def sync_repository(repo: Path, *, force: bool = False, label: str = "", cancel_
         label = repo.name
 
     changed = _changed_files_since(repo, prev_head) if prev_head and head != prev_head else []
+    fingerprint = _worktree_fingerprint(repo, head) if dirty else head
     needs_index = (
         force
         or not prev_head
         or head != prev_head
-        or dirty
+        # Uncommitted changes: re-index only when they changed since the last index. Rebuilding on
+        # every 30-min sync while the tree stayed dirty kept the RTX busy all day (2026-10-14).
+        or (dirty and fingerprint != (prev.index_fingerprint if prev else ""))
         or not index_path_for_repo(repo).is_file()
     )
 
@@ -260,6 +284,7 @@ def sync_repository(repo: Path, *, force: bool = False, label: str = "", cancel_
         errors=errors,
         open_prs=prs,
         project_slug=project_slug,
+        index_fingerprint=fingerprint if (not needs_index or not errors) else (prev.index_fingerprint if prev else ""),
     )
 
     state_data.setdefault("repos", {})[rid] = st.to_dict()

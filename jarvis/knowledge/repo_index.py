@@ -27,6 +27,57 @@ def _save_chunks(index_path: Path, chunks: list[dict]) -> None:
     index_path.write_text(json.dumps(chunks, indent=0), encoding="utf-8")
 
 
+EMBED_BATCH = 32
+
+
+def _key(text: str) -> str:
+    import hashlib
+
+    return hashlib.sha1(text[:2000].encode("utf-8", "ignore")).hexdigest()
+
+
+def _embed_new(chunks: list[dict], known: dict[str, list[float]], root: Path, check_cancel) -> int:
+    """Give every chunk its embedding, reusing ``known`` ones (keyed by text) and embedding the
+    rest in batches. Returns how many were embedded now.
+
+    Every scheduled sync of a repo with uncommitted changes used to re-embed the whole repo one
+    chunk per request: 21,084 requests for ARIA, ~40 min of continuous RTX load, every 30 min
+    (2026-10-14: 70-86% RTX utilization while ARIA was idle)."""
+    todo: list[dict] = []
+    for c in chunks:
+        c["repo"] = str(root)
+        vec = known.get(_key(c["text"]))
+        if vec:
+            c["embedding"] = vec
+        else:
+            todo.append(c)
+    if not todo:
+        return 0
+    try:
+        from jarvis.ollama_runtime import chat_priority_active
+    except Exception:  # noqa: BLE001
+        chat_priority_active = lambda: False  # noqa: E731
+    done = 0
+    with llm.embed_session():
+        for i in range(0, len(todo), EMBED_BATCH):
+            check_cancel()
+            batch = todo[i:i + EMBED_BATCH]
+            if chat_priority_active():
+                vectors: list[list[float]] = []  # never compete with a chat stream; next sync fills these
+            else:
+                try:
+                    vectors = llm.embed_batch([c["text"][:2000] for c in batch])
+                except llm.EmbeddingError as exc:
+                    logger.warning("Repository index: embedding unavailable (%s); will retry next sync", exc)
+                    vectors = []
+            for c, vec in zip(batch, vectors or [[]] * len(batch)):
+                c["embedding"] = vec
+                if vec:
+                    known[_key(c["text"])] = vec
+                    done += 1
+    return done
+
+
 def build_repo_index(
     root: Path,
     *,
@@ -34,45 +85,35 @@ def build_repo_index(
     changed_files: list[str] | None = None,
     cancel_check=None,
 ) -> int:
-    """Build or incrementally update a repository code index."""
+    """Build or incrementally update a repository code index.
+
+    Chunks whose text is unchanged keep their stored embedding, so a rebuild only embeds what
+    actually changed."""
     def check_cancel():
         if cancel_check is not None and cancel_check():
             raise InterruptedError("Repository indexing cancelled for ARIA shutdown")
 
     check_cancel()
     root = root.resolve()
+    old = _load_chunks(index_path)
+    known = {_key(c.get("text") or ""): c["embedding"] for c in old if c.get("embedding") and c.get("text")}
     if changed_files:
-        chunks = _load_chunks(index_path)
-        # Session keeps the embed model resident; without it every item
-        # paid a full model load+unload (_embed_keep_alive() == 0).
-        with llm.embed_session():
-            for rel in changed_files:
-                check_cancel()
-                chunks = [c for c in chunks if c.get("source") != rel]
-                path = root / rel
-                if not _should_index(path, root):
-                    continue
-                try:
-                    text = path.read_text(encoding="utf-8", errors="ignore")
-                except OSError:
-                    continue
-                new_chunks = _chunks(text, rel)
-                # Without a session _embed_keep_alive() is 0, so each chunk paid a
-                # full embed-model load+unload (~2-3s) instead of ~3ms.
-                with llm.embed_session():
-                    for c in new_chunks:
-                        check_cancel()
-                        c["embedding"] = llm.embed_text(c["text"][:2000])
-                        c["repo"] = str(root)
-                chunks.extend(new_chunks)
-        check_cancel()
-        _save_chunks(index_path, chunks)
-        return len(chunks)
-
-    chunks: list[dict] = []
-    # Session keeps the embed model resident; without it every item
-    # paid a full model load+unload (_embed_keep_alive() == 0).
-    with llm.embed_session():
+        chunks = [c for c in old if c.get("source") not in set(changed_files)]
+        fresh: list[dict] = []
+        for rel in changed_files:
+            check_cancel()
+            path = root / rel
+            if not _should_index(path, root):
+                continue
+            try:
+                text = path.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            fresh.extend(_chunks(text, rel))
+        embedded = _embed_new(fresh, known, root, check_cancel)
+        chunks.extend(fresh)
+    else:
+        chunks = []
         for p in root.rglob("*"):
             check_cancel()
             if not _should_index(p, root):
@@ -81,15 +122,11 @@ def build_repo_index(
                 text = p.read_text(encoding="utf-8", errors="ignore")
             except OSError:
                 continue
-            rel = str(p.relative_to(root))
-            for c in _chunks(text, rel):
-                check_cancel()
-                c["embedding"] = llm.embed_text(c["text"][:2000])
-                c["repo"] = str(root)
-                chunks.append(c)
-
+            chunks.extend(_chunks(text, str(p.relative_to(root))))
+        embedded = _embed_new(chunks, known, root, check_cancel)
     check_cancel()
     _save_chunks(index_path, chunks)
+    logger.info("Repository index %s: %d chunks, %d embedded now", root.name, len(chunks), embedded)
     return len(chunks)
 
 

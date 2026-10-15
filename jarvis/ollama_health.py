@@ -116,6 +116,34 @@ def _model_is_loaded(model: str, loaded: list[str]) -> bool:
     return False
 
 
+def _remaining_keep_alive_s(host: str, model: str) -> int | None:
+    """Seconds until a loaded model's keep-alive expires (None: not loaded / unknown).
+
+    A probe sent without keep_alive resets the timer to the daemon default (5 min). Probing
+    every 2 min (tray and server each) therefore kept gemma4's 9 GB on the RTX forever while
+    ARIA was idle, and cut a real chat's 30-min keep-alive to 5 (2026-10-14). The probe passes
+    the time that is left, so a health check never changes how long a model stays loaded."""
+    from datetime import datetime
+
+    try:
+        with urllib.request.urlopen(f"{host.rstrip('/')}/api/ps", timeout=2) as resp:
+            rows = json.loads(resp.read().decode()).get("models") or []
+    except Exception:  # noqa: BLE001
+        return None
+    for row in rows:
+        name = (row.get("name") or row.get("model") or "").strip()
+        if name in (model, f"{model}:latest") or name.removesuffix(":latest") == model:
+            try:
+                expires = datetime.fromisoformat(str(row.get("expires_at")))
+            except ValueError:
+                return None
+            left = (expires - datetime.now(expires.tzinfo)).total_seconds()
+            if left > 10 * 365 * 86400:  # keep_alive -1 ("forever") reports a far-future time
+                return None
+            return max(1, int(left))
+    return None
+
+
 def _soft_generate_probe(host: str, model: str, *, timeout: float) -> dict:
     """Cheap generate probe (1 token, short timeout). Never used on every health poll.
 
@@ -137,12 +165,10 @@ def _soft_generate_probe(host: str, model: str, *, timeout: float) -> dict:
         options = dict(default_options(num_predict=max(1, _PROBE_NUM_PREDICT)))
     except Exception:
         options["num_ctx"] = int(os.getenv("JARVIS_OLLAMA_NUM_CTX", "8192") or 8192)
-    body = json.dumps({
-        "model": model,
-        "prompt": "ping",
-        "stream": False,
-        "options": options,
-    }).encode()
+    payload = {"model": model, "prompt": "ping", "stream": False, "options": options}
+    if (left := _remaining_keep_alive_s(host, model)) is not None:
+        payload["keep_alive"] = f"{left}s"
+    body = json.dumps(payload).encode()
     req = urllib.request.Request(
         f"{host}/api/generate",
         data=body,

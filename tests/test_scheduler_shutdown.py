@@ -22,11 +22,14 @@ def test_cancelled_batch_preserves_previous_index(tmp_path,monkeypatch,increment
     cancel=threading.Event();calls=[]
     monkeypatch.setattr(repo_index.llm,'embed_session',contextlib.nullcontext)
     monkeypatch.setattr(repo_index,'_chunks',lambda *args:[{'text':'first'},{'text':'second'}])
-    def embed(text):calls.append(text);cancel.set();return [1]
-    monkeypatch.setattr(repo_index.llm,'embed_text',embed)
+    # Chunks are embedded in batches (one request per 32): the cancel is honoured before the next batch.
+    def embed(texts):calls.append(list(texts));cancel.set();return [[1] for _ in texts]
+    monkeypatch.setattr(repo_index.llm,'embed_batch',embed)
+    monkeypatch.setattr(repo_index.llm,'embed_text',lambda t:pytest.fail('one request per chunk'))
+    monkeypatch.setattr(repo_index,'EMBED_BATCH',1)
     with pytest.raises(InterruptedError):
         repo_index.build_repo_index(root,index_path=index,changed_files=['a.py'] if incremental else None,cancel_check=cancel.is_set)
-    assert calls==['first'];assert index.read_bytes()==before
+    assert calls==[['first']];assert index.read_bytes()==before
     assert (root/'a.py').read_text()=='print(1)'
 
 
@@ -34,7 +37,7 @@ def test_cancel_after_last_chunk_does_not_commit(tmp_path,monkeypatch):
     (tmp_path/'a.py').write_text('print(1)');index=tmp_path/'index.json'
     monkeypatch.setattr(repo_index.llm,'embed_session',contextlib.nullcontext)
     cancel=threading.Event()
-    monkeypatch.setattr(repo_index.llm,'embed_text',lambda text:(cancel.set() or [1]))
+    monkeypatch.setattr(repo_index.llm,'embed_batch',lambda texts:(cancel.set() or [[1] for _ in texts]))
     with pytest.raises(InterruptedError):repo_index.build_repo_index(tmp_path,index_path=index,cancel_check=cancel.is_set)
     assert not index.exists()
 
@@ -104,9 +107,9 @@ acm_bridge._ENGINE=SimpleNamespace(flush=lambda **kw:conn.commit(),durable=Simpl
 (p/'a.py').write_text('print(1)');(p/'index.json').write_text('[]')
 repo_index.llm.embed_session=contextlib.nullcontext
 repo_index._chunks=lambda *a:[{'text':'first'},{'text':'second'}]
-def embed(text):
- (p/'indexing').touch();assert s._stop.wait(8);return [1]
-repo_index.llm.embed_text=embed
+def embed(texts):
+ (p/'indexing').touch();assert s._stop.wait(8);return [[1] for _ in texts]
+repo_index.llm.embed_batch=embed
 class Stop(threading.Event):
  def wait(self,timeout=None):
   if timeout==60:return self.is_set()
